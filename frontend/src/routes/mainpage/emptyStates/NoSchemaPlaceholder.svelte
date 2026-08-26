@@ -18,17 +18,20 @@
 <script>
     import { faDiagramProject } from "@fortawesome/free-solid-svg-icons";
 
-    import { isReadOnly } from "$lib/api/apiWorkspaceUtils.js";
     import { asyncValue } from "$lib/asyncValue.svelte.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import WorkspaceActionsMenu from "../workspaceActions/WorkspaceActionsMenu.svelte";
 
     let { workspaceName } = $props();
 
-    const readonlyValue = asyncValue(() => workspaceName, isReadOnly);
+    const readonlyValue = asyncValue(
+        () => workspaceName,
+        workspaceStore.isReadOnly,
+    );
 
     let showNewGraphDialog = $state(false);
     let showImportDialog = $state(false);

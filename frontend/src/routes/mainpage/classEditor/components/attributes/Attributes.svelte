@@ -42,14 +42,14 @@
 
     let expandStereotypes = $state(true);
 
-    let readonly = $derived(classEditorContext.readonly);
+    let readonly = $derived(classEditorContext.readOnly);
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
-        readonly = getContext("classEditor").readonly;
+        readonly = getContext("classEditor").readOnly;
     });
 
-    onMount(() => (readonly = classEditorContext.readonly));
+    onMount(() => (readonly = classEditorContext.readOnly));
 
     function openAttributeEditor(attribute, targetClass = null) {
         attributeEditorDialog.attribute = attribute;

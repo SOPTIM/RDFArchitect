@@ -18,17 +18,16 @@
 <script>
     import { setContext, untrack } from "svelte";
 
-    import { getNamespaces, isReadOnly } from "$lib/api/apiWorkspaceUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import { asyncValue } from "$lib/asyncValue.svelte.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import { graphColors } from "$lib/graphColors.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { SimpleTrigger } from "$lib/statePrimitives.svelte.js";
+    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import { getWorkspaceNavEntry } from "./build-nav-object.js";
     import CrossProfileDiagramsSection from "./CrossProfileDiagramsSection.svelte";
@@ -36,9 +35,11 @@
     import GraphSection from "./GraphSection.svelte";
     import WorkspaceActionsMenu from "../workspaceActions/WorkspaceActionsMenu.svelte";
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const localReloadTrigger = new SimpleTrigger();
-    const readonlyValue = asyncValue(() => activeWorkspace, isReadOnly);
+    const readonlyValue = asyncValue(
+        () => activeWorkspace,
+        workspace => workspaceStore.isReadOnly(workspace),
+    );
 
     let workspaceNavEntry = $state(null);
     let namespaces = $state([]);
@@ -89,8 +90,10 @@
             workspaceName,
             previousNavEntry,
         );
-        const loadedNamespaces = await fetchNamespaces(workspaceName);
-        const loadedCrossProfileID = await fetchCrossProfileID(workspaceName);
+        const loadedNamespaces =
+            (await workspaceStore.getNamespaces(workspaceName)) ?? [];
+        const loadedCrossProfileID =
+            await crossProfileStore.getId(workspaceName);
         await graphColors.reload(workspaceName);
         if (request !== latestLoadRequest) {
             return;
@@ -98,25 +101,6 @@
         workspaceNavEntry = navEntry;
         namespaces = loadedNamespaces;
         crossProfileID = loadedCrossProfileID;
-    }
-
-    async function fetchNamespaces(workspaceName) {
-        try {
-            return await getNamespaces(workspaceName);
-        } catch (err) {
-            console.error("Failed to load namespaces:", err);
-            return [];
-        }
-    }
-
-    async function fetchCrossProfileID(workspaceName) {
-        try {
-            const res = await bec.getCrossProfileID(workspaceName);
-            return await res.text();
-        } catch (err) {
-            console.error("Failed to load merged view id:", err);
-            return undefined;
-        }
     }
 
     setContext("packageNavigation", {

@@ -17,13 +17,13 @@
 
 <script>
     import { faPlus } from "@fortawesome/free-solid-svg-icons";
-    import { untrack } from "svelte";
     import { Fa } from "svelte-fa";
 
     import {
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { workspaceState } from "$lib/workspaceState.svelte.js";
 
     import WorkspaceTab from "./WorkspaceTab.svelte";
@@ -31,12 +31,13 @@
 
     let showNewWorkspaceDialog = $state(false);
 
-    const workspaces = $derived(workspaceState.getNames());
+    let workspaces = $state([]);
     const activeWorkspace = $derived(editorState.selectedWorkspace.getValue());
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
-        await untrack(async () => await workspaceState.load());
+        workspaces = await workspaceStore.getWorkspaces();
+        await workspaceState.load();
     });
 </script>
 
@@ -45,11 +46,11 @@
     role="tablist"
     aria-label="Workspaces"
 >
-    {#each workspaces as name (name)}
+    {#each workspaces as workspace (workspace.label)}
         <WorkspaceTab
-            {name}
-            active={name === activeWorkspace}
-            onActivate={() => workspaceState.activate(name)}
+            name={workspace.label}
+            active={workspace.label === activeWorkspace}
+            onActivate={() => workspaceState.activate(workspace.label)}
         />
     {/each}
     <button
@@ -65,5 +66,5 @@
 
 <NewWorkspaceDialog
     bind:showDialog={showNewWorkspaceDialog}
-    existingNames={workspaces}
+    existingNames={workspaces.map(ws => ws.label)}
 />

@@ -18,9 +18,12 @@
 <script>
     import { onMount } from "svelte";
 
+    import {
+        confirmRenamedClasses,
+        getClassRenamings,
+    } from "$lib/api/generated/index.ts";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
     import RenameTable from "./RenameTable.svelte";
@@ -37,12 +40,8 @@
     });
 
     onMount(() => {
-        fetch(PUBLIC_BACKEND_URL + "/migrations/class-renamings", {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        })
-            .then(res => (res.ok ? res.json() : Promise.reject("Failed")))
+        getClassRenamings()
+            .then(res => (res.error ? Promise.reject("Failed") : res.data))
             .then(data => {
                 deletedAndRenamed = data.deletedAndRenamed.sort((a, b) =>
                     a.oldResource.label.localeCompare(b.oldResource.label),
@@ -81,16 +80,11 @@
     export async function onNext() {
         let body = deletedAndRenamed.filter(r => r.newResource != null);
         try {
-            const res = await fetch(
-                PUBLIC_BACKEND_URL + "/migrations/class-renamings",
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify(body),
-                },
-            );
-            if (!res.ok) {
+            const { error } = await confirmRenamedClasses({
+                body: body,
+            });
+
+            if (error) {
                 toastStore.error(
                     "Save failed",
                     "Could not save class renames for the migration.",

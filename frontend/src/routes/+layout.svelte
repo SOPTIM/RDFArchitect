@@ -20,26 +20,20 @@
     import { Tooltip } from "bits-ui";
     import { onMount } from "svelte";
 
-    import { enableEditing } from "$lib/actions/editingActions.js";
-    import {
-        fetchCanRedo,
-        fetchCanUndo,
-        redo,
-        undo,
-    } from "$lib/actions/versionControlActions.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import {
         installBackendFetchInterceptor,
         probeBackendConnection,
     } from "$lib/api/backendConnectionMonitor.svelte.js";
+    import { loadSnapshot as loadSnapshotAPI } from "$lib/api/generated/index.ts";
     import { Menubar } from "$lib/components/bitsui/menubar";
     import BrandLogo from "$lib/components/BrandLogo.svelte";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ToastContainer from "$lib/components/ToastContainer.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { versionControlStore } from "$lib/stores/versionControlStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import {
         DiagramType,
@@ -59,8 +53,6 @@
     /** @type {{children?: import("svelte").Snippet}} */
     let { children } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
     let canUndo = $state(false);
     let canRedo = $state(false);
     let menubarValue = $state(undefined);
@@ -77,10 +69,14 @@
         editorState.selectedGraph.subscribe();
         editorState.selectedWorkspace.subscribe();
         forceReloadTrigger.subscribe();
-        await fetchUndoRedo();
         isWorkspaceReadOnly = selectedWorkspace
-            ? await isReadOnly(selectedWorkspace)
+            ? await workspaceStore.isReadOnly(selectedWorkspace)
             : false;
+    });
+
+    $effect(async () => {
+        forceReloadTrigger.subscribe();
+        await fetchUndoRedo();
     });
 
     onMount(() => {
@@ -93,9 +89,12 @@
         if (!selectedWorkspace || !isWorkspaceReadOnly) {
             return;
         }
-        if (!(await enableEditing(selectedWorkspace))) {
-            return;
-        }
+        const { error } = await workspaceStore.updateReadonly(
+            selectedWorkspace,
+            false,
+        );
+        if (error) return;
+
         forceReloadTrigger.trigger();
         editorState.selectedClass.trigger();
         editorState.selectedDiagram.trigger();
@@ -105,8 +104,8 @@
     async function loadSnapshot() {
         const base64Param = page.url.searchParams.get("snapshot");
         if (base64Param) {
-            const res = await bec.loadSnapshot(base64Param);
-            if (res.ok) {
+            const { error } = await loadSnapshotAPI({ path: { base64Param } });
+            if (!error) {
                 await goto("/mainpage");
                 toastStore.success(
                     "Snapshot loaded",
@@ -122,17 +121,14 @@
     }
 
     async function fetchUndoRedo() {
-        canUndo = await fetchCanUndo();
-        canRedo = await fetchCanRedo();
-    }
-
-    async function isReadOnly(workspaceName) {
-        const res = await bec.isReadOnly(workspaceName);
-        return await res.json();
+        const workspaceName = editorState.selectedWorkspace.getValue();
+        const graph = editorState.selectedGraph.getValue();
+        await versionControlStore.refresh(workspaceName, graph);
+        canUndo = await versionControlStore.canUndo(workspaceName, graph);
+        canRedo = await versionControlStore.canRedo(workspaceName, graph);
     }
 
     async function reload() {
-        await fetchUndoRedo();
         editorState.selectedWorkspace.trigger();
         editorState.selectedGraph.trigger();
         editorState.selectedClass.trigger();
@@ -161,11 +157,18 @@
     }
 
     async function handleUndoRedo(isRedo) {
-        if (isRedo) {
-            if (canRedo && (await redo())) await reload();
-        } else {
-            if (canUndo && (await undo())) await reload();
-        }
+        if (isRedo && !canRedo) return;
+        if (!isRedo && !canUndo) return;
+
+        await eventStack.guardAction(async () => {
+            const { error } = isRedo
+                ? await versionControlStore.redo()
+                : await versionControlStore.undo();
+
+            if (!error) {
+                await reload();
+            }
+        });
     }
 
     async function handleKeydown(event) {

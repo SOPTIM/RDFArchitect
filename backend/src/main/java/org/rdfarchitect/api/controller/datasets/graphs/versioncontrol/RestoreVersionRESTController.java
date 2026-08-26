@@ -30,6 +30,7 @@ import org.rdfarchitect.services.versioncontrol.RestoreVersionUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -55,7 +56,7 @@ public class RestoreVersionRESTController {
             description = "restores the graph to the state specified by the version id",
             tags = {"graph"},
             responses = {@ApiResponse(responseCode = "200")})
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public String restoreVersion(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
@@ -74,7 +75,7 @@ public class RestoreVersionRESTController {
                             required = true,
                             description = "The ID of the version to restore.")
                     @RequestBody
-                    String versionId) {
+                    RestoreVersionDTO dto) {
 
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/restore\" from \"{}\".",
@@ -85,7 +86,7 @@ public class RestoreVersionRESTController {
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
         restoreVersionUseCase.restoreVersion(
-                new GraphIdentifier(datasetName, extendedGraphURI), UUID.fromString(versionId));
+                new GraphIdentifier(datasetName, extendedGraphURI), UUID.fromString(dto.versionId));
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/restore\" to \"{}\".",
@@ -94,4 +95,6 @@ public class RestoreVersionRESTController {
                 originURL);
         return Response.SUCCESS;
     }
+
+    public record RestoreVersionDTO(String versionId) {}
 }

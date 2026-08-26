@@ -19,7 +19,6 @@
     import { v4 as uuidv4 } from "uuid";
 
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { workspaceState } from "$lib/workspaceState.svelte.js";
 
@@ -31,7 +30,9 @@
     let workspaceNameUserInput = $state("");
 
     const trimmedName = $derived(workspaceNameUserInput.trim());
-    const nameExists = $derived(existingNames.includes(trimmedName));
+    const nameExists = $derived(
+        existingNames.some(workspace => workspace.label === trimmedName),
+    );
     const nameHasInvalidCharacters = $derived(
         invalidCharacters.test(trimmedName),
     );
@@ -48,11 +49,9 @@
     }
 
     async function createWorkspace() {
-        const name = trimmedName;
-        if (!(await workspaceState.create(name))) {
+        if (!(await workspaceState.create(trimmedName))) {
             return;
         }
-        toastStore.success("Workspace created", `"${name}" was created.`);
         forceReloadTrigger.trigger();
     }
 </script>

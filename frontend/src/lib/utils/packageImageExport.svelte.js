@@ -18,13 +18,11 @@
 import * as htmlToImage from "html-to-image";
 import { mount, unmount, tick } from "svelte";
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+import { getRenderingDataParameterized } from "$lib/api/generated/index.ts";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import PackageSnapshotRenderer from "$lib/rendering/svelteflow/PackageSnapshotRenderer.svelte";
+import { packageStore } from "$lib/stores/packageStore.ts";
 import { PackageStatus } from "$lib/utils/exportProgress.svelte.js";
-
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
 /**
  * Filename the backend embeds in the exported document for a package diagram
@@ -58,31 +56,29 @@ function displayFilenameOf(packageUUID, label, fileEnding) {
     return `${slugifyLabel(label)}-${packageUUID}.${fileEnding}`;
 }
 
-async function getAllPackages(workspaceName, graphURI, signal) {
-    const res = await bec.getPackages(workspaceName, graphURI, signal);
-    const json = await res.json();
-    return [
-        ...(json.internalPackageList ?? []),
-        ...(json.externalPackageList ?? []),
-    ];
+async function getAllPackages(workspaceName, graphURI) {
+    const res = (await packageStore.getPackages(workspaceName, graphURI)) ?? {
+        internal: [],
+        external: [],
+    };
+    return [...(res.internal ?? []), ...(res.external ?? [])];
 }
 
 async function getPackageDiagram(workspaceName, graphURI, packageUUID, signal) {
-    const res = await bec.fetchFilteredRenderingData(
-        workspaceName,
-        graphURI,
-        {
-            packageUUID,
-            includeEnumEntries: true,
-            includeAttributes: true,
-            includeAssociations: true,
-            includeInheritance: true,
-            includeRelationsToExternalPackages: true,
-        },
-        signal,
-    );
-    const text = await res.text();
-    return text ? JSON.parse(text) : null;
+    const filter = {
+        packageUUID,
+        includeEnumEntries: true,
+        includeAttributes: true,
+        includeAssociations: true,
+        includeInheritance: true,
+        includeRelationsToExternalPackages: true,
+    };
+    const res = await getRenderingDataParameterized({
+        path: { datasetName: workspaceName, graphURI: graphURI },
+        body: filter,
+        signal: signal,
+    });
+    return res.data;
 }
 
 async function renderPackage(nodes, edges, fileType) {
@@ -150,6 +146,9 @@ async function renderPackage(nodes, edges, fileType) {
 /**
  * Renders one diagram per package of the graph.
  *
+ * @param workspaceName
+ * @param graphURI
+ * @param fileType
  * @param progress optional {@link ExportProgress} that receives the packages and
  *     their outcome, and whose cancellation stops the loop at the next package
  */
@@ -161,7 +160,7 @@ export async function generatePackageImages(
 ) {
     const images = [];
     const signal = progress?.signal;
-    const packages = await getAllPackages(workspaceName, graphURI, signal);
+    const packages = await getAllPackages(workspaceName, graphURI);
 
     progress?.startDiagrams(
         packages.map(pkg => ({

@@ -18,7 +18,6 @@
 <script>
     import JSZip from "jszip";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import ExportProgressPanel from "$lib/components/ExportProgressPanel.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
@@ -37,8 +36,6 @@
         lockedGraphUri,
     } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
     const zipMediaType = {
         mimeType: "application/zip",
         name: "ZIP",
@@ -54,26 +51,34 @@
         {
             name: "HTML",
             ending: "html",
-            fetch: (workspace, graph, imageEnding, embedDiagrams, signal) =>
-                bec.getHTMLExport(
-                    workspace,
-                    graph,
-                    imageEnding,
-                    embedDiagrams,
+            fetch: (workspace, graph, imageEnding, embedDiagrams, signal) => {
+                const url = `${PUBLIC_BACKEND_URL}/api/datasets/${encodeURIComponent(workspace)}/graphs/${encodeURIComponent(graph)}/htmlexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
+                return fetch(url, {
+                    method: "GET",
+                    headers: new Headers({
+                        "Content-Type": "application/json",
+                    }),
+                    mode: "cors",
+                    credentials: "include",
                     signal,
-                ),
+                });
+            },
         },
         {
             name: "AsciiDoc",
             ending: "adoc",
-            fetch: (workspace, graph, imageEnding, embedDiagrams, signal) =>
-                bec.getAsciiDocExport(
-                    workspace,
-                    graph,
-                    imageEnding,
-                    embedDiagrams,
+            fetch: (workspace, graph, imageEnding, embedDiagrams, signal) => {
+                const url = `${PUBLIC_BACKEND_URL}/api/datasets/${encodeURIComponent(workspace)}/graphs/${encodeURIComponent(graph)}/asciidocexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
+                return fetch(url, {
+                    method: "GET",
+                    headers: new Headers({
+                        "Content-Type": "application/json",
+                    }),
+                    mode: "cors",
+                    credentials: "include",
                     signal,
-                ),
+                });
+            },
         },
     ];
 

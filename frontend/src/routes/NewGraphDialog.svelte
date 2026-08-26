@@ -18,12 +18,10 @@
 <script>
     import { v4 as uuidv4 } from "uuid";
 
-    import { getWorkspaceNames } from "$lib/api/apiWorkspaceUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
+    import { graphStore } from "$lib/stores/graphStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import {
         DiagramType,
@@ -33,7 +31,6 @@
 
     let { showDialog = $bindable(), lockedWorkspaceName } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const uniqueId = uuidv4();
     const defaultGraphUriPrefix = "http://graph#";
     const uriSchemePattern = /^[a-zA-Z][a-zA-Z\d+.-]*:/;
@@ -64,6 +61,7 @@
             workspaceIsReadOnly ||
             graphExists,
     );
+
     function resolveGraphUri(graphInput) {
         const trimmedInput = graphInput.trim();
         if (!trimmedInput) {
@@ -82,10 +80,16 @@
             "";
         graphUriUserInput = "";
 
-        const workspaceNames = await getWorkspaceNames();
-        modifiableWorkspaces = workspaceNames.modifiable;
-        readOnlyWorkspaces = workspaceNames.readonly;
-
+        const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
+        readOnlyWorkspaces = [];
+        modifiableWorkspaces = [];
+        for (const workspace of workspaces) {
+            if (workspace.readOnly) {
+                readOnlyWorkspaces.push(workspace.label);
+            } else {
+                modifiableWorkspaces.push(workspace.label);
+            }
+        }
         await refreshGraphNames();
     }
 
@@ -106,59 +110,30 @@
             return;
         }
 
-        const res = await bec.getGraphs(workspaceNameUserInput);
-        graphNames = await res.json();
+        graphNames = (await graphStore.getGraphs(workspaceNameUserInput)) ?? [];
     }
 
     async function addGraph() {
         const workspaceNameLocal = workspaceNameUserInput;
         const graphURILocal = resolvedGraphUri;
 
-        const promise = fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(workspaceNameLocal) +
-                "/graphs/" +
-                encodeURIComponent(graphURILocal) +
-                "/content",
-            {
-                method: "PUT",
-                credentials: "include",
-            },
-        ).then(res => {
-            if (res.ok) {
-                editorState.selectedWorkspace.updateValue(workspaceNameLocal);
-                editorState.selectedGraph.updateValue(graphURILocal);
-                editorState.selectedDiagram.updateValue({
-                    type: DiagramType.PACKAGE,
-                    id: "default",
-                });
-                editorState.selectedClass.updateValue({ type: null, id: null });
-                toastStore.success(
-                    "Schema created",
-                    `"${graphURILocal}" was added to "${workspaceNameLocal}".`,
-                );
-            } else {
-                console.log("failed to create graph");
-                toastStore.error(
-                    "Create failed",
-                    `Could not create schema "${graphURILocal}".`,
-                );
-            }
-        });
+        const { error } = await graphStore.addEmptyGraph(
+            workspaceNameLocal,
+            graphURILocal,
+        );
+        if (error) return;
 
-        promise
-            .catch(e => {
-                console.log("failed to create graph:");
-                console.log(e);
-                toastStore.error(
-                    "Create failed",
-                    "An unexpected error occurred while creating the schema.",
-                );
-            })
-            .finally(() => {
-                forceReloadTrigger.trigger();
-            });
+        editorState.selectedWorkspace.updateValue(workspaceNameLocal);
+        editorState.selectedGraph.updateValue(graphURILocal);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: "default",
+        });
+        editorState.selectedClass.updateValue({ type: null, id: null });
+
+        graphStore.invalidateWorkspace(workspaceNameLocal);
+        workspaceStore.invalidate();
+        forceReloadTrigger.trigger();
     }
 </script>
 

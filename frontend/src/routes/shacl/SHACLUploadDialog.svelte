@@ -16,9 +16,9 @@
   -->
 
 <script>
+    import { replaceGraphWithFile } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
@@ -52,23 +52,12 @@
     }
 
     async function importGraph() {
-        let formData = new FormData();
-        formData.append("file", file);
-        fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(workspaceName) +
-                "/graphs/" +
-                encodeURIComponent(graphURI) +
-                "/shacl/custom/file",
-            {
-                method: "PUT",
-                body: formData,
-                credentials: "include",
-            },
-        )
+        replaceGraphWithFile({
+            path: { datasetName: workspaceName, graphURI: graphURI },
+            body: { file },
+        })
             .then(res => {
-                if (res.ok) {
+                if (!res.error) {
                     console.log("successfully inserted data");
                     toastStore.success(
                         "Constraints imported",

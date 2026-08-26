@@ -19,16 +19,12 @@
     import { onDestroy, onMount, setContext } from "svelte";
     import { Pane, Splitpanes } from "svelte-splitpanes";
 
-    import { isReadOnly } from "$lib/api/apiWorkspaceUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         eventStack,
         EventType,
     } from "$lib/eventhandling/closeEventManager.svelte.js";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         findSuperClass,
         mapClassDtoToReactiveClass,
@@ -41,13 +37,14 @@
         forceReloadTrigger,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/classStore.ts";
+    import { datatypesStore } from "$lib/stores/datatypesStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import {
         getClasses,
         getDataTypes,
-        getNamespaces,
         getPackages,
-        getStereotypes,
     } from "./fetch-class-editor-context.js";
     import ShaclPropertySpecificDialog from "../../shacl/SHACLPropertySpecificDialog.svelte";
     import Associations from "./components/associations/Associations.svelte";
@@ -65,7 +62,6 @@
 
     const enumerationStereotype =
         "http://iec.ch/TC57/NonStandard/UML#enumeration";
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const context = {
         namespaces: [],
@@ -125,53 +121,31 @@
         // through the loading overlay while the newly selected one is fetched.
         externalClass = null;
         (async () => {
-            let res = await bec.getClassInfo(
+            const classDto = await classStore.getClassInfo(
                 workspaceName,
                 graphUri,
                 classUuid,
-                true,
             );
-            let resText = await res.text();
             if (cancellation.cancelled) return;
-            if (!resText) {
+            if (classDto == null) {
                 return closeClassEditor({
                     workspaceName: workspaceName,
                     graphUri: graphUri,
                     classUuid: null,
                 });
             }
-            let classData;
-            try {
-                classData = JSON.parse(resText);
-            } catch (e) {
-                console.error(
-                    "Failed to parse class data for class UUID",
-                    classUuid,
-                    "in workspace",
-                    workspaceName,
-                    "and graph",
-                    graphUri,
-                    ":",
-                    e,
-                );
-                return closeClassEditor({
-                    workspaceName: workspaceName,
-                    graphUri: graphUri,
-                    classUuid: null,
-                });
-            }
-            const readOnly = await isReadOnly(workspaceName);
+            const readOnly = await workspaceStore.isReadOnly(workspaceName);
             if (cancellation.cancelled) return;
             isWorkspaceReadOnly = readOnly;
-            if (classData.external) {
+            if (classDto.external) {
                 reactiveClass = undefined;
-                externalClass = classData;
+                externalClass = classDto;
                 loadingContext = false;
                 loadingClass = false;
                 return;
             }
             await loadContext(cancellation);
-            await loadReactiveClass(cancellation, classData);
+            await loadReactiveClass(cancellation, classDto);
         })();
 
         return () => {
@@ -182,7 +156,7 @@
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
         forceReloadTrigger.subscribe();
-        isWorkspaceReadOnly = await isReadOnly(workspaceName);
+        isWorkspaceReadOnly = await workspaceStore.isReadOnly(workspaceName);
     });
 
     onMount(() => {
@@ -217,6 +191,8 @@
             classType: null,
         },
     ) {
+        loadingContext = false;
+        loadingClass = false;
         if (!showDiscardSaveConfirmDialog && reactiveClass?.isModified) {
             showDiscardSaveConfirmDialog = true;
             workspaceOfClassToOpenNext = workspaceName;
@@ -241,33 +217,16 @@
      */
     async function createReferencedClass() {
         creatingClass = true;
-        try {
-            const res = await bec.postClass(workspaceName, graphUri, {
-                packageDTO: await packageOfCurrentDiagram(),
-                classURIPrefix: externalClass.prefix,
-                className: externalClass.label,
-            });
-            if (!res.ok) {
-                toastStore.error(
-                    "Create failed",
-                    `Could not create class "${externalClass.label}".`,
-                );
-                return;
-            }
-            toastStore.success(
-                "Class created",
-                `"${externalClass.label}" was added.`,
-            );
+
+        const { error } = await classStore.addClass(workspaceName, graphUri, {
+            packageDTO: await packageOfCurrentDiagram(),
+            classURIPrefix: externalClass.prefix,
+            className: externalClass.label,
+        });
+        if (!error) {
             forceReloadTrigger.trigger();
-        } catch (e) {
-            console.error("failed to create referenced class:", e);
-            toastStore.error(
-                "Create failed",
-                "An unexpected error occurred while creating the class.",
-            );
-        } finally {
-            creatingClass = false;
         }
+        creatingClass = false;
     }
 
     async function packageOfCurrentDiagram() {
@@ -280,20 +239,20 @@
     }
 
     async function loadContext(cancellation) {
-        const [classes, packages, datatypes, stereotypes, namespaces] =
-            await Promise.all([
-                getClasses(workspaceName, graphUri),
-                getPackages(workspaceName, graphUri),
-                getDataTypes(workspaceName, graphUri),
-                getStereotypes(workspaceName, graphUri),
-                getNamespaces(workspaceName),
-            ]);
+        const [classes, packages, datatypes] = await Promise.all([
+            getClasses(workspaceName, graphUri),
+            getPackages(workspaceName, graphUri),
+            getDataTypes(workspaceName, graphUri),
+        ]);
         if (cancellation.cancelled) return;
         context.classes = classes;
         context.packages = packages;
         context.datatypes = datatypes;
-        context.stereotypes = stereotypes;
-        context.namespaces = namespaces;
+        context.stereotypes = await datatypesStore.getStereotypes(
+            workspaceName,
+            graphUri,
+        );
+        context.namespaces = await workspaceStore.getNamespaces(workspaceName);
         loadingContext = false;
         editorState.selectedContext.trigger();
     }
@@ -329,15 +288,13 @@
 
         let targetClassInfos = await Promise.all(
             targetUuids.map(async uuid => {
-                const res = await bec.getClassInfo(
+                const res = await classStore.getClassInfo(
                     workspaceName,
                     graphUri,
                     uuid,
                 );
-                if (!res || !res.ok) return null;
-                const text = await res.text();
-                if (!text) return null;
-                return JSON.parse(text);
+                if (!res) return null;
+                return res;
             }),
         );
         if (cancelled.cancelled) return;
@@ -357,7 +314,7 @@
         get graphUri() {
             return graphUri;
         },
-        get readonly() {
+        get readOnly() {
             return isWorkspaceReadOnly;
         },
         get namespaces() {
@@ -380,9 +337,6 @@
         },
         get targetClassInfos() {
             return context.targetClassInfos;
-        },
-        get backendConnection() {
-            return bec;
         },
         get getClassByUuid() {
             return function (uuid) {

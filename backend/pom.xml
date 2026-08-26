@@ -194,6 +194,23 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.6.3</version>
+                <executions>
+                    <execution>
+                        <id>export-openapi</id>
+                        <phase>none</phase>
+                        <goals><goal>java</goal></goals>
+                        <configuration>
+                            <mainClass>org.rdfarchitect.OpenApiSpecExport</mainClass>
+                            <classpathScope>runtime</classpathScope>
+                            <cleanupDaemonThreads>false</cleanupDaemonThreads>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>

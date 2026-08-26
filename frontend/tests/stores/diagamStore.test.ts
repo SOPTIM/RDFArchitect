@@ -1,0 +1,944 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+import { get } from "svelte/store";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
+import * as api from "../../src/lib/api/generated";
+import { CustomDiagramDto } from "../../src/lib/api/generated";
+import { toastStore } from "../../src/lib/eventhandling/toastStore.svelte.js";
+import { createCustomDiagramStore } from "../../src/lib/stores/diagramStore";
+
+// ---------------------------------------------------------------------------
+// Fixtures
+// ---------------------------------------------------------------------------
+
+const WORKSPACE_A = "workspaceA";
+const WORKSPACE_B = "workspaceB";
+const GRAPH_URI_1 = "http://example.org/graph1";
+const GRAPH_URI_2 = "http://example.org/graph2";
+const DIAGRAM_ID = "diag-456";
+
+const MOCK_WORKSPACE_DIAGRAMS: CustomDiagramDto[] = [
+    { diagramId: "diag-1", name: "Workspace Diagram 1" } as CustomDiagramDto,
+    { diagramId: "diag-2", name: "Workspace Diagram 2" } as CustomDiagramDto,
+];
+
+const MOCK_GRAPH_DIAGRAMS: CustomDiagramDto[] = [
+    { diagramId: "diag-3", name: "Graph Diagram 1" } as CustomDiagramDto,
+];
+
+const MOCK_DIAGRAM_BODY = { diagramId: "diag-4", name: "New Diagram" };
+
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
+
+vi.mock("$lib/api/generated", () => ({
+    getCustomDatasetDiagramList: vi.fn(),
+    getCustomGraphDiagramList: vi.fn(),
+    replaceCustomDatasetDiagram: vi.fn(),
+    replaceCustomGraphDiagram: vi.fn(),
+    deleteCustomDatasetDiagram: vi.fn(),
+    deleteCustomGraphDiagram: vi.fn(),
+    addToCustomDatasetDiagram: vi.fn(),
+    addToCustomGraphDiagram: vi.fn(),
+    removeFromCustomDatasetDiagram: vi.fn(),
+    removeFromDiagram: vi.fn(),
+}));
+
+vi.mock("$lib/eventhandling/toastStore.svelte.js", () => ({
+    toastStore: { success: vi.fn(), error: vi.fn() },
+}));
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe("customDiagramStore", () => {
+    let store: ReturnType<typeof createCustomDiagramStore>;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        store = createCustomDiagramStore();
+    });
+
+    // -------------------------------------------------------------------------
+    describe("Initial State", () => {
+        test("store initializes with empty maps", () => {
+            const state = get(store);
+            expect(state.workspaceLists.size).toBe(0);
+            expect(state.graphLists.size).toBe(0);
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("getWorkspaceDiagrams", () => {
+        test("returns null for empty workspaceName without calling API", async () => {
+            const result = await store.getWorkspaceDiagrams("");
+            expect(result).toBeNull();
+            expect(api.getCustomDatasetDiagramList).not.toHaveBeenCalled();
+        });
+
+        test("fetches and caches diagrams for a workspace", async () => {
+            vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
+                data: MOCK_WORKSPACE_DIAGRAMS,
+                error: undefined,
+            });
+
+            const result = await store.getWorkspaceDiagrams(WORKSPACE_A);
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+
+            expect(result).toEqual(MOCK_WORKSPACE_DIAGRAMS);
+            expect(api.getCustomDatasetDiagramList).toHaveBeenCalledTimes(1);
+        });
+
+        test("force=true bypasses the cache and re-fetches", async () => {
+            vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
+                data: MOCK_WORKSPACE_DIAGRAMS,
+                error: undefined,
+            });
+
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+            await store.getWorkspaceDiagrams(WORKSPACE_A, true);
+
+            expect(api.getCustomDatasetDiagramList).toHaveBeenCalledTimes(2);
+        });
+
+        test("returns null on API error", async () => {
+            vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
+                data: undefined,
+                error: new Error("Network error"),
+            });
+
+            const result = await store.getWorkspaceDiagrams(WORKSPACE_A);
+            expect(result).toBeNull();
+        });
+
+        test("caches are independent for different workspaces", async () => {
+            vi.mocked(api.getCustomDatasetDiagramList)
+                .mockResolvedValueOnce({
+                    data: MOCK_WORKSPACE_DIAGRAMS,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_GRAPH_DIAGRAMS,
+                    error: undefined,
+                });
+
+            const resultA = await store.getWorkspaceDiagrams(WORKSPACE_A);
+            const resultB = await store.getWorkspaceDiagrams(WORKSPACE_B);
+
+            expect(resultA).toEqual(MOCK_WORKSPACE_DIAGRAMS);
+            expect(resultB).toEqual(MOCK_GRAPH_DIAGRAMS);
+            expect(api.getCustomDatasetDiagramList).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("getGraphDiagrams", () => {
+        test("returns null if workspaceName is empty", async () => {
+            const result = await store.getGraphDiagrams("", GRAPH_URI_1);
+            expect(result).toBeNull();
+            expect(api.getCustomGraphDiagramList).not.toHaveBeenCalled();
+        });
+
+        test("returns null if graphURI is empty", async () => {
+            const result = await store.getGraphDiagrams(WORKSPACE_A, "");
+            expect(result).toBeNull();
+            expect(api.getCustomGraphDiagramList).not.toHaveBeenCalled();
+        });
+
+        test("returns null if both workspaceName and graphURI are empty", async () => {
+            const result = await store.getGraphDiagrams("", "");
+            expect(result).toBeNull();
+            expect(api.getCustomGraphDiagramList).not.toHaveBeenCalled();
+        });
+
+        test("fetches and caches diagrams for a workspace+graph pair", async () => {
+            vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
+                data: MOCK_GRAPH_DIAGRAMS,
+                error: undefined,
+            });
+
+            const result = await store.getGraphDiagrams(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+            );
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+
+            expect(result).toEqual(MOCK_GRAPH_DIAGRAMS);
+            expect(api.getCustomGraphDiagramList).toHaveBeenCalledTimes(1);
+        });
+
+        test("treats different graphURIs under the same workspace as separate cache entries", async () => {
+            vi.mocked(api.getCustomGraphDiagramList)
+                .mockResolvedValueOnce({
+                    data: MOCK_GRAPH_DIAGRAMS,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_WORKSPACE_DIAGRAMS,
+                    error: undefined,
+                });
+
+            const result1 = await store.getGraphDiagrams(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+            );
+            const result2 = await store.getGraphDiagrams(
+                WORKSPACE_A,
+                GRAPH_URI_2,
+            );
+
+            expect(result1).toEqual(MOCK_GRAPH_DIAGRAMS);
+            expect(result2).toEqual(MOCK_WORKSPACE_DIAGRAMS);
+            expect(api.getCustomGraphDiagramList).toHaveBeenCalledTimes(2);
+        });
+
+        test("treats same graphURI under different workspaces as separate cache entries", async () => {
+            vi.mocked(api.getCustomGraphDiagramList)
+                .mockResolvedValueOnce({
+                    data: MOCK_GRAPH_DIAGRAMS,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_WORKSPACE_DIAGRAMS,
+                    error: undefined,
+                });
+
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_B, GRAPH_URI_1);
+
+            expect(api.getCustomGraphDiagramList).toHaveBeenCalledTimes(2);
+        });
+
+        test("force=true bypasses the cache and re-fetches", async () => {
+            vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
+                data: MOCK_GRAPH_DIAGRAMS,
+                error: undefined,
+            });
+
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1, true);
+
+            expect(api.getCustomGraphDiagramList).toHaveBeenCalledTimes(2);
+        });
+
+        test("returns null on API error", async () => {
+            vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
+                data: undefined,
+                error: new Error("Server error"),
+            });
+
+            const result = await store.getGraphDiagrams(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+            );
+            expect(result).toBeNull();
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("saveWorkspaceDiagram", () => {
+        test("calls API with correct arguments updates cache on success", async () => {
+            vi.mocked(api.replaceCustomDatasetDiagram).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+            // Seed the cache
+            vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
+                data: MOCK_WORKSPACE_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+
+            const result = await store.saveWorkspaceDiagram(
+                WORKSPACE_A,
+                DIAGRAM_ID,
+                MOCK_DIAGRAM_BODY,
+            );
+
+            expect(result.error).toBeNull();
+            expect(api.replaceCustomDatasetDiagram).toHaveBeenCalledWith({
+                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
+                body: MOCK_DIAGRAM_BODY,
+            });
+
+            const state = get(store);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(true);
+
+            expect(toastStore.success).toHaveBeenCalledWith(
+                "Diagram saved",
+                "Workspace diagram was saved.",
+            );
+        });
+
+        test("returns error and does not invalidate cache on API failure", async () => {
+            const error = new Error("Save failed");
+            vi.mocked(api.replaceCustomDatasetDiagram).mockResolvedValue({
+                data: undefined,
+                error,
+            });
+            // Seed the cache
+            vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
+                data: MOCK_WORKSPACE_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+
+            const result = await store.saveWorkspaceDiagram(
+                WORKSPACE_A,
+                DIAGRAM_ID,
+                MOCK_DIAGRAM_BODY,
+            );
+
+            expect(result.error).toBe(error);
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Save failed",
+                "Could not save workspace diagram.",
+            );
+
+            // Cache should remain intact
+            const state = get(store);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(true);
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("saveGraphDiagram", () => {
+        test("calls API with correct arguments and updates cache on success", async () => {
+            vi.mocked(api.replaceCustomGraphDiagram).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+            // Seed the cache
+            vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
+                data: MOCK_GRAPH_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+
+            const result = await store.saveGraphDiagram(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+                MOCK_DIAGRAM_BODY,
+            );
+
+            expect(result.error).toBeNull();
+            expect(api.replaceCustomGraphDiagram).toHaveBeenCalledWith({
+                path: {
+                    datasetName: WORKSPACE_A,
+                    graphURI: GRAPH_URI_1,
+                    diagramId: DIAGRAM_ID,
+                },
+                body: MOCK_DIAGRAM_BODY,
+            });
+
+            const state = get(store);
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
+
+            expect(toastStore.success).toHaveBeenCalledWith(
+                "Diagram saved",
+                "Graph diagram was saved.",
+            );
+        });
+
+        test("returns error and does not invalidate cache on API failure", async () => {
+            const error = new Error("Save failed");
+            vi.mocked(api.replaceCustomGraphDiagram).mockResolvedValue({
+                data: undefined,
+                error,
+            });
+            vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
+                data: MOCK_GRAPH_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+
+            const result = await store.saveGraphDiagram(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+                MOCK_DIAGRAM_BODY,
+            );
+
+            expect(result.error).toBe(error);
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Save failed",
+                "Could not save graph diagram.",
+            );
+
+            const state = get(store);
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("deleteWorkspaceDiagram", () => {
+        test("calls API with correct arguments and updates workspace cache on success", async () => {
+            vi.mocked(api.deleteCustomDatasetDiagram).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+            vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
+                data: MOCK_WORKSPACE_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+
+            const result = await store.deleteWorkspaceDiagram(
+                WORKSPACE_A,
+                DIAGRAM_ID,
+            );
+
+            expect(result.error).toBeNull();
+            expect(api.deleteCustomDatasetDiagram).toHaveBeenCalledWith({
+                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
+            });
+
+            const state = get(store);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(true);
+        });
+
+        test("returns error and preserves cache on API failure", async () => {
+            const error = new Error("Delete failed");
+            vi.mocked(api.deleteCustomDatasetDiagram).mockResolvedValue({
+                data: undefined,
+                error,
+            });
+            vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
+                data: MOCK_WORKSPACE_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+
+            const result = await store.deleteWorkspaceDiagram(
+                WORKSPACE_A,
+                DIAGRAM_ID,
+            );
+
+            expect(result.error).toBe(error);
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Delete failed",
+                "Could not delete workspace diagram.",
+            );
+
+            const state = get(store);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(true);
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("deleteGraphDiagram", () => {
+        test("calls API with correct arguments and updates graph cache on success", async () => {
+            vi.mocked(api.deleteCustomGraphDiagram).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+            vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
+                data: MOCK_GRAPH_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+
+            const result = await store.deleteGraphDiagram(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+            );
+
+            expect(result.error).toBeNull();
+            expect(api.deleteCustomGraphDiagram).toHaveBeenCalledWith({
+                path: {
+                    datasetName: WORKSPACE_A,
+                    graphURI: GRAPH_URI_1,
+                    diagramId: DIAGRAM_ID,
+                },
+            });
+
+            const state = get(store);
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
+
+            expect(toastStore.success).toHaveBeenCalledWith(
+                "Diagram deleted",
+                "Graph diagram was removed.",
+            );
+        });
+
+        test("returns error and preserves cache on API failure", async () => {
+            const error = new Error("Delete failed");
+            vi.mocked(api.deleteCustomGraphDiagram).mockResolvedValue({
+                data: undefined,
+                error,
+            });
+            vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
+                data: MOCK_GRAPH_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+
+            const result = await store.deleteGraphDiagram(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+            );
+
+            expect(result.error).toBe(error);
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Delete failed",
+                "Could not delete graph diagram.",
+            );
+
+            const state = get(store);
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("addClassesToWorkspaceDiagram", () => {
+        const CLASSES = ["ClassA", "ClassB"];
+
+        test("calls API with correct arguments and invalidates workspace cache on success", async () => {
+            vi.mocked(api.addToCustomDatasetDiagram).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+            vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
+                data: MOCK_WORKSPACE_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+
+            const result = await store.addClassesToWorkspaceDiagram(
+                WORKSPACE_A,
+                DIAGRAM_ID,
+                CLASSES,
+            );
+
+            expect(result.error).toBeNull();
+            expect(api.addToCustomDatasetDiagram).toHaveBeenCalledWith({
+                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
+                body: CLASSES,
+            });
+
+            const state = get(store);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(false);
+        });
+
+        test("does not show a success toast on success", async () => {
+            vi.mocked(api.addToCustomDatasetDiagram).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+
+            await store.addClassesToWorkspaceDiagram(
+                WORKSPACE_A,
+                DIAGRAM_ID,
+                CLASSES,
+            );
+
+            expect(toastStore.success).not.toHaveBeenCalled();
+        });
+
+        test("returns error and preserves cache on API failure", async () => {
+            const error = new Error("Add failed");
+            vi.mocked(api.addToCustomDatasetDiagram).mockResolvedValue({
+                data: undefined,
+                error,
+            });
+            vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
+                data: MOCK_WORKSPACE_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+
+            const result = await store.addClassesToWorkspaceDiagram(
+                WORKSPACE_A,
+                DIAGRAM_ID,
+                CLASSES,
+            );
+
+            expect(result.error).toBe(error);
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Update failed",
+                "Could not add classes to diagram.",
+            );
+
+            const state = get(store);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(true);
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("addClassesToGraphDiagram", () => {
+        const CLASSES = ["ClassA", "ClassB"];
+
+        test("calls API with correct arguments and invalidates graph cache on success", async () => {
+            vi.mocked(api.addToCustomGraphDiagram).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+            vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
+                data: MOCK_GRAPH_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+
+            const result = await store.addClassesToGraphDiagram(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+                CLASSES,
+            );
+
+            expect(result.error).toBeNull();
+            expect(api.addToCustomGraphDiagram).toHaveBeenCalledWith({
+                path: {
+                    datasetName: WORKSPACE_A,
+                    graphURI: GRAPH_URI_1,
+                    diagramId: DIAGRAM_ID,
+                },
+                body: CLASSES,
+            });
+
+            const state = get(store);
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
+                false,
+            );
+        });
+
+        test("does not show a success toast on success", async () => {
+            vi.mocked(api.addToCustomGraphDiagram).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+
+            await store.addClassesToGraphDiagram(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+                CLASSES,
+            );
+
+            expect(toastStore.success).not.toHaveBeenCalled();
+        });
+
+        test("returns error and preserves cache on API failure", async () => {
+            const error = new Error("Add failed");
+            vi.mocked(api.addToCustomGraphDiagram).mockResolvedValue({
+                data: undefined,
+                error,
+            });
+            vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
+                data: MOCK_GRAPH_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+
+            const result = await store.addClassesToGraphDiagram(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+                CLASSES,
+            );
+
+            expect(result.error).toBe(error);
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Update failed",
+                "Could not add classes to diagram.",
+            );
+
+            const state = get(store);
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("removeClassesFromWorkspaceDiagram", () => {
+        const CLASS_IDS = ["ClassA", "ClassB"];
+
+        test("calls API with correct arguments and invalidates workspace cache on success", async () => {
+            vi.mocked(api.removeFromCustomDatasetDiagram).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+            vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
+                data: MOCK_WORKSPACE_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+
+            const result = await store.removeClassesFromWorkspaceDiagram(
+                WORKSPACE_A,
+                DIAGRAM_ID,
+                CLASS_IDS,
+            );
+
+            expect(result.error).toBeNull();
+            expect(api.removeFromCustomDatasetDiagram).toHaveBeenCalledWith({
+                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
+                body: CLASS_IDS,
+            });
+
+            const state = get(store);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(false);
+        });
+
+        test("returns error and preserves cache on API failure", async () => {
+            const error = new Error("Remove failed");
+            vi.mocked(api.removeFromCustomDatasetDiagram).mockResolvedValue({
+                data: undefined,
+                error,
+            });
+            vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
+                data: MOCK_WORKSPACE_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+
+            const result = await store.removeClassesFromWorkspaceDiagram(
+                WORKSPACE_A,
+                DIAGRAM_ID,
+                CLASS_IDS,
+            );
+
+            expect(result.error).toBe(error);
+
+            const state = get(store);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(true);
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("removeClassesFromGraphDiagram", () => {
+        const CLASSES = ["ClassA"];
+
+        test("calls API with correct arguments (single classId) and invalidates graph cache on success", async () => {
+            vi.mocked(api.removeFromDiagram).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+            vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
+                data: MOCK_GRAPH_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+
+            const result = await store.removeClassesFromGraphDiagram(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+                CLASSES,
+            );
+
+            expect(result.error).toBeNull();
+            expect(api.removeFromDiagram).toHaveBeenCalledWith({
+                path: {
+                    datasetName: WORKSPACE_A,
+                    graphURI: GRAPH_URI_1,
+                    diagramId: DIAGRAM_ID,
+                },
+                body: CLASSES,
+            });
+
+            const state = get(store);
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
+                false,
+            );
+        });
+
+        test("returns error and preserves cache on API failure", async () => {
+            const error = new Error("Remove failed");
+            vi.mocked(api.removeFromDiagram).mockResolvedValue({
+                data: undefined,
+                error,
+            });
+            vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
+                data: MOCK_GRAPH_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+
+            const result = await store.removeClassesFromGraphDiagram(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+                CLASSES,
+            );
+
+            expect(result.error).toBe(error);
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Update failed",
+                "Could not remove class from diagram.",
+            );
+
+            const state = get(store);
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("invalidateWorkspace", () => {
+        test("removes the workspace list cache for the given workspace", async () => {
+            vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
+                data: MOCK_WORKSPACE_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+
+            store.invalidateWorkspace(WORKSPACE_A);
+
+            const state = get(store);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(false);
+        });
+
+        test("also removes all graph list cache entries belonging to that workspace", async () => {
+            vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
+                data: MOCK_GRAPH_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_2);
+
+            store.invalidateWorkspace(WORKSPACE_A);
+
+            const state = get(store);
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
+                false,
+            );
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_2}`)).toBe(
+                false,
+            );
+        });
+
+        test("does not affect other workspaces or their graph lists", async () => {
+            vi.mocked(api.getCustomDatasetDiagramList)
+                .mockResolvedValueOnce({
+                    data: MOCK_WORKSPACE_DIAGRAMS,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_WORKSPACE_DIAGRAMS,
+                    error: undefined,
+                });
+            vi.mocked(api.getCustomGraphDiagramList)
+                .mockResolvedValueOnce({
+                    data: MOCK_GRAPH_DIAGRAMS,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_GRAPH_DIAGRAMS,
+                    error: undefined,
+                });
+
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+            await store.getWorkspaceDiagrams(WORKSPACE_B);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_B, GRAPH_URI_1);
+
+            store.invalidateWorkspace(WORKSPACE_A);
+
+            const state = get(store);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(false);
+            expect(state.workspaceLists.has(WORKSPACE_B)).toBe(true);
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
+                false,
+            );
+            expect(state.graphLists.has(`${WORKSPACE_B}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
+        });
+
+        test("does not incorrectly match a workspace whose name is a prefix of another", async () => {
+            // e.g. invalidating "data" should not clear "workspaceA"
+            const SHORT_WORKSPACE = "data";
+            vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
+                data: MOCK_GRAPH_DIAGRAMS,
+                error: undefined,
+            });
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1); // key: "workspaceA::..."
+
+            store.invalidateWorkspace(SHORT_WORKSPACE);
+
+            const state = get(store);
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("invalidateGraph", () => {
+        test("removes only the specific graph list entry", async () => {
+            vi.mocked(api.getCustomGraphDiagramList)
+                .mockResolvedValueOnce({
+                    data: MOCK_GRAPH_DIAGRAMS,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_GRAPH_DIAGRAMS,
+                    error: undefined,
+                });
+
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_2);
+
+            store.invalidateGraph(WORKSPACE_A, GRAPH_URI_1);
+
+            const state = get(store);
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
+                false,
+            );
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_2}`)).toBe(
+                true,
+            );
+        });
+
+        test("does not affect the workspace list cache", async () => {
+            vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
+                data: MOCK_WORKSPACE_DIAGRAMS,
+                error: undefined,
+            });
+            vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
+                data: MOCK_GRAPH_DIAGRAMS,
+                error: undefined,
+            });
+
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+
+            store.invalidateGraph(WORKSPACE_A, GRAPH_URI_1);
+
+            const state = get(store);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(true);
+        });
+    });
+});

@@ -20,17 +20,17 @@
     import { onMount } from "svelte";
     import { Fa } from "svelte-fa";
 
-    import { getXSDPrimitives } from "$lib/api/apiGlobalUtils.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import ComboBoxEditControl from "$lib/components/ComboBoxEditControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
+    import { getXsdPrimitives } from "$lib/stores/xsdDatatypesStore.ts";
 
     let { entries, entry, readonly, namespaces } = $props();
 
     let datatypes = $state([]);
     onMount(async () => {
-        const xsdPrimitives = await getXSDPrimitives();
+        const xsdPrimitives = await getXsdPrimitives();
         const xsdDatatypes = [];
         xsdPrimitives.forEach(xsdDatatype => {
             if (xsdDatatype) {

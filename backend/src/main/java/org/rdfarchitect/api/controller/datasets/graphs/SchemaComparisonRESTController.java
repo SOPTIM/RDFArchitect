@@ -58,7 +58,7 @@ public class SchemaComparisonRESTController {
     @Operation(
             summary = "compare schemas",
             description = "Compare a given graph with the specified graph from the dataset",
-            tags = {"graph"},
+            tags = {"comparison"},
             responses = {
                 @ApiResponse(
                         responseCode = "200",
@@ -113,7 +113,7 @@ public class SchemaComparisonRESTController {
     @Operation(
             summary = "compare schemas",
             description = "Compare two graphs stored in the database",
-            tags = {"graph"},
+            tags = {"comparison"},
             responses = {
                 @ApiResponse(
                         responseCode = "200",
@@ -129,7 +129,7 @@ public class SchemaComparisonRESTController {
                                                                                         .class))))
             })
     @GetMapping()
-    public List<TriplePackageChange> compareDatasetSchemas(
+    public List<TriplePackageChange> compareStoredSchemas(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

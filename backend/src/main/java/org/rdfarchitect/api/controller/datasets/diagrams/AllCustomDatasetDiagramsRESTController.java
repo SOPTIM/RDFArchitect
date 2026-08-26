@@ -17,11 +17,16 @@
 
 package org.rdfarchitect.api.controller.datasets.diagrams;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,8 +49,26 @@ public class AllCustomDatasetDiagramsRESTController {
 
     private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
 
+    @Operation(
+            summary = "list custom diagrams for dataset",
+            description =
+                    "Returns a list of all custom diagrams for the specified dataset. Each diagram includes its ID, name, and other relevant information.",
+            tags = {"diagram"},
+            responses =
+                    @ApiResponse(
+                            responseCode = "200",
+                            content =
+                                    @Content(
+                                            mediaType = "application/json",
+                                            array =
+                                                    @ArraySchema(
+                                                            schema =
+                                                                    @Schema(
+                                                                            implementation =
+                                                                                    CustomDiagramDTO
+                                                                                            .class)))))
     @GetMapping
-    public List<CustomDiagram> getCustomDiagramList(
+    public List<CustomDiagramDTO> getCustomDatasetDiagramList(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

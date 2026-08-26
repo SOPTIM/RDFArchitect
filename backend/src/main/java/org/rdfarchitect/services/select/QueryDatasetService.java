@@ -28,6 +28,7 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFFormat;
+import org.rdfarchitect.api.dto.DatasetDTO;
 import org.rdfarchitect.api.dto.GraphDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -139,7 +140,18 @@ public class QueryDatasetService
     }
 
     @Override
-    public List<String> listDatasets() {
-        return databasePort.listDatasets();
+    public List<DatasetDTO> listDatasets() {
+        var result = new ArrayList<DatasetDTO>();
+        for (var datasetName : databasePort.listDatasets()) {
+            var readonly = databasePort.isReadOnly(datasetName);
+            var prefixMapping = databasePort.getPrefixMapping(datasetName);
+
+            var prefixPairs = new ArrayList<CIMPrefixPair>();
+            for (var prefix : prefixMapping.getNsPrefixMap().entrySet()) {
+                prefixPairs.add(new CIMPrefixPair(prefix.getKey() + ":", prefix.getValue()));
+            }
+            result.add(new DatasetDTO(datasetName, readonly, prefixPairs));
+        }
+        return result;
     }
 }

@@ -26,9 +26,10 @@
     import { ReactiveEnumEntry } from "$lib/models/reactive/models/reactive-enum-entry.svelte.js";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/classStore.ts";
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
-    import { saveApiEnumEntryToBackend } from "./save-enum-entry-to-backend.js";
     import { resolveSaveTarget } from "../resolve-save-target.js";
 
     let {
@@ -41,7 +42,7 @@
     let classEditorContext = $state();
 
     let isNewEnumEntry = $state(true);
-    let readonly = $derived(classEditorContext?.readonly);
+    let readonly = $derived(classEditorContext?.readOnly);
 
     function onOpen() {
         classEditorContext = getContext("classEditor");
@@ -73,18 +74,29 @@
             enumEntry,
             domainIri,
         );
-        const result = await saveApiEnumEntryToBackend(
-            classEditorContext.workspaceName,
-            classEditorContext.graphUri,
-            classUuid,
-            apiEnumEntry,
-            isNewEnumEntry,
-        );
-        if (!result.ok) {
-            return;
-        }
 
-        enumEntry.uuid.value = result.enumEntryUUID;
+        const { error, data } = isNewEnumEntry
+            ? await classStore.addEnumEntry(
+                  classEditorContext.workspaceName,
+                  classEditorContext.graphUri,
+                  classUuid,
+                  apiEnumEntry,
+                  isNewEnumEntry,
+              )
+            : await classStore.replaceEnumEntry(
+                  classEditorContext.workspaceName,
+                  classEditorContext.graphUri,
+                  classUuid,
+                  apiEnumEntry,
+                  isNewEnumEntry,
+              );
+
+        if (error) return;
+
+        editorState.selectedClass.trigger();
+        editorState.selectedDiagram.trigger();
+
+        enumEntry.uuid.value = data;
         enumEntry.save();
         if (isNewEnumEntry) {
             enumEntries.append(enumEntry);

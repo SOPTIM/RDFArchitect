@@ -34,14 +34,14 @@
     } = $props();
 
     const classEditorContext = getContext("classEditor");
-    let readonly = $derived(classEditorContext.readonly);
+    let readonly = $derived(classEditorContext.readOnly);
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
     });
 
-    onMount(() => (readonly = classEditorContext.readonly));
+    onMount(() => (readonly = classEditorContext.readOnly));
 </script>
 
 <tr>

@@ -17,9 +17,9 @@
 
 package org.rdfarchitect.services.diagrams;
 
+import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
 
 import java.util.List;
@@ -32,7 +32,7 @@ public interface GetCustomDiagramsUseCase {
      * @param graphIdentifier The graph identifier.
      * @return The custom diagrams for the graph.
      */
-    List<CustomDiagram> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier);
+    List<CustomDiagramDTO> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier);
 
     /**
      * Lists the custom diagrams belonging to a single dataset.
@@ -40,7 +40,7 @@ public interface GetCustomDiagramsUseCase {
      * @param datasetName The name of the dataset.
      * @return The custom diagrams for the dataset.
      */
-    List<CustomDiagram> getCustomDiagramsForDataset(String datasetName);
+    List<CustomDiagramDTO> getCustomDiagramsForDataset(String datasetName);
 
     /**
      * Returns the cross profile diagram for the dataset.

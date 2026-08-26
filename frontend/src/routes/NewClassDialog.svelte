@@ -19,16 +19,17 @@
     import { untrack } from "svelte";
     import { v4 as uuidv4 } from "uuid";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
     import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+    import { classStore } from "$lib/stores/classStore.ts";
+    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
+    import { packageStore } from "$lib/stores/packageStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     import {
@@ -56,7 +57,6 @@
         classURINamespace: "classURINamespaceNewClass" + uuid,
         className: "classNameNewClass" + uuid,
     };
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const DEFAULT_PACKAGE = Object.freeze({
         uuid: null,
@@ -96,7 +96,7 @@
     });
 
     async function onWorkspaceOrGraphChanged(ds, graph) {
-        namespaces = await fetchNamespaces(ds);
+        namespaces = await workspaceStore.getNamespaces(ds);
         if (classURINamespace) classURINamespace.value = null;
         classPackage = null;
 
@@ -143,14 +143,10 @@
             isInvalidClassLabel(label, classURINamespace, compareClasses),
         );
 
-        if (!workspaceName) {
+        if (!workspaceName || !graphURI) {
             return;
         }
-        namespaces = await fetchNamespaces(workspaceName);
-
-        if (!graphURI) {
-            return;
-        }
+        namespaces = await workspaceStore.getNamespaces(workspaceName);
 
         await getPackages(workspaceName, graphURI);
         compareClasses = await getClasses(workspaceName, graphURI, false);
@@ -185,25 +181,17 @@
         classPackage = null;
     }
 
-    async function fetchNamespaces(workspaceName) {
-        if (!workspaceName) {
-            return [];
-        }
-        const res = await bec.getNamespaces(workspaceName);
-        return await res.json();
-    }
-
     async function getPackages(workspaceName, graphURI) {
         if (!workspaceName || !graphURI) {
             packages = [];
             return;
         }
-        const res = await bec.getPackages(workspaceName, graphURI);
-        const packagesJSON = await res.json();
-        packages = [
-            ...packagesJSON.internalPackageList,
-            ...packagesJSON.externalPackageList,
-        ];
+
+        const result = (await packageStore.getPackages(
+            workspaceName,
+            graphURI,
+        )) ?? { internal: [], external: [] };
+        packages = [...result.internal, ...result.external];
     }
 
     function snapshotFormState() {
@@ -227,7 +215,11 @@
             requestBody.classLayoutPosition = classLayoutPosition;
         }
 
-        return bec.postClass(form.workspaceName, form.graphURI, requestBody);
+        return classStore.addClass(
+            form.workspaceName,
+            form.graphURI,
+            requestBody,
+        );
     }
 
     function updateEditorSelection(form, classUUID) {
@@ -246,7 +238,6 @@
     }
 
     function handleClassCreated(form, classUUID) {
-        console.log("successfully added class");
         onClassCreated({
             classUUID,
             workspaceName: form.workspaceName,
@@ -255,37 +246,17 @@
             className: form.className,
         });
         updateEditorSelection(form, classUUID);
-        toastStore.success("Class created", `"${form.className}" was added.`);
-    }
-
-    function triggerEditorRefresh() {
-        forceReloadTrigger.trigger();
+        crossProfileStore.invalidateWorkspace(form.workspaceName);
     }
 
     async function newClass() {
         const form = snapshotFormState();
 
-        try {
-            const res = await postNewClass(form);
-            if (res.ok) {
-                const classUUID = await res.text();
-                handleClassCreated(form, classUUID);
-            } else {
-                console.log("failed to insert data");
-                toastStore.error(
-                    "Create failed",
-                    `Could not create class "${form.className}".`,
-                );
-            }
-        } catch (e) {
-            console.log("failed to add class:", e);
-            toastStore.error(
-                "Create failed",
-                "An unexpected error occurred while creating the class.",
-            );
-        } finally {
-            triggerEditorRefresh();
+        const { data, error } = await postNewClass(form);
+        if (!error) {
+            handleClassCreated(form, data);
         }
+        forceReloadTrigger.trigger();
     }
 </script>
 

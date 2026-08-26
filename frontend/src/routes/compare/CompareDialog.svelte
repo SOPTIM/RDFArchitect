@@ -18,11 +18,14 @@
     import { faRightLeft } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
-    import { BackendConnection } from "$lib/api/backend.js";
+    import {
+        compareSchemas,
+        compareSchemasFromFiles,
+        compareStoredSchemas,
+    } from "$lib/api/generated/index.ts";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import {
         compareState,
@@ -37,8 +40,6 @@
         lockedWorkspaceName,
         lockedGraphUri,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const CompareMode = Object.freeze({
         STORED_TO_STORED: 0,
@@ -189,28 +190,34 @@
         let invert = false;
         switch (compareMode) {
             case CompareMode.FILE_TO_FILE:
-                response = await bec.compareSchemasFromFiles(fileA, fileB);
+                response = await compareSchemasFromFiles({
+                    body: { fileA, fileB },
+                });
                 break;
             case CompareMode.FILE_TO_STORED:
-                response = await bec.compareSchemas(workspaceB, graphB, fileA);
+                response = await compareSchemas({
+                    path: { datasetName: workspaceB, graphURI: graphB },
+                    body: fileA,
+                });
                 break;
             case CompareMode.STORED_TO_FILE:
-                response = await bec.compareSchemas(workspaceA, graphA, fileA);
+                response = await compareSchemas({
+                    path: { datasetName: workspaceA, graphURI: graphA },
+                    body: fileB,
+                });
                 invert = true;
                 break;
             case CompareMode.STORED_TO_STORED:
-                response = await bec.compareWorkspaceSchemas(
-                    workspaceA,
-                    graphA,
-                    workspaceB,
-                    graphB,
-                );
+                response = await compareStoredSchemas({
+                    path: { datasetName: workspaceA, graphURI: graphA },
+                    query: { otherDataset: workspaceB, otherGraph: graphB },
+                });
                 break;
             default:
                 throw new Error(`Unknown compareMode: ${compareMode}`);
         }
 
-        let changeList = await response.json();
+        let changeList = response.data;
         if (invert) {
             changeList = invertChangeList(changeList);
         }

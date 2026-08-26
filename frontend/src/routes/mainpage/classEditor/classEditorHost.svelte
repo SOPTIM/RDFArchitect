@@ -26,7 +26,6 @@
     import { onMount, onDestroy } from "svelte";
     import { Fa } from "svelte-fa";
 
-    import { getCrossProfileDiagram } from "$lib/api/apiWorkspaceUtils.js";
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import {
@@ -40,6 +39,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
 
     import ClassEditor from "./classEditor.svelte";
 
@@ -100,65 +100,64 @@
 
         const cancellation = { cancelled: false };
         resolving = true;
-        getCrossProfileDiagram(workspaceName)
-            .then(diagram => {
-                if (cancellation.cancelled) return;
-                const classes = diagram?.classes ?? [];
 
-                let found = savedSourceUuid
-                    ? classes.find(c =>
-                          c.sources?.some(s => s.classUUID === savedSourceUuid),
+        (async () => {
+            const diagram = await crossProfileStore.getDiagram(workspaceName);
+
+            if (cancellation.cancelled) return;
+            const classes = diagram?.classes ?? [];
+
+            let found = savedSourceUuid
+                ? classes.find(c =>
+                      c.sources?.some(s => s.classUUID === savedSourceUuid),
+                  )
+                : null;
+
+            if (!found) {
+                found = classes.find(c => c.uuid === classUuid) ?? null;
+            }
+
+            if (!found) {
+                found =
+                    classes.find(c =>
+                        c.sources?.some(s => s.classUUID === classUuid),
+                    ) ?? null;
+            }
+
+            mergedClass = found;
+
+            if (found) {
+                const originGraph =
+                    graphUri ?? editorState.mergedViewOriginGraph.getValue();
+                if (!graphUri) {
+                    editorState.mergedViewOriginGraph.updateValue(null);
+                }
+                const originSource = originGraph
+                    ? found.sources?.find(
+                          s =>
+                              s.graph?.uri &&
+                              new URI(s.graph.uri).toString() ===
+                                  String(originGraph),
                       )
                     : null;
+                const hasSaved = found.sources?.some(
+                    s => s.classUUID === savedSourceUuid,
+                );
+                activeSourceUuid = hasSaved
+                    ? savedSourceUuid
+                    : (originSource?.classUUID ??
+                      found.sources?.[0]?.classUUID ??
+                      null);
+            }
 
-                if (!found) {
-                    found = classes.find(c => c.uuid === classUuid) ?? null;
-                }
-
-                if (!found) {
-                    found =
-                        classes.find(c =>
-                            c.sources?.some(s => s.classUUID === classUuid),
-                        ) ?? null;
-                }
-
-                mergedClass = found;
-
-                if (found) {
-                    const originGraph =
-                        graphUri ??
-                        editorState.mergedViewOriginGraph.getValue();
-                    if (!graphUri) {
-                        editorState.mergedViewOriginGraph.updateValue(null);
-                    }
-                    const originSource = originGraph
-                        ? found.sources?.find(
-                              s =>
-                                  s.graph?.uri &&
-                                  new URI(s.graph.uri).toString() ===
-                                      String(originGraph),
-                          )
-                        : null;
-                    const hasSaved = found.sources?.some(
-                        s => s.classUUID === savedSourceUuid,
-                    );
-                    activeSourceUuid = hasSaved
-                        ? savedSourceUuid
-                        : (originSource?.classUUID ??
-                          found.sources?.[0]?.classUUID ??
-                          null);
-                }
-
-                if (found && found.uuid !== classUuid && !graphUri) {
-                    editorState.selectedClass.updateValue({
-                        type: ClassType.MERGED_CLASS,
-                        id: found.uuid,
-                    });
-                }
-            })
-            .finally(() => {
-                if (!cancellation.cancelled) resolving = false;
-            });
+            if (found && found.uuid !== classUuid && !graphUri) {
+                editorState.selectedClass.updateValue({
+                    type: ClassType.MERGED_CLASS,
+                    id: found.uuid,
+                });
+            }
+        })();
+        if (!cancellation.cancelled) resolving = false;
 
         return () => {
             cancellation.cancelled = true;

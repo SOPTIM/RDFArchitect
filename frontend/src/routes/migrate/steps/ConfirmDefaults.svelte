@@ -18,7 +18,10 @@
 <script>
     import { onMount } from "svelte";
 
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import {
+        getDefaultValuesViews,
+        submitDefaultValues,
+    } from "$lib/api/generated/index.ts";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
     let {
@@ -33,12 +36,8 @@
     let currentSubstep = $derived(substeps[currentSubstepIndex]);
 
     onMount(() => {
-        fetch(PUBLIC_BACKEND_URL + "/migrations/default-values", {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        })
-            .then(res => (res.ok ? res.json() : Promise.reject("Failed")))
+        getDefaultValuesViews()
+            .then(res => (res.error ? Promise.reject("Failed") : res.data))
             .then(data => {
                 classes = data;
             })
@@ -50,16 +49,9 @@
 
     export async function onNext() {
         try {
-            const res = await fetch(
-                PUBLIC_BACKEND_URL + "/migrations/default-values",
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify(classes),
-                },
-            );
-            if (!res.ok) {
+            const { error } = submitDefaultValues({ body: classes });
+
+            if (error) {
                 toastStore.error(
                     "Save failed",
                     "Could not save default values for the migration.",

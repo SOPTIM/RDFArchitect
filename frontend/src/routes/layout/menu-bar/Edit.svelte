@@ -17,34 +17,24 @@
 
 <script>
     import {
+        faCopy,
         faCube,
         faDiagramProject,
-        faLock,
-        faPlus,
+        faEye,
         faFolderPlus,
+        faLock,
+        faPaste,
         faPen,
         faPenToSquare,
+        faPlus,
         faRotateLeft,
         faRotateRight,
         faTags,
         faTrash,
-        faEye,
-        faPaste,
-        faCopy,
     } from "@fortawesome/free-solid-svg-icons";
     import { onDestroy, onMount } from "svelte";
 
-    import {
-        enableEditing,
-        disableEditing,
-    } from "$lib/actions/editingActions.js";
-    import {
-        undo as doUndo,
-        redo as doRedo,
-    } from "$lib/actions/versionControlActions.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import { Menubar } from "$lib/components/bitsui/menubar";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { PASTE_VARIANTS } from "$lib/pasteOptions.js";
     import {
@@ -54,6 +44,10 @@
         multiSelectState,
         SelectionLevel,
     } from "$lib/sharedState.svelte.js";
+    import { ontologyStore } from "$lib/stores/ontologyStore.ts";
+    import { packageStore } from "$lib/stores/packageStore.ts";
+    import { versionControlStore } from "$lib/stores/versionControlStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
@@ -71,8 +65,6 @@
     import WorkspaceDeleteDialog from "../../WorkspaceDeleteDialog.svelte";
 
     let { canUndo, canRedo, isWorkspaceReadOnly, reload = () => {} } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const shortcutsUnregister = [];
 
@@ -274,21 +266,24 @@
         if (!hasGraphSelected) {
             return null;
         }
-        const res = await bec.getOntology(selectedWorkspace, selectedGraph);
-        let content = await res.text();
-        if (!content) {
-            return null;
-        }
-        return JSON.parse(content);
+
+        return await ontologyStore.getOntologyForGraph(
+            selectedWorkspace,
+            selectedGraph,
+        );
     }
 
     async function requestEnableEditing() {
         if (!selectedWorkspace || !isWorkspaceReadOnly) {
             return;
         }
-        if (!(await enableEditing(selectedWorkspace))) {
-            return;
-        }
+
+        const { error } = await workspaceStore.updateReadonly(
+            selectedWorkspace,
+            false,
+        );
+        if (error) return;
+
         await reload();
         forceReloadTrigger.trigger();
     }
@@ -297,9 +292,13 @@
         if (!selectedWorkspace || isWorkspaceReadOnly) {
             return;
         }
-        if (!(await disableEditing(selectedWorkspace))) {
-            return;
-        }
+
+        const { error } = await workspaceStore.updateReadonly(
+            selectedWorkspace,
+            true,
+        );
+        if (error) return;
+
         await reload();
         editorState.selectedDiagram.trigger();
     }
@@ -329,29 +328,26 @@
         if (!hasGraphSelected) {
             return [];
         }
-        try {
-            const response = await bec.getPackages(
-                selectedWorkspace,
-                selectedGraph,
-            );
-            if (!response.ok) {
-                throw new Error("Failed to fetch packages");
-            }
-            const packagesJSON = await response.json();
-            return [
-                ...(packagesJSON.internalPackageList ?? []).map(p => ({
-                    ...p,
-                    external: false,
-                })),
-                ...(packagesJSON.externalPackageList ?? []).map(p => ({
-                    ...p,
-                    external: true,
-                })),
-            ];
-        } catch (error) {
-            console.error("Failed to fetch packages", error);
+
+        const packageData = await packageStore.getPackages(
+            selectedWorkspace,
+            selectedGraph,
+        );
+
+        if (!packageData) {
             return [];
         }
+
+        return [
+            ...(packageData?.internal ?? []).map(p => ({
+                ...p,
+                external: false,
+            })),
+            ...(packageData?.external ?? []).map(p => ({
+                ...p,
+                external: true,
+            })),
+        ];
     }
 
     async function refreshSelectedPackageDetails(packages) {
@@ -389,10 +385,23 @@
     }
 
     async function undo() {
-        if (await doUndo()) reload();
+        const { error } = await versionControlStore.undo(
+            editorState.selectedDataset.getValue(),
+            editorState.selectedGraph.getValue(),
+        );
+        if (!error) {
+            reload();
+        }
     }
+
     async function redo() {
-        if (await doRedo()) reload();
+        const { error } = await versionControlStore.redo(
+            editorState.selectedDataset.getValue(),
+            editorState.selectedGraph.getValue(),
+        );
+        if (!error) {
+            reload();
+        }
     }
 
     function copyClass() {

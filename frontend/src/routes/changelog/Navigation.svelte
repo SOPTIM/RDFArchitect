@@ -20,17 +20,16 @@
         faDiagramProject,
     } from "@fortawesome/free-solid-svg-icons";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
+    import { graphStore } from "$lib/stores/graphStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import { getUri } from "../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     let workspaceList = $state([]);
     let selectedWorkspaceName = $derived(
         editorState.selectedWorkspace.getValue(),
@@ -43,9 +42,10 @@
     });
 
     async function fetchNavigationObject() {
-        const workspaceNames = await getWorkspaceNames();
         const newWorkspaceList = [];
-        for (const workspaceName of workspaceNames) {
+        const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
+        for (const workspace of workspaces) {
+            const workspaceName = workspace.label;
             let showWorkspaceContents = workspaceName === selectedWorkspaceName;
             showWorkspaceContents |= workspaceList.find(
                 workspaceObject => workspaceObject.label === workspaceName,
@@ -55,20 +55,10 @@
                 graphs: [],
                 showContents: showWorkspaceContents,
             });
-            const graphs = await getGraphs(workspaceName);
+            const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
             graphs.forEach(graph => newWorkspaceList.at(-1).graphs.push(graph));
         }
         workspaceList = newWorkspaceList;
-    }
-
-    async function getWorkspaceNames() {
-        const res = await bec.getWorkspaceNames();
-        return await res.json();
-    }
-
-    async function getGraphs(workspaceName) {
-        const res = await bec.getGraphs(workspaceName);
-        return await res.json();
     }
 </script>
 

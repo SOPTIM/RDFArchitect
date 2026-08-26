@@ -21,7 +21,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
 
 /** Graph list as the backend returns it: the URI next to its dcat:keyword. */
-const GRAPHS = [
+const GRAPHS = vi.hoisted(() => [
     {
         uri: { prefix: "http://iec.ch/TC57/CIM100#", suffix: "EQ" },
         keyword: null,
@@ -30,7 +30,7 @@ const GRAPHS = [
         uri: { prefix: "http://iec.ch/TC57/CIM100#", suffix: "TP" },
         keyword: "Topology",
     },
-];
+]);
 
 let mounted = null;
 let target = null;
@@ -45,7 +45,7 @@ async function render(props) {
     document.body.appendChild(target);
     mounted = mount(WorkspaceAndGraphSelection, { target, props });
     await vi.waitFor(() =>
-        expect(graphSelect(target).options.length).toBe(GRAPHS.length + 1),
+        expect(graphSelect(target).options).toHaveLength(GRAPHS.length + 1),
     );
     return target;
 }
@@ -55,22 +55,17 @@ function graphOptions(container) {
     return [...graphSelect(container).options].slice(1);
 }
 
-vi.mock("$lib/config/runtime", () => ({
-    PUBLIC_BACKEND_URL: "http://localhost/api",
+vi.mock("$lib/stores/graphStore.ts", () => ({
+    graphStore: {
+        getGraphs: vi.fn().mockResolvedValue(GRAPHS),
+    },
 }));
 
-vi.mock("$lib/api/apiWorkspaceUtils.js", () => ({
-    isReadOnly: async () => false,
-}));
-
-vi.mock("$lib/api/backend.js", () => ({
-    BackendConnection: class {
-        async getWorkspaceNames() {
-            return { json: async () => ["cgmes"] };
-        }
-        async getGraphs() {
-            return { json: async () => GRAPHS };
-        }
+vi.mock("$lib/stores/workspaceStore.ts", () => ({
+    workspaceStore: {
+        getWorkspaces: vi
+            .fn()
+            .mockResolvedValue([{ label: "cgmes", readOnly: false }]),
     },
 }));
 

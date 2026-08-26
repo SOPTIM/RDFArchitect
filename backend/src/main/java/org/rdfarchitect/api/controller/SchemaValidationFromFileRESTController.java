@@ -68,7 +68,7 @@ public class SchemaValidationFromFileRESTController {
                                                                 SchemaValidationReportDTO.class)))
             })
     @PostMapping
-    public SchemaValidationReportDTO validateSchema(
+    public SchemaValidationReportDTO validateFile(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

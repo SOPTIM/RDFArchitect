@@ -20,6 +20,7 @@ package org.rdfarchitect.services.diagrams;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
+import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.ClassSourceDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramColorDataDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramDTO;
@@ -53,22 +54,36 @@ public class CustomDiagramService
         implements GetCustomDiagramsUseCase,
                 ReplaceCustomDiagramUseCase,
                 DeleteCustomDiagramUseCase,
-                RemoveFromDiagramUseCase,
+                RemoveFromCustomDiagramUseCase,
                 CrossProfileColorUseCase {
 
     private final DatabasePort databasePort;
     private final ListGraphsUseCase listGraphsUseCase;
 
     @Override
-    public List<CustomDiagram> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
+    public List<CustomDiagramDTO> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            return ctx.getCustomDiagrams().values().stream().toList();
+            return ctx.getCustomDiagrams().values().stream()
+                    .map(
+                            diagram ->
+                                    new CustomDiagramDTO(
+                                            diagram.getDiagramId(),
+                                            diagram.getName(),
+                                            diagram.getClasses()))
+                    .toList();
         }
     }
 
     @Override
-    public List<CustomDiagram> getCustomDiagramsForDataset(String datasetName) {
-        return databasePort.getDatasetDiagrams(datasetName).values().stream().toList();
+    public List<CustomDiagramDTO> getCustomDiagramsForDataset(String datasetName) {
+        return databasePort.getDatasetDiagrams(datasetName).values().stream()
+                .map(
+                        diagram ->
+                                new CustomDiagramDTO(
+                                        diagram.getDiagramId(),
+                                        diagram.getName(),
+                                        diagram.getClasses()))
+                .toList();
     }
 
     @Override
@@ -156,27 +171,33 @@ public class CustomDiagramService
     }
 
     @Override
-    public void deleteCustomDiagram(String datasetName, String diagramId) {
+    public void deleteCustomDatasetDiagram(String datasetName, String diagramId) {
         var diagrams = databasePort.getDatasetDiagrams(datasetName);
         diagrams.remove(UUID.fromString(diagramId));
     }
 
     @Override
-    public void replaceCustomDiagram(String datasetName, String diagramId, CustomDiagram diagram) {
-        if (!Objects.equals(diagramId, diagram.getDiagramId().toString())) {
+    public void replaceCustomDatasetDiagram(
+            String datasetName, String diagramId, CustomDiagramDTO diagramDTO) {
+        if (!Objects.equals(diagramId, diagramDTO.getDiagramId().toString())) {
             throw new IllegalArgumentException(
                     "Diagram ID mismatch: URL parameter '"
                             + diagramId
                             + "' does not match diagram object ID '"
-                            + diagram.getDiagramId()
+                            + diagramDTO.getDiagramId()
                             + "'");
         }
+        // dto is necessary for swagger to infer the correct type, but we need to create a new
+        // CustomDiagram object to store in the database
+        var diagram =
+                new CustomDiagram(
+                        diagramDTO.getDiagramId(), diagramDTO.getName(), diagramDTO.getClasses());
         var diagrams = databasePort.getDatasetDiagrams(datasetName);
         diagrams.put(UUID.fromString(diagramId), diagram);
     }
 
     @Override
-    public void removeFromDiagram(String datasetName, String diagramId, UUID classId) {
+    public void removeFromCustomDatasetDiagram(String datasetName, String diagramId, UUID classId) {
         var diagrams = databasePort.getDatasetDiagrams(datasetName);
         var diagram = diagrams.get(UUID.fromString(diagramId));
         if (diagram != null) {
@@ -187,7 +208,7 @@ public class CustomDiagramService
     }
 
     @Override
-    public void deleteCustomDiagram(GraphIdentifier graphIdentifier, String diagramId) {
+    public void deleteCustomGraphDiagram(GraphIdentifier graphIdentifier, String diagramId) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
             ctx.commit("deleted diagram %s".formatted(diagramId));
@@ -195,24 +216,32 @@ public class CustomDiagramService
     }
 
     @Override
-    public void replaceCustomDiagram(
-            GraphIdentifier graphIdentifier, String diagramId, CustomDiagram diagram) {
-        if (!Objects.equals(diagramId, diagram.getDiagramId().toString())) {
+    public void replaceCustomGraphDiagram(
+            GraphIdentifier graphIdentifier, String diagramId, CustomDiagramDTO diagramDTO) {
+        if (!Objects.equals(diagramId, diagramDTO.getDiagramId().toString())) {
             throw new IllegalArgumentException(
                     "Diagram ID mismatch: URL parameter '"
                             + diagramId
                             + "' does not match diagram object ID '"
-                            + diagram.getDiagramId()
+                            + diagramDTO.getDiagramId()
                             + "'");
         }
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            // dto is necessary for swagger to infer the correct type, but we need to create a new
+            // CustomDiagram object to store in the database
+            var diagram =
+                    new CustomDiagram(
+                            diagramDTO.getDiagramId(),
+                            diagramDTO.getName(),
+                            diagramDTO.getClasses());
             ctx.getCustomDiagrams().put(UUID.fromString(diagramId), diagram);
             ctx.commit("replaced diagram %s".formatted(diagramId));
         }
     }
 
     @Override
-    public void removeFromDiagram(GraphIdentifier graphIdentifier, String diagramId, UUID classId) {
+    public void removeFromCustomGraphDiagram(
+            GraphIdentifier graphIdentifier, String diagramId, UUID classId) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagram = ctx.getCustomDiagrams().get(UUID.fromString(diagramId));
             if (diagram != null) {

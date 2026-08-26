@@ -15,8 +15,7 @@
  *
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+import { previewPaste } from "$lib/api/generated/index.ts";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import {
     DEFAULT_PASTE_OPTIONS,
@@ -29,8 +28,8 @@ import {
     editorState,
     forceReloadTrigger,
 } from "$lib/sharedState.svelte.js";
-
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+import { classStore } from "$lib/stores/classStore.ts";
+import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
 
 export const PASTE_PREVIEW_FAILED = Symbol("pastePreviewFailed");
 
@@ -54,13 +53,19 @@ export async function loadPastePreview(workspaceName, graphURI, options) {
     );
     if (entries.length === 0 || !copiesAnything) return null;
     try {
-        const res = await bec.postPastePreview(workspaceName, graphURI, {
-            sources: sourcesOf(entries),
+        const { data, error } = await previewPaste({
+            path: {
+                targetDatasetName: workspaceName,
+                targetGraphURI: graphURI,
+            },
+            body: {
+                sources: sourcesOf(entries),
+            },
         });
-        if (!res.ok) {
-            return reportPreviewFailure(await res.text());
+        if (error) {
+            return reportPreviewFailure(error);
         }
-        const preview = await res.json();
+        const preview = data;
         const missing = PASTE_REFERENCE_KINDS.some(
             ({ kind, option }) =>
                 options[option] && preview.missing?.[kind]?.length > 0,
@@ -95,20 +100,14 @@ export async function saveCopyClass(
         sources: sourcesOf(entries),
     };
     try {
-        const res = await bec.postPasteClasses(
+        const { data, error } = await classStore.saveCopyClass(
             workspaceName,
             graphURI,
             payload,
         );
-        if (res.ok) {
-            const pasted = await res.json();
-            if (pasted.length === 0) {
-                toastStore.error(
-                    "Paste failed",
-                    "At least one of the copied classes is no longer available.",
-                );
-                return false;
-            }
+        if (!error) {
+            const pasted = data;
+            crossProfileStore.invalidateWorkspace(workspaceName);
             editorState.selectedWorkspace.updateValue(workspaceName);
             editorState.selectedClassWorkspace.updateValue(workspaceName);
             editorState.selectedGraph.updateValue(graphURI);
@@ -124,23 +123,7 @@ export async function saveCopyClass(
                     id: last.uuid,
                 });
             }
-            if (pasted.length === 1) {
-                toastStore.success(
-                    "Class pasted",
-                    `"${pasted[0].name}" was pasted.`,
-                );
-            } else {
-                toastStore.success(
-                    "Classes pasted",
-                    `${pasted.length} classes were pasted.`,
-                );
-            }
             return true;
-        } else {
-            const errorText = await res.text();
-            console.error("Could not paste classes:", errorText);
-            toastStore.error("Paste failed", `Could not paste classes.`);
-            return false;
         }
     } finally {
         forceReloadTrigger.trigger();

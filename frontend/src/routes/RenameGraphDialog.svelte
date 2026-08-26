@@ -18,22 +18,19 @@
 <script>
     import { v4 as uuidv4 } from "uuid";
 
-    import { getNamespaces } from "$lib/api/apiWorkspaceUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
     import {
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { graphStore } from "$lib/stores/graphStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import { getUri } from "./mainpage/packageNavigation/packageNavigationUtils.svelte.js";
 
     let { showDialog = $bindable(), workspaceName, graphUri } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const uniqueId = uuidv4();
     const defaultNamespace = "http://graph#";
     const uriSchemePattern = /^[a-zA-Z][a-zA-Z\d+.-]*:/;
@@ -85,12 +82,8 @@
     }
 
     async function loadNamespaceOptions() {
-        let namespaces = [];
-        try {
-            namespaces = await getNamespaces(workspaceName);
-        } catch (err) {
-            console.error("Failed to load namespaces:", err);
-        }
+        const namespaces =
+            (await workspaceStore.getNamespaces(workspaceName)) ?? [];
         const options = namespaces
             .map(namespace => namespace?.prefix)
             .filter(prefix => !!prefix);
@@ -103,53 +96,26 @@
         if (!workspaceName) {
             return [];
         }
-        try {
-            const res = await bec.getGraphs(workspaceName);
-            if (!res.ok) {
-                return [];
-            }
-            const graphs = await res.json();
-            return graphs.map(getUri).filter(uri => uri !== graphUri);
-        } catch (err) {
-            console.error("Failed to load schemas:", err);
-            return [];
-        }
+
+        const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
+        return graphs.map(getUri).filter(uri => uri !== graphUri);
     }
 
     async function renameGraph() {
         const oldGraphUri = graphUri;
         const newGraphUri = resolvedGraphUri;
         const newKeyword = labelChanged ? trimmedLabel : null;
-        try {
-            const res = await bec.renameGraph(
-                workspaceName,
-                oldGraphUri,
-                newGraphUri,
-                newKeyword,
-            );
-            if (!res.ok) {
-                toastStore.error(
-                    "Rename failed",
-                    res.status === 409
-                        ? `A schema with the uri "${newGraphUri}" already exists.`
-                        : `Could not rename schema "${oldGraphUri}".`,
-                );
-                return;
-            }
-            editorState.renameGraph(workspaceName, oldGraphUri, newGraphUri);
-            toastStore.success(
-                "Schema renamed",
-                `"${oldGraphUri}" is now "${newGraphUri}".`,
-            );
-        } catch (err) {
-            console.error("Failed to rename schema:", err);
-            toastStore.error(
-                "Rename failed",
-                "An unexpected error occurred while renaming the schema.",
-            );
-        } finally {
-            forceReloadTrigger.trigger();
-        }
+
+        const { error } = await graphStore.renameGraph(
+            workspaceName,
+            oldGraphUri,
+            newGraphUri,
+            newKeyword,
+        );
+        if (error) return;
+
+        editorState.renameGraph(workspaceName, oldGraphUri, newGraphUri);
+        forceReloadTrigger.trigger();
     }
 </script>
 

@@ -18,10 +18,9 @@
     import { onMount } from "svelte";
     import { v4 as uuidv4 } from "uuid";
 
-    import { isReadOnly } from "$lib/api/apiWorkspaceUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { graphStore } from "$lib/stores/graphStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     let {
         workspace = $bindable(),
@@ -31,8 +30,6 @@
         allowSelectionOfReadonlyWorkspaces = true,
         displayAsCard = true,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const workspaceSelectId = `workspaceSelect-${uuidv4()}`;
     const graphSelectId = `graphSelect-${uuidv4()}`;
@@ -45,23 +42,41 @@
 
     const graphSelectDisabled = $derived(graphLocked || !workspace);
 
-    $effect(() => {
+    $effect(async () => {
         if (workspaceLocked) return;
         if (!workspace) {
             graph = graphLocked ? lockedGraphUri : null;
             graphs = [];
             return;
         }
-        loadGraphsFor(workspace);
+
+        graphs = (await graphStore.getGraphs(workspace)) ?? [];
+        const valid = graphs.some(graphName => getUri(graphName) === graph);
+        if (!valid && !graphLocked) {
+            graph = null;
+        }
     });
 
     onMount(async () => {
+        workspaces = (await workspaceStore.getWorkspaces()) ?? [];
         if (workspaceLocked) workspace = lockedWorkspaceName;
         if (graphLocked) graph = lockedGraphUri;
 
-        await loadWorkspaces();
+        if (
+            !workspaceLocked &&
+            workspace &&
+            !allowSelectionOfReadonlyWorkspaces
+        ) {
+            const selectedWorkspace = workspaces.find(
+                option => option.label === workspace,
+            );
+            if (!selectedWorkspace || selectedWorkspace.readOnly) {
+                workspace = null;
+            }
+        }
+
         if (workspace) {
-            await loadGraphsFor(workspace);
+            graphs = await graphStore.getGraphs(workspace);
         } else {
             graphs = [];
         }
@@ -75,49 +90,6 @@
     function getUri(graph) {
         const uri = graph.uri ?? graph;
         return (uri.prefix ?? "") + (uri.suffix ?? "");
-    }
-
-    async function loadWorkspaces() {
-        const res = await bec.getWorkspaceNames();
-        const workspaceNames = await res.json();
-        const newWorkspaces = workspaceNames.map(name => ({
-            label: name,
-            readonly: false,
-        }));
-        if (!allowSelectionOfReadonlyWorkspaces) {
-            for (const workspace of newWorkspaces) {
-                workspace.readonly = await isReadOnly(workspace.label);
-            }
-        }
-        workspaces = newWorkspaces;
-
-        if (
-            !workspaceLocked &&
-            workspace &&
-            !allowSelectionOfReadonlyWorkspaces
-        ) {
-            const selectedWorkspace = newWorkspaces.find(
-                option => option.label === workspace,
-            );
-            if (!selectedWorkspace || selectedWorkspace.readonly) {
-                workspace = null;
-            }
-        }
-    }
-
-    async function loadGraphsFor(workspace) {
-        if (!workspace) {
-            graphs = [];
-            return;
-        }
-
-        const res = await bec.getGraphs(workspace);
-        graphs = await res.json();
-
-        const valid = graphs.some(graphName => getUri(graphName) === graph);
-        if (!valid && !graphLocked) {
-            graph = null;
-        }
     }
 </script>
 
@@ -138,8 +110,8 @@
                 !allowSelectionOfReadonlyWorkspaces && workspace.readonly}
             getOptionValue={workspace => workspace.label}
             getOptionLabel={workspace =>
-                workspace.label + (workspace.readonly ? " (readonly)" : "")}
-            disabled={workspaces.length === 0}
+                workspace.label + (workspace.readOnly ? " (readonly)" : "")}
+            disabled={(workspaces?.length ?? 0) === 0}
             placeholder="Select workspace"
             onchange={() => (graph = null)}
         />

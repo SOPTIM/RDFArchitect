@@ -15,11 +15,8 @@
  *
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 import { editorState } from "$lib/sharedState.svelte.js";
-
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+import { classStore } from "$lib/stores/classStore.ts";
 
 export async function saveApiAttributeToBackend(
     workspace,
@@ -28,21 +25,24 @@ export async function saveApiAttributeToBackend(
     attribute,
     isNewAttribute,
 ) {
-    const saveAttributeCall = isNewAttribute
-        ? bec.postAttribute(workspace, graph, classUUID, attribute)
-        : bec.putAttribute(workspace, graph, classUUID, attribute);
+    const res = isNewAttribute
+        ? await classStore.addAttribute(workspace, graph, classUUID, attribute)
+        : await classStore.replaceAttribute(
+              workspace,
+              graph,
+              classUUID,
+              attribute,
+          );
 
     try {
-        const res = await saveAttributeCall;
-        if (res.ok) {
-            const attributeUUID = await res.json();
+        if (!res.error) {
+            const attributeUUID = res.data;
             console.log("Successfully saved attribute:", attributeUUID);
             return { ok: true, attributeUUID };
         }
 
-        const errorText = await res.text();
-        console.error("Could not save attribute:", errorText);
-        return { ok: false, errorText };
+        console.error("Could not save attribute:", res.error);
+        return { ok: false, error: res.error };
     } finally {
         editorState.selectedClass.trigger();
         editorState.selectedDiagram.trigger();

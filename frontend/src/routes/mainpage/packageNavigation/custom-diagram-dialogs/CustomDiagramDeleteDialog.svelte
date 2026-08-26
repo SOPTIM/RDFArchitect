@@ -18,14 +18,12 @@
 <script>
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
+    import { customDiagramStore } from "$lib/stores/diagramStore.ts";
 
     let {
         showDialog = $bindable(),
@@ -34,54 +32,31 @@
         diagram,
     } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
     async function deleteCustomDiagram() {
-        try {
-            const res = graphUri
-                ? await bec.deleteCustomGraphDiagram(
-                      workspaceName,
-                      graphUri,
-                      diagram.diagramId,
-                  )
-                : await bec.deleteCustomWorkspaceDiagram(
-                      workspaceName,
-                      diagram.diagramId,
-                  );
-            if (!res.ok) {
-                console.error(
-                    "Failed to delete custom diagram",
-                    await res.text(),
-                );
-                toastStore.error(
-                    "Delete failed",
-                    diagram?.label
-                        ? `Could not delete custom diagram "${diagram.label}".`
-                        : "Could not delete custom diagram.",
-                );
-                return;
-            }
-            if (
-                editorState.selectedDiagram.getProperty("id") ===
-                diagram.diagramId
-            ) {
-                editorState.selectedDiagram.updateValue({
-                    type: null,
-                    id: null,
-                });
-                editorState.selectedClassWorkspace.updateValue(null);
-                editorState.selectedClassGraph.updateValue(null);
-                editorState.selectedClass.updateValue({ type: null, id: null });
-            }
-            toastStore.success(
-                "Custom diagram deleted",
-                diagram?.label
-                    ? `"${diagram.label}" was removed.`
-                    : "Diagram was removed.",
-            );
-        } finally {
-            forceReloadTrigger.trigger();
+        const { error } = graphUri
+            ? await customDiagramStore.deleteGraphDiagram(
+                  workspaceName,
+                  graphUri,
+                  diagram.diagramId,
+              )
+            : await customDiagramStore.deleteWorkspaceDiagram(
+                  workspaceName,
+                  diagram.diagramId,
+              );
+        if (error) return;
+
+        if (
+            editorState.selectedDiagram.getProperty("id") === diagram.diagramId
+        ) {
+            editorState.selectedDiagram.updateValue({
+                type: null,
+                id: null,
+            });
+            editorState.selectedClassWorkspace.updateValue(null);
+            editorState.selectedClassGraph.updateValue(null);
+            editorState.selectedClass.updateValue({ type: null, id: null });
         }
+        forceReloadTrigger.trigger();
     }
 </script>
 

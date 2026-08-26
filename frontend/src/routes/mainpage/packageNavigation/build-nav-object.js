@@ -15,12 +15,13 @@
  *
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
 import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+import { classStore } from "$lib/stores/classStore.ts";
+import { graphStore } from "$lib/stores/graphStore.ts";
+import { packageStore } from "$lib/stores/packageStore.ts";
 import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
 import {
@@ -30,8 +31,12 @@ import {
     isSelectedClass,
 } from "./packageNavigationUtils.svelte.js";
 
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
+/**
+ * @description Reuses an existing NavEntry by id or creates a new one. Preserves isOpen.
+ * @param {NavEntry[]} existingList
+ * @param {object} props
+ * @returns {NavEntry}
+ */
 function reuseOrCreate(existingList, props) {
     const existing = existingList?.find(e => e.id === props.id);
     if (existing) {
@@ -77,7 +82,9 @@ export async function getWorkspaceNavEntry(workspaceName, existingNavEntry) {
 async function populateWorkspace(workspaceNavEntry) {
     const existingGraphNavList = workspaceNavEntry.children;
 
-    const freshEntries = (await getGraphNames(workspaceNavEntry.id))
+    const freshEntries = (
+        (await graphStore.getGraphs(workspaceNavEntry.id)) ?? []
+    )
         .sort((a, b) => getUri(a).localeCompare(getUri(b)))
         .map(graph => {
             const fullUri = getUri(graph);
@@ -103,41 +110,23 @@ async function populateWorkspace(workspaceNavEntry) {
     }
 }
 
-async function getGraphNames(workspaceName) {
-    try {
-        const res = await bec.getGraphs(workspaceName);
-        if (!res.ok) {
-            console.error(
-                `Error fetching graph names for workspace "${workspaceName}": HTTP ${res.status}`,
-            );
-            return [];
-        }
-        return await res.json();
-    } catch (err) {
-        console.error(
-            "Error fetching graph names for workspace " + workspaceName,
-            err,
-        );
-        return [];
-    }
-}
-
 export async function populateGraph(workspaceNavObject, graphNavObject) {
     const existingPackageList = graphNavObject.children;
-    const packageApiObject = await getPackages(
+    const packageData = (await packageStore.getPackages(
         workspaceNavObject.id,
         graphNavObject.id,
-    );
-    const allClasses = await getClasses(
+    )) ?? { internal: [], external: [] };
+
+    const allClasses = await classStore.getClasses(
         workspaceNavObject.id,
         graphNavObject.id,
     );
 
     const freshEntries = [
-        ...packageApiObject.internalPackageList.map(pack =>
+        ...packageData.internal.map(pack =>
             reuseOrCreatePackage(existingPackageList, pack, false),
         ),
-        ...packageApiObject.externalPackageList.map(pack =>
+        ...packageData.external.map(pack =>
             reuseOrCreatePackage(existingPackageList, pack, true),
         ),
     ].sort((a, b) => {
@@ -200,31 +189,9 @@ function reuseOrCreatePackage(existingPackageList, packObj, isExternal) {
     return entry;
 }
 
-async function getPackages(workspaceName, graphURI) {
-    try {
-        const res = await bec.getPackages(workspaceName, graphURI);
-        return await res.json();
-    } catch (err) {
-        console.error(
-            "Error fetching packages for workspace " +
-                workspaceName +
-                " and graph " +
-                graphURI,
-            err,
-        );
-        return { internalPackageList: [], externalPackageList: [] };
-    }
-}
-
 function populatePackage(packageNavObject, allClasses, workspaceId, graphId) {
     const existingClassList = packageNavObject.children;
 
-    console.debug(
-        "Populating package",
-        packageNavObject.id,
-        "with classes:",
-        allClasses,
-    );
     allClasses = allClasses ?? [];
     const freshEntries = allClasses
         .filter(cls => packageNavObject.id === (cls.package?.uuid ?? "default"))
@@ -261,27 +228,4 @@ function populatePackage(packageNavObject, allClasses, workspaceId, graphId) {
     }
 
     return packageNavObject;
-}
-
-async function getClasses(workspaceName, graphURI) {
-    try {
-        const res = await bec.getClasses(workspaceName, graphURI);
-        console.debug(
-            "Fetched classes for workspace " +
-                workspaceName +
-                " and graph " +
-                graphURI,
-            res,
-        );
-        return await res.json();
-    } catch (err) {
-        console.error(
-            "Error fetching classes for workspace " +
-                workspaceName +
-                " and graph " +
-                graphURI,
-            err,
-        );
-        return [];
-    }
 }

@@ -15,19 +15,16 @@
   -->
 
 <script>
-    import { isReadOnly } from "$lib/api/apiWorkspaceUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { getChangeLog as getChangeLogAPI } from "$lib/api/generated/index.ts";
     import {
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import ChangesRow from "./ChangesRow.svelte";
 
     const { getExpanded, setExpanded, cleanExpandedStateMap } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let changelog = $state();
 
@@ -41,7 +38,9 @@
     $effect(async () => {
         forceReloadTrigger.subscribe();
         if (selectedWorkspaceName) {
-            readonlyWorkspace = await isReadOnly(selectedWorkspaceName);
+            readonlyWorkspace = await workspaceStore.isReadOnly(
+                selectedWorkspaceName,
+            );
         }
     });
 
@@ -56,15 +55,17 @@
         if (!selectedWorkspaceName || !selectedGraphUri) {
             return;
         }
-        const res = await bec.getChangelog(
-            selectedWorkspaceName,
-            selectedGraphUri,
-        );
-        if (res.ok) {
-            changelog = await res.json();
+        const { data, error } = await getChangeLogAPI({
+            path: {
+                datasetName: selectedWorkspaceName,
+                graphURI: selectedGraphUri,
+            },
+        });
+        if (!error) {
+            changelog = data;
             cleanExpandedStateMap(changelog);
         } else {
-            console.error("Failed to fetch changelog:", res.statusText);
+            console.error("Failed to fetch changelog:", error);
         }
     }
 </script>

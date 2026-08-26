@@ -18,16 +18,12 @@
     import { tick } from "svelte";
     import { Fa } from "svelte-fa";
 
-    import { getNamespaces } from "$lib/api/apiWorkspaceUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { mapNamespaceDtoToReactiveNamespace } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { mapReactiveNamespaceToNamespaceDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactiveNamespace } from "$lib/models/reactive/models/reactive-namespace.svelte.js";
@@ -38,10 +34,9 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     let { showDialog = $bindable(), lockedWorkspaceName } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let workspaceName = $state("");
     let readonly = $state(false);
@@ -53,12 +48,13 @@
         workspaceName =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
         if (!workspaceName) return;
-        readonly = await isReadOnly(workspaceName);
+        readonly = await workspaceStore.isReadOnly(workspaceName);
         await loadNamespaces(workspaceName);
     }
 
     async function loadNamespaces(workspaceNameLocal) {
-        const namespaceDTOs = await getNamespaces(workspaceNameLocal);
+        const namespaceDTOs =
+            await workspaceStore.getNamespaces(workspaceNameLocal);
         const objectsForReactiveNamespaces = namespaceDTOs.map(namespaceDto => {
             return mapNamespaceDtoToReactiveNamespace(namespaceDto);
         });
@@ -71,11 +67,6 @@
                 );
             },
         );
-    }
-
-    async function isReadOnly(workspaceNameLocal) {
-        const res = await bec.isReadOnly(workspaceNameLocal);
-        return await res.json();
     }
 
     async function saveNamespaces() {
@@ -93,29 +84,12 @@
         const namespaceDTOs = plainReactiveNamespaces.map(namespace => {
             return mapReactiveNamespaceToNamespaceDto(namespace);
         });
-        try {
-            const res = await bec.replaceNamespaces(
-                workspaceName,
-                namespaceDTOs,
-            );
-            if (res && res.ok === false) {
-                toastStore.error(
-                    "Save failed",
-                    `Could not save namespaces for "${workspaceName}".`,
-                );
-                return;
-            }
-            toastStore.success(
-                "Namespaces saved",
-                `Updated for "${workspaceName}".`,
-            );
-        } catch (err) {
-            console.error("Failed to save namespaces:", err);
-            toastStore.error(
-                "Save failed",
-                "An unexpected error occurred while saving namespaces.",
-            );
-        } finally {
+        const { error } = await workspaceStore.saveNamespaces(
+            workspaceName,
+            namespaceDTOs,
+        );
+
+        if (!error) {
             forceReloadTrigger.trigger();
         }
     }

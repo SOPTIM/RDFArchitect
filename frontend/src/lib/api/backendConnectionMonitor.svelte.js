@@ -127,7 +127,7 @@ export function installBackendFetchInterceptor() {
 export async function probeBackendConnection() {
     if (!PUBLIC_BACKEND_URL || typeof window === "undefined") return;
     try {
-        await fetch(`${PUBLIC_BACKEND_URL}/datasets`, {
+        await fetch(`${PUBLIC_BACKEND_URL}/api/datasets`, {
             method: "GET",
             credentials: "include",
         });

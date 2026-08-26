@@ -16,19 +16,17 @@
   -->
 
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { isValidDiagramName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import {
         DiagramType,
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { customDiagramStore } from "$lib/stores/diagramStore.ts";
 
     import { getPackageId } from "../packageNavigationUtils.svelte.js";
     import {
@@ -46,7 +44,6 @@
         selectedClasses = [],
     } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     let localDiagramName = $state("");
     let localDiagramId = $state();
 
@@ -83,11 +80,10 @@
 
     async function fetchOtherDiagrams() {
         try {
-            const res = await bec.getCustomDiagramsForGraph(
+            const diagrams = await customDiagramStore.getGraphDiagrams(
                 lockedWorkspaceName,
                 lockedGraphUri,
             );
-            const diagrams = await res.json();
             otherDiagrams = diagrams.filter(
                 d => d.diagramId !== localDiagramId,
             );
@@ -136,35 +132,21 @@
             classes: selectedClassList,
         };
 
-        try {
-            const res = await bec.putCustomDiagram(
-                lockedWorkspaceName,
-                lockedGraphUri,
-                localDiagramId,
-                diagramData,
-            );
+        const { error } = await customDiagramStore.saveGraphDiagram(
+            lockedWorkspaceName,
+            lockedGraphUri,
+            localDiagramId,
+            diagramData,
+        );
+        if (error) return;
 
-            if (res.ok) {
-                editorState.selectedWorkspace.updateValue(lockedWorkspaceName);
-                editorState.selectedGraph.updateValue(lockedGraphUri);
-                editorState.selectedDiagram.updateValue({
-                    type: DiagramType.CUSTOM_GRAPH_DIAGRAM,
-                    id: localDiagramId,
-                });
-                toastStore.success(
-                    "Diagram saved",
-                    `"${localDiagramName}" was saved.`,
-                );
-            } else {
-                console.error("Failed to save diagram");
-                toastStore.error(
-                    "Save failed",
-                    `Could not save diagram "${localDiagramName}".`,
-                );
-            }
-        } finally {
-            forceReloadTrigger.trigger();
-        }
+        editorState.selectedWorkspace.updateValue(lockedWorkspaceName);
+        editorState.selectedGraph.updateValue(lockedGraphUri);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.CUSTOM_GRAPH_DIAGRAM,
+            id: localDiagramId,
+        });
+        forceReloadTrigger.trigger();
     }
 </script>
 

@@ -20,11 +20,11 @@
     import { Fa } from "svelte-fa";
     import { v4 as uuidv4 } from "uuid";
 
-    import { getWorkspaceNames } from "$lib/api/apiWorkspaceUtils.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
+    import { graphStore } from "$lib/stores/graphStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils";
 
     import {
@@ -65,20 +65,28 @@
         workspaceNameUserInput =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
 
-        const workspaceNames = await getWorkspaceNames();
-        modifiableWorkspaces = workspaceNames.modifiable;
-        readOnlyWorkspaces = workspaceNames.readonly;
+        const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
+        for (const workspace of workspaces) {
+            if (workspace.readOnly) {
+                readOnlyWorkspaces.push(workspace.label);
+            } else {
+                modifiableWorkspaces.push(workspace.label);
+            }
+        }
     }
 
     function onClose() {
         clearInputs();
     }
+
     function clearInputs() {
         workspaceNameUserInput = "";
         files = [];
         dragActive = false;
         fileInputValue = "";
         rejectedFiles = [];
+        modifiableWorkspaces = [];
+        readOnlyWorkspaces = [];
     }
 
     function isWorkspaceReadOnly(workspaceName) {
@@ -178,124 +186,35 @@
         return workspaceNameUserInput || DEFAULT_WORKSPACE_NAME;
     }
 
-    function buildRequestBody(files) {
-        let formData = new FormData();
-        files.forEach(fileEntry => {
-            formData.append("files", fileEntry.file);
-            formData.append(
-                "graphUris",
-                fileEntry.isZip
-                    ? ""
-                    : ensureGraphNamespaceUri(
-                          fileEntry.graphUri,
-                          fileEntry.file.name,
-                      ),
-            );
-        });
-        return formData;
-    }
-
-    function putFiles(files, workspacename) {
-        return fetch(
-            `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspacename)}/graphs/content`,
-            {
-                method: "PUT",
-                body: buildRequestBody(files),
-                credentials: "include",
-            },
-        );
-    }
-    async function parseResponse(response, workspaceName) {
-        if (!response.ok) {
-            console.log("failed to insert data");
-            toastStore.error(
-                "Import failed",
-                `Could not import into "${workspaceName}".`,
-            );
-            return;
-        }
-
-        const body = await response.json();
-        console.log(body.message);
-
-        const failedImports = body.failedImports ?? [];
-        if (failedImports.length > 0) {
-            console.warn("failed imports:", failedImports);
-        }
-
-        //only update the selected workspace and graph if at least one import was successful, otherwise keep the old selection
-        const importedGraphUris = body.importedGraphUris ?? [];
-        if (importedGraphUris.length === 0) {
-            toastStore.error(
-                "Import failed",
-                failedImports.length > 0
-                    ? `${failedImports.length} file(s) could not be imported.`
-                    : "No schemas were imported.",
-            );
-            return;
-        }
-        console.log("imported graphs:", importedGraphUris);
-
-        editorState.selectedWorkspace.updateValue(workspaceName);
-        editorState.selectedGraph.updateValue(importedGraphUris[0]);
-        editorState.selectedDiagram.updateValue({ type: null, id: null });
-        editorState.selectedClassWorkspace.updateValue(null);
-        editorState.selectedClassGraph.updateValue(null);
-        editorState.selectedClass.updateValue({ type: null, id: null });
-
-        const importedCount = importedGraphUris.length;
-        const summary = `${importedCount} graph${importedCount === 1 ? "" : "s"} imported into "${workspaceName}".`;
-        if (failedImports.length > 0) {
-            toastStore.warning(
-                "Import partially succeeded",
-                `${summary} ${failedImports.length} file(s) were skipped.`,
-            );
-        } else {
-            toastStore.success("Import complete", summary);
-        }
-
-        notifyUndisplayableProperties(body.warnings ?? []);
-    }
-
-    function notifyUndisplayableProperties(warnings) {
-        if (warnings.length === 0) {
-            return;
-        }
-        const total = warnings.reduce(
-            (sum, warning) =>
-                sum + (warning.undisplayableProperties?.length ?? 0),
-            0,
-        );
-        const details = warnings
-            .map(
-                warning =>
-                    `${warning.fileName}: ${(warning.undisplayableProperties ?? []).join(", ")}`,
-            )
-            .join("; ");
-        toastStore.warning(
-            "Some properties could not be displayed",
-            `${total} propert${total === 1 ? "y" : "ies"} ${total === 1 ? "is" : "are"} missing the CIM stereotype or association metadata RDFArchitect needs to show ${total === 1 ? "it" : "them"} (${details}).`,
-        );
-    }
-
     async function importGraphs() {
         const workspaceNameUserInputLocal = getUserInputWorkspaceName();
-        const filesLocal = files;
-        console.warn(
-            "Importing files into workspace:",
-            workspaceNameUserInputLocal,
+        const filesLocal = files.map(entry => entry.file);
+        const graphUrisLocal = files.map(entry =>
+            entry.isZip
+                ? ""
+                : ensureGraphNamespaceUri(entry.graphUri, entry.file.name),
         );
-        try {
-            const res = await putFiles(filesLocal, workspaceNameUserInputLocal);
-            await parseResponse(res, workspaceNameUserInputLocal);
-        } catch (e) {
-            console.log("failed to insert data:");
-            console.log(e);
-            toastStore.error(
-                "Import failed",
-                "An unexpected error occurred while importing.",
+        const { data, error } = await graphStore.importGraphs(
+            workspaceNameUserInputLocal,
+            filesLocal,
+            graphUrisLocal,
+        );
+
+        if (!error && data.importedGraphUris?.length > 0) {
+            editorState.selectedWorkspace.updateValue(
+                workspaceNameUserInputLocal,
             );
-        } finally {
+            editorState.selectedGraph.updateValue(
+                data.importedGraphUris[0] || null,
+            );
+            editorState.selectedDiagram.updateValue({ type: null, id: null });
+            editorState.selectedClassWorkspace.updateValue(null);
+            editorState.selectedClassGraph.updateValue(null);
+            editorState.selectedClass.updateValue({ type: null, id: null });
+
+            graphStore.invalidateWorkspace(workspaceNameUserInputLocal);
+            workspaceStore.invalidate();
+            crossProfileStore.invalidateWorkspace(workspaceNameUserInputLocal);
             forceReloadTrigger.trigger();
         }
     }

@@ -19,7 +19,6 @@ package org.rdfarchitect.api.controller.datasets.graphs;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -72,13 +71,10 @@ public class AllPackagesRESTController {
                         content =
                                 @Content(
                                         mediaType = "application/json",
-                                        array =
-                                                @ArraySchema(
-                                                        schema =
-                                                                @Schema(
-                                                                        implementation =
-                                                                                ListPackagesResponse
-                                                                                        .class))))
+                                        schema =
+                                                @Schema(
+                                                        implementation =
+                                                                ListPackagesResponse.class)))
             })
     @GetMapping
     public ListPackagesResponse listPackages(

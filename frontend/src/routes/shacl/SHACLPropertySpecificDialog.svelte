@@ -16,8 +16,15 @@
   -->
 
 <script>
+    import {
+        getAssociationShacl,
+        getAttributeShacl,
+        getCustomShaclNamespacesAsString,
+        getGeneratedShaclNamespacesAsString,
+        replaceAssociationShacl,
+        replaceAttributeShacl,
+    } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
@@ -81,37 +88,37 @@
         return "";
     }
 
-    function buildBaseUrl() {
-        return (
-            PUBLIC_BACKEND_URL +
-            "/datasets/" +
-            encodeURIComponent(classWorkspaceName) +
-            "/graphs/" +
-            encodeURIComponent(classGraphUri)
-        );
-    }
-
     /**
      * fetches the SHACL rules for the selected class.
      */
     async function fetchShacl(newViewedClassUUID, viewedPropertyUUID) {
         try {
             const type = getType();
-            const res = await fetch(
-                buildBaseUrl() +
-                    "/classes/" +
-                    encodeURIComponent(newViewedClassUUID) +
-                    "/" +
-                    type +
-                    "/" +
-                    encodeURIComponent(viewedPropertyUUID) +
-                    "/shacl",
-                {
-                    method: "GET",
-                    credentials: "include",
-                },
-            );
-            if (!res.ok) {
+            let res;
+            if (type === "attributes") {
+                res = await getAttributeShacl({
+                    path: {
+                        datasetName: classWorkspaceName,
+                        graphURI: classGraphUri,
+                        classUUID: newViewedClassUUID,
+                        attributeUUID: viewedPropertyUUID,
+                    },
+                });
+            } else if (type === "associations") {
+                res = await getAssociationShacl({
+                    path: {
+                        datasetName: classWorkspaceName,
+                        graphURI: classGraphUri,
+                        classUUID: newViewedClassUUID,
+                        associationUUID: viewedPropertyUUID,
+                    },
+                });
+            } else {
+                console.warn("Failed to fetch SHACL: property type unknown");
+                return;
+            }
+
+            if (res.error) {
                 console.warn(
                     "Failed to fetch SHACL:",
                     res.status,
@@ -119,7 +126,7 @@
                 );
                 return;
             }
-            const data = await res.json();
+            const data = res.data;
             customShacl.propertyShapes = data.custom;
             generatedShacl.propertyShapes = data.generated;
 
@@ -132,34 +139,36 @@
     async function fetchFormattedNamespaces() {
         try {
             const [generatedRes, customRes] = await Promise.all([
-                fetch(buildBaseUrl() + "/shacl/generated/namespaces/ttl", {
-                    method: "GET",
-                    credentials: "include",
+                getGeneratedShaclNamespacesAsString({
+                    path: {
+                        datasetName: classWorkspaceName,
+                        graphURI: classGraphUri,
+                    },
                 }),
-                fetch(buildBaseUrl() + "/shacl/custom/namespaces/ttl", {
-                    method: "GET",
-                    credentials: "include",
+                getCustomShaclNamespacesAsString({
+                    path: {
+                        datasetName: classWorkspaceName,
+                        graphURI: classGraphUri,
+                    },
                 }),
             ]);
 
-            if (!generatedRes.ok) {
+            if (generatedRes.error) {
                 console.warn(
                     "Failed to fetch generated namespaces:",
-                    generatedRes.status,
-                    generatedRes.statusText,
+                    generatedRes.error,
                 );
             } else {
-                generatedShacl.namespaces = await generatedRes.text();
+                generatedShacl.namespaces = await generatedRes.data;
             }
 
-            if (!customRes.ok) {
+            if (customRes.error) {
                 console.warn(
                     "Failed to fetch custom namespaces:",
-                    customRes.status,
-                    customRes.statusText,
+                    customRes.error,
                 );
             } else {
-                customShacl.namespaces = await customRes.text();
+                customShacl.namespaces = await customRes.data;
             }
 
             customShaclBackUp = buildTtlString(customShacl);
@@ -172,27 +181,40 @@
         const ttlString = buildTtlString(customShacl);
         const type = getType();
         try {
-            const res = await fetch(
-                buildBaseUrl() +
-                    "/classes/" +
-                    encodeURIComponent(getViewedClassUuid()) +
-                    "/" +
-                    type +
-                    "/" +
-                    encodeURIComponent(property.uuid.value) +
-                    "/shacl",
-                {
-                    method: "PUT",
+            let res;
+            if (type === "attributes") {
+                res = await replaceAttributeShacl({
+                    path: {
+                        datasetName: classWorkspaceName,
+                        graphURI: classGraphUri,
+                        classUUID: getViewedClassUuid(),
+                        attributeUUID: property.uuid.value,
+                    },
                     body: ttlString,
-                    credentials: "include",
-                },
-            );
-            if (!res.ok) {
+                });
+            } else if (type === "associations") {
+                res = await replaceAssociationShacl({
+                    path: {
+                        datasetName: classWorkspaceName,
+                        graphURI: classGraphUri,
+                        classUUID: getViewedClassUuid(),
+                        associationUUID: property.uuid.value,
+                    },
+                    body: ttlString,
+                });
+            } else {
                 console.warn(
-                    "Failed to save custom SHACL:",
-                    res.status,
-                    res.statusText,
+                    "Failed to save custom SHACL: property type unknown",
                 );
+                toastStore.error(
+                    "Save failed",
+                    "Could not save property constraints.",
+                );
+                return;
+            }
+
+            if (res.error) {
+                console.warn("Failed to save custom SHACL:", res.error);
                 toastStore.error(
                     "Save failed",
                     "Could not save property constraints.",

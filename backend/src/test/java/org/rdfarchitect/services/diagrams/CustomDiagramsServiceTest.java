@@ -18,12 +18,12 @@
 package org.rdfarchitect.services.diagrams;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -67,7 +67,14 @@ class CustomDiagramsServiceTest {
 
         var result = service.getCustomDiagramsForGraph(graphIdentifier);
 
-        assertThat(result).containsExactly(diagram);
+        assertThat(result)
+                .hasSize(1)
+                .first()
+                .satisfies(
+                        dto -> {
+                            assertThat(dto.getDiagramId()).isEqualTo(diagramId);
+                            assertThat(dto.getName()).isNull();
+                        });
     }
 
     @Test
@@ -81,7 +88,14 @@ class CustomDiagramsServiceTest {
 
         var result = service.getCustomDiagramsForDataset("dataset");
 
-        assertThat(result).containsExactly(diagram);
+        assertThat(result)
+                .hasSize(1)
+                .first()
+                .satisfies(
+                        dto -> {
+                            assertThat(dto.getDiagramId()).isEqualTo(diagramId);
+                            assertThat(dto.getName()).isNull();
+                        });
     }
 
     @Test
@@ -92,7 +106,7 @@ class CustomDiagramsServiceTest {
 
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
 
-        service.deleteCustomDiagram("dataset", diagramId.toString());
+        service.deleteCustomDatasetDiagram("dataset", diagramId.toString());
 
         assertThat(map).doesNotContainKey(diagramId);
     }
@@ -106,7 +120,7 @@ class CustomDiagramsServiceTest {
         var graph = mockGraph(map);
         when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
 
-        service.deleteCustomDiagram(graphIdentifier, diagramId.toString());
+        service.deleteCustomGraphDiagram(graphIdentifier, diagramId.toString());
 
         assertThat(map).doesNotContainKey(diagramId);
     }
@@ -114,28 +128,38 @@ class CustomDiagramsServiceTest {
     @Test
     void replaceCustomDiagram_newDiagramForDataset_replacesInMap() {
         var diagramId = UUID.randomUUID();
-        var newDiagram = new CustomDiagram(diagramId);
+        var newDiagram = new CustomDiagramDTO(diagramId);
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
 
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
 
-        service.replaceCustomDiagram("dataset", diagramId.toString(), newDiagram);
+        service.replaceCustomDatasetDiagram("dataset", diagramId.toString(), newDiagram);
 
-        assertThat(map).containsEntry(diagramId, newDiagram);
+        assertThat(map)
+                .hasEntrySatisfying(
+                        diagramId,
+                        diagram ->
+                                assertThat(diagram.getDiagramId())
+                                        .isEqualTo(newDiagram.getDiagramId()));
     }
 
     @Test
     void replaceCustomDiagram_newDiagramForGraph_replacesInMap() {
         var diagramId = UUID.randomUUID();
-        var newDiagram = new CustomDiagram(diagramId);
+        var newDiagram = new CustomDiagramDTO(diagramId);
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
 
         var graph = mockGraph(map);
         when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
 
-        service.replaceCustomDiagram(graphIdentifier, diagramId.toString(), newDiagram);
+        service.replaceCustomGraphDiagram(graphIdentifier, diagramId.toString(), newDiagram);
 
-        assertThat(map).containsEntry(diagramId, newDiagram);
+        assertThat(map)
+                .hasEntrySatisfying(
+                        diagramId,
+                        diagram ->
+                                assertThat(diagram.getDiagramId())
+                                        .isEqualTo(newDiagram.getDiagramId()));
     }
 
     @Test
@@ -150,7 +174,7 @@ class CustomDiagramsServiceTest {
 
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
 
-        service.removeFromDiagram("dataset", diagramId.toString(), classId);
+        service.removeFromCustomDatasetDiagram("dataset", diagramId.toString(), classId);
 
         assertThat(diagram.getClasses()).isEmpty();
     }
@@ -168,7 +192,7 @@ class CustomDiagramsServiceTest {
         var graph = mockGraph(map);
         when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
 
-        service.removeFromDiagram(graphIdentifier, diagramId.toString(), classId);
+        service.removeFromCustomGraphDiagram(graphIdentifier, diagramId.toString(), classId);
 
         assertThat(diagram.getClasses()).isEmpty();
     }

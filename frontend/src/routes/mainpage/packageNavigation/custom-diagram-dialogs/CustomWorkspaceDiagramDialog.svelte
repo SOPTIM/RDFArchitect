@@ -16,19 +16,18 @@
   -->
 
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { isValidDiagramName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import {
         DiagramType,
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { customDiagramStore } from "$lib/stores/diagramStore.ts";
+    import { graphStore } from "$lib/stores/graphStore.ts";
 
     import { getUri } from "../packageNavigationUtils.svelte.js";
     import {
@@ -45,7 +44,6 @@
         selectedClasses = [],
     } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     let localDiagramName = $state();
     let localDiagramId = $state();
 
@@ -77,9 +75,10 @@
 
     async function fetchOtherDiagrams() {
         try {
-            const res =
-                await bec.getCustomDiagramsForWorkspace(lockedWorkspaceName);
-            const diagrams = await res.json();
+            const diagrams =
+                await customDiagramStore.getWorkspaceDiagrams(
+                    lockedWorkspaceName,
+                );
             otherDiagrams = diagrams.filter(
                 d => d.diagramId !== localDiagramId,
             );
@@ -89,27 +88,17 @@
         }
     }
 
-    async function getGraphs(workspaceName) {
-        const result = await bec.getGraphs(workspaceName);
-        return await result.json();
-    }
-
     async function fetchGraphs() {
-        try {
-            const res = await getGraphs(lockedWorkspaceName);
-            graphs = res
-                .map(graph => {
-                    return {
-                        ...graph,
-                        selected: false,
-                        expanded: false,
-                    };
-                })
-                .sort((a, b) => getUri(a).localeCompare(getUri(b)));
-        } catch (err) {
-            console.error("Failed to load graphs:", err);
-            graphs = [];
-        }
+        const result = (await graphStore.getGraphs(lockedWorkspaceName)) ?? [];
+        graphs = result
+            .map(graph => {
+                return {
+                    ...graph,
+                    selected: false,
+                    expanded: false,
+                };
+            })
+            .sort((a, b) => getUri(a).localeCompare(getUri(b)));
     }
 
     async function createPackageMap() {
@@ -202,34 +191,21 @@
             classes: selectedClassList,
         };
 
-        try {
-            const res = await bec.putCustomWorkspaceDiagram(
-                lockedWorkspaceName,
-                localDiagramId,
-                diagramData,
-            );
+        const { error } = await customDiagramStore.saveWorkspaceDiagram(
+            lockedWorkspaceName,
+            localDiagramId,
+            diagramData,
+        );
 
-            if (res.ok) {
-                editorState.selectedWorkspace.updateValue(lockedWorkspaceName);
-                editorState.selectedGraph.updateValue(null);
-                editorState.selectedDiagram.updateValue({
-                    type: DiagramType.CUSTOM_WORKSPACE_DIAGRAM,
-                    id: localDiagramId,
-                });
-                toastStore.success(
-                    "Diagram saved",
-                    `"${localDiagramName}" was saved.`,
-                );
-            } else {
-                console.error("Failed to save diagram");
-                toastStore.error(
-                    "Save failed",
-                    `Could not save diagram "${localDiagramName}".`,
-                );
-            }
-        } finally {
-            forceReloadTrigger.trigger();
-        }
+        if (error) return;
+
+        editorState.selectedWorkspace.updateValue(lockedWorkspaceName);
+        editorState.selectedGraph.updateValue(null);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.CUSTOM_WORKSPACE_DIAGRAM,
+            id: localDiagramId,
+        });
+        forceReloadTrigger.trigger();
     }
 </script>
 

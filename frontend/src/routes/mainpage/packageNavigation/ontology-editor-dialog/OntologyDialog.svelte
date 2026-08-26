@@ -19,19 +19,17 @@
     import { faRotateLeft, faSave } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
-    import { getNamespaces } from "$lib/api/apiWorkspaceUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { ontologyStore } from "$lib/stores/ontologyStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import AddKnownFieldsDialog from "./AddKnownFieldsDialog.svelte";
     import OntologyEntryRow from "./OntologyEntryRow.svelte";
@@ -45,8 +43,6 @@
         readonly,
         onSubmit,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     // Namespaces that the backend auto-adds when an ontology is created.
     // Added client-side here (without persisting) so they already appear
@@ -88,7 +84,7 @@
 
     async function onOpen() {
         if (!namespaces) {
-            namespaces = await getNamespaces(workspace);
+            namespaces = await workspaceStore.getNamespaces(workspace);
         }
 
         namespaces = withOntologyDefaultNamespaces(namespaces);
@@ -165,30 +161,24 @@
         if (!graphUri) {
             return null;
         }
-        const res = await bec.getOntology(workspace, graphUri);
-        let content = await res.text();
-        if (!content) {
-            return null;
-        }
-        return JSON.parse(content);
+        return await ontologyStore.getOntologyForGraph(workspace, graphUri);
     }
 
     async function saveOntology(workspaceName, graphUri, ontologyObject) {
         const serializable = ontologyObject.getPlainObject();
-        const res = ontologyObject.uuid.value
-            ? await bec.putOntology(workspaceName, graphUri, serializable)
-            : await bec.postOntology(workspaceName, graphUri, serializable);
-        if (res && res.ok === false) {
-            toastStore.error(
-                "Save failed",
-                "Could not save the profile header.",
+        if (ontologyObject.uuid.value) {
+            await ontologyStore.replaceOntology(
+                workspaceName,
+                graphUri,
+                serializable,
             );
-            return;
+        } else {
+            await ontologyStore.createOntology(
+                workspaceName,
+                graphUri,
+                serializable,
+            );
         }
-        toastStore.success(
-            "Profile header saved",
-            "The profile header was saved.",
-        );
     }
 
     function scrollEntriesToBottom() {

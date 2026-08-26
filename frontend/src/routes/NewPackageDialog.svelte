@@ -16,18 +16,17 @@
   -->
 
 <script>
-    import { getNamespaces } from "$lib/api/apiWorkspaceUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { Package } from "$lib/models/dto";
     import { DiagramType } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/classStore.ts";
+    import { packageStore } from "$lib/stores/packageStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import {
         editorState,
@@ -46,7 +45,6 @@
         packageLabel: "packageNameNewPackage" + uuid,
         packageComment: "packageCommentNewPackage" + uuid,
     };
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let selectedWorkspaceName = $state(null);
     let selectedGraphURI = $state(null);
@@ -58,7 +56,7 @@
     let packages = $state([]);
     let classes = $state([]);
 
-    let packageIri = $derived(getPackageIri(packageURINamespace, packageLabel));
+    let packageIri = $derived(packageURINamespace + packageLabel);
     let resourceIriAlreadyExists = $derived(
         !!packageIri &&
             [...packages, ...classes].some(
@@ -75,7 +73,7 @@
     );
 
     $effect(async () => {
-        namespaces = await getNamespaces(selectedWorkspaceName);
+        namespaces = await workspaceStore.getNamespaces(selectedWorkspaceName);
         packageURINamespace = null;
     });
 
@@ -96,7 +94,7 @@
         if (!selectedWorkspaceName) {
             return;
         }
-        namespaces = await getNamespaces(selectedWorkspaceName);
+        namespaces = await workspaceStore.getNamespaces(selectedWorkspaceName);
 
         if (selectedGraphURI) {
             await getResources(selectedWorkspaceName, selectedGraphURI);
@@ -129,12 +127,9 @@
             packages = [];
             return;
         }
-        const res = await bec.getPackages(workspaceName, graphURI);
-        const packagesJSON = await res.json();
-        packages = [
-            ...packagesJSON.internalPackageList,
-            ...packagesJSON.externalPackageList,
-        ];
+
+        const result = await packageStore.getPackages(workspaceName, graphURI);
+        packages = result ? [...result.internal, ...result.external] : [];
     }
 
     async function getClasses(workspaceName, graphURI) {
@@ -142,25 +137,7 @@
             classes = [];
             return;
         }
-        const res = await bec.getClasses(workspaceName, graphURI);
-        classes = await res.json();
-    }
-
-    function getExpandedNamespace(namespace) {
-        return (
-            namespaces.find(n => n.substitutedPrefix === namespace)?.prefix ??
-            namespace
-        );
-    }
-
-    function getPackageIri(namespace, label) {
-        if (!namespace || !label) {
-            return null;
-        }
-        if (!label?.startsWith("Package_")) {
-            label = "Package_" + label;
-        }
-        return getExpandedNamespace(namespace) + label;
+        classes = (await classStore.getClasses(workspaceName, graphURI)) ?? [];
     }
 
     function getResourceIri(resource) {
@@ -177,62 +154,22 @@
         if (!packageLabel.startsWith("Package_")) {
             packageLabel = "Package_" + packageLabel;
         }
-        let promise = fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(ds) +
-                "/graphs/" +
-                encodeURIComponent(graph) +
-                "/packages",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(
-                    new Package({
-                        prefix: packageURINamespace,
-                        label: packageLabel,
-                        comment: packageComment,
-                    }),
-                ),
-                credentials: "include",
-            },
-        )
-            .then(async res => {
-                if (res.ok) {
-                    console.log("successfully added package");
-                    return res.json();
-                }
-                throw new Error(await res.text());
-            })
-            .then(uuid => {
-                console.log(
-                    `successfully added package ${packageLabel} with UUID ${uuid}`,
-                );
-                editorState.selectedWorkspace.updateValue(ds);
-                editorState.selectedGraph.updateValue(graph);
-                editorState.selectedDiagram.updateValue({
-                    type: DiagramType.PACKAGE,
-                    id: uuid,
-                });
-                toastStore.success(
-                    "Package created",
-                    `"${packageLabel}" was added.`,
-                );
-            });
-        promise
-            .catch(e => {
-                console.log("failed to add package:");
-                console.log(e);
-                toastStore.error(
-                    "Create failed",
-                    `Could not create package "${packageLabel}".`,
-                );
-            })
-            .finally(() => {
-                forceReloadTrigger.trigger();
-            });
+        const body = new Package({
+            prefix: packageURINamespace,
+            label: packageLabel,
+            comment: packageComment,
+        });
+        const { data, error } = await packageStore.addPackage(ds, graph, body);
+
+        if (error) return;
+
+        editorState.selectedWorkspace.updateValue(ds);
+        editorState.selectedGraph.updateValue(graph);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: data,
+        });
+        forceReloadTrigger.trigger();
     }
 </script>
 
@@ -273,7 +210,7 @@
             placeholder={selectedWorkspaceName
                 ? "Select namespace"
                 : "Select a workspace first"}
-            getOptionValue={namespace => namespace.substitutedPrefix}
+            getOptionValue={namespace => namespace.prefix}
             getOptionLabel={namespace =>
                 `${namespace.substitutedPrefix} (${namespace.prefix})`}
         />

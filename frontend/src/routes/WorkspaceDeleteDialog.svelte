@@ -18,29 +18,27 @@
 <script>
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
-    import { workspaceState } from "$lib/workspaceState.svelte.js";
+    import {
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/classStore.ts";
+    import { datatypesStore } from "$lib/stores/datatypesStore.ts";
+    import { customDiagramStore } from "$lib/stores/diagramStore.ts";
+    import { graphStore } from "$lib/stores/graphStore.ts";
+    import { ontologyStore } from "$lib/stores/ontologyStore.ts";
+    import { packageStore } from "$lib/stores/packageStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     let { showDialog = $bindable(), workspaceName } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const baseDeletionDescription =
         "All schemas and packages inside this workspace will be permanently removed.";
     let graphs = $state(null);
 
     async function onOpen() {
-        graphs = null;
-        if (workspaceName) {
-            const res = await bec.getGraphs(workspaceName);
-            graphs = await res.json();
-        } else {
-            graphs = [];
-        }
-        console.log(graphs);
+        graphs = await graphStore.getGraphs(workspaceName);
     }
 
     function onClose() {
@@ -48,18 +46,25 @@
     }
 
     async function deleteWorkspace() {
-        const deletedWorkspace = workspaceName;
-        if (!deletedWorkspace) {
+        if (!workspaceName) {
             return;
         }
         try {
-            if (!(await workspaceState.remove(deletedWorkspace))) {
-                return;
+            if (!workspaceName) return;
+
+            const res = await workspaceStore.remove(workspaceName);
+            if (res.error) return;
+
+            graphStore.invalidateWorkspace(workspaceName);
+            classStore.invalidateWorkspace(workspaceName);
+            packageStore.invalidateWorkspace(workspaceName);
+            datatypesStore.invalidateWorkspace(workspaceName);
+            ontologyStore.invalidateWorkspace(workspaceName);
+            customDiagramStore.invalidateWorkspace(workspaceName);
+
+            if (editorState.selectedWorkspace.getValue() === workspaceName) {
+                editorState.reset();
             }
-            toastStore.success(
-                "Workspace deleted",
-                `"${deletedWorkspace}" was removed.`,
-            );
         } finally {
             forceReloadTrigger.trigger();
         }

@@ -49,7 +49,7 @@ export class EnumEntry {
 
     stereotype: "enum" | null;
 
-    type: string;
+    type: string | null;
 
     updateUUID(uuid: string) {
         this.uuid = uuid;

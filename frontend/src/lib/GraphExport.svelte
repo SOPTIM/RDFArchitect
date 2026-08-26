@@ -20,18 +20,17 @@
     import { onMount } from "svelte";
     import { Fa } from "svelte-fa";
 
-    import { getNamespaces } from "$lib/api/apiWorkspaceUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index";
     import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { ontologyStore } from "$lib/stores/ontologyStore.ts";
     import { userSettings } from "$lib/userSettings.svelte.js";
     import { saveFile, supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
 
     import { editorState } from "../lib/sharedState.svelte.js";
+    import { workspaceStore } from "./stores/workspaceStore.ts";
 
     let {
         showDialog = $bindable(),
@@ -41,8 +40,6 @@
         generateOntologyEntries = false,
         supportedMediaTypes = supportedRDFMediaTypes,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let selectedWorkspaceName = $state(null);
     let graphURI = $state(null);
@@ -71,7 +68,9 @@
 
     $effect(async () => {
         if (selectedWorkspaceName) {
-            namespaces = await getNamespaces(selectedWorkspaceName);
+            namespaces = await workspaceStore.getNamespaces(
+                selectedWorkspaceName,
+            );
         } else {
             namespaces = [];
         }
@@ -79,18 +78,18 @@
 
     $effect(async () => {
         if (selectedWorkspaceName && graphURI) {
-            let ontologyJSON = await getOntology(
+            const result = await ontologyStore.getOntologyForGraph(
                 selectedWorkspaceName,
                 graphURI,
             );
-            if (!ontologyJSON) {
+            if (result == null || result === undefined) {
                 ontology = null;
                 return;
             }
             ontology = new ReactiveOntology(
-                ontologyJSON.uuid,
-                ontologyJSON.namespace,
-                ontologyJSON.entries,
+                result.uuid,
+                result.namespace,
+                result.entries,
                 namespaces,
             );
         }
@@ -98,12 +97,16 @@
 
     $effect(async () => {
         if (selectedWorkspaceName && graphURI && hasOntology) {
-            const res = await bec.generateOntologyEntries(
+            const { error, data } = await ontologyStore.generateOntologyEntries(
                 selectedWorkspaceName,
                 graphURI,
             );
-            generatedOntologyEntries = await res.json();
-            generatedOntologyEntries.forEach(entry => (entry.generate = true));
+            if (!error) {
+                generatedOntologyEntries = data;
+                generatedOntologyEntries.forEach(
+                    entry => (entry.generate = true),
+                );
+            }
             return;
         }
         generatedOntologyEntries = [];
@@ -113,9 +116,6 @@
         selectedWorkspaceName =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
         graphURI = lockedGraphUri ?? editorState.selectedGraph.getValue();
-        if (selectedWorkspaceName) {
-            namespaces = await getNamespaces(selectedWorkspaceName);
-        }
         const saved = userSettings.get("defaultExportFormat", null);
         selectedMediaType = saved
             ? (supportedMediaTypes.find(m => m.mimeType === saved) ??
@@ -136,15 +136,6 @@
         });
     }
 
-    async function getOntology(workspaceName) {
-        const res = await bec.getOntology(workspaceName, graphURI);
-        let content = await res.text();
-        if (!content) {
-            return content;
-        }
-        return JSON.parse(content);
-    }
-
     // This function is called from the parent component when the user clicks the export button
     export async function handleExport(getAPIRoute) {
         if (
@@ -161,19 +152,14 @@
                     ontology.entries.append(entry);
                 }
             }
-            const ontologyRes = await bec.putOntology(
+            const { error } = await ontologyStore.replaceOntology(
                 selectedWorkspaceName,
                 graphURI,
                 ontology.getPlainObject(),
             );
-            if (ontologyRes && ontologyRes.ok === false) {
-                toastStore.error(
-                    "Profile header update failed",
-                    "Could not persist the generated profile header entries; export aborted.",
-                );
-                return;
+            if (!error) {
+                forceReloadTrigger.trigger();
             }
-            forceReloadTrigger.trigger();
         }
         try {
             const response = await fetchGraphFile(getAPIRoute);

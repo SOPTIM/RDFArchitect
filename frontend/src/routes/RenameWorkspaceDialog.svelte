@@ -19,8 +19,8 @@
     import { v4 as uuidv4 } from "uuid";
 
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { workspaceState } from "$lib/workspaceState.svelte.js";
 
     let { showDialog = $bindable(), workspaceName } = $props();
@@ -30,10 +30,12 @@
 
     let workspaceNameUserInput = $state("");
 
+    const workspaceNames = $derived(
+        ($workspaceStore.data ?? []).map(ws => ws.label),
+    );
     const trimmedName = $derived(workspaceNameUserInput.trim());
     const nameExists = $derived(
-        trimmedName !== workspaceName &&
-            workspaceState.getNames().includes(trimmedName),
+        trimmedName !== workspaceName && workspaceNames.includes(trimmedName),
     );
     const nameHasInvalidCharacters = $derived(
         invalidCharacters.test(trimmedName),
@@ -54,19 +56,8 @@
     }
 
     async function renameWorkspace() {
-        const oldName = workspaceName;
-        const newName = trimmedName;
-        try {
-            if (!(await workspaceState.rename(oldName, newName))) {
-                return;
-            }
-            toastStore.success(
-                "Workspace renamed",
-                `"${oldName}" is now "${newName}".`,
-            );
-        } finally {
-            forceReloadTrigger.trigger();
-        }
+        await workspaceState.rename(workspaceName, trimmedName);
+        forceReloadTrigger.trigger();
     }
 </script>
 

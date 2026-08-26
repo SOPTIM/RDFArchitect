@@ -17,7 +17,6 @@
 
 <script>
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { graphColors } from "$lib/graphColors.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
     import { userSettings } from "$lib/userSettings.svelte.js";
@@ -53,7 +52,7 @@
 
     function onClose() {
         colorEntries = [];
-        originalJson = "[]";
+        originalJson = "";
     }
 
     async function saveColors() {
@@ -65,16 +64,8 @@
             graphColorMap,
         );
         if (!saved) {
-            toastStore.error(
-                "Save failed",
-                `Could not save color data for "${workspaceName}".`,
-            );
             return;
         }
-        toastStore.success(
-            "Colors saved",
-            `Color settings updated for "${workspaceName}".`,
-        );
         snapshotOriginal();
     }
 

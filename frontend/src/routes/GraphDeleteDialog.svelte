@@ -18,9 +18,13 @@
 <script>
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { classStore } from "$lib/stores/classStore.ts";
+    import { datatypesStore } from "$lib/stores/datatypesStore.ts";
+    import { customDiagramStore } from "$lib/stores/diagramStore.ts";
+    import { graphStore } from "$lib/stores/graphStore.ts";
+    import { ontologyStore } from "$lib/stores/ontologyStore.ts";
+    import { packageStore } from "$lib/stores/packageStore.ts";
 
     import {
         editorState,
@@ -45,53 +49,26 @@
     }
 
     async function deleteGraph() {
-        let promise = fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(workspaceName) +
-                "/graphs/" +
-                encodeURIComponent(graphURI) +
-                "/content",
-            {
-                method: "DELETE",
-                credentials: "include",
-            },
-        ).then(res => {
-            if (res.ok) {
-                console.log("successfully deleted data");
-                const deletedGraph = graphURI;
-                editorState.selectedGraph.updateValue(null);
-                editorState.selectedDiagram.updateValue({
-                    type: null,
-                    id: null,
-                });
-                editorState.selectedClassWorkspace.updateValue(null);
-                editorState.selectedClassGraph.updateValue(null);
-                editorState.selectedClass.updateValue({ type: null, id: null });
-                toastStore.success(
-                    "Schema deleted",
-                    `"${deletedGraph}" was removed.`,
-                );
-            } else {
-                console.log("failed to insert data");
-                toastStore.error(
-                    "Delete failed",
-                    `Could not delete schema "${graphURI}".`,
-                );
-            }
+        const { error } = await graphStore.remove(workspaceName, graphURI);
+        if (error) return;
+
+        editorState.selectedWorkspace.updateValue(null);
+        editorState.selectedGraph.updateValue(null);
+        editorState.selectedDiagram.updateValue({
+            type: null,
+            id: null,
         });
-        promise
-            .catch(e => {
-                console.log("failed to delete graph:");
-                console.log(e);
-                toastStore.error(
-                    "Delete failed",
-                    "An unexpected error occurred while deleting the schema.",
-                );
-            })
-            .finally(() => {
-                forceReloadTrigger.trigger();
-            });
+        editorState.selectedClassWorkspace.updateValue(null);
+        editorState.selectedClassGraph.updateValue(null);
+        editorState.selectedClass.updateValue({ type: null, id: null });
+
+        classStore.invalidateGraph(workspaceName, graphURI);
+        packageStore.invalidateGraph(workspaceName, graphURI);
+        datatypesStore.invalidateGraph(workspaceName, graphURI);
+        ontologyStore.invalidateGraph(workspaceName, graphURI);
+        customDiagramStore.invalidateGraph(workspaceName, graphURI);
+
+        forceReloadTrigger.trigger();
     }
 </script>
 

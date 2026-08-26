@@ -15,24 +15,22 @@
  *
  */
 
-import { getNamespaces as getNamespacesFromApi } from "$lib/api/apiWorkspaceUtils.js";
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 import { Class, DataType, DataTypeTypes, Package } from "$lib/models/dto";
-
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+import { classStore } from "$lib/stores/classStore.ts";
+import { datatypesStore } from "$lib/stores/datatypesStore.ts";
+import { packageStore } from "$lib/stores/packageStore.ts";
+import { getXsdPrimitives } from "$lib/stores/xsdDatatypesStore.ts";
 
 export async function getPackages(workspaceName, graphUri) {
     // fetch packages
-    const res = await bec.getPackages(workspaceName, graphUri);
-    let packagesDto = await res.json();
+    const packageData = await packageStore.getPackages(workspaceName, graphUri);
 
     // Combine internal and external packages
     let packages = [];
-    for (const pkg of packagesDto.internalPackageList) {
+    for (const pkg of packageData.internal) {
         packages.push(new Package(pkg));
     }
-    for (const pkg of packagesDto.externalPackageList) {
+    for (const pkg of packageData.external) {
         packages.push(new Package({ ...pkg, external: true }));
     }
 
@@ -47,22 +45,19 @@ export async function getPackages(workspaceName, graphUri) {
 }
 
 export async function getDataTypes(workspaceName, graphUri) {
-    // fetch xsd datatypes
-    const xsd = await bec.getXSDPrimitives();
-    let xsdPrimitivesDto = await xsd.json();
-    // fetch primitive datatypes
-    const resPrimitivesClasses = await bec.getPrimitives(
+    const xsd = await getXsdPrimitives();
+    const primitivesDto = await datatypesStore.getPrimitives(
         workspaceName,
         graphUri,
     );
-    let primitivesDto = await resPrimitivesClasses.json();
-    // fetch other datatypes (e.g. CIMDatatype)
-    const resDataTypes = await bec.getDataTypes(workspaceName, graphUri);
-    let dataTypesDto = await resDataTypes.json();
+    const dataTypesDto = await datatypesStore.getDatatypes(
+        workspaceName,
+        graphUri,
+    );
 
     // combine all datatypes into one list
     let datatypes = [];
-    for (const xsdDatatype of xsdPrimitivesDto) {
+    for (const xsdDatatype of xsd) {
         datatypes.push(
             new DataType({
                 prefix: xsdDatatype.prefix,
@@ -104,28 +99,13 @@ export async function getClasses(
     graphUri,
     includeExternalClasses = true,
 ) {
-    const res = await bec.getClasses(
-        workspaceName,
-        graphUri,
-        includeExternalClasses,
-    );
-    let classesDto = await res.json();
-    console.debug("classesDTO", classesDto);
-    let classes = classesDto.map(cls => new Class(cls));
+    const res =
+        (await classStore.getClasses(
+            workspaceName,
+            graphUri,
+            includeExternalClasses,
+        )) ?? [];
+    let classes = res.map(cls => new Class(cls));
     console.debug("CLASSES:", classes);
     return classes;
-}
-
-export async function getStereotypes(workspaceName, graphUri) {
-    const res = await bec.getStereotypes(workspaceName, graphUri);
-    let stereotypesJSON = await res.json();
-
-    console.debug("STEREOTYPES:", stereotypesJSON);
-    return stereotypesJSON;
-}
-
-export async function getNamespaces(workspaceName) {
-    const namespaces = await getNamespacesFromApi(workspaceName);
-    console.debug("NAMESPACES:", namespaces);
-    return namespaces;
 }

@@ -44,14 +44,14 @@ public List<ClassDTO> listAbstract(@PathVariable String datasetName,
 
 ## Step 5 — Frontend BackendConnection method
 
+Regenerate the frontend client by executing `npm run api:generate`. This automatically generates a function to call based on the Open-API Annotation on the Controller in the backend.
+
+Call the new endpoint either by adding a method to the relevant store or by directly calling the client in a component.
+
 ```javascript
-async listAbstractClasses(datasetName, graphURI) {
-    const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/abstract`;
-    return fetch(url, {
-        method: "GET",
-        credentials: "include",
-    });
-}
+const abstractClasses = listAbstract({
+    path = { datasetName: datasetName, graphURI: graphURI }
+})
 ```
 
 ## Step 6 — Reactive consumer

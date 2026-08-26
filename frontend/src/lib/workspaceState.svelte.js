@@ -15,13 +15,8 @@
  *
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
-import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import { editorState } from "$lib/sharedState.svelte.js";
-import { StateValuePair } from "$lib/statePrimitives.svelte.js";
-
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
 /** @type {Map<string, Object>} selection to restore per workspace name */
 const selectionByWorkspace = new Map();
@@ -35,17 +30,6 @@ const selectionByWorkspace = new Map();
  * schemas) is loaded where it is shown, see `asyncValue`.
  */
 export const workspaceState = {
-    /** @type {StateValuePair<string[] | null>} null until the first load */
-    names: new StateValuePair(null),
-
-    getNames() {
-        return this.names.getValue() ?? [];
-    },
-
-    isLoaded() {
-        return this.names.getValue() !== null;
-    },
-
     getActive() {
         return editorState.selectedWorkspace.getValue();
     },
@@ -56,21 +40,20 @@ export const workspaceState = {
      * does not look like "no workspaces".
      */
     async load() {
-        const names = await fetchWorkspaceNames();
-        if (names === null) {
+        const workspaces = await workspaceStore.getWorkspaces();
+        if (workspaces === null) {
             return;
         }
-        this.names.updateValue(names);
 
-        for (const name of [...selectionByWorkspace.keys()]) {
-            if (!names.includes(name)) {
-                selectionByWorkspace.delete(name);
+        for (const workspace of selectionByWorkspace.keys()) {
+            if (!workspaces.some(ws => ws.label === workspace)) {
+                selectionByWorkspace.delete(workspace);
             }
         }
 
         const active = this.getActive();
-        if (!active || !names.includes(active)) {
-            this.activate(names[0] ?? null);
+        if (!active || !workspaces.some(ws => ws.label === active)) {
+            this.activate(workspaces[0].label ?? null);
         }
     },
 
@@ -91,86 +74,38 @@ export const workspaceState = {
     },
 
     async create(name) {
-        const res = await bec.createWorkspace(name);
-        if (!res.ok) {
-            toastStore.error(
-                "Create failed",
-                res.status === 409
-                    ? `A workspace named "${name}" already exists.`
-                    : `Could not create workspace "${name}".`,
-            );
+        const { error } = await workspaceStore.create(name);
+        if (error) {
             return false;
         }
         selectionByWorkspace.delete(name);
-        this.names.updateValue(
-            [...new Set([...this.getNames(), name])].sort((a, b) =>
-                a.localeCompare(b),
-            ),
-        );
         this.activate(name);
         return true;
     },
 
     async rename(name, newName) {
-        const res = await bec.renameWorkspace(name, newName);
-        if (!res.ok) {
-            toastStore.error(
-                "Rename failed",
-                res.status === 409
-                    ? `A workspace named "${newName}" already exists.`
-                    : `Could not rename workspace "${name}".`,
-            );
+        const { error } = await workspaceStore.rename(name, newName);
+        if (error) {
             return false;
         }
         if (selectionByWorkspace.has(name)) {
             selectionByWorkspace.set(newName, selectionByWorkspace.get(name));
             selectionByWorkspace.delete(name);
         }
-        this.names.updateValue(
-            this.getNames()
-                .map(workspaceName =>
-                    workspaceName === name ? newName : workspaceName,
-                )
-                .sort((a, b) => a.localeCompare(b)),
-        );
         editorState.renameWorkspace(name, newName);
         return true;
     },
 
     async remove(name) {
-        const res = await bec.deleteWorkspace(name);
-        if (res && res.ok === false) {
-            toastStore.error(
-                "Delete failed",
-                `Could not delete workspace "${name}".`,
-            );
-            return false;
-        }
+        const { error } = await workspaceStore.remove(name);
+        if (error) return false;
+
         selectionByWorkspace.delete(name);
-        const remaining = this.getNames().filter(
-            workspaceName => workspaceName !== name,
-        );
-        this.names.updateValue(remaining);
         if (this.getActive() === name) {
+            const workspaces = await workspaceStore.getWorkspaces();
             editorState.reset();
-            this.activate(remaining[0] ?? null);
+            this.activate(workspaces[0] ?? null);
         }
         return true;
     },
 };
-
-/** @returns {Promise<string[] | null>} null when the request failed */
-async function fetchWorkspaceNames() {
-    try {
-        const res = await bec.getWorkspaceNames();
-        if (!res.ok) {
-            console.error(`Error fetching workspaces: HTTP ${res.status}`);
-            return null;
-        }
-        const names = await res.json();
-        return names.sort((a, b) => a.localeCompare(b));
-    } catch (err) {
-        console.error("Error fetching workspaces", err);
-        return null;
-    }
-}

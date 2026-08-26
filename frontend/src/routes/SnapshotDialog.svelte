@@ -20,41 +20,37 @@
     import { Fa } from "svelte-fa";
     import { v4 as uuidv4 } from "uuid";
 
-    import { BackendConnection } from "$lib/api/backend.js";
+    import { createSnapshot } from "$lib/api/generated/index.ts";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import ButtonControl from "../lib/components/ButtonControl.svelte";
     import { editorState } from "../lib/sharedState.svelte.js";
 
     let { showDialog = $bindable(), lockedWorkspaceName } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
     const workspaceSelectId = `workspaceSelect-${uuidv4()}`;
 
     let workspaceName = $state(null);
-    let workspaces = $state([]);
+    let workspaces = $state();
     let base64Token = $state();
 
     const workspaceSelectionLocked = $derived(!!lockedWorkspaceName);
 
-    function onOpen() {
+    async function onOpen() {
         workspaceName =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
-        if (workspaceSelectionLocked) {
-            workspaces = [{ label: lockedWorkspaceName }];
-        } else {
-            loadWorkspaces();
-        }
+        workspaces = await workspaceStore.getWorkspaces();
     }
 
     async function snapshotWorkspace() {
-        const res = await bec.createSnapshot(workspaceName);
-        if (res.ok) {
-            base64Token = await res.text();
+        const { data, error } = await createSnapshot({
+            path: { datasetName: workspaceName },
+        });
+        if (!error) {
+            base64Token = data;
             console.log(
                 "Successfully created snapshot for workspace",
                 workspaceName,
@@ -64,21 +60,12 @@
                 `Share link created for "${workspaceName}".`,
             );
         } else {
-            console.error(
-                "Error creating snapshot for workspace:",
-                res.statusText,
-            );
+            console.error("Error creating snapshot for workspace:", error);
             toastStore.error(
                 "Snapshot failed",
                 `Could not create a snapshot for "${workspaceName}".`,
             );
         }
-    }
-
-    async function loadWorkspaces() {
-        const res = await bec.getWorkspaceNames();
-        const workspaceNames = await res.json();
-        workspaces = workspaceNames.map(name => ({ label: name }));
     }
 
     async function copyToClipboard() {

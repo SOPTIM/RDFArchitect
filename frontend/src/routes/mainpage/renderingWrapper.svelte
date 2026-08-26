@@ -20,10 +20,13 @@
     import { SvelteFlowProvider } from "@xyflow/svelte";
     import { untrack } from "svelte";
 
-    import { BackendConnection } from "$lib/api/backend.js";
+    import {
+        getCustomDatasetViewRenderingData,
+        getCustomProfileViewRenderingData,
+        getRenderingDataParameterized,
+    } from "$lib/api/generated/index.ts";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import MermaidWrapper from "$lib/rendering/mermaid/mermaidWrapper.svelte";
     import SvelteFlowWrapper from "$lib/rendering/svelteflow/svelteFlowWrapper.svelte";
     import { renderOptions } from "$lib/renderOptions.svelte.js";
@@ -32,10 +35,10 @@
         forceReloadTrigger,
         DiagramType,
     } from "$lib/sharedState.svelte.js";
+    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import RenderFilterBar from "./RenderFilterBar.svelte";
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const MERMAID_FORMAT = "MERMAID";
     const SVELTEFLOW_FORMAT = "SVELTEFLOW";
@@ -61,7 +64,9 @@
         forceReloadTrigger.subscribe();
         editorState.selectedWorkspace.subscribe();
         const workspace = editorState.selectedWorkspace.getValue();
-        isWorkspaceReadOnly = workspace ? await isReadOnly(workspace) : false;
+        isWorkspaceReadOnly = workspace
+            ? await workspaceStore.isReadOnly(workspace)
+            : false;
     });
 
     $effect(async () => {
@@ -133,45 +138,44 @@
         };
 
         try {
-            const res = await bec.fetchFilteredRenderingData(
-                workspaceName,
-                graphUri,
-                graphFilter,
-            );
+            const { data, error } = await getRenderingDataParameterized({
+                path: { datasetName: workspaceName, graphURI: graphUri },
+                body: graphFilter,
+            });
 
-            const responseText = await res.text();
-            if (!responseText) {
+            if (error) {
                 response = null;
                 renderingFormat = null;
                 displayDiagram = false;
                 isLoading = false;
             } else {
-                const parsedResponse = JSON.parse(responseText);
-                response = parsedResponse;
-                renderingFormat = parsedResponse.format;
+                response = data;
+                renderingFormat = data.format;
                 displayDiagram = true;
             }
         } catch (error) {
-            console.error("Error fetching diagram data:", error);
+            console.error("Error fetching package rendering data:", error);
             response = null;
             renderingFormat = null;
             displayDiagram = false;
+        } finally {
             isLoading = false;
         }
     }
 
     async function fetchWorkspaceDiagramRenderingData(diagramId) {
         try {
-            const res = await bec.getCustomWorkspaceDiagramRenderingData(
-                editorState.selectedWorkspace.getValue(),
-                diagramId,
-            );
+            const { data, error } = await getCustomDatasetViewRenderingData({
+                path: {
+                    datasetName: editorState.selectedWorkspace.getValue(),
+                    diagramId: diagramId,
+                },
+            });
 
-            const responseText = await res.text();
-            if (!responseText) {
+            if (error) {
                 displayDiagram = false;
             } else {
-                response = JSON.parse(responseText);
+                response = data;
                 renderingFormat = response.format;
                 displayDiagram = true;
             }
@@ -186,17 +190,18 @@
 
     async function fetchGraphDiagramRenderingData(diagramId) {
         try {
-            const res = await bec.getCustomGraphDiagramRenderingData(
-                editorState.selectedWorkspace.getValue(),
-                editorState.selectedGraph.getValue(),
-                diagramId,
-            );
+            const { data, error } = await getCustomProfileViewRenderingData({
+                path: {
+                    datasetName: editorState.selectedWorkspace.getValue(),
+                    graphURI: editorState.selectedGraph.getValue(),
+                    diagramId: diagramId,
+                },
+            });
 
-            const responseText = await res.text();
-            if (!responseText) {
+            if (error) {
                 displayDiagram = false;
             } else {
-                response = JSON.parse(responseText);
+                response = data;
                 renderingFormat = response.format;
                 displayDiagram = true;
             }
@@ -210,27 +215,21 @@
     }
 
     async function fetchCrossProfileRenderingData() {
-        try {
-            const res =
-                await bec.getCrossProfileDiagramRenderingDataForWorkspace(
-                    editorState.selectedWorkspace.getValue(),
-                );
+        const { error, data } = await crossProfileStore.fetchRenderingData(
+            editorState.selectedWorkspace.getValue(),
+        );
 
-            const responseText = await res.text();
-            if (!responseText) {
-                displayDiagram = false;
-            } else {
-                response = JSON.parse(responseText);
-                renderingFormat = response.format;
-                displayDiagram = true;
-            }
-        } catch (error) {
-            console.error("Error fetching cross profile diagram data:", error);
+        if (error || !data) {
+            displayDiagram = false;
             response = null;
             renderingFormat = null;
-        } finally {
-            isLoading = false;
+        } else {
+            response = data;
+            renderingFormat = response.format;
+            displayDiagram = true;
         }
+
+        isLoading = false;
     }
 
     function getDiagramRequestKey(
@@ -245,11 +244,6 @@
             packageUUID,
             filter,
         });
-    }
-
-    async function isReadOnly(workspaceName) {
-        const res = await bec.isReadOnly(workspaceName);
-        return await res.json();
     }
 
     function handleResetView() {

@@ -28,12 +28,9 @@
         faTrash,
     } from "@fortawesome/free-solid-svg-icons";
 
-    import {
-        disableEditing,
-        enableEditing,
-    } from "$lib/actions/editingActions.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import ImportDialog from "../../ImportDialog.svelte";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
@@ -58,8 +55,8 @@
 
     async function toggleEditing(editingEnabled) {
         const succeeded = editingEnabled
-            ? await enableEditing(workspaceName)
-            : await disableEditing(workspaceName);
+            ? await workspaceStore.updateReadonly(workspaceName, false)
+            : await workspaceStore.updateReadonly(workspaceName, true);
         if (!succeeded) {
             return;
         }

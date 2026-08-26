@@ -16,16 +16,15 @@
   -->
 
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
     import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         DiagramType,
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/classStore.ts";
+    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
 
     let {
         showDialog = $bindable(),
@@ -33,8 +32,6 @@
         graphUri,
         classUUID,
     } = $props();
-
-    let bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let selectedWorkspaceName = $state(null);
     let selectedGraphURI = $state(null);
@@ -46,39 +43,23 @@
             workspaceName: selectedWorkspaceName,
             graphUri: selectedGraphURI,
         };
-        try {
-            const response = await bec.extendClass(
-                workspaceName,
-                graphUri,
-                classUUID,
-                body,
-            );
-            if (!response.ok) {
-                toastStore.error(
-                    "Could not extend class",
-                    "The class could not be extended. Please try again.",
-                );
-                return;
-            }
-            const newClass = await response.json();
-            editorState.selectedWorkspace.updateValue(selectedWorkspaceName);
-            editorState.selectedGraph.updateValue(selectedGraphURI);
-            editorState.selectedDiagram.updateValue({
-                type: DiagramType.PACKAGE,
-                id: newClass.belongsToCategory,
-            });
-            forceReloadTrigger.trigger();
-            toastStore.success(
-                "Class extended",
-                `The class has been extended in "${selectedWorkspaceName}".`,
-            );
-        } catch (e) {
-            console.log(e);
-            toastStore.error(
-                "Could not extend class",
-                "An unexpected error occurred. Please try again.",
-            );
-        }
+
+        const { data, error } = await classStore.extendClass(
+            workspaceName,
+            graphUri,
+            classUUID,
+            body,
+        );
+        if (error) return;
+
+        crossProfileStore.invalidateWorkspace(selectedWorkspaceName);
+        editorState.selectedWorkspace.updateValue(selectedWorkspaceName);
+        editorState.selectedGraph.updateValue(selectedGraphURI);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: data.belongsToCategory,
+        });
+        forceReloadTrigger.trigger();
     }
 </script>
 

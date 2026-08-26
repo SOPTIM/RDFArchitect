@@ -53,6 +53,7 @@ public class SchemaComparisonFromFilesRESTController {
     @Operation(
             summary = "compare schemas",
             description = "Compare two given graphs",
+            tags = {"comparison"},
             responses = {
                 @ApiResponse(
                         responseCode = "200",
@@ -68,7 +69,7 @@ public class SchemaComparisonFromFilesRESTController {
                                                                                         .class))))
             })
     @PostMapping
-    public List<TriplePackageChange> compareSchemas(
+    public List<TriplePackageChange> compareSchemasFromFiles(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

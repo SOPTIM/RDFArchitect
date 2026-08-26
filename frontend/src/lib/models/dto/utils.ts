@@ -15,7 +15,7 @@
  *
  */
 
-export function isValidMultiplicity(multiplicity: string): boolean {
+export function isValidMultiplicity(multiplicity: string | null): boolean {
     if (multiplicity === null) {
         return false;
     }

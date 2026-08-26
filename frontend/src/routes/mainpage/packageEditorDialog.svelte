@@ -15,27 +15,21 @@
   -
   -->
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { mapReactivePackageToPackageDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactivePackage } from "$lib/models/reactive/models/reactive-package.svelte.js";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { packageStore } from "$lib/stores/packageStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import {
         getPackageDisplayLabel,
         restorePackageLabelPrefix,
     } from "$lib/utils/package-label.js";
-
-    import {
-        getNamespaces,
-        getPackages,
-    } from "./classEditor/fetch-class-editor-context.js";
 
     let {
         showDialog = $bindable(),
@@ -44,8 +38,6 @@
         workspaceName = null,
         graphUri = null,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let pkg = $state(null);
     let isNewPackage = $state(true);
@@ -58,8 +50,16 @@
     }
 
     async function onOpen() {
-        await fetchPackages();
-        namespaces = await getNamespaces(workspaceName);
+        namespaces = await workspaceStore.getNamespaces(workspaceName);
+
+        if (!workspaceName || !graphUri) {
+            packages = [];
+            return;
+        }
+
+        const result = await packageStore.getPackages(workspaceName, graphUri);
+        packages = result ? [...result.internal, ...result.external] : [];
+
         if (pack) {
             isNewPackage = false;
             pkg = new ReactivePackage({
@@ -86,26 +86,8 @@
             return [];
         });
     }
-    async function fetchPackages() {
-        if (!workspaceName || !graphUri) {
-            packages = [];
-            return;
-        }
-        try {
-            packages = await getPackages(workspaceName, graphUri);
-        } catch (err) {
-            console.error("Failed to load packages:", err);
-            packages = [];
-        }
-    }
 
     async function savePackage() {
-        console.log(
-            "Saving package in workspace",
-            workspaceName,
-            "and graph",
-            graphUri,
-        );
         if (!workspaceName || !graphUri) {
             return;
         }
@@ -115,23 +97,15 @@
             apiPackage.label,
             pack?.label,
         );
-        const res = await bec.putPackage(workspaceName, graphUri, apiPackage);
+        const res = await packageStore.savePackage(
+            workspaceName,
+            graphUri,
+            apiPackage,
+        );
 
-        if (res.ok) {
-            console.log("Successfully saved package");
+        if (!res.error) {
             pkg.save();
             forceReloadTrigger.trigger();
-            toastStore.success(
-                isNewPackage ? "Package created" : "Package saved",
-                `"${getPackageDisplayLabel(apiPackage.label)}" was saved.`,
-            );
-        } else {
-            const errorText = await res.text();
-            console.error("Could not save package:", errorText);
-            toastStore.error(
-                "Save failed",
-                `Could not save package "${getPackageDisplayLabel(apiPackage.label)}".`,
-            );
         }
 
         return res;
