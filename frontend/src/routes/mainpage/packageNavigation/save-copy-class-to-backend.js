@@ -54,7 +54,10 @@ export async function loadPastePreview(workspaceName, graphURI, options) {
     if (entries.length === 0 || !copiesAnything) return null;
     try {
         const { data, error } = await previewPaste({
-            path: { workspaceName, graphURI },
+            path: {
+                targetDatasetName: workspaceName,
+                targetGraphURI: graphURI,
+            },
             body: {
                 sources: sourcesOf(entries),
             },

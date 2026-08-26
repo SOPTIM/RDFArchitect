@@ -129,7 +129,6 @@
     }
 
     async function reload() {
-        await fetchUndoRedo();
         editorState.selectedWorkspace.trigger();
         editorState.selectedGraph.trigger();
         editorState.selectedClass.trigger();

@@ -53,7 +53,7 @@ export const workspaceState = {
 
         const active = this.getActive();
         if (!active || !workspaces.some(ws => ws.label === active)) {
-            this.activate(workspaces[0] ?? null);
+            this.activate(workspaces[0].label ?? null);
         }
     },
 

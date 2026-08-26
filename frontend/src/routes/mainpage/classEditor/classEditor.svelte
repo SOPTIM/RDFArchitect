@@ -125,7 +125,6 @@
                 workspaceName,
                 graphUri,
                 classUuid,
-                true,
             );
             if (cancellation.cancelled) return;
             if (classDto == null) {

@@ -52,7 +52,7 @@
             name: "HTML",
             ending: "html",
             fetch: (workspace, graph, imageEnding, embedDiagrams, signal) => {
-                const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspace)}/graphs/${encodeURIComponent(graph)}/htmlexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
+                const url = `${PUBLIC_BACKEND_URL}/api/datasets/${encodeURIComponent(workspace)}/graphs/${encodeURIComponent(graph)}/htmlexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
                 return fetch(url, {
                     method: "GET",
                     headers: new Headers({
@@ -68,7 +68,7 @@
             name: "AsciiDoc",
             ending: "adoc",
             fetch: (workspace, graph, imageEnding, embedDiagrams, signal) => {
-                const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspace)}/graphs/${encodeURIComponent(graph)}/asciidocexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
+                const url = `${PUBLIC_BACKEND_URL}/api/datasets/${encodeURIComponent(workspace)}/graphs/${encodeURIComponent(graph)}/asciidocexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
                 return fetch(url, {
                     method: "GET",
                     headers: new Headers({
