@@ -133,7 +133,10 @@ function createWorkspaceStore() {
         return { error: null };
     }
 
-    async function rename(workspaceName: string, newWorkspaceName: string): Promise<Result> {
+    async function rename(
+        workspaceName: string,
+        newWorkspaceName: string,
+    ): Promise<Result> {
         console.log(`${LOG_PREFIX} Renaming workspace "${workspaceName}"`);
 
         const { error } = await renameDataset({
@@ -172,7 +175,6 @@ function createWorkspaceStore() {
 
         return { error: null };
     }
-
 
     async function remove(workspaceName: string): Promise<Result> {
         console.log(`${LOG_PREFIX} Deleting workspace "${workspaceName}"`);

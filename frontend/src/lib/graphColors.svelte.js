@@ -178,11 +178,16 @@ async function put(workspaceName, colorsByGraph) {
             body: { graphColors: payload },
         });
         if (error) {
-            console.error(`Failed to save schema colors for "${workspaceName}"`);
+            console.error(
+                `Failed to save schema colors for "${workspaceName}"`,
+            );
         }
         return true;
     } catch (err) {
-        console.error(`Failed to save schema colors for "${workspaceName}"`, err);
+        console.error(
+            `Failed to save schema colors for "${workspaceName}"`,
+            err,
+        );
         return false;
     }
 }

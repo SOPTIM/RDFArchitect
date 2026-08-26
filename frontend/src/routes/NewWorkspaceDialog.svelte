@@ -30,7 +30,9 @@
     let workspaceNameUserInput = $state("");
 
     const trimmedName = $derived(workspaceNameUserInput.trim());
-    const nameExists = $derived(existingNames.some(workspace => workspace.label === trimmedName));
+    const nameExists = $derived(
+        existingNames.some(workspace => workspace.label === trimmedName),
+    );
     const nameHasInvalidCharacters = $derived(
         invalidCharacters.test(trimmedName),
     );

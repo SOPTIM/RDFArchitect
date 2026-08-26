@@ -22,7 +22,7 @@
     import { URI } from "$lib/models/dto/index.ts";
     import {
         editorState,
-        forceReloadTrigger
+        forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
@@ -47,20 +47,20 @@
     const trimmedNamespace = $derived(namespaceUserInput.trim());
     const trimmedLabel = $derived(labelUserInput.trim());
     const resolvedGraphUri = $derived(
-        trimmedNamespace && trimmedLabel ? trimmedNamespace + trimmedLabel : ""
+        trimmedNamespace && trimmedLabel ? trimmedNamespace + trimmedLabel : "",
     );
     const namespaceIsInvalid = $derived(
-        !!trimmedNamespace && !uriSchemePattern.test(trimmedNamespace)
+        !!trimmedNamespace && !uriSchemePattern.test(trimmedNamespace),
     );
     const graphExists = $derived(
-        !!resolvedGraphUri && otherGraphUris.includes(resolvedGraphUri)
+        !!resolvedGraphUri && otherGraphUris.includes(resolvedGraphUri),
     );
     const uriChanged = $derived(resolvedGraphUri !== graphUri);
     // The tree labels a schema by its dcat:keyword and only falls back to the
     // URI suffix, so a new label has to reach the keyword as well.
     const labelChanged = $derived(trimmedLabel !== initialLabel);
     const disableSubmit = $derived(
-        !resolvedGraphUri || namespaceIsInvalid || graphExists || !uriChanged
+        !resolvedGraphUri || namespaceIsInvalid || graphExists || !uriChanged,
     );
 
     async function onOpen() {
@@ -82,12 +82,13 @@
     }
 
     async function loadNamespaceOptions() {
-        const namespaces = await workspaceStore.getNamespaces(workspaceName) ?? [];
+        const namespaces =
+            (await workspaceStore.getNamespaces(workspaceName)) ?? [];
         const options = namespaces
             .map(namespace => namespace?.prefix)
             .filter(prefix => !!prefix);
         return [
-            ...new Set([defaultNamespace, ...options, namespaceUserInput])
+            ...new Set([defaultNamespace, ...options, namespaceUserInput]),
         ].sort((a, b) => a.localeCompare(b));
     }
 
@@ -96,7 +97,7 @@
             return [];
         }
 
-        const graphs = await graphStore.getGraphs(workspaceName) ?? [];
+        const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
         return graphs.map(getUri).filter(uri => uri !== graphUri);
     }
 
@@ -109,7 +110,7 @@
             workspaceName,
             oldGraphUri,
             newGraphUri,
-            newKeyword
+            newKeyword,
         );
         if (error) return;
 

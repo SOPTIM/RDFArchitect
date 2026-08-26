@@ -30,7 +30,6 @@ const selectionByWorkspace = new Map();
  * schemas) is loaded where it is shown, see `asyncValue`.
  */
 export const workspaceState = {
-
     getActive() {
         return editorState.selectedWorkspace.getValue();
     },

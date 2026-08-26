@@ -16,14 +16,14 @@
   -->
 
 <script>
-    import { onMount, setContext, untrack } from "svelte";
+    import { setContext, untrack } from "svelte";
 
     import { asyncValue } from "$lib/asyncValue.svelte.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import { graphColors } from "$lib/graphColors.svelte.js";
     import {
         editorState,
-        forceReloadTrigger
+        forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { SimpleTrigger } from "$lib/statePrimitives.svelte.js";
     import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
@@ -35,11 +35,10 @@
     import GraphSection from "./GraphSection.svelte";
     import WorkspaceActionsMenu from "../workspaceActions/WorkspaceActionsMenu.svelte";
 
-
     const localReloadTrigger = new SimpleTrigger();
     const readonlyValue = asyncValue(
         () => activeWorkspace,
-        (workspace) => workspaceStore.isReadOnly(workspace)
+        workspace => workspaceStore.isReadOnly(workspace),
     );
 
     let workspaceNavEntry = $state(null);
@@ -54,13 +53,13 @@
     // schemas while the tree is being rebuilt.
     const navEntryReady = $derived(workspaceNavEntry?.id === activeWorkspace);
     const graphNavEntries = $derived(
-        navEntryReady ? (workspaceNavEntry?.children ?? []) : []
+        navEntryReady ? (workspaceNavEntry?.children ?? []) : [],
     );
     const packagesWithClassesCount = $derived(
         graphNavEntries
             .flatMap(graphNavEntry => graphNavEntry.children ?? [])
             .filter(packageNavEntry => packageNavEntry.children?.length > 0)
-            .length
+            .length,
     );
 
     $effect(async () => {
@@ -89,10 +88,12 @@
         }
         const navEntry = await getWorkspaceNavEntry(
             workspaceName,
-            previousNavEntry
+            previousNavEntry,
         );
-        const loadedNamespaces = await workspaceStore.getNamespaces(workspaceName) ?? [];
-        const loadedCrossProfileID = await crossProfileStore.getId(workspaceName);
+        const loadedNamespaces =
+            (await workspaceStore.getNamespaces(workspaceName)) ?? [];
+        const loadedCrossProfileID =
+            await crossProfileStore.getId(workspaceName);
         await graphColors.reload(workspaceName);
         if (request !== latestLoadRequest) {
             return;
@@ -103,7 +104,7 @@
     }
 
     setContext("packageNavigation", {
-        reloadTrigger: localReloadTrigger
+        reloadTrigger: localReloadTrigger,
     });
 </script>
 

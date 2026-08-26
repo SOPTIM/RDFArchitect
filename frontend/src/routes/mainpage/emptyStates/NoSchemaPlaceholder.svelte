@@ -26,10 +26,12 @@
 
     import WorkspaceActionsMenu from "../workspaceActions/WorkspaceActionsMenu.svelte";
 
-
     let { workspaceName } = $props();
 
-    const readonlyValue = asyncValue(() => workspaceName, workspaceStore.isReadOnly);
+    const readonlyValue = asyncValue(
+        () => workspaceName,
+        workspaceStore.isReadOnly,
+    );
 
     let showNewGraphDialog = $state(false);
     let showImportDialog = $state(false);

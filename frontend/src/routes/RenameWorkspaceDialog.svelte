@@ -31,21 +31,20 @@
     let workspaceNameUserInput = $state("");
 
     const workspaceNames = $derived(
-        ($workspaceStore.data ?? []).map(ws => ws.label)
+        ($workspaceStore.data ?? []).map(ws => ws.label),
     );
     const trimmedName = $derived(workspaceNameUserInput.trim());
     const nameExists = $derived(
-        trimmedName !== workspaceName &&
-        workspaceNames.includes(trimmedName)
+        trimmedName !== workspaceName && workspaceNames.includes(trimmedName),
     );
     const nameHasInvalidCharacters = $derived(
-        invalidCharacters.test(trimmedName)
+        invalidCharacters.test(trimmedName),
     );
     const disableSubmit = $derived(
         !trimmedName ||
-        trimmedName === workspaceName ||
-        nameExists ||
-        nameHasInvalidCharacters
+            trimmedName === workspaceName ||
+            nameExists ||
+            nameHasInvalidCharacters,
     );
 
     function onOpen() {
