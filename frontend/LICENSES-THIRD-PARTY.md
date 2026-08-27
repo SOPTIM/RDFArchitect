@@ -14,7 +14,7 @@
 
 ### @faker-js/faker
 - **Package:** @faker-js/faker
-- **Version:** 10.5.0
+- **Version:** 10.6.0
 - **License:** MIT
 - **URL:** [https://fakerjs.dev](https://fakerjs.dev)
 
@@ -62,7 +62,7 @@
 
 ### @sveltejs/kit
 - **Package:** @sveltejs/kit
-- **Version:** 2.70.2
+- **Version:** 2.70.3
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -98,7 +98,7 @@
 
 ### asciidoctor
 - **Package:** asciidoctor
-- **Version:** 4.0.8
+- **Version:** 4.0.11
 - **License:** MIT
 - **URL:** [https://github.com/asciidoctor/asciidoctor.js](https://github.com/asciidoctor/asciidoctor.js)
 
@@ -109,7 +109,7 @@
 
 ### bits-ui
 - **Package:** bits-ui
-- **Version:** 2.18.1
+- **Version:** 2.19.0
 - **License:** MIT
 
 ### codemirror
@@ -185,7 +185,7 @@
 
 ### mermaid
 - **Package:** mermaid
-- **Version:** 11.16.1
+- **Version:** 11.17.0
 - **License:** MIT
 - **URL:** [https://github.com/mermaid-js/mermaid](https://github.com/mermaid-js/mermaid)
 
@@ -227,7 +227,7 @@
 
 ### svelte-eslint-parser
 - **Package:** svelte-eslint-parser
-- **Version:** 1.8.0
+- **Version:** 1.8.1
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/svelte-eslint-parser#readme](https://github.com/sveltejs/svelte-eslint-parser#readme)
 
@@ -263,7 +263,7 @@
 
 ### uuid
 - **Package:** uuid
-- **Version:** 14.0.1
+- **Version:** 14.0.2
 - **License:** MIT
 - **URL:** [https://github.com/uuidjs/uuid](https://github.com/uuidjs/uuid)
 
@@ -275,13 +275,13 @@
 
 ### vite
 - **Package:** vite
-- **Version:** 8.2.1
+- **Version:** 8.2.2
 - **License:** MIT
 - **URL:** [https://vite.dev](https://vite.dev)
 
 ### vitest
 - **Package:** vitest
-- **Version:** 4.1.10
+- **Version:** 4.1.11
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 
