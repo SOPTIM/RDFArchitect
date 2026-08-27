@@ -1853,7 +1853,8 @@
               "DELETE",
               "DELETED_FROM_INHERITANCE",
               "CHANGE",
-              "RENAME"
+              "RENAME",
+              "INHERITS_CHANGE"
             ],
             "type" : "string"
           }
@@ -1965,7 +1966,8 @@
               "DELETE",
               "DELETED_FROM_INHERITANCE",
               "CHANGE",
-              "RENAME"
+              "RENAME",
+              "INHERITS_CHANGE"
             ],
             "type" : "string"
           },
