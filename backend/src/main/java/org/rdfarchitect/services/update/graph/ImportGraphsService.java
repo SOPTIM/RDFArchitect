@@ -34,7 +34,6 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -70,7 +69,6 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     private static final int MAX_ENTRIES = 1000;
     private static final String FALL_BACK_NAME = "graph";
 
-    private final CreateDiagramLayoutUseCase createDiagramLayoutUseCase;
     private final DatabasePort databasePort;
 
     @Override
@@ -112,7 +110,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             graphUri = ensureUniqueGraphUri(graphUri, reservedGraphUris);
             var graph = parseGraph(file, graphUri);
             var undisplayableProperties = findUndisplayableProperties(graph);
-            var graphIdentifier = replaceGraph(datasetName, graphUri, graph);
+            replaceGraph(datasetName, graphUri, graph);
             result.importedGraphUris().add(graphUri);
             if (!undisplayableProperties.isEmpty()) {
                 result.warnings()
@@ -120,17 +118,15 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                                 new ImportWarning(
                                         file.getOriginalFilename(), undisplayableProperties));
             }
-            createDiagramLayoutUseCase.createDiagramLayout(graphIdentifier);
         } catch (RuntimeException _) {
             result.failedFileNames().add(file.getOriginalFilename());
         }
     }
 
-    private GraphIdentifier replaceGraph(String datasetName, String graphUri, Graph graph) {
+    private void replaceGraph(String datasetName, String graphUri, Graph graph) {
         var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
         databasePort.deleteGraph(graphIdentifier);
         databasePort.createGraph(graphIdentifier, graph);
-        return graphIdentifier;
     }
 
     /**

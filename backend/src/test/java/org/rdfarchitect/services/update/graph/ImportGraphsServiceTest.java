@@ -31,7 +31,6 @@ import org.mockito.ArgumentCaptor;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
-import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.nio.charset.StandardCharsets;
@@ -40,15 +39,12 @@ import java.util.List;
 class ImportGraphsServiceTest {
 
     private ImportGraphsUseCase importGraphsUseCase;
-    private CreateDiagramLayoutUseCase createDiagramLayoutUseCaseMock;
     private DatabasePort databasePortMock;
 
     @BeforeEach
     void setUp() {
-        createDiagramLayoutUseCaseMock = mock(CreateDiagramLayoutUseCase.class);
         databasePortMock = mock(DatabasePort.class);
-        importGraphsUseCase =
-                new ImportGraphsService(createDiagramLayoutUseCaseMock, databasePortMock);
+        importGraphsUseCase = new ImportGraphsService(databasePortMock);
     }
 
     @Test
@@ -86,8 +82,6 @@ class ImportGraphsServiceTest {
         assertThat(captor.getAllValues())
                 .extracting(GraphIdentifier::graphUri)
                 .containsExactly(RDFA.GRAPH_URI + "graph", RDFA.GRAPH_URI + "graph_1");
-
-        verify(createDiagramLayoutUseCaseMock, times(2)).createDiagramLayout(any());
     }
 
     @Test
