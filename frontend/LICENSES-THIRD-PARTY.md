@@ -44,7 +44,7 @@
 
 ### @hey-api/openapi-ts
 - **Package:** @hey-api/openapi-ts
-- **Version:** 0.97.1
+- **Version:** 0.97.3
 - **License:** MIT
 - **URL:** [https://heyapi.dev/](https://heyapi.dev/)
 
