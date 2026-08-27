@@ -83,14 +83,14 @@ public class ImportJobService implements ImportJobUseCase {
     }
 
     @Override
-    public Optional<ImportJobStatus> getStatus(UUID jobId) {
+    public Optional<ImportJobStatus> getStatus(String datasetName, UUID jobId) {
         dropExpiredJobs();
-        return findJobOfCurrentSession(jobId).map(ImportJob::status);
+        return findJob(datasetName, jobId).map(ImportJob::status);
     }
 
     @Override
-    public boolean cancel(UUID jobId) {
-        var job = findJobOfCurrentSession(jobId);
+    public boolean cancel(String datasetName, UUID jobId) {
+        var job = findJob(datasetName, jobId);
         job.ifPresent(
                 cancelledJob -> {
                     cancelledJob.requestCancel();
@@ -131,9 +131,14 @@ public class ImportJobService implements ImportJobUseCase {
                 .anyMatch(job -> job.getSessionId().equals(sessionId) && job.finishedAt() == null);
     }
 
-    private Optional<ImportJob> findJobOfCurrentSession(UUID jobId) {
+    /**
+     * A job is only reachable through the session that started it and the dataset it imports into.
+     */
+    private Optional<ImportJob> findJob(String datasetName, UUID jobId) {
         var job = jobs.get(jobId);
-        if (job == null || !job.getSessionId().equals(SessionContext.getSessionId())) {
+        if (job == null
+                || !job.getSessionId().equals(SessionContext.getSessionId())
+                || !job.getDatasetName().equals(datasetName)) {
             return Optional.empty();
         }
         return Optional.of(job);
