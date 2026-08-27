@@ -35,9 +35,11 @@ import org.rdfarchitect.dl.data.DLUtils;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.rdf.resources.CIM;
 import org.rdfarchitect.dl.rdf.resources.DL;
+import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
-import org.rdfarchitect.services.dl.update.UpdateDiagramLayoutService;
+import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
+import org.rdfarchitect.services.dl.update.packagelayout.UpdatePackageLayoutService;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterService;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
 import org.springframework.mock.web.MockMultipartFile;
@@ -53,7 +55,6 @@ public class DiagramLayoutServicesTestBase {
             "src/test/java/org/rdfarchitect/services/dl/update/";
     public static final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
     // CONSTANTS FOR ASSERTS
-    public static final String DEFAULT_PACKAGE_LABEL = "default/default";
     public static final String PACKAGE_A_LABEL = "packageA";
     public static final UUID PACKAGE_A_UUID =
             UUID.fromString("43836908-c7f7-4749-bb8b-3ac9250de655");
@@ -64,21 +65,17 @@ public class DiagramLayoutServicesTestBase {
     public static final UUID CLASS_A_UUID = UUID.fromString("62118c18-10a9-49ba-b605-e74292a85186");
     public static final String CLASS_B_LABEL = "classB";
     public static final UUID CLASS_B_UUID = UUID.fromString("a516a307-21ee-4a79-a817-1a4a57a1b8de");
-    public static final String CLASS_C_LABEL = "classC";
-    public static final UUID CLASS_C_UUID = UUID.fromString("06610df1-4fde-4b75-b845-ef04b947054c");
     public static GraphToCIMCollectionConverterUseCase converter;
     public static DatabasePort databasePort;
     public static PackageMapper packageMapper;
     public static InMemoryDatabase database;
     public static DiagramLayoutDelta diagramLayout;
-    public static UpdateDiagramLayoutService updateDiagramLayoutService;
 
     @BeforeAll
     static void setUpEnvironment() {
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         converter = new GraphToCIMCollectionConverterService(databasePort);
         packageMapper = Mappers.getMapper(PackageMapper.class);
-        updateDiagramLayoutService = new UpdateDiagramLayoutService(databasePort, converter);
     }
 
     public static void addGraphFromFile(String fileName) {
@@ -97,6 +94,44 @@ public class DiagramLayoutServicesTestBase {
                         .graph();
         databasePort.createGraph(graphIdentifier, graph);
         diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
+    }
+
+    /**
+     * Populates the layout data of the graph under test the way the running application does: the
+     * editor creates a diagram when a package is opened and a diagram object when a class shows up
+     * in it, both through the services below. Tests that need existing layout data call this
+     * instead of relying on the import to have prepared it.
+     */
+    public static void initialiseDiagramLayout() {
+        var packageLayoutService =
+                new UpdatePackageLayoutService(databasePort, packageMapper, converter);
+        var classLayoutService = new UpdateClassLayoutService(databasePort, packageMapper);
+
+        for (var cimPackage :
+                converter.convert(graphIdentifier, new GraphFilter(false)).getPackages()) {
+            var packageDTO = packageMapper.toDTO(cimPackage);
+            // The editor sends the label the package is known by, which the diagram of the package
+            // is named after; mapping to a DTO would replace that label with the uri suffix.
+            packageDTO.setLabel(cimPackage.getLabel().getValue());
+            packageLayoutService.createPackageLayoutData(
+                    graphIdentifier, packageDTO, cimPackage.getUuid());
+
+            var packageFilter = new GraphFilter(false);
+            packageFilter.setIncludeInheritance(true);
+            packageFilter.setIncludeAssociations(true);
+            packageFilter.setIncludeRelationsToExternalPackages(true);
+            packageFilter.setPackageUUID(cimPackage.getUuid().toString());
+
+            for (var cimClassOrEnum :
+                    converter.convert(graphIdentifier, packageFilter).getClassesAndEnums()) {
+                classLayoutService.createClassLayoutData(
+                        graphIdentifier,
+                        packageDTO,
+                        cimClassOrEnum.getLabel().getValue(),
+                        cimClassOrEnum.getUuid(),
+                        null);
+            }
+        }
     }
 
     public static void assertDiagram(UUID packageUUID, String packageName) {

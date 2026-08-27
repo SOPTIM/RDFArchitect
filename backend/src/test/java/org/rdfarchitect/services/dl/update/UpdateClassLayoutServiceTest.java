@@ -91,7 +91,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         // Arrange: a class that already has layout data, as when it takes over an uri whose
         // class was deleted while references to it remained
         addGraphFromFile("package_and_class.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
         var packageDTO =
                 PackageDTO.builder()
                         .uuid(PACKAGE_A_UUID)
@@ -125,7 +125,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void createClassLayoutData_layoutDataWithoutPoint_placesClassAtRequestedPosition() {
         // Arrange: a diagram object that lost its point, so the class has layout data but no place
         addGraphFromFile("package_and_class.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
         var doMRID = assertDiagramObject(CLASS_A_UUID, PACKAGE_A_UUID, CLASS_A_LABEL);
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModelDirect();
         DLUpdates.deleteDiagramObjectPoint(
@@ -155,7 +155,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void updateClassPositions_fullGraph_repositionsClasses() {
         // Arrange
         addGraphFromFile("full_graph.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
 
         // Act
         var classAPositionDTO = new ClassPositionDTO();
@@ -172,7 +172,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void updateDiagramObjectName_classExists_updatesDiagramObjectName() {
         // Arrange
         addGraphFromFile("package_and_class.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
 
         // Act
         service.updateDiagramObjectName(graphIdentifier, CLASS_A_UUID, "newClassLabel");
@@ -185,7 +185,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void deleteClassLayoutData_classExists_deletesClassLayoutData() {
         // Arrange
         addGraphFromFile("association.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
         var diagramObjects =
                 diagramLayout
                         .getDiagramLayoutModelDirect()
