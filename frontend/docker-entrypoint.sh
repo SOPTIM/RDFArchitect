@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-: "${PUBLIC_BACKEND_URL:=/}"
+: "${PUBLIC_BACKEND_URL:=}"
 : "${PUBLIC_APP_VERSION:=}"
 : "${PUBLIC_COMMIT_SHA:=}"
 : "${PUBLIC_REPOSITORY_URL:=}"
