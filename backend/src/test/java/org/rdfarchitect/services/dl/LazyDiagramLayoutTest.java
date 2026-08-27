@@ -38,6 +38,7 @@ import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterService;
 import org.rdfarchitect.services.rendering.svelteflow.RenderCIMFacadeCollectionSvelteFlowService;
 import org.rdfarchitect.services.update.graph.ImportGraphsService;
+import org.rdfarchitect.services.update.graph.ImportProgressListener;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.nio.charset.StandardCharsets;
@@ -93,7 +94,9 @@ class LazyDiagramLayoutTest {
                         "gadgets.ttl",
                         "text/turtle",
                         SCHEMA.getBytes(StandardCharsets.UTF_8));
-        var result = new ImportGraphsService(databasePort).importGraphs("ds", List.of(file), null);
+        var result =
+                new ImportGraphsService(databasePort)
+                        .importGraphs("ds", List.of(file), null, ImportProgressListener.NOOP);
         assertThat(result.failedFileNames()).isEmpty();
         graphIdentifier = new GraphIdentifier("ds", result.importedGraphUris().getFirst());
     }

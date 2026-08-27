@@ -24,6 +24,7 @@
     import { Fa } from "svelte-fa";
 
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
+    import ProgressBar from "$lib/components/ProgressBar.svelte";
     import { PackageStatus } from "$lib/utils/exportProgress.svelte.js";
 
     let { progress } = $props();
@@ -42,33 +43,15 @@
         [PackageStatus.FAILED]: "failed",
     };
 
-    let percent = $derived(Math.round(progress.percent));
     let total = $derived(progress.packages.length);
 </script>
 
 <div class="mx-2 mt-2 flex min-h-0 flex-col">
-    <div class="mb-1 flex items-baseline justify-between gap-2">
-        <span class="text-default-text truncate text-sm" aria-live="polite">
-            {progress.statusText}
-        </span>
-        <span class="text-text-subtle shrink-0 text-sm tabular-nums">
-            {percent}%
-        </span>
-    </div>
-
-    <div
-        class="bg-default-background h-2 w-full overflow-hidden rounded"
-        role="progressbar"
-        aria-valuenow={percent}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label="Export progress"
-    >
-        <div
-            class="bg-blue h-full rounded transition-[width] duration-200 ease-out"
-            style={`width:${percent}%`}
-        ></div>
-    </div>
+    <ProgressBar
+        label={progress.statusText}
+        percent={progress.percent}
+        ariaLabel="Export progress"
+    />
 
     {#if total}
         <p class="text-text-subtle mt-1 text-xs tabular-nums">
