@@ -69,7 +69,9 @@ class ImportGraphsServiceTest {
         when(databasePortMock.listGraphUris(datasetName))
                 .thenThrow(new RuntimeException("dataset does not exist"));
 
-        var result = importGraphsUseCase.importGraphs(datasetName, List.of(file1, file2), null);
+        var result =
+                importGraphsUseCase.importGraphs(
+                        datasetName, List.of(file1, file2), null, ImportProgressListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedGraphUris())
@@ -131,7 +133,9 @@ class ImportGraphsServiceTest {
                         "text/turtle",
                         schema.getBytes(StandardCharsets.UTF_8));
 
-        var result = importGraphsUseCase.importGraphs(datasetName, List.of(file), null);
+        var result =
+                importGraphsUseCase.importGraphs(
+                        datasetName, List.of(file), null, ImportProgressListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "schema");
@@ -176,7 +180,9 @@ class ImportGraphsServiceTest {
                         "text/turtle",
                         schema.getBytes(StandardCharsets.UTF_8));
 
-        var result = importGraphsUseCase.importGraphs(datasetName, List.of(file), null);
+        var result =
+                importGraphsUseCase.importGraphs(
+                        datasetName, List.of(file), null, ImportProgressListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "schema");

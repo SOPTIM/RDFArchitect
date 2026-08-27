@@ -26,31 +26,25 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
-import org.jetbrains.annotations.NotNull;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
+import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
+import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
+import org.rdfarchitect.services.update.graph.ImportProgressListener.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URLConnection;
-import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -73,20 +67,110 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     @Override
     public ImportResult importGraphs(
-            String datasetName, List<MultipartFile> files, List<String> graphUris) {
+            String datasetName,
+            List<MultipartFile> files,
+            List<String> graphUris,
+            ImportProgressListener listener) {
+        var sources = planSources(files, graphUris);
+        listener.planned(
+                sources.stream()
+                        .flatMap(source -> source.plannedFiles().stream())
+                        .map(PlannedFile::toPlannedImport)
+                        .toList());
+
         var reservedGraphUris = loadExistingGraphUris(datasetName);
         var result = new ImportResult();
+        for (var source : sources) {
+            importSource(result, datasetName, source, reservedGraphUris, listener);
+        }
+        return result;
+    }
 
+    // -------------------------------------------------------------------------
+    // Planning
+    // -------------------------------------------------------------------------
+
+    /**
+     * Works out which graph files the upload will produce, before importing any of them, so that
+     * progress can be reported against a known total. A zip archive contributes one entry per graph
+     * file it holds; an archive that cannot be read contributes a single entry that fails right
+     * away, leaving the other uploads unaffected.
+     */
+    private List<PlannedSource> planSources(List<MultipartFile> files, List<String> graphUris) {
+        var sources = new ArrayList<PlannedSource>();
+        int index = 0;
         for (int i = 0; i < files.size(); i++) {
             var file = files.get(i);
             if (isZipFile(file)) {
-                importZipFile(result, datasetName, file, reservedGraphUris);
+                var source = planZipSource(file, index);
+                index += source.plannedFiles().size();
+                sources.add(source);
             } else {
-                var requestedUri = getRequestedGraphUri(graphUris, i);
-                importSingleFile(result, datasetName, file, requestedUri, reservedGraphUris);
+                var fileName =
+                        Objects.requireNonNullElse(file.getOriginalFilename(), FALL_BACK_NAME);
+                var plannedFile =
+                        new PlannedFile(
+                                index++,
+                                fileName,
+                                getRequestedGraphUri(graphUris, i),
+                                file.getSize());
+                sources.add(new PlannedSource(file, false, List.of(plannedFile), null));
             }
         }
-        return result;
+        return sources;
+    }
+
+    private PlannedSource planZipSource(MultipartFile file, int firstIndex) {
+        var plannedFiles = new ArrayList<PlannedFile>();
+        var index = firstIndex;
+        try (var zipInputStream = new ZipInputStream(file.getInputStream())) {
+            ZipEntry entry;
+            int entryCount = 0;
+            while ((entry = zipInputStream.getNextEntry()) != null) {
+                entryCount++;
+                if (entryCount > MAX_ENTRIES) {
+                    throw new IOException("Zip file contains too many entries.");
+                }
+                if (entry.getSize() > MAX_ENTRY_SIZE) {
+                    throw new IOException(
+                            "Zip entry exceeds maximum allowed size: " + entry.getName());
+                }
+                if (isImportableEntry(entry)) {
+                    plannedFiles.add(
+                            new PlannedFile(index++, entry.getName(), null, entry.getSize()));
+                } else if (!entry.isDirectory()) {
+                    logger.warn(
+                            "Skipping zip entry '{}' because it is not a supported file.",
+                            entry.getName());
+                }
+                zipInputStream.closeEntry();
+            }
+        } catch (IOException | RuntimeException exception) {
+            logger.warn(
+                    "Unable to read zip file '{}': {}",
+                    file.getOriginalFilename(),
+                    exception.getMessage());
+            return unreadableZipSource(file, firstIndex, exception.getMessage());
+        }
+        if (plannedFiles.isEmpty()) {
+            // Reported as a failure of the archive itself: a zip that contributes nothing would
+            // otherwise disappear from the progress without any hint of why.
+            return unreadableZipSource(file, firstIndex, "Contains no supported graph file.");
+        }
+        return new PlannedSource(file, true, plannedFiles, null);
+    }
+
+    private PlannedSource unreadableZipSource(MultipartFile file, int index, String reason) {
+        var fileName = Objects.requireNonNullElse(file.getOriginalFilename(), FALL_BACK_NAME);
+        return new PlannedSource(
+                file,
+                true,
+                List.of(new PlannedFile(index, fileName, null, file.getSize())),
+                reason);
+    }
+
+    private boolean isImportableEntry(ZipEntry entry) {
+        return !entry.isDirectory() && isGraphFile(entry.getName());
     }
 
     private String getRequestedGraphUri(List<String> graphUris, int index) {
@@ -99,27 +183,117 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         return null;
     }
 
-    private void importSingleFile(
+    // -------------------------------------------------------------------------
+    // Importing
+    // -------------------------------------------------------------------------
+
+    private void importSource(
             ImportResult result,
             String datasetName,
+            PlannedSource source,
+            Set<String> reservedGraphUris,
+            ImportProgressListener listener) {
+        var plannedFiles = source.plannedFiles().iterator();
+
+        if (source.unreadableReason() != null) {
+            failRemaining(result, plannedFiles, listener);
+            return;
+        }
+        if (!source.zip()) {
+            importPlannedFile(
+                    result,
+                    datasetName,
+                    plannedFiles.next(),
+                    source.file(),
+                    reservedGraphUris,
+                    listener);
+            return;
+        }
+
+        // The plan was built with the same predicate over the same archive, so streaming it again
+        // yields the importable entries in exactly the order they were planned in.
+        try (var zipInputStream = new ZipInputStream(source.file().getInputStream())) {
+            ZipEntry entry;
+            while (plannedFiles.hasNext() && (entry = zipInputStream.getNextEntry()) != null) {
+                try {
+                    if (!isImportableEntry(entry)) {
+                        continue;
+                    }
+                    var plannedFile = plannedFiles.next();
+                    if (listener.isCancelled()) {
+                        listener.finished(plannedFile.index(), Outcome.SKIPPED, null);
+                        continue;
+                    }
+                    importPlannedFile(
+                            result,
+                            datasetName,
+                            plannedFile,
+                            InMemoryMultipartFile.of(plannedFile.fileName(), zipInputStream),
+                            reservedGraphUris,
+                            listener);
+                } finally {
+                    zipInputStream.closeEntry();
+                }
+            }
+        } catch (IOException exception) {
+            logger.warn(
+                    "Unable to import the remaining graphs of zip file '{}': {}",
+                    source.file().getOriginalFilename(),
+                    exception.getMessage());
+            failRemaining(result, plannedFiles, listener);
+        }
+    }
+
+    private void importPlannedFile(
+            ImportResult result,
+            String datasetName,
+            PlannedFile plannedFile,
             MultipartFile file,
-            String requestedUri,
-            Set<String> reservedGraphUris) {
+            Set<String> reservedGraphUris,
+            ImportProgressListener listener) {
+        if (listener.isCancelled()) {
+            listener.finished(plannedFile.index(), Outcome.SKIPPED, null);
+            return;
+        }
+        listener.started(plannedFile.index());
         try {
-            var graphUri = normalizeGraphUri(requestedUri, file.getOriginalFilename());
-            graphUri = ensureUniqueGraphUri(graphUri, reservedGraphUris);
+            var graphUri =
+                    ensureUniqueGraphUri(
+                            normalizeGraphUri(
+                                    plannedFile.requestedGraphUri(), plannedFile.fileName()),
+                            reservedGraphUris);
+
+            listener.stage(plannedFile.index(), Stage.PARSING);
             var graph = parseGraph(file, graphUri);
+
+            listener.stage(plannedFile.index(), Stage.ANALYZING);
             var undisplayableProperties = findUndisplayableProperties(graph);
+
+            listener.stage(plannedFile.index(), Stage.STORING);
             replaceGraph(datasetName, graphUri, graph);
+
             result.importedGraphUris().add(graphUri);
             if (!undisplayableProperties.isEmpty()) {
                 result.warnings()
-                        .add(
-                                new ImportWarning(
-                                        file.getOriginalFilename(), undisplayableProperties));
+                        .add(new ImportWarning(plannedFile.fileName(), undisplayableProperties));
             }
-        } catch (RuntimeException _) {
-            result.failedFileNames().add(file.getOriginalFilename());
+            listener.finished(plannedFile.index(), Outcome.IMPORTED, graphUri);
+        } catch (RuntimeException exception) {
+            logger.warn(
+                    "Unable to import '{}': {}", plannedFile.fileName(), exception.getMessage());
+            result.failedFileNames().add(plannedFile.fileName());
+            listener.finished(plannedFile.index(), Outcome.FAILED, null);
+        }
+    }
+
+    private void failRemaining(
+            ImportResult result,
+            Iterator<PlannedFile> plannedFiles,
+            ImportProgressListener listener) {
+        while (plannedFiles.hasNext()) {
+            var plannedFile = plannedFiles.next();
+            result.failedFileNames().add(plannedFile.fileName());
+            listener.finished(plannedFile.index(), Outcome.FAILED, null);
         }
     }
 
@@ -161,57 +335,6 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         return localName == null || localName.isBlank() ? property.getURI() : localName;
     }
 
-    private void importZipFile(
-            ImportResult result,
-            String datasetName,
-            MultipartFile file,
-            Set<String> reservedGraphUris) {
-        try (var zipInputStream = new ZipInputStream(file.getInputStream())) {
-            ZipEntry entry;
-            int entryCount = 0;
-            while ((entry = zipInputStream.getNextEntry()) != null) {
-                entryCount++;
-                if (entryCount > MAX_ENTRIES) {
-                    throw new DataAccessException("ZIP file contains too many entries.");
-                }
-                if (entry.getSize() > MAX_ENTRY_SIZE) {
-                    throw new DataAccessException(
-                            "ZIP entry exceeds maximum allowed size: " + entry.getName());
-                }
-                try {
-                    extractAndImportZipEntry(
-                            result, datasetName, entry, zipInputStream, reservedGraphUris);
-                } finally {
-                    zipInputStream.closeEntry();
-                }
-            }
-        } catch (IOException exception) {
-            throw new DataAccessException("Unable to import graphs from zip file.", exception);
-        }
-    }
-
-    private void extractAndImportZipEntry(
-            ImportResult result,
-            String datasetName,
-            ZipEntry entry,
-            ZipInputStream zipInputStream,
-            Set<String> reservedGraphUris)
-            throws IOException {
-        if (entry.isDirectory()) {
-            return;
-        }
-        var entryName = entry.getName();
-        if (!isGraphFile(entryName)) {
-            logger.warn(
-                    "Skipping ZIP entry '{}' for dataset '{}' because it is not a supported file.",
-                    entryName,
-                    datasetName);
-            return;
-        }
-        var extractedFile = toMultipartFile(entryName, zipInputStream);
-        importSingleFile(result, datasetName, extractedFile, null, reservedGraphUris);
-    }
-
     private Set<String> loadExistingGraphUris(String datasetName) {
         try {
             return new HashSet<>(databasePort.listGraphUris(datasetName));
@@ -236,13 +359,6 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         }
         reservedGraphUris.add(candidate);
         return candidate;
-    }
-
-    private MultipartFile toMultipartFile(String fileName, InputStream stream) throws IOException {
-        var outputStream = new ByteArrayOutputStream();
-        stream.transferTo(outputStream);
-        var content = outputStream.toByteArray();
-        return new SimpleMultipartFile(fileName, fileName, guessContentType(fileName), content);
     }
 
     private String buildGraphUriFromFileName(String fileName) {
@@ -281,87 +397,23 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         return fileName != null && RDFLanguages.filenameToLang(fileName) != null;
     }
 
-    private String guessContentType(String fileName) {
-        return Objects.requireNonNullElse(
-                URLConnection.guessContentTypeFromName(fileName),
-                MediaType.APPLICATION_OCTET_STREAM_VALUE);
-    }
+    /**
+     * One uploaded file together with the graph files it contributes to the import.
+     *
+     * @param unreadableReason why the archive could not be opened, or {@code null} when it could
+     */
+    private record PlannedSource(
+            MultipartFile file,
+            boolean zip,
+            List<PlannedFile> plannedFiles,
+            String unreadableReason) {}
 
-    private record SimpleMultipartFile(
-            String name, String originalFilename, String contentType, byte[] content)
-            implements MultipartFile {
+    /** One graph file of the import, in the order the import will process it. */
+    private record PlannedFile(
+            int index, String fileName, String requestedGraphUri, long sizeBytes) {
 
-        @Override
-        public @NotNull String getName() {
-            return name;
-        }
-
-        @Override
-        public String getOriginalFilename() {
-            return originalFilename;
-        }
-
-        @Override
-        public String getContentType() {
-            return contentType;
-        }
-
-        @Override
-        public boolean isEmpty() {
-            return content.length == 0;
-        }
-
-        @Override
-        public long getSize() {
-            return content.length;
-        }
-
-        @Override
-        public byte @NotNull [] getBytes() {
-            return content;
-        }
-
-        @Override
-        public @NotNull InputStream getInputStream() {
-            return new ByteArrayInputStream(content);
-        }
-
-        @Override
-        public void transferTo(File dest) throws IOException, IllegalStateException {
-            Files.write(dest.toPath(), content);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (!(o
-                    instanceof
-                    SimpleMultipartFile(
-                            String name1,
-                            String filename,
-                            String type,
-                            byte[] content1))) {
-                return false;
-            }
-            return Objects.equals(name, name1)
-                    && Objects.equals(originalFilename, filename)
-                    && Objects.equals(contentType, type)
-                    && Arrays.equals(content, content1);
-        }
-
-        @Override
-        public int hashCode() {
-            int result = Objects.hash(name, originalFilename, contentType);
-            result = 31 * result + Arrays.hashCode(content);
-            return result;
-        }
-
-        @Override
-        public @NotNull String toString() {
-            return "SimpleMultipartFile[name=%s, originalFilename=%s, contentType=%s, contentLength=%d]"
-                    .formatted(name, originalFilename, contentType, content.length);
+        PlannedImport toPlannedImport() {
+            return new PlannedImport(index, fileName, sizeBytes);
         }
     }
 }
