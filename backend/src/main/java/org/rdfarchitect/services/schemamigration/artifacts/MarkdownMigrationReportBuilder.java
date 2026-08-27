@@ -207,36 +207,39 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                                     .filter(
                                             p ->
                                                     p.getSemanticResourceChangeType()
-                                                            != SemanticResourceChangeType
-                                                            .ADDED_FROM_INHERITANCE
+                                                                    != SemanticResourceChangeType
+                                                                            .ADDED_FROM_INHERITANCE
                                                             && p.getSemanticResourceChangeType()
-                                                            != SemanticResourceChangeType
-                                                            .DELETED_FROM_INHERITANCE)
+                                                                    != SemanticResourceChangeType
+                                                                            .DELETED_FROM_INHERITANCE)
                                     .forEach(ancestorChangedAttributes::add);
                             superclass.getAssociations().stream()
                                     .filter(
                                             p ->
                                                     p.getSemanticResourceChangeType()
-                                                            != SemanticResourceChangeType
-                                                            .ADDED_FROM_INHERITANCE
+                                                                    != SemanticResourceChangeType
+                                                                            .ADDED_FROM_INHERITANCE
                                                             && p.getSemanticResourceChangeType()
-                                                            != SemanticResourceChangeType
-                                                            .DELETED_FROM_INHERITANCE)
+                                                                    != SemanticResourceChangeType
+                                                                            .DELETED_FROM_INHERITANCE)
                                     .forEach(ancestorChangedAssociations::add);
                             superclass.getEnumEntries().stream()
                                     .filter(
                                             p ->
                                                     p.getSemanticResourceChangeType()
-                                                            != SemanticResourceChangeType
-                                                            .ADDED_FROM_INHERITANCE
+                                                                    != SemanticResourceChangeType
+                                                                            .ADDED_FROM_INHERITANCE
                                                             && p.getSemanticResourceChangeType()
-                                                            != SemanticResourceChangeType
-                                                            .DELETED_FROM_INHERITANCE)
+                                                                    != SemanticResourceChangeType
+                                                                            .DELETED_FROM_INHERITANCE)
                                     .forEach(ancestorChangedEnumEntries::add);
                         });
 
-        if (classChange.getSemanticResourceChangeType() == SemanticResourceChangeType.INHERITS_CHANGE &&
-        ancestorChangedAttributes.isEmpty() && ancestorChangedAssociations.isEmpty() && ancestorChangedEnumEntries.isEmpty()) {
+        if (classChange.getSemanticResourceChangeType()
+                        == SemanticResourceChangeType.INHERITS_CHANGE
+                && ancestorChangedAttributes.isEmpty()
+                && ancestorChangedAssociations.isEmpty()
+                && ancestorChangedEnumEntries.isEmpty()) {
             return;
         }
 

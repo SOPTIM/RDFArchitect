@@ -18,7 +18,10 @@
 <script>
     import { get } from "svelte/store";
 
-    import { generateMigrationReport, generateMigrationScript } from "$lib/api/generated/index.ts";
+    import {
+        generateMigrationReport,
+        generateMigrationScript,
+    } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import { migrationState } from "$lib/sharedState.svelte.js";
@@ -96,7 +99,8 @@
                             </span>
                             <span class="text-text-subtle text-sm">
                                 SPARQL UPDATE script for automatically migrating
-                                your data to the new schema as well as SHACL shapes for validating the data.
+                                your data to the new schema as well as SHACL
+                                shapes for validating the data.
                             </span>
                         </div>
                         <div class="w-48 shrink-0">

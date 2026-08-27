@@ -53,7 +53,7 @@
 
     export async function onNext() {
         const { error } = await confirmMigrationChanges({
-            body: classes
+            body: classes,
         });
         if (error) {
             console.log("Failed to fetch changes:", error);
