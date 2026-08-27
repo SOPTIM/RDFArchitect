@@ -111,7 +111,7 @@ public class GraphBulkContentRESTController {
                     String datasetName,
             @Parameter(description = "The id of the import job.") @PathVariable UUID jobId) {
         return importJobUseCase
-                .getStatus(jobId)
+                .getStatus(datasetName, jobId)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
@@ -142,7 +142,7 @@ public class GraphBulkContentRESTController {
                 jobId,
                 originURL);
 
-        return importJobUseCase.cancel(jobId)
+        return importJobUseCase.cancel(datasetName, jobId)
                 ? ResponseEntity.noContent().build()
                 : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }

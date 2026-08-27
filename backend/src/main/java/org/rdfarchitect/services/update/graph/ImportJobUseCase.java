@@ -89,13 +89,13 @@ public interface ImportJobUseCase {
      */
     UUID startImport(String datasetName, List<MultipartFile> files, List<String> graphUris);
 
-    /** The current progress of the job, or empty if the session has no such job. */
-    Optional<ImportJobStatus> getStatus(UUID jobId);
+    /** The current progress of the job, or empty if the session has no such job for the dataset. */
+    Optional<ImportJobStatus> getStatus(String datasetName, UUID jobId);
 
     /**
      * Asks the job to stop after the file it is currently importing.
      *
-     * @return {@code false} if the session has no such job
+     * @return {@code false} if the session has no such job for the dataset
      */
-    boolean cancel(UUID jobId);
+    boolean cancel(String datasetName, UUID jobId);
 }

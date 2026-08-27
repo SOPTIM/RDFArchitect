@@ -51,6 +51,8 @@ class ImportJobServiceTest {
 
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
+    private static final String DATASET = "ds";
+
     private static final String SCHEMA =
             """
             @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -81,7 +83,7 @@ class ImportJobServiceTest {
 
         var jobId =
                 service.startImport(
-                        "ds", List.of(graphFile("first.ttl"), graphFile("second.ttl")), null);
+                        DATASET, List.of(graphFile("first.ttl"), graphFile("second.ttl")), null);
 
         var status = awaitFinished(jobId);
         assertThat(status.state()).isEqualTo(JobState.COMPLETED);
@@ -108,7 +110,7 @@ class ImportJobServiceTest {
                             return new ImportResult();
                         });
 
-        var jobId = service.startImport("ds", List.of(graphFile("first.ttl")), null);
+        var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
 
         awaitFinished(jobId);
         assertThat(observedSession.get()).isEqualTo("session-a");
@@ -125,7 +127,7 @@ class ImportJobServiceTest {
                             return new ImportResult();
                         });
 
-        var jobId = service.startImport("ds", List.of(graphFile("first.ttl")), null);
+        var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
 
         awaitFinished(jobId);
         assertThat(received.get()).isInstanceOf(InMemoryMultipartFile.class);
@@ -138,10 +140,11 @@ class ImportJobServiceTest {
         var release = new CountDownLatch(1);
         service = new ImportJobService(blockingImportService(running, release));
 
-        service.startImport("ds", List.of(graphFile("first.ttl")), null);
+        service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
         assertThat(running.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS)).isTrue();
 
-        assertThatThrownBy(() -> service.startImport("ds", List.of(graphFile("second.ttl")), null))
+        assertThatThrownBy(
+                        () -> service.startImport(DATASET, List.of(graphFile("second.ttl")), null))
                 .isInstanceOf(ResourceConflictException.class);
 
         release.countDown();
@@ -153,11 +156,12 @@ class ImportJobServiceTest {
         var release = new CountDownLatch(1);
         service = new ImportJobService(blockingImportService(running, release));
 
-        service.startImport("ds", List.of(graphFile("first.ttl")), null);
+        service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
         assertThat(running.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS)).isTrue();
 
         SessionContext.setSessionId("session-b");
-        assertThat(service.startImport("ds", List.of(graphFile("second.ttl")), null)).isNotNull();
+        assertThat(service.startImport(DATASET, List.of(graphFile("second.ttl")), null))
+                .isNotNull();
 
         release.countDown();
     }
@@ -165,20 +169,30 @@ class ImportJobServiceTest {
     @Test
     void getStatus_jobOfAnotherSession_isNotVisible() {
         service = new ImportJobService(realImportService());
-        var jobId = service.startImport("ds", List.of(graphFile("first.ttl")), null);
+        var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
         awaitFinished(jobId);
 
         SessionContext.setSessionId("session-b");
 
-        assertThat(service.getStatus(jobId)).isEmpty();
-        assertThat(service.cancel(jobId)).isFalse();
+        assertThat(service.getStatus(DATASET, jobId)).isEmpty();
+        assertThat(service.cancel(DATASET, jobId)).isFalse();
+    }
+
+    @Test
+    void getStatus_jobOfAnotherDataset_isNotVisible() {
+        service = new ImportJobService(realImportService());
+        var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
+        awaitFinished(jobId);
+
+        assertThat(service.getStatus("other", jobId)).isEmpty();
+        assertThat(service.cancel("other", jobId)).isFalse();
     }
 
     @Test
     void getStatus_unknownJob_isEmpty() {
         service = new ImportJobService(realImportService());
 
-        assertThat(service.getStatus(UUID.randomUUID())).isEmpty();
+        assertThat(service.getStatus(DATASET, UUID.randomUUID())).isEmpty();
     }
 
     @Test
@@ -191,12 +205,12 @@ class ImportJobServiceTest {
                             listener.finished(0, ImportProgressListener.Outcome.SKIPPED, null);
                             return new ImportResult();
                         });
-        var jobId = service.startImport("ds", List.of(graphFile("first.ttl")), null);
+        var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
 
         await().pollInSameThread()
                 .atMost(TIMEOUT)
-                .until(() -> !service.getStatus(jobId).orElseThrow().files().isEmpty());
-        assertThat(service.cancel(jobId)).isTrue();
+                .until(() -> !service.getStatus(DATASET, jobId).orElseThrow().files().isEmpty());
+        assertThat(service.cancel(DATASET, jobId)).isTrue();
 
         var status = awaitFinished(jobId);
         assertThat(status.state()).isEqualTo(JobState.CANCELLED);
@@ -214,7 +228,7 @@ class ImportJobServiceTest {
                             throw new IllegalStateException("import blew up");
                         });
 
-        var jobId = service.startImport("ds", List.of(graphFile("first.ttl")), null);
+        var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
 
         var status = awaitFinished(jobId);
         assertThat(status.state()).isEqualTo(JobState.FAILED);
@@ -230,10 +244,10 @@ class ImportJobServiceTest {
                 .atMost(TIMEOUT)
                 .until(
                         () ->
-                                service.getStatus(jobId)
+                                service.getStatus(DATASET, jobId)
                                         .filter(status -> status.state() != JobState.RUNNING)
                                         .isPresent());
-        return service.getStatus(jobId).orElseThrow();
+        return service.getStatus(DATASET, jobId).orElseThrow();
     }
 
     private ImportGraphsUseCase realImportService() {
