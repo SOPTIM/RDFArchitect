@@ -1537,31 +1537,6 @@
               "$ref" : "#/components/schemas/RenameCandidateSemanticResourceChange"
             },
             "type" : "array"
-          },
-          "modified" : {
-            "items" : {
-              "oneOf" : [
-                {
-                  "$ref" : "#/components/schemas/SemanticResourceChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticAssociationChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticAttributeChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticClassChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticEnumEntryChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticPackageChange"
-                }
-              ]
-            },
-            "type" : "array"
           }
         },
         "type" : "object"
@@ -1577,12 +1552,6 @@
           "deletedAndRenamed" : {
             "items" : {
               "$ref" : "#/components/schemas/RenameCandidateSemanticAssociationChange"
-            },
-            "type" : "array"
-          },
-          "modified" : {
-            "items" : {
-              "$ref" : "#/components/schemas/SemanticAssociationChange"
             },
             "type" : "array"
           }
@@ -1602,12 +1571,6 @@
               "$ref" : "#/components/schemas/RenameCandidateSemanticAttributeChange"
             },
             "type" : "array"
-          },
-          "modified" : {
-            "items" : {
-              "$ref" : "#/components/schemas/SemanticAttributeChange"
-            },
-            "type" : "array"
           }
         },
         "type" : "object"
@@ -1623,12 +1586,6 @@
           "deletedAndRenamed" : {
             "items" : {
               "$ref" : "#/components/schemas/RenameCandidateSemanticEnumEntryChange"
-            },
-            "type" : "array"
-          },
-          "modified" : {
-            "items" : {
-              "$ref" : "#/components/schemas/SemanticEnumEntryChange"
             },
             "type" : "array"
           }
@@ -1834,52 +1791,74 @@
         ]
       },
       "SemanticClassChange" : {
-        "allOf" : [
-          {
-            "$ref" : "#/components/schemas/SemanticResourceChange"
-          },
-          {
-            "properties" : {
-              "associationRenameCandidates" : {
-                "items" : {
-                  "$ref" : "#/components/schemas/RenameCandidateSemanticAssociationChange"
-                },
-                "type" : "array"
-              },
-              "associations" : {
-                "items" : {
-                  "$ref" : "#/components/schemas/SemanticAssociationChange"
-                },
-                "type" : "array"
-              },
-              "attributeRenameCandidates" : {
-                "items" : {
-                  "$ref" : "#/components/schemas/RenameCandidateSemanticAttributeChange"
-                },
-                "type" : "array"
-              },
-              "attributes" : {
-                "items" : {
-                  "$ref" : "#/components/schemas/SemanticAttributeChange"
-                },
-                "type" : "array"
-              },
-              "enumEntries" : {
-                "items" : {
-                  "$ref" : "#/components/schemas/SemanticEnumEntryChange"
-                },
-                "type" : "array"
-              },
-              "enumEntryRenameCandidates" : {
-                "items" : {
-                  "$ref" : "#/components/schemas/RenameCandidateSemanticEnumEntryChange"
-                },
-                "type" : "array"
-              }
+        "properties" : {
+          "associationRenameCandidates" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RenameCandidateSemanticAssociationChange"
             },
-            "type" : "object"
+            "type" : "array"
+          },
+          "associations" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticAssociationChange"
+            },
+            "type" : "array"
+          },
+          "attributeRenameCandidates" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RenameCandidateSemanticAttributeChange"
+            },
+            "type" : "array"
+          },
+          "attributes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticAttributeChange"
+            },
+            "type" : "array"
+          },
+          "changes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticFieldChange"
+            },
+            "type" : "array"
+          },
+          "comment" : {
+            "type" : "string"
+          },
+          "enumEntries" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticEnumEntryChange"
+            },
+            "type" : "array"
+          },
+          "enumEntryRenameCandidates" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RenameCandidateSemanticEnumEntryChange"
+            },
+            "type" : "array"
+          },
+          "iri" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "oldIRI" : {
+            "type" : "string"
+          },
+          "semanticResourceChangeType" : {
+            "enum" : [
+              "ADD",
+              "ADDED_FROM_INHERITANCE",
+              "DELETE",
+              "DELETED_FROM_INHERITANCE",
+              "CHANGE",
+              "RENAME"
+            ],
+            "type" : "string"
           }
-        ]
+        },
+        "type" : "object"
       },
       "SemanticEnumEntryChange" : {
         "allOf" : [
@@ -1912,6 +1891,7 @@
               "LABEL_CHANGE",
               "COMMENT_CHANGE",
               "SUPERCLASS_CHANGE",
+              "SUPERCLASS_RENAME",
               "BELONGS_TO_CATEGORY_CHANGE",
               "DATATYPE_CHANGE",
               "DATATYPE_RENAME",
@@ -1924,6 +1904,7 @@
               "DOMAIN_CHANGE",
               "DOMAIN_RENAME",
               "TARGET_CHANGE",
+              "TARGET_RENAME",
               "ASSOCIATION_USED_CHANGE",
               "DEFAULT_VALUE_CHANGE",
               "FIXED_VALUE_CHANGE"
@@ -1964,6 +1945,9 @@
               "$ref" : "#/components/schemas/SemanticFieldChange"
             },
             "type" : "array"
+          },
+          "comment" : {
+            "type" : "string"
           },
           "iri" : {
             "type" : "string"
@@ -8207,6 +8191,82 @@
         ]
       }
     },
+    "/api/migrations/changes" : {
+      "get" : {
+        "description" : "returns final changes in migration to be displayed for review",
+        "operationId" : "getMigrationChanges",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/SemanticResourceChange"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "migration changes overview",
+        "tags" : [
+          "migration"
+        ]
+      },
+      "post" : {
+        "description" : "Confirms the migration changes including potentially added comments",
+        "operationId" : "confirmMigrationChanges",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "description" : "The updated class renamings",
+                "items" : {
+                  "$ref" : "#/components/schemas/SemanticClassChange"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "summary" : "confirm migration changes",
+        "tags" : [
+          "migration"
+        ]
+      }
+    },
     "/api/migrations/class-renamings" : {
       "get" : {
         "description" : "Provides an overview of the migration classes including added, modified, deleted and potentially renamed classes.",
@@ -8357,6 +8417,16 @@
             "required" : false,
             "schema" : {
               "type" : "string"
+            }
+          },
+          {
+            "description" : "Whether to ignore prefixes in the comparison and rename detection. Defaults to false.",
+            "in" : "query",
+            "name" : "ignorePrefixes",
+            "required" : false,
+            "schema" : {
+              "default" : false,
+              "type" : "boolean"
             }
           }
         ],
@@ -8569,6 +8639,78 @@
           }
         },
         "summary" : "confirm renamed properties",
+        "tags" : [
+          "migration"
+        ]
+      }
+    },
+    "/api/migrations/report" : {
+      "get" : {
+        "description" : "Generates a migration script based on the previously computed migration actions and the shacl shapes of the new schema.",
+        "operationId" : "generateMigrationReport",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "Type of the migration report to generate. Can be either SUMMARY or DETAILED.",
+            "in" : "query",
+            "name" : "reportType",
+            "required" : false,
+            "schema" : {
+              "default" : "SUMMARY",
+              "enum" : [
+                "SUMMARY",
+                "DETAILED"
+              ],
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The CGMES version of the original schema",
+            "in" : "query",
+            "name" : "originalCGMESVersion",
+            "required" : false,
+            "schema" : {
+              "default" : "V3_0",
+              "enum" : [
+                "V2_4_15",
+                "V3_0"
+              ],
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The CGMES version of the updated schema",
+            "in" : "query",
+            "name" : "updatedCGMESVersion",
+            "required" : false,
+            "schema" : {
+              "default" : "V3_0",
+              "enum" : [
+                "V2_4_15",
+                "V3_0"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/zip" : { }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "generate migration script",
         "tags" : [
           "migration"
         ]

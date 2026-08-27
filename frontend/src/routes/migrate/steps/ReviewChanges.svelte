@@ -18,49 +18,45 @@
     import { onMount } from "svelte";
     import { get } from "svelte/store";
 
-    import { BackendConnection } from "$lib/api/backend.js";
+    import {
+        confirmMigrationChanges,
+        getMigrationChanges,
+    } from "$lib/api/generated/index.ts";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
 
     import ResourceChangeCard from "./ResourceChangeCard.svelte";
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
     let classes = $state([]);
     let isLoading = $state(true);
     let ignorePrefixes = $state(false);
 
-    onMount(() => {
+    onMount(async () => {
         let storedState = get(migrationState);
         ignorePrefixes = storedState.ignorePrefixes;
 
-        bec.getChanges()
-            .then(res => (res.ok ? res.json() : Promise.reject("Failed")))
-            .then(data => {
-                classes = data.sort((a, b) => {
-                    return a.label.localeCompare(b.label);
-                });
-            })
-            .catch(e => console.log("Failed to fetch changes:", e))
-            .finally(() => {
-                isLoading = false;
-            });
+        try {
+            const { data, error } = await getMigrationChanges();
+            if (error) {
+                console.log("Failed to fetch changes:", error);
+            }
+
+            classes = data.sort((a, b) => a.label.localeCompare(b.label));
+        } catch (e) {
+            console.log("Failed to fetch changes:", e);
+        } finally {
+            isLoading = false;
+        }
     });
 
     export async function onNext() {
-        try {
-            const res = await bec.confirmChanges(classes);
-            if (!res.ok) {
-                toastStore.error(
-                    "Save failed",
-                    "Could not save changes for the migration.",
-                );
-            }
-        } catch (e) {
-            console.log("Failed to save changes:", e);
+        const { error } = await confirmMigrationChanges({
+            body: classes
+        });
+        if (error) {
+            console.log("Failed to fetch changes:", error);
             toastStore.error(
                 "Save failed",
                 "Could not save changes for the migration.",

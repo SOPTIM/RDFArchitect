@@ -21,9 +21,8 @@
     import { get } from "svelte/store";
     import { Fa } from "svelte-fa";
 
-    import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
-    import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import { computeMigrationContext } from "$lib/api/generated/index.ts";
+    import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
@@ -156,7 +155,7 @@
                     graphA: graphA,
                     datasetB: workspaceB,
                     graphB: graphB,
-                    ignorePrefixes: ignorePrefixes
+                    ignorePrefixes: ignorePrefixes,
                 },
                 body: { fileA: fileA, fileB: fileB },
             });

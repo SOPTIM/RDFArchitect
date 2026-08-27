@@ -49,7 +49,7 @@
 
     export async function onNext() {
         try {
-            const { error } = submitDefaultValues({ body: classes });
+            const { error } = await submitDefaultValues({ body: classes });
 
             if (error) {
                 toastStore.error(

@@ -18,60 +18,47 @@
 <script>
     import { get } from "svelte/store";
 
-    import { BackendConnection } from "$lib/api/backend.js";
+    import { generateMigrationReport, generateMigrationScript } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { migrationState } from "$lib/sharedState.svelte.js";
     import { saveFile, sparqlMediaType } from "$lib/utils/fileUtils.js";
 
     import { goto } from "$app/navigation";
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
-    let reportType = $state("SUMMARY");
-
     export async function onNext() {
         await goto("/mainpage");
     }
 
-    async function generateMigrationScript() {
+    async function downloadMigrationScript() {
         try {
-            const response = await fetchScript();
+            const { data, response } = await generateMigrationScript();
             const suggestedFilename = response.headers.get(
                 "content-disposition",
             );
-            const blob = await response.blob();
-            saveFile(blob, suggestedFilename, sparqlMediaType);
+            saveFile(data, suggestedFilename, sparqlMediaType);
         } catch (e) {
             console.error("Failed to generate script:", e);
         }
     }
 
-    async function generateMigrationReport() {
+    async function downloadMigrationReport(reportType) {
         const state = get(migrationState);
         try {
-            const response = await bec.fetchReport(
-                reportType,
-                state.cgmesVersionA,
-                state.cgmesVersionB,
-            );
+            const { data, response } = await generateMigrationReport({
+                query: {
+                    reportType: reportType,
+                    originalCGMESVersion: state.cgmesVersionA,
+                    updatedCGMESVersion: state.cgmesVersionB,
+                },
+            });
             const suggestedFilename = response.headers.get(
                 "content-disposition",
             );
-            const blob = await response.blob();
-            saveFile(blob, suggestedFilename, sparqlMediaType);
+            saveFile(data, suggestedFilename, sparqlMediaType);
         } catch (e) {
             console.error("Failed to generate report:", e);
         }
-    }
-
-    async function fetchScript() {
-        return fetch(PUBLIC_BACKEND_URL + "/api/migrations/export", {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
     }
 </script>
 
@@ -109,12 +96,12 @@
                             </span>
                             <span class="text-text-subtle text-sm">
                                 SPARQL UPDATE script for automatically migrating
-                                your data to the new schema.
+                                your data to the new schema as well as SHACL shapes for validating the data.
                             </span>
                         </div>
                         <div class="w-48 shrink-0">
                             <ButtonControl
-                                callOnClick={generateMigrationScript}
+                                callOnClick={downloadMigrationScript}
                             >
                                 Download script
                             </ButtonControl>
@@ -137,7 +124,7 @@
                         <div class="w-48 shrink-0">
                             <ButtonControl
                                 callOnClick={() =>
-                                    generateMigrationReport("SUMMARY")}
+                                    downloadMigrationReport("SUMMARY")}
                             >
                                 Download report
                             </ButtonControl>
@@ -160,7 +147,7 @@
                         <div class="w-48 shrink-0">
                             <ButtonControl
                                 callOnClick={() =>
-                                    generateMigrationReport("DETAILED")}
+                                    downloadMigrationReport("DETAILED")}
                             >
                                 Download report
                             </ButtonControl>
@@ -186,7 +173,7 @@
                 </li>
                 <li>
                     <span class="font-medium">Apply the update:</span>
-                    Execute the SPARQL UPDATE script on your workspace
+                    Execute the SPARQL UPDATE script on your schema
                 </li>
                 <li>
                     <span class="font-medium">Verify the resulting data:</span>

@@ -87,18 +87,17 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                         .toSet();
         concreteClassIRIs.addAll(updatedConcreteClassIRIs);
 
-        var concreteChanges =
-                visibleChanges.stream()
-                        .filter(c -> concreteClassIRIs.contains(c.getIri()))
-                        .sorted(Comparator.comparing(SemanticResourceChange::getLabel))
+        var sortedConcreteClassIRIs =
+                concreteClassIRIs.stream()
+                        .sorted(Comparator.comparing(iri -> new URI(iri).getSuffix()))
                         .toList();
 
         var classChangesMap =
                 visibleChanges.stream()
                         .collect(Collectors.toMap(SemanticClassChange::getIri, c -> c));
 
-        for (var classChange : concreteChanges) {
-            appendDetailedClassSection(sb, classChange, model, classChangesMap);
+        for (var cls : sortedConcreteClassIRIs) {
+            appendDetailedClassSection(sb, cls, model, classChangesMap);
         }
 
         return sb.toString();
@@ -124,16 +123,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                         .toList();
 
         for (var classChange : directlyChanged) {
-            sb.append("## ")
-                    .append(formatChangeType(classChange.getSemanticResourceChangeType()))
-                    .append(" ")
-                    .append(classChange.getLabel())
-                    .append("\n\n");
-            sb.append("**IRI:** ").append(shorten(classChange.getIri())).append("\n\n");
-
-            if (classChange.getComment() != null && !classChange.getComment().isBlank()) {
-                sb.append("> ").append(classChange.getComment()).append("\n\n");
-            }
+            appendClassHeader(sb, classChange);
 
             if (classChange.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE) {
                 appendFieldChangesAsSentences(sb, classChange.getChanges());
@@ -186,10 +176,87 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
 
     private void appendDetailedClassSection(
             StringBuilder sb,
-            SemanticClassChange classChange,
+            String classIRI,
             Model model,
             Map<String, SemanticClassChange> classChangesMap) {
 
+        SemanticClassChange classChange;
+        if (classChangesMap.containsKey(classIRI)) {
+            classChange = classChangesMap.get(classIRI);
+        } else {
+            // If the class is not in the changes map, it means it has no direct changes.
+            // We create a dummy SemanticClassChange to represent it.
+            classChange = new SemanticClassChange();
+            classChange.setIri(classIRI);
+            classChange.setLabel(new URI(classIRI).getSuffix());
+            classChange.setSemanticResourceChangeType(SemanticResourceChangeType.INHERITS_CHANGE);
+        }
+
+        // Collect changed properties from ancestor classes
+        var classResource = model.getResource(classChange.getIri());
+        var ancestorChangedAttributes = new ArrayList<SemanticResourceChange>();
+        var ancestorChangedAssociations = new ArrayList<SemanticResourceChange>();
+        var ancestorChangedEnumEntries = new ArrayList<SemanticResourceChange>();
+
+        CIMClassUtils.listSuperClasses(classResource).stream()
+                .map(r -> classChangesMap.get(r.getURI()))
+                .filter(Objects::nonNull)
+                .forEach(
+                        superclass -> {
+                            superclass.getAttributes().stream()
+                                    .filter(
+                                            p ->
+                                                    p.getSemanticResourceChangeType()
+                                                            != SemanticResourceChangeType
+                                                            .ADDED_FROM_INHERITANCE
+                                                            && p.getSemanticResourceChangeType()
+                                                            != SemanticResourceChangeType
+                                                            .DELETED_FROM_INHERITANCE)
+                                    .forEach(ancestorChangedAttributes::add);
+                            superclass.getAssociations().stream()
+                                    .filter(
+                                            p ->
+                                                    p.getSemanticResourceChangeType()
+                                                            != SemanticResourceChangeType
+                                                            .ADDED_FROM_INHERITANCE
+                                                            && p.getSemanticResourceChangeType()
+                                                            != SemanticResourceChangeType
+                                                            .DELETED_FROM_INHERITANCE)
+                                    .forEach(ancestorChangedAssociations::add);
+                            superclass.getEnumEntries().stream()
+                                    .filter(
+                                            p ->
+                                                    p.getSemanticResourceChangeType()
+                                                            != SemanticResourceChangeType
+                                                            .ADDED_FROM_INHERITANCE
+                                                            && p.getSemanticResourceChangeType()
+                                                            != SemanticResourceChangeType
+                                                            .DELETED_FROM_INHERITANCE)
+                                    .forEach(ancestorChangedEnumEntries::add);
+                        });
+
+        if (classChange.getSemanticResourceChangeType() == SemanticResourceChangeType.INHERITS_CHANGE &&
+        ancestorChangedAttributes.isEmpty() && ancestorChangedAssociations.isEmpty() && ancestorChangedEnumEntries.isEmpty()) {
+            return;
+        }
+
+        appendClassHeader(sb, classChange);
+
+        if (classChange.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE) {
+            appendFieldChangesAsSentences(sb, classChange.getChanges());
+        }
+        appendPropertySection(sb, "Attributes", classChange.getAttributes());
+        appendPropertySection(sb, "Associations", classChange.getAssociations());
+        appendPropertySection(sb, "Enum Entries", classChange.getEnumEntries());
+
+        appendPropertySection(sb, "Inherited Attribute Changes", ancestorChangedAttributes);
+        appendPropertySection(sb, "Inherited Association Changes", ancestorChangedAssociations);
+        appendPropertySection(sb, "Inherited Enum Entry Changes", ancestorChangedEnumEntries);
+
+        sb.append("\n---\n\n");
+    }
+
+    private void appendClassHeader(StringBuilder sb, SemanticClassChange classChange) {
         if (classChange.getSemanticResourceChangeType() == SemanticResourceChangeType.RENAME) {
             var oldLabel = new URI(classChange.getOldIRI()).getSuffix();
             sb.append("## Renamed from ")
@@ -211,62 +278,6 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
         if (classChange.getComment() != null && !classChange.getComment().isBlank()) {
             sb.append("> ").append(classChange.getComment()).append("\n\n");
         }
-
-        if (classChange.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE) {
-            appendFieldChangesAsSentences(sb, classChange.getChanges());
-        }
-        appendPropertySection(sb, "Attributes", classChange.getAttributes());
-        appendPropertySection(sb, "Associations", classChange.getAssociations());
-        appendPropertySection(sb, "Enum Entries", classChange.getEnumEntries());
-
-        // Collect changed (not added/deleted) properties from ancestor classes
-        var classResource = model.getResource(classChange.getIri());
-        var ancestorChangedAttributes = new ArrayList<SemanticResourceChange>();
-        var ancestorChangedAssociations = new ArrayList<SemanticResourceChange>();
-        var ancestorChangedEnumEntries = new ArrayList<SemanticResourceChange>();
-
-        CIMClassUtils.listSuperClasses(classResource).stream()
-                .map(r -> classChangesMap.get(r.getURI()))
-                .filter(Objects::nonNull)
-                .forEach(
-                        superclass -> {
-                            superclass.getAttributes().stream()
-                                    .filter(
-                                            p ->
-                                                    p.getSemanticResourceChangeType()
-                                                                    == SemanticResourceChangeType
-                                                                            .CHANGE
-                                                            || p.getSemanticResourceChangeType()
-                                                                    == SemanticResourceChangeType
-                                                                            .RENAME)
-                                    .forEach(ancestorChangedAttributes::add);
-                            superclass.getAssociations().stream()
-                                    .filter(
-                                            p ->
-                                                    p.getSemanticResourceChangeType()
-                                                                    == SemanticResourceChangeType
-                                                                            .CHANGE
-                                                            || p.getSemanticResourceChangeType()
-                                                                    == SemanticResourceChangeType
-                                                                            .RENAME)
-                                    .forEach(ancestorChangedAssociations::add);
-                            superclass.getEnumEntries().stream()
-                                    .filter(
-                                            p ->
-                                                    p.getSemanticResourceChangeType()
-                                                                    == SemanticResourceChangeType
-                                                                            .CHANGE
-                                                            || p.getSemanticResourceChangeType()
-                                                                    == SemanticResourceChangeType
-                                                                            .RENAME)
-                                    .forEach(ancestorChangedEnumEntries::add);
-                        });
-
-        appendPropertySection(sb, "Inherited Attribute Changes", ancestorChangedAttributes);
-        appendPropertySection(sb, "Inherited Association Changes", ancestorChangedAssociations);
-        appendPropertySection(sb, "Inherited Enum Entry Changes", ancestorChangedEnumEntries);
-
-        sb.append("\n---\n\n");
     }
 
     private void appendFieldChangesAsSentences(
@@ -421,6 +432,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
             case RENAME -> "[Renamed]";
             case ADDED_FROM_INHERITANCE -> "[Added via inheritance]";
             case DELETED_FROM_INHERITANCE -> "[Deleted via inheritance]";
+            case INHERITS_CHANGE -> "[Inherits changes]";
         };
     }
 

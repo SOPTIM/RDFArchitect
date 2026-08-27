@@ -25,4 +25,5 @@ public enum SemanticResourceChangeType {
     DELETED_FROM_INHERITANCE,
     CHANGE,
     RENAME,
+    INHERITS_CHANGE,
 }
