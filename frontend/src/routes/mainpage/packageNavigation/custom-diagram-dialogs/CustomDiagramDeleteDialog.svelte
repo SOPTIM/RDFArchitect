@@ -66,8 +66,8 @@
     primaryLabel="Delete Diagram"
     onPrimary={deleteCustomDiagram}
     primaryVariant="danger"
-    title={diagram?.label
-        ? `Delete Diagram "${diagram.label}"?`
+    title={diagram?.name
+        ? `Delete Diagram "${diagram.name}"?`
         : "Delete Diagram?"}
     titleIcon={faExclamation}
     titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"

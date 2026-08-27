@@ -84,7 +84,7 @@ export function isValidDiagramName(diagramName, compareDiagrams) {
         violations.push("must not be empty");
     }
 
-    if (compareDiagrams?.some(d => d.label === diagramName)) {
+    if (compareDiagrams?.some(d => d.name === diagramName)) {
         violations.push("must be unique");
     }
 
