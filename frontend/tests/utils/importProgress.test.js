@@ -201,6 +201,18 @@ describe("ImportProgress", () => {
         expect(progress.errorMessage).toBe("out of memory");
     });
 
+    test("cancelling a fully sent upload waits for the job id instead of aborting", () => {
+        const progress = new ImportProgress();
+        progress.uploadProgress(100);
+
+        progress.cancel();
+
+        expect(progress.cancelling).toBe(true);
+        // The response carrying the job id is still on its way; without it the job the backend
+        // has already started would keep running with nobody left to stop it.
+        expect(progress.signal.aborted).toBe(false);
+    });
+
     test("cancelling aborts the upload and shows what is happening", () => {
         const progress = new ImportProgress();
 

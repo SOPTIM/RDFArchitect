@@ -115,6 +115,17 @@ class ImportJob implements ImportProgressListener {
     }
 
     synchronized void fail(String message) {
+        // The import stopped where it stood: the file it was on never finished and the ones behind
+        // it never started. Left as they are, the dialog keeps spinning on a file that is gone and
+        // its file count never reaches the end.
+        for (var file : files) {
+            if (file.state == FileState.RUNNING) {
+                file.state = FileState.FAILED;
+                file.stage = null;
+            } else if (file.state == FileState.PENDING) {
+                file.state = FileState.SKIPPED;
+            }
+        }
         // The result died with the exception, but every file that made it through reported its
         // outcome, so what the import did manage to write is still recoverable from the progress.
         importedGraphUris =
