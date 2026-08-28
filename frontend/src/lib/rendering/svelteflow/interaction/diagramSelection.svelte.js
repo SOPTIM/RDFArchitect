@@ -23,9 +23,11 @@ import {
     ClassType,
     DiagramType,
     editorState,
+    isMergedDiagramType,
     mergeSelections,
     multiSelectState,
     SelectionLevel,
+    SINGLE_SCHEMA_DIAGRAM_TYPES,
     toggleSelections,
 } from "$lib/sharedState.svelte.js";
 
@@ -62,8 +64,9 @@ export class DiagramSelectionController {
     }
 
     #selectionGraphUri(node) {
-        return editorState.selectedDiagram.getProperty("type") ===
-            DiagramType.CROSS_PROFILE
+        return isMergedDiagramType(
+            editorState.selectedDiagram.getProperty("type"),
+        )
             ? null
             : node.data?.graphUri;
     }
@@ -173,8 +176,8 @@ export class DiagramSelectionController {
 
         const diagramType = editorState.selectedDiagram.getProperty("type");
         const isMergedContext =
-            diagramType === DiagramType.CROSS_PROFILE ||
-            (diagramType === DiagramType.PACKAGE &&
+            isMergedDiagramType(diagramType) ||
+            (SINGLE_SCHEMA_DIAGRAM_TYPES.includes(diagramType) &&
                 renderOptions.get("includePropertiesFromOtherProfiles"));
         const classType = isMergedContext
             ? ClassType.MERGED_CLASS

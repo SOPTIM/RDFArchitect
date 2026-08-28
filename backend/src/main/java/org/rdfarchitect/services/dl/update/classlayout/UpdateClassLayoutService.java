@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
@@ -34,12 +35,20 @@ import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
+import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
+import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
+import org.rdfarchitect.services.rendering.MergedClasses;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Service
@@ -257,17 +266,43 @@ public class UpdateClassLayoutService
                 diagram.setClasses(updated);
             }
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
-            if (DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null) {
-                DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, diagramUUID, "");
-            }
-            for (var cls : classes) {
-                var doMRID =
-                        DiagramLayoutServiceUtils.insertDiagramObject(
-                                diagramLayoutModel, diagramUUID, "", cls.getUuid());
-                DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                        diagramLayoutModel, diagramUUID, doMRID);
-            }
+            insertLayoutForClasses(
+                    diagramLayoutModel,
+                    diagramUUID,
+                    classes.stream()
+                            .map(ClassInDiagram::getUuid)
+                            .collect(Collectors.toCollection(LinkedHashSet::new)));
             ctx.commit();
+        }
+    }
+
+    private static Set<UUID> mergedUuidsOf(
+            List<ClassInDiagram> classes, Map<UUID, String> classUriByUuid) {
+        var mergedUuids = new LinkedHashSet<UUID>();
+        for (var cls : classes) {
+            var classUri = classUriByUuid.get(cls.getUuid());
+            if (classUri != null) {
+                mergedUuids.add(CrossProfileUtils.mergedClassUuid(classUri));
+            }
+        }
+        return mergedUuids;
+    }
+
+    private static void insertLayoutForClasses(
+            Model diagramLayoutModel, UUID diagramUUID, Set<UUID> mergedUuids) {
+        if (DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null) {
+            DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, diagramUUID, "");
+        }
+        for (var mergedUuid : mergedUuids) {
+            if (DLObjectFetcher.fetchDiagramDOForClass(diagramLayoutModel, diagramUUID, mergedUuid)
+                    != null) {
+                continue;
+            }
+            var doMRID =
+                    DiagramLayoutServiceUtils.insertDiagramObject(
+                            diagramLayoutModel, diagramUUID, "", mergedUuid);
+            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                    diagramLayoutModel, diagramUUID, doMRID);
         }
     }
 
@@ -282,20 +317,36 @@ public class UpdateClassLayoutService
             var diagram = ctx.getCustomDiagrams().get(diagramUUID);
             if (diagram != null) {
                 var updated = diagram.getClasses();
-                updated.removeIf(c -> classUUIDs.contains(c.getUuid()));
+                updated.removeIf(cls -> classUUIDs.contains(cls.getUuid()));
                 diagram.setClasses(updated);
             }
-            var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
-            for (var classUUID : classUUIDs) {
-                var diagramObject =
-                        DLObjectFetcher.fetchDiagramDOForClass(
-                                diagramLayoutModel, diagramUUID, classUUID);
-                if (diagramObject != null) {
-                    DLUpdates.deleteDiagramObjectCascade(
-                            diagramLayoutModel, diagramObject.getMRID());
-                }
-            }
+            deleteLayoutForClasses(
+                    ctx.getDiagramLayout().getDiagramLayoutModel(), diagramUUID, classUUIDs);
             ctx.commit();
+        }
+    }
+
+    private static Predicate<ClassInDiagram> removedByAnyOf(
+            List<UUID> classUUIDs, Map<UUID, String> classUriByUuid) {
+        return cls -> {
+            if (classUUIDs.contains(cls.getUuid())) {
+                return true;
+            }
+            var classUri = classUriByUuid.get(cls.getUuid());
+            return classUri != null
+                    && classUUIDs.contains(CrossProfileUtils.mergedClassUuid(classUri));
+        };
+    }
+
+    private static void deleteLayoutForClasses(
+            Model diagramLayoutModel, UUID diagramUUID, List<UUID> classUUIDs) {
+        for (var classUUID : classUUIDs) {
+            var diagramObject =
+                    DLObjectFetcher.fetchDiagramDOForClass(
+                            diagramLayoutModel, diagramUUID, classUUID);
+            if (diagramObject != null) {
+                DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
+            }
         }
     }
 
@@ -321,16 +372,34 @@ public class UpdateClassLayoutService
         }
         var diagramLayoutModel =
                 databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        if (DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null) {
-            DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, diagramUUID, "");
+        insertLayoutForClasses(
+                diagramLayoutModel,
+                diagramUUID,
+                mergedUuidsOf(classes, classUriByUuid(datasetName, classes)));
+    }
+
+    private Map<UUID, String> classUriByUuid(String datasetName, List<ClassInDiagram> classes) {
+        var existingGraphUris = new HashSet<>(databasePort.listGraphUris(datasetName));
+        var classesByGraphUri =
+                classes.stream()
+                        .filter(cls -> cls.getGraphUri() != null && cls.getUuid() != null)
+                        .filter(cls -> existingGraphUris.contains(cls.getGraphUri().toString()))
+                        .collect(Collectors.groupingBy(cls -> cls.getGraphUri().toString()));
+
+        var classUriByUuid = new HashMap<UUID, String>();
+        for (var entry : classesByGraphUri.entrySet()) {
+            var identifier = new GraphIdentifier(datasetName, entry.getKey());
+            try (var ctx = databasePort.getGraphWithContext(identifier).begin(ReadWrite.READ)) {
+                var model =
+                        new CIMModelFacade(
+                                entry.getKey(),
+                                ModelFactory.createModelForGraph(ctx.getRdfGraph()));
+                classUriByUuid.putAll(
+                        MergedClasses.classUriByUuid(
+                                entry.getValue(), Map.of(entry.getKey(), model)));
+            }
         }
-        for (var cls : classes) {
-            var doMRID =
-                    DiagramLayoutServiceUtils.insertDiagramObject(
-                            diagramLayoutModel, diagramUUID, "", cls.getUuid());
-            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                    diagramLayoutModel, diagramUUID, doMRID);
-        }
+        return classUriByUuid;
     }
 
     @Override
@@ -340,46 +409,57 @@ public class UpdateClassLayoutService
             return;
         }
 
+        var model = databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
         var diagram = databasePort.getDatasetDiagrams(datasetName).get(diagramUUID);
-        if (diagram != null) {
-            var updated = diagram.getClasses();
-            updated.removeIf(c -> classUUIDs.contains(c.getUuid()));
-            diagram.setClasses(updated);
+        if (diagram == null) {
+            deleteLayoutForClasses(model, diagramUUID, classUUIDs);
+            return;
         }
-        var diagramLayoutModel =
-                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        for (var classUUID : classUUIDs) {
-            var diagramObject =
-                    DLObjectFetcher.fetchDiagramDOForClass(
-                            diagramLayoutModel, diagramUUID, classUUID);
-            if (diagramObject != null) {
-                DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
-            }
-        }
+
+        var updated = diagram.getClasses();
+        var classUriByUuid = classUriByUuid(datasetName, updated);
+        updated.removeIf(removedByAnyOf(classUUIDs, classUriByUuid));
+        diagram.setClasses(updated);
+
+        var stillRendered = mergedUuidsOf(updated, classUriByUuid);
+        deleteLayoutForClasses(
+                model,
+                diagramUUID,
+                classUUIDs.stream().filter(uuid -> !stillRendered.contains(uuid)).toList());
     }
 
     @Override
     public void migrateLayoutToNewClassUri(
             String datasetName, UUID oldMergedUuid, UUID newMergedUuid, String newClassUri) {
-        var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
-        var model = diagramLayout.getDiagramLayoutModel();
-        var crossProfileDiagramUUID =
-                databasePort.getCrossProfileDiagramInfo(datasetName).getCrossProfileDiagramUUID();
+        var model = databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
 
-        if (DLObjectFetcher.fetchDiagram(model, crossProfileDiagramUUID) == null) {
+        var diagramUUIDs = new LinkedHashSet<UUID>();
+        diagramUUIDs.add(
+                databasePort.getCrossProfileDiagramInfo(datasetName).getCrossProfileDiagramUUID());
+        diagramUUIDs.addAll(databasePort.getDatasetDiagrams(datasetName).keySet());
+
+        for (var diagramUUID : diagramUUIDs) {
+            migrateLayoutToNewClassUri(
+                    model, diagramUUID, oldMergedUuid, newMergedUuid, newClassUri);
+        }
+    }
+
+    private static void migrateLayoutToNewClassUri(
+            Model model,
+            UUID diagramUUID,
+            UUID oldMergedUuid,
+            UUID newMergedUuid,
+            String newClassUri) {
+        if (DLObjectFetcher.fetchDiagram(model, diagramUUID) == null) {
             return;
         }
 
-        var existingNew =
-                DLObjectFetcher.fetchDiagramDOForClass(
-                        model, crossProfileDiagramUUID, newMergedUuid);
+        var existingNew = DLObjectFetcher.fetchDiagramDOForClass(model, diagramUUID, newMergedUuid);
         if (existingNew != null) {
             return;
         }
 
-        var oldDO =
-                DLObjectFetcher.fetchDiagramDOForClass(
-                        model, crossProfileDiagramUUID, oldMergedUuid);
+        var oldDO = DLObjectFetcher.fetchDiagramDOForClass(model, diagramUUID, oldMergedUuid);
         if (oldDO == null) {
             return;
         }
@@ -389,7 +469,7 @@ public class UpdateClassLayoutService
 
         var newDoMRID =
                 DiagramLayoutServiceUtils.insertDiagramObject(
-                        model, crossProfileDiagramUUID, newClassUri, newMergedUuid);
+                        model, diagramUUID, newClassUri, newMergedUuid);
 
         var newDiagramObjectPoint =
                 DiagramObjectPoint.builder()

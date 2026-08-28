@@ -21,8 +21,8 @@
     import { URI } from "$lib/models/dto/index.ts";
     import { renderOptions } from "$lib/renderOptions.svelte.js";
     import {
-        DiagramType,
         editorState,
+        isMergedDiagramType,
         multiSelectState,
         SelectionLevel,
     } from "$lib/sharedState.svelte.js";
@@ -30,13 +30,10 @@
 
     let { id, data, dragging } = $props();
 
-    const isCrossProfileDiagram = $derived(
-        editorState.selectedDiagram.getProperty("type") ===
-            DiagramType.CROSS_PROFILE,
+    const isMergedDiagram = $derived(
+        isMergedDiagramType(editorState.selectedDiagram.getProperty("type")),
     );
-    const selectionGraphUri = $derived(
-        isCrossProfileDiagram ? null : data.graphUri,
-    );
+    const selectionGraphUri = $derived(isMergedDiagram ? null : data.graphUri);
 
     const isInSelection = $derived(
         multiSelectState.isSelected(
@@ -71,7 +68,7 @@
     );
 
     const useProfileSections = $derived(
-        isCrossProfileDiagram ||
+        isMergedDiagram ||
             (renderOptions.get("includePropertiesFromOtherProfiles") &&
                 hasProfileInfo),
     );
@@ -79,7 +76,7 @@
     const profileSections = $derived(
         useProfileSections
             ? buildProfileSections(
-                  isCrossProfileDiagram
+                  isMergedDiagram
                       ? collectGraphUris()
                       : ownGraphUriFirst(collectGraphUris()),
               )

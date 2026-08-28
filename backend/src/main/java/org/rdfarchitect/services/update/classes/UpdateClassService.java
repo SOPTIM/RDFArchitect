@@ -36,6 +36,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
+import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.diagrams.RemoveFromCustomDiagramUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CrossProfileDiagramLayoutUseCase;
@@ -44,7 +45,6 @@ import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUs
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Service
@@ -117,10 +117,8 @@ public class UpdateClassService
 
         String newClassUri = newClass.getPrefix() + newClass.getLabel();
         if (!oldClassUri.equals(newClassUri)) {
-            var oldMergedUuid =
-                    UUID.nameUUIDFromBytes(oldClassUri.getBytes(StandardCharsets.UTF_8));
-            var newMergedUuid =
-                    UUID.nameUUIDFromBytes(newClassUri.getBytes(StandardCharsets.UTF_8));
+            var oldMergedUuid = CrossProfileUtils.mergedClassUuid(oldClassUri);
+            var newMergedUuid = CrossProfileUtils.mergedClassUuid(newClassUri);
             crossProfileDiagramLayoutUseCase.migrateLayoutToNewClassUri(
                     graphIdentifier.datasetName(), oldMergedUuid, newMergedUuid, newClassUri);
         }

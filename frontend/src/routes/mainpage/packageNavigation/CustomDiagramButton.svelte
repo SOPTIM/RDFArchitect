@@ -24,7 +24,11 @@
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+    import {
+        ClassType,
+        DiagramType,
+        editorState,
+    } from "$lib/sharedState.svelte.js";
 
     import ClassEntry from "./ClassEntry.svelte";
     import CustomDiagramDeleteDialog from "./custom-diagram-dialogs/CustomDiagramDeleteDialog.svelte";
@@ -35,7 +39,6 @@
     let {
         workspaceNavEntry,
         graphNavEntry,
-        allGraphNavEntries,
         diagram = $bindable(),
         classes,
         readonly,
@@ -45,26 +48,17 @@
 
     let showEditDiagramDialog = $state(false);
     let showDeleteDiagramDialog = $state(false);
-    let graphNavEntryByClass = $derived.by(() => {
-        const map = {};
 
-        classes?.forEach(diagramClass => {
-            const graph = allGraphNavEntries.find(g =>
-                g.children.some(pack =>
-                    pack.children.some(cls => cls.id === diagramClass.id),
-                ),
-            );
-            if (graph) {
-                map[diagramClass.id] = graph;
-            } else {
-                console.warn(
-                    "Could not find graph for class ",
-                    diagramClass.id,
-                );
-            }
-        });
-        return map;
-    });
+    const diagramType = $derived(
+        graphNavEntry
+            ? DiagramType.CUSTOM_GRAPH_DIAGRAM
+            : DiagramType.CUSTOM_WORKSPACE_DIAGRAM,
+    );
+
+    const classGraphNavEntry = $derived(graphNavEntry ?? { id: null });
+    const classType = $derived(
+        graphNavEntry ? ClassType.SINGLE_CLASS : ClassType.MERGED_CLASS,
+    );
 
     let packageIcon = $derived(diagram.showContents ? faFolderOpen : faFolder);
     const hasClasses = $derived(diagram.classes?.length > 0);
@@ -72,32 +66,22 @@
     const rangeSiblings = $derived(
         classes?.map(cls => ({
             classNavEntry: cls,
-            graphNavEntry: getGraphNavEntryForClass(cls.id),
+            graphNavEntry: classGraphNavEntry,
         })) ?? [],
     );
 
     async function toggleDiagramContentsVisibility() {
-        await onToggle();
-        const next = !diagram.showContents;
+        try {
+            await onToggle();
+        } finally {
+            const next = !diagram.showContents;
 
-        diagram.showContents = next;
-        diagram.userCollapsed = !next;
-    }
-
-    function getGraphNavEntryForClass(classUUID) {
-        if (graphNavEntry) {
-            return graphNavEntry;
-        }
-        const navEntry = graphNavEntryByClass[classUUID];
-        if (navEntry) {
-            return navEntry;
+            diagram.showContents = next;
+            diagram.userCollapsed = !next;
         }
     }
 
     function selectDiagram() {
-        const diagramType = graphNavEntry
-            ? DiagramType.CUSTOM_GRAPH_DIAGRAM
-            : DiagramType.CUSTOM_WORKSPACE_DIAGRAM;
         editorState.selectCustomDiagram(
             workspaceNavEntry.label,
             graphNavEntry ? graphNavEntry.id : null,
@@ -146,17 +130,19 @@
             </ContextMenu.Item.Button>
         </ContextMenu.Content>
     </ContextMenu.Root>
-    {#if diagram.showContents && hasClasses}
+    {#if diagram.showContents && classes?.length}
         <div
             class="flex w-full flex-col items-stretch gap-[0.1rem] empty:hidden"
         >
             {#each classes as cls (cls.id)}
                 <ClassEntry
                     {workspaceNavEntry}
-                    graphNavEntry={getGraphNavEntryForClass(cls.id)}
+                    graphNavEntry={classGraphNavEntry}
                     classNavEntry={cls}
                     diagramId={diagram.diagramId}
                     diagramGraphUri={graphNavEntry?.id}
+                    {classType}
+                    {diagramType}
                     {rangeSiblings}
                     {readonly}
                     level={level + 1}

@@ -25,7 +25,9 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
@@ -36,6 +38,7 @@ import org.rdfarchitect.services.select.ListGraphsUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -54,20 +57,57 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
 
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             rdfGraphCopy = GraphUtils.deepCopy(ctx.getRdfGraph());
-
-            var diagramLayout = ctx.getDiagramLayout();
-            var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
-            var classLayoutingData =
-                    packageUUID == null
-                            ? DLObjectFetcher.fetchDiagramDOPPerClass(
-                                    diagramLayoutModel,
-                                    diagramLayout.getDefaultPackageMRID().getUuid())
-                            : DLObjectFetcher.fetchDiagramDOPPerClass(
-                                    diagramLayoutModel, packageUUID);
-            layoutData =
-                    RenderingLayoutData.builder().classLayoutingData(classLayoutingData).build();
+            layoutData = fetchLayoutData(ctx, packageUUID);
         }
 
+        return render(graphIdentifier, filter, rdfGraphCopy, layoutData);
+    }
+
+    @Override
+    public RenderingDataDTO getCustomDiagramRenderingData(
+            GraphIdentifier graphIdentifier, GraphFilter filter, UUID diagramUUID) {
+        Graph rdfGraphCopy;
+        RenderingLayoutData layoutData;
+
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var diagram = ctx.getCustomDiagrams().get(diagramUUID);
+            if (diagram == null) {
+                throw new IllegalArgumentException(
+                        "Diagram with ID "
+                                + diagramUUID
+                                + " not found in graph "
+                                + graphIdentifier);
+            }
+            filter.setAllowedUUIDs(
+                    diagram.getClasses().stream()
+                            .map(ClassInDiagram::getUuid)
+                            .filter(Objects::nonNull)
+                            .map(UUID::toString)
+                            .toList());
+            filter.setIncludeRelationsToExternalPackages(false);
+            rdfGraphCopy = GraphUtils.deepCopy(ctx.getRdfGraph());
+            layoutData = fetchLayoutData(ctx, diagramUUID);
+        }
+
+        return render(graphIdentifier, filter, rdfGraphCopy, layoutData);
+    }
+
+    private RenderingLayoutData fetchLayoutData(GraphContext ctx, UUID diagramUUID) {
+        var diagramLayout = ctx.getDiagramLayout();
+        var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
+        var classLayoutingData =
+                diagramUUID == null
+                        ? DLObjectFetcher.fetchDiagramDOPPerClass(
+                                diagramLayoutModel, diagramLayout.getDefaultPackageMRID().getUuid())
+                        : DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, diagramUUID);
+        return RenderingLayoutData.builder().classLayoutingData(classLayoutingData).build();
+    }
+
+    private RenderingDataDTO render(
+            GraphIdentifier graphIdentifier,
+            GraphFilter filter,
+            Graph rdfGraphCopy,
+            RenderingLayoutData layoutData) {
         var cimModel =
                 new CIMModelFacade(
                         graphIdentifier.graphUri(), ModelFactory.createModelForGraph(rdfGraphCopy));
