@@ -16,7 +16,10 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { isManuallyEnteredConcreteStereotype } from "../../../../src/lib/models/reactive/validity-rules/validityFunctions.js";
+import {
+    isInvalidSuperClass,
+    isManuallyEnteredConcreteStereotype,
+} from "../../../../src/lib/models/reactive/validity-rules/validityFunctions.js";
 import { CONCRETE_STEREOTYPE } from "../../../../src/lib/models/stereotype-constants.js";
 
 describe("isManuallyEnteredConcreteStereotype", () => {
@@ -38,5 +41,23 @@ describe("isManuallyEnteredConcreteStereotype", () => {
         const regular = "http://example.org/some#stereotype";
         expect(isManuallyEnteredConcreteStereotype(regular, true)).toEqual([]);
         expect(isManuallyEnteredConcreteStereotype(regular, false)).toEqual([]);
+    });
+});
+
+describe("isInvalidSuperClass", () => {
+    it("accepts the uuid of a class of this schema", () => {
+        expect(
+            isInvalidSuperClass("2c9916ee-a33e-4a2a-a0b8-ad1ba1322ffd"),
+        ).toEqual([]);
+    });
+
+    it("accepts the uri of a superclass that this schema only references", () => {
+        expect(
+            isInvalidSuperClass("http://iec.ch/TC57/CIM100#LimitSet"),
+        ).toEqual([]);
+    });
+
+    it("flags anything that is neither a uuid nor a uri", () => {
+        expect(isInvalidSuperClass("LimitSet")).toHaveLength(1);
     });
 });

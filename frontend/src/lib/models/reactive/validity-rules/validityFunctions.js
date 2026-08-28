@@ -84,7 +84,7 @@ export function isValidDiagramName(diagramName, compareDiagrams) {
         violations.push("must not be empty");
     }
 
-    if (compareDiagrams?.some(d => d.label === diagramName)) {
+    if (compareDiagrams?.some(d => d.name === diagramName)) {
         violations.push("must be unique");
     }
 
@@ -423,7 +423,17 @@ export function isInvalidPackage(pack) {
     return isInvalidUuid(pack);
 }
 
+/**
+ * A superclass that is only referenced by this schema instead of being defined
+ * in it is identified by its uri, so both a uuid and an iri are accepted.
+ */
 export function isInvalidSuperClass(superClass) {
+    if (
+        typeof superClass === "string" &&
+        !validateIri(superClass, IriValidationStrategy.Pragmatic)
+    ) {
+        return [];
+    }
     return isInvalidUuid(superClass);
 }
 

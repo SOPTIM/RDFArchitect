@@ -16,12 +16,13 @@
  */
 
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
 import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
 import { classStore } from "$lib/stores/classStore.ts";
 import { graphStore } from "$lib/stores/graphStore.ts";
 import { packageStore } from "$lib/stores/packageStore.ts";
+import { compareGraphs } from "$lib/utils/graph-order.js";
+import { uriSuffix } from "$lib/utils/iri.js";
 import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
 import {
@@ -85,11 +86,19 @@ async function populateWorkspace(workspaceNavEntry) {
     const freshEntries = (
         (await graphStore.getGraphs(workspaceNavEntry.id)) ?? []
     )
-        .sort((a, b) => getUri(a).localeCompare(getUri(b)))
         .map(graph => {
             const fullUri = getUri(graph);
+            return { label: graph.keyword ?? uriSuffix(fullUri), fullUri };
+        })
+        .sort((a, b) =>
+            compareGraphs(
+                { label: a.label, uri: a.fullUri },
+                { label: b.label, uri: b.fullUri },
+            ),
+        )
+        .map(({ label, fullUri }) => {
             return reuseOrCreate(existingGraphNavList, {
-                label: graph.keyword ?? new URI(fullUri).suffix,
+                label,
                 tooltip: fullUri,
                 id: fullUri,
             });

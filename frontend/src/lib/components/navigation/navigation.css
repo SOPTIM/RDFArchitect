@@ -144,23 +144,9 @@
     line-height: 1.2;
 }
 
-.nav-entry__badge {
+.nav-entry__marker {
     margin-left: auto;
-    padding: 0.1rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.68rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    background: var(--color-nav-badge-background);
-    color: var(--color-nav-badge-text);
-    white-space: nowrap;
-}
-
-.nav-entry__badge--external {
-    background: var(--color-nav-external-badge-background);
-}
-
-.nav-entry__badge--readonly {
-    background: var(--color-border-strong);
-    color: var(--color-default-text);
+    padding-left: 0.35rem;
+    font-size: 0.72rem;
+    opacity: 0.75;
 }

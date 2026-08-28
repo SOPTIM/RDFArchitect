@@ -15,6 +15,20 @@
  *
  */
 
+import { URI } from "$lib/models/dto/index.ts";
+
+/** The local name of an iri, or the iri itself when it cannot be parsed. */
+export function uriSuffix(iri) {
+    if (!iri) {
+        return "";
+    }
+    try {
+        return new URI(iri).suffix;
+    } catch {
+        return iri;
+    }
+}
+
 export function shortenIri(prefixes, iri) {
     if (!iri) {
         return iri ?? "";

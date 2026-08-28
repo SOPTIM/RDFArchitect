@@ -20,7 +20,9 @@ package org.rdfarchitect.services.diagrams;
 import lombok.experimental.UtilityClass;
 
 import java.awt.Color;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
+import java.util.UUID;
 
 @UtilityClass
 public class CrossProfileUtils {
@@ -31,6 +33,15 @@ public class CrossProfileUtils {
     private static final float RANGE_SATURATION = 0.5f;
     private static final float MIN_BRIGHTNESS = 0.3f;
     private static final float RANGE_BRIGHTNESS = 0.4f;
+
+    /**
+     * The uuid the merged class of a class uri carries in the cross profile view. It is derived
+     * from the uri, because the merged class exists in no graph and therefore has no uuid of its
+     * own.
+     */
+    public static UUID mergedClassUuid(String classUri) {
+        return UUID.nameUUIDFromBytes(classUri.getBytes(StandardCharsets.UTF_8));
+    }
 
     public static String generateRandomDarkColor() {
         float hue = random.nextFloat();

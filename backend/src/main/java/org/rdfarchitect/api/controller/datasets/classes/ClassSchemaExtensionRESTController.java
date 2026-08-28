@@ -15,17 +15,14 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs.classes;
+package org.rdfarchitect.api.controller.datasets.classes;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.ClassDTO;
-import org.rdfarchitect.api.dto.attributes.AttributeDTO;
+import org.rdfarchitect.api.dto.ClassExtensionResultDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ClassExtensionUseCase;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -39,22 +36,30 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/extend")
+@RequestMapping("api/datasets/{datasetName}/classes/extendToSchema")
 @RequiredArgsConstructor
-public class ClassExtensionRESTController {
+public class ClassSchemaExtensionRESTController {
+
     private static final Logger logger =
-            LoggerFactory.getLogger(ClassExtensionRESTController.class);
+            LoggerFactory.getLogger(ClassSchemaExtensionRESTController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
+
     private final ClassExtensionUseCase classExtensionUseCase;
 
+    public record ExtendToSchemaRequest(
+            String graphUri, List<String> classUUIDs, boolean withInheritance) {}
+
     @Operation(
-            summary = "Extend class",
-            description = "extends a class in another graph",
+            summary = "Extend classes into another schema",
+            description =
+                    "Creates a stub of every given class in another graph of the same dataset, optionally stubbing their superclasses as well. The classes may come from different graphs and are addressed either by the uuid they carry there or by the uuid of their merged class. Classes that are already defined in the target graph are left untouched.",
             tags = {"class"})
     @PostMapping
-    public ClassDTO extendClass(
+    public List<ClassExtensionResultDTO> extendToSchema(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -63,38 +68,27 @@ public class ClassExtensionRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
-            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                            required = true,
-                            description = "The new attribute",
-                            content =
-                                    @Content(schema = @Schema(implementation = AttributeDTO.class)))
-                    @RequestBody
-                    GraphIdentifier newGraphIdentifier) {
+            @RequestBody ExtendToSchemaRequest request) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/extend\" from \"{}\".",
+                "Received POST request: \"/api/datasets/{{}}/classes/extendToSchema\" from \"{}\".",
                 datasetName,
-                graphURI,
-                classUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var targetGraphIdentifier =
+                new GraphIdentifier(
+                        datasetName, expandURIUseCase.expandUri(datasetName, request.graphUri()));
 
-        var newClass =
-                classExtensionUseCase.extendClass(graphIdentifier, classUUID, newGraphIdentifier);
+        var results =
+                classExtensionUseCase.extendClasses(
+                        datasetName,
+                        request.classUUIDs(),
+                        targetGraphIdentifier,
+                        request.withInheritance());
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/extend\" to \"{}\".",
+                "Sending response to POST request: \"/api/datasets/{{}}/classes/extendToSchema\" to \"{}\".",
                 datasetName,
-                graphURI,
-                classUUID,
                 originURL);
-        return newClass;
+        return results;
     }
 }
