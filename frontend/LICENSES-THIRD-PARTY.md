@@ -44,9 +44,9 @@
 
 ### @hey-api/openapi-ts
 - **Package:** @hey-api/openapi-ts
-- **Version:** 0.97.3
+- **Version:** 0.99.0
 - **License:** MIT
-- **URL:** [https://heyapi.dev/](https://heyapi.dev/)
+- **URL:** [https://heyapi.dev/docs/openapi/typescript/get-started](https://heyapi.dev/docs/openapi/typescript/get-started)
 
 ### @sveltejs/adapter-auto
 - **Package:** @sveltejs/adapter-auto
@@ -132,7 +132,7 @@
 
 ### eslint
 - **Package:** eslint
-- **Version:** 10.8.1
+- **Version:** 10.9.0
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -215,7 +215,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.56.9
+- **Version:** 5.56.10
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
