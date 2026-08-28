@@ -236,6 +236,31 @@ class ImportJobServiceTest {
     }
 
     @Test
+    void startImport_importDiesHalfWay_settlesTheFilesItNeverFinished() {
+        service =
+                new ImportJobService(
+                        (datasetName, files, graphUris, listener) -> {
+                            listener.planned(
+                                    List.of(
+                                            new PlannedImport(0, "first.ttl", 1),
+                                            new PlannedImport(1, "second.ttl", 1),
+                                            new PlannedImport(2, "third.ttl", 1)));
+                            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
+                            listener.started(1);
+                            throw new IllegalStateException("out of memory");
+                        });
+
+        var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
+
+        var status = awaitFinished(jobId);
+        // A file left running keeps the dialog spinning on it and its count short of the end.
+        assertThat(status.files())
+                .extracting(file -> file.fileName() + ":" + file.state())
+                .containsExactly("first.ttl:IMPORTED", "second.ttl:FAILED", "third.ttl:SKIPPED");
+        assertThat(status.failedImports()).containsExactly("second.ttl");
+    }
+
+    @Test
     void getStatus_jobOfAnotherSession_isNotVisible() {
         service = new ImportJobService(realImportService());
         var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);

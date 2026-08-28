@@ -207,7 +207,12 @@ export class ImportProgress {
     cancel() {
         if (this.cancelling) return;
         this.cancelling = true;
-        this.#controller.abort();
+        if (this.uploadPercent < 100) {
+            // Once the last byte is out the backend has the job. Aborting would throw away the
+            // response that carries its id and leave it running with nobody left to stop it, so
+            // from here on the cancellation waits for the id and goes to the backend instead.
+            this.#controller.abort();
+        }
     }
 
     #importedShare() {
