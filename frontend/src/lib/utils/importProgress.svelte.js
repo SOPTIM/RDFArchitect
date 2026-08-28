@@ -230,11 +230,13 @@ export class ImportProgress {
     }
 
     #finishedText() {
-        if (this.jobState === JobState.FAILED) {
-            return "Import failed";
-        }
         const imported = this.importedGraphUris.length;
         const schemas = `${imported} schema${imported === 1 ? "" : "s"}`;
+        if (this.jobState === JobState.FAILED) {
+            return imported === 0
+                ? "Import failed"
+                : `Import failed after ${schemas}`;
+        }
         if (this.jobState === JobState.CANCELLED) {
             return imported === 0
                 ? "Import cancelled"

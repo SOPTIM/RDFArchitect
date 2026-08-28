@@ -224,11 +224,22 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                         listener.finished(plannedFile.index(), Outcome.SKIPPED, null);
                         continue;
                     }
+                    MultipartFile entryFile;
+                    try {
+                        entryFile =
+                                InMemoryMultipartFile.of(plannedFile.fileName(), zipInputStream);
+                    } catch (IOException exception) {
+                        // The iterator has already moved past this file, so failRemaining below
+                        // would leave it pending forever; fail it here and let the rest follow.
+                        result.failedFileNames().add(plannedFile.fileName());
+                        listener.finished(plannedFile.index(), Outcome.FAILED, null);
+                        throw exception;
+                    }
                     importPlannedFile(
                             result,
                             datasetName,
                             plannedFile,
-                            InMemoryMultipartFile.of(plannedFile.fileName(), zipInputStream),
+                            entryFile,
                             reservedGraphUris,
                             listener);
                 } finally {
@@ -240,8 +251,11 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                     "Unable to import the remaining graphs of zip file '{}': {}",
                     source.file().getOriginalFilename(),
                     exception.getMessage());
-            failRemaining(result, plannedFiles, listener);
         }
+        // The archive is read a second time here, and a stream that breaks can end the loop by
+        // throwing as much as by simply running out of entries. Either way the files it did not
+        // yield again have to be reported, or the import waits on them forever.
+        failRemaining(result, plannedFiles, listener);
     }
 
     private void importPlannedFile(

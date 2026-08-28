@@ -32,13 +32,17 @@ import org.rdfarchitect.services.update.graph.ImportProgressListener.Stage;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -148,6 +152,25 @@ class ImportProgressReportingTest {
     }
 
     @Test
+    void importGraphs_zipEntryUnreadableHalfWayThrough_leavesNoEntryUnreported() throws Exception {
+        // The plan reads the archive once and the import reads it again, so an archive that only
+        // survives the first pass breaks exactly where a file has already been taken off the plan.
+        var archive =
+                zip(new LinkedHashMap<>(Map.of("a.ttl", SCHEMA, "b.ttl", SCHEMA, "c.ttl", SCHEMA)));
+
+        var result =
+                importGraphsUseCase.importGraphs(
+                        "ds", List.of(readableOnce(archive)), null, listener);
+
+        assertThat(listener.planned).hasSize(3);
+        // Whatever the archive still managed to give up, no planned entry may be left without an
+        // outcome: the progress would wait for it forever and the result would not mention it.
+        assertThat(listener.outcomes).hasSameSizeAs(listener.planned);
+        assertThat(result.importedGraphUris().size() + result.failedFileNames().size())
+                .isEqualTo(listener.planned.size());
+    }
+
+    @Test
     void importGraphs_noListenerGiven_stillImports() {
         var result =
                 importGraphsUseCase.importGraphs(
@@ -159,6 +182,23 @@ class ImportProgressReportingTest {
     private MultipartFile graphFile(String fileName) {
         return new MockMultipartFile(
                 "files", fileName, "text/turtle", SCHEMA.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * The archive as uploaded on the first read and a truncated one on every read after that, so
+     * that the plan pass sees a whole archive and the import pass runs into a broken stream.
+     */
+    private MultipartFile readableOnce(MultipartFile archive) throws IOException {
+        var content = archive.getBytes();
+        var truncated = Arrays.copyOf(content, content.length / 2);
+        var reads = new AtomicInteger();
+        return new MockMultipartFile(
+                "files", archive.getOriginalFilename(), "application/zip", content) {
+            @Override
+            public InputStream getInputStream() {
+                return new ByteArrayInputStream(reads.getAndIncrement() == 0 ? content : truncated);
+            }
+        };
     }
 
     private MultipartFile zip(Map<String, String> entries) throws IOException {

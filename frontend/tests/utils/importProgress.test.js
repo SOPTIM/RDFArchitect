@@ -176,6 +176,20 @@ describe("ImportProgress", () => {
         expect(progress.statusText).toBe("Import cancelled after 2 schemas");
     });
 
+    test("keeps what a failed import managed to import", () => {
+        const progress = new ImportProgress();
+
+        progress.apply(
+            running({
+                state: JobState.FAILED,
+                errorMessage: "out of memory",
+                importedGraphUris: ["http://graph#first"],
+            }),
+        );
+
+        expect(progress.statusText).toBe("Import failed after 1 schema");
+    });
+
     test("reports the reason an import ended unexpectedly", () => {
         const progress = new ImportProgress();
 

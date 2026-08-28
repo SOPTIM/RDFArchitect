@@ -61,18 +61,32 @@ public class ImportJobService implements ImportJobUseCase {
         dropExpiredJobs();
 
         var sessionId = SessionContext.getSessionId();
-        if (hasRunningJob(sessionId)) {
-            throw new ResourceConflictException("An import is already running for this session.");
+        var job = new ImportJob(UUID.randomUUID(), sessionId, datasetName);
+        // Claiming the session and registering the job has to be one step, otherwise two parallel
+        // starts both pass the guard and import into the same store with their own reservations.
+        synchronized (jobs) {
+            if (hasRunningJob(sessionId)) {
+                throw new ResourceConflictException(
+                        "An import is already running for this session.");
+            }
+            jobs.put(job.getId(), job);
         }
 
-        // The servlet container deletes the temporary files of the request once its response is
-        // sent, so the job has to take over the uploaded content before that happens.
-        var ownedFiles = copyOf(files);
         var userSettings = UserSettingsContext.get();
-
-        var job = new ImportJob(UUID.randomUUID(), sessionId, datasetName);
-        jobs.put(job.getId(), job);
-        executor.execute(() -> runImport(job, ownedFiles, graphUris, userSettings));
+        var started = false;
+        try {
+            // The servlet container deletes the temporary files of the request once its response
+            // is sent, so the job has to take over the uploaded content before that happens.
+            var ownedFiles = copyOf(files);
+            executor.execute(() -> runImport(job, ownedFiles, graphUris, userSettings));
+            started = true;
+        } finally {
+            if (!started) {
+                // Taking the files over or handing them to the executor went wrong, so the job
+                // never ran and must not keep blocking the session.
+                jobs.remove(job.getId());
+            }
+        }
 
         logger.info(
                 "Started import job {} for dataset \"{}\" with {} file(s).",

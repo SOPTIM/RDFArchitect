@@ -154,6 +154,30 @@ describe("ImportProgressPanel", () => {
         expect(panel.textContent).toContain("schema.ttl: color, owner");
     });
 
+    test("lists a warning per file even when the same file was imported twice", () => {
+        // Nothing stops the dialog from adding one file twice, and the backend keeps both under
+        // suffixed graph uris, so the warnings arrive with a repeated file name.
+        const progress = new ImportProgress();
+        progress.uploaded();
+        const status = statusOf(
+            [
+                fileOf(0, "schema.ttl", FileState.IMPORTED),
+                fileOf(1, "schema.ttl", FileState.IMPORTED),
+            ],
+            JobState.COMPLETED,
+        );
+        status.warnings = [
+            { fileName: "schema.ttl", undisplayableProperties: ["color"] },
+            { fileName: "schema.ttl", undisplayableProperties: ["owner"] },
+        ];
+        progress.apply(status);
+
+        const panel = render(progress);
+
+        expect(panel.textContent).toContain("schema.ttl: color");
+        expect(panel.textContent).toContain("schema.ttl: owner");
+    });
+
     test("explains an import that ended unexpectedly", () => {
         const progress = new ImportProgress();
         progress.fail("Another import is still running.");
