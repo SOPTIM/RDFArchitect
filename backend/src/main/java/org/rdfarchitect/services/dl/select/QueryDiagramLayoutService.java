@@ -22,12 +22,10 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -55,15 +53,14 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
     private RenderingLayoutData fetchRenderingLayoutData(
             UUID defaultPackageUUID, Model diagramLayoutModel, UUID diagramId) {
 
-        Map<UUID, DiagramObjectPoint> classLayoutingData;
-        if (diagramId == null) {
-            classLayoutingData =
-                    DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, defaultPackageUUID);
-        } else {
-            classLayoutingData =
-                    DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, diagramId);
-        }
+        var resolvedDiagramId = diagramId != null ? diagramId : defaultPackageUUID;
 
-        return RenderingLayoutData.builder().classLayoutingData(classLayoutingData).build();
+        return RenderingLayoutData.builder()
+                .classLayoutingData(
+                        DLObjectFetcher.fetchDiagramDOPPerClass(
+                                diagramLayoutModel, resolvedDiagramId))
+                .labelLayoutingData(
+                        DLObjectFetcher.fetchLabelOffsets(diagramLayoutModel, resolvedDiagramId))
+                .build();
     }
 }

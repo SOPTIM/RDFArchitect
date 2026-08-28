@@ -19,6 +19,9 @@ package org.rdfarchitect.services.dl.update.classlayout;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.graph.Graph;
+import org.apache.jena.graph.Node;
+import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -36,6 +39,7 @@ import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.rdfarchitect.services.rendering.MergedClasses;
@@ -247,7 +251,25 @@ public class UpdateClassLayoutService
             for (var diagramObject : DLObjectFetcher.fetchAllDOs(diagramLayoutModel, classUUID)) {
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
             }
+            deleteOrphanedLabels(diagramLayoutModel, ctx.getRdfGraph());
             ctx.commit();
+        }
+    }
+
+    /**
+     * Drops the layout of labels whose resource no longer exists. Labels are anchored to the
+     * resource whose text they display, e.g. an association end, so deleting a class leaves the
+     * labels of its associations behind. Sweeping the graph-scoped layout after a deletion covers
+     * that without every delete path having to know which labels it invalidates.
+     */
+    private void deleteOrphanedLabels(Model diagramLayoutModel, Graph rdfGraph) {
+        for (var label : DLObjectFetcher.fetchAllLabelDOs(diagramLayoutModel)) {
+            var uuidNode =
+                    NodeFactory.createLiteralString(
+                            label.getBelongsToIdentifiedObject().getUuid().toString());
+            if (!rdfGraph.contains(Node.ANY, RDFA.uuid.asNode(), uuidNode)) {
+                DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, label.getMRID());
+            }
         }
     }
 
@@ -282,7 +304,7 @@ public class UpdateClassLayoutService
         for (var cls : classes) {
             var classUri = classUriByUuid.get(cls.getUuid());
             if (classUri != null) {
-                mergedUuids.add(CrossProfileUtils.mergedClassUuid(classUri));
+                mergedUuids.add(CrossProfileUtils.mergedUuid(classUri));
             }
         }
         return mergedUuids;
@@ -333,8 +355,7 @@ public class UpdateClassLayoutService
                 return true;
             }
             var classUri = classUriByUuid.get(cls.getUuid());
-            return classUri != null
-                    && classUUIDs.contains(CrossProfileUtils.mergedClassUuid(classUri));
+            return classUri != null && classUUIDs.contains(CrossProfileUtils.mergedUuid(classUri));
         };
     }
 

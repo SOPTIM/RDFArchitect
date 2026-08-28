@@ -37,6 +37,9 @@ public class DLQueryVars {
     public static final String DO_MRID = "?doMRID";
     public static final String DO_NAME = "?doName";
     public static final String IO_MRID = "?ioMRID";
+    public static final String STYLE_NAME = "?styleName";
+    public static final String OFFSET_X = "?offsetX";
+    public static final String OFFSET_Y = "?offsetY";
 
     // DIAGRAMOBJECTPOINT
     public static final String DOP_MRID = "?dopMRID";

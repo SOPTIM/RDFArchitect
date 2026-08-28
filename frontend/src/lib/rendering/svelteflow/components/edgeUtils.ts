@@ -15,7 +15,17 @@
  *
  */
 
-import { type InternalNode } from "@xyflow/svelte";
+import { type InternalNode, type Node } from "@xyflow/svelte";
+
+/**
+ * Edge endpoints are read from the rendered internal nodes inside an edge component and from the
+ * plain nodes when label nodes are laid out, which position themselves relative to an endpoint.
+ */
+type EdgeEndpointNode = Node & Partial<Pick<InternalNode, "internals">>;
+
+function nodePosition(node: EdgeEndpointNode) {
+    return node.internals?.positionAbsolute ?? node.position ?? { x: 0, y: 0 };
+}
 
 /**
  * Calculates the intersection point between a line (from the target to the node center)
@@ -24,15 +34,12 @@ import { type InternalNode } from "@xyflow/svelte";
  * See: https://svelteflow.dev/examples/nodes/easy-connect
  */
 function getNodeIntersection(
-    intersectionNode: InternalNode,
-    targetNode: InternalNode,
+    intersectionNode: EdgeEndpointNode,
+    targetNode: EdgeEndpointNode,
     offsetY: number = 0,
 ) {
-    const intersectionPos = intersectionNode.internals.positionAbsolute || {
-        x: 0,
-        y: 0,
-    };
-    const targetPos = targetNode.internals.positionAbsolute || { x: 0, y: 0 };
+    const intersectionPos = nodePosition(intersectionNode);
+    const targetPos = nodePosition(targetNode);
 
     const w = (intersectionNode.measured.width ?? 0) / 2;
     const h = (intersectionNode.measured.height ?? 0) / 2;
@@ -96,8 +103,8 @@ function getLabelOffsets(sx: number, sy: number, tx: number, ty: number) {
  * Contains the start/end points of the edge as well as the calculated label positions.
  */
 export function getEdgeParams(
-    source: InternalNode,
-    target: InternalNode,
+    source: EdgeEndpointNode,
+    target: EdgeEndpointNode,
     offsetY: number = 0,
 ) {
     const sourceIntersection = getNodeIntersection(source, target);

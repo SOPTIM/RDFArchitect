@@ -32,6 +32,8 @@ import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.AttributeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeLabelDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeLabelDTO.Anchor;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EnumEntryDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.SuperClassDTO;
@@ -347,8 +349,9 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         var edge = associationEdges.getFirst();
         assertThat(edge.getSource()).isEqualTo(CHILD_UUID);
         assertThat(edge.getTarget()).isEqualTo(TERMINAL_UUID);
-        assertThat(edge.getData().getFromMultiplicity()).isEqualTo("0..n");
-        assertThat(edge.getData().getToMultiplicity()).isEqualTo("1..1");
+        assertThat(edge.getData().getLabels())
+                .extracting(EdgeLabelDTO::getAnchor, EdgeLabelDTO::getText)
+                .containsExactly(tuple(Anchor.SOURCE, "1..1"), tuple(Anchor.TARGET, "0..n"));
         assertThat(edge.getData().isUseToAssociation()).isTrue();
         assertThat(edge.getData().isUseFromAssociation()).isFalse();
     }
@@ -910,10 +913,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                             assertThat(List.of(edge.getSource(), edge.getTarget()))
                                     .containsExactlyInAnyOrder(
                                             mergedUuid("Child"), mergedUuid("Terminal"));
-                            assertThat(
-                                            List.of(
-                                                    edge.getData().getFromMultiplicity(),
-                                                    edge.getData().getToMultiplicity()))
+                            assertThat(multiplicityTexts(edge))
                                     .containsExactlyInAnyOrder("0..n", "1..1");
                         });
     }
@@ -969,6 +969,10 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
 
         assertThat(result.getNodes()).isEmpty();
         assertThat(result.getEdges()).isEmpty();
+    }
+
+    private List<String> multiplicityTexts(EdgeDTO edge) {
+        return edge.getData().getLabels().stream().map(EdgeLabelDTO::getText).toList();
     }
 
     private List<EdgeDTO> mergedAssociationEdges(List<CIMProfileModel> profiles) {

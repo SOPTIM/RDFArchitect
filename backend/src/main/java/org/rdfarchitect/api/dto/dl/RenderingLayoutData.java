@@ -21,6 +21,8 @@ import lombok.Builder;
 import lombok.Data;
 
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
+import org.rdfarchitect.dl.data.dto.relations.XYOffset;
+import org.rdfarchitect.dl.queries.select.DLObjectFetcher.LabelKey;
 
 import java.util.Map;
 import java.util.UUID;
@@ -34,4 +36,7 @@ import java.util.UUID;
 public class RenderingLayoutData {
 
     Map<UUID, DiagramObjectPoint> classLayoutingData;
+
+    /** Manually placed labels, positioned as an offset relative to their class. */
+    Map<LabelKey, XYOffset> labelLayoutingData;
 }

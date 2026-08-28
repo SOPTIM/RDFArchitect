@@ -333,15 +333,19 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         var sourceUUID = renderContext.uriToUUIDMap.get(from.getDomain().getUri().toString());
         var targetUUID = renderContext.uriToUUIDMap.get(from.getRange().getUri().toString());
 
-        var fromMultiplicity = extractMultiplicityString(from.getMultiplicity());
-        var toMultiplicity = extractMultiplicityString(to.getMultiplicity());
+        var layoutData = renderContext.layoutingData();
         var useToAssociation = getAssociationUsedValue(from.getAssociationUsed());
         var useFromAssociation = getAssociationUsedValue(to.getAssociationUsed());
 
         var edgeDataDTO =
                 EdgeDataDTO.builder()
-                        .toMultiplicity(toMultiplicity)
-                        .fromMultiplicity(fromMultiplicity)
+                        .labels(
+                                SvelteFlowLabels.forAssociation(
+                                        to.getUuid(),
+                                        extractMultiplicityString(to.getMultiplicity()),
+                                        from.getUuid(),
+                                        extractMultiplicityString(from.getMultiplicity()),
+                                        layoutData))
                         .useToAssociation(useToAssociation)
                         .useFromAssociation(useFromAssociation)
                         .build();

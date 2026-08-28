@@ -69,7 +69,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
                         .getDiagramLayoutModel();
         assertThat(
                         DLObjectFetcher.fetchDiagramDOForClass(
-                                model, diagramUUID, CrossProfileUtils.mergedClassUuid(CLASS_A_URI)))
+                                model, diagramUUID, CrossProfileUtils.mergedUuid(CLASS_A_URI)))
                 .isNotNull();
         assertThat(DLObjectFetcher.fetchDiagramDOForClass(model, diagramUUID, CLASS_A_UUID))
                 .isNull();
@@ -83,7 +83,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
                 datasetName, diagramUUID, List.of(classAInDiagram()));
 
         service.removeClassesFromCustomDatasetDiagram(
-                datasetName, diagramUUID, List.of(CrossProfileUtils.mergedClassUuid(CLASS_A_URI)));
+                datasetName, diagramUUID, List.of(CrossProfileUtils.mergedUuid(CLASS_A_URI)));
 
         assertThat(databasePort.getDatasetDiagrams(datasetName).get(diagramUUID).getClasses())
                 .isEmpty();
@@ -93,7 +93,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
                                         .getDatasetDiagramLayout(datasetName)
                                         .getDiagramLayoutModel(),
                                 diagramUUID,
-                                CrossProfileUtils.mergedClassUuid(CLASS_A_URI)))
+                                CrossProfileUtils.mergedUuid(CLASS_A_URI)))
                 .isNull();
     }
 
