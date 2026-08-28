@@ -94,7 +94,7 @@
     }
 
     function onClose() {
-        dismissImport();
+        void dismissImport();
         clearInputs();
     }
 
@@ -309,9 +309,10 @@
 
     /**
      * Ends the dialog's part in the current import: cancels it while it still runs, opens what it
-     * imported once it is done, and forgets it either way.
+     * imported either way, and forgets it. Cancelling only stops the job where it is, so the
+     * graphs it already wrote still have to reach the editor.
      */
-    function dismissImport() {
+    async function dismissImport() {
         stopPolling();
         const currentProgress = progress;
         const jobId = importJobId;
@@ -323,18 +324,29 @@
         if (!currentProgress) {
             return;
         }
+
+        let importedGraphUris = currentProgress.importedGraphUris;
         if (!currentProgress.finished) {
             currentProgress.cancel();
-            void cancelImportJob(workspaceName, jobId);
-            return;
+            await cancelImportJob(workspaceName, jobId);
+            if (workspaceName && jobId) {
+                // The last poll can predate the file the job was on when it was told to stop, so
+                // the status is read once more to catch what still made it through.
+                const { data } = await graphStore.getImportStatus(
+                    workspaceName,
+                    jobId,
+                );
+                importedGraphUris =
+                    data?.importedGraphUris ?? importedGraphUris;
+            }
         }
-        if (currentProgress.importedGraphUris.length > 0) {
-            applyImportResult(currentProgress.importedGraphUris, workspaceName);
+        if (importedGraphUris.length > 0) {
+            applyImportResult(importedGraphUris, workspaceName);
         }
     }
 
     function closeAfterImport() {
-        dismissImport();
+        void dismissImport();
         clearInputs();
         showDialog = false;
     }

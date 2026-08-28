@@ -35,16 +35,19 @@ import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportResult;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.FileState;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.JobState;
+import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 class ImportJobServiceTest {
@@ -151,6 +154,47 @@ class ImportJobServiceTest {
     }
 
     @Test
+    void startImport_racingStartsOfTheSameSession_letOnlyOneThrough() throws Exception {
+        var running = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        service = new ImportJobService(blockingImportService(running, release));
+        var start = new CountDownLatch(1);
+        var accepted = new AtomicInteger();
+
+        var threads = new ArrayList<Thread>();
+        for (var i = 0; i < 8; i++) {
+            var thread =
+                    new Thread(
+                            () -> {
+                                SessionContext.setSessionId("session-a");
+                                try {
+                                    start.await();
+                                    service.startImport(
+                                            DATASET, List.of(graphFile("first.ttl")), null);
+                                    accepted.incrementAndGet();
+                                } catch (ResourceConflictException expected) {
+                                    // The guard turned this start away, which is the point.
+                                } catch (InterruptedException exception) {
+                                    Thread.currentThread().interrupt();
+                                } finally {
+                                    SessionContext.clear();
+                                }
+                            });
+            threads.add(thread);
+            thread.start();
+        }
+        start.countDown();
+        for (var thread : threads) {
+            thread.join(TIMEOUT.toMillis());
+        }
+
+        // Two imports of one session would write into the same store with reservations neither of
+        // them knows about, so the guard has to hold even when the starts arrive together.
+        assertThat(accepted.get()).isEqualTo(1);
+        release.countDown();
+    }
+
+    @Test
     void startImport_whileAnotherSessionImports_isAllowed() throws Exception {
         var running = new CountDownLatch(1);
         var release = new CountDownLatch(1);
@@ -164,6 +208,31 @@ class ImportJobServiceTest {
                 .isNotNull();
 
         release.countDown();
+    }
+
+    @Test
+    void startImport_importDiesHalfWay_stillReportsWhatItWrote() {
+        service =
+                new ImportJobService(
+                        (datasetName, files, graphUris, listener) -> {
+                            listener.planned(
+                                    List.of(
+                                            new PlannedImport(0, "first.ttl", 1),
+                                            new PlannedImport(1, "second.ttl", 1)));
+                            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
+                            throw new IllegalStateException("out of memory");
+                        });
+
+        var jobId =
+                service.startImport(
+                        DATASET, List.of(graphFile("first.ttl"), graphFile("second.ttl")), null);
+
+        var status = awaitFinished(jobId);
+        assertThat(status.state()).isEqualTo(JobState.FAILED);
+        assertThat(status.errorMessage()).isEqualTo("out of memory");
+        // The graph is in the store whether the job survived or not, so the caller has to hear
+        // about it; otherwise it stays invisible until the workspace is reloaded by hand.
+        assertThat(status.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "first");
     }
 
     @Test

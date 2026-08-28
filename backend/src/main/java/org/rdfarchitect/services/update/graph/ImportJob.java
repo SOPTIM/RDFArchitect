@@ -115,6 +115,18 @@ class ImportJob implements ImportProgressListener {
     }
 
     synchronized void fail(String message) {
+        // The result died with the exception, but every file that made it through reported its
+        // outcome, so what the import did manage to write is still recoverable from the progress.
+        importedGraphUris =
+                files.stream()
+                        .filter(file -> file.state == FileState.IMPORTED && file.graphUri != null)
+                        .map(file -> file.graphUri)
+                        .toList();
+        failedImports =
+                files.stream()
+                        .filter(file -> file.state == FileState.FAILED)
+                        .map(file -> file.plannedImport.fileName())
+                        .toList();
         errorMessage = message;
         state = JobState.FAILED;
         finishedAt = Instant.now();

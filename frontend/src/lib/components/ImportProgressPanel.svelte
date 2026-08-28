@@ -134,7 +134,7 @@
                 association metadata RDFArchitect needs to show them.
             </p>
             <ul class="mt-1 list-disc pl-5">
-                {#each warnings as warning (warning.fileName)}
+                {#each warnings as warning}
                     <li>
                         {warning.fileName}: {warning.undisplayableProperties.join(
                             ", ",
