@@ -16,32 +16,18 @@
   -->
 
 <script>
-    import { renderOptions } from "$lib/renderOptions.svelte.js";
-
     import {
         BaseEdge,
         EdgeLabel,
-        getStraightPath,
-        useEdges,
         useInternalNode,
     } from "@xyflow/svelte";
-    import {
-        getInnerBendPoints,
-        getSourceEndPoint,
-        getTargetEndPoint,
-    } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
-    import { userSettings } from "$lib/userSettings.svelte.js";
 
-    import EdgeBendPoints from "./EdgeBendPoints.svelte";
-    import {
-        getEdgeParams,
-        getPolylinePath,
-        getRoundedCornerPolylinePath,
-    } from "./edgeUtils.ts";
+    import { renderOptions } from "$lib/renderOptions.svelte.js";
+
+    import PolylineEdge from "./PolylineEdge.svelte";
     import { labelsOf } from "../diagram/labelNodes.js";
     import { labelHighlight } from "../interaction/labelHighlight.svelte.js";
 
-    import PolylineEdge from "./PolylineEdge.svelte";
 
     let { id, source, target, data, selected } = $props();
 
@@ -58,8 +44,6 @@
     /** The widths an edge swells between while one of its labels is pressed. */
     const BASE_STROKE_WIDTH = "2px";
     const HIGHLIGHT_STROKE_WIDTH = "3.2px";
-
-    const edges = useEdges();
 
     let markerEnd = data.useToAssociation ? "url(#associationTo)" : "";
     let markerStart = data.useFromAssociation ? "url(#associationFrom)" : "";
