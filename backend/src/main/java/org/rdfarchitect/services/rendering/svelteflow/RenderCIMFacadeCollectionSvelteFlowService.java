@@ -95,17 +95,18 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             List<CIMProfileModel> otherProfiles,
             String primaryColor,
             String primaryKeyword) {
-        var classes = selectClasses(cimModel, filter);
-        if (classes.isEmpty()) {
+        var selection = selectClasses(cimModel, filter);
+        if (selection.classes().isEmpty()) {
             return createEmptyDiagram();
         }
 
         var renderContext =
                 new RenderContext(
-                        new ArrayList<>(classes.values()),
-                        classes.values().stream()
+                        new ArrayList<>(selection.classes().values()),
+                        selection.classes().values().stream()
                                 .map(ICIMClass::getUuid)
                                 .collect(Collectors.toSet()),
+                        selection.outsidePackageUris(),
                         filter,
                         layoutData,
                         cimModel.getGraphUri(),
@@ -392,7 +393,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         return SvelteFlowDTO.builder().nodes(List.of()).edges(List.of()).build();
     }
 
-    private Map<String, ICIMClass> selectClasses(ICIMModelFacade cimModel, GraphFilter filter) {
+    private SelectedClasses selectClasses(ICIMModelFacade cimModel, GraphFilter filter) {
         var classes = new LinkedHashMap<String, ICIMClass>();
 
         if (!CollectionUtils.isEmpty(filter.getAllowedUUIDs())) {
@@ -405,22 +406,29 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     classes.put(cimClass.getUri().toString(), cimClass);
                 }
             }
-            return classes;
+            return new SelectedClasses(classes, Set.of());
         }
 
         var category = cimModel.getCIMClassCategory(resolvePackageUUID(filter));
         if (category == null) {
-            return classes;
+            return new SelectedClasses(classes, Set.of());
         }
         for (var cimClass : category.getClasses()) {
             classes.put(cimClass.getUri().toString(), cimClass);
         }
 
-        if (filter.isIncludeRelationsToExternalPackages()) {
-            addExternallyRelatedClasses(cimModel, filter, classes);
+        if (!filter.isIncludeRelationsToExternalPackages()) {
+            return new SelectedClasses(classes, Set.of());
         }
 
-        return classes;
+        var packageUris = Set.copyOf(classes.keySet());
+        addExternallyRelatedClasses(filter, classes);
+        var outsidePackageUris =
+                classes.keySet().stream()
+                        .filter(uri -> !packageUris.contains(uri))
+                        .collect(Collectors.toSet());
+
+        return new SelectedClasses(classes, outsidePackageUris);
     }
 
     private UUID resolvePackageUUID(GraphFilter filter) {
@@ -430,13 +438,11 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         return UUID.fromString(filter.getPackageUUID());
     }
 
-    private void addExternallyRelatedClasses(
-            ICIMModelFacade cimModel, GraphFilter filter, Map<String, ICIMClass> classes) {
+    private void addExternallyRelatedClasses(GraphFilter filter, Map<String, ICIMClass> classes) {
         if (!filter.isIncludeAssociations() && !filter.isIncludeInheritance()) {
             return;
         }
         var classesInPackage = List.copyOf(classes.values());
-        var definedClasses = cimModel.getCIMClasses();
 
         if (filter.isIncludeAssociations()) {
             for (var cimClass : classesInPackage) {
@@ -449,24 +455,12 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         }
 
         if (filter.isIncludeInheritance()) {
-            var packageUris = classes.keySet();
             for (var cimClass : classesInPackage) {
                 for (var superClass : cimClass.getSuperClasses()) {
                     addExternallyRelatedClass(classes, superClass);
                 }
-            }
-            for (var cimClass : definedClasses) {
-                if (classes.containsKey(cimClass.getUri().toString())) {
-                    continue;
-                }
-                var extendsPackageClass =
-                        cimClass.getSuperClasses().stream()
-                                .anyMatch(
-                                        superClass ->
-                                                packageUris.contains(
-                                                        superClass.getUri().toString()));
-                if (extendsPackageClass) {
-                    classes.put(cimClass.getUri().toString(), cimClass);
+                for (var subClass : cimClass.getSubClasses()) {
+                    addExternallyRelatedClass(classes, subClass);
                 }
             }
         }
@@ -511,6 +505,10 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                         .graphUri(cimClass.getGraphUri())
                         .label(cimClass.getLabel().getValue())
                         .external(cimClass.isExternal())
+                        .outsidePackage(
+                                renderContext
+                                        .outsidePackageUris()
+                                        .contains(cimClass.getUri().toString()))
                         .belongsToCategory(
                                 cimClass.getBelongsToCategory() != null
                                         ? cimClass.getBelongsToCategory().getLabel().getValue()
@@ -774,9 +772,13 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         };
     }
 
+    private record SelectedClasses(
+            Map<String, ICIMClass> classes, Set<String> outsidePackageUris) {}
+
     private record RenderContext(
             List<ICIMClass> classes,
             Set<UUID> nodeUUIDs,
+            Set<String> outsidePackageUris,
             GraphFilter filter,
             RenderingLayoutData layoutingData,
             String primaryGraphUri,

@@ -32,6 +32,8 @@ public interface ICIMClass extends ICIMResource {
 
     List<ICIMClass> getSuperClasses();
 
+    List<ICIMClass> getSubClasses();
+
     ICIMClassCategory getBelongsToCategory();
 
     List<CIMSStereotype> getStereotypes();

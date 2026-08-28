@@ -182,6 +182,40 @@ class CIMFacadeTest {
     }
 
     @Test
+    @DisplayName("returns the direct sub classes of a class")
+    void subClasses() {
+        var recloser = model.createResource(NS + "Recloser");
+        recloser.addProperty(RDF.type, RDFS.Class);
+        recloser.addProperty(RDFA.uuid, RECLOSER_UUID.toString());
+        recloser.addProperty(RDFS.label, model.createLiteral("Recloser", "en"));
+        recloser.addProperty(RDFS.subClassOf, model.getResource(NS + "Breaker"));
+
+        var subClasses = new CIMClass(GRAPH_URI, model, SWITCH_UUID).getSubClasses();
+
+        assertThat(subClasses)
+                .singleElement()
+                .isInstanceOf(CIMClass.class)
+                .satisfies(subClass -> assertThat(subClass.getUuid()).isEqualTo(BREAKER_UUID));
+    }
+
+    @Test
+    @DisplayName("returns the sub classes of an external class")
+    void subClassesOfExternalClass() {
+        var externalBase =
+                new ExternalCIMClass(GRAPH_URI, model, model.getResource(NS + "ExternalBase"));
+
+        assertThat(externalBase.getSubClasses())
+                .singleElement()
+                .satisfies(subClass -> assertThat(subClass.getUuid()).isEqualTo(BREAKER_UUID));
+    }
+
+    @Test
+    @DisplayName("returns no sub classes for a class that is not extended")
+    void subClassesWithoutSubClasses() {
+        assertThat(breaker().getSubClasses()).isEmpty();
+    }
+
+    @Test
     @DisplayName("returns a referenced only super class as ExternalCIMClass even if it has a uuid")
     void superClassesWithReferencedOnlyResource() {
         var referencedOnly = model.createResource(NS + "ReferencedOnly");

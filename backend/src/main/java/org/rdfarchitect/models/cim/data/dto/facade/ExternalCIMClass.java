@@ -96,6 +96,11 @@ public class ExternalCIMClass implements ICIMClass {
     }
 
     @Override
+    public List<ICIMClass> getSubClasses() {
+        return CIMClass.subClassesOf(graphUri, model, resource);
+    }
+
+    @Override
     public ICIMClassCategory getBelongsToCategory() {
         return null;
     }
