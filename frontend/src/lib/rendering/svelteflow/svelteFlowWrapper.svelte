@@ -919,7 +919,7 @@
     // Ctrl+Q: creates a bend point on the edge closest to the cursor. Selects that
     // edge if it was not selected yet.
     function addBendPointAtCursor() {
-        if (isDatasetReadOnly) return;
+        if (isWorkspaceReadOnly) return;
         const context = cursorFlowContext(
             EDGE_INTERACTION_CONFIG.edgeHitRadiusPx,
         );
@@ -940,7 +940,7 @@
     // Ctrl+Shift+Q: deletes the bend or end point under the cursor, across all
     // edges. Selects the affected edge if it was not selected yet.
     function deleteBendPointAtCursor() {
-        if (isDatasetReadOnly) return;
+        if (isWorkspaceReadOnly) return;
         const context = cursorFlowContext(
             EDGE_INTERACTION_CONFIG.pointHitRadiusPx,
         );
