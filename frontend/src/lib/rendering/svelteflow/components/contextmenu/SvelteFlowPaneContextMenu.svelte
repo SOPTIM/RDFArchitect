@@ -39,8 +39,6 @@
     import { startPaste } from "../../../../../routes/mainpage/packageNavigation/paste-flow.svelte.js";
     import PasteMenuItems from "../../../../../routes/mainpage/packageNavigation/PasteMenuItems.svelte";
     import NewClassDialog from "../../../../../routes/NewClassDialog.svelte";
-    import { saveCopyClass } from "../../../../../routes/mainpage/packageNavigation/save-copy-class-to-backend.js";
-    //TODO check die pfade hier nochmal
     let {
         request = null,
         disabled = false,

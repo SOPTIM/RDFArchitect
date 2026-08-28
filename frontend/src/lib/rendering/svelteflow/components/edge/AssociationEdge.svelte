@@ -19,19 +19,6 @@
     import { BaseEdge, EdgeLabel, useInternalNode } from "@xyflow/svelte";
 
     import { renderOptions } from "$lib/renderOptions.svelte.js";
-    import {
-        getInnerBendPoints,
-        getSourceEndPoint,
-        getTargetEndPoint,
-    } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
-    import { userSettings } from "$lib/userSettings.svelte.js";
-    //TODO userSettings sollte es hier noch geben oder?
-    import EdgeBendPoints from "./EdgeBendPoints.svelte";
-    import {
-        getEdgeParams,
-        getPolylinePath,
-        getRoundedCornerPolylinePath,
-    } from "./edgeUtils.ts";
 
     import PolylineEdge from "./PolylineEdge.svelte";
 
