@@ -57,10 +57,11 @@
     });
 
     function selectMergedView() {
-        const originGraph = editorState.selectedGraph.getValue();
-        if (originGraph) {
-            editorState.mergedViewOriginGraph.updateValue(originGraph);
-        }
+        // Always overwritten, so that a schema the user left long ago does not
+        // keep preselecting itself in the class editor.
+        editorState.mergedViewOriginGraph.updateValue(
+            editorState.selectedGraph.getValue(),
+        );
         editorState.selectedWorkspace.updateValue(workspaceNavEntry.label);
         editorState.selectedGraph.updateValue(null);
         editorState.selectedDiagram.updateValue({

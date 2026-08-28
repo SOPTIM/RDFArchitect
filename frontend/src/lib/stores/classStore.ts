@@ -27,7 +27,6 @@ import {
     // class-level mutations
     addClass,
     replaceClass,
-    extendClass,
     pasteClasses,
     // attribute mutations
     createAttribute,
@@ -42,7 +41,6 @@ import {
     type AddNewClassRequest,
     type AssociationPairDto,
     type AttributeDto,
-    type ClassDto,
     type ClassUmlAdaptedDto,
     type EnumEntryDto,
     type AssociationUuids,
@@ -461,36 +459,6 @@ function createClassStore() {
         return { error: null };
     }
 
-    async function extendExistingClass(
-        workspaceName: string,
-        graphURI: string,
-        classUUID: string,
-        attribute: AttributeDto,
-    ): Promise<Result<ClassDto>> {
-        console.log(`${LOG_PREFIX} Extending class classUUID="${classUUID}"`);
-
-        const { data, error } = await extendClass({
-            path: { datasetName: workspaceName, graphURI, classUUID },
-            body: attribute,
-        });
-        if (error) {
-            console.error(
-                `${LOG_PREFIX} Could not extend class classUUID="${classUUID}"`,
-                await describeError(error),
-            );
-            toastStore.error(
-                "Extension failed",
-                "Class could not be extended.",
-            );
-            return { error };
-        }
-
-        invalidateGraph(workspaceName, graphURI);
-        console.log(`${LOG_PREFIX} Extended class classUUID="${classUUID}"`);
-        toastStore.success("Class extended", "Class was extended.");
-        return { error: null, data: data ?? undefined };
-    }
-
     // =========================================================================
     // ATTRIBUTE OPERATIONS
     // =========================================================================
@@ -845,7 +813,6 @@ function createClassStore() {
         // class-level mutations
         addClass: addNewClass,
         replaceClass: replaceExistingClass,
-        extendClass: extendExistingClass,
         saveCopyClass: pasteCopiedClasses,
 
         // attribute mutations

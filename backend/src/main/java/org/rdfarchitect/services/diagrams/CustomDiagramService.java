@@ -38,7 +38,6 @@ import org.rdfarchitect.services.rendering.CIMProfileModels;
 import org.rdfarchitect.services.select.ListGraphsUseCase;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -116,7 +115,7 @@ public class CustomDiagramService
 
             for (var cimClass : profile.model().getCIMClasses()) {
                 var classUri = cimClass.getUri().toString();
-                var mergedUuid = UUID.nameUUIDFromBytes(classUri.getBytes(StandardCharsets.UTF_8));
+                var mergedUuid = CrossProfileUtils.mergedClassUuid(classUri);
 
                 var merged =
                         mergeMap.computeIfAbsent(

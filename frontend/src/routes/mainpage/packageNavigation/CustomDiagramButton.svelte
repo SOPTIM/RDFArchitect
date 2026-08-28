@@ -171,7 +171,7 @@
         bind:showDialog={showEditDiagramDialog}
         lockedWorkspaceName={workspaceNavEntry.id}
         lockedGraphUri={graphNavEntry.id}
-        diagramName={diagram.label}
+        diagramName={diagram.name}
         diagramId={diagram.diagramId}
         selectedClasses={diagram.classes}
     />
@@ -179,7 +179,7 @@
     <CustomWorkspaceDiagramDialog
         bind:showDialog={showEditDiagramDialog}
         lockedWorkspaceName={workspaceNavEntry.id}
-        diagramName={diagram.label}
+        diagramName={diagram.name}
         diagramId={diagram.diagramId}
         selectedClasses={diagram.classes}
     />

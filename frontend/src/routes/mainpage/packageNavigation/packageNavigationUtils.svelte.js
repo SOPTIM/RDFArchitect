@@ -168,6 +168,31 @@ function someOpenClass(workspaceLabel, graphUri = ANY_GRAPH, matchUuid = null) {
     );
 }
 
+/** The occurrences of the class the class editor has open, in this workspace. */
+function openClassOccurrences(workspaceLabel) {
+    const openClass = editorState.openClassOccurrences.getValue();
+    if (!openClass || openClass.workspaceName !== workspaceLabel) {
+        return null;
+    }
+    return openClass;
+}
+
+function isOpenClassOccurrence(workspaceLabel, graphUri, uuid) {
+    return !!openClassOccurrences(workspaceLabel)?.occurrences?.some(
+        entry => entry.graphUri === graphUri && entry.classUUID === uuid,
+    );
+}
+
+/** True for the entry whose schema the class editor currently shows. */
+export function isClassEditorTarget(workspace, graph, classUuid) {
+    const { workspaceLabel, graphUri } = normContext(workspace, graph);
+    const uuid = classUuid?.uuid ?? classUuid;
+    return (
+        openClassOccurrences(workspaceLabel)?.activeGraphUri === graphUri &&
+        isOpenClassOccurrence(workspaceLabel, graphUri, uuid)
+    );
+}
+
 export function classHighlight(workspace, graph, classUuid) {
     const { workspaceLabel, graphUri } = normContext(workspace, graph);
     const uuid = classUuid?.uuid ?? classUuid;
@@ -179,7 +204,11 @@ export function classHighlight(workspace, graph, classUuid) {
     if (inSelection && deepestSelectedLevel() === SelectionLevel.CLASS) {
         return "active";
     }
-    if (inSelection || isSelectedClass(workspace, graph, uuid)) {
+    if (
+        inSelection ||
+        isSelectedClass(workspace, graph, uuid) ||
+        isOpenClassOccurrence(workspaceLabel, graphUri, uuid)
+    ) {
         return "secondary";
     }
     return null;

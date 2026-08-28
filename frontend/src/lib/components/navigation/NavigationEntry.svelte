@@ -22,6 +22,7 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
+    import Badge from "$lib/components/Badge.svelte";
     import { Checkbox } from "$lib/components/bitsui/checkbox";
 
     let {
@@ -38,6 +39,8 @@
         secondaryLabel = "",
         badgeText = "",
         badgeVariant = "default",
+        markerIcon = null,
+        markerTitle = "",
         highlightLabel = "",
         title,
         onToggle,
@@ -47,12 +50,6 @@
         onSelect,
         ...restProps
     } = $props();
-
-    const badgeClassMap = {
-        default: "",
-        external: "nav-entry__badge--external",
-        readonly: "nav-entry__badge--readonly",
-    };
 
     let pointerHandled = false;
 
@@ -119,10 +116,6 @@
         event.stopPropagation();
         onToggle(event);
     }
-
-    function badgeClass(variant) {
-        return badgeClassMap[variant] ?? "";
-    }
 </script>
 
 <button
@@ -156,10 +149,13 @@
             <span class="nav-entry__secondary">{secondaryLabel}</span>
         {/if}
     </span>
-    {#if badgeText}
-        <span class={`nav-entry__badge ${badgeClass(badgeVariant)}`}>
-            {badgeText}
+    {#if markerIcon}
+        <span class="nav-entry__marker" title={markerTitle}>
+            <Fa icon={markerIcon} />
         </span>
+    {/if}
+    {#if badgeText}
+        <Badge text={badgeText} variant={badgeVariant} />
     {/if}
     {#if showCheckbox}
         <Checkbox

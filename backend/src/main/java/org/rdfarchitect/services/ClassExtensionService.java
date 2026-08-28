@@ -21,27 +21,27 @@ import lombok.AllArgsConstructor;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.vocabulary.RDF;
-import org.apache.jena.vocabulary.RDFS;
-import org.rdfarchitect.api.dto.ClassDTO;
-import org.rdfarchitect.api.dto.ClassMapper;
+import org.rdfarchitect.api.dto.ClassExtensionResultDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.CIMObjectFetcher;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
-import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
-import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMResource;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
-import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
-import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.CIMClassRelationFinder;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
+import org.rdfarchitect.services.select.LocateClassUseCase;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -49,31 +49,48 @@ import java.util.UUID;
 public class ClassExtensionService implements ClassExtensionUseCase {
 
     private DatabasePort databasePort;
-    private ClassMapper classMapper;
+    private LocateClassUseCase locateClassUseCase;
 
     @Override
-    public ClassDTO extendClass(
-            GraphIdentifier graphIdentifier, String classUUID, GraphIdentifier newGraphIdentifier) {
-        CIMClass classCopy;
-        List<CIMClass> superClasses;
+    public List<ClassExtensionResultDTO> extendClasses(
+            String datasetName,
+            List<String> classUUIDs,
+            GraphIdentifier newGraphIdentifier,
+            boolean withInheritance) {
+        var stubsBySourceUUID = new LinkedHashMap<String, CIMClass>();
+        var superClassStubs = new ArrayList<CIMClass>();
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var rdfGraph = ctx.getRdfGraph();
+        for (var classUUID : classUUIDs) {
+            var located = locateClassUseCase.locate(datasetName, classUUID);
+            var sourceGraph = new GraphIdentifier(datasetName, located.graphUri());
+            try (var ctx = databasePort.getGraphWithContext(sourceGraph).begin(ReadWrite.READ)) {
+                stubsBySourceUUID.put(
+                        classUUID,
+                        fetchStubbedClassCopy(sourceGraph, located.classUUID().toString()));
+                if (withInheritance) {
+                    superClassStubs.addAll(
+                            fetchStubbedSuperClasses(ctx.getRdfGraph(), located.classUUID()));
+                }
+            }
+        }
 
-            classCopy = fetchStubbedClassCopy(graphIdentifier, classUUID);
-            superClasses = fetchStubbedSuperClasses(rdfGraph, UUID.fromString(classUUID));
+        var stubs = new ArrayList<>(superClassStubs);
+        stubs.addAll(stubsBySourceUUID.values());
+        var insertedUris = insertStubs(newGraphIdentifier, stubs);
+        var identifiers = readTargetIdentifiers(newGraphIdentifier, stubsBySourceUUID.values());
+
+        var results = new ArrayList<ClassExtensionResultDTO>();
+        for (var entry : stubsBySourceUUID.entrySet()) {
+            var uri = entry.getValue().getUri().toString();
+            var targetIdentifiers = identifiers.get(uri);
+            results.add(
+                    new ClassExtensionResultDTO(
+                            UUID.fromString(entry.getKey()),
+                            targetIdentifiers.classUUID(),
+                            targetIdentifiers.packageUUID(),
+                            insertedUris.contains(uri)));
         }
-        try (var ctx =
-                databasePort.getGraphWithContext(newGraphIdentifier).begin(ReadWrite.WRITE)) {
-            var newGraph = databasePort.getGraphWithContext(newGraphIdentifier).getRdfGraph();
-            insertNewClasses(newGraph, classCopy, superClasses);
-            ctx.commit(
-                    "Added "
-                            + classCopy.getLabel().getValue()
-                            + " and its superclasses to graph "
-                            + newGraphIdentifier.graphUri());
-        }
-        return classMapper.toDTO(classCopy);
+        return results;
     }
 
     private CIMClass fetchStubbedClassCopy(GraphIdentifier graphIdentifier, String classUUID) {
@@ -115,35 +132,68 @@ public class ClassExtensionService implements ClassExtensionUseCase {
         return superClasses.stream().toList();
     }
 
-    private void insertNewClasses(Graph newGraph, CIMClass classCopy, List<CIMClass> superClasses) {
-        var model = ModelFactory.createModelForGraph(newGraph);
+    /**
+     * Inserts the stubs that are not defined in the target graph yet, keeping the package they
+     * belong to in their source graph. A package that does not exist in the target graph stays a
+     * referenced only resource there, just like the superclass of a stub inserted without its
+     * inheritance chain.
+     *
+     * @return the uris of the classes that were inserted
+     */
+    private Set<String> insertStubs(
+            GraphIdentifier newGraphIdentifier, Collection<CIMClass> stubs) {
+        var insertedUris = new LinkedHashSet<String>();
+        try (var ctx =
+                databasePort.getGraphWithContext(newGraphIdentifier).begin(ReadWrite.WRITE)) {
+            var newGraph = ctx.getRdfGraph();
+            var labels = new ArrayList<String>();
+            for (var stub : stubs) {
+                if (CIMResourceUtils.containsClass(newGraph, stub.getUri())) {
+                    continue;
+                }
+                CIMUpdates.insertClass(newGraph, newGraph.getPrefixMapping(), stub);
+                insertedUris.add(stub.getUri().toString());
+                labels.add(stub.getLabel().getValue());
+            }
+            if (insertedUris.isEmpty()) {
+                return insertedUris;
+            }
+            ctx.commit(
+                    "Added "
+                            + String.join(", ", labels)
+                            + " to graph "
+                            + newGraphIdentifier.graphUri());
+        }
+        return insertedUris;
+    }
 
-        var newPackage = fetchNewPackage(model);
-
-        for (var cls : superClasses) {
-            if (!model.contains(model.createResource(cls.getUri().toString()), null)) {
-                cls.setBelongsToCategory(newPackage);
-                CIMUpdates.insertClass(newGraph, newGraph.getPrefixMapping(), cls);
+    /**
+     * Reads the identifiers the stubs have in the target graph, keyed by class uri. They can differ
+     * from the ones of the source graph, because a class keeps the uuid it was already referenced
+     * with in the target graph.
+     */
+    private Map<String, TargetIdentifiers> readTargetIdentifiers(
+            GraphIdentifier newGraphIdentifier, Collection<CIMClass> stubs) {
+        var identifiers = new LinkedHashMap<String, TargetIdentifiers>();
+        try (var ctx = databasePort.getGraphWithContext(newGraphIdentifier).begin(ReadWrite.READ)) {
+            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
+            for (var stub : stubs) {
+                var uri = stub.getUri().toString();
+                var target =
+                        org.rdfarchitect.models.cim.data.dto.facade.CIMClass.fromResource(
+                                newGraphIdentifier.graphUri(), model, model.getResource(uri));
+                identifiers.put(
+                        uri,
+                        new TargetIdentifiers(
+                                uuidOf(target), uuidOf(target.getBelongsToCategory())));
             }
         }
-        classCopy.setBelongsToCategory(newPackage);
-        CIMUpdates.insertClass(newGraph, newGraph.getPrefixMapping(), classCopy);
+        return identifiers;
     }
 
-    private CIMSBelongsToCategory fetchNewPackage(Model model) {
-        var it =
-                model.listSubjectsWithProperty(RDF.type, CIMS.classCategory)
-                        .filterKeep(s -> s.toString().contains("Core"));
-
-        if (!it.hasNext()) {
-            return null;
-        }
-
-        var corePackage = it.next();
-        CIMSBelongsToCategory pack = new CIMSBelongsToCategory();
-        pack.setUri(new URI(corePackage.getURI()));
-        pack.setLabel(new RDFSLabel(corePackage.getProperty(RDFS.label).getString(), "en"));
-        pack.setUuid(UUID.fromString(corePackage.getProperty(RDFA.uuid).getString()));
-        return pack;
+    private UUID uuidOf(ICIMResource resource) {
+        return resource == null ? null : resource.getUuid();
     }
+
+    private record TargetIdentifiers(UUID classUUID, UUID packageUUID) {}
 }
