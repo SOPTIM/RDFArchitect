@@ -23,6 +23,7 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.rdfarchitect.config.GraphCompressionConfig;
 import org.rdfarchitect.database.GraphContext;
+import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
@@ -42,10 +43,13 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -68,14 +72,30 @@ public class GraphWithContextTransactional implements GraphContext {
 
     private final RDFGraphDelta rdfGraph;
     private final DiagramLayoutDelta diagramLayout;
-    private final RDFGraphDelta customSHACL;
     private final ChangeLog changeLog = new ChangeLog(txnContext);
     private final ConcurrentHashMap<UUID, CustomDiagram> customDiagrams = new ConcurrentHashMap<>();
 
-    /** The fixed participants that are always part of every transaction. */
-    private final List<RDFGraphDelta> graphParticipants;
+    /**
+     * Shapes documents of this graph, in insertion order so the document list and the merge order
+     * for export are stable.
+     */
+    private final Map<UUID, ShapesDocument> shapesDocuments = new LinkedHashMap<>();
 
-    private final List<NamedRewindable> coreRewindables;
+    /**
+     * Guards {@link #shapesDocuments}. A dedicated object rather than the map itself, which is
+     * handed out — as a copy — by {@link #getShapesDocuments()}.
+     */
+    private final Object shapesDocumentsLock = new Object();
+
+    /**
+     * Graphs taking part in every transaction: the schema graph plus one per shapes document.
+     *
+     * <p>Copy-on-write because documents can be added and removed while the context is alive, and
+     * the lists are iterated during commit, abort and undo.
+     */
+    private final List<RDFGraphDelta> graphParticipants = new CopyOnWriteArrayList<>();
+
+    private final List<NamedRewindable> coreRewindables = new CopyOnWriteArrayList<>();
     private final AtomicInteger stepsSinceNamedCommit = new AtomicInteger(0);
 
     private record NamedRewindable(String name, Rewindable rewindable) {}
@@ -107,16 +127,17 @@ public class GraphWithContextTransactional implements GraphContext {
         rdfModel.setNsPrefixes(base.getPrefixMapping());
         rdfModel.add(ModelFactory.createModelForGraph(base));
         this.diagramLayout = new DiagramLayoutDelta(txnContext);
-        this.customSHACL =
-                new RDFGraphDelta(
-                        GraphFactory.createDefaultGraph(), maxVersions, compressCount, txnContext);
-        this.graphParticipants = List.of(rdfGraph, customSHACL);
-        this.coreRewindables =
-                List.of(
-                        new NamedRewindable("rdf", rdfGraph),
-                        new NamedRewindable("shacl", customSHACL));
+        this.graphParticipants.add(rdfGraph);
+        this.coreRewindables.add(new NamedRewindable("rdf", rdfGraph));
+        // Created up front, exactly as the single shapes graph used to be, so that reading a
+        // graph's SHACL never has the side effect of adding a transaction participant.
+        var defaultDocument =
+                addShapesDocument(
+                        DEFAULT_SHAPES_DOCUMENT_ID,
+                        DEFAULT_SHAPES_DOCUMENT_NAME,
+                        ShapesDocument.Origin.AUTHORED);
         if (customSHACLBase != null) {
-            var shaclModel = ModelFactory.createModelForGraph(customSHACL);
+            var shaclModel = ModelFactory.createModelForGraph(defaultDocument.getGraph());
             shaclModel.setNsPrefixes(customSHACLBase.getPrefixMapping());
             shaclModel.add(ModelFactory.createModelForGraph(customSHACLBase));
         }
@@ -158,8 +179,66 @@ public class GraphWithContextTransactional implements GraphContext {
     }
 
     @Override
+    public Map<UUID, ShapesDocument> getShapesDocuments() {
+        synchronized (shapesDocumentsLock) {
+            return Collections.unmodifiableMap(new LinkedHashMap<>(shapesDocuments));
+        }
+    }
+
+    @Override
     public RDFGraphDelta getCustomSHACL() {
-        return customSHACL;
+        synchronized (shapesDocumentsLock) {
+            return shapesDocuments.get(DEFAULT_SHAPES_DOCUMENT_ID).getGraph();
+        }
+    }
+
+    @Override
+    public ShapesDocument createShapesDocument(String name, ShapesDocument.Origin origin) {
+        return addShapesDocument(UUID.randomUUID(), name, origin);
+    }
+
+    private ShapesDocument addShapesDocument(UUID id, String name, ShapesDocument.Origin origin) {
+        var graph =
+                new RDFGraphDelta(
+                        GraphFactory.createDefaultGraph(),
+                        GraphCompressionConfig.getMaxVersions(),
+                        GraphCompressionConfig.getCompressCount(),
+                        txnContext);
+        // A document created part-way through a session starts with no history, but the context
+        // undoes every participant the same number of times. Align it with the schema graph so an
+        // undo reaching past its creation does not run it off the end of its history.
+        graph.padHistory(rdfGraph.currentVersion());
+
+        var document = new ShapesDocument(id, name, origin, graph);
+        synchronized (shapesDocumentsLock) {
+            document.setOrder(shapesDocuments.size());
+            shapesDocuments.put(id, document);
+        }
+        graphParticipants.add(graph);
+        // The changelog surfaces this name to the user, so it stays "shacl" for the default
+        // document — the label the changelog has always shown — and is qualified only when there is
+        // more than one document to tell apart.
+        var contextName =
+                DEFAULT_SHAPES_DOCUMENT_ID.equals(id) ? "shacl" : "shacl:" + document.getName();
+        coreRewindables.add(new NamedRewindable(contextName, graph));
+        return document;
+    }
+
+    @Override
+    public void removeShapesDocument(UUID documentId) {
+        if (DEFAULT_SHAPES_DOCUMENT_ID.equals(documentId)) {
+            throw new IllegalArgumentException(
+                    "The default shapes document cannot be removed; clear its content instead.");
+        }
+        ShapesDocument removed;
+        synchronized (shapesDocumentsLock) {
+            removed = shapesDocuments.remove(documentId);
+        }
+        if (removed == null) {
+            return;
+        }
+        graphParticipants.remove(removed.getGraph());
+        coreRewindables.removeIf(nr -> nr.rewindable() == removed.getGraph());
     }
 
     @Override
@@ -233,10 +312,10 @@ public class GraphWithContextTransactional implements GraphContext {
         GraphUtils.enhanceWithUUIDs(rdfGraph);
         changeLog.clearRedo();
 
-        // Commit graph participants to capture their deltas.
-        rdfGraph.commit();
+        // Commit graph participants to capture their deltas. Every participant commits, whether or
+        // not it changed, so their version counters stay aligned for undo.
+        graphParticipants.forEach(RDFGraphDelta::commit);
         diagramLayout.commit();
-        customSHACL.commit();
         customDiagrams.values().forEach(CustomDiagram::commit);
         stepsSinceNamedCommit.incrementAndGet();
         int steps = stepsSinceNamedCommit.get();
