@@ -5,48 +5,88 @@ sidebar_position: 7
 
 # SHACL — Constraints
 
-SHACL (Shapes Constraint Language) is how CGMES and ENTSO-E express the data-quality rules that an exchange file must satisfy: "every `ACLineSegment` must have exactly one `length`", "every `Terminal` must reference a `ConductingEquipment`", and so on. RDFArchitect can generate, import, edit, view, and export SHACL rules; validation of instance data is done outside RDFArchitect.
+SHACL (Shapes Constraint Language) is how CGMES and ENTSO-E express the data-quality rules that an exchange file must satisfy: "every `ACLineSegment` must have exactly one `length`", "every `Terminal` must reference a `ConductingEquipment`", and so on. RDFArchitect generates, imports, edits, validates and exports SHACL rules, and can tell you whether an imported constraints file still agrees with the schema it describes.
 
-![SHACL view](/img/screenshots/shacl.png)
+Validation of *instance data* — checking a CIM/XML exchange file against the shapes — is deliberately left to other tools. Everything here is about the shapes themselves.
 
 ## Two sources of SHACL
 
 RDFArchitect distinguishes two kinds of shapes and stores them separately:
 
-- **Generated SHACL.** SHACL shapes that can be derived from the schema itself. They include, among other things, constraints for the multiplicity of associations and the datatype of attributes. This set is always in sync with the current state of the graph.
-- **Custom SHACL.** Shapes that you import or author separately — typically the official SHACL files that ship with a CGMES or ENTSO-E release. These can be edited freely in RDFArchitect and are *not* regenerated when the schema changes.
+- **Generated SHACL.** Shapes derived from the schema itself — the multiplicity of associations, the datatype of attributes, and so on. This set is always in sync with the current state of the graph and cannot be edited: change the schema and it changes with it.
+- **Custom SHACL.** Shapes you import or author — typically the official SHACL files that ship with a CGMES or ENTSO-E release, plus whatever your organisation adds. These are yours to edit and are *not* regenerated when the schema changes.
 
-When you view SHACL for a graph, both sets are shown and clearly labelled.
+Custom SHACL is held as a **list of documents** rather than one block of text, because a schema's constraints normally arrive as several official files. Two rules follow from that, and they are worth knowing:
 
-Custom SHACL is held as a **list of documents** rather than one block of text, because a schema's constraints normally arrive as several official files plus whatever you add yourself. Every enabled document applies and none overrides another: two documents that contradict each other are *reported*, never silently resolved. Custom shapes do take precedence over generated ones for the same resource, since the generated ones are derived defaults.
+- **Every enabled document applies, and none overrides another.** SHACL is conjunctive: constraints add up. Two documents that contradict each other are therefore *reported* as a problem, never silently resolved in favour of one of them.
+- **Custom shapes do take precedence over generated ones** for the same resource, because the generated ones are derived defaults.
+
+Switching a document **off** means it takes no part in validation or in a combined export. It is still there, still editable, and can still be exported on purpose.
 
 ## The constraints workbench
 
-**View → Constraints (SHACL)** (`Ctrl+Shift+L`) opens the workbench for the selected schema.
+**View → Constraints (SHACL)** (`Ctrl+Shift+L`) opens the workbench for the selected schema. It is also reachable from a schema's context menu and from the constraints popup in the class editor.
 
-- **Documents** (left) lists the graph's constraints documents. Add an empty one, import a file, rename, reorder, delete, and switch a document off so it takes no part in validation or the combined export. Each row carries a badge summarising what validation found in it.
-- **Editor** (middle) edits the open document as Turtle, with syntax highlighting that extends into the SPARQL inside `sh:select`, and squiggles under whatever validation objects to. `Ctrl+S` saves; `F8` walks the problems.
+- **Documents** (left) lists the graph's constraints documents: add an empty one, import a file, rename, reorder, delete, and switch one off. Each row carries a badge summarising what validation found in it, so a file with problems is visible without opening it.
+- **Editor** (middle) shows the open document in one of three views — see below.
 - **Inspector** (right) shows what the document is, the shapes it declares — click one to jump to it — and which profiles the constraints are being checked against.
-- **Problems** (bottom) collects everything found across all of the documents. Clicking an entry opens the document it belongs to and puts the cursor on it.
+- **Problems** (bottom) collects everything found across *all* of the documents. Clicking an entry opens the document it belongs to and puts the cursor on it.
+
+In a **read-only** workspace the workbench reads and validates as usual, but nothing can be changed and the header says so.
+
+### Turtle view
+
+The document as text, with syntax highlighting that extends into the SPARQL inside `sh:select`, and squiggles under whatever validation objects to. `Ctrl+S` saves; `F8` walks from one problem to the next; hovering a marker shows the message.
+
+The text you wrote is what is stored, byte for byte — comments and ordering included. That matters for the official ENTSO-E files, which carry both and which you will want back unchanged.
+
+Typing gets you more than highlighting:
+
+- **Completion** on `:` offers the classes, properties and enumeration members that the workspace's schema actually declares, written the way the open document writes them. You never have to type an IRI.
+- **Hover** over a term shows its label, its `rdfs:comment`, and for a property its domain, range and multiplicity, together with the profiles that declare it.
+- **Ctrl+click** a class or property and you land on it in the class editor. For a property that means the class it belongs to, since a property is edited as a row of its class.
+
+### Form view
+
+The same document, shown as shapes rather than as text, for people who would rather not read Turtle. Each shape says which class it applies to; under it, one card per rule — which property, how many values, of what type, what message to show when it is broken. Classes and properties are picked from the live schema.
+
+An edit here rewrites exactly the shape you changed and copies the rest of the file through untouched, so using the form on an imported official file does not reformat it. The one thing that cannot survive is a comment written *inside* the shape you edited, and you are told when that happens.
+
+Some shapes are shown **read-only** with a "Turtle only" marker. Those use something the form does not model — an embedded SPARQL query, or a path expression rather than a plain property. They are displayed rather than hidden, but only the Turtle view will edit them, because writing them back from a form would drop the part it cannot represent. Official ENTSO-E constraints files are largely of this kind; the form is at its best on constraints you write yourself.
+
+### Schema check
+
+Answers the question only RDFArchitect can answer: **does this constraints file still agree with the schema it describes?**
+
+It generates the shapes your schema implies, compares them with the open document property by property, and groups what it finds:
+
+| | |
+|---|---|
+| **Contradiction** | The two cannot both be satisfied — different datatypes, or the schema requires more values than the document allows. Someone has to decide which is right. |
+| **Difference** | Both can be satisfied, but they do not say the same thing. Usually the profile deliberately narrowing what the schema allows. |
+| **Missing in the document** | The schema implies a constraint the document does not state. |
+| **Not in the schema** | The document constrains a property the schema does not have on that class. |
+
+Shapes are matched by class and property, never by name, because generated and official shapes share no naming convention and both spread one property's rules over several shapes.
 
 ### What validation checks
 
 Shapes are checked against the live CIM schema of the whole workspace: do the classes and properties they mention exist, do their cardinalities agree with the schema's multiplicities, does the SPARQL embedded in them parse and refer to real terms, and do the documents contradict each other.
 
-The check spans *every* schema in the workspace, not only the one the document belongs to. Official ENTSO-E cross-profile constraints files reference terms from neighbouring profiles on purpose, and checking against one profile alone would report all of those as unknown.
+The check spans *every* schema in the workspace, not only the one the document belongs to. Official ENTSO-E cross-profile constraints files reference terms from neighbouring profiles on purpose, and checking against a single profile would report all of those as unknown.
 
-This is validation of the *shapes*, not of instance data — an exchange file is still validated outside RDFArchitect.
+A document with problems still saves. Validation is a report, not a gate — you could not otherwise use the editor to finish a half-written file. Turtle that does not *parse* is the exception: there is nothing to store, and the message tells you the line and column where the parser stopped.
 
 ## Viewing SHACL at class level
 
-In the class editor, every attribute and association row has a SHACL icon. Clicking it opens the **property-specific constraints (SHACL) dialog** — the subset of both generated and custom shapes that target that exact property on that exact class. This is by far the fastest way to answer the question *"what constraint is enforced on this attribute?"* without leaving the class you are looking at.
+In the class editor, every attribute and association row has a SHACL icon. Clicking it opens the **property-specific constraints (SHACL) dialog** — the subset of both generated and custom shapes that target that exact property on that exact class. This is by far the fastest way to answer *"what constraint is enforced on this attribute?"* without leaving the class you are looking at.
 
-A similar dialog exists at the class level to inspect the NodeShapes and the PropertyShapes related to the properties of the selected class.
+A similar dialog at class level inspects the NodeShapes and PropertyShapes related to the selected class's properties, and offers **Open Workbench** for everything else.
 
 ## Importing custom SHACL
 
-**File → Import → Constraints (SHACL)** uploads a SHACL file into the currently selected graph. Supported formats are the same as for schema import (TTL, RDF/XML, N-Triples); TTL is the default and recommended format.
+**File → Import → Constraints (SHACL)** uploads a SHACL file into the currently selected graph, as a new document. The workbench's import button does the same thing without leaving it. Supported formats are the same as for schema import (TTL, RDF/XML, N-Triples); TTL is the default and recommended, and is the only one that preserves the file's text exactly.
 
 ## Exporting SHACL
 
-**File → Export → Constraints (SHACL)** downloads a SHACL file. The dialog asks which workspace and graph to use, which parts to include (generated, custom, or both), and in which format. TTL is the default.
+**File → Export → Constraints (SHACL)** downloads the constraints as one file. The dialog asks which workspace and schema, then **which parts to include**: the generated shapes, and any of the graph's constraints documents. A document that is switched off can still be ticked — off means "takes no part in validation", not "cannot be exported". TTL is the default format.

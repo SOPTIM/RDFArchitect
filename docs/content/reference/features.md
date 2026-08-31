@@ -89,7 +89,15 @@ SHACL shapes are generated automatically from the schema. They include, among ot
 
 ### Custom SHACL side-by-side
 
-Import the official SHACL of a CGMES/ENTSO-E release and store it next to the generated shapes. Custom SHACL can be edited freely and is not regenerated when the schema changes. Both sets are visible at graph level and at class level.
+Import the official SHACL of a CGMES/ENTSO-E release and store it next to the generated shapes. Each file stays its own document, keeping its name and its text byte for byte. Custom SHACL can be edited freely and is not regenerated when the schema changes. Both sets are visible at graph level and at class level.
+
+### Constraints workbench
+
+A dedicated editor for a schema's constraints: the list of documents, a Turtle editor with completion, hover and go-to-definition fed by the live CIM schema, a form view for people who do not read Turtle, and a problems panel. Constraints are validated against the schema as you type — do these classes and properties exist, do the cardinalities agree, does the embedded SPARQL refer to real terms — with every problem reported at its line and column.
+
+### Conformance check: does the schema still match its constraints?
+
+Compares the shapes your schema implies with an imported constraints file and reports where they have drifted apart: what the schema implies and the file omits, what the file constrains that the schema does not have, and — the case worth acting on — what the two assert that cannot both be true. Answered per class and property, so naming differences between generated and official shapes do not matter.
 
 ### Read-only workspaces
 
@@ -101,7 +109,7 @@ One-click immutable copy of a workspace, stored in Fuseki, reachable by a URL wi
 
 ### Export
 
-Every graph can be exported to RDF/XML, Turtle, or N-Triples, using the active namespace table and an optional auto-generated profile header placed as the first resource (matching ENTSO-E release conventions). SHACL can be exported separately as TTL.
+Every graph can be exported to RDF/XML, Turtle, or N-Triples, using the active namespace table and an optional auto-generated profile header placed as the first resource (matching ENTSO-E release conventions). Constraints are exported separately, choosing which of the graph's documents and whether to include the generated shapes.
 
 ### Open REST API
 
