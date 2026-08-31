@@ -33,6 +33,7 @@
     let {
         request = null,
         disabled = false,
+        readOnly = false,
         onClose = () => {},
         onAddBendPoint = () => {},
         onDeleteBendPoint = () => {},
@@ -108,6 +109,7 @@
                 onSelect={deleteEndPoint}
                 faIcon={faTrash}
                 variant="danger"
+                disabled={readOnly}
             >
                 Delete end point
             </ContextMenu.Item.Button>
@@ -116,6 +118,7 @@
                 onSelect={deleteBendPoint}
                 faIcon={faTrash}
                 variant="danger"
+                disabled={readOnly}
             >
                 Delete bend point
             </ContextMenu.Item.Button>
@@ -124,6 +127,7 @@
                 onSelect={addBendPoint}
                 faIcon={faPlus}
                 altText={"Ctrl+Q"}
+                disabled={readOnly}
             >
                 Add bend point here
             </ContextMenu.Item.Button>
@@ -133,6 +137,7 @@
             onSelect={clearBendPoints}
             faIcon={faEraser}
             variant="danger"
+            disabled={readOnly}
         >
             Remove all bend points
         </ContextMenu.Item.Button>
