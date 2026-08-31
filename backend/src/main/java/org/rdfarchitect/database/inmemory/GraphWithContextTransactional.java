@@ -81,6 +81,20 @@ public class GraphWithContextTransactional implements GraphContext {
     private record NamedRewindable(String name, Rewindable rewindable) {}
 
     public GraphWithContextTransactional(Graph base) {
+        this(base, null);
+    }
+
+    /**
+     * Creates the context and seeds its custom SHACL from {@code customSHACLBase}.
+     *
+     * <p>Used when loading a snapshot, which carries a graph's constraints alongside its schema.
+     * Seeding inside the initial transaction keeps the load a single {@code imported graph} commit
+     * — writing the shapes afterwards would leave the user an undo step for content they never
+     * authored in this session.
+     *
+     * @param customSHACLBase the shapes to seed, or {@code null} for none
+     */
+    public GraphWithContextTransactional(Graph base, Graph customSHACLBase) {
         txnContext.begin(ReadWrite.WRITE);
         int maxVersions = GraphCompressionConfig.getMaxVersions();
         int compressCount = GraphCompressionConfig.getCompressCount();
@@ -101,6 +115,11 @@ public class GraphWithContextTransactional implements GraphContext {
                 List.of(
                         new NamedRewindable("rdf", rdfGraph),
                         new NamedRewindable("shacl", customSHACL));
+        if (customSHACLBase != null) {
+            var shaclModel = ModelFactory.createModelForGraph(customSHACL);
+            shaclModel.setNsPrefixes(customSHACLBase.getPrefixMapping());
+            shaclModel.add(ModelFactory.createModelForGraph(customSHACLBase));
+        }
         commit("imported graph");
         txnContext.end();
     }

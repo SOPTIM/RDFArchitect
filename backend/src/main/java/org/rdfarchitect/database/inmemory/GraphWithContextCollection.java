@@ -32,14 +32,17 @@ import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.database.snapshots.ShapesGraphNaming;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -78,21 +81,54 @@ public class GraphWithContextCollection {
         rwLock.writeLock().lock();
         try {
             this.prefixes.setNsPrefixes(dataset.getPrefixMapping());
+
+            // A snapshot stores a graph's custom SHACL in its own named graph, so the shapes have
+            // to be routed to the owning graph's context instead of becoming a graph of their own.
+            // They are collected first because a dataset lists its graphs in no particular order:
+            // the shapes graph may well be visited before its owner exists.
+            var shapesByOwner = collectShapesGraphs(dataset);
+
             if (!dataset.getDefaultModel().isEmpty()) {
                 graphs.put(
                         DEFAULT_GRAPH_NAME,
-                        new GraphWithContextTransactional(dataset.getDefaultModel().getGraph()));
+                        new GraphWithContextTransactional(
+                                dataset.getDefaultModel().getGraph(),
+                                shapesByOwner.get(DEFAULT_GRAPH_NAME)));
             }
             for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
                 var graphURI = it.next().getURI();
+                if (ShapesGraphNaming.isShapesGraph(graphURI)) {
+                    continue;
+                }
                 graphs.put(
                         graphURI,
                         new GraphWithContextTransactional(
-                                dataset.getNamedModel(graphURI).getGraph()));
+                                dataset.getNamedModel(graphURI).getGraph(),
+                                shapesByOwner.get(graphURI)));
             }
         } finally {
             rwLock.writeLock().unlock();
         }
+    }
+
+    /**
+     * Indexes the dataset's shapes graphs by the graph they belong to.
+     *
+     * <p>Shapes whose owner is not in the dataset are dropped: without its schema a constraint set
+     * has nothing to apply to, and keeping it would resurrect a graph the snapshot did not contain.
+     */
+    private static Map<String, Graph> collectShapesGraphs(Dataset dataset) {
+        Map<String, Graph> shapesByOwner = new HashMap<>();
+        for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
+            var graphURI = it.next().getURI();
+            ShapesGraphNaming.decode(graphURI)
+                    .ifPresent(
+                            name ->
+                                    shapesByOwner.put(
+                                            name.ownerGraphUri(),
+                                            dataset.getNamedModel(graphURI).getGraph()));
+        }
+        return shapesByOwner;
     }
 
     /**
