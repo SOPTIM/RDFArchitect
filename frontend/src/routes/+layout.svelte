@@ -104,7 +104,9 @@
     async function loadSnapshot() {
         const base64Param = page.url.searchParams.get("snapshot");
         if (base64Param) {
-            const { error } = await loadSnapshotAPI({ path: { base64Param } });
+            const { error } = await loadSnapshotAPI({
+                path: { base64Token: base64Param },
+            });
             if (!error) {
                 await goto("/mainpage");
                 toastStore.success(
