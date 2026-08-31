@@ -29,12 +29,16 @@
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
+    import { onOpenClass } from "$lib/monaco/turtleLanguageFeatures.js";
+    import { SchemaTermSource } from "$lib/shacl/schemaTermSource.svelte.js";
     import { ShapesWorkbench } from "$lib/shacl/workbenchState.svelte.js";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { ClassType, editorState } from "$lib/sharedState.svelte.js";
 
     import DocumentInspector from "./workbench/DocumentInspector.svelte";
     import DocumentList from "./workbench/DocumentList.svelte";
     import ProblemsPanel from "./workbench/ProblemsPanel.svelte";
+
+    import { goto } from "$app/navigation";
 
     let editor = $state(null);
     let problemsExpanded = $state(true);
@@ -61,6 +65,16 @@
             : null,
     );
 
+    /** The workspace's CIM terms, which the editor completes and explains against. */
+    const termSource = $derived(
+        selectedWorkspace && selectedGraph
+            ? new SchemaTermSource({
+                  datasetName: selectedWorkspace,
+                  graphUri: selectedGraph,
+              })
+            : null,
+    );
+
     $effect(() => {
         editorState.selectedWorkspace.subscribe();
         editorState.selectedGraph.subscribe();
@@ -69,6 +83,25 @@
     $effect(() => {
         workbench?.load();
         return () => workbench?.cancelPendingValidation();
+    });
+
+    /**
+     * Following a term opens the class it belongs to in the class editor.
+     *
+     * Registered here because the workbench is where the navigation makes sense; the editor
+     * component only knows it was asked to follow something.
+     */
+    $effect(() => {
+        onOpenClass((graphUri, classUuid) => {
+            editorState.selectedClassWorkspace.updateValue(selectedWorkspace);
+            editorState.selectedClassGraph.updateValue(graphUri);
+            editorState.selectedClass.updateValue({
+                type: ClassType.SINGLE_CLASS,
+                id: classUuid,
+            });
+            goto("/mainpage");
+        });
+        return () => onOpenClass(null);
     });
 
     async function save() {
@@ -209,6 +242,7 @@
                             bind:this={editor}
                             bind:value={workbench.text}
                             findings={workbench.findings}
+                            {termSource}
                             onSave={save}
                             onchange={onTextChanged}
                         />

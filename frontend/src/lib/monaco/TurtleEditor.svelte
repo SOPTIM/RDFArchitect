@@ -19,6 +19,10 @@
     import { MARKER_OWNER, toMarkers } from "./markers.js";
     import { loadMonaco, TURTLE_LANGUAGE_ID } from "./monaco.js";
     import { resolveThemeName } from "./theme.js";
+    import {
+        attachTermSource,
+        detachTermSource,
+    } from "./turtleLanguageFeatures.js";
 
     import { browser } from "$app/environment";
 
@@ -31,6 +35,7 @@
         maxHeight = 480,
         onSave = undefined,
         onchange = undefined,
+        termSource = undefined,
     } = $props();
 
     // All four are $state because the effects below key off them: the editor is created when
@@ -139,6 +144,17 @@
 
     $effect(() => {
         editor?.updateOptions({ readOnly });
+    });
+
+    // Completion and hover answer only for a model that has been given a schema to answer from,
+    // so the small editors in the class-editor dialogs stay plain.
+    $effect(() => {
+        const model = editor?.getModel();
+        if (!model || !termSource) {
+            return;
+        }
+        attachTermSource(model, termSource);
+        return () => detachTermSource(model);
     });
 
     // Monaco's theme is global rather than per editor, so changing the setting repaints every

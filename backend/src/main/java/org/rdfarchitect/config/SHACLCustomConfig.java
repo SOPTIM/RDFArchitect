@@ -27,6 +27,8 @@ import org.rdfarchitect.services.shacl.SHACLInsertUseCase;
 import org.rdfarchitect.services.shacl.SHACLReplaceShapeUseCase;
 import org.rdfarchitect.services.shacl.SHACLStoringService;
 import org.rdfarchitect.services.shacl.SHACLUpdateUseCase;
+import org.rdfarchitect.services.shacl.terms.SchemaTermsService;
+import org.rdfarchitect.services.shacl.terms.SchemaTermsUseCase;
 import org.rdfarchitect.services.shacl.validation.SchemaIndexCache;
 import org.rdfarchitect.services.shacl.validation.ShapesValidationService;
 import org.rdfarchitect.services.shacl.validation.ShapesValidationUseCase;
@@ -83,6 +85,12 @@ public class SHACLCustomConfig {
     @Bean
     public SchemaIndexCache schemaIndexCache(DatabasePort databasePort) {
         return new SchemaIndexCache(databasePort);
+    }
+
+    @Bean
+    public SchemaTermsUseCase schemaTermsUseCase(
+            DatabasePort databasePort, SchemaIndexCache schemaIndexCache) {
+        return new SchemaTermsService(databasePort, schemaIndexCache);
     }
 
     @Bean

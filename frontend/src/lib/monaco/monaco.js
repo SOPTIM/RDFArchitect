@@ -33,6 +33,7 @@
  */
 
 import { THEMES } from "./theme.js";
+import { registerTurtleLanguageFeatures } from "./turtleLanguageFeatures.js";
 
 export const TURTLE_LANGUAGE_ID = "turtle";
 
@@ -95,6 +96,8 @@ async function initialise() {
         TURTLE_LANGUAGE_ID,
         await createTurtleTokensProvider(),
     );
+
+    registerTurtleLanguageFeatures(monaco, TURTLE_LANGUAGE_ID);
 
     for (const [name, theme] of Object.entries(THEMES)) {
         monaco.editor.defineTheme(name, theme);
