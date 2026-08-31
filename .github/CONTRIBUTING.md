@@ -29,8 +29,14 @@ mvn spring-boot:run
 ```bash
 cd frontend
 npm install
+npm run api:generate
 npm run dev
 ```
+
+`npm run api:generate` generates the typed backend client into `frontend/src/lib/api/generated`
+from the committed `frontend/openapi.json` contract. That directory is git-ignored, so the step
+is required after cloning and after `npm run clean-install`, and has to be repeated whenever
+`frontend/openapi.json` changes.
 
 ## Branching and Pull Requests
 
@@ -59,10 +65,14 @@ Use `mvn -B spotless:apply` for automatic formatting.
 
 ```bash
 cd frontend
+npm run api:generate
 npm run test
 npm run lint
 npm run build
 ```
+
+A stale API client fails `npm run build` while `npm run test` and `npm run lint` still pass, so
+regenerate it first — CI does the same, right after installing dependencies.
 
 Use `npm run format` for automatic formatting.
 

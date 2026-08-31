@@ -48,13 +48,14 @@ mvn -B test -Dtest=ClassName                # single test class
 mvn -B test -Dtest=ClassName#methodName     # single test method
 
 # Frontend — common single commands
+npm run api:generate                        # generate the typed API client (required before dev/build)
 npm run dev                                 # dev server on :1407
 npm run build                               # production build
 npm run test                                # vitest
 npm run test -- --watch                     # vitest in watch mode
 npm run lint                                # prettier + eslint + license check
 npm run format                              # prettier --write + eslint --fix
-npm run clean-install                       # nuke node_modules and reinstall
+npm run clean-install                       # nuke node_modules and reinstall (then api:generate)
 
 # Docker — full stack
 cd docker

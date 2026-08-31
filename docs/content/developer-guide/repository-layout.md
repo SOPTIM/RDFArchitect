@@ -30,6 +30,7 @@ sidebar_position: 2
 │       ├── routes/           # SvelteKit pages (homepage, /mainpage, /changelog, /compare, /migrate, /shacl)
 │       └── lib/
 │           ├── api/          # BackendConnection + small fetch helpers
+│           │   └── generated/ # hey-api client — git-ignored, `npm run api:generate`
 │           ├── components/   # Reusable UI primitives + bits-ui wrappers
 │           ├── models/       # DTO types and reactive wrappers ($state-backed)
 │           ├── rendering/    # SvelteFlow + Mermaid diagram renderers

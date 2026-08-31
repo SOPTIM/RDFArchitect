@@ -88,8 +88,11 @@ In a second terminal:
 ```bash
 cd frontend
 npm install
+npm run api:generate
 npm run dev
 ```
+
+`npm run api:generate` is required before the first start: it generates the typed backend client into `frontend/src/lib/api/generated` from the committed `frontend/openapi.json`. That directory is git-ignored, so it is missing in a fresh checkout and after `npm run clean-install`. Rerun it whenever `frontend/openapi.json` changes.
 
 The frontend starts on port `1407` at `http://localhost:1407` and talks to the backend directly (no nginx in front).
 
