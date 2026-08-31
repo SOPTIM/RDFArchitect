@@ -30,11 +30,14 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
     import { onOpenClass } from "$lib/monaco/turtleLanguageFeatures.js";
+    import { ConformanceView } from "$lib/shacl/conformanceState.svelte.js";
     import { ShapesFormView } from "$lib/shacl/formState.svelte.js";
     import { SchemaTermSource } from "$lib/shacl/schemaTermSource.svelte.js";
+    import { parsePrefixes } from "$lib/shacl/turtleTerms.js";
     import { ShapesWorkbench } from "$lib/shacl/workbenchState.svelte.js";
     import { ClassType, editorState } from "$lib/sharedState.svelte.js";
 
+    import ConformanceReportView from "./workbench/ConformanceReportView.svelte";
     import DocumentInspector from "./workbench/DocumentInspector.svelte";
     import DocumentList from "./workbench/DocumentList.svelte";
     import FormEditor from "./workbench/FormEditor.svelte";
@@ -45,6 +48,7 @@
     const VIEWS = [
         { id: "ttl", label: "Turtle" },
         { id: "form", label: "Form" },
+        { id: "conformance", label: "Schema check" },
     ];
 
     let editor = $state(null);
@@ -69,6 +73,16 @@
     const workbench = $derived(
         selectedWorkspace && selectedGraph
             ? new ShapesWorkbench({
+                  datasetName: selectedWorkspace,
+                  graphUri: selectedGraph,
+              })
+            : null,
+    );
+
+    /** Compares the open document with the constraints the schema implies. */
+    const conformance = $derived(
+        selectedWorkspace && selectedGraph
+            ? new ConformanceView({
                   datasetName: selectedWorkspace,
                   graphUri: selectedGraph,
               })
@@ -307,6 +321,14 @@
                                         onturtle={next =>
                                             (workbench.text = next)}
                                         onvalidate={onTextChanged}
+                                    />
+                                {:else if view === "conformance" && conformance}
+                                    <ConformanceReportView
+                                        {conformance}
+                                        documentId={workbench.selectedId}
+                                        documentName={workbench.selected
+                                            ?.name ?? ""}
+                                        prefixes={parsePrefixes(workbench.text)}
                                     />
                                 {/if}
                             </div>

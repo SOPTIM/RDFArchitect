@@ -619,6 +619,80 @@
         },
         "type" : "object"
       },
+      "ConformanceFinding" : {
+        "properties" : {
+          "documentSays" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [
+              "CONTRADICTED",
+              "DIFFERENT",
+              "MISSING_IN_DOCUMENT",
+              "NOT_IN_SCHEMA"
+            ],
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "schemaSays" : {
+            "type" : "string"
+          },
+          "targetClass" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ConformanceReport" : {
+        "properties" : {
+          "agreeing" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "compared" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "conforms" : {
+            "type" : "boolean"
+          },
+          "contradictedCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "differentCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "documentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "documentName" : {
+            "type" : "string"
+          },
+          "findings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ConformanceFinding"
+            },
+            "type" : "array"
+          },
+          "missingInDocumentCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "notInSchemaCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "ContextDelta" : {
         "properties" : {
           "additions" : {
@@ -7296,6 +7370,68 @@
           }
         },
         "summary" : "export shacl",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/conformance" : {
+      "get" : {
+        "description" : "Reports where a constraints document and the schema it describes disagree: what the schema implies and the document omits, what the document says that the schema does not have, and — the case worth acting on — what the two assert that cannot both be true. Compared per class and property, not by shape name, because generated and official shapes share no naming convention.",
+        "operationId" : "compare",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The constraints document to compare against.",
+            "in" : "query",
+            "name" : "documentId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConformanceReport"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "compare constraints with the schema",
         "tags" : [
           "shacl"
         ]
