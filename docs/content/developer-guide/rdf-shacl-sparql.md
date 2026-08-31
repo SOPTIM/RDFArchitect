@@ -68,6 +68,11 @@ Editor completion, hover and go-to-definition are plain REST endpoints plus Mona
 
 `services/shacl/conformance/EffectiveConstraints` collapses a shapes graph into one statement per `(sh:targetClass, sh:path)` before anything is compared, because generated and official shapes share no naming convention and both spread a single property's rules over separate cardinality, datatype and value-type shapes. Collapsing is conjunction — the effective lower bound is the largest `sh:minCount` anyone asks for. Datatypes are *collected* rather than merged: two different ones is not a stricter rule but a contradiction, and the comparison has to see it as one.
 
+Two things about the comparison are load-bearing, and both were got wrong first:
+
+- **The right-hand side is every enabled document, not the open one.** A graph's constraints are their conjunction, and official releases split their rules across files: the CGMES 3.0 DiagramLayout file states 11 of its property shapes itself and defers 41 to the shared IdentifiedObject file. Reading one document alone reported its neighbours' coverage as missing. The open document joins in even when it is disabled, because it is the one the question is about, and `ConformanceFinding.statedIn` names the documents behind each finding so a merged answer still points at a file.
+- **Coverage is counted apart from agreement.** `compared` is the *overlap* — the keys both sides state — and `agreeing` is that minus the contradictions and differences. Counting the schema's whole surface instead scored silence as disagreement, so a 55-line cross-profile constraints file with one rule in it announced "0 of 49 property constraints agree" about a profile it had no quarrel with. `ConformanceAcrossDocumentsTest` pins both, against the real DiagramLayout files.
+
 ## Diagram layout
 
 Layout positions are persisted as RDF using a small custom vocabulary under `dl/rdf/` (Diagram Layout). Layout DTOs live in `api/dto/rendering/` with renderer-specific subdirectories (`svelteflow/`, `mermaid/`). When changing the layout schema, update both the `dl/` model and any code that reads or writes layout data.

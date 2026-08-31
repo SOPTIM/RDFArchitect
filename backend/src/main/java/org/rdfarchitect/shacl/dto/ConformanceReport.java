@@ -37,14 +37,32 @@ public class ConformanceReport {
 
     private String documentName;
 
-    /** True when nothing disagrees. */
+    /**
+     * True when nothing the two both state disagrees, and the documents state nothing the schema
+     * does not have.
+     *
+     * <p>Coverage is deliberately not part of this. A constraints file that says nothing about a
+     * property does not disagree with the schema about it — official releases split their rules
+     * across several files, and some of those files carry a single cross-profile rule.
+     */
     private boolean conforms;
 
-    /** Property constraints the schema and the document both state and agree on. */
+    /** Of {@link #compared}, how many say the same thing. */
     private int agreeing;
 
-    /** Property constraints compared in total, agreeing ones included. */
+    /**
+     * Property constraints <em>both</em> sides state — the only ones agreement is a question about.
+     */
     private int compared;
+
+    /** Every property constraint the schema implies, whether or not a document states it. */
+    private int impliedBySchema;
+
+    /** Every property constraint the documents state, whether or not the schema implies it. */
+    private int stated;
+
+    /** The documents the comparison read, in reading order. */
+    private List<String> documents;
 
     private int contradictedCount;
 

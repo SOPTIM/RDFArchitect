@@ -63,14 +63,21 @@ class ConformanceComparatorTest {
     }
 
     private static List<ConformanceFinding> compare(String schema, String document) {
-        return ConformanceComparator.compare(constraints(schema), constraints(document), PREFIXES);
+        return ConformanceComparator.compare(
+                constraints(schema),
+                EffectiveConstraints.of(java.util.Map.of("document.ttl", graphOf(document))),
+                PREFIXES);
     }
 
     private static java.util.Map<EffectiveConstraints.Key, EffectiveConstraints.Constraint>
             constraints(String turtle) {
+        return EffectiveConstraints.of(graphOf(turtle));
+    }
+
+    private static org.apache.jena.graph.Graph graphOf(String turtle) {
         var graph = GraphFactory.createDefaultGraph();
         RDFParser.fromString(turtle, Lang.TURTLE).parse(graph);
-        return EffectiveConstraints.of(graph);
+        return graph;
     }
 
     // -------------------------------------------------------------------------

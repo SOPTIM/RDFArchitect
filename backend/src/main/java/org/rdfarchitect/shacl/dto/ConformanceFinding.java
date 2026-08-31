@@ -20,6 +20,8 @@ package org.rdfarchitect.shacl.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * One way in which a constraints document and the schema it is meant to describe disagree.
  *
@@ -56,4 +58,13 @@ public class ConformanceFinding {
     private String documentSays;
 
     private String message;
+
+    /**
+     * The constraints documents that state this, in reading order.
+     *
+     * <p>Empty for {@link Kind#MISSING_IN_DOCUMENT}, where the point is that none of them do.
+     * Present so a finding can be traced to the file to open: the comparison merges every enabled
+     * document, and without this the merged view would say nothing about where a rule came from.
+     */
+    private List<String> statedIn;
 }

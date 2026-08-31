@@ -642,6 +642,12 @@
           "schemaSays" : {
             "type" : "string"
           },
+          "statedIn" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "targetClass" : {
             "type" : "string"
           }
@@ -676,17 +682,31 @@
           "documentName" : {
             "type" : "string"
           },
+          "documents" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "findings" : {
             "items" : {
               "$ref" : "#/components/schemas/ConformanceFinding"
             },
             "type" : "array"
           },
+          "impliedBySchema" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "missingInDocumentCount" : {
             "format" : "int32",
             "type" : "integer"
           },
           "notInSchemaCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "stated" : {
             "format" : "int32",
             "type" : "integer"
           }

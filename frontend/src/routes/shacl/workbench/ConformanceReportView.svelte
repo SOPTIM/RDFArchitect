@@ -17,11 +17,15 @@
 
 <script>
     /**
-     * Does this constraints document still agree with the schema it describes?
+     * Do this graph's constraints still agree with the schema they describe?
      *
      * Grouped by kind rather than listed flat, because the four kinds call for different actions:
      * a contradiction means somebody has to decide who is right, while a difference is often the
      * profile doing its job and narrowing what the schema allows.
+     *
+     * Coverage is shown apart from agreement, and the headline only turns red for a contradiction.
+     * Scoring the two together was how a 55-line cross-profile file — one rule, and no quarrel with
+     * anything — came to announce "0 of 49 property constraints agree".
      */
 
     import {
@@ -36,15 +40,13 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
-    import { conformanceKind } from "$lib/shacl/conformanceState.svelte.js";
+    import {
+        conformanceKind,
+        conformanceVerdict,
+    } from "$lib/shacl/conformanceState.svelte.js";
     import { writeTerm } from "$lib/shacl/turtleTerms.js";
 
-    let {
-        conformance,
-        documentId = null,
-        documentName = "",
-        prefixes = {},
-    } = $props();
+    let { conformance, documentId = null, prefixes = {} } = $props();
 
     /** Reuses the validation palette, so the same word means the same colour across the app. */
     const STYLE = {
@@ -70,9 +72,33 @@
         },
     };
 
+    /** How the headline reads for each verdict, and what it is coloured. */
+    const VERDICT = {
+        ok: {
+            icon: faCircleCheck,
+            text: "text-green-text",
+            card: "bg-green-background border-green-border",
+            headline: "The constraints and the schema agree",
+        },
+        gaps: {
+            icon: faCircleInfo,
+            text: "text-blue",
+            card: "bg-lightblue border-blue",
+            headline: "No contradictions",
+        },
+        drift: {
+            icon: faCircleExclamation,
+            text: "text-red-text",
+            card: "bg-red-background border-red-border",
+            headline: "The constraints and the schema contradict each other",
+        },
+    };
+
     const report = $derived(
         conformance.reportedOn === documentId ? conformance.report : null,
     );
+
+    const verdict = $derived(conformanceVerdict(report));
 
     const groups = $derived.by(() => {
         const byKind = new Map();
@@ -141,49 +167,43 @@
                 <EmptyStateCard
                     icon={faScaleBalanced}
                     title="Compare with the schema"
-                    description="Checks whether {documentName ||
-                        'this document'} still says what the schema implies — and, more usefully, whether the two now contradict each other."
+                    description="Reads every enabled constraints document of this schema and checks them against what the schema implies — most usefully, whether the two now contradict each other."
                 />
             </div>
         {:else}
-            <div
-                class={`mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded border p-4 ${
-                    report.conforms
-                        ? "bg-green-background border-green-border"
-                        : "bg-red-background border-red-border"
-                }`}
-            >
+            {@const summary = VERDICT[verdict] ?? VERDICT.gaps}
+            <div class={`mb-4 rounded border p-4 ${summary.card}`}>
                 <div class="flex items-center gap-2">
-                    <Fa
-                        icon={report.conforms
-                            ? faCircleCheck
-                            : faCircleExclamation}
-                        class={report.conforms
-                            ? "text-green-text"
-                            : "text-red-text"}
-                    />
-                    <span
-                        class={`text-base font-semibold ${
-                            report.conforms
-                                ? "text-green-text"
-                                : "text-red-text"
-                        }`}
-                    >
-                        {report.conforms
-                            ? "The document agrees with the schema"
-                            : "The document and the schema disagree"}
+                    <Fa icon={summary.icon} class={summary.text} />
+                    <span class={`text-base font-semibold ${summary.text}`}>
+                        {summary.headline}
                     </span>
                 </div>
-                <span class="text-default-text text-sm">
-                    {report.agreeing} of {report.compared} property constraints agree
-                </span>
+                <p class="text-default-text mt-2 text-sm">
+                    {#if report.compared === 0}
+                        The schema implies {report.impliedBySchema} property constraints.
+                        These documents state none of them, so there is nothing to
+                        agree or disagree about.
+                    {:else}
+                        {report.agreeing} of the {report.compared} property constraints
+                        both sides state agree.
+                    {/if}
+                    {#if report.missingInDocumentCount > 0}
+                        {report.missingInDocumentCount} more the schema implies are
+                        not stated anywhere.
+                    {/if}
+                </p>
+                {#if report.documents?.length}
+                    <p class="text-text-subtle mt-1 text-xs">
+                        Read together: {report.documents.join(", ")}
+                    </p>
+                {/if}
             </div>
 
             {#if groups.length === 0}
                 <p class="text-text-subtle text-sm italic">
-                    Every constraint the schema implies is stated in the
-                    document, and nothing is stated that the schema does not
-                    have.
+                    Every constraint the schema implies is stated, and nothing
+                    is stated that the schema does not have.
                 </p>
             {:else}
                 <div class="flex flex-col gap-4">
@@ -230,9 +250,19 @@
                                             {/if}
                                             {#if finding.documentSays}
                                                 <div class="flex gap-1">
-                                                    <dt>document:</dt>
+                                                    <dt>documents:</dt>
                                                     <dd class="font-mono">
                                                         {finding.documentSays}
+                                                    </dd>
+                                                </div>
+                                            {/if}
+                                            {#if finding.statedIn?.length}
+                                                <div class="flex gap-1">
+                                                    <dt>stated in:</dt>
+                                                    <dd>
+                                                        {finding.statedIn.join(
+                                                            ", ",
+                                                        )}
                                                     </dd>
                                                 </div>
                                             {/if}

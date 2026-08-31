@@ -28,9 +28,12 @@ const DOCUMENT = "eq-document-id";
 const REPORT = {
     documentId: DOCUMENT,
     documentName: "official.ttl",
+    documents: ["official.ttl"],
     conforms: false,
     compared: 1343,
     agreeing: 1341,
+    impliedBySchema: 1343,
+    stated: 1343,
     contradictedCount: 1,
     differentCount: 1,
     missingInDocumentCount: 0,
@@ -43,6 +46,7 @@ const REPORT = {
             schemaSays: "1..1, xsd:MonthDay",
             documentSays: "1..1, xsd:gMonthDay",
             message: "A value cannot be both xsd:MonthDay and xsd:gMonthDay.",
+            statedIn: ["official.ttl"],
         },
         {
             kind: "DIFFERENT",
@@ -52,6 +56,7 @@ const REPORT = {
             documentSays: "0..1",
             message:
                 "Both can be satisfied, but they do not say the same thing.",
+            statedIn: ["official.ttl"],
         },
     ],
 };
@@ -159,11 +164,12 @@ describe("ConformanceReportView", () => {
         const view = render({
             conformance: conformance({ report: null, reportedOn: null }),
             documentId: DOCUMENT,
-            documentName: "official.ttl",
         });
 
         expect(view.textContent).toContain("Compare with the schema");
-        expect(view.textContent).toContain("official.ttl");
+        expect(view.textContent).toContain(
+            "every enabled constraints document",
+        );
     });
 
     test("groups the findings by kind, worst first", () => {
@@ -189,10 +195,27 @@ describe("ConformanceReportView", () => {
         });
         const text = view.textContent.replace(/\s+/g, " ");
 
-        expect(text).toContain("1341 of 1343 property constraints agree");
+        expect(text).toContain(
+            "1341 of the 1343 property constraints both sides state agree",
+        );
         expect(text).toContain("cim:Season · cim:Season.endDate");
         expect(text).toContain("xsd:MonthDay");
         expect(text).toContain("xsd:gMonthDay");
+        expect(text).toContain("Read together: official.ttl");
+    });
+
+    test("names the document a finding came from", () => {
+        const view = render({
+            conformance: conformance(),
+            documentId: DOCUMENT,
+            prefixes: { cim: CIM },
+        });
+
+        // The comparison merges every enabled document, so without this a finding says which rule
+        // is wrong but not which of several files to open.
+        expect(view.textContent.replace(/\s+/g, " ")).toContain(
+            "stated in: official.ttl",
+        );
     });
 
     test("does not show a report that belongs to another document", () => {
@@ -213,15 +236,56 @@ describe("ConformanceReportView", () => {
                     conforms: true,
                     findings: [],
                     agreeing: 1343,
+                    contradictedCount: 0,
+                    differentCount: 0,
                 },
             }),
             documentId: DOCUMENT,
         });
 
         expect(view.textContent).toContain(
-            "The document agrees with the schema",
+            "The constraints and the schema agree",
         );
         expect(view.querySelectorAll("h3")).toHaveLength(0);
+    });
+
+    test("a document that covers nothing is not called a disagreement", () => {
+        // What the CGMES 3.0 DiagramLayout cross-profile files do: one rule each, against a schema
+        // implying 49 constraints. The old report announced "0 of 49 property constraints agree".
+        const view = render({
+            conformance: conformance({
+                report: {
+                    ...REPORT,
+                    conforms: false,
+                    compared: 0,
+                    agreeing: 0,
+                    impliedBySchema: 49,
+                    stated: 0,
+                    contradictedCount: 0,
+                    differentCount: 0,
+                    missingInDocumentCount: 49,
+                    findings: [],
+                },
+            }),
+            documentId: DOCUMENT,
+        });
+        const text = view.textContent.replace(/\s+/g, " ");
+
+        expect(text).toContain("No contradictions");
+        expect(text).toContain("nothing to agree or disagree about");
+        expect(text).toContain("49 more the schema implies are not stated");
+        expect(text).not.toContain("0 of 49");
+    });
+
+    test("a contradiction is what turns the headline red", () => {
+        const view = render({
+            conformance: conformance(),
+            documentId: DOCUMENT,
+        });
+
+        expect(view.textContent).toContain(
+            "The constraints and the schema contradict each other",
+        );
     });
 
     test("running the comparison goes through the view state", () => {

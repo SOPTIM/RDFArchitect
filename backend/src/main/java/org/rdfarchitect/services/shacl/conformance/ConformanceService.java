@@ -33,7 +33,9 @@ import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 import org.rdfarchitect.shacl.dto.ConformanceFinding;
 import org.rdfarchitect.shacl.dto.ConformanceReport;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -43,6 +45,11 @@ import java.util.UUID;
  * and property, merged from however many shapes said it. That is what makes the comparison possible
  * at all — generated shapes and official ENTSO-E ones share no naming convention, and both sides
  * spread one property's rules over separate cardinality, datatype and value-type shapes.
+ *
+ * <p>The right-hand side is the graph's <em>enabled</em> documents together, not the one being
+ * looked at. A graph's constraints are their conjunction, and official releases split their rules
+ * across files on purpose — reading one alone reported its neighbours' coverage as missing. The
+ * open document joins in even when it is disabled, because it is the one the question is about.
  *
  * <p>Inverse cardinality is left out. RDFArchitect states it as {@code sh:path [ sh:inversePath …
  * ]}, a path expression rather than a property, and there is nothing on the other side to line it
@@ -58,16 +65,22 @@ public class ConformanceService implements ConformanceUseCase {
         var prefixes = databasePort.getPrefixMapping(graphIdentifier.datasetName());
 
         Graph schemaShapes;
-        Graph documentShapes;
+        var documentShapes = new LinkedHashMap<String, Graph>();
         String documentName;
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var document = ctx.getShapesDocuments().get(documentId);
-            if (document == null) {
+            var documents = ctx.getShapesDocuments();
+            var opened = documents.get(documentId);
+            if (opened == null) {
                 throw new ResourceNotFoundException(
                         "No constraints document with id " + documentId + " in this graph.");
             }
-            documentName = document.getName();
-            documentShapes = copyOf(document.getGraph());
+            documentName = opened.getName();
+            documents.values().stream()
+                    .filter(document -> document.isEnabled() || document.getId().equals(documentId))
+                    .forEach(
+                            document ->
+                                    documentShapes.put(
+                                            document.getName(), copyOf(document.getGraph())));
 
             var ontology = ModelFactory.createModelForGraph(copyOf(ctx.getRdfGraph()));
             ontology.setNsPrefixes(prefixes);
@@ -84,24 +97,39 @@ public class ConformanceService implements ConformanceUseCase {
         var asserted = EffectiveConstraints.of(documentShapes);
         var findings = ConformanceComparator.compare(implied, asserted, prefixes);
 
-        var compared = implied.size() + count(findings, ConformanceFinding.Kind.NOT_IN_SCHEMA);
+        var contradicted = count(findings, ConformanceFinding.Kind.CONTRADICTED);
+        var different = count(findings, ConformanceFinding.Kind.DIFFERENT);
+        var notInSchema = count(findings, ConformanceFinding.Kind.NOT_IN_SCHEMA);
+        // Only what both sides state is a question of agreement. Counting the schema's whole
+        // surface here scored silence as disagreement, which is how a 55-line cross-profile file
+        // came to read as "0 of 49 agree".
+        var compared = overlap(implied.keySet(), asserted.constraints().keySet());
+
         return ConformanceReport.builder()
                 .documentId(documentId)
                 .documentName(documentName)
-                .conforms(findings.isEmpty())
+                .documents(List.copyOf(documentShapes.keySet()))
+                .conforms(contradicted == 0 && different == 0 && notInSchema == 0)
                 .compared(compared)
-                .agreeing(compared - findings.size())
-                .contradictedCount(count(findings, ConformanceFinding.Kind.CONTRADICTED))
-                .differentCount(count(findings, ConformanceFinding.Kind.DIFFERENT))
+                .agreeing(compared - contradicted - different)
+                .impliedBySchema(implied.size())
+                .stated(asserted.constraints().size())
+                .contradictedCount(contradicted)
+                .differentCount(different)
                 .missingInDocumentCount(
                         count(findings, ConformanceFinding.Kind.MISSING_IN_DOCUMENT))
-                .notInSchemaCount(count(findings, ConformanceFinding.Kind.NOT_IN_SCHEMA))
+                .notInSchemaCount(notInSchema)
                 .findings(findings)
                 .build();
     }
 
     private static int count(List<ConformanceFinding> findings, ConformanceFinding.Kind kind) {
         return (int) findings.stream().filter(finding -> finding.getKind() == kind).count();
+    }
+
+    private static int overlap(
+            Set<EffectiveConstraints.Key> schema, Set<EffectiveConstraints.Key> documents) {
+        return (int) schema.stream().filter(documents::contains).count();
     }
 
     /**

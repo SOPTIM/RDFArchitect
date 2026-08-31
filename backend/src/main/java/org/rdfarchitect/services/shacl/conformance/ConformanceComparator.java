@@ -35,6 +35,11 @@ import java.util.Set;
  * the schema allows many values, the profile permits one. Contradicting is drift — the two cannot
  * both be satisfied, so data valid against one is invalid against the other, and somebody has
  * changed something without the other side following.
+ *
+ * <p>Coverage is a third thing again, and not a disagreement. Constraints the documents say nothing
+ * about are reported so a gap is visible, but they are not scored against agreement: official
+ * releases split their rules over several files, some of which carry one cross-profile rule, and
+ * counting silence as disagreement made such a file read as "0 of 49 agree".
  */
 final class ConformanceComparator {
 
@@ -43,9 +48,10 @@ final class ConformanceComparator {
     /** Every disagreement, worst first, then in class and property order. */
     static List<ConformanceFinding> compare(
             Map<EffectiveConstraints.Key, EffectiveConstraints.Constraint> schema,
-            Map<EffectiveConstraints.Key, EffectiveConstraints.Constraint> document,
+            EffectiveConstraints.Asserted documents,
             PrefixMapping prefixes) {
         var findings = new ArrayList<ConformanceFinding>();
+        var document = documents.constraints();
 
         schema.forEach(
                 (key, implied) -> {
@@ -57,12 +63,13 @@ final class ConformanceComparator {
                                         key,
                                         describe(implied, prefixes),
                                         null,
-                                        "The schema implies this constraint; the document does not"
-                                                + " state it.",
-                                        prefixes));
+                                        "The schema implies this constraint; no constraints"
+                                                + " document states it.",
+                                        List.of()));
                         return;
                     }
-                    disagreement(key, implied, asserted, prefixes).ifPresent(findings::add);
+                    disagreement(key, implied, asserted, statedIn(documents, key), prefixes)
+                            .ifPresent(findings::add);
                 });
 
         document.forEach(
@@ -76,7 +83,7 @@ final class ConformanceComparator {
                                         describe(asserted, prefixes),
                                         "The document constrains this property, but the schema does"
                                                 + " not have it on this class.",
-                                        prefixes));
+                                        statedIn(documents, key)));
                     }
                 });
 
@@ -98,6 +105,7 @@ final class ConformanceComparator {
             EffectiveConstraints.Key key,
             EffectiveConstraints.Constraint schema,
             EffectiveConstraints.Constraint document,
+            List<String> statedIn,
             PrefixMapping prefixes) {
         var contradictions = contradictions(schema, document, prefixes);
         if (!contradictions.isEmpty()) {
@@ -108,7 +116,7 @@ final class ConformanceComparator {
                             describe(schema, prefixes),
                             describe(document, prefixes),
                             String.join(" ", contradictions),
-                            prefixes));
+                            statedIn));
         }
         if (schema.equals(document)) {
             return java.util.Optional.empty();
@@ -121,7 +129,7 @@ final class ConformanceComparator {
                         describe(document, prefixes),
                         "Both can be satisfied, but the schema and the document do not say the same"
                                 + " thing.",
-                        prefixes));
+                        statedIn));
     }
 
     private static List<String> contradictions(
@@ -180,13 +188,18 @@ final class ConformanceComparator {
         return minimum != null && maximum != null && minimum > maximum;
     }
 
+    private static List<String> statedIn(
+            EffectiveConstraints.Asserted documents, EffectiveConstraints.Key key) {
+        return documents.statedIn().getOrDefault(key, List.of());
+    }
+
     private static ConformanceFinding finding(
             ConformanceFinding.Kind kind,
             EffectiveConstraints.Key key,
             String schemaSays,
             String documentSays,
             String message,
-            PrefixMapping prefixes) {
+            List<String> statedIn) {
         return ConformanceFinding.builder()
                 .kind(kind)
                 .targetClass(key.targetClass())
@@ -194,6 +207,7 @@ final class ConformanceComparator {
                 .schemaSays(schemaSays)
                 .documentSays(documentSays)
                 .message(message)
+                .statedIn(List.copyOf(statedIn))
                 .build();
     }
 

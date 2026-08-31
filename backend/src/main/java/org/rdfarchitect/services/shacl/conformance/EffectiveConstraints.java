@@ -22,8 +22,10 @@ import de.soptim.opencgmes.cimvocabcheck.core.shacl.Shacl;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -69,7 +71,46 @@ final class EffectiveConstraints {
         }
     }
 
+    /**
+     * What several documents require together, and which of them requires each thing.
+     *
+     * <p>A graph's constraints are the conjunction of its enabled documents, so this is the only
+     * honest right-hand side for the comparison. Official constraints arrive split across files —
+     * the CGMES 3.0 DiagramLayout file states 11 of its property shapes itself and defers 41 to the
+     * shared IdentifiedObject file — and reading one of them alone reports its neighbours' coverage
+     * as missing.
+     *
+     * <p>{@code statedIn} exists so a finding can name the file to open, which a merged view would
+     * otherwise have thrown away.
+     */
+    record Asserted(Map<Key, Constraint> constraints, Map<Key, List<String>> statedIn) {
+
+        static Asserted empty() {
+            return new Asserted(Map.of(), Map.of());
+        }
+    }
+
     private EffectiveConstraints() {}
+
+    /** Reads several documents as one set of constraints, remembering where each came from. */
+    static Asserted of(Map<String, Graph> documents) {
+        var merged = new LinkedHashMap<Key, Constraint>();
+        var statedIn = new LinkedHashMap<Key, List<String>>();
+        documents.forEach(
+                (name, graph) ->
+                        of(graph)
+                                .forEach(
+                                        (key, constraint) -> {
+                                            merged.merge(
+                                                    key,
+                                                    constraint,
+                                                    EffectiveConstraints::conjunction);
+                                            statedIn.computeIfAbsent(
+                                                            key, ignored -> new ArrayList<>())
+                                                    .add(name);
+                                        }));
+        return new Asserted(merged, statedIn);
+    }
 
     /** Reads a shapes graph into one constraint per class and property. */
     static Map<Key, Constraint> of(Graph shapes) {

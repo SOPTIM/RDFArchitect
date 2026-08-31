@@ -31,24 +31,53 @@ export const CONFORMANCE_KIND = {
             "Both can be satisfied, but they do not say the same thing.",
     },
     MISSING_IN_DOCUMENT: {
-        label: "Missing in the document",
+        label: "Not covered",
         order: 2,
-        explanation: "The schema implies this; the document does not state it.",
+        explanation:
+            "The schema implies this; none of the graph's documents state it.",
     },
     NOT_IN_SCHEMA: {
         label: "Not in the schema",
         order: 3,
         explanation:
-            "The document constrains something the schema does not have.",
+            "The documents constrain something the schema does not have.",
     },
 };
+
+/**
+ * How a report reads at a glance: `ok`, `gaps` or `drift`.
+ *
+ * Coverage and agreement are separate questions, and conflating them is what made a 55-line
+ * cross-profile constraints file report "0 of 49 property constraints agree". A file that says
+ * nothing about a property does not disagree with the schema about it.
+ */
+export function conformanceVerdict(report) {
+    if (!report) {
+        return null;
+    }
+    if (report.contradictedCount > 0) {
+        return "drift";
+    }
+    if (
+        report.differentCount > 0 ||
+        report.notInSchemaCount > 0 ||
+        report.missingInDocumentCount > 0
+    ) {
+        return "gaps";
+    }
+    return "ok";
+}
 
 export function conformanceKind(kind) {
     return CONFORMANCE_KIND[kind] ?? CONFORMANCE_KIND.DIFFERENT;
 }
 
 /**
- * Whether the open document still agrees with the schema it describes.
+ * Whether the graph's constraints still agree with the schema they describe.
+ *
+ * The question is about the graph, not about one file. Official constraints arrive split across
+ * several documents, so the comparison reads every enabled one; the open document is only what
+ * decides when the question gets asked.
  *
  * Answered on demand rather than continuously: the comparison generates shapes for the whole
  * schema, which is far more work than validating a document, and the question is one a modeller
