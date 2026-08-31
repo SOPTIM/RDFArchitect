@@ -30,18 +30,28 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
     import { onOpenClass } from "$lib/monaco/turtleLanguageFeatures.js";
+    import { ShapesFormView } from "$lib/shacl/formState.svelte.js";
     import { SchemaTermSource } from "$lib/shacl/schemaTermSource.svelte.js";
     import { ShapesWorkbench } from "$lib/shacl/workbenchState.svelte.js";
     import { ClassType, editorState } from "$lib/sharedState.svelte.js";
 
     import DocumentInspector from "./workbench/DocumentInspector.svelte";
     import DocumentList from "./workbench/DocumentList.svelte";
+    import FormEditor from "./workbench/FormEditor.svelte";
     import ProblemsPanel from "./workbench/ProblemsPanel.svelte";
 
     import { goto } from "$app/navigation";
 
+    const VIEWS = [
+        { id: "ttl", label: "Turtle" },
+        { id: "form", label: "Form" },
+    ];
+
     let editor = $state(null);
     let problemsExpanded = $state(true);
+
+    /** Which view of the open document is showing. Both edit the same unsaved buffer. */
+    let view = $state("ttl");
 
     /** Resolved when the user has answered the unsaved-changes dialog. */
     let pendingSwitch = $state(null);
@@ -59,6 +69,16 @@
     const workbench = $derived(
         selectedWorkspace && selectedGraph
             ? new ShapesWorkbench({
+                  datasetName: selectedWorkspace,
+                  graphUri: selectedGraph,
+              })
+            : null,
+    );
+
+    /** Reads and writes the buffer as shapes, for the form view. */
+    const formView = $derived(
+        selectedWorkspace && selectedGraph
+            ? new ShapesFormView({
                   datasetName: selectedWorkspace,
                   graphUri: selectedGraph,
               })
@@ -238,14 +258,59 @@
                             />
                         </div>
                     {:else}
-                        <TurtleEditor
-                            bind:this={editor}
-                            bind:value={workbench.text}
-                            findings={workbench.findings}
-                            {termSource}
-                            onSave={save}
-                            onchange={onTextChanged}
-                        />
+                        <div class="flex h-full min-h-0 flex-col">
+                            <div
+                                class="border-border flex h-9 shrink-0 items-center gap-2 border-b px-2"
+                            >
+                                {#each VIEWS as option (option.id)}
+                                    <button
+                                        class="cursor-pointer rounded px-3 py-1 text-sm {view ===
+                                        option.id
+                                            ? 'bg-background-select text-nav-active-text font-semibold'
+                                            : 'text-text-subtle hover:text-default-text'}"
+                                        onclick={() => (view = option.id)}
+                                    >
+                                        {option.label}
+                                    </button>
+                                {/each}
+                                {#if view === "form" && formView?.applying}
+                                    <span class="text-text-subtle text-xs">
+                                        applying…
+                                    </span>
+                                {/if}
+                            </div>
+
+                            <div class="min-h-0 flex-1">
+                                <!--
+                                  Both views are kept mounted so switching does not throw away the
+                                  editor's undo history or scroll position; only one is shown.
+                                -->
+                                <div
+                                    class="h-full {view === 'ttl'
+                                        ? ''
+                                        : 'hidden'}"
+                                >
+                                    <TurtleEditor
+                                        bind:this={editor}
+                                        bind:value={workbench.text}
+                                        findings={workbench.findings}
+                                        {termSource}
+                                        onSave={save}
+                                        onchange={onTextChanged}
+                                    />
+                                </div>
+                                {#if view === "form" && formView}
+                                    <FormEditor
+                                        form={formView}
+                                        turtle={workbench.text}
+                                        terms={termSource?.terms ?? []}
+                                        onturtle={next =>
+                                            (workbench.text = next)}
+                                        onvalidate={onTextChanged}
+                                    />
+                                {/if}
+                            </div>
+                        </div>
                     {/if}
                 </Pane>
                 <Pane size={23} minSize={15} maxSize={40}>

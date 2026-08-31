@@ -55,4 +55,12 @@ public class SchemaTerm {
      * repeating it would be most of the response for none of the information.
      */
     private String label;
+
+    /**
+     * The class a property is declared on, so a form can offer a class's own properties first.
+     *
+     * <p>Only set for {@link Kind#PROPERTY}. A property declared on several classes reports the
+     * first; the form uses this to order a list, not to decide what is allowed.
+     */
+    private String domain;
 }

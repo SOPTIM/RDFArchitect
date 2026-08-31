@@ -117,7 +117,8 @@ public class SchemaTermsService implements SchemaTermsUseCase {
             }
             var iri = node.getURI();
             var localName = localNameOf(iri);
-            var label = index.labelOf(node, profilesOf(index, node, kind)).orElse(null);
+            var profiles = profilesOf(index, node, kind);
+            var label = index.labelOf(node, profiles).orElse(null);
             terms.add(
                     SchemaTerm.builder()
                             .kind(kind)
@@ -125,6 +126,10 @@ public class SchemaTermsService implements SchemaTermsUseCase {
                             .namespace(namespaceOf(iri))
                             .localName(localName)
                             .label(localName.equals(label) ? null : label)
+                            .domain(
+                                    kind == SchemaTerm.Kind.PROPERTY
+                                            ? firstUri(index.domainsOf(node, profiles))
+                                            : null)
                             .build());
         }
     }
@@ -236,6 +241,15 @@ public class SchemaTermsService implements SchemaTermsUseCase {
 
     private static List<String> iris(Collection<VersionIri> profiles) {
         return profiles.stream().map(VersionIri::iri).toList();
+    }
+
+    private static String firstUri(Set<Node> nodes) {
+        return nodes.stream()
+                .filter(Node::isURI)
+                .map(Node::getURI)
+                .sorted()
+                .findFirst()
+                .orElse(null);
     }
 
     private static List<String> uris(Set<Node> nodes) {

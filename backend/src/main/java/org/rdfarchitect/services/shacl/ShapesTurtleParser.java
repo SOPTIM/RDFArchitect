@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.services.shacl.validation;
+package org.rdfarchitect.services.shacl;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.riot.Lang;
@@ -38,10 +38,10 @@ import java.util.List;
  * document reports that one problem plus any recoverable ones before it — not every problem in the
  * file.
  */
-final class ShapesTurtleParser {
+public final class ShapesTurtleParser {
 
     /** Code for a finding that came from the parser rather than from a shape check. */
-    static final String PARSE_ERROR_CODE = "TURTLE_PARSE_ERROR";
+    public static final String PARSE_ERROR_CODE = "TURTLE_PARSE_ERROR";
 
     /**
      * The graph parsed from {@code turtle} together with whatever the parser complained about.
@@ -50,11 +50,11 @@ final class ShapesTurtleParser {
      * @param findings parser complaints, in the order reported
      * @param failed whether parsing stopped early, leaving {@link #graph} incomplete
      */
-    record Result(Graph graph, List<ShapesValidationFinding> findings, boolean failed) {}
+    public record Result(Graph graph, List<ShapesValidationFinding> findings, boolean failed) {}
 
     private ShapesTurtleParser() {}
 
-    static Result parse(String turtle) {
+    public static Result parse(String turtle) {
         var findings = new ArrayList<ShapesValidationFinding>();
         var graph = GraphFactory.createDefaultGraph();
         boolean failed = false;

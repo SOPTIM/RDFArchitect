@@ -36,6 +36,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
+import org.rdfarchitect.services.shacl.ShapesTurtleParser;
 import org.rdfarchitect.shacl.dto.ShapesDocumentValidationResult;
 import org.rdfarchitect.shacl.dto.ShapesValidationFinding;
 import org.rdfarchitect.shacl.dto.ShapesValidationReport;
