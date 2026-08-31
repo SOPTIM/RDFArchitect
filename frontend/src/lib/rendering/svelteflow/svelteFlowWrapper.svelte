@@ -161,6 +161,7 @@
     $effect(() => {
         forceReloadTrigger.subscribe();
         editorState.selectedWorkspace.subscribe();
+        editorState.selectedDiagram.subscribe();
         refreshReadOnlyState();
     });
 
@@ -188,6 +189,24 @@
         multiSelectState.subscribe();
         editorState.selectedClass.subscribe();
         untrack(keepEscapeHandlerOnTop);
+    });
+
+    $effect(() => {
+        const readOnly = isWorkspaceReadOnly ?? false;
+        const currentEdges = edges;
+        untrack(() => {
+            let changed = false;
+            const next = currentEdges.map(edge => {
+                if ((edge.data?.readOnly ?? false) === readOnly) {
+                    return edge;
+                }
+                changed = true;
+                return { ...edge, data: { ...edge.data, readOnly } };
+            });
+            if (changed) {
+                edges = next;
+            }
+        });
     });
 
     onMount(() => {
@@ -756,8 +775,7 @@
     // points become sided end points, interior points become bend points.
     // Inheritance edges are skipped until they move to the shared routing.
     function applyLayoutedEdges(layoutedEdges) {
-        const tolerance =
-            EDGE_INTERACTION_CONFIG.collinearBendPointTolerancePx;
+        const tolerance = EDGE_INTERACTION_CONFIG.collinearBendPointTolerancePx;
         edges = edges.map(edge => {
             const routingPoints = layoutedEdges.get(edge.id);
             if (!routingPoints || routingPoints.length === 0) {
@@ -923,7 +941,8 @@
     />
     <SvelteFlowEdgeContextMenu
         request={contextMenus.edgeRequest}
-        disabled={isWorkspaceReadOnly || !contextMenus.edgeRequest}
+        disabled={!contextMenus.edgeRequest}
+        readOnly={isWorkspaceReadOnly}
         onClose={() => contextMenus.close()}
         onAddBendPoint={handleEdgeAddBendPoint}
         onDeleteBendPoint={handleEdgeDeleteBendPoint}

@@ -110,9 +110,6 @@ export class ContextMenuController {
 
     handleEdgeContextMenu({ event, edge }) {
         this.#consumeEvent(event);
-        if (this.#getIsReadOnly()) {
-            return;
-        }
 
         const edgeId = edge?.id;
         if (!edgeId) {
