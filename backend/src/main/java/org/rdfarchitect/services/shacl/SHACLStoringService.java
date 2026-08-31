@@ -34,7 +34,9 @@ import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.GraphUtils;
@@ -55,6 +57,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -79,6 +82,45 @@ public class SHACLStoringService
 
     private final DatabasePort databasePort;
 
+    /**
+     * All enabled shapes documents of the graph, read as one model.
+     *
+     * <p>SHACL is conjunctive: shapes targeting the same focus node all apply, and the language has
+     * no notion of one shape overriding another. Documents are therefore unioned, never resolved
+     * against each other — a precedence rule here would disagree with the file the user exports and
+     * with every SHACL engine that validates it. Where two documents genuinely cannot both hold (an
+     * unsatisfiable pair, or the same shape IRI defined twice), that is reported as a validation
+     * finding rather than silently decided.
+     *
+     * <p>Documents are added in {@link ShapesDocument#getOrder()} order so serialisation is stable.
+     * Disabled documents are left out: switching a document off is how a user takes its constraints
+     * out of validation and export.
+     *
+     * <p>Must be called inside a transaction on {@code ctx}. The result is detached from the stored
+     * graphs, so writes to it are not persisted.
+     */
+    private static Model readEnabledShapes(GraphContext ctx) {
+        var union = ModelFactory.createDefaultModel();
+        ctx.getShapesDocuments().values().stream()
+                .filter(ShapesDocument::isEnabled)
+                .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
+                .forEach(
+                        document -> {
+                            var model = ModelFactory.createModelForGraph(document.getGraph());
+                            // The first document to declare a prefix keeps it, so a later document
+                            // rebinding it cannot change what earlier shapes mean.
+                            model.getNsPrefixMap()
+                                    .forEach(
+                                            (prefix, uri) -> {
+                                                if (union.getNsPrefixURI(prefix) == null) {
+                                                    union.setNsPrefix(prefix, uri);
+                                                }
+                                            });
+                            union.add(model);
+                        });
+        return union;
+    }
+
     @Override
     public void replaceCustomSHACLGraph(GraphIdentifier graphIdentifier, Graph shacl) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
@@ -98,7 +140,7 @@ public class SHACLStoringService
     public ByteArrayOutputStream exportCustomSHACLGraph(
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(ctx);
             try (var outStream = new ByteArrayOutputStream()) {
                 customSHACL.write(outStream, format.getLang().getName());
                 return outStream;
@@ -144,7 +186,7 @@ public class SHACLStoringService
     public ByteArrayOutputStream exportCombinedSHACLGraph(
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(ctx);
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             ontologyModel.setNsPrefixes(
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()));
@@ -166,7 +208,7 @@ public class SHACLStoringService
     public ByteArrayOutputStream exportCustomSHACLNamespaces(
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(ctx);
             try (var outStream = new ByteArrayOutputStream()) {
                 var prefixModel = ModelFactory.createDefaultModel();
                 prefixModel.setNsPrefixes(customSHACL.getNsPrefixMap());
@@ -198,7 +240,7 @@ public class SHACLStoringService
     public CustomAndGeneratedTuple<SHACLToClassRelations> getSHACLToClassRelations(
             GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(ctx);
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             ontologyModel.setNsPrefixes(
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()));
@@ -257,7 +299,7 @@ public class SHACLStoringService
     private CustomAndGeneratedTuple<List<PropertyShape>> getSHACLShapesByProperty(
             GraphIdentifier graphIdentifier, UUID propertyUUID) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(ctx);
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             var property =
                     ontologyModel
@@ -308,7 +350,7 @@ public class SHACLStoringService
     public CustomAndGeneratedTuple<List<NodeShape>> getNodeShapesForClass(
             GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(ctx);
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             var classUri =
                     ontologyModel
@@ -333,7 +375,7 @@ public class SHACLStoringService
     public List<PropertyShapesWrapper> getPropertyShapes(
             GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(ctx);
             var shaclToClassAssigner =
                     new PropertyShapeToClassAssigner(
                             customSHACL, ModelFactory.createModelForGraph(ctx.getRdfGraph()));
