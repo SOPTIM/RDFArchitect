@@ -34,7 +34,7 @@
     const workspaceSelectId = `workspaceSelect-${uuidv4()}`;
 
     let workspaceName = $state(null);
-    let workspaces = $state();
+    let workspaces = $state([]);
     let base64Token = $state();
 
     const workspaceSelectionLocked = $derived(!!lockedWorkspaceName);
@@ -42,12 +42,17 @@
     async function onOpen() {
         workspaceName =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
-        workspaces = await workspaceStore.getWorkspaces();
+        workspaces = (await workspaceStore.getWorkspaces()) ?? [];
     }
 
     async function snapshotWorkspace() {
+        // The endpoint takes the workspace name as a raw request body: the
+        // backend reads it verbatim, so the default JSON serializer would send
+        // it quoted and the workspace would not be found.
         const { data, error } = await createSnapshot({
-            path: { datasetName: workspaceName },
+            body: workspaceName,
+            bodySerializer: null,
+            headers: { "Content-Type": "text/plain" },
         });
         if (!error) {
             base64Token = data;
