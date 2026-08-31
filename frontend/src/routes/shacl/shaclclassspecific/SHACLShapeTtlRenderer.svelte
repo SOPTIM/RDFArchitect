@@ -16,13 +16,7 @@
   -->
 
 <script>
-    import { onMount } from "svelte";
-
-    import { putShacl } from "$lib/api/generated/index.ts";
-    import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
-    import { editorState } from "$lib/sharedState.svelte.js";
 
     import SHACLNodeShapeEditor from "./editors/SHACLNodeShapeEditor.svelte";
     import ShaclPropertyShapeWrapperListEditor from "./editors/SHACLPropertyShapeWrapperListEditor.svelte";
@@ -32,239 +26,96 @@
         nodeShapesList,
         propertyShapesWrapperList,
         derivedPropertyShapesWrapperList,
-        readOnly = false,
-        expanded = true,
     } = $props();
 
     let showNamespaces = $state(false);
-    let showNodeShapes = $state(expanded);
-    let showPropertyShapes = $state(expanded);
-    let showDerivedPropertyShapes = $state(expanded);
-    let showUserInput = $state(false);
+    let showNodeShapes = $state(true);
+    let showPropertyShapes = $state(true);
+    let showDerivedPropertyShapes = $state(true);
 
-    let localNamespaces = $state(namespaces);
-    let localNodeShapesList = $state();
-    let localPropertyShapesWrapperList = $state();
-    let localDerivedPropertyShapesList = $state();
-
-    let userInput = $state("");
-
-    let classWorkspaceName = $derived(
-        editorState.selectedClassWorkspace.getValue() ??
-            editorState.selectedWorkspace.getValue(),
+    const hasAnything = $derived(
+        (nodeShapesList?.length ?? 0) > 0 ||
+            (propertyShapesWrapperList?.length ?? 0) > 0 ||
+            (derivedPropertyShapesWrapperList?.length ?? 0) > 0,
     );
-    let classGraphUri = $derived(
-        editorState.selectedClassGraph.getValue() ??
-            editorState.selectedGraph.getValue(),
-    );
-
-    onMount(() => setUpLocalLists());
-
-    function setUpLocalLists() {
-        if (nodeShapesList)
-            localNodeShapesList = JSON.parse(JSON.stringify(nodeShapesList));
-        if (propertyShapesWrapperList)
-            localPropertyShapesWrapperList = JSON.parse(
-                JSON.stringify(propertyShapesWrapperList),
-            );
-        if (derivedPropertyShapesWrapperList)
-            localDerivedPropertyShapesList = JSON.parse(
-                JSON.stringify(derivedPropertyShapesWrapperList),
-            );
-    }
-
-    function putChanges() {
-        const ttlString = buildTtlString(
-            localNamespaces,
-            localNodeShapesList,
-            localPropertyShapesWrapperList,
-        );
-        putShacl({
-            path: {
-                datasetName: classWorkspaceName,
-                graphURI: classGraphUri,
-                classUUID: editorState.selectedClass.getProperty("id"),
-            },
-            body: ttlString,
-        })
-            .then(res => {
-                if (!res.error) {
-                    console.log("successfully updated custom shacl of class.");
-                    toastStore.success(
-                        "SHACL shapes saved",
-                        "Custom SHACL shapes were saved.",
-                    );
-                } else {
-                    console.log("failed to update custom shacl of class.");
-                    toastStore.error(
-                        "Save failed",
-                        "Could not save custom SHACL shapes.",
-                    );
-                }
-            })
-            .catch(() => {
-                toastStore.error(
-                    "Save failed",
-                    "Could not save custom SHACL shapes.",
-                );
-            })
-            .finally(() => {
-                editorState.selectedClass.trigger();
-            });
-    }
-
-    function buildTtlString(
-        namespaces,
-        nodeShapesList,
-        propertyShapesWrapperList,
-    ) {
-        let ttlString = "";
-        if (namespaces) {
-            ttlString += namespaces;
-        }
-        if (nodeShapesList) {
-            for (const nodeShape of nodeShapesList) {
-                ttlString += nodeShape.triples;
-            }
-        }
-        if (propertyShapesWrapperList) {
-            for (const propertyShapeWrapper of propertyShapesWrapperList) {
-                for (const propertyShape of propertyShapeWrapper.propertyShapes) {
-                    ttlString += propertyShape.triples;
-                }
-            }
-        }
-        if (userInput) {
-            ttlString += userInput;
-        }
-        return ttlString;
-    }
-
-    function checkForChanges() {
-        return (
-            userInput ||
-            buildTtlString(
-                localNamespaces,
-                localNodeShapesList,
-                localPropertyShapesWrapperList,
-            ) !==
-                buildTtlString(
-                    namespaces,
-                    nodeShapesList,
-                    propertyShapesWrapperList,
-                )
-        );
-    }
 </script>
 
-<div class="flex h-fit flex-col">
-    <div>
-        {#if !readOnly && checkForChanges()}
-            <div class="w-fit">
-                <ButtonControl
-                    class="w-fit font-semibold italic hover:underline"
-                    callOnClick={putChanges}
-                >
-                    Save Changes
-                </ButtonControl>
-            </div>
-        {/if}
-    </div>
-    <div>
-        {#if namespaces && namespaces.length > 0}
+<!--
+  @component
+  The shapes that target one class, as the Turtle they were written in.
+
+  Read-only. Shapes reach this view merged from every enabled document, but the endpoints that used
+  to write them back always wrote to the graph's *default* document — so editing a rule that came
+  from an imported file left the original in place and added a second, contradicting copy, and the
+  edit never reached the document's text at all. Editing constraints is the workbench's job; this
+  view answers "what is enforced on this class".
+-->
+
+<div class="flex h-fit flex-col gap-1">
+    {#if !hasAnything}
+        <p class="text-text-subtle py-2 text-sm italic">
+            No constraints target this class.
+        </p>
+    {/if}
+
+    {#if nodeShapesList && nodeShapesList.length > 0}
+        <div>
             <button
-                class="w-fit font-bold hover:cursor-pointer hover:underline"
-                onclick={() => {
-                    showNamespaces = !showNamespaces;
-                }}
-            >
-                namespaces:
-            </button>
-            {#if showNamespaces}
-                <TurtleEditor
-                    autoGrow
-                    bind:value={localNamespaces}
-                    {readOnly}
-                />
-            {/if}
-        {:else}
-            <p class="text-default-text font-semibold">No namespaces found</p>
-        {/if}
-    </div>
-    <div>
-        {#if localNodeShapesList && localNodeShapesList.length > 0}
-            <button
-                class="w-fit font-semibold hover:cursor-pointer hover:underline"
+                class="text-default-text w-fit text-sm font-semibold hover:cursor-pointer hover:underline"
                 onclick={() => (showNodeShapes = !showNodeShapes)}
             >
-                NodeShapes:
+                Class rules ({nodeShapesList.length})
             </button>
-            {#if showNodeShapes && localNodeShapesList}
-                <SHACLNodeShapeEditor
-                    bind:nodeShapesList={localNodeShapesList}
-                    {readOnly}
-                />
+            {#if showNodeShapes}
+                <SHACLNodeShapeEditor {nodeShapesList} />
             {/if}
-        {:else}
-            <p class="text-default-text font-semibold">No NodeShapes found</p>
-        {/if}
-    </div>
-    <div>
-        {#if localPropertyShapesWrapperList && localPropertyShapesWrapperList.length > 0}
+        </div>
+    {/if}
+
+    {#if propertyShapesWrapperList && propertyShapesWrapperList.length > 0}
+        <div>
             <button
-                class="w-fit font-semibold hover:cursor-pointer hover:underline"
+                class="text-default-text w-fit text-sm font-semibold hover:cursor-pointer hover:underline"
                 onclick={() => (showPropertyShapes = !showPropertyShapes)}
             >
-                PropertyShapes:
+                Property rules ({propertyShapesWrapperList.length})
             </button>
-            {#if showPropertyShapes && localPropertyShapesWrapperList}
+            {#if showPropertyShapes}
                 <ShaclPropertyShapeWrapperListEditor
-                    bind:propertyShapesWrapperList={
-                        localPropertyShapesWrapperList
-                    }
-                    {readOnly}
+                    {propertyShapesWrapperList}
                 />
             {/if}
-        {:else}
-            <p class="text-default-text font-semibold">
-                No PropertyShapes found
-            </p>
-        {/if}
-    </div>
-    <div>
-        {#if localDerivedPropertyShapesList && localDerivedPropertyShapesList.length > 0}
+        </div>
+    {/if}
+
+    {#if derivedPropertyShapesWrapperList && derivedPropertyShapesWrapperList.length > 0}
+        <div>
             <button
-                class="w-fit font-semibold hover:cursor-pointer hover:underline"
+                class="text-default-text w-fit text-sm font-semibold hover:cursor-pointer hover:underline"
                 onclick={() =>
                     (showDerivedPropertyShapes = !showDerivedPropertyShapes)}
+                title="Rules the class inherits rather than declares"
             >
-                derived PropertyShapes:
+                Inherited property rules ({derivedPropertyShapesWrapperList.length})
             </button>
-            {#if showDerivedPropertyShapes && localDerivedPropertyShapesList}
+            {#if showDerivedPropertyShapes}
                 <ShaclPropertyShapeWrapperListEditor
-                    bind:propertyShapesWrapperList={
-                        localDerivedPropertyShapesList
-                    }
-                    readOnly={true}
+                    propertyShapesWrapperList={derivedPropertyShapesWrapperList}
                 />
             {/if}
-        {:else}
-            <p class="text-default-text font-semibold">
-                No derived PropertyShapes found
-            </p>
-        {/if}
-    </div>
-    {#if !readOnly}
-        <div class="mt-4">
-            {#if showUserInput}
-                <TurtleEditor autoGrow bind:value={userInput} {readOnly} />
-            {:else}
-                <button
-                    class="w-fit font-semibold hover:cursor-pointer hover:underline"
-                    onclick={() => (showUserInput = true)}
-                >
-                    add new custom shapes:
-                </button>
+        </div>
+    {/if}
+
+    {#if namespaces && namespaces.length > 0}
+        <div>
+            <button
+                class="text-text-subtle w-fit text-xs hover:cursor-pointer hover:underline"
+                onclick={() => (showNamespaces = !showNamespaces)}
+            >
+                Prefixes
+            </button>
+            {#if showNamespaces}
+                <TurtleEditor autoGrow value={namespaces} readOnly={true} />
             {/if}
         </div>
     {/if}

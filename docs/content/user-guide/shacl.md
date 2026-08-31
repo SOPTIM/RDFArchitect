@@ -86,7 +86,9 @@ A document with problems still saves. Validation is a report, not a gate — you
 
 In the class editor, every attribute and association row has a SHACL icon. Clicking it opens the **property-specific constraints (SHACL) dialog** — the subset of both generated and custom shapes that target that exact property on that exact class. This is by far the fastest way to answer *"what constraint is enforced on this attribute?"* without leaving the class you are looking at.
 
-A similar dialog at class level inspects the NodeShapes and PropertyShapes related to the selected class's properties, and offers **Open Workbench** for everything else.
+A similar dialog at class level shows the class rules, property rules and inherited property rules that target the selected class, alongside the classes that reference it.
+
+**Both dialogs read; the workbench writes.** They show constraints merged from every enabled document, and merged shapes cannot be written back — there is no way to tell which document a rule came from once they are combined, and the endpoints that used to try wrote every edit into the graph's default document instead. **Edit in workbench** takes you to the document the rule really lives in.
 
 ## Importing custom SHACL
 

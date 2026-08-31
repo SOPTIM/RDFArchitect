@@ -127,13 +127,13 @@
                         </ButtonControl>
                     </div>
                     <!--
-                      This popup shows only the shapes that target this class. Editing anything
-                      else about the document they live in — or seeing what validation says about
-                      it — belongs in the workbench.
+                      This popup reads; the workbench writes. Shapes arrive here merged from every
+                      enabled document, and there is no honest way to write one back without
+                      knowing which document it came from — see the component comment on
+                      SHACLShapeTtlRenderer.
                     -->
                     <div class="ml-auto w-48 text-nowrap">
                         <ButtonControl
-                            variant="inline"
                             callOnClick={() => {
                                 showDialog = false;
                                 goto("/shacl");
@@ -141,7 +141,7 @@
                         >
                             <span class="flex items-center gap-2">
                                 <Fa icon={faFileShield} />
-                                Open Workbench
+                                Edit in workbench
                             </span>
                         </ButtonControl>
                     </div>
@@ -156,7 +156,6 @@
                                 nodeShapesList={generatedShacl.nodeShapes}
                                 propertyShapesWrapperList={generatedShacl.propertyShapes}
                                 derivedPropertyShapesWrapperList={generatedShacl.derivedPropertyShapes}
-                                readOnly={true}
                             />
                         {:else}
                             <SHACLShapeTtlRenderer
@@ -164,7 +163,6 @@
                                 nodeShapesList={customShacl?.nodeShapes}
                                 propertyShapesWrapperList={customShacl?.propertyShapes}
                                 derivedPropertyShapesWrapperList={customShacl?.derivedPropertyShapes}
-                                readOnly={false}
                             />
                         {/if}
                     {/key}

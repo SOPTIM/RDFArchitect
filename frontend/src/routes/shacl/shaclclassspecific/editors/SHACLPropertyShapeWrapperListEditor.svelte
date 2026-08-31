@@ -17,36 +17,30 @@
 <script>
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
 
-    let {
-        propertyShapesWrapperList = $bindable(),
-        readOnly = false,
-        expanded = false,
-    } = $props();
+    let { propertyShapesWrapperList } = $props();
 
-    let showPropertyShapes = $state(
-        Array(propertyShapesWrapperList.length).fill(expanded),
-    );
+    /** Which properties are open, by label — no coupling to the list's length or order. */
+    let open = $state({});
 </script>
 
 {#if propertyShapesWrapperList}
-    {#each propertyShapesWrapperList as shapesWrapper, i}
+    {#each propertyShapesWrapperList as shapesWrapper (shapesWrapper.label)}
         <div class="ml-4">
             <button
                 class="w-fit hover:cursor-pointer hover:underline"
-                onmousedown={() => {
-                    showPropertyShapes[i] = !showPropertyShapes[i];
-                }}
+                onclick={() =>
+                    (open[shapesWrapper.label] = !open[shapesWrapper.label])}
             >
-                {shapesWrapper.label + ":"}
+                {shapesWrapper.label}
             </button>
         </div>
         <div class="space-y-4">
-            {#if showPropertyShapes[i]}
+            {#if open[shapesWrapper.label]}
                 {#each shapesWrapper.propertyShapes as propertyShape}
                     <TurtleEditor
                         autoGrow
-                        bind:value={propertyShape.triples}
-                        {readOnly}
+                        value={propertyShape.triples}
+                        readOnly={true}
                     />
                 {/each}
             {/if}

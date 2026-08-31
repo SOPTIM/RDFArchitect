@@ -74,6 +74,14 @@ import java.util.UUID;
  * <p>Reads span every enabled {@link ShapesDocument} (see {@code readEnabledShapes}); the
  * shape-level and property-level writes still target the graph's default document, which is what
  * the endpoints predating multiple documents address.
+ *
+ * <p>That asymmetry is why {@link #updateClassSHACL} and {@link #updatePropertyShacl} are
+ * deprecated and no longer reached from the UI. Editing a rule that came from an imported document
+ * could not remove it — it is not in the default document — so the edit was <em>added</em> beside
+ * the original, and SHACL being conjunctive the two then contradicted each other. Neither method
+ * updates the default document's {@code rawText} either, so the workbench kept showing the text
+ * from before the edit and overwrote it on the next save. Write through {@link
+ * #replaceShapesDocumentText}, which addresses one document and keeps its text authoritative.
  */
 @RequiredArgsConstructor
 public class SHACLStoringService

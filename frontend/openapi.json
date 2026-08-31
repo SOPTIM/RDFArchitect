@@ -4477,7 +4477,8 @@
         ]
       },
       "put" : {
-        "description" : "Replace the SHACL rules of an association.",
+        "deprecated" : true,
+        "description" : "Replace the SHACL rules of an association. Superseded by PUT /shacl/documents/{documentId}. Writes land in the graph's *default* shapes document whichever document the rule came from, and do not update that document's text — so an edit made here is invisible to, and overwritten by, the constraints workbench.",
         "operationId" : "replaceAssociationSHACL",
         "parameters" : [
           {
@@ -4854,7 +4855,8 @@
         ]
       },
       "put" : {
-        "description" : "Replace the SHACL rules of an attribute.",
+        "deprecated" : true,
+        "description" : "Replace the SHACL rules of an attribute. Superseded by PUT /shacl/documents/{documentId}. Writes land in the graph's *default* shapes document whichever document the rule came from, and do not update that document's text — so an edit made here is invisible to, and overwritten by, the constraints workbench.",
         "operationId" : "replaceAttributeSHACL",
         "parameters" : [
           {
@@ -5212,7 +5214,8 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/shacl/custom" : {
       "put" : {
-        "description" : "Replace or insert SHACL rules related to a class.",
+        "deprecated" : true,
+        "description" : "Replace or insert SHACL rules related to a class. Superseded by PUT /shacl/documents/{documentId}. Writes land in the graph's *default* shapes document whichever document the rule came from, and do not update that document's text — so an edit made here is invisible to, and overwritten by, the constraints workbench.",
         "operationId" : "putSHACL",
         "parameters" : [
           {

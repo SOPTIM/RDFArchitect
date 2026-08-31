@@ -16,21 +16,23 @@
   -->
 
 <script>
+    import { faFileShield } from "@fortawesome/free-solid-svg-icons";
+    import { Fa } from "svelte-fa";
+
     import {
         getAssociationShacl,
         getAttributeShacl,
         getCustomShaclNamespacesAsString,
         getGeneratedShaclNamespacesAsString,
-        replaceAssociationShacl,
-        replaceAttributeShacl,
     } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
     import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
     import { editorState } from "$lib/sharedState.svelte.js";
+
+    import { goto } from "$app/navigation";
 
     let {
         showDialog = $bindable(),
@@ -44,7 +46,6 @@
     });
 
     let customShacl = $state(defaultShacl());
-    let customShaclBackUp = $state("");
     let generatedShacl = $state(defaultShacl());
     let showGeneratedShacl = $state(false);
     let showGeneratedNamespaces = $state(false);
@@ -72,7 +73,6 @@
 
     function onClose() {
         customShacl = defaultShacl();
-        customShaclBackUp = "";
         generatedShacl = defaultShacl();
         showGeneratedShacl = false;
         showGeneratedNamespaces = false;
@@ -170,78 +170,14 @@
             } else {
                 customShacl.namespaces = await customRes.data;
             }
-
-            customShaclBackUp = buildTtlString(customShacl);
         } catch (error) {
             console.warn("Failed to fetch namespaces:", error);
         }
     }
 
-    async function saveChanges() {
-        const ttlString = buildTtlString(customShacl);
-        const type = getType();
-        try {
-            let res;
-            if (type === "attributes") {
-                res = await replaceAttributeShacl({
-                    path: {
-                        datasetName: classWorkspaceName,
-                        graphURI: classGraphUri,
-                        classUUID: getViewedClassUuid(),
-                        attributeUUID: property.uuid.value,
-                    },
-                    body: ttlString,
-                });
-            } else if (type === "associations") {
-                res = await replaceAssociationShacl({
-                    path: {
-                        datasetName: classWorkspaceName,
-                        graphURI: classGraphUri,
-                        classUUID: getViewedClassUuid(),
-                        associationUUID: property.uuid.value,
-                    },
-                    body: ttlString,
-                });
-            } else {
-                console.warn(
-                    "Failed to save custom SHACL: property type unknown",
-                );
-                toastStore.error(
-                    "Save failed",
-                    "Could not save property constraints.",
-                );
-                return;
-            }
-
-            if (res.error) {
-                console.warn("Failed to save custom SHACL:", res.error);
-                toastStore.error(
-                    "Save failed",
-                    "Could not save property constraints.",
-                );
-            } else {
-                toastStore.success("Constraints saved");
-            }
-        } catch (error) {
-            console.warn("Failed to save custom SHACL:", error);
-            toastStore.error(
-                "Save failed",
-                "An unexpected error occurred while saving property constraints.",
-            );
-        } finally {
-            await fetchShacl(getViewedClassUuid(), property.uuid.value);
-        }
-    }
-
-    function buildTtlString(shacl) {
-        let ttlString = "";
-        if (shacl.namespaces) {
-            ttlString += shacl.namespaces;
-        }
-        for (const propertyShape of shacl.propertyShapes) {
-            ttlString += propertyShape.triples + "\n";
-        }
-        return ttlString;
+    function openWorkbench() {
+        showDialog = false;
+        goto("/shacl");
     }
 </script>
 
@@ -273,13 +209,27 @@
                             Custom Constraints
                         </ButtonControl>
                     </div>
+                    <!--
+                      Reads only. The endpoint this used to save through wrote every edit into the
+                      graph's default document, whichever document the rule actually came from.
+                    -->
+                    <div class="ml-auto w-48 text-nowrap">
+                        <ButtonControl callOnClick={openWorkbench}>
+                            <span class="flex items-center gap-2">
+                                <Fa icon={faFileShield} />
+                                Edit in workbench
+                            </span>
+                        </ButtonControl>
+                    </div>
                 </div>
             </div>
             <div class="min-h-0 flex-1 overflow-y-auto rounded">
                 {#if showGeneratedShacl}
                     <div class="flex flex-col">
                         {#if generatedShacl.namespaces.trim().length === 0}
-                            <p class="">No namespaces found.</p>
+                            <p class="text-text-subtle text-sm italic">
+                                No prefixes.
+                            </p>
                         {:else}
                             <button
                                 class="w-fit font-bold hover:cursor-pointer hover:underline"
@@ -300,7 +250,9 @@
                         {/if}
                         <div class="my-2 space-y-2">
                             {#if generatedShacl.propertyShapes.length === 0}
-                                <p class="">No Constraints (SHACL) found.</p>
+                                <p class="text-text-subtle text-sm italic">
+                                    No constraints on this property.
+                                </p>
                             {/if}
                             {#each generatedShacl.propertyShapes as propertyShape}
                                 <div>
@@ -315,15 +267,10 @@
                     </div>
                 {:else}
                     <div class="flex h-full flex-col">
-                        {#if buildTtlString(customShacl) !== customShaclBackUp}
-                            <div class="w-fit">
-                                <ButtonControl callOnClick={saveChanges}>
-                                    Save Changes
-                                </ButtonControl>
-                            </div>
-                        {/if}
                         {#if customShacl.namespaces.trim().length === 0}
-                            <p class="">No namespaces found.</p>
+                            <p class="text-text-subtle text-sm italic">
+                                No prefixes.
+                            </p>
                         {:else}
                             <button
                                 class="w-fit font-bold hover:underline"
@@ -338,20 +285,22 @@
                         {#if showCustomNamespaces}
                             <TurtleEditor
                                 autoGrow
-                                bind:value={customShacl.namespaces}
-                                readOnly={false}
+                                value={customShacl.namespaces}
+                                readOnly={true}
                             />
                         {/if}
                         <div class="my-2 space-y-2">
                             {#if customShacl.propertyShapes.length === 0}
-                                <p class="">No Constraints (SHACL) found.</p>
+                                <p class="text-text-subtle text-sm italic">
+                                    No constraints on this property.
+                                </p>
                             {/if}
                             {#each customShacl.propertyShapes as propertyShape}
                                 <div>
                                     <TurtleEditor
                                         autoGrow
-                                        bind:value={propertyShape.triples}
-                                        readOnly={false}
+                                        value={propertyShape.triples.trim()}
+                                        readOnly={true}
                                     />
                                 </div>
                             {/each}

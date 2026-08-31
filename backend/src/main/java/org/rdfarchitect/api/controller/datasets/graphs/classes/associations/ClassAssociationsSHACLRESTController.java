@@ -108,8 +108,15 @@ public class ClassAssociationsSHACLRESTController {
 
     @Operation(
             summary = "replace SHACL of an association",
-            description = "Replace the SHACL rules of an association.",
-            tags = {"shacl"})
+            description =
+                    "Replace the SHACL rules of an association. "
+                            + "Superseded by PUT /shacl/documents/{documentId}. Writes land in "
+                            + "the graph's *default* shapes document whichever "
+                            + "document the rule came from, and do not update that "
+                            + "document's text — so an edit made here is invisible "
+                            + "to, and overwritten by, the constraints workbench.",
+            tags = {"shacl"},
+            deprecated = true)
     // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
     // body would reach Jena with its surrounding quotes and fail to parse.
     @PutMapping(consumes = MediaType.TEXT_PLAIN_VALUE)

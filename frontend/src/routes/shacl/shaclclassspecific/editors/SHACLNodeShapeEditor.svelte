@@ -18,29 +18,24 @@
     import { URI } from "$lib/models/dto/index.ts";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
 
-    let {
-        nodeShapesList = $bindable(),
-        readOnly = false,
-        expanded = false,
-    } = $props();
+    let { nodeShapesList } = $props();
 
-    let showNodeShapes = $state(Array(nodeShapesList.length).fill(expanded));
+    /** Which shapes are open, by id — no coupling to the list's length or order. */
+    let open = $state({});
 </script>
 
 {#if nodeShapesList}
-    {#each nodeShapesList as nodeShape, i}
+    {#each nodeShapesList as nodeShape (nodeShape.id)}
         <div class="ml-4">
             <button
                 class="w-fit hover:cursor-pointer hover:underline"
-                onmousedown={() => {
-                    showNodeShapes[i] = !showNodeShapes[i];
-                }}
+                onclick={() => (open[nodeShape.id] = !open[nodeShape.id])}
             >
-                {new URI(nodeShape.id).suffix + ":"}
+                {new URI(nodeShape.id).suffix}
             </button>
         </div>
-        {#if showNodeShapes[i]}
-            <TurtleEditor autoGrow bind:value={nodeShape.triples} {readOnly} />
+        {#if open[nodeShape.id]}
+            <TurtleEditor autoGrow value={nodeShape.triples} readOnly={true} />
         {/if}
     {/each}
 {/if}
