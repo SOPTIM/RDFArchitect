@@ -59,9 +59,13 @@ class SchemaTermsServiceTest {
             <http://ex.org/EQ> a owl:Ontology ;
                 owl:versionIRI <http://ex.org/EQ/1.0> .
 
+            cim:Wires a cims:ClassCategory ;
+                rdfs:label "Wires" .
+
             cim:ACLineSegment a rdfs:Class ;
                 rdfs:label "ACLineSegment" ;
-                rdfs:comment "A wire or combination of wires." .
+                rdfs:comment "A wire or combination of wires." ;
+                cims:belongsToCategory cim:Wires .
 
             cim:Terminal a rdfs:Class ;
                 rdfs:label "A terminal" .
@@ -200,6 +204,23 @@ class SchemaTermsServiceTest {
     }
 
     @Test
+    void aClassCarriesThePackageItsDiagramBelongsTo() {
+        // Opening the class editor alone leaves the diagram wherever the user last was, so the
+        // package is what lets the caller put the class on screen highlighted.
+        var detail = service.detailOf(GRAPH, "http://iec.ch/TC57/CIM100#ACLineSegment");
+
+        assertThat(detail.getPackageUUID()).isNotNull();
+    }
+
+    @Test
+    void aClassInNoPackageNamesNone() {
+        var detail = service.detailOf(GRAPH, "http://iec.ch/TC57/CIM100#Terminal");
+
+        assertThat(detail.getClassUUID()).isNotNull();
+        assertThat(detail.getPackageUUID()).isNull();
+    }
+
+    @Test
     void aPropertyLeadsToTheClassItIsOn() {
         // A property is edited as a row of its class, so its domain is the useful destination.
         var onClass = service.detailOf(GRAPH, "http://iec.ch/TC57/CIM100#ACLineSegment");
@@ -207,6 +228,7 @@ class SchemaTermsServiceTest {
 
         assertThat(onProperty.getClassUUID()).isEqualTo(onClass.getClassUUID());
         assertThat(onProperty.getGraphUri()).isEqualTo(onClass.getGraphUri());
+        assertThat(onProperty.getPackageUUID()).isEqualTo(onClass.getPackageUUID());
     }
 
     @Test

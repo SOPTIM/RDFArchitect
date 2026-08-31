@@ -19,6 +19,7 @@ import {
     createShapesDocument,
     createShapesDocumentFromFile,
     deleteShapesDocument,
+    getGeneratedShaclasString,
     getShapesDocumentText,
     listShapesDocuments,
     replaceShapesDocumentText,
@@ -40,6 +41,20 @@ export const VALIDATION_DEBOUNCE_MS = 500;
 /** Said instead of a server error when the workspace is the reason nothing can be written. */
 const READ_ONLY =
     "This workspace is read-only, so its constraints cannot be changed.";
+
+/**
+ * The id of the shapes RDFArchitect derives from the schema itself.
+ *
+ * Not a document: nothing stores it, and it is rebuilt from the classes every time it is asked
+ * for. It sits in the list anyway because the list is where someone looks for "what constrains
+ * this schema", and the generated rules are most of the answer — reading them beside an imported
+ * file is what makes a conformance report legible. A plain string, so it can never collide with a
+ * document's UUID.
+ */
+export const GENERATED_ID = "generated";
+
+/** What the generated entry is called in the list. */
+export const GENERATED_NAME = "Generated rules";
 
 /** An empty per-document result, so a badge has something to render before the first report. */
 const NO_FINDINGS = {
@@ -98,6 +113,8 @@ export class ShapesWorkbench {
     readOnly = $state(true);
     loading = $state(false);
     saving = $state(false);
+    /** True while the generated rules are being fetched for the first time. */
+    generating = $state(false);
     validating = $state(false);
     /** Last failure, shown in place of the editor rather than swallowed. */
     error = $state(null);
@@ -109,6 +126,8 @@ export class ShapesWorkbench {
     #graphUri;
     #requestOptions;
     #timer = null;
+    /** The generated Turtle, fetched once. Cleared whenever a save changes the schema's version. */
+    #generated = null;
 
     constructor({ datasetName, graphUri, requestOptions = {} }) {
         this.#datasetName = datasetName;
@@ -127,8 +146,40 @@ export class ShapesWorkbench {
         );
     }
 
+    /** The document list as the UI shows it: the generated rules, then the graph's documents. */
+    get entries() {
+        return [
+            {
+                id: GENERATED_ID,
+                name: GENERATED_NAME,
+                generated: true,
+                enabled: true,
+            },
+            ...this.documents,
+        ];
+    }
+
+    /** Whether what is open is the generated rules rather than a document. */
+    get showingGenerated() {
+        return this.selectedId === GENERATED_ID;
+    }
+
+    /**
+     * Whether the editor must refuse edits.
+     *
+     * Two unrelated reasons, and the editor only needs the answer: the workspace may be read-only,
+     * and the generated rules are derived from the schema — editing them would mean editing a view.
+     */
+    get editorReadOnly() {
+        return this.readOnly || this.showingGenerated;
+    }
+
     get dirty() {
-        return this.selectedId !== null && this.text !== this.savedText;
+        return (
+            this.selectedId !== null &&
+            !this.showingGenerated &&
+            this.text !== this.savedText
+        );
     }
 
     /** The profiles the shapes were checked against, for the inspector. */
@@ -150,6 +201,10 @@ export class ShapesWorkbench {
     }
 
     resultFor(documentId) {
+        if (documentId === GENERATED_ID) {
+            // Nothing validates the generated shapes against the schema they were generated from.
+            return NO_FINDINGS;
+        }
         if (documentId === this.selectedId && this.#bufferIsCurrent()) {
             return this.bufferReport?.documents?.[0] ?? NO_FINDINGS;
         }
@@ -215,6 +270,10 @@ export class ShapesWorkbench {
             this.savedText = "";
             return;
         }
+        if (documentId === GENERATED_ID) {
+            await this.#showGenerated();
+            return;
+        }
         const { data, error } = await getShapesDocumentText({
             ...this.#requestOptions,
             path: { ...this.path, documentId },
@@ -235,6 +294,14 @@ export class ShapesWorkbench {
      *     that only says "could not be saved" leaves the user with nowhere to look.
      */
     async save() {
+        if (this.showingGenerated) {
+            return {
+                saved: false,
+                reason:
+                    "The generated rules come from the schema itself. Change the classes, or" +
+                    " copy what you need into a document of your own.",
+            };
+        }
         if (!this.selectedId || this.saving || this.readOnly) {
             return { saved: false, reason: this.readOnly ? READ_ONLY : null };
         }
@@ -253,6 +320,8 @@ export class ShapesWorkbench {
                 return { saved: false, reason: reasonFrom(error) };
             }
             this.savedText = this.text;
+            // The schema's version moves with a shapes save, so anything derived from it is stale.
+            this.#generated = null;
             await this.#refreshDocuments();
             await this.validateAll();
             return { saved: true, reason: null };
@@ -379,8 +448,44 @@ export class ShapesWorkbench {
             (a, b) => (a.order ?? 0) - (b.order ?? 0),
         );
         this.error = null;
-        if (!this.documents.some(document => document.id === this.selectedId)) {
+        if (
+            !this.showingGenerated &&
+            !this.documents.some(document => document.id === this.selectedId)
+        ) {
             this.selectedId = this.documents[0]?.id ?? null;
+        }
+    }
+
+    /**
+     * Puts the shapes the schema implies in the editor, read-only.
+     *
+     * Fetched rather than derived here: the same generator answers the export and the conformance
+     * check, and a second implementation in the browser would be a second thing to keep true.
+     */
+    async #showGenerated() {
+        if (this.#generated !== null) {
+            this.text = this.#generated;
+            this.savedText = this.#generated;
+            return;
+        }
+        this.generating = true;
+        try {
+            const { data, error } = await getGeneratedShaclasString({
+                ...this.#requestOptions,
+                path: this.path,
+            });
+            if (error) {
+                this.error = "The generated rules could not be read.";
+                this.text = "";
+                this.savedText = "";
+                return;
+            }
+            this.#generated = data ?? "";
+            this.text = this.#generated;
+            this.savedText = this.#generated;
+            this.error = null;
+        } finally {
+            this.generating = false;
         }
     }
 
@@ -409,7 +514,7 @@ export class ShapesWorkbench {
      * comparison — otherwise every shape the user has not renamed reads as defined twice.
      */
     async validateBuffer() {
-        if (this.selectedId === null) {
+        if (this.selectedId === null || this.showingGenerated) {
             return null;
         }
         const documentId = this.selectedId;

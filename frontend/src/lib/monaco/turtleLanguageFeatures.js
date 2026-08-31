@@ -55,7 +55,13 @@ export function detachTermSource(model) {
     sources.delete(model);
 }
 
-/** Registers what happens when the user follows a term to the class it belongs to. */
+/**
+ * Registers what happens when the user follows a term to the class it belongs to.
+ *
+ * The handler is given `(graphUri, classUUID, packageUUID)`. The package is part of the
+ * destination, not decoration: opening the class editor without it leaves the diagram showing
+ * wherever the user last was, with the class they asked for nowhere in sight.
+ */
 export function onOpenClass(handler) {
     openClass = handler;
 }
@@ -101,7 +107,7 @@ export function registerTurtleLanguageFeatures(monaco, languageId) {
             };
             return {
                 suggestions: completionEntries(
-                    source.terms,
+                    source.completionTerms ?? source.terms,
                     prefixesOf(model),
                 ).map(entry => ({
                     label: entry.label,
@@ -171,10 +177,13 @@ export function registerTurtleLanguageFeatures(monaco, languageId) {
             }
             // Monaco wants a location to open. The uri is a handle rather than a document: the
             // opener below recognises the scheme and navigates the app instead of opening a model.
+            // The package rides along in the query because it is what says which diagram to put on
+            // screen, and a class that belongs to none simply leaves it empty.
             return {
                 uri: monaco.Uri.from({
                     scheme: CLASS_SCHEME,
                     path: `/${encodeURIComponent(detail.graphUri)}/${detail.classUUID}`,
+                    query: detail.packageUUID ?? "",
                 }),
                 range: {
                     startLineNumber: 1,
@@ -194,7 +203,11 @@ export function registerTurtleLanguageFeatures(monaco, languageId) {
             const [graphUri, classUUID] = resource.path
                 .replace(/^\//, "")
                 .split("/");
-            openClass(decodeURIComponent(graphUri), classUUID);
+            openClass(
+                decodeURIComponent(graphUri),
+                classUUID,
+                resource.query || null,
+            );
             return true;
         },
     });

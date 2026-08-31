@@ -35,7 +35,11 @@
     import { SchemaTermSource } from "$lib/shacl/schemaTermSource.svelte.js";
     import { parsePrefixes } from "$lib/shacl/turtleTerms.js";
     import { ShapesWorkbench } from "$lib/shacl/workbenchState.svelte.js";
-    import { ClassType, editorState } from "$lib/sharedState.svelte.js";
+    import {
+        ClassType,
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
 
     import ConformanceReportView from "./workbench/ConformanceReportView.svelte";
     import DocumentInspector from "./workbench/DocumentInspector.svelte";
@@ -109,9 +113,24 @@
             : null,
     );
 
+    /**
+     * The generated rules are a view of the schema, so only the Turtle tab means anything for
+     * them: there is no document to edit as a form, and comparing them with the schema they were
+     * generated from would compare a thing with itself.
+     */
+    const views = $derived(
+        workbench?.showingGenerated ? VIEWS.slice(0, 1) : VIEWS,
+    );
+
     $effect(() => {
         editorState.selectedWorkspace.subscribe();
         editorState.selectedGraph.subscribe();
+    });
+
+    $effect(() => {
+        if (!views.some(option => option.id === view)) {
+            view = "ttl";
+        }
     });
 
     $effect(() => {
@@ -120,19 +139,35 @@
     });
 
     /**
-     * Following a term opens the class it belongs to in the class editor.
+     * Following a term opens the class it belongs to and puts it on screen.
+     *
+     * The same three steps the search bar takes, because "go to definition" and "search for a
+     * class" are the same request: select the package so the right diagram is drawn, select the
+     * class so the editor fills, and set the focused class so the diagram scrolls to it and
+     * highlights it. Opening the class editor alone left the user looking at whatever diagram they
+     * had been on.
      *
      * Registered here because the workbench is where the navigation makes sense; the editor
      * component only knows it was asked to follow something.
      */
     $effect(() => {
-        onOpenClass((graphUri, classUuid) => {
+        onOpenClass((graphUri, classUUID, packageUUID) => {
+            editorState.selectPackage(
+                selectedWorkspace,
+                graphUri,
+                packageUUID ?? "default",
+            );
             editorState.selectedClassWorkspace.updateValue(selectedWorkspace);
             editorState.selectedClassGraph.updateValue(graphUri);
             editorState.selectedClass.updateValue({
                 type: ClassType.SINGLE_CLASS,
-                id: classUuid,
+                id: classUUID,
             });
+            editorState.focusedClassUUID.updateValue(classUUID);
+            editorState.selectedWorkspace.trigger();
+            editorState.selectedGraph.trigger();
+            editorState.selectedDiagram.trigger();
+            forceReloadTrigger.trigger();
             goto("/mainpage");
         });
         return () => onOpenClass(null);
@@ -235,6 +270,11 @@
                     validating…
                 </span>
             {/if}
+            {#if workbench.generating}
+                <span class="text-text-subtle shrink-0 text-xs">
+                    generating…
+                </span>
+            {/if}
             <div class="ml-auto h-8 w-32 shrink-0">
                 <ButtonControl
                     callOnClick={save}
@@ -282,7 +322,7 @@
                             <div
                                 class="border-border flex h-9 shrink-0 items-center gap-2 border-b px-2"
                             >
-                                {#each VIEWS as option (option.id)}
+                                {#each views as option (option.id)}
                                     <button
                                         class="cursor-pointer rounded px-3 py-1 text-sm {view ===
                                         option.id
@@ -296,6 +336,11 @@
                                 {#if view === "form" && formView?.applying}
                                     <span class="text-text-subtle text-xs">
                                         applying…
+                                    </span>
+                                {/if}
+                                {#if workbench.showingGenerated}
+                                    <span class="text-text-subtle text-xs">
+                                        derived from the schema — read-only
                                     </span>
                                 {/if}
                             </div>
@@ -315,7 +360,7 @@
                                         bind:value={workbench.text}
                                         findings={workbench.findings}
                                         {termSource}
-                                        readOnly={workbench.readOnly}
+                                        readOnly={workbench.editorReadOnly}
                                         onSave={save}
                                         onchange={onTextChanged}
                                     />
@@ -334,8 +379,6 @@
                                     <ConformanceReportView
                                         {conformance}
                                         documentId={workbench.selectedId}
-                                        documentName={workbench.selected
-                                            ?.name ?? ""}
                                         prefixes={parsePrefixes(workbench.text)}
                                     />
                                 {/if}

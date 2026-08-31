@@ -24,12 +24,14 @@
         faFileImport,
         faPen,
         faTrash,
+        faWandMagicSparkles,
     } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { uniqueDocumentName } from "$lib/shacl/documentNames.js";
     import {
         severityMeta,
         summarise,
@@ -89,17 +91,10 @@
 
     /** The backend rejects a duplicate name, so a second "eq.ttl" becomes "eq.ttl (2)". */
     function uniqueName(name) {
-        const taken = new Set(
+        return uniqueDocumentName(
             workbench.documents.map(document => document.name),
+            name,
         );
-        if (!taken.has(name)) {
-            return name;
-        }
-        let suffix = 2;
-        while (taken.has(`${name} (${suffix})`)) {
-            suffix += 1;
-        }
-        return `${name} (${suffix})`;
     }
 
     function startRename(document) {
@@ -141,6 +136,10 @@
 
   Every enabled document applies and none overrides another, so the checkbox is about
   participation and the arrows are about reading order — neither changes which constraints win.
+
+  The first entry is not a document at all: it is what RDFArchitect derives from the schema. It is
+  in the list because this is where someone looks for "what constrains this schema", and reading
+  the generated rules beside an imported file is what makes a conformance report legible.
 -->
 
 <div class="flex h-full min-h-0 flex-col">
@@ -174,7 +173,7 @@
     </div>
 
     <ul class="min-h-0 flex-1 overflow-y-auto">
-        {#each workbench.documents as document (document.id)}
+        {#each workbench.entries as document (document.id)}
             {@const result = results.get(document.id)}
             {@const worst = result?.errorCount
                 ? "ERROR"
@@ -189,19 +188,28 @@
                     : 'hover:bg-nav-hover-background border-l-2 border-l-transparent'}"
             >
                 <div class="flex items-center gap-2 px-2 py-1.5">
-                    <div
-                        class="shrink-0"
-                        title="Take part in validation and export"
-                    >
-                        <CheckBoxEditControl
-                            value={document.enabled}
-                            readonly={readOnly}
-                            callOnInputTrue={() =>
-                                workbench.setEnabled(document.id, true)}
-                            callOnInputFalse={() =>
-                                workbench.setEnabled(document.id, false)}
-                        />
-                    </div>
+                    {#if document.generated}
+                        <div
+                            class="text-text-subtle shrink-0"
+                            title="Derived from the schema itself — not a stored document"
+                        >
+                            <Fa icon={faWandMagicSparkles} />
+                        </div>
+                    {:else}
+                        <div
+                            class="shrink-0"
+                            title="Take part in validation and export"
+                        >
+                            <CheckBoxEditControl
+                                value={document.enabled}
+                                readonly={readOnly}
+                                callOnInputTrue={() =>
+                                    workbench.setEnabled(document.id, true)}
+                                callOnInputFalse={() =>
+                                    workbench.setEnabled(document.id, false)}
+                            />
+                        </div>
+                    {/if}
 
                     {#if renamingId === document.id}
                         <!-- svelte-ignore a11y_autofocus -->
@@ -221,7 +229,9 @@
                         <button
                             class="min-w-0 flex-1 cursor-pointer text-left"
                             ondblclick={() => {
-                                if (!readOnly) startRename(document);
+                                if (!readOnly && !document.generated) {
+                                    startRename(document);
+                                }
                             }}
                             onclick={() => open(document.id)}
                         >
@@ -236,14 +246,20 @@
                             <span
                                 class="text-text-subtle block truncate text-xs"
                             >
-                                {document.tripleCount ?? 0} triples{summary
-                                    ? ` · ${summary}`
-                                    : ""}
+                                {#if document.generated}
+                                    from the schema · read-only
+                                {:else}
+                                    {document.tripleCount ?? 0} triples{summary
+                                        ? ` · ${summary}`
+                                        : ""}
+                                {/if}
                             </span>
                         </button>
                     {/if}
 
-                    {#if worst}
+                    {#if document.generated}
+                        <!-- Nothing validates the generated shapes against their own schema. -->
+                    {:else if worst}
                         <Fa
                             icon={severityMeta(worst).icon}
                             class="shrink-0 {severityMeta(worst).text}"
@@ -256,7 +272,7 @@
                     {/if}
                 </div>
 
-                {#if !readOnly}
+                {#if !readOnly && !document.generated}
                     <div
                         class="flex justify-end gap-1 px-2 pb-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
                     >

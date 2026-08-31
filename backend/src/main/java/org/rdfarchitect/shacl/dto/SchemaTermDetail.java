@@ -70,4 +70,13 @@ public class SchemaTermDetail {
 
     /** The class's id in {@link #graphUri}, or {@code null} when there is none to open. */
     private UUID classUUID;
+
+    /**
+     * The package the class sits in, so following a term can open the diagram it is drawn on.
+     *
+     * <p>Opening the class editor alone leaves the diagram showing wherever the user last was, and
+     * the class they asked for unhighlighted. {@code null} when the class belongs to no package,
+     * which the caller reads as the graph's default diagram.
+     */
+    private UUID packageUUID;
 }

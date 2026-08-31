@@ -22,11 +22,14 @@ import de.soptim.opencgmes.cimvocabcheck.core.schema.SchemaIndex;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.shacl.validation.SchemaIndexCache;
 import org.rdfarchitect.shacl.dto.SchemaTerm;
@@ -57,8 +60,8 @@ public class SchemaTermsService implements SchemaTermsUseCase {
 
     private final SchemaIndexCache schemaIndexCache;
 
-    /** Where a term can be opened for editing. */
-    private record ClassLocation(String graphUri, UUID classUUID) {}
+    /** Where a term can be opened for editing, and which diagram shows it. */
+    private record ClassLocation(String graphUri, UUID classUUID, UUID packageUUID) {}
 
     @Override
     public SchemaTerms listTerms(GraphIdentifier graphIdentifier) {
@@ -102,6 +105,7 @@ public class SchemaTermsService implements SchemaTermsUseCase {
                 .profiles(iris(profiles))
                 .graphUri(location.map(ClassLocation::graphUri).orElse(null))
                 .classUUID(location.map(ClassLocation::classUUID).orElse(null))
+                .packageUUID(location.map(ClassLocation::packageUUID).orElse(null))
                 .build();
     }
 
@@ -193,22 +197,42 @@ public class SchemaTermsService implements SchemaTermsUseCase {
      * <p>Found by the {@code rdfa:uuid} the in-memory database stamps onto every typed resource on
      * commit, which is the same id the class editor is addressed by. A term that only a read-only
      * imported profile declares has none, and is simply not followable.
+     *
+     * <p>The package is read in the same pass. It is what tells the caller which diagram to put on
+     * screen, and looking it up separately would mean walking every graph a second time.
      */
     private Optional<ClassLocation> locateClass(String datasetName, Node classNode) {
         for (String graphUri : databasePort.listGraphUris(datasetName)) {
             var identifier = new GraphIdentifier(datasetName, graphUri);
             try (var ctx = databasePort.getGraphWithContext(identifier).begin(ReadWrite.READ)) {
-                var uuid =
-                        ctx.getRdfGraph().stream(classNode, RDFA.uuid.asNode(), Node.ANY)
-                                .map(triple -> asUuid(triple.getObject()))
-                                .filter(Objects::nonNull)
-                                .findFirst();
+                var graph = ctx.getRdfGraph();
+                var uuid = uuidOf(graph, classNode);
                 if (uuid.isPresent()) {
-                    return Optional.of(new ClassLocation(graphUri, uuid.get()));
+                    return Optional.of(
+                            new ClassLocation(
+                                    graphUri,
+                                    uuid.get(),
+                                    packageOf(graph, classNode).orElse(null)));
                 }
             }
         }
         return Optional.empty();
+    }
+
+    /** The id of the package the class declares itself part of, if it declares one. */
+    private static Optional<UUID> packageOf(Graph graph, Node classNode) {
+        return graph.stream(classNode, CIMS.belongsToCategory.asNode(), Node.ANY)
+                .map(Triple::getObject)
+                .filter(Node::isURI)
+                .flatMap(category -> uuidOf(graph, category).stream())
+                .findFirst();
+    }
+
+    private static Optional<UUID> uuidOf(Graph graph, Node subject) {
+        return graph.stream(subject, RDFA.uuid.asNode(), Node.ANY)
+                .map(triple -> asUuid(triple.getObject()))
+                .filter(Objects::nonNull)
+                .findFirst();
     }
 
     private static UUID asUuid(Node object) {

@@ -45,6 +45,18 @@ let target = null;
 function fakeWorkbench(overrides = {}) {
     return {
         documents: DOCUMENTS,
+        // Mirrors the real getter: the generated rules are always the first row.
+        get entries() {
+            return [
+                {
+                    id: "generated",
+                    name: "Generated rules",
+                    generated: true,
+                    enabled: true,
+                },
+                ...this.documents,
+            ];
+        },
         selectedId: "eq",
         results: [
             {
@@ -80,6 +92,11 @@ function render(props) {
     return target;
 }
 
+/** The document rows, without the generated-rules row the list always shows first. */
+function documentRows(list) {
+    return [...list.querySelectorAll("li")].slice(1);
+}
+
 /** The row's controls, by their accessible name. */
 function button(row, label) {
     return [...row.querySelectorAll("button")].find(
@@ -101,7 +118,7 @@ afterEach(() => {
 describe("DocumentList", () => {
     test("shows each document with its triple count and problem summary", () => {
         const list = render({ workbench: fakeWorkbench() });
-        const rows = [...list.querySelectorAll("li")];
+        const rows = documentRows(list);
 
         expect(rows).toHaveLength(2);
         expect(rows[0].textContent.replace(/\s+/g, " ")).toContain(
@@ -116,7 +133,7 @@ describe("DocumentList", () => {
         const onbeforeswitch = vi.fn().mockResolvedValue(false);
         const list = render({ workbench, onbeforeswitch });
 
-        [...list.querySelectorAll("li")][1].querySelector("button").click();
+        documentRows(list)[1].querySelector("button").click();
         await Promise.resolve();
 
         expect(onbeforeswitch).toHaveBeenCalled();
@@ -130,7 +147,7 @@ describe("DocumentList", () => {
             onbeforeswitch: () => Promise.resolve(true),
         });
 
-        [...list.querySelectorAll("li")][1].querySelector("button").click();
+        documentRows(list)[1].querySelector("button").click();
         await Promise.resolve();
         await Promise.resolve();
 
@@ -141,7 +158,7 @@ describe("DocumentList", () => {
         const onbeforeswitch = vi.fn();
         const list = render({ workbench: fakeWorkbench(), onbeforeswitch });
 
-        [...list.querySelectorAll("li")][0].querySelector("button").click();
+        documentRows(list)[0].querySelector("button").click();
         await Promise.resolve();
 
         expect(onbeforeswitch).not.toHaveBeenCalled();
@@ -150,7 +167,7 @@ describe("DocumentList", () => {
     test("reordering goes through the workbench", () => {
         const workbench = fakeWorkbench();
         const list = render({ workbench });
-        const rows = [...list.querySelectorAll("li")];
+        const rows = documentRows(list);
 
         button(rows[0], "Move down").click();
         flushSync();
@@ -160,7 +177,7 @@ describe("DocumentList", () => {
 
     test("the default document cannot be deleted", () => {
         const list = render({ workbench: fakeWorkbench() });
-        const rows = [...list.querySelectorAll("li")];
+        const rows = documentRows(list);
 
         expect(button(rows[0], "Delete")).toBeDefined();
         expect(button(rows[1], "Delete")).toBeUndefined();
@@ -169,7 +186,7 @@ describe("DocumentList", () => {
     test("renaming replaces the label with an input and commits on Enter", async () => {
         const workbench = fakeWorkbench();
         const list = render({ workbench });
-        const row = [...list.querySelectorAll("li")][0];
+        const row = documentRows(list)[0];
 
         button(row, "Rename").click();
         flushSync();
@@ -190,7 +207,7 @@ describe("DocumentList", () => {
     test("escape abandons a rename", () => {
         const workbench = fakeWorkbench();
         const list = render({ workbench });
-        const row = [...list.querySelectorAll("li")][0];
+        const row = documentRows(list)[0];
 
         button(row, "Rename").click();
         flushSync();
@@ -201,6 +218,35 @@ describe("DocumentList", () => {
 
         expect(workbench.rename).not.toHaveBeenCalled();
         expect(list.textContent).toContain("eq.ttl");
+    });
+
+    test("the generated rules head the list, read-only and with no checkbox", () => {
+        const list = render({ workbench: fakeWorkbench() });
+        const generated = [...list.querySelectorAll("li")][0];
+
+        // Not a document: nothing stores it, so nothing about it can be changed.
+        expect(generated.textContent).toContain("Generated rules");
+        expect(generated.textContent.replace(/\s+/g, " ")).toContain(
+            "from the schema · read-only",
+        );
+        expect(generated.querySelector("input[type='checkbox']")).toBeNull();
+        expect(button(generated, "Delete")).toBeUndefined();
+        expect(button(generated, "Rename")).toBeUndefined();
+        expect(button(generated, "Move down")).toBeUndefined();
+    });
+
+    test("opening the generated rules goes through the workbench like a document", async () => {
+        const workbench = fakeWorkbench();
+        const list = render({
+            workbench,
+            onbeforeswitch: () => Promise.resolve(true),
+        });
+
+        [...list.querySelectorAll("li")][0].querySelector("button").click();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(workbench.select).toHaveBeenCalledWith("generated");
     });
 
     test("a new document gets a name that is not taken yet", async () => {

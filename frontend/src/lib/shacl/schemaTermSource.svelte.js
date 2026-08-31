@@ -17,6 +17,8 @@
 
 import { describeTerm, listTerms } from "$lib/api/generated/index.ts";
 
+import { STANDARD_TERMS, standardDetailOf } from "./standardVocabulary.js";
+
 /**
  * The schema terms of one graph's workspace, held for as long as an editor is open on it.
  *
@@ -26,6 +28,10 @@ import { describeTerm, listTerms } from "$lib/api/generated/index.ts";
  *
  * Details are fetched per term and kept, because a hover is asked for the same handful of terms
  * over and over while someone reads a file.
+ *
+ * SHACL's own vocabulary is added on top of what the workspace declares. It is in no profile, so
+ * the schema index does not know it exists — which is why `sh:` used to complete to nothing in a
+ * file made entirely of `sh:` terms.
  */
 export class SchemaTermSource {
     /** @type {import("$lib/api/generated").SchemaTerm[]} */
@@ -48,6 +54,17 @@ export class SchemaTermSource {
 
     get #path() {
         return { datasetName: this.#datasetName, graphURI: this.#graphUri };
+    }
+
+    /**
+     * What the editor offers: the workspace's terms and the vocabularies they are written in.
+     *
+     * Separate from `terms` because the two lists answer different questions. The form's term
+     * picker asks "which class or property of my schema is this rule about?", and `sh:minCount` is
+     * never an answer to that.
+     */
+    get completionTerms() {
+        return [...this.terms, ...STANDARD_TERMS];
     }
 
     /** Fetches the term list once. Safe to call from every provider on every keystroke. */
@@ -77,8 +94,17 @@ export class SchemaTermSource {
      *
      * A miss is cached as well as a hit: an editor asks about whatever is under the cursor, and
      * most of what a Turtle file contains is not a schema term.
+     *
+     * The standard vocabularies are answered here without a request. Their namespaces are disjoint
+     * from any CIM profile, so a hit is definitive — and in a constraints file most of what the
+     * cursor passes over is `sh:`, which would otherwise be one round trip each to be told the
+     * schema has never heard of it.
      */
     async detailOf(iri) {
+        const standard = standardDetailOf(iri);
+        if (standard) {
+            return standard;
+        }
         if (this.#details.has(iri)) {
             return this.#details.get(iri);
         }

@@ -110,6 +110,12 @@ async function initialise() {
  *
  * `hover` and `gotoError` are the two that matter most: without them a validation marker is a
  * squiggle with no way to read the message, and F8 is how you walk a file's findings.
+ *
+ * `gotoSymbol` is listed as two entries on purpose. `goToCommands` is the F12 command and the
+ * context-menu entry, which used to arrive only because `hoverActions` imports it; asking for it
+ * explicitly is what stops a hover refactor upstream from silently removing go-to-definition.
+ * `goToDefinitionAtPosition` is the separate contribution that makes ctrl+hover underline a term
+ * and ctrl+click follow it — without it, following a term needs the context menu.
  */
 function importContributions() {
     return Promise.all([
@@ -121,6 +127,8 @@ function importContributions() {
         import("monaco-editor/editor/contrib/find/browser/findController.js"),
         import("monaco-editor/editor/contrib/folding/browser/folding.js"),
         import("monaco-editor/editor/contrib/gotoError/browser/gotoError.js"),
+        import("monaco-editor/editor/contrib/gotoSymbol/browser/goToCommands.js"),
+        import("monaco-editor/editor/contrib/gotoSymbol/browser/link/goToDefinitionAtPosition.js"),
         import("monaco-editor/editor/contrib/hover/browser/hoverContribution.js"),
         import("monaco-editor/editor/contrib/indentation/browser/indentation.js"),
         import("monaco-editor/editor/contrib/lineSelection/browser/lineSelection.js"),

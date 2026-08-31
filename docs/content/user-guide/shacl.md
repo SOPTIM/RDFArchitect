@@ -27,7 +27,7 @@ Switching a document **off** means it takes no part in validation or in a combin
 
 **View → Constraints (SHACL)** (`Ctrl+Shift+L`) opens the workbench for the selected schema. It is also reachable from a schema's context menu and from the constraints popup in the class editor.
 
-- **Documents** (left) lists the graph's constraints documents: add an empty one, import a file, rename, reorder, delete, and switch one off. Each row carries a badge summarising what validation found in it, so a file with problems is visible without opening it.
+- **Documents** (left) lists the graph's constraints documents: add an empty one, import a file, rename, reorder, delete, and switch one off. Each row carries a badge summarising what validation found in it, so a file with problems is visible without opening it. The first row is not a document but the **generated rules** — what RDFArchitect derives from the schema itself, shown read-only so you can read it beside whatever you imported.
 - **Editor** (middle) shows the open document in one of three views — see below.
 - **Inspector** (right) shows what the document is, the shapes it declares — click one to jump to it — and which profiles the constraints are being checked against.
 - **Problems** (bottom) collects everything found across *all* of the documents. Clicking an entry opens the document it belongs to and puts the cursor on it.
@@ -44,7 +44,8 @@ Typing gets you more than highlighting:
 
 - **Completion** on `:` offers the classes, properties and enumeration members that the workspace's schema actually declares, written the way the open document writes them. You never have to type an IRI.
 - **Hover** over a term shows its label, its `rdfs:comment`, and for a property its domain, range and multiplicity, together with the profiles that declare it.
-- **Ctrl+click** a class or property and you land on it in the class editor. For a property that means the class it belongs to, since a property is edited as a row of its class.
+- **Completion** also covers the vocabularies a constraints file is *written in* — `sh:`, `rdf:`, `rdfs:`, `owl:` and the XSD datatypes — with a one-line explanation of each on hover. These are in no CGMES profile, so the schema knows nothing about them.
+- **Ctrl+click** a class or property and you land on it in the class editor, with the class highlighted on its package diagram. For a property that means the class it belongs to, since a property is edited as a row of its class. `F12` and the context menu do the same thing.
 
 ### Form view
 
@@ -56,16 +57,20 @@ Some shapes are shown **read-only** with a "Turtle only" marker. Those use somet
 
 ### Schema check
 
-Answers the question only RDFArchitect can answer: **does this constraints file still agree with the schema it describes?**
+Answers the question only RDFArchitect can answer: **do this schema's constraints still agree with the schema they describe?**
 
-It generates the shapes your schema implies, compares them with the open document property by property, and groups what it finds:
+It generates the shapes your schema implies and compares them, property by property, with what the graph's constraints state. The comparison reads **every enabled document together**, not just the open one — an official release splits its rules across several files, and the CGMES 3.0 DiagramLayout constraints are a good example: one file defers most of its property shapes to the shared IdentifiedObject file, and two more carry a single cross-profile rule each.
+
+What it finds is grouped:
 
 | | |
 |---|---|
-| **Contradiction** | The two cannot both be satisfied — different datatypes, or the schema requires more values than the document allows. Someone has to decide which is right. |
+| **Contradiction** | The two cannot both be satisfied — different datatypes, or the schema requires more values than the documents allow. Someone has to decide which is right. |
 | **Difference** | Both can be satisfied, but they do not say the same thing. Usually the profile deliberately narrowing what the schema allows. |
-| **Missing in the document** | The schema implies a constraint the document does not state. |
-| **Not in the schema** | The document constrains a property the schema does not have on that class. |
+| **Not covered** | The schema implies a constraint no document states. |
+| **Not in the schema** | A document constrains a property the schema does not have on that class. |
+
+Coverage and agreement are counted separately, and the headline only turns red for a contradiction. A file that says nothing about a property does not disagree with the schema about it: the report says how many of the constraints *both* sides state agree, and reports the rest as a gap. Each finding also names the document that states it, so a report over several files still points at the one to open.
 
 Shapes are matched by class and property, never by name, because generated and official shapes share no naming convention and both spread one property's rules over several shapes.
 
@@ -85,7 +90,7 @@ A similar dialog at class level inspects the NodeShapes and PropertyShapes relat
 
 ## Importing custom SHACL
 
-**File → Import → Constraints (SHACL)** uploads a SHACL file into the currently selected graph, as a new document. The workbench's import button does the same thing without leaving it. Supported formats are the same as for schema import (TTL, RDF/XML, N-Triples); TTL is the default and recommended, and is the only one that preserves the file's text exactly.
+**File → Import → Constraints (SHACL)** uploads a SHACL file into the currently selected graph, as a new document named after the file. The workbench's import button does the same thing without leaving it. Importing a file whose name is already taken adds a `(2)` rather than replacing anything. Supported formats are the same as for schema import (TTL, RDF/XML, N-Triples); TTL is the default and recommended, and is the only one that preserves the file's text exactly.
 
 ## Exporting SHACL
 

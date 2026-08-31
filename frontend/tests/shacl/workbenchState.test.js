@@ -17,7 +17,10 @@
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import { ShapesWorkbench } from "$lib/shacl/workbenchState.svelte.js";
+import {
+    GENERATED_ID,
+    ShapesWorkbench,
+} from "$lib/shacl/workbenchState.svelte.js";
 
 const EQ = "eq-document-id";
 const CUSTOM = "custom-document-id";
@@ -56,6 +59,8 @@ function fakeServer(overrides = {}) {
             },
         ],
         texts: { [EQ]: SHAPES, [CUSTOM]: "" },
+        generated:
+            "# generated from the schema\nex:Generated a sh:NodeShape .\n",
         report: {
             valid: false,
             errorCount: 1,
@@ -123,6 +128,12 @@ function fakeServer(overrides = {}) {
 
         if (entry.path.endsWith("/shacl/documents") && entry.method === "GET") {
             return json(server.documents);
+        }
+        if (entry.path.endsWith("/shacl/generate/string")) {
+            return new Response(server.generated, {
+                status: 200,
+                headers: { "content-type": "text/plain" },
+            });
         }
         if (entry.path.endsWith("/shacl/validate")) {
             return json(server.report);
@@ -485,5 +496,79 @@ describe("the document list", () => {
 
         expect(await workbench.remove(EQ)).toBe(true);
         expect(workbench.selectedId).toBe(CUSTOM);
+    });
+});
+
+describe("the generated rules", () => {
+    test("head the list without pretending to be a document", async () => {
+        await workbench.load();
+
+        expect(workbench.entries[0]).toMatchObject({
+            id: GENERATED_ID,
+            generated: true,
+        });
+        expect(workbench.documents).not.toContainEqual(
+            expect.objectContaining({ id: GENERATED_ID }),
+        );
+    });
+
+    test("open into the editor, read-only", async () => {
+        await workbench.load();
+
+        await workbench.select(GENERATED_ID);
+
+        expect(workbench.text).toContain("generated from the schema");
+        expect(workbench.showingGenerated).toBe(true);
+        expect(workbench.editorReadOnly).toBe(true);
+        expect(workbench.dirty).toBe(false);
+    });
+
+    test("are fetched once and then remembered", async () => {
+        await workbench.load();
+
+        await workbench.select(GENERATED_ID);
+        await workbench.select(EQ);
+        server.requests.length = 0;
+        await workbench.select(GENERATED_ID);
+
+        expect(
+            server.requests.filter(request =>
+                request.path.endsWith("/shacl/generate/string"),
+            ),
+        ).toHaveLength(0);
+    });
+
+    test("cannot be saved over", async () => {
+        await workbench.load();
+        await workbench.select(GENERATED_ID);
+        workbench.text = "edited anyway";
+        server.requests.length = 0;
+
+        const { saved, reason } = await workbench.save();
+
+        expect(saved).toBe(false);
+        expect(reason).toContain("come from the schema itself");
+        expect(server.requests).toHaveLength(0);
+    });
+
+    test("are not sent for validation", async () => {
+        await workbench.load();
+        await workbench.select(GENERATED_ID);
+        server.requests.length = 0;
+
+        expect(await workbench.validateBuffer()).toBeNull();
+        expect(server.requests).toHaveLength(0);
+    });
+
+    test("stay selected when the document list is refreshed", async () => {
+        await workbench.load();
+        await workbench.select(GENERATED_ID);
+
+        await workbench.validateAll();
+        // A refresh used to fall back to the first document, because the generated entry is in no
+        // document list.
+        await workbench.setEnabled(EQ, false);
+
+        expect(workbench.selectedId).toBe(GENERATED_ID);
     });
 });

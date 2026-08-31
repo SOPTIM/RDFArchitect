@@ -1949,6 +1949,10 @@
           "namespace" : {
             "type" : "string"
           },
+          "packageUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
           "profiles" : {
             "items" : {
               "type" : "string"

@@ -154,6 +154,61 @@ describe("term details", () => {
     });
 });
 
+describe("the standard vocabulary", () => {
+    test("SHACL's own terms are offered even though no profile declares them", async () => {
+        await source.load();
+
+        // The schema index knows CIM. A constraints file is written almost entirely in sh:, and
+        // completing none of it is what made the editor feel like a plain text box.
+        expect(source.completionTerms).toContainEqual(
+            expect.objectContaining({
+                iri: "http://www.w3.org/ns/shacl#minCount",
+                kind: "PROPERTY",
+            }),
+        );
+        expect(source.completionTerms).toContainEqual(
+            expect.objectContaining({
+                iri: "http://www.w3.org/ns/shacl#NodeShape",
+                kind: "CLASS",
+            }),
+        );
+        expect(source.completionTerms).toContainEqual(
+            expect.objectContaining({
+                iri: "http://www.w3.org/2001/XMLSchema#gMonthDay",
+            }),
+        );
+    });
+
+    test("the schema's own terms are still there", async () => {
+        await source.load();
+
+        expect(source.completionTerms).toContainEqual(
+            expect.objectContaining({ iri: `${CIM}ACLineSegment` }),
+        );
+    });
+
+    test("the form's term list stays the schema's, without sh: in it", async () => {
+        await source.load();
+
+        // "Which property of my schema is this rule about?" is never answered by sh:minCount.
+        expect(source.terms).toHaveLength(1);
+        expect(source.terms[0].iri).toBe(`${CIM}ACLineSegment`);
+    });
+
+    test("a standard term is explained without asking the server", async () => {
+        const detail = await source.detailOf("http://www.w3.org/ns/shacl#path");
+
+        expect(detail.comment).toContain("property");
+        expect(server.requests).toHaveLength(0);
+    });
+
+    test("anything else is still a question for the schema", async () => {
+        await source.detailOf(`${CIM}ACLineSegment`);
+
+        expect(server.requests.at(-1).iri).toBe(`${CIM}ACLineSegment`);
+    });
+});
+
 describe("invalidate", () => {
     test("makes the next question re-read a schema that has changed", async () => {
         await source.load();
