@@ -27,6 +27,9 @@ import org.rdfarchitect.services.shacl.SHACLInsertUseCase;
 import org.rdfarchitect.services.shacl.SHACLReplaceShapeUseCase;
 import org.rdfarchitect.services.shacl.SHACLStoringService;
 import org.rdfarchitect.services.shacl.SHACLUpdateUseCase;
+import org.rdfarchitect.services.shacl.validation.SchemaIndexCache;
+import org.rdfarchitect.services.shacl.validation.ShapesValidationService;
+import org.rdfarchitect.services.shacl.validation.ShapesValidationUseCase;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -71,5 +74,20 @@ public class SHACLCustomConfig {
     @Bean
     public SHACLDocumentUseCase shaclDocumentUseCase(DatabasePort databasePort) {
         return new SHACLStoringService(databasePort);
+    }
+
+    /**
+     * Shared deliberately: indexing a workspace's schema costs a few hundred milliseconds, and the
+     * embedded language server planned for the editor will read the same index.
+     */
+    @Bean
+    public SchemaIndexCache schemaIndexCache(DatabasePort databasePort) {
+        return new SchemaIndexCache(databasePort);
+    }
+
+    @Bean
+    public ShapesValidationUseCase shapesValidationUseCase(
+            DatabasePort databasePort, SchemaIndexCache schemaIndexCache) {
+        return new ShapesValidationService(databasePort, schemaIndexCache);
     }
 }

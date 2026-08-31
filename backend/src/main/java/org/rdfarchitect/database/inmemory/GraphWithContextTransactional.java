@@ -173,6 +173,11 @@ public class GraphWithContextTransactional implements GraphContext {
     }
 
     @Override
+    public UUID getRdfGraphVersion() {
+        return rdfGraph.getLastDelta().getVersionId();
+    }
+
+    @Override
     public DiagramLayoutDelta getDiagramLayout() {
         return diagramLayout;
     }

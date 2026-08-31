@@ -38,6 +38,17 @@ public interface GraphContext extends Transactional, VersionControl {
 
     Graph getRdfGraph();
 
+    /**
+     * Identifies the graph's current committed content. A fresh id is minted by every commit, and
+     * an undo or redo returns the id of the version it moves to, so two reads seeing the same id
+     * are looking at the same triples.
+     *
+     * <p>Exposed so that work derived from a graph — indexing its schema for term lookups, say —
+     * can be kept until the graph actually changes, without the commit path having to notify
+     * anyone.
+     */
+    UUID getRdfGraphVersion();
+
     DiagramLayoutDelta getDiagramLayout();
 
     /**

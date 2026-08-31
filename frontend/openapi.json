@@ -2030,6 +2030,116 @@
         },
         "type" : "object"
       },
+      "ShapesDocumentValidationResult" : {
+        "properties" : {
+          "documentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "documentName" : {
+            "type" : "string"
+          },
+          "errorCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "findings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ShapesValidationFinding"
+            },
+            "type" : "array"
+          },
+          "infoCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "valid" : {
+            "type" : "boolean"
+          },
+          "warningCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ShapesValidationFinding" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "column" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "foundInProfiles" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "line" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "severity" : {
+            "enum" : [
+              "ERROR",
+              "WARNING",
+              "INFO"
+            ],
+            "type" : "string"
+          },
+          "source" : {
+            "enum" : [
+              "SYNTAX",
+              "SHAPE",
+              "SPARQL",
+              "CONFLICT"
+            ],
+            "type" : "string"
+          },
+          "term" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ShapesValidationReport" : {
+        "properties" : {
+          "documents" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ShapesDocumentValidationResult"
+            },
+            "type" : "array"
+          },
+          "errorCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "infoCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "profiles" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "valid" : {
+            "type" : "boolean"
+          },
+          "warningCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "SuperClassDTO" : {
         "properties" : {
           "label" : {
@@ -7973,6 +8083,141 @@
           }
         },
         "summary" : "export generated SHACL namespaces",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/validate" : {
+      "post" : {
+        "description" : "Validates the graph's SHACL shapes against the CIM schema of its workspace, and reports each problem with the document and source position it belongs to. Validates every enabled document unless one is named, in which case that document is validated even when disabled. The per-document counts are what a document list needs for its status badges.",
+        "operationId" : "validateShapes",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "A single constraints document to validate.",
+            "in" : "query",
+            "name" : "documentId",
+            "required" : false,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesValidationReport"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "validate stored constraints",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/validate/text" : {
+      "post" : {
+        "description" : "Validates a Turtle document that has not been saved, so an editor can show problems while the user types. Turtle that does not parse is reported as a finding with its position, not as a failed request.",
+        "operationId" : "validateShapesText",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "What to call the document in the report.",
+            "in" : "query",
+            "name" : "name",
+            "required" : false,
+            "schema" : {
+              "default" : "unsaved",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "text/plain" : {
+              "schema" : {
+                "description" : "The SHACL shapes in Turtle syntax.",
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesValidationReport"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "validate constraints that are not stored",
         "tags" : [
           "shacl"
         ]
