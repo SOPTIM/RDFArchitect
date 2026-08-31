@@ -32,6 +32,7 @@ import org.rdfarchitect.shacl.dto.PropertyShape;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -109,7 +110,9 @@ public class ClassAssociationsSHACLRESTController {
             summary = "replace SHACL of an association",
             description = "Replace the SHACL rules of an association.",
             tags = {"shacl"})
-    @PutMapping
+    // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
+    // body would reach Jena with its surrounding quotes and fail to parse.
+    @PutMapping(consumes = MediaType.TEXT_PLAIN_VALUE)
     public String replaceAssociationSHACL(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(

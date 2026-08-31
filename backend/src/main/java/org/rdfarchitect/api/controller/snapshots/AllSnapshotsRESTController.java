@@ -27,6 +27,7 @@ import org.rdfarchitect.services.snapshot.CreateSnapshotUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -47,7 +48,9 @@ public class AllSnapshotsRESTController {
             description = "Creates a snapshot for a dataset and persists it in the database",
             tags = {"snapshot", "dataset"},
             responses = {@ApiResponse(responseCode = "200")})
-    @PostMapping
+    // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
+    // body would be looked up as a dataset name that still includes its quotes.
+    @PostMapping(consumes = MediaType.TEXT_PLAIN_VALUE)
     public String createSnapshot(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(

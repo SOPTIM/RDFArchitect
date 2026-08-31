@@ -116,7 +116,9 @@ public class SHACLCustomContentRestController {
             description = "Replace or insert a shacl graph stored in a Turtle String",
             tags = {"graph"},
             responses = {@ApiResponse(responseCode = "200")})
-    @PutMapping("/string")
+    // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
+    // body would reach Jena with its surrounding quotes and fail to parse.
+    @PutMapping(path = "/string", consumes = MediaType.TEXT_PLAIN_VALUE)
     public String replaceGraphWithGraphString(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(

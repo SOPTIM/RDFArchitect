@@ -4025,7 +4025,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
+            "text/plain" : {
               "schema" : {
                 "description" : "The SHACL shapes to be inserted.",
                 "type" : "string"
@@ -4402,7 +4402,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
+            "text/plain" : {
               "schema" : {
                 "description" : "The SHACL shapes to be inserted.",
                 "type" : "string"
@@ -4751,7 +4751,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
+            "text/plain" : {
               "schema" : {
                 "description" : "The SHACL shapes to be inserted.",
                 "type" : "string"
@@ -7145,7 +7145,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
+            "text/plain" : {
               "schema" : {
                 "description" : "The entire SHACL graph as a string",
                 "type" : "string"
@@ -7276,7 +7276,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
+            "text/plain" : {
               "schema" : {
                 "description" : "the triples to replace, requires valid turtle syntax.",
                 "type" : "string"
@@ -8734,7 +8734,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
+            "text/plain" : {
               "schema" : {
                 "description" : "The literal name of the dataset.",
                 "type" : "string"

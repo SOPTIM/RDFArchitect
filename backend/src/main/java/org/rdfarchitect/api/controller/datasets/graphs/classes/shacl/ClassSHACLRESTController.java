@@ -33,6 +33,7 @@ import org.rdfarchitect.shacl.dto.SHACLToClassRelations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -104,7 +105,9 @@ public class ClassSHACLRESTController {
             description = "Replace or insert SHACL rules related to a class.",
             tags = {"shacl"},
             responses = {@ApiResponse(responseCode = "200")})
-    @PutMapping("/custom")
+    // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
+    // body would reach Jena with its surrounding quotes and fail to parse.
+    @PutMapping(path = "/custom", consumes = MediaType.TEXT_PLAIN_VALUE)
     public String putSHACL(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
