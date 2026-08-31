@@ -43,6 +43,7 @@
         form,
         turtle = "",
         terms = [],
+        readOnly = false,
         onturtle = () => {},
         onvalidate = () => {},
     } = $props();
@@ -98,19 +99,23 @@
         class="border-border flex shrink-0 items-center gap-2 border-b px-3 py-2"
     >
         <h2 class="text-default-text grow text-sm font-semibold">Shapes</h2>
-        <div class="h-7 w-32">
-            <ButtonControl
-                height={7}
-                variant="inline"
-                callOnClick={addShape}
-                disabled={form.applying || form.parseError !== null}
-            >
-                <span class="flex items-center gap-2 text-sm">
-                    <Fa icon={faPlus} />
-                    Add shape
-                </span>
-            </ButtonControl>
-        </div>
+        {#if !readOnly}
+            <div class="h-7 w-32">
+                <ButtonControl
+                    height={7}
+                    variant="inline"
+                    callOnClick={addShape}
+                    disabled={form.applying ||
+                        form.parseError !== null ||
+                        readOnly}
+                >
+                    <span class="flex items-center gap-2 text-sm">
+                        <Fa icon={faPlus} />
+                        Add shape
+                    </span>
+                </ButtonControl>
+            </div>
+        {/if}
     </div>
 
     <div class="min-h-0 flex-1 overflow-y-auto p-3">
@@ -153,6 +158,7 @@
                         {shape}
                         {terms}
                         {prefixes}
+                        readOnly={readOnly || shape.editable === false}
                         expanded={expandedIri === shape.iri}
                         ontoggle={() =>
                             (expandedIri =

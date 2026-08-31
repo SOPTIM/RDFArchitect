@@ -139,14 +139,18 @@
     });
 
     async function save() {
-        if (await workbench.save()) {
+        const { saved, reason } = await workbench.save();
+        if (saved) {
             toastStore.success("Constraints saved");
-        } else {
-            toastStore.error(
-                "Save failed",
-                "The constraints could not be saved. The document is unchanged on the server.",
-            );
+            return;
         }
+        // The reason is almost always a syntax error with a line and column. Saying only that the
+        // save failed leaves the user hunting for something the server already located.
+        toastStore.error(
+            "Not saved",
+            reason ??
+                "The constraints could not be saved. The document is unchanged on the server.",
+        );
     }
 
     /**
@@ -234,7 +238,9 @@
             <div class="ml-auto h-8 w-32 shrink-0">
                 <ButtonControl
                     callOnClick={save}
-                    disabled={!workbench.dirty || workbench.saving}
+                    disabled={!workbench.dirty ||
+                        workbench.saving ||
+                        workbench.readOnly}
                 >
                     <span class="flex items-center gap-2">
                         <Fa icon={faFloppyDisk} />
@@ -309,6 +315,7 @@
                                         bind:value={workbench.text}
                                         findings={workbench.findings}
                                         {termSource}
+                                        readOnly={workbench.readOnly}
                                         onSave={save}
                                         onchange={onTextChanged}
                                     />
@@ -318,6 +325,7 @@
                                         form={formView}
                                         turtle={workbench.text}
                                         terms={termSource?.terms ?? []}
+                                        readOnly={workbench.readOnly}
                                         onturtle={next =>
                                             (workbench.text = next)}
                                         onvalidate={onTextChanged}

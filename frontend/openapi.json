@@ -8333,6 +8333,77 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/export/file" : {
+      "get" : {
+        "description" : "Exports the named constraints documents as one file, optionally merged with the shapes generated from the schema. A document is included because it was asked for, whether or not it is enabled for validation.",
+        "operationId" : "exportSelection",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The constraints documents to include.",
+            "in" : "query",
+            "name" : "documentId",
+            "required" : false,
+            "schema" : {
+              "items" : {
+                "format" : "uuid",
+                "type" : "string"
+              },
+              "type" : "array"
+            }
+          },
+          {
+            "description" : "Whether to merge in the shapes derived from the schema.",
+            "in" : "query",
+            "name" : "includeGenerated",
+            "required" : false,
+            "schema" : {
+              "default" : false,
+              "type" : "boolean"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "text/turtle" : { }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "export chosen constraints",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/form" : {
       "post" : {
         "description" : "Reads a Turtle document into the node shapes and property shapes a form can show. A shape using anything the form does not model — sh:or or an embedded query, say — comes back marked not editable, so it can be displayed without the form ever offering to write it back.",

@@ -28,6 +28,7 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFFormat;
+import org.apache.jena.riot.RiotException;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.apache.jena.shacl.vocabulary.SHACL;
 import org.apache.jena.shared.PrefixMapping;
@@ -38,6 +39,7 @@ import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.exception.database.InvalidContentException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
@@ -60,8 +62,10 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -251,10 +255,20 @@ public class SHACLStoringService
                         : serialiseToTurtle(storedModel));
     }
 
+    /**
+     * Parses content the client sent, reporting a syntax error as one.
+     *
+     * <p>Jena's own message carries the line and column, which is the only part of the answer the
+     * user can do anything with, so it is passed through rather than replaced.
+     */
     private static Model parse(String content, Lang lang) {
         var model = ModelFactory.createDefaultModel();
         try (var reader = new StringReader(content == null ? "" : content.trim())) {
             model.read(reader, null, lang.getName());
+        } catch (RiotException e) {
+            throw new InvalidContentException(
+                    "The constraints could not be read as %s: %s"
+                            .formatted(lang.getLabel(), e.getMessage()));
         }
         return ModelFactory.createModelForGraph(GraphUtils.normalizeBlankNodes(model.getGraph()));
     }
@@ -298,26 +312,74 @@ public class SHACLStoringService
      * <p>Must be called inside a transaction on {@code ctx}. The result is detached from the stored
      * graphs, so writes to it are not persisted.
      */
+    @Override
+    public ByteArrayOutputStream exportSelectedSHACLGraph(
+            GraphIdentifier graphIdentifier,
+            RDFFormat format,
+            Collection<UUID> documentIds,
+            boolean includeGenerated) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var selected = readShapesOf(ctx, documentIds);
+            var model = selected;
+            if (includeGenerated) {
+                var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
+                ontologyModel.setNsPrefixes(
+                        databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+                var generated =
+                        new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true).generate();
+                // Custom shapes win over generated ones for the same resource: the generated ones
+                // are derived defaults, and this is the same rule the combined export follows.
+                model = new ModelResourceExclusiveMerge().merge(selected, generated);
+            }
+            try (var outStream = new ByteArrayOutputStream()) {
+                model.write(outStream, format.getLang().getName());
+                return outStream;
+            } catch (IOException e) {
+                throw new DataAccessException(
+                        "Error while writing the selected shapes to output stream", e);
+            }
+        }
+    }
+
+    /**
+     * The named documents merged, in the graph's own order.
+     *
+     * <p>Enabled state is ignored on purpose — see {@code exportSelectedSHACLGraph}. An id that
+     * names no document is skipped rather than refused, so a stale selection still exports what
+     * remains.
+     */
+    private static Model readShapesOf(GraphContext ctx, Collection<UUID> documentIds) {
+        var wanted = Set.copyOf(documentIds == null ? List.<UUID>of() : documentIds);
+        var union = ModelFactory.createDefaultModel();
+        ctx.getShapesDocuments().values().stream()
+                .filter(document -> wanted.contains(document.getId()))
+                .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
+                .forEach(document -> addWithPrefixes(union, document));
+        return union;
+    }
+
     private static Model readEnabledShapes(GraphContext ctx) {
         var union = ModelFactory.createDefaultModel();
         ctx.getShapesDocuments().values().stream()
                 .filter(ShapesDocument::isEnabled)
                 .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
-                .forEach(
-                        document -> {
-                            var model = ModelFactory.createModelForGraph(document.getGraph());
-                            // The first document to declare a prefix keeps it, so a later document
-                            // rebinding it cannot change what earlier shapes mean.
-                            model.getNsPrefixMap()
-                                    .forEach(
-                                            (prefix, uri) -> {
-                                                if (union.getNsPrefixURI(prefix) == null) {
-                                                    union.setNsPrefix(prefix, uri);
-                                                }
-                                            });
-                            union.add(model);
-                        });
+                .forEach(document -> addWithPrefixes(union, document));
         return union;
+    }
+
+    /** Adds a document's triples, letting the first document to bind a prefix keep it. */
+    private static void addWithPrefixes(Model union, ShapesDocument document) {
+        var model = ModelFactory.createModelForGraph(document.getGraph());
+        // The first document to declare a prefix keeps it, so a later document rebinding it
+        // cannot change what earlier shapes mean.
+        model.getNsPrefixMap()
+                .forEach(
+                        (prefix, uri) -> {
+                            if (union.getNsPrefixURI(prefix) == null) {
+                                union.setNsPrefix(prefix, uri);
+                            }
+                        });
+        union.add(model);
     }
 
     @Override

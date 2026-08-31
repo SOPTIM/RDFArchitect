@@ -28,6 +28,10 @@ const SHAPES = `@prefix sh: <http://www.w3.org/ns/shacl#> .
 ex:Shape a sh:NodeShape .
 `;
 
+// Read-only is a property of the workspace, fetched separately from everything the fake server
+// below answers. Writable unless a test says otherwise.
+const readOnly = vi.fn().mockResolvedValue(false);
+
 let server;
 let workbench;
 
@@ -152,9 +156,13 @@ function workbenchFor(server) {
 vi.mock("$lib/config/runtime", () => ({
     PUBLIC_BACKEND_URL: "http://backend.test",
 }));
+vi.mock("$lib/stores/workspaceStore.ts", () => ({
+    workspaceStore: { isReadOnly: (...args) => readOnly(...args) },
+}));
 
 beforeEach(async () => {
     vi.useRealTimers();
+    readOnly.mockResolvedValue(false);
     server = fakeServer();
     workbench = workbenchFor(server);
 });
@@ -193,7 +201,7 @@ describe("editing and saving", () => {
         workbench.text = `${SHAPES}ex:Other a sh:NodeShape .\n`;
         expect(workbench.dirty).toBe(true);
 
-        expect(await workbench.save()).toBe(true);
+        expect(await workbench.save()).toEqual({ saved: true, reason: null });
         expect(workbench.dirty).toBe(false);
     });
 
@@ -233,15 +241,89 @@ describe("editing and saving", () => {
         workbench.text = edited;
         server.respond = entry =>
             entry.method === "PUT"
-                ? new Response("nope", { status: 500 })
+                ? new Response(
+                      JSON.stringify({
+                          status: 400,
+                          detail: "[line: 3, col: 1 ] Undefined prefix: ex",
+                      }),
+                      {
+                          status: 400,
+                          headers: { "content-type": "application/json" },
+                      },
+                  )
                 : new Response("{}", {
                       status: 200,
                       headers: { "content-type": "application/json" },
                   });
 
-        expect(await workbench.save()).toBe(false);
+        const { saved, reason } = await workbench.save();
+
+        expect(saved).toBe(false);
+        // The server's own explanation, not a generic "could not be saved".
+        expect(reason).toBe("[line: 3, col: 1 ] Undefined prefix: ex");
         expect(workbench.text).toBe(edited);
         expect(workbench.dirty).toBe(true);
+    });
+});
+
+describe("a read-only workspace", () => {
+    // Read-only is advisory: the backend reports it but does not enforce it, so every write here
+    // has to check. The class editor already did; this workbench did not.
+    beforeEach(() => {
+        readOnly.mockResolvedValue(true);
+        server = fakeServer();
+        workbench = workbenchFor(server);
+    });
+
+    test("is read before anything can be edited", async () => {
+        await workbench.load();
+
+        expect(workbench.readOnly).toBe(true);
+        expect(workbench.documents).toHaveLength(2);
+    });
+
+    test("refuses to save, and says why", async () => {
+        await workbench.load();
+        workbench.text = "ex:X a sh:NodeShape .";
+        server.requests.length = 0;
+
+        const { saved, reason } = await workbench.save();
+
+        expect(saved).toBe(false);
+        expect(reason).toContain("read-only");
+        expect(server.requests).toHaveLength(0);
+    });
+
+    test("refuses every change to the document list", async () => {
+        await workbench.load();
+        server.requests.length = 0;
+
+        expect(await workbench.create("new.ttl")).toBeNull();
+        expect(await workbench.importFile(new Blob(["x"]), "f.ttl")).toBeNull();
+        expect(await workbench.rename(EQ, "other.ttl")).toBe(false);
+        expect(await workbench.setEnabled(EQ, false)).toBe(false);
+        expect(await workbench.move(EQ, 1)).toBe(false);
+        expect(await workbench.remove(EQ)).toBe(false);
+
+        expect(server.requests).toHaveLength(0);
+    });
+
+    test("still reads and validates, because looking is not changing", async () => {
+        await workbench.load();
+
+        expect(workbench.text).toBe(SHAPES);
+        expect(workbench.report).not.toBeNull();
+        expect(await workbench.validateBuffer()).not.toBeNull();
+    });
+
+    test("stays locked when the workspace cannot be asked", async () => {
+        // An unknown answer must not be read as permission to write.
+        readOnly.mockResolvedValue(null);
+        const unknown = workbenchFor(fakeServer());
+
+        await unknown.load();
+
+        expect(unknown.readOnly).toBe(true);
     });
 });
 

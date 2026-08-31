@@ -42,13 +42,18 @@
         shape,
         terms = [],
         prefixes = {},
+        readOnly = false,
         expanded = false,
         ontoggle = () => {},
         onchange = () => {},
         onremove = () => {},
     } = $props();
 
-    const readOnly = $derived(shape.editable === false);
+    /** Either the workspace forbids changes, or the shape is not one the form can write back. */
+    const locked = $derived(readOnly || shape.editable === false);
+
+    /** Only the shape's own limits are worth explaining; a read-only workspace says so elsewhere. */
+    const turtleOnly = $derived(shape.editable === false);
 
     const title = $derived(shortForm(shape.iri));
 
@@ -103,7 +108,7 @@
             </span>
         </button>
 
-        {#if readOnly}
+        {#if turtleOnly}
             <span
                 class="text-text-subtle flex shrink-0 items-center gap-1 text-xs"
                 title={`This shape uses ${shape.unsupported?.join(", ")}, which the form does not edit. Use the Turtle view.`}
@@ -111,7 +116,7 @@
                 <Fa icon={faLock} />
                 Turtle only
             </span>
-        {:else}
+        {:else if !locked}
             <button
                 class="text-text-subtle hover:text-red shrink-0 cursor-pointer p-1 text-xs"
                 title="Delete this shape"
@@ -125,7 +130,7 @@
 
     {#if expanded}
         <div class="border-border space-y-3 border-t px-3 py-3">
-            {#if readOnly}
+            {#if turtleOnly}
                 <p
                     class="text-text-subtle bg-background-subtle rounded p-2 text-sm"
                 >
@@ -144,7 +149,7 @@
                 value={shape.targetClass}
                 {terms}
                 {prefixes}
-                disabled={readOnly}
+                disabled={locked}
                 onpick={iri => {
                     shape.targetClass = iri;
                     onchange();
@@ -157,13 +162,13 @@
                     {terms}
                     {prefixes}
                     targetClass={shape.targetClass}
-                    {readOnly}
+                    readOnly={locked}
                     {onchange}
                     onremove={() => removeRule(index)}
                 />
             {/each}
 
-            {#if !readOnly}
+            {#if !locked}
                 <div class="h-8 w-40">
                     <ButtonControl variant="inline" callOnClick={addRule}>
                         <span class="flex items-center gap-2 text-sm">

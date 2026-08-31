@@ -26,6 +26,7 @@ import {
     validateShapes,
     validateShapesText,
 } from "$lib/api/generated/index.ts";
+import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
 /**
  * How long typing has to pause before the buffer is sent for validation.
@@ -36,6 +37,10 @@ import {
  */
 export const VALIDATION_DEBOUNCE_MS = 500;
 
+/** Said instead of a server error when the workspace is the reason nothing can be written. */
+const READ_ONLY =
+    "This workspace is read-only, so its constraints cannot be changed.";
+
 /** An empty per-document result, so a badge has something to render before the first report. */
 const NO_FINDINGS = {
     valid: true,
@@ -44,6 +49,22 @@ const NO_FINDINGS = {
     infoCount: 0,
     findings: [],
 };
+
+/**
+ * The part of a failed response worth showing someone.
+ *
+ * Spring answers with RFC 9457 problem details, whose `detail` is the actual reason — a parser's
+ * line and column, say. Everything else in the body is about the request, not about what to fix.
+ */
+export function reasonFrom(error) {
+    if (!error) {
+        return null;
+    }
+    if (typeof error === "string") {
+        return error;
+    }
+    return error.detail ?? error.message ?? null;
+}
 
 /**
  * One graph's constraints documents, the text being edited, and what validation says about them.
@@ -67,6 +88,14 @@ export class ShapesWorkbench {
     report = $state(null);
     /** @type {import("$lib/api/generated").ShapesValidationReport | null} */
     bufferReport = $state(null);
+    /**
+     * Whether the workspace forbids changes.
+     *
+     * Read-only is a property of the workspace, and it is advisory: the backend reports it but does
+     * not enforce it, so every part of this feature that writes has to check. Defaults to true so a
+     * workbench that has not finished loading cannot be used to change anything.
+     */
+    readOnly = $state(true);
     loading = $state(false);
     saving = $state(false);
     validating = $state(false);
@@ -161,6 +190,8 @@ export class ShapesWorkbench {
     async load() {
         this.loading = true;
         try {
+            this.readOnly =
+                (await workspaceStore.isReadOnly(this.#datasetName)) !== false;
             await this.#refreshDocuments();
             // Validating on top of a failed listing would replace the message that says what
             // actually went wrong with a vaguer one about validation.
@@ -196,9 +227,16 @@ export class ShapesWorkbench {
         this.savedText = this.text;
     }
 
+    /**
+     * Writes the buffer back to the document.
+     *
+     * @returns `{ saved, reason }` — on failure `reason` is what the server said went wrong, which
+     *     for the usual case is the line and column where the Turtle stopped parsing. A message
+     *     that only says "could not be saved" leaves the user with nowhere to look.
+     */
     async save() {
-        if (!this.selectedId || this.saving) {
-            return false;
+        if (!this.selectedId || this.saving || this.readOnly) {
+            return { saved: false, reason: this.readOnly ? READ_ONLY : null };
         }
         this.saving = true;
         try {
@@ -212,12 +250,12 @@ export class ShapesWorkbench {
                 headers: { "Content-Type": "text/plain" },
             });
             if (error) {
-                return false;
+                return { saved: false, reason: reasonFrom(error) };
             }
             this.savedText = this.text;
             await this.#refreshDocuments();
             await this.validateAll();
-            return true;
+            return { saved: true, reason: null };
         } finally {
             this.saving = false;
         }
@@ -228,6 +266,9 @@ export class ShapesWorkbench {
     // -------------------------------------------------------------------------
 
     async create(name) {
+        if (this.readOnly) {
+            return null;
+        }
         const { data, error } = await createShapesDocument({
             ...this.#requestOptions,
             path: this.path,
@@ -246,6 +287,9 @@ export class ShapesWorkbench {
     }
 
     async importFile(file, name) {
+        if (this.readOnly) {
+            return null;
+        }
         const { data, error } = await createShapesDocumentFromFile({
             ...this.#requestOptions,
             path: this.path,
@@ -287,6 +331,9 @@ export class ShapesWorkbench {
     }
 
     async remove(documentId) {
+        if (this.readOnly) {
+            return false;
+        }
         const { error } = await deleteShapesDocument({
             ...this.#requestOptions,
             path: { ...this.path, documentId },
@@ -303,6 +350,9 @@ export class ShapesWorkbench {
     }
 
     async #update(documentId, query) {
+        if (this.readOnly) {
+            return false;
+        }
         const { error } = await updateShapesDocument({
             ...this.#requestOptions,
             path: { ...this.path, documentId },

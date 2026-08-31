@@ -44,6 +44,9 @@
     let showDeleteDialog = $state(false);
     let fileInput;
 
+    /** Read-only is a property of the workspace; nothing here may write when it is set. */
+    const readOnly = $derived(workbench.readOnly === true);
+
     const results = $derived(
         new Map(workbench.results.map(result => [result.documentId, result])),
     );
@@ -143,22 +146,24 @@
 <div class="flex h-full min-h-0 flex-col">
     <div class="border-border flex items-center gap-2 border-b px-3 py-2">
         <h2 class="text-default-text grow text-sm font-semibold">Documents</h2>
-        <button
-            class="text-text-subtle hover:text-blue cursor-pointer p-1"
-            title="New document"
-            aria-label="New document"
-            onclick={addDocument}
-        >
-            <Fa icon={faFileCirclePlus} />
-        </button>
-        <button
-            class="text-text-subtle hover:text-blue cursor-pointer p-1"
-            title="Import a constraints file"
-            aria-label="Import a constraints file"
-            onclick={() => fileInput.click()}
-        >
-            <Fa icon={faFileImport} />
-        </button>
+        {#if !readOnly}
+            <button
+                class="text-text-subtle hover:text-blue cursor-pointer p-1"
+                title="New document"
+                aria-label="New document"
+                onclick={addDocument}
+            >
+                <Fa icon={faFileCirclePlus} />
+            </button>
+            <button
+                class="text-text-subtle hover:text-blue cursor-pointer p-1"
+                title="Import a constraints file"
+                aria-label="Import a constraints file"
+                onclick={() => fileInput.click()}
+            >
+                <Fa icon={faFileImport} />
+            </button>
+        {/if}
         <input
             bind:this={fileInput}
             class="hidden"
@@ -190,6 +195,7 @@
                     >
                         <CheckBoxEditControl
                             value={document.enabled}
+                            readonly={readOnly}
                             callOnInputTrue={() =>
                                 workbench.setEnabled(document.id, true)}
                             callOnInputFalse={() =>
@@ -214,7 +220,9 @@
                     {:else}
                         <button
                             class="min-w-0 flex-1 cursor-pointer text-left"
-                            ondblclick={() => startRename(document)}
+                            ondblclick={() => {
+                                if (!readOnly) startRename(document);
+                            }}
                             onclick={() => open(document.id)}
                         >
                             <span
@@ -248,47 +256,49 @@
                     {/if}
                 </div>
 
-                <div
-                    class="flex justify-end gap-1 px-2 pb-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
-                >
-                    <button
-                        class="text-text-subtle hover:text-blue cursor-pointer p-1 text-xs"
-                        title="Move up"
-                        aria-label="Move up"
-                        onclick={() => workbench.move(document.id, -1)}
+                {#if !readOnly}
+                    <div
+                        class="flex justify-end gap-1 px-2 pb-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
                     >
-                        <Fa icon={faArrowUp} />
-                    </button>
-                    <button
-                        class="text-text-subtle hover:text-blue cursor-pointer p-1 text-xs"
-                        title="Move down"
-                        aria-label="Move down"
-                        onclick={() => workbench.move(document.id, 1)}
-                    >
-                        <Fa icon={faArrowDown} />
-                    </button>
-                    <button
-                        class="text-text-subtle hover:text-blue cursor-pointer p-1 text-xs"
-                        title="Rename"
-                        aria-label="Rename"
-                        onclick={() => startRename(document)}
-                    >
-                        <Fa icon={faPen} />
-                    </button>
-                    {#if !document.default}
                         <button
-                            class="text-text-subtle hover:text-red cursor-pointer p-1 text-xs"
-                            title="Delete"
-                            aria-label="Delete"
-                            onclick={() => {
-                                pendingDelete = document;
-                                showDeleteDialog = true;
-                            }}
+                            class="text-text-subtle hover:text-blue cursor-pointer p-1 text-xs"
+                            title="Move up"
+                            aria-label="Move up"
+                            onclick={() => workbench.move(document.id, -1)}
                         >
-                            <Fa icon={faTrash} />
+                            <Fa icon={faArrowUp} />
                         </button>
-                    {/if}
-                </div>
+                        <button
+                            class="text-text-subtle hover:text-blue cursor-pointer p-1 text-xs"
+                            title="Move down"
+                            aria-label="Move down"
+                            onclick={() => workbench.move(document.id, 1)}
+                        >
+                            <Fa icon={faArrowDown} />
+                        </button>
+                        <button
+                            class="text-text-subtle hover:text-blue cursor-pointer p-1 text-xs"
+                            title="Rename"
+                            aria-label="Rename"
+                            onclick={() => startRename(document)}
+                        >
+                            <Fa icon={faPen} />
+                        </button>
+                        {#if !document.default}
+                            <button
+                                class="text-text-subtle hover:text-red cursor-pointer p-1 text-xs"
+                                title="Delete"
+                                aria-label="Delete"
+                                onclick={() => {
+                                    pendingDelete = document;
+                                    showDeleteDialog = true;
+                                }}
+                            >
+                                <Fa icon={faTrash} />
+                            </button>
+                        {/if}
+                    </div>
+                {/if}
             </li>
         {/each}
     </ul>

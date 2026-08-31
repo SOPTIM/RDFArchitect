@@ -24,6 +24,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,10 +33,13 @@ import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.database.inmemory.GraphWithContextTransactional;
+import org.rdfarchitect.exception.database.InvalidContentException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.shacl.dto.ShapesDocumentInfo;
 
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.UUID;
 
 /** Managing a graph's shapes documents through the service. */
@@ -189,6 +193,104 @@ class SHACLDocumentServiceTest {
                         () ->
                                 service.deleteShapesDocument(
                                         GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID));
+    }
+
+    @Test
+    void turtleThatDoesNotParseIsRefusedAsAClientErrorWithTheReason() {
+        // Unparseable input is the caller's problem, not a server fault, and the only useful part
+        // of the answer is where in their text the parser stopped.
+        assertThatExceptionOfType(InvalidContentException.class)
+                .isThrownBy(
+                        () ->
+                                service.replaceShapesDocumentText(
+                                        GRAPH,
+                                        GraphContext.DEFAULT_SHAPES_DOCUMENT_ID,
+                                        "@prefix sh: <http://www.w3.org/ns/shacl#> .\n\n"
+                                                + "ex:Broken a sh:NodeShape .\n"))
+                .satisfies(
+                        thrown -> {
+                            assertThat(thrown.getStatusCode().value()).isEqualTo(400);
+                            assertThat(thrown.getMessage()).contains("Undefined prefix: ex");
+                            assertThat(thrown.getMessage()).contains("line: 3");
+                        });
+    }
+
+    @Test
+    void shapesThatViolateTheSchemaAreStillSaved() {
+        // Validation findings are a report, not a gate: a half-finished document has to be
+        // storable or the editor cannot be used to finish it.
+        service.replaceShapesDocumentText(
+                GRAPH,
+                GraphContext.DEFAULT_SHAPES_DOCUMENT_ID,
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://example.org/> .
+
+                ex:S a sh:NodeShape ;
+                    sh:targetClass cim:NoSuchClass .
+                """);
+
+        assertThat(service.getShapesDocumentText(GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID))
+                .contains("cim:NoSuchClass");
+    }
+
+    @Test
+    void exportingASelectionIncludesOnlyTheDocumentsAskedFor() {
+        var eq = service.createShapesDocument(GRAPH, "eq.ttl", null, TURTLE, Lang.TURTLE);
+        var other =
+                service.createShapesDocument(
+                        GRAPH,
+                        "other.ttl",
+                        null,
+                        TURTLE.replace("ACLineSegmentShape", "OtherShape"),
+                        Lang.TURTLE);
+
+        var exported =
+                service.exportSelectedSHACLGraph(
+                                GRAPH, RDFFormat.TURTLE, List.of(eq.getId()), false)
+                        .toString(StandardCharsets.UTF_8);
+
+        assertThat(exported).contains("ACLineSegmentShape").doesNotContain("OtherShape");
+        assertThat(other.getId()).isNotNull();
+    }
+
+    @Test
+    void aDisabledDocumentIsStillExportedWhenItIsAskedForByName() {
+        // Disabling says "take no part in validation", not "never let me export you".
+        var draft = service.createShapesDocument(GRAPH, "draft.ttl", null, TURTLE, Lang.TURTLE);
+        service.updateShapesDocument(GRAPH, draft.getId(), null, false, null);
+
+        var exported =
+                service.exportSelectedSHACLGraph(
+                                GRAPH, RDFFormat.TURTLE, List.of(draft.getId()), false)
+                        .toString(StandardCharsets.UTF_8);
+
+        assertThat(exported).contains("ACLineSegmentShape");
+    }
+
+    @Test
+    void exportingNothingProducesAnEmptyDocumentRatherThanFailing() {
+        var exported =
+                service.exportSelectedSHACLGraph(GRAPH, RDFFormat.TURTLE, List.of(), false)
+                        .toString(StandardCharsets.UTF_8);
+
+        assertThat(exported).doesNotContain("targetClass");
+    }
+
+    @Test
+    void anIdThatNamesNoDocumentIsSkippedSoAStaleSelectionStillWorks() {
+        var eq = service.createShapesDocument(GRAPH, "eq.ttl", null, TURTLE, Lang.TURTLE);
+
+        var exported =
+                service.exportSelectedSHACLGraph(
+                                GRAPH,
+                                RDFFormat.TURTLE,
+                                List.of(eq.getId(), UUID.randomUUID()),
+                                false)
+                        .toString(StandardCharsets.UTF_8);
+
+        assertThat(exported).contains("ACLineSegmentShape");
     }
 
     @Test
