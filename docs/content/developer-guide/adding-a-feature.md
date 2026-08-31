@@ -44,7 +44,16 @@ public List<ClassDTO> listAbstract(@PathVariable String datasetName,
 
 ## Step 5 — Frontend BackendConnection method
 
-Regenerate the frontend client by executing `npm run api:generate`. This automatically generates a function to call based on the Open-API Annotation on the Controller in the backend.
+Export the updated contract from the backend and regenerate the frontend client:
+
+```bash
+cd backend
+mvn exec:java@export-openapi   # writes ../frontend/openapi.json — commit the result
+cd ../frontend
+npm run api:generate           # writes src/lib/api/generated from ./openapi.json
+```
+
+This generates a function to call, based on the OpenAPI annotations on the controller in the backend. `frontend/openapi.json` is the committed contract and is checked by backend CI; the generated client itself is git-ignored, so every contributor regenerates it locally.
 
 Call the new endpoint either by adding a method to the relevant store or by directly calling the client in a component.
 
