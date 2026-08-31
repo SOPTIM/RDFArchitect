@@ -15,7 +15,7 @@
   -
   -->
 <script>
-    import TtlCodeEditor from "$lib/ttl/TtlCodeEditor.svelte";
+    import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
 
     let {
         propertyShapesWrapperList = $bindable(),
@@ -43,7 +43,8 @@
         <div class="space-y-4">
             {#if showPropertyShapes[i]}
                 {#each shapesWrapper.propertyShapes as propertyShape}
-                    <TtlCodeEditor
+                    <TurtleEditor
+                        autoGrow
                         bind:value={propertyShape.triples}
                         {readOnly}
                     />

@@ -16,6 +16,9 @@
   -->
 
 <script>
+    import { faFileShield } from "@fortawesome/free-solid-svg-icons";
+    import { Fa } from "svelte-fa";
+
     import { getShaclRelatedToClass } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
@@ -23,6 +26,8 @@
 
     import ClassReferencedVia from "./ClassReferencedVia.svelte";
     import SHACLShapeTtlRenderer from "./SHACLShapeTtlRenderer.svelte";
+
+    import { goto } from "$app/navigation";
 
     let {
         workspaceName,
@@ -119,6 +124,25 @@
                             variant={showGeneratedShacl ? "inline" : ""}
                         >
                             Custom Constraints
+                        </ButtonControl>
+                    </div>
+                    <!--
+                      This popup shows only the shapes that target this class. Editing anything
+                      else about the document they live in — or seeing what validation says about
+                      it — belongs in the workbench.
+                    -->
+                    <div class="ml-auto w-48 text-nowrap">
+                        <ButtonControl
+                            variant="inline"
+                            callOnClick={() => {
+                                showDialog = false;
+                                goto("/shacl");
+                            }}
+                        >
+                            <span class="flex items-center gap-2">
+                                <Fa icon={faFileShield} />
+                                Open Workbench
+                            </span>
                         </ButtonControl>
                     </div>
                 </div>

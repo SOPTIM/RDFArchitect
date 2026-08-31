@@ -26,6 +26,7 @@ import {
     replaceGraphWithGraphString,
     replaceShape,
     replaceShapesDocumentText,
+    validateShapesText,
 } from "../../src/lib/api/generated";
 
 /**
@@ -77,6 +78,7 @@ const OPERATIONS = [
         createShapesDocument,
         { path: GRAPH, query: { name: "eq.ttl" } },
     ],
+    ["validateShapesText", validateShapesText, { path: GRAPH }],
     [
         "replaceShapesDocumentText",
         replaceShapesDocumentText,

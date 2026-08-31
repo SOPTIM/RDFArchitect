@@ -29,8 +29,8 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
     import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
+    import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
     import { editorState } from "$lib/sharedState.svelte.js";
-    import TtlCodeEditor from "$lib/ttl/TtlCodeEditor.svelte";
 
     let {
         showDialog = $bindable(),
@@ -292,7 +292,8 @@
                             </button>
                         {/if}
                         {#if showGeneratedNamespaces}
-                            <TtlCodeEditor
+                            <TurtleEditor
+                                autoGrow
                                 value={generatedShacl.namespaces}
                                 readOnly={true}
                             />
@@ -303,7 +304,8 @@
                             {/if}
                             {#each generatedShacl.propertyShapes as propertyShape}
                                 <div>
-                                    <TtlCodeEditor
+                                    <TurtleEditor
+                                        autoGrow
                                         value={propertyShape.triples.trim()}
                                         readOnly={true}
                                     />
@@ -334,7 +336,8 @@
                             </button>
                         {/if}
                         {#if showCustomNamespaces}
-                            <TtlCodeEditor
+                            <TurtleEditor
+                                autoGrow
                                 bind:value={customShacl.namespaces}
                                 readOnly={false}
                             />
@@ -345,7 +348,8 @@
                             {/if}
                             {#each customShacl.propertyShapes as propertyShape}
                                 <div>
-                                    <TtlCodeEditor
+                                    <TurtleEditor
+                                        autoGrow
                                         bind:value={propertyShape.triples}
                                         readOnly={false}
                                     />

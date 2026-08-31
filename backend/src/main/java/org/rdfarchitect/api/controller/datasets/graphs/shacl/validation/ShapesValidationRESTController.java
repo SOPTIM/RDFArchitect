@@ -148,6 +148,13 @@ public class ShapesValidationRESTController {
             @Parameter(description = "What to call the document in the report.")
                     @RequestParam(required = false, defaultValue = "unsaved")
                     String name,
+            @Parameter(
+                            description =
+                                    "The stored document this text is the unsaved version of. Given "
+                                            + "one, contradictions between the text and the graph's "
+                                            + "other documents are reported too.")
+                    @RequestParam(required = false)
+                    UUID documentId,
             @Parameter(description = "The SHACL shapes in Turtle syntax.") @RequestBody
                     String turtle) {
         logger.info(
@@ -157,7 +164,7 @@ public class ShapesValidationRESTController {
                 originURL);
 
         return shapesValidationUseCase.validateTurtle(
-                graphIdentifier(datasetName, graphURI), name, turtle);
+                graphIdentifier(datasetName, graphURI), name, turtle, documentId);
     }
 
     private GraphIdentifier graphIdentifier(String datasetName, String graphURI) {

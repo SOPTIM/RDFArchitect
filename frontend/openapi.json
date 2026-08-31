@@ -8192,6 +8192,16 @@
               "default" : "unsaved",
               "type" : "string"
             }
+          },
+          {
+            "description" : "The stored document this text is the unsaved version of. Given one, contradictions between the text and the graph's other documents are reported too.",
+            "in" : "query",
+            "name" : "documentId",
+            "required" : false,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
           }
         ],
         "requestBody" : {

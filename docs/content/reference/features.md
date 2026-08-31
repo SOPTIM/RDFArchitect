@@ -159,7 +159,7 @@ Spring Boot backend, SvelteKit frontend, Apache Jena, Apache Jena Fuseki. All ma
 | Changelog                             | View → Changelog                                 |
 | Compare schemas                       | View → Compare Schemas                           |
 | Migrate schema (5-step wizard)        | View → Migrate Schema                            |
-| Full SHACL view (generated+custom)    | View → View Constraints (SHACL)                  |
+| Constraints workbench (SHACL)         | View → Constraints (SHACL)                       |
 | Help / feedback / about               | Help menu                                        |
 | Search across the workspace           | Search bar at the top                            |
 | Property-specific constraints (SHACL) | Class editor → SHACL icon next to each row       |

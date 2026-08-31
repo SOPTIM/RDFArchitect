@@ -112,18 +112,6 @@
 - **Version:** 2.19.0
 - **License:** MIT
 
-### codemirror
-- **Package:** codemirror
-- **Version:** 6.0.2
-- **License:** MIT
-- **URL:** [https://github.com/codemirror/basic-setup](https://github.com/codemirror/basic-setup)
-
-### codemirror-lang-turtle
-- **Package:** codemirror-lang-turtle
-- **Version:** 0.0.2
-- **License:** MIT
-- **URL:** [https://github.com/aatauil/codemirror-lang-turtle](https://github.com/aatauil/codemirror-lang-turtle)
-
 ### elkjs
 - **Package:** elkjs
 - **Version:** 0.12.0
@@ -188,6 +176,12 @@
 - **Version:** 11.17.1
 - **License:** MIT
 - **URL:** [https://github.com/mermaid-js/mermaid](https://github.com/mermaid-js/mermaid)
+
+### monaco-editor
+- **Package:** monaco-editor
+- **Version:** 0.56.0
+- **License:** MIT
+- **URL:** [https://github.com/microsoft/monaco-editor](https://github.com/microsoft/monaco-editor)
 
 ### postcss
 - **Package:** postcss
@@ -284,4 +278,16 @@
 - **Version:** 4.1.11
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
+
+### vscode-oniguruma
+- **Package:** vscode-oniguruma
+- **Version:** 2.0.1
+- **License:** MIT
+- **URL:** [https://github.com/microsoft/vscode-oniguruma](https://github.com/microsoft/vscode-oniguruma)
+
+### vscode-textmate
+- **Package:** vscode-textmate
+- **Version:** 9.3.2
+- **License:** MIT
+- **URL:** [https://github.com/microsoft/vscode-textmate](https://github.com/microsoft/vscode-textmate)
 

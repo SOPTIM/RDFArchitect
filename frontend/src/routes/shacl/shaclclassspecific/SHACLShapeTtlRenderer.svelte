@@ -21,8 +21,8 @@
     import { putShacl } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
     import { editorState } from "$lib/sharedState.svelte.js";
-    import TtlCodeEditor from "$lib/ttl/TtlCodeEditor.svelte";
 
     import SHACLNodeShapeEditor from "./editors/SHACLNodeShapeEditor.svelte";
     import ShaclPropertyShapeWrapperListEditor from "./editors/SHACLPropertyShapeWrapperListEditor.svelte";
@@ -181,7 +181,11 @@
                 namespaces:
             </button>
             {#if showNamespaces}
-                <TtlCodeEditor bind:value={localNamespaces} {readOnly} />
+                <TurtleEditor
+                    autoGrow
+                    bind:value={localNamespaces}
+                    {readOnly}
+                />
             {/if}
         {:else}
             <p class="text-default-text font-semibold">No namespaces found</p>
@@ -253,7 +257,7 @@
     {#if !readOnly}
         <div class="mt-4">
             {#if showUserInput}
-                <TtlCodeEditor bind:value={userInput} {readOnly} />
+                <TurtleEditor autoGrow bind:value={userInput} {readOnly} />
             {:else}
                 <button
                     class="w-fit font-semibold hover:cursor-pointer hover:underline"

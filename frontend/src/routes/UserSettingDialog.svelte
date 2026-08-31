@@ -19,6 +19,7 @@
     import { UserSettingsComponents as USC } from "$lib/components/bitsui/usersettings/index.js";
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
+    import { THEME_OPTIONS, THEME_SETTING } from "$lib/monaco/theme.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
@@ -38,6 +39,7 @@
         includeInheritance: true,
         includeRelationsToExternalPackages: true,
         includePropertiesFromOtherProfiles: false,
+        [THEME_SETTING]: "light",
     };
 
     let localSettings = $state({});
@@ -135,6 +137,16 @@
                 label="Include properties from other schemas"
                 bind:value={localSettings["includePropertiesFromOtherProfiles"]}
                 labelFirst={false}
+            />
+        </USC.Section>
+        <USC.Section title="Constraints Editor">
+            <USC.Item.SingleSelect
+                label="Colour Scheme"
+                options={THEME_OPTIONS}
+                getOptionLabel={option => option.name}
+                getOptionValue={option => option.value}
+                value={localSettings[THEME_SETTING]}
+                onChange={value => (localSettings[THEME_SETTING] = value)}
             />
         </USC.Section>
         <USC.Section title="Normalization">

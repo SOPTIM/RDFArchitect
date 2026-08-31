@@ -47,14 +47,13 @@ public interface ShapesValidationUseCase {
      * <p>This is what an editor calls while the user types, so unparseable text is expected and is
      * reported as a finding rather than refused.
      *
-     * <p>The text is checked on its own: it is not compared with the graph's stored documents, so
-     * contradictions between it and them are not reported here. Naming which document the text is
-     * the unsaved version of would be needed first, or every shape IRI it shares with its own saved
-     * copy would be reported as defined twice. {@link #validateShapes} answers the cross-document
-     * question over what is actually stored.
-     *
      * @param name what to call the text in the report
+     * @param documentId the stored document this text is the unsaved version of, or {@code null}.
+     *     Given one, the text is also compared with the graph's other documents and contradictions
+     *     between them are reported; the named document's stored copy is left out of that
+     *     comparison, so the text is never found to conflict with itself. Without one the text is
+     *     checked on its own.
      */
     ShapesValidationReport validateTurtle(
-            GraphIdentifier graphIdentifier, String name, String turtle);
+            GraphIdentifier graphIdentifier, String name, String turtle, UUID documentId);
 }

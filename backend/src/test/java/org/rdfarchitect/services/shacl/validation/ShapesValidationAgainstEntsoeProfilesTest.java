@@ -131,7 +131,7 @@ class ShapesValidationAgainstEntsoeProfilesTest {
 
     @Test
     void everyProfileInTheWorkspaceIsOneTheShapesAreCheckedAgainst() {
-        var report = service.validateTurtle(GRAPH, CLEAN_SIMPLE, read(CLEAN_SIMPLE));
+        var report = service.validateTurtle(GRAPH, CLEAN_SIMPLE, read(CLEAN_SIMPLE), null);
 
         assertThat(report.getProfiles())
                 .as("profiles the loader recognised, addressed by their owl:versionIRI")
@@ -164,7 +164,7 @@ class ShapesValidationAgainstEntsoeProfilesTest {
 
     @Test
     void anOfficialCrossProfileFileReportsNoError() {
-        var report = service.validateTurtle(GRAPH, CROSS_PROFILE, read(CROSS_PROFILE));
+        var report = service.validateTurtle(GRAPH, CROSS_PROFILE, read(CROSS_PROFILE), null);
 
         assertThat(report.isValid()).isTrue();
         assertThat(report.getErrorCount()).isZero();
@@ -176,7 +176,7 @@ class ShapesValidationAgainstEntsoeProfilesTest {
         var corrupted = original.replaceFirst("cim:ACLineSegment\\b", "cim:AClineSegment");
         assertThat(corrupted).isNotEqualTo(original);
 
-        var report = service.validateTurtle(GRAPH, CLEAN_SIMPLE, corrupted);
+        var report = service.validateTurtle(GRAPH, CLEAN_SIMPLE, corrupted, null);
 
         assertThat(findings(report.getDocuments()))
                 .anySatisfy(
@@ -204,7 +204,7 @@ class ShapesValidationAgainstEntsoeProfilesTest {
                     sh:targetClass cim:NotAClassAnyProfileDeclares .
                 """;
 
-        var report = service.validateTurtle(GRAPH, "invented.ttl", shapes);
+        var report = service.validateTurtle(GRAPH, "invented.ttl", shapes, null);
 
         assertThat(report.isValid()).isFalse();
         assertThat(findings(report.getDocuments()))

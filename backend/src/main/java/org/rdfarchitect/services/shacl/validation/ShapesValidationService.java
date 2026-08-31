@@ -44,7 +44,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Validates SHACL shapes against the live CIM schema using CIMVocabCheck.
@@ -72,39 +75,27 @@ public class ShapesValidationService implements ShapesValidationUseCase {
     public ShapesValidationReport validateShapes(GraphIdentifier graphIdentifier, UUID documentId) {
         var snapshots = readDocuments(graphIdentifier, documentId);
         var api = schemaIndexCache.apiFor(graphIdentifier.datasetName());
+        var conflicts = conflictsAmong(snapshots);
 
-        var conflicts =
-                ShapesConflictAnalyzer.analyze(
-                        snapshots.stream()
-                                .map(
-                                        snapshot ->
-                                                new ShapesConflictAnalyzer.Document(
-                                                        snapshot.id(),
-                                                        snapshot.name(),
-                                                        snapshot.graph(),
-                                                        snapshot.rawText()))
-                                .toList());
-
+        // Conflicts are found across all of the documents even when only one is being reported on:
+        // "this shape is also defined in EQ.ttl" is a fact about the pair, and a document list
+        // refreshing one badge should not stop saying it.
         var results =
                 snapshots.stream()
+                        .filter(snapshot -> documentId == null || documentId.equals(snapshot.id()))
                         .map(
-                                snapshot -> {
-                                    var findings =
-                                            new ArrayList<>(
-                                                    validate(
-                                                            api,
-                                                            snapshot.graph(),
-                                                            snapshot.rawText()));
-                                    findings.addAll(conflicts.get(snapshot.id()));
-                                    return result(snapshot.id(), snapshot.name(), findings);
-                                })
+                                snapshot ->
+                                        result(
+                                                snapshot.id(),
+                                                snapshot.name(),
+                                                findingsOf(api, snapshot, conflicts)))
                         .toList();
         return report(api, results);
     }
 
     @Override
     public ShapesValidationReport validateTurtle(
-            GraphIdentifier graphIdentifier, String name, String turtle) {
+            GraphIdentifier graphIdentifier, String name, String turtle, UUID documentId) {
         var parsed = ShapesTurtleParser.parse(turtle);
         var api = schemaIndexCache.apiFor(graphIdentifier.datasetName());
         var findings = new ArrayList<>(parsed.findings());
@@ -112,26 +103,81 @@ public class ShapesValidationService implements ShapesValidationUseCase {
         // reporting the syntax error alone beats reporting whatever the fragment happens to imply.
         if (!parsed.failed()) {
             findings.addAll(validate(api, parsed.graph(), turtle));
+            findings.addAll(
+                    bufferConflicts(graphIdentifier, documentId, name, parsed.graph(), turtle));
         }
-        return report(api, List.of(result(null, name, findings)));
+        return report(api, List.of(result(documentId, name, findings)));
+    }
+
+    private List<ShapesValidationFinding> findingsOf(
+            SparqlValidationApi api,
+            Snapshot snapshot,
+            Map<UUID, List<ShapesValidationFinding>> conflicts) {
+        var findings = new ArrayList<>(validate(api, snapshot.graph(), snapshot.rawText()));
+        findings.addAll(conflicts.getOrDefault(snapshot.id(), List.of()));
+        return findings;
+    }
+
+    private static Map<UUID, List<ShapesValidationFinding>> conflictsAmong(
+            List<Snapshot> snapshots) {
+        return ShapesConflictAnalyzer.analyze(
+                snapshots.stream().map(ShapesValidationService::asDocument).toList());
+    }
+
+    /**
+     * Contradictions between unsaved text and the graph's other documents.
+     *
+     * <p>The stored copy of {@code documentId} is left out and the posted text takes its place:
+     * comparing a buffer with its own saved version would report every shape it has not renamed as
+     * defined twice. Without a {@code documentId} there is nothing to leave out and therefore
+     * nothing that can be said safely, so the comparison is skipped rather than guessed at.
+     *
+     * <p>An id that no stored document has is fine — a document being drafted before its first save
+     * is simply compared against everything that is stored.
+     */
+    private List<ShapesValidationFinding> bufferConflicts(
+            GraphIdentifier graphIdentifier,
+            UUID documentId,
+            String name,
+            Graph graph,
+            String turtle) {
+        if (documentId == null) {
+            return List.of();
+        }
+        var documents =
+                readDocuments(graphIdentifier, null).stream()
+                        .filter(snapshot -> !documentId.equals(snapshot.id()))
+                        .map(ShapesValidationService::asDocument)
+                        .collect(Collectors.toCollection(ArrayList::new));
+        documents.add(new ShapesConflictAnalyzer.Document(documentId, name, graph, turtle));
+        return ShapesConflictAnalyzer.analyze(documents).getOrDefault(documentId, List.of());
+    }
+
+    private static ShapesConflictAnalyzer.Document asDocument(Snapshot snapshot) {
+        return new ShapesConflictAnalyzer.Document(
+                snapshot.id(), snapshot.name(), snapshot.graph(), snapshot.rawText());
     }
 
     // -------------------------------------------------------------------------
     // Reading
     // -------------------------------------------------------------------------
 
-    private List<Snapshot> readDocuments(GraphIdentifier graphIdentifier, UUID documentId) {
+    /**
+     * The documents to validate over: every enabled one, plus {@code required} even when it is
+     * disabled, because naming a document is asking for it.
+     */
+    private List<Snapshot> readDocuments(GraphIdentifier graphIdentifier, UUID required) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            if (documentId != null) {
-                var document = ctx.getShapesDocuments().get(documentId);
-                if (document == null) {
-                    throw new ResourceNotFoundException(
-                            "No constraints document with id " + documentId + " in this graph.");
-                }
-                return List.of(snapshot(document));
+            var documents = ctx.getShapesDocuments();
+            if (required != null && !documents.containsKey(required)) {
+                throw new ResourceNotFoundException(
+                        "No constraints document with id " + required + " in this graph.");
             }
-            return ctx.getShapesDocuments().values().stream()
-                    .filter(ShapesDocument::isEnabled)
+            return documents.values().stream()
+                    .filter(
+                            document ->
+                                    document.isEnabled()
+                                            || Objects.equals(document.getId(), required))
                     .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
                     .map(ShapesValidationService::snapshot)
                     .toList();

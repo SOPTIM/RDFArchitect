@@ -239,7 +239,7 @@ class ShapesValidationServiceTest {
                     a sh:NodeShape .
                 """;
 
-        var report = service.validateTurtle(GRAPH, "draft.ttl", broken);
+        var report = service.validateTurtle(GRAPH, "draft.ttl", broken, null);
 
         assertThat(report.isValid()).isFalse();
         assertThat(report.getDocuments())
@@ -264,7 +264,7 @@ class ShapesValidationServiceTest {
 
     @Test
     void turtleThatParsesIsCheckedAgainstTheSchema() {
-        var report = service.validateTurtle(GRAPH, "draft.ttl", VALID_SHAPES);
+        var report = service.validateTurtle(GRAPH, "draft.ttl", VALID_SHAPES, null);
 
         assertThat(report.isValid()).isTrue();
         assertThat(report.getDocuments())
@@ -378,6 +378,83 @@ class ShapesValidationServiceTest {
         assertThat(findings(report.getDocuments()))
                 .extracting(ShapesValidationFinding::getSource)
                 .doesNotContain(ShapesValidationFinding.Source.CONFLICT);
+    }
+
+    // -------------------------------------------------------------------------
+    // Unsaved text against the stored documents
+    // -------------------------------------------------------------------------
+
+    @Test
+    void unsavedTextIsNotFoundToConflictWithItsOwnSavedCopy() {
+        var stored =
+                documents.createShapesDocument(GRAPH, "own.ttl", null, VALID_SHAPES, Lang.TURTLE);
+
+        var report = service.validateTurtle(GRAPH, "own.ttl", VALID_SHAPES, stored.getId());
+
+        assertThat(findings(report.getDocuments()))
+                .extracting(ShapesValidationFinding::getCode)
+                .doesNotContain("DUPLICATE_SHAPE_IRI");
+    }
+
+    @Test
+    void unsavedTextThatCollidesWithAnotherDocumentIsReported() {
+        documents.replaceShapesDocumentText(
+                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+        var edited =
+                documents.createShapesDocument(GRAPH, "draft.ttl", null, "", Lang.TURTLE).getId();
+
+        var report = service.validateTurtle(GRAPH, "draft.ttl", VALID_SHAPES, edited);
+
+        assertThat(findings(report.getDocuments()))
+                .anySatisfy(
+                        finding -> {
+                            assertThat(finding.getCode()).isEqualTo("DUPLICATE_SHAPE_IRI");
+                            assertThat(finding.getMessage()).contains("custom");
+                        });
+        assertThat(report.getDocuments())
+                .singleElement()
+                .satisfies(result -> assertThat(result.getDocumentId()).isEqualTo(edited));
+    }
+
+    @Test
+    void unsavedTextWithoutADocumentIdIsCheckedOnItsOwn() {
+        documents.replaceShapesDocumentText(
+                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+
+        var report = service.validateTurtle(GRAPH, "draft.ttl", VALID_SHAPES, null);
+
+        assertThat(findings(report.getDocuments()))
+                .extracting(ShapesValidationFinding::getCode)
+                .doesNotContain("DUPLICATE_SHAPE_IRI");
+    }
+
+    @Test
+    void anIdNoStoredDocumentHasIsComparedAgainstEverythingStored() {
+        documents.replaceShapesDocumentText(
+                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+
+        var report = service.validateTurtle(GRAPH, "new.ttl", VALID_SHAPES, UUID.randomUUID());
+
+        assertThat(findings(report.getDocuments()))
+                .extracting(ShapesValidationFinding::getCode)
+                .contains("DUPLICATE_SHAPE_IRI");
+    }
+
+    @Test
+    void askingForOneDocumentStillReportsItsConflictsWithTheOthers() {
+        documents.replaceShapesDocumentText(
+                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+        var second =
+                documents.createShapesDocument(GRAPH, "copy.ttl", null, VALID_SHAPES, Lang.TURTLE);
+
+        var report = service.validateShapes(GRAPH, second.getId());
+
+        assertThat(report.getDocuments())
+                .singleElement()
+                .satisfies(result -> assertThat(result.getDocumentId()).isEqualTo(second.getId()));
+        assertThat(findings(report.getDocuments()))
+                .extracting(ShapesValidationFinding::getCode)
+                .contains("DUPLICATE_SHAPE_IRI");
     }
 
     private static String datatypeShapes(String datatype, String shapeName) {

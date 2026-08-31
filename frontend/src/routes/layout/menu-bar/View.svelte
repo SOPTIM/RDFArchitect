@@ -20,7 +20,7 @@
         faClockRotateLeft,
         faCodeBranch,
         faRightLeft,
-        faEye,
+        faFileShield,
         faCircleCheck,
     } from "@fortawesome/free-solid-svg-icons";
     import { onDestroy, onMount } from "svelte";
@@ -33,14 +33,12 @@
     } from "$lib/sharedState.svelte.js";
 
     import CompareDialog from "../../compare/CompareDialog.svelte";
-    import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
     import ValidationDialog from "../../validate/ValidationDialog.svelte";
 
     import { goto } from "$app/navigation";
 
     const shortcutsUnregister = [];
 
-    let showSHACLFullViewDialog = $state(false);
     let showCompareDialog = $state(false);
     let showValidationDialog = $state(false);
 
@@ -71,10 +69,10 @@
                 goto("/migrate"),
             ),
             shortcutStore.register(
-                "shaclFullView",
+                "shaclWorkbench",
                 ["ctrl", "shift", "l"],
                 () => {
-                    if (hasGraphSelected) showSHACLFullViewDialog = true;
+                    if (hasGraphSelected) goto("/shacl");
                 },
                 hasGraphSelected,
             ),
@@ -124,15 +122,14 @@
             Validate Schema
         </Menubar.Item.Button>
         <Menubar.Item.Button
-            onSelect={() => (showSHACLFullViewDialog = true)}
+            onSelect={() => goto("/shacl")}
             disabled={!hasGraphSelected}
-            faIcon={faEye}
+            faIcon={faFileShield}
             altText="Ctrl+Shift+L"
         >
-            View Constraints (SHACL)
+            Constraints (SHACL)
         </Menubar.Item.Button>
     </Menubar.Content>
 </Menubar.Menu>
-<SHACLFullViewDialog bind:showDialog={showSHACLFullViewDialog} />
 <CompareDialog bind:showDialog={showCompareDialog} />
 <ValidationDialog bind:showDialog={showValidationDialog} />

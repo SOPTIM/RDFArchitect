@@ -54,16 +54,17 @@
         "@xyflow/svelte": "^1.4.0",
         "asciidoctor": "^4.0.0",
         "bits-ui": "^2.11.5",
-        "codemirror": "^6.0.2",
-        "codemirror-lang-turtle": "^0.0.2",
         "elkjs": "^0.12.0",
         "html-to-image": "^1.11.13",
         "jszip": "^3.10.1",
         "mermaid": "^11.2.1",
+        "monaco-editor": "^0.56.0",
         "svelte-collapsible": "^0.3.1",
         "svelte-fa": "^4.0.4",
         "svelte-splitpanes": "^8.0.9",
         "uuid": "^14.0.0",
-        "validate-iri": "^1.0.1"
+        "validate-iri": "^1.0.1",
+        "vscode-oniguruma": "^2.0.1",
+        "vscode-textmate": "^9.3.2"
     }
 }

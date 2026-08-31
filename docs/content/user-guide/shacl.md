@@ -18,9 +18,24 @@ RDFArchitect distinguishes two kinds of shapes and stores them separately:
 
 When you view SHACL for a graph, both sets are shown and clearly labelled.
 
-## Viewing SHACL at graph level
+Custom SHACL is held as a **list of documents** rather than one block of text, because a schema's constraints normally arrive as several official files plus whatever you add yourself. Every enabled document applies and none overrides another: two documents that contradict each other are *reported*, never silently resolved. Custom shapes do take precedence over generated ones for the same resource, since the generated ones are derived defaults.
 
-**View → View Constraints (SHACL)** opens the full-view dialog. Two tabs: **Generated** (read-only TTL output) and **Custom** (editable TTL). The custom tab has inline TTL syntax highlighting and can be saved after editing.
+## The constraints workbench
+
+**View → Constraints (SHACL)** (`Ctrl+Shift+L`) opens the workbench for the selected schema.
+
+- **Documents** (left) lists the graph's constraints documents. Add an empty one, import a file, rename, reorder, delete, and switch a document off so it takes no part in validation or the combined export. Each row carries a badge summarising what validation found in it.
+- **Editor** (middle) edits the open document as Turtle, with syntax highlighting that extends into the SPARQL inside `sh:select`, and squiggles under whatever validation objects to. `Ctrl+S` saves; `F8` walks the problems.
+- **Inspector** (right) shows what the document is, the shapes it declares — click one to jump to it — and which profiles the constraints are being checked against.
+- **Problems** (bottom) collects everything found across all of the documents. Clicking an entry opens the document it belongs to and puts the cursor on it.
+
+### What validation checks
+
+Shapes are checked against the live CIM schema of the whole workspace: do the classes and properties they mention exist, do their cardinalities agree with the schema's multiplicities, does the SPARQL embedded in them parse and refer to real terms, and do the documents contradict each other.
+
+The check spans *every* schema in the workspace, not only the one the document belongs to. Official ENTSO-E cross-profile constraints files reference terms from neighbouring profiles on purpose, and checking against one profile alone would report all of those as unknown.
+
+This is validation of the *shapes*, not of instance data — an exchange file is still validated outside RDFArchitect.
 
 ## Viewing SHACL at class level
 

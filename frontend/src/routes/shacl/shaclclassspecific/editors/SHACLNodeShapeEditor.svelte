@@ -16,7 +16,7 @@
   -->
 <script>
     import { URI } from "$lib/models/dto/index.ts";
-    import TtlCodeEditor from "$lib/ttl/TtlCodeEditor.svelte";
+    import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
 
     let {
         nodeShapesList = $bindable(),
@@ -40,7 +40,7 @@
             </button>
         </div>
         {#if showNodeShapes[i]}
-            <TtlCodeEditor bind:value={nodeShape.triples} {readOnly} />
+            <TurtleEditor autoGrow bind:value={nodeShape.triples} {readOnly} />
         {/if}
     {/each}
 {/if}

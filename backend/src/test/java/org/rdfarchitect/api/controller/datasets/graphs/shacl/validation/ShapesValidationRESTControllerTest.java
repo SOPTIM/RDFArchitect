@@ -20,6 +20,7 @@ package org.rdfarchitect.api.controller.datasets.graphs.shacl.validation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -75,7 +76,8 @@ class ShapesValidationRESTControllerTest {
         shapesValidationUseCase = mock(ShapesValidationUseCase.class);
         when(expandURIUseCase.expandUri(any(), any())).thenReturn(GRAPH_URI);
         when(shapesValidationUseCase.validateShapes(any(), any())).thenReturn(emptyReport());
-        when(shapesValidationUseCase.validateTurtle(any(), any(), any())).thenReturn(emptyReport());
+        when(shapesValidationUseCase.validateTurtle(any(), any(), any(), any()))
+                .thenReturn(emptyReport());
 
         var controller =
                 new ShapesValidationRESTController(expandURIUseCase, shapesValidationUseCase);
@@ -116,7 +118,8 @@ class ShapesValidationRESTControllerTest {
                 .validateTurtle(
                         eq(new GraphIdentifier("cgmes", GRAPH_URI)),
                         eq("draft.ttl"),
-                        body.capture());
+                        body.capture(),
+                        isNull());
         assertThat(body.getValue()).isEqualTo(TTL);
     }
 
@@ -128,7 +131,7 @@ class ShapesValidationRESTControllerTest {
                                 .content("\"" + TTL.replace("\n", "\\n") + "\""))
                 .andExpect(result -> assertThat(result.getResponse().getStatus()).isEqualTo(415));
 
-        verify(shapesValidationUseCase, never()).validateTurtle(any(), any(), any());
+        verify(shapesValidationUseCase, never()).validateTurtle(any(), any(), any(), any());
     }
 
     @Test
@@ -136,7 +139,22 @@ class ShapesValidationRESTControllerTest {
         mockMvc.perform(post(URL + "/text").contentType(MediaType.TEXT_PLAIN).content(TTL))
                 .andExpect(result -> assertThat(result.getResponse().getStatus()).isEqualTo(200));
 
-        verify(shapesValidationUseCase).validateTurtle(any(), eq("unsaved"), eq(TTL));
+        verify(shapesValidationUseCase).validateTurtle(any(), eq("unsaved"), eq(TTL), isNull());
+    }
+
+    @Test
+    void unsavedTurtleCanNameTheDocumentItBelongsTo() throws Exception {
+        var documentId = UUID.randomUUID();
+
+        mockMvc.perform(
+                        post(URL + "/text")
+                                .param("documentId", documentId.toString())
+                                .contentType(MediaType.TEXT_PLAIN)
+                                .content(TTL))
+                .andExpect(result -> assertThat(result.getResponse().getStatus()).isEqualTo(200));
+
+        verify(shapesValidationUseCase)
+                .validateTurtle(any(), eq("unsaved"), eq(TTL), eq(documentId));
     }
 
     @Test
