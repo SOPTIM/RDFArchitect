@@ -18,12 +18,14 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
+    createShapesDocument,
     createSnapshot,
     putShacl,
     replaceAssociationShacl,
     replaceAttributeShacl,
     replaceGraphWithGraphString,
     replaceShape,
+    replaceShapesDocumentText,
 } from "../../src/lib/api/generated";
 
 /**
@@ -69,6 +71,21 @@ const OPERATIONS = [
         "replaceAssociationShacl",
         replaceAssociationShacl,
         { path: { ...CLASS, associationUUID: "an-association" } },
+    ],
+    [
+        "createShapesDocument",
+        createShapesDocument,
+        { path: GRAPH, query: { name: "eq.ttl" } },
+    ],
+    [
+        "replaceShapesDocumentText",
+        replaceShapesDocumentText,
+        {
+            path: {
+                ...GRAPH,
+                documentId: "0f8fad5b-d9cb-469f-a165-70867728950e",
+            },
+        },
     ],
 ];
 

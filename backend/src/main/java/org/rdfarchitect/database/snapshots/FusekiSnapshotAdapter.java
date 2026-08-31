@@ -110,35 +110,46 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
             GraphUtils.removeUUIDs(copiedGraph);
 
             conn.put(graphIdentifier.graphUri(), ModelFactory.createModelForGraph(copiedGraph));
-            transferCustomSHACL(conn, graphIdentifier, ctx);
+            transferShapesDocuments(conn, graphIdentifier, ctx);
         } catch (Exception e) {
             throw new FusekiServerException(e.getMessage());
         }
     }
 
     /**
-     * Copies the graph's custom SHACL into its own named graph, so that constraints a user imported
-     * or authored survive a share link instead of being silently dropped.
+     * Copies each of the graph's shapes documents into its own named graph, plus one graph holding
+     * their metadata, so that constraints a user imported or authored survive a share link instead
+     * of being silently dropped.
      *
-     * <p>Empty shapes graphs are skipped: Fuseki would reject a {@code PUT} of an empty model, and
-     * a snapshot without the graph is exactly how a snapshot taken before this existed looks.
+     * <p>Empty documents are skipped: Fuseki rejects a {@code PUT} of an empty model, and a
+     * snapshot without the graph is exactly how a snapshot taken before this existed looks. Their
+     * metadata is still written, so an empty-but-named document is not lost.
      *
-     * <p>Only the triples travel. The shapes graph's own prefix map is deliberately left behind: a
-     * snapshot keeps prefixes per dataset, not per graph, so writing them here could overwrite the
-     * schema's {@code cim:} mapping with a conflicting one from an imported constraints file.
-     * Round-tripping a shapes file byte-for-byte needs the verbatim source text, which the storage
-     * model does not carry yet.
+     * <p>Only the triples and the recorded source text travel. A shapes graph's own prefix map is
+     * left behind on purpose: a snapshot keeps prefixes per dataset, so writing them could
+     * overwrite the schema's {@code cim:} mapping with a conflicting one from an imported
+     * constraints file. The verbatim source text in the metadata is what preserves an imported file
+     * exactly.
      */
-    private void transferCustomSHACL(
+    private void transferShapesDocuments(
             RDFConnection conn, GraphIdentifier graphIdentifier, GraphContext ctx) {
-        var customSHACL = ctx.getCustomSHACL();
-        if (customSHACL.isEmpty()) {
-            return;
+        var documents = ctx.getShapesDocuments().values();
+        var metadata = ShapesDocumentMetadata.emptyModel();
+
+        for (var document : documents) {
+            ShapesDocumentMetadata.write(metadata, document);
+            if (document.getGraph().isEmpty()) {
+                continue;
+            }
+            var copiedShapes = GraphUtils.deepCopy(document.getGraph());
+            conn.put(
+                    ShapesGraphNaming.encode(
+                            graphIdentifier.graphUri(), document.getId().toString()),
+                    ModelFactory.createModelForGraph(copiedShapes));
         }
-        var copiedShapes = GraphUtils.deepCopy(customSHACL);
-        conn.put(
-                ShapesGraphNaming.encode(
-                        graphIdentifier.graphUri(), ShapesGraphNaming.DEFAULT_DOCUMENT_ID),
-                ModelFactory.createModelForGraph(copiedShapes));
+
+        if (!metadata.isEmpty()) {
+            conn.put(ShapesGraphNaming.encodeMetadata(graphIdentifier.graphUri()), metadata);
+        }
     }
 }

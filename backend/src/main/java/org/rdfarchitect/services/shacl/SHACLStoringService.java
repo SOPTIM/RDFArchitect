@@ -38,6 +38,8 @@ import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.merge.ModelResourceExclusiveMerge;
@@ -49,6 +51,7 @@ import org.rdfarchitect.shacl.dto.NodeShape;
 import org.rdfarchitect.shacl.dto.PropertyShape;
 import org.rdfarchitect.shacl.dto.PropertyShapesWrapper;
 import org.rdfarchitect.shacl.dto.SHACLToClassRelations;
+import org.rdfarchitect.shacl.dto.ShapesDocumentInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,8 +65,11 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * This implementation is able to store a single shacl file. This is a temporary solution missing
- * the core concept of storing multiple shacl files.
+ * Stores and reads the sets of SHACL shapes belonging to a graph.
+ *
+ * <p>Reads span every enabled {@link ShapesDocument} (see {@code readEnabledShapes}); the
+ * shape-level and property-level writes still target the graph's default document, which is what
+ * the endpoints predating multiple documents address.
  */
 @RequiredArgsConstructor
 public class SHACLStoringService
@@ -73,7 +79,8 @@ public class SHACLStoringService
                 SHACLGetShapeUseCase,
                 SHACLReplaceShapeUseCase,
                 SHACLDeleteShapeUseCase,
-                SHACLUpdateUseCase {
+                SHACLUpdateUseCase,
+                SHACLDocumentUseCase {
 
     private static final Logger logger = LoggerFactory.getLogger(SHACLStoringService.class);
 
@@ -81,6 +88,198 @@ public class SHACLStoringService
             PrefixEntry.create(RDFA.NS_PREFIX_SHACL, RDFA.NS_URI_SHACL);
 
     private final DatabasePort databasePort;
+
+    // -------------------------------------------------------------------------
+    // Shapes documents
+    // -------------------------------------------------------------------------
+
+    @Override
+    public List<ShapesDocumentInfo> listShapesDocuments(GraphIdentifier graphIdentifier) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            return ctx.getShapesDocuments().values().stream()
+                    .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
+                    .map(SHACLStoringService::toInfo)
+                    .toList();
+        }
+    }
+
+    @Override
+    public ShapesDocumentInfo createShapesDocument(
+            GraphIdentifier graphIdentifier,
+            String name,
+            String sourceFileName,
+            String content,
+            Lang lang) {
+        var parsed = parse(content, lang);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            assertNameIsFree(ctx, name, null);
+            var document = ctx.createShapesDocument(name, resolveOrigin(sourceFileName));
+            document.setSourceFileName(sourceFileName);
+            writeContent(document, parsed, content, lang);
+            ctx.commit("Add constraints \"%s\"".formatted(name));
+            return toInfo(document);
+        }
+    }
+
+    @Override
+    public String getShapesDocumentText(GraphIdentifier graphIdentifier, UUID documentId) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var document = requireDocument(ctx, documentId);
+            // Authoritative text, unless the document has none yet (a snapshot carries only the
+            // triples, and an undo drops the text) — then it is re-derived from the shapes.
+            return document.getRawText() != null
+                    ? document.getRawText()
+                    : serialiseToTurtle(ModelFactory.createModelForGraph(document.getGraph()));
+        }
+    }
+
+    @Override
+    public void replaceShapesDocumentText(
+            GraphIdentifier graphIdentifier, UUID documentId, String turtle) {
+        var parsed = parse(turtle, Lang.TURTLE);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var document = requireDocument(ctx, documentId);
+            writeContent(document, parsed, turtle, Lang.TURTLE);
+            ctx.commit("Edit constraints \"%s\"".formatted(document.getName()));
+        }
+    }
+
+    @Override
+    public ShapesDocumentInfo updateShapesDocument(
+            GraphIdentifier graphIdentifier,
+            UUID documentId,
+            String name,
+            Boolean enabled,
+            Integer order) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var document = requireDocument(ctx, documentId);
+            if (name != null) {
+                assertNameIsFree(ctx, name, documentId);
+                document.setName(name);
+            }
+            if (enabled != null) {
+                document.setEnabled(enabled);
+            }
+            if (order != null) {
+                reorder(ctx, document, order);
+            }
+            ctx.commit("Update constraints \"%s\"".formatted(document.getName()));
+            return toInfo(document);
+        }
+    }
+
+    @Override
+    public void deleteShapesDocument(GraphIdentifier graphIdentifier, UUID documentId) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var document = requireDocument(ctx, documentId);
+            if (GraphContext.DEFAULT_SHAPES_DOCUMENT_ID.equals(documentId)) {
+                // Refusing here rather than letting the context's guard surface as a server error:
+                // asking to delete it is a client mistake, not a fault.
+                throw new ResourceConflictException(
+                        "The graph's default constraints document cannot be deleted. "
+                                + "Replace its content with an empty document instead.");
+            }
+            var name = document.getName();
+            ctx.removeShapesDocument(documentId);
+            ctx.commit("Delete constraints \"%s\"".formatted(name));
+        }
+    }
+
+    private static ShapesDocument requireDocument(GraphContext ctx, UUID documentId) {
+        var document = ctx.getShapesDocuments().get(documentId);
+        if (document == null) {
+            throw new ResourceNotFoundException(
+                    "No constraints document with id " + documentId + " in this graph.");
+        }
+        return document;
+    }
+
+    /** Names identify documents to the user, so two documents must not share one. */
+    private static void assertNameIsFree(GraphContext ctx, String name, UUID allowedId) {
+        var clash =
+                ctx.getShapesDocuments().values().stream()
+                        .anyMatch(d -> d.getName().equals(name) && !d.getId().equals(allowedId));
+        if (clash) {
+            throw new ResourceConflictException(
+                    "A constraints document named \"" + name + "\" already exists in this graph.");
+        }
+    }
+
+    /**
+     * Moves {@code document} to {@code targetOrder} and renumbers the rest so the positions stay
+     * dense — a gap would make the next insert land in an unexpected place.
+     */
+    private static void reorder(GraphContext ctx, ShapesDocument document, int targetOrder) {
+        var ordered =
+                new ArrayList<>(
+                        ctx.getShapesDocuments().values().stream()
+                                .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
+                                .toList());
+        ordered.remove(document);
+        var clamped = Math.clamp(targetOrder, 0, ordered.size());
+        ordered.add(clamped, document);
+        for (int i = 0; i < ordered.size(); i++) {
+            ordered.get(i).setOrder(i);
+        }
+    }
+
+    /** Uploaded content is treated as imported; content typed into the editor as authored. */
+    private static ShapesDocument.Origin resolveOrigin(String sourceFileName) {
+        return sourceFileName != null
+                ? ShapesDocument.Origin.IMPORTED
+                : ShapesDocument.Origin.AUTHORED;
+    }
+
+    /**
+     * Replaces a document's shapes and records the text they came from.
+     *
+     * <p>Turtle is kept exactly as the user wrote it, comments and ordering included. Any other
+     * syntax is converted to Turtle once, here, because the editor only works in Turtle — keeping
+     * the original RDF/XML would mean handing the editor something it cannot show.
+     */
+    private static void writeContent(
+            ShapesDocument document, Model parsed, String content, Lang lang) {
+        var stored = document.getGraph();
+        stored.clear();
+        var storedModel = ModelFactory.createModelForGraph(stored);
+        storedModel.clearNsPrefixMap();
+        storedModel.add(parsed);
+        storedModel.setNsPrefixes(parsed);
+        document.setRawText(
+                Lang.TURTLE.equals(lang) && content != null
+                        ? content
+                        : serialiseToTurtle(storedModel));
+    }
+
+    private static Model parse(String content, Lang lang) {
+        var model = ModelFactory.createDefaultModel();
+        try (var reader = new StringReader(content == null ? "" : content.trim())) {
+            model.read(reader, null, lang.getName());
+        }
+        return ModelFactory.createModelForGraph(GraphUtils.normalizeBlankNodes(model.getGraph()));
+    }
+
+    private static String serialiseToTurtle(Model model) {
+        try (var out = new ByteArrayOutputStream()) {
+            model.write(out, Lang.TURTLE.getName());
+            return out.toString(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new DataAccessException("Error while writing constraints as Turtle", e);
+        }
+    }
+
+    private static ShapesDocumentInfo toInfo(ShapesDocument document) {
+        return ShapesDocumentInfo.builder()
+                .id(document.getId())
+                .name(document.getName())
+                .sourceFileName(document.getSourceFileName())
+                .origin(document.getOrigin())
+                .enabled(document.isEnabled())
+                .order(document.getOrder())
+                .isDefault(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID.equals(document.getId()))
+                .tripleCount(document.getGraph().size())
+                .build();
+    }
 
     /**
      * All enabled shapes documents of the graph, read as one model.
@@ -124,13 +323,11 @@ public class SHACLStoringService
     @Override
     public void replaceCustomSHACLGraph(GraphIdentifier graphIdentifier, Graph shacl) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var storedGraph = ctx.getCustomSHACL();
-            storedGraph.clear();
-            var storedModel = ModelFactory.createModelForGraph(storedGraph);
+            var document = ctx.getShapesDocuments().get(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
             var newModel = ModelFactory.createModelForGraph(GraphUtils.normalizeBlankNodes(shacl));
-            storedModel.clearNsPrefixMap();
-            storedModel.add(newModel);
-            storedModel.setNsPrefixes(newModel);
+            // This path receives an already-parsed graph, so there is no user-authored text to
+            // preserve; the serialised form is the best available source for the editor.
+            writeContent(document, newModel, null, null);
 
             ctx.commit("Replace custom SHACL");
         }

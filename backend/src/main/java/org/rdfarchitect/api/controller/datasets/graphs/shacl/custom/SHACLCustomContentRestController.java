@@ -70,8 +70,12 @@ public class SHACLCustomContentRestController {
 
     @Operation(
             summary = "Replace/Insert shacl",
-            description = "Replace or insert a shacl graph stored in a file",
+            description =
+                    "Replace or insert a shacl graph stored in a file. Superseded by POST "
+                            + "/shacl/documents/file, which adds a file as its own document instead of "
+                            + "replacing the graph's default one.",
             tags = {"graph"},
+            deprecated = true,
             responses = {@ApiResponse(responseCode = "200")})
     @PutMapping(path = "/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public String replaceGraphWithFile(
@@ -113,8 +117,11 @@ public class SHACLCustomContentRestController {
 
     @Operation(
             summary = "Replace/Insert shacl",
-            description = "Replace or insert a shacl graph stored in a Turtle String",
+            description =
+                    "Replace or insert a shacl graph stored in a Turtle String. Superseded by PUT "
+                            + "/shacl/documents/{documentId}, which addresses one document explicitly.",
             tags = {"graph"},
+            deprecated = true,
             responses = {@ApiResponse(responseCode = "200")})
     // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
     // body would reach Jena with its surrounding quotes and fail to parse.

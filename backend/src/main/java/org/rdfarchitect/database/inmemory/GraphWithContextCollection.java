@@ -24,20 +24,26 @@ import lombok.Setter;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
+import org.rdfarchitect.database.GraphContext;
+import org.rdfarchitect.database.ShapesDocument;
+import org.rdfarchitect.database.ShapesDocumentSeed;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.database.snapshots.ShapesDocumentMetadata;
 import org.rdfarchitect.database.snapshots.ShapesGraphNaming;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -93,18 +99,18 @@ public class GraphWithContextCollection {
                         DEFAULT_GRAPH_NAME,
                         new GraphWithContextTransactional(
                                 dataset.getDefaultModel().getGraph(),
-                                shapesByOwner.get(DEFAULT_GRAPH_NAME)));
+                                shapesByOwner.getOrDefault(DEFAULT_GRAPH_NAME, List.of())));
             }
             for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
                 var graphURI = it.next().getURI();
-                if (ShapesGraphNaming.isShapesGraph(graphURI)) {
+                if (ShapesGraphNaming.isReserved(graphURI)) {
                     continue;
                 }
                 graphs.put(
                         graphURI,
                         new GraphWithContextTransactional(
                                 dataset.getNamedModel(graphURI).getGraph(),
-                                shapesByOwner.get(graphURI)));
+                                shapesByOwner.getOrDefault(graphURI, List.of())));
             }
         } finally {
             rwLock.writeLock().unlock();
@@ -112,23 +118,63 @@ public class GraphWithContextCollection {
     }
 
     /**
-     * Indexes the dataset's shapes graphs by the graph they belong to.
+     * Indexes the dataset's shapes documents by the graph they belong to.
      *
      * <p>Shapes whose owner is not in the dataset are dropped: without its schema a constraint set
      * has nothing to apply to, and keeping it would resurrect a graph the snapshot did not contain.
+     *
+     * <p>A snapshot written before documents existed names its shapes graph {@code default} rather
+     * than a uuid; those land in the graph's default document, which is where that single shapes
+     * graph used to live.
      */
-    private static Map<String, Graph> collectShapesGraphs(Dataset dataset) {
-        Map<String, Graph> shapesByOwner = new HashMap<>();
+    private static Map<String, List<ShapesDocumentSeed>> collectShapesGraphs(Dataset dataset) {
+        Map<String, List<ShapesDocumentSeed>> shapesByOwner = new HashMap<>();
         for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
             var graphURI = it.next().getURI();
-            ShapesGraphNaming.decode(graphURI)
-                    .ifPresent(
-                            name ->
-                                    shapesByOwner.put(
-                                            name.ownerGraphUri(),
-                                            dataset.getNamedModel(graphURI).getGraph()));
+            var name = ShapesGraphNaming.decode(graphURI);
+            if (name.isEmpty()) {
+                continue;
+            }
+            var owner = name.get().ownerGraphUri();
+            var documentId = parseDocumentId(name.get().documentId());
+            var metadata = metadataOf(dataset, owner);
+            var entry = ShapesDocumentMetadata.read(metadata, documentId);
+            shapesByOwner
+                    .computeIfAbsent(owner, _ -> new ArrayList<>())
+                    .add(
+                            new ShapesDocumentSeed(
+                                    documentId,
+                                    entry.map(ShapesDocumentMetadata.Entry::name)
+                                            .orElseGet(
+                                                    () ->
+                                                            ShapesDocumentMetadata.defaultName(
+                                                                    documentId)),
+                                    entry.map(ShapesDocumentMetadata.Entry::sourceFileName)
+                                            .orElse(null),
+                                    entry.map(ShapesDocumentMetadata.Entry::origin)
+                                            .orElse(ShapesDocument.Origin.IMPORTED),
+                                    entry.map(ShapesDocumentMetadata.Entry::enabled).orElse(true),
+                                    entry.map(ShapesDocumentMetadata.Entry::order).orElse(0),
+                                    entry.map(ShapesDocumentMetadata.Entry::rawText).orElse(null),
+                                    dataset.getNamedModel(graphURI).getGraph()));
         }
         return shapesByOwner;
+    }
+
+    private static Model metadataOf(Dataset dataset, String ownerGraphUri) {
+        var metadataGraph = ShapesGraphNaming.encodeMetadata(ownerGraphUri);
+        return dataset.containsNamedModel(metadataGraph)
+                ? dataset.getNamedModel(metadataGraph)
+                : ShapesDocumentMetadata.emptyModel();
+    }
+
+    /** A pre-document snapshot uses {@code default} where later ones use a uuid. */
+    private static UUID parseDocumentId(String documentId) {
+        try {
+            return UUID.fromString(documentId);
+        } catch (IllegalArgumentException _) {
+            return GraphContext.DEFAULT_SHAPES_DOCUMENT_ID;
+        }
     }
 
     /**

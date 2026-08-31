@@ -24,6 +24,7 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.rdfarchitect.config.GraphCompressionConfig;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.ShapesDocument;
+import org.rdfarchitect.database.ShapesDocumentSeed;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
@@ -44,6 +45,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -101,20 +103,20 @@ public class GraphWithContextTransactional implements GraphContext {
     private record NamedRewindable(String name, Rewindable rewindable) {}
 
     public GraphWithContextTransactional(Graph base) {
-        this(base, null);
+        this(base, List.of());
     }
 
     /**
-     * Creates the context and seeds its custom SHACL from {@code customSHACLBase}.
+     * Creates the context and seeds its shapes documents from {@code shapesSeeds}.
      *
      * <p>Used when loading a snapshot, which carries a graph's constraints alongside its schema.
      * Seeding inside the initial transaction keeps the load a single {@code imported graph} commit
      * — writing the shapes afterwards would leave the user an undo step for content they never
      * authored in this session.
      *
-     * @param customSHACLBase the shapes to seed, or {@code null} for none
+     * @param shapesSeeds the documents to restore; empty for a graph without constraints
      */
-    public GraphWithContextTransactional(Graph base, Graph customSHACLBase) {
+    public GraphWithContextTransactional(Graph base, List<ShapesDocumentSeed> shapesSeeds) {
         txnContext.begin(ReadWrite.WRITE);
         int maxVersions = GraphCompressionConfig.getMaxVersions();
         int compressCount = GraphCompressionConfig.getCompressCount();
@@ -131,16 +133,13 @@ public class GraphWithContextTransactional implements GraphContext {
         this.coreRewindables.add(new NamedRewindable("rdf", rdfGraph));
         // Created up front, exactly as the single shapes graph used to be, so that reading a
         // graph's SHACL never has the side effect of adding a transaction participant.
-        var defaultDocument =
-                addShapesDocument(
-                        DEFAULT_SHAPES_DOCUMENT_ID,
-                        DEFAULT_SHAPES_DOCUMENT_NAME,
-                        ShapesDocument.Origin.AUTHORED);
-        if (customSHACLBase != null) {
-            var shaclModel = ModelFactory.createModelForGraph(defaultDocument.getGraph());
-            shaclModel.setNsPrefixes(customSHACLBase.getPrefixMapping());
-            shaclModel.add(ModelFactory.createModelForGraph(customSHACLBase));
-        }
+        addShapesDocument(
+                DEFAULT_SHAPES_DOCUMENT_ID,
+                DEFAULT_SHAPES_DOCUMENT_NAME,
+                ShapesDocument.Origin.AUTHORED);
+        shapesSeeds.stream()
+                .sorted(Comparator.comparingInt(ShapesDocumentSeed::order))
+                .forEach(this::restoreShapesDocument);
         commit("imported graph");
         txnContext.end();
     }
@@ -190,6 +189,28 @@ public class GraphWithContextTransactional implements GraphContext {
         synchronized (shapesDocumentsLock) {
             return shapesDocuments.get(DEFAULT_SHAPES_DOCUMENT_ID).getGraph();
         }
+    }
+
+    /**
+     * Puts a document back as storage described it, reusing its id so links to it survive a reload.
+     *
+     * <p>The default document already exists, so a seed for it fills the existing one instead of
+     * adding a second.
+     */
+    private void restoreShapesDocument(ShapesDocumentSeed seed) {
+        var document =
+                DEFAULT_SHAPES_DOCUMENT_ID.equals(seed.id())
+                        ? shapesDocuments.get(DEFAULT_SHAPES_DOCUMENT_ID)
+                        : addShapesDocument(seed.id(), seed.name(), seed.origin());
+        document.setName(seed.name());
+        document.setSourceFileName(seed.sourceFileName());
+        document.setEnabled(seed.enabled());
+        document.setOrder(seed.order());
+        document.setRawText(seed.rawText());
+
+        var model = ModelFactory.createModelForGraph(document.getGraph());
+        model.setNsPrefixes(seed.graph().getPrefixMapping());
+        model.add(ModelFactory.createModelForGraph(seed.graph()));
     }
 
     @Override

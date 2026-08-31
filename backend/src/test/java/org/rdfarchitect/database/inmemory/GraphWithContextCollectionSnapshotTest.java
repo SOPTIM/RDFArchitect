@@ -25,8 +25,15 @@ import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.database.ShapesDocument;
+import org.rdfarchitect.database.snapshots.ShapesDocumentMetadata;
 import org.rdfarchitect.database.snapshots.ShapesGraphNaming;
+import org.rdfarchitect.rdf.graph.wrapper.RDFGraphDelta;
+import org.rdfarchitect.rdf.graph.wrapper.TransactionContext;
+
+import java.util.UUID;
 
 /**
  * Loading the shapes graphs a snapshot carries alongside its schema.
@@ -126,5 +133,114 @@ class GraphWithContextCollectionSnapshotTest {
             assertThat(ctx.canUndo()).isFalse();
         }
         assertThat(customSHACLHasTargetClass(context)).isTrue();
+    }
+
+    // -------------------------------------------------------------------------
+    // Several documents
+    // -------------------------------------------------------------------------
+
+    private static Model namedShapeModel(String localName) {
+        var model = ModelFactory.createDefaultModel();
+        model.add(
+                ResourceFactory.createResource(GRAPH_URI + "#" + localName),
+                ResourceFactory.createProperty(SHACL_NS + "targetClass"),
+                ResourceFactory.createResource(GRAPH_URI + "#ACLineSegment"));
+        return model;
+    }
+
+    @Test
+    void everyDocumentInTheSnapshotIsRestoredWithItsMetadata() {
+        var eqId = UUID.randomUUID();
+        var tpId = UUID.randomUUID();
+
+        var dataset = DatasetFactory.createGeneral();
+        dataset.addNamedModel(GRAPH_URI, schemaModel());
+        dataset.addNamedModel(
+                ShapesGraphNaming.encode(GRAPH_URI, eqId.toString()), namedShapeModel("EqShape"));
+        dataset.addNamedModel(
+                ShapesGraphNaming.encode(GRAPH_URI, tpId.toString()), namedShapeModel("TpShape"));
+
+        var metadata = ShapesDocumentMetadata.emptyModel();
+        metadata.add(documentMetadata(eqId, "eq.ttl", "EQ.ttl", 1, true, "# eq source"));
+        metadata.add(documentMetadata(tpId, "tp.ttl", null, 2, false, null));
+        dataset.addNamedModel(ShapesGraphNaming.encodeMetadata(GRAPH_URI), metadata);
+
+        var collection = new GraphWithContextCollection(dataset);
+
+        assertThat(collection.listGraphUris()).containsExactly(GRAPH_URI);
+
+        var context = collection.getGraphWithContext(GRAPH_URI);
+        try (var ctx = context.begin(ReadWrite.READ)) {
+            var documents = ctx.getShapesDocuments();
+            assertThat(documents).containsKeys(eqId, tpId);
+
+            var eq = documents.get(eqId);
+            assertThat(eq.getName()).isEqualTo("eq.ttl");
+            assertThat(eq.getSourceFileName()).isEqualTo("EQ.ttl");
+            assertThat(eq.getOrder()).isEqualTo(1);
+            assertThat(eq.isEnabled()).isTrue();
+            assertThat(eq.getRawText()).isEqualTo("# eq source");
+            assertThat(eq.getGraph().isEmpty()).isFalse();
+
+            var tp = documents.get(tpId);
+            assertThat(tp.getName()).isEqualTo("tp.ttl");
+            assertThat(tp.getSourceFileName()).isNull();
+            // A document switched off before the snapshot stays off after it.
+            assertThat(tp.isEnabled()).isFalse();
+        }
+    }
+
+    @Test
+    void documentWithoutRecordedMetadataStillLoads() {
+        // A snapshot written before the metadata graph existed carries only the shapes.
+        var id = UUID.randomUUID();
+        var dataset = DatasetFactory.createGeneral();
+        dataset.addNamedModel(GRAPH_URI, schemaModel());
+        dataset.addNamedModel(
+                ShapesGraphNaming.encode(GRAPH_URI, id.toString()), namedShapeModel("EqShape"));
+
+        var collection = new GraphWithContextCollection(dataset);
+
+        try (var ctx = collection.getGraphWithContext(GRAPH_URI).begin(ReadWrite.READ)) {
+            var document = ctx.getShapesDocuments().get(id);
+            assertThat(document).isNotNull();
+            assertThat(document.getName()).contains(id.toString());
+            assertThat(document.isEnabled()).isTrue();
+            assertThat(document.getGraph().isEmpty()).isFalse();
+        }
+    }
+
+    @Test
+    void metadataGraphIsNotExposedAsAGraphOfItsOwn() {
+        var dataset = snapshotWithShapes();
+        dataset.addNamedModel(
+                ShapesGraphNaming.encodeMetadata(GRAPH_URI), ShapesDocumentMetadata.emptyModel());
+
+        var collection = new GraphWithContextCollection(dataset);
+
+        assertThat(collection.listGraphUris()).containsExactly(GRAPH_URI);
+    }
+
+    /** Builds the metadata statements a snapshot records for one document. */
+    private static Model documentMetadata(
+            UUID id, String name, String sourceFile, int order, boolean enabled, String rawText) {
+        var document =
+                new ShapesDocument(
+                        id,
+                        name,
+                        ShapesDocument.Origin.IMPORTED,
+                        new RDFGraphDelta(
+                                GraphFactory.createDefaultGraph(),
+                                50,
+                                5,
+                                new TransactionContext()));
+        document.setSourceFileName(sourceFile);
+        document.setOrder(order);
+        document.setEnabled(enabled);
+        document.setRawText(rawText);
+
+        var model = ShapesDocumentMetadata.emptyModel();
+        ShapesDocumentMetadata.write(model, document);
+        return model;
     }
 }

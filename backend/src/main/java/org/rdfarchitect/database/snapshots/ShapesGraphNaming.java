@@ -58,9 +58,42 @@ public final class ShapesGraphNaming {
         return PREFIX + URLEncoder.encode(ownerGraphUri, StandardCharsets.UTF_8) + ":" + documentId;
     }
 
+    private static final String METADATA_PREFIX = "urn:rdfa:shacl-meta:";
+
+    /**
+     * Names the graph holding a graph's shapes-document metadata (names, order, enabled flags,
+     * source text). Separate from the shapes themselves so that reading the shapes never has to
+     * filter bookkeeping triples out of them.
+     */
+    public static String encodeMetadata(String ownerGraphUri) {
+        return METADATA_PREFIX + URLEncoder.encode(ownerGraphUri, StandardCharsets.UTF_8);
+    }
+
+    /** Returns whether {@code graphUri} names a shapes-metadata graph. */
+    public static boolean isMetadataGraph(String graphUri) {
+        return graphUri != null && graphUri.startsWith(METADATA_PREFIX);
+    }
+
     /** Returns whether {@code graphUri} names a shapes graph rather than a CIM profile graph. */
     public static boolean isShapesGraph(String graphUri) {
-        return graphUri != null && graphUri.startsWith(PREFIX);
+        return graphUri != null && graphUri.startsWith(PREFIX) && !isMetadataGraph(graphUri);
+    }
+
+    /** Returns whether {@code graphUri} is one of the reserved graphs, of either kind. */
+    public static boolean isReserved(String graphUri) {
+        return isShapesGraph(graphUri) || isMetadataGraph(graphUri);
+    }
+
+    /** Splits a shapes-metadata graph name back into the graph it belongs to. */
+    public static Optional<String> decodeMetadata(String graphUri) {
+        if (!isMetadataGraph(graphUri)) {
+            return Optional.empty();
+        }
+        var body = graphUri.substring(METADATA_PREFIX.length());
+        if (body.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(URLDecoder.decode(body, StandardCharsets.UTF_8));
     }
 
     /**

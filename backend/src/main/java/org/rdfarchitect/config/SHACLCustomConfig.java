@@ -19,6 +19,7 @@ package org.rdfarchitect.config;
 
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.services.shacl.SHACLDeleteShapeUseCase;
+import org.rdfarchitect.services.shacl.SHACLDocumentUseCase;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.rdfarchitect.services.shacl.SHACLGetClassRelationsUseCase;
 import org.rdfarchitect.services.shacl.SHACLGetShapeUseCase;
@@ -64,6 +65,11 @@ public class SHACLCustomConfig {
 
     @Bean
     public SHACLUpdateUseCase shaclUpdateUseCase(DatabasePort databasePort) {
+        return new SHACLStoringService(databasePort);
+    }
+
+    @Bean
+    public SHACLDocumentUseCase shaclDocumentUseCase(DatabasePort databasePort) {
         return new SHACLStoringService(databasePort);
     }
 }
