@@ -53,6 +53,7 @@
     let bendPoints = $derived(getInnerBendPoints(allPoints));
     let sourceEndPoint = $derived(getSourceEndPoint(allPoints));
     let targetEndPoint = $derived(getTargetEndPoint(allPoints));
+    let readOnly = $derived(data?.readOnly ?? false);
 
     let useRoundedCorners = $derived(
         userSettings.get("useRoundedEdges", false),
@@ -156,7 +157,7 @@
         d={path}
         fill="none"
         class="pointer-events-none"
-        style="stroke: var(--color-blue); stroke-width: 1.5px; stroke-dasharray: 6 4; opacity: 0.9;"
+        style="stroke: var(--color-blue); stroke-width: 3.5px; stroke-dasharray: 10 6; opacity: 0.9;"
     />
 {/if}
 
@@ -171,10 +172,10 @@
         {bendPoints}
         {sourceEndPoint}
         {targetEndPoint}
+        {readOnly}
         sourceNodeId={source}
         targetNodeId={target}
         onPointsChange={handleBendPointsChange}
         onPointsCommit={handleBendPointsCommit}
-    />
     />
 {/if}

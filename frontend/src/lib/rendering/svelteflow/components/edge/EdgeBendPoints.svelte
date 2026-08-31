@@ -42,6 +42,7 @@
         bendPoints = [],
         sourceEndPoint = null,
         targetEndPoint = null,
+        readOnly = false,
         sourceNodeId,
         targetNodeId,
         onPointsChange,
@@ -62,13 +63,21 @@
     let drag = $state(null);
 
     let fullPoints = $derived([sourcePoint, ...bendPoints, targetPoint]);
-    let inactiveBendPoints = $derived(getInactiveBendPoints(fullPoints));
+    let inactiveBendPoints = $derived(
+        readOnly ? [] : getInactiveBendPoints(fullPoints),
+    );
 
     let inactiveEndPoints = $derived(
-        [
-            sourceEndPoint ? null : { side: "source", ...sourceBorderPoint },
-            targetEndPoint ? null : { side: "target", ...targetBorderPoint },
-        ].filter(Boolean),
+        readOnly
+            ? []
+            : [
+                  sourceEndPoint
+                      ? null
+                      : { side: "source", ...sourceBorderPoint },
+                  targetEndPoint
+                      ? null
+                      : { side: "target", ...targetBorderPoint },
+              ].filter(Boolean),
     );
 
     function beginPointDrag(pointId, event) {
@@ -208,7 +217,11 @@
 
     {#each bendPoints as bendPoint (bendPoint.id)}
         <circle
-            class="bend-point-handle nodrag nopan fill-blue cursor-grab stroke-white stroke-[1.5]"
+            class={`bend-point-handle nodrag nopan stroke-white stroke-[1.5] ${
+                readOnly
+                    ? "fill-text-subtle cursor-default"
+                    : "fill-blue cursor-grab"
+            }`}
             role="button"
             aria-label="Move bend point"
             tabindex="-1"
@@ -217,13 +230,19 @@
             cy={bendPoint.y}
             r={EDGE_INTERACTION_CONFIG.activePointRadiusPx}
             style="pointer-events: all;"
-            onpointerdown={e => beginPointDrag(bendPoint.id, e)}
+            onpointerdown={readOnly
+                ? undefined
+                : e => beginPointDrag(bendPoint.id, e)}
         />
     {/each}
 
     {#if sourceEndPoint}
         <circle
-            class="bend-point-handle nodrag nopan fill-green cursor-grab stroke-white stroke-[1.5]"
+            class={`bend-point-handle nodrag nopan stroke-white stroke-[1.5] ${
+                readOnly
+                    ? "fill-text-subtle cursor-default"
+                    : "fill-green cursor-grab"
+            }`}
             role="button"
             aria-label="Move source end point"
             tabindex="-1"
@@ -232,13 +251,19 @@
             cy={sourceEndPoint.y}
             r={EDGE_INTERACTION_CONFIG.activePointRadiusPx}
             style="pointer-events: all;"
-            onpointerdown={e => beginPointDrag(sourceEndPoint.id, e)}
+            onpointerdown={readOnly
+                ? undefined
+                : e => beginPointDrag(sourceEndPoint.id, e)}
         />
     {/if}
 
     {#if targetEndPoint}
         <circle
-            class="bend-point-handle nodrag nopan fill-green cursor-grab stroke-white stroke-[1.5]"
+            class={`bend-point-handle nodrag nopan stroke-white stroke-[1.5] ${
+                readOnly
+                    ? "fill-text-subtle cursor-default"
+                    : "fill-green cursor-grab"
+            }`}
             role="button"
             aria-label="Move target end point"
             tabindex="-1"
@@ -247,7 +272,9 @@
             cy={targetEndPoint.y}
             r={EDGE_INTERACTION_CONFIG.activePointRadiusPx}
             style="pointer-events: all;"
-            onpointerdown={e => beginPointDrag(targetEndPoint.id, e)}
+            onpointerdown={readOnly
+                ? undefined
+                : e => beginPointDrag(targetEndPoint.id, e)}
         />
     {/if}
 </g>
