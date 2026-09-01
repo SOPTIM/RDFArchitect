@@ -27,9 +27,13 @@
      */
     function handlePointerDown() {
         labelHighlight.press(id);
-        window.addEventListener("pointerup", () => labelHighlight.release(), {
-            once: true,
-        });
+        const release = () => {
+            labelHighlight.release();
+            window.removeEventListener("pointerup", release);
+            window.removeEventListener("pointercancel", release);
+        };
+        window.addEventListener("pointerup", release);
+        window.addEventListener("pointercancel", release);
     }
 </script>
 

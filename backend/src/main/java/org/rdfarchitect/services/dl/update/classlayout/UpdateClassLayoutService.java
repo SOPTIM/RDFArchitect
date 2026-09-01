@@ -20,11 +20,11 @@ package org.rdfarchitect.services.dl.update.classlayout;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
-import org.apache.jena.graph.Node;
-import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
@@ -39,7 +39,10 @@ import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.rdfarchitect.services.rendering.MergedClasses;
@@ -251,26 +254,64 @@ public class UpdateClassLayoutService
             for (var diagramObject : DLObjectFetcher.fetchAllDOs(diagramLayoutModel, classUUID)) {
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
             }
-            deleteOrphanedLabels(diagramLayoutModel, ctx.getRdfGraph());
+            deleteOrphanedLabels(diagramLayoutModel, ctx.getRdfGraph(), classUUID);
             ctx.commit();
         }
     }
 
     /**
-     * Drops the layout of labels whose resource no longer exists. Labels are anchored to the
-     * resource whose text they display, e.g. an association end, so deleting a class leaves the
-     * labels of its associations behind. Sweeping the graph-scoped layout after a deletion covers
-     * that without every delete path having to know which labels it invalidates.
+     * Drops the layout of labels anchored to an association end of the deleted class. Labels are
+     * anchored to the resource whose text they display, e.g. an association end, so deleting a
+     * class leaves the labels of its associations behind: {@code CIMUpdates.deleteClass} never
+     * cascades to a class's associations, so their own {@code rdfa:uuid} outlives the class.
      */
-    private void deleteOrphanedLabels(Model diagramLayoutModel, Graph rdfGraph) {
+    private void deleteOrphanedLabels(Model diagramLayoutModel, Graph rdfGraph, UUID classUUID) {
+        var danglingAssociationEndUuids = danglingAssociationEndUuids(rdfGraph, classUUID);
+        if (danglingAssociationEndUuids.isEmpty()) {
+            return;
+        }
         for (var label : DLObjectFetcher.fetchAllLabelDOs(diagramLayoutModel)) {
-            var uuidNode =
-                    NodeFactory.createLiteralString(
-                            label.getBelongsToIdentifiedObject().getUuid().toString());
-            if (!rdfGraph.contains(Node.ANY, RDFA.uuid.asNode(), uuidNode)) {
+            if (danglingAssociationEndUuids.contains(
+                    label.getBelongsToIdentifiedObject().getUuid())) {
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, label.getMRID());
             }
         }
+    }
+
+    /**
+     * Finds the UUIDs of both ends of every association still pointing at the deleted class as its
+     * domain or range, so their multiplicity labels can be dropped. Includes each association's
+     * inverse end, since a label may be anchored to either side of the pair.
+     */
+    private Set<UUID> danglingAssociationEndUuids(Graph rdfGraph, UUID classUUID) {
+        var model = ModelFactory.createModelForGraph(rdfGraph);
+        var classResource =
+                model.listSubjectsWithProperty(RDFA.uuid, classUUID.toString())
+                        .nextOptional()
+                        .orElse(null);
+        if (classResource == null) {
+            return Set.of();
+        }
+
+        Set<Resource> associationEnds = new LinkedHashSet<>();
+        associationEnds.addAll(
+                model.listSubjectsWithProperty(RDFS.domain, classResource)
+                        .filterKeep(CIMPropertyUtils::isAssociation)
+                        .toList());
+        associationEnds.addAll(
+                model.listSubjectsWithProperty(RDFS.range, classResource)
+                        .filterKeep(CIMPropertyUtils::isAssociation)
+                        .toList());
+
+        Set<UUID> uuids = new HashSet<>();
+        for (var end : associationEnds) {
+            uuids.add(CIMResourceUtils.findUuidForResource(end));
+            var inverse = end.getProperty(CIMS.inverseRoleName);
+            if (inverse != null && inverse.getObject().isResource()) {
+                uuids.add(CIMResourceUtils.findUuidForResource(inverse.getObject().asResource()));
+            }
+        }
+        return uuids;
     }
 
     @Override

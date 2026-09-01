@@ -32,9 +32,11 @@ public enum DiagramObjectStyle {
     MULTIPLICITY("multiplicity");
 
     private final String styleName;
+    private final MRID mRID;
 
     DiagramObjectStyle(String styleName) {
         this.styleName = styleName;
+        this.mRID = mridOf(styleName);
     }
 
     public String getStyleName() {
@@ -42,7 +44,7 @@ public enum DiagramObjectStyle {
     }
 
     public MRID getMRID() {
-        return mridOf(styleName);
+        return mRID;
     }
 
     /**

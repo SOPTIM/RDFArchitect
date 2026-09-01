@@ -19,9 +19,12 @@ package org.rdfarchitect.services.dl.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +39,8 @@ import org.rdfarchitect.dl.queries.select.DLObjectFetcher.LabelKey;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.dl.rdf.resources.CIM;
 import org.rdfarchitect.dl.rdf.resources.DL;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.dl.DiagramLayoutServicesTestBase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.dl.update.labellayout.UpdateLabelLayoutService;
@@ -56,6 +61,11 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
     private static final UUID OTHER_ASSOCIATION_END_UUID =
             UUID.fromString("9c8e7d6a-5b4c-4321-9876-0fedcba98765");
+
+    private static final String CLASS_A_URI = "http://example.com#classA";
+    private static final String CLASS_B_URI = "http://example.com#classB";
+    private static final String ASSOCIATION_URI = "http://example.com#classA.classB";
+    private static final String INVERSE_ASSOCIATION_URI = "http://example.com#classB.classA";
 
     private static UpdateLabelLayoutService service;
     private static UpdateClassLayoutService classLayoutService;
@@ -192,12 +202,83 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
     @Test
     void deleteClassLayoutData_classDeleted_dropsTheLabelsOfItsAssociations() {
+        insertAssociationFixture();
+        var inverseEndLabel = new LabelPositionDTO();
+        inverseEndLabel.setIdentifiedObjectUUID(OTHER_ASSOCIATION_END_UUID);
+        inverseEndLabel.setKind(DiagramObjectStyle.MULTIPLICITY.getStyleName());
+        inverseEndLabel.setXOffset(5F);
+        inverseEndLabel.setYOffset(6F);
+        var unrelatedLabel = new LabelPositionDTO();
+        unrelatedLabel.setIdentifiedObjectUUID(PACKAGE_A_UUID);
+        unrelatedLabel.setKind(DiagramObjectStyle.MULTIPLICITY.getStyleName());
+        unrelatedLabel.setXOffset(3F);
+        unrelatedLabel.setYOffset(4F);
+
         service.updateLabelPositions(
-                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-37.5F, 62.25F)));
+                graphIdentifier,
+                PACKAGE_A_UUID,
+                List.of(labelPosition(-37.5F, 62.25F), inverseEndLabel, unrelatedLabel));
 
         classLayoutService.deleteClassLayoutData(graphIdentifier, CLASS_A_UUID);
 
-        assertThat(storedOffsets()).isEmpty();
+        assertThat(storedOffsets())
+                .containsOnlyKeys(new LabelKey(PACKAGE_A_UUID, DiagramObjectStyle.MULTIPLICITY));
+    }
+
+    /**
+     * Sets up classA, classB and the association pair between them (with classA as domain), whose
+     * two ends carry {@link #ASSOCIATION_END_UUID} and {@link #OTHER_ASSOCIATION_END_UUID}. {@code
+     * package.ttl} only contains a package, not a class, so the CIM data a delete needs to cascade
+     * against is added directly rather than through a shared fixture file other tests also load.
+     */
+    private static void insertAssociationFixture() {
+        var classA = NodeFactory.createURI(CLASS_A_URI);
+        var classB = NodeFactory.createURI(CLASS_B_URI);
+        var association = NodeFactory.createURI(ASSOCIATION_URI);
+        var inverseAssociation = NodeFactory.createURI(INVERSE_ASSOCIATION_URI);
+
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var graph = ctx.getRdfGraph();
+
+            graph.add(classA, RDF.type.asNode(), RDFS.Class.asNode());
+            graph.add(
+                    classA,
+                    RDFA.uuid.asNode(),
+                    NodeFactory.createLiteralString(CLASS_A_UUID.toString()));
+            graph.add(classB, RDF.type.asNode(), RDFS.Class.asNode());
+            graph.add(
+                    classB,
+                    RDFA.uuid.asNode(),
+                    NodeFactory.createLiteralString(UUID.randomUUID().toString()));
+
+            graph.add(association, RDF.type.asNode(), RDF.Property.asNode());
+            graph.add(
+                    association,
+                    RDFA.uuid.asNode(),
+                    NodeFactory.createLiteralString(ASSOCIATION_END_UUID.toString()));
+            graph.add(association, RDFS.domain.asNode(), classA);
+            graph.add(association, RDFS.range.asNode(), classB);
+            graph.add(
+                    association,
+                    CIMS.associationUsed.asNode(),
+                    NodeFactory.createLiteralString("Yes"));
+            graph.add(association, CIMS.inverseRoleName.asNode(), inverseAssociation);
+
+            graph.add(inverseAssociation, RDF.type.asNode(), RDF.Property.asNode());
+            graph.add(
+                    inverseAssociation,
+                    RDFA.uuid.asNode(),
+                    NodeFactory.createLiteralString(OTHER_ASSOCIATION_END_UUID.toString()));
+            graph.add(inverseAssociation, RDFS.domain.asNode(), classB);
+            graph.add(inverseAssociation, RDFS.range.asNode(), classA);
+            graph.add(
+                    inverseAssociation,
+                    CIMS.associationUsed.asNode(),
+                    NodeFactory.createLiteralString("Yes"));
+            graph.add(inverseAssociation, CIMS.inverseRoleName.asNode(), association);
+
+            ctx.commit();
+        }
     }
 
     @Test

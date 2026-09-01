@@ -34,7 +34,9 @@ import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -91,13 +93,14 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
         if (DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null) {
             DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, diagramUUID, "");
         }
+        var existingLabelsByKey = existingLabelsByKey(diagramLayoutModel, diagramUUID);
         for (var labelPosition : labelPositions) {
             var style = DiagramObjectStyle.byName(labelPosition.getKind());
             if (style == null || style == DiagramObjectStyle.CLASS) {
                 continue;
             }
             var labelKey = new LabelKey(labelPosition.getIdentifiedObjectUUID(), style);
-            var existing = DLObjectFetcher.fetchLabelDO(diagramLayoutModel, diagramUUID, labelKey);
+            var existing = existingLabelsByKey.get(labelKey);
             if (existing != null) {
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, existing.getMRID());
             }
@@ -106,6 +109,24 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
             }
             insertLabel(diagramLayoutModel, diagramUUID, labelPosition, style);
         }
+    }
+
+    /**
+     * Fetches every existing label of the diagram in one query instead of one {@code fetchLabelDO}
+     * query per label being applied.
+     */
+    private Map<LabelKey, DiagramObject> existingLabelsByKey(
+            Model diagramLayoutModel, UUID diagramUUID) {
+        Map<LabelKey, DiagramObject> byKey = new HashMap<>();
+        for (var label : DLObjectFetcher.fetchDiagramLabelDOs(diagramLayoutModel, diagramUUID)) {
+            if (label.getStyle() == null) {
+                continue;
+            }
+            byKey.put(
+                    new LabelKey(label.getBelongsToIdentifiedObject().getUuid(), label.getStyle()),
+                    label);
+        }
+        return byKey;
     }
 
     private void insertLabel(

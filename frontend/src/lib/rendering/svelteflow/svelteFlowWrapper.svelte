@@ -25,6 +25,7 @@
         useSvelteFlow,
     } from "@xyflow/svelte";
     import { onDestroy, onMount, tick, untrack } from "svelte";
+    import { SvelteMap } from "svelte/reactivity";
 
     import {
         updateClassPositions,
@@ -124,8 +125,12 @@
     let selectionZFrame = null;
     let boxSelecting = false;
     // Offsets of labels moved in this session, so a drag takes effect without refetching the
-    // diagram. An entry holding null resets that label to its default placement.
-    let labelOffsets = new Map();
+    // diagram. An entry holding null resets that label to its default placement. A SvelteMap so
+    // mutating it alone is enough to re-trigger syncLabelNodes below.
+    let labelOffsets = new SvelteMap();
+    // Memoizes edge-intersection geometry per class pair, so dragging one class does not
+    // recompute the placement of every other edge in the diagram.
+    let labelPlacementCache = new Map();
     let labelDragActive = false;
     let classNodes = $derived(
         nodes.filter(node => node.type !== LABEL_NODE_TYPE),
@@ -288,7 +293,8 @@
     }
 
     function syncDiagramElements() {
-        labelOffsets = new Map();
+        labelOffsets = new SvelteMap();
+        labelPlacementCache = new Map();
         const nextNodes = [...inputNodes];
         const nextHasDefaultLayout = hasDefaultNodeLayout(nextNodes);
 
@@ -357,6 +363,7 @@
             currentNodes,
             currentEdges,
             labelOffsets,
+            labelPlacementCache,
         );
         if (!labelNodesChanged(currentNodes, nextLabelNodes)) {
             return;
@@ -420,11 +427,20 @@
         );
     }
 
+    function toLabelPositionDTO(identifiedObjectUUID, kind, offset) {
+        return {
+            identifiedObjectUUID,
+            kind,
+            xOffset: offset?.x ?? null,
+            yOffset: offset?.y ?? null,
+        };
+    }
+
     function handleLabelMove(movedLabelNodes) {
-        const classNodes = new Map(nodes.map(node => [node.id, node]));
+        const nodesById = new Map(nodes.map(node => [node.id, node]));
         const movedLabels = [];
         for (const labelNode of movedLabelNodes) {
-            const anchorClass = classNodes.get(labelNode.data.anchorClassId);
+            const anchorClass = nodesById.get(labelNode.data.anchorClassId);
             if (!anchorClass) {
                 continue;
             }
@@ -438,12 +454,13 @@
                 anchorClass,
             );
             labelOffsets.set(labelNode.id, offset);
-            movedLabels.push({
-                identifiedObjectUUID: labelNode.data.identifiedObjectUUID,
-                kind: labelNode.data.kind,
-                xOffset: offset.x,
-                yOffset: offset.y,
-            });
+            movedLabels.push(
+                toLabelPositionDTO(
+                    labelNode.data.identifiedObjectUUID,
+                    labelNode.data.kind,
+                    offset,
+                ),
+            );
         }
         persistLabelPositions(movedLabels);
     }
@@ -456,12 +473,13 @@
                 continue;
             }
             labelOffsets.set(labelNodeId(label), null);
-            resetLabels.push({
-                identifiedObjectUUID: label.identifiedObjectUUID,
-                kind: label.kind,
-                xOffset: null,
-                yOffset: null,
-            });
+            resetLabels.push(
+                toLabelPositionDTO(
+                    label.identifiedObjectUUID,
+                    label.kind,
+                    null,
+                ),
+            );
         }
         persistLabelPositions(resetLabels);
     }
@@ -543,7 +561,6 @@
     export async function applyELKLayout() {
         if (!isLoading) isLoading = true;
         layouted = true;
-        const classNodes = nodes.filter(node => node.type !== LABEL_NODE_TYPE);
         const layoutedNodes = await getLayoutedNodes(classNodes, edges);
         nodes = [...layoutedNodes];
         updateNodePositions(nodes);

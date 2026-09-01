@@ -103,6 +103,12 @@ public class LabelLayoutDataRESTController {
                 resolvedDiagramUUID,
                 labelPositionDTOList);
 
+        logger.info(
+                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/labels\" from \"{}\".",
+                datasetName,
+                graphURI,
+                diagramUUID,
+                originURL);
         return "success";
     }
 }

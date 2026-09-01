@@ -61,8 +61,15 @@ function anchorClassId(edge, label) {
  * @param edges the current edges, carrying the labels of both of their ends
  * @param offsetOverrides offsets of labels moved in this session, keyed by label node id; an entry
  *     holding null resets that label to its default placement
+ * @param placementCache memoizes the edge-intersection geometry per class pair, keyed by node id,
+ *     so dragging one class does not recompute the placement of every other edge in the diagram
  */
-export function buildLabelNodes(nodes, edges, offsetOverrides = new Map()) {
+export function buildLabelNodes(
+    nodes,
+    edges,
+    offsetOverrides = new Map(),
+    placementCache = new Map(),
+) {
     const classNodes = new Map();
     const labelSizes = new Map();
     for (const node of nodes) {
@@ -81,7 +88,7 @@ export function buildLabelNodes(nodes, edges, offsetOverrides = new Map()) {
             continue;
         }
 
-        const placements = edgePlacements(source, target);
+        const placements = cachedEdgePlacements(source, target, placementCache);
         for (const label of edge.data?.labels ?? []) {
             const atSource = label.anchor === SOURCE_ANCHOR;
             labelNodes.push(
@@ -138,7 +145,7 @@ function buildLabelNode(
         selectable: false,
         // Carried over because SvelteFlow takes a node's dimensions from the node object it is
         // given: rebuilding without them hides the label until it has been measured again.
-        measured: labelSizes.get(labelNodeId(label)),
+        measured: labelSizes.get(id),
         data: {
             text: label.text,
             identifiedObjectUUID: label.identifiedObjectUUID,
@@ -165,6 +172,40 @@ export function clampToAnchor(position, anchorPoint) {
         x: anchorPoint.x + dx * scale,
         y: anchorPoint.y + dy * scale,
     };
+}
+
+/**
+ * Reuses the previous placement of a class pair when neither class has moved or resized, so
+ * dragging one class does not recompute the edge-intersection geometry of every other edge.
+ */
+function cachedEdgePlacements(source, target, cache) {
+    const key = `${source.id}|${target.id}`;
+    const cached = cache.get(key);
+    if (cached && samePlacementInputs(cached, source, target)) {
+        return cached.placements;
+    }
+    const placements = edgePlacements(source, target);
+    cache.set(key, {
+        placements,
+        sourcePosition: source.position,
+        sourceMeasured: source.measured,
+        targetPosition: target.position,
+        targetMeasured: target.measured,
+    });
+    return placements;
+}
+
+function samePlacementInputs(cached, source, target) {
+    return (
+        cached.sourcePosition.x === source.position.x &&
+        cached.sourcePosition.y === source.position.y &&
+        cached.targetPosition.x === target.position.x &&
+        cached.targetPosition.y === target.position.y &&
+        cached.sourceMeasured.width === source.measured.width &&
+        cached.sourceMeasured.height === source.measured.height &&
+        cached.targetMeasured.width === target.measured.width &&
+        cached.targetMeasured.height === target.measured.height
+    );
 }
 
 /**

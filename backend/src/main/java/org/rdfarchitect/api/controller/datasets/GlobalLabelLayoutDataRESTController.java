@@ -88,6 +88,11 @@ public class GlobalLabelLayoutDataRESTController {
         updateLabelPositionsUseCase.updateLabelPositions(
                 datasetName, UUID.fromString(diagramUUID), labelPositionDTOList);
 
+        logger.info(
+                "Sending response to PUT request: \"/api/datasets/{{}}/layout/{{}}/labels\" from \"{}\".",
+                datasetName,
+                diagramUUID,
+                originURL);
         return "success";
     }
 }

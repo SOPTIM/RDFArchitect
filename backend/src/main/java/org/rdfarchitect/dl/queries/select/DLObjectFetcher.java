@@ -117,11 +117,11 @@ public class DLObjectFetcher {
                       }
 
                       FILTER(STR(?diagramMRID) = "DIAGRAM_MRID")
-                      FILTER(STR(?styleMRID) = "CLASS_STYLE_MRID")
+                      STYLE_FILTER
                   }
                   """
                         .replace("DIAGRAM_MRID", diagramMRID)
-                        .replace("CLASS_STYLE_MRID", classStyleMRID());
+                        .replace("STYLE_FILTER", classStyleFilter(true));
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
@@ -196,7 +196,7 @@ public class DLObjectFetcher {
                   PREFIX  rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                   PREFIX  cim:    <http://iec.ch/TC57/CIM100#>
 
-                  SELECT ?doMRID ?doName ?ioMRID
+                  SELECT ?doMRID ?doName ?ioMRID ?styleName
                   WHERE {
                       ?diagramMRID rdf:type cim:Diagram .
 
@@ -205,13 +205,15 @@ public class DLObjectFetcher {
                             cim:IdentifiedObject.name ?doName ;
                             cim:DiagramObject.Diagram ?diagramMRID ;
                             cim:DiagramObject.IdentifiedObject ?ioMRID .
+                      STYLE_NAME_JOIN
 
                       FILTER(STR(?diagramMRID) = "DIAGRAM_MRID")
-                      FILTER(STR(?styleMRID) = "CLASS_STYLE_MRID")
+                      STYLE_FILTER
                   }
                   """
                         .replace("DIAGRAM_MRID", diagramMRID.getFullMRID())
-                        .replace("CLASS_STYLE_MRID", classStyleMRID());
+                        .replace("STYLE_FILTER", classStyleFilter(true))
+                        .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
@@ -246,20 +248,22 @@ public class DLObjectFetcher {
                   PREFIX  rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                   PREFIX  cim:    <http://iec.ch/TC57/CIM100#>
 
-                  SELECT ?doMRID ?doName ?diagramMRID
+                  SELECT ?doMRID ?doName ?diagramMRID ?styleName
                   WHERE {
                       ?doMRID rdf:type cim:DiagramObject ;
                             cim:DiagramObject.DiagramObjectStyle ?styleMRID ;
                             cim:IdentifiedObject.name ?doName ;
                             cim:DiagramObject.Diagram ?diagramMRID ;
                             cim:DiagramObject.IdentifiedObject ?ioMRID .
+                      STYLE_NAME_JOIN
 
                       FILTER(STR(?ioMRID) = "IO_MRID")
-                      FILTER(STR(?styleMRID) = "CLASS_STYLE_MRID")
+                      STYLE_FILTER
                   }
                   """
                         .replace("IO_MRID", ioMRID)
-                        .replace("CLASS_STYLE_MRID", classStyleMRID());
+                        .replace("STYLE_FILTER", classStyleFilter(true))
+                        .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
@@ -296,7 +300,7 @@ public class DLObjectFetcher {
                   PREFIX  rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                   PREFIX  cim:    <http://iec.ch/TC57/CIM100#>
 
-                  SELECT ?doMRID ?doName
+                  SELECT ?doMRID ?doName ?styleName
                   WHERE {
                       ?diagramMRID rdf:type cim:Diagram .
 
@@ -305,15 +309,17 @@ public class DLObjectFetcher {
                             cim:IdentifiedObject.name ?doName ;
                             cim:DiagramObject.Diagram ?diagramMRID ;
                             cim:DiagramObject.IdentifiedObject ?ioMRID .
+                      STYLE_NAME_JOIN
 
                       FILTER(STR(?diagramMRID) = "DIAGRAM_MRID")
                       FILTER(STR(?ioMRID) = "IO_MRID")
-                      FILTER(STR(?styleMRID) = "CLASS_STYLE_MRID")
+                      STYLE_FILTER
                   }
                   """
                         .replace("IO_MRID", ioMRID)
                         .replace("DIAGRAM_MRID", diagramMRID)
-                        .replace("CLASS_STYLE_MRID", classStyleMRID());
+                        .replace("STYLE_FILTER", classStyleFilter(true))
+                        .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
@@ -370,11 +376,11 @@ public class DLObjectFetcher {
                       ?styleMRID cim:IdentifiedObject.name ?styleName .
 
                       FILTER(STR(?diagramMRID) = "DIAGRAM_MRID")
-                      FILTER(STR(?styleMRID) != "CLASS_STYLE_MRID")
+                      STYLE_FILTER
                   }
                   """
                         .replace("DIAGRAM_MRID", new MRID(diagramUUID).getFullMRID())
-                        .replace("CLASS_STYLE_MRID", classStyleMRID());
+                        .replace("STYLE_FILTER", classStyleFilter(false));
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
@@ -409,12 +415,13 @@ public class DLObjectFetcher {
                   PREFIX  rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                   PREFIX  cim:    <http://iec.ch/TC57/CIM100#>
 
-                  SELECT ?doMRID
+                  SELECT ?doMRID ?styleName
                   WHERE {
                       ?doMRID rdf:type cim:DiagramObject ;
                             cim:DiagramObject.DiagramObjectStyle ?styleMRID ;
                             cim:DiagramObject.IdentifiedObject ?ioMRID ;
                             cim:DiagramObject.Diagram ?diagramMRID .
+                      STYLE_NAME_JOIN
 
                       FILTER(STR(?diagramMRID) = "DIAGRAM_MRID")
                       FILTER(STR(?ioMRID) = "IO_MRID")
@@ -423,7 +430,8 @@ public class DLObjectFetcher {
                   """
                         .replace("DIAGRAM_MRID", new MRID(diagramUUID).getFullMRID())
                         .replace("IO_MRID", new MRID(labelKey.identifiedObjectUUID()).getFullMRID())
-                        .replace("STYLE_MRID", labelKey.style().getMRID().getFullMRID());
+                        .replace("STYLE_MRID", labelKey.style().getMRID().getFullMRID())
+                        .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
@@ -461,17 +469,19 @@ public class DLObjectFetcher {
                   PREFIX  rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                   PREFIX  cim:    <http://iec.ch/TC57/CIM100#>
 
-                  SELECT ?doMRID ?ioMRID ?diagramMRID
+                  SELECT ?doMRID ?ioMRID ?diagramMRID ?styleName
                   WHERE {
                       ?doMRID rdf:type cim:DiagramObject ;
                             cim:DiagramObject.DiagramObjectStyle ?styleMRID ;
                             cim:DiagramObject.Diagram ?diagramMRID ;
                             cim:DiagramObject.IdentifiedObject ?ioMRID .
+                      STYLE_NAME_JOIN
 
-                      FILTER(STR(?styleMRID) != "CLASS_STYLE_MRID")
+                      STYLE_FILTER
                   }
                   """
-                        .replace("CLASS_STYLE_MRID", classStyleMRID());
+                        .replace("STYLE_FILTER", classStyleFilter(false))
+                        .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
@@ -484,7 +494,20 @@ public class DLObjectFetcher {
         }
     }
 
-    private String classStyleMRID() {
-        return DiagramObjectStyle.CLASS.getMRID().getFullMRID();
+    /**
+     * Joins a diagram object's style resource to its name, so {@link
+     * org.rdfarchitect.dl.data.DLObjectFactory#createDiagramObject} can resolve a {@link
+     * DiagramObjectStyle}. Optional because the style-vs-not-style filters below only need the bare
+     * {@code ?styleMRID}, and some legacy layout data may not have the name triple.
+     */
+    private static final String STYLE_NAME_JOIN =
+            "OPTIONAL { ?styleMRID cim:IdentifiedObject.name ?styleName . }";
+
+    /** A filter restricting {@code ?styleMRID} to (or, negated, away from) the class style. */
+    private static String classStyleFilter(boolean isClassStyle) {
+        return "FILTER(STR(?styleMRID) %s \"%s\")"
+                .formatted(
+                        isClassStyle ? "=" : "!=",
+                        DiagramObjectStyle.CLASS.getMRID().getFullMRID());
     }
 }
