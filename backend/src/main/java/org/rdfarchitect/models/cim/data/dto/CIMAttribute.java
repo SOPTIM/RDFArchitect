@@ -30,6 +30,8 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -52,7 +54,7 @@ public class CIMAttribute {
 
     private RDFSComment comment;
 
-    private CIMSStereotype stereotype;
+    @Builder.Default private List<CIMSStereotype> stereotypes = new ArrayList<>();
 
     private CIMSIsFixed fixedValue;
 

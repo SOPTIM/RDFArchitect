@@ -110,7 +110,6 @@ public class CIMObjectFactory {
                 .domain(parser.getDomain(CIMQueryVars.DOMAIN_URI, CIMQueryVars.DOMAIN_LABEL))
                 .multiplicity(parser.getMultiplicity(CIMQueryVars.MULTIPLICITY))
                 .dataType(dataType)
-                .stereotype(parser.getStereotype(CIMQueryVars.STEREOTYPE))
                 .comment(parser.getComment(CIMQueryVars.COMMENT))
                 .fixedValue(parser.getIsFixed(CIMQueryVars.IS_FIXED, CIMQueryVars.IS_FIXED_INNER))
                 .defaultValue(

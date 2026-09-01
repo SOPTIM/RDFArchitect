@@ -447,7 +447,7 @@ public class CopyClassService implements CopyClassUseCase {
                                         .multiplicity(attr.getMultiplicity())
                                         .dataType(copyDataType(attr))
                                         .comment(attr.getComment())
-                                        .stereotype(attr.getStereotype())
+                                        .stereotypes(attr.getStereotypes())
                                         .fixedValue(attr.getFixed())
                                         .defaultValue(attr.getDefault())
                                         .build())

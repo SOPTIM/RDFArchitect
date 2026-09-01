@@ -277,7 +277,7 @@ class CIMFacadeTest {
         assertThat(attribute.getDomain().getUuid()).isEqualTo(BREAKER_UUID);
         assertThat(attribute.getMultiplicity())
                 .isEqualTo(new CIMSMultiplicity(CIMS.namespace + "M:0..1"));
-        assertThat(attribute.getStereotype())
+        assertThat(attribute.getStereotypes())
                 .isEqualTo(new CIMSStereotype(CIMStereotypes.attributeString));
         assertThat(attribute.getDataType()).isInstanceOf(ExternalCIMClass.class);
         assertThat(attribute.getDataType().getUri().toString()).isEqualTo(XSD.xstring.getURI());
@@ -333,7 +333,7 @@ class CIMFacadeTest {
         assertThatThrownBy(attribute::getDomain).isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(attribute::getMultiplicity).isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(attribute::getDataType).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(attribute::getStereotype).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(attribute::getStereotypes).isInstanceOf(IllegalStateException.class);
 
         var association = new CIMAssociation(GRAPH_URI, model, bareUuid);
         assertThatThrownBy(association::getRange).isInstanceOf(IllegalStateException.class);

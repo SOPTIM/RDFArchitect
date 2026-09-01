@@ -34,6 +34,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.shacl.XSDDatatypeMapper;
 
+import java.util.Collections;
 import java.util.List;
 
 @Mapper(
@@ -51,6 +52,7 @@ public interface AttributeMapper {
     @Mapping(target = "comment", source = "comment.value")
     @Mapping(target = "fixedValue", source = "fixedValue.value")
     @Mapping(target = "defaultValue", source = "defaultValue.value")
+    @Mapping(target = "stereotypes", source = "stereotypes")
     AttributeDTO toDTO(CIMAttribute attribute);
 
     List<AttributeDTO> toDTOList(List<CIMAttribute> attributesList);
@@ -61,10 +63,7 @@ public interface AttributeMapper {
 
     @Mapping(target = "uri", source = ".")
     @Mapping(target = "domain", source = ".")
-    @Mapping(
-            target = "stereotype",
-            expression =
-                    "java(new CIMSStereotype(\"http://iec.ch/TC57/NonStandard/UML#attribute\"))")
+    @Mapping(target = "stereotypes", source = "stereotypes")
     @Mapping(target = "fixedValue", source = ".")
     @Mapping(target = "defaultValue", source = ".")
     CIMAttribute toCIMObject(AttributeDTO dto);
@@ -111,6 +110,20 @@ public interface AttributeMapper {
                 new URI(dto.getPrefix() + dto.getLabel()),
                 new RDFSLabel(dto.getLabel(), "en"),
                 CIMSDataType.Type.valueOf(dto.getType().toString()));
+    }
+
+    default List<String> mapStereotypes(List<CIMSStereotype> stereotypes) {
+        if (stereotypes == null || stereotypes.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return stereotypes.stream().map(CIMSStereotype::getStereotype).toList();
+    }
+
+    default List<CIMSStereotype> buildStereotypes(List<String> stereotypes) {
+        if (stereotypes == null || stereotypes.isEmpty()) {
+            return List.of(new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#attribute"));
+        }
+        return stereotypes.stream().map(CIMSStereotype::new).toList();
     }
 
     /**

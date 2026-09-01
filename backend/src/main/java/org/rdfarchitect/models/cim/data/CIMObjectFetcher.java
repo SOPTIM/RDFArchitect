@@ -148,7 +148,15 @@ public class CIMObjectFetcher {
      * @return List of {@link CIMAttribute CIMAttributes}.
      */
     public List<CIMAttribute> fetchCIMAttributeList(Query query) {
-        return executeQueryForList(query, CIMObjectFactory::createCIMAttributeList);
+        var attributes = executeQueryForList(query, CIMObjectFactory::createCIMAttributeList);
+        for (var attribute : attributes) {
+            var stereotypeQuery =
+                    CIMQueries.getStereotypesQuery(
+                                    prefixMapping, attribute.getUuid().toString(), graphURI)
+                            .build();
+            attribute.setStereotypes(fetchCIMStereotypeList(stereotypeQuery));
+        }
+        return attributes;
     }
 
     /**

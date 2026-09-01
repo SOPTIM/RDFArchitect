@@ -32,6 +32,7 @@
 
     import { saveApiAttributeToBackend } from "./save-attribute-to-backend.js";
     import { resolveSaveTarget } from "../resolve-save-target.js";
+    import AttributeStereotypes from "./AttributeStereotypes.svelte";
 
     let {
         showDialog = $bindable(),
@@ -61,6 +62,7 @@
         } else {
             isNewAttribute = false;
         }
+        console.log({ attribute });
     }
 
     function onClose() {
@@ -177,6 +179,12 @@
                 <ViolationMessages violations={attribute.label.violations} />
             </div>
 
+            <!-- STEREOTYPES -->
+            <div>
+                <AttributeStereotypes
+                    attributeStereotypes={attribute.stereotypes}
+                />
+            </div>
             <!-- DATATYPE -->
             <div>
                 <SearchableSelect
