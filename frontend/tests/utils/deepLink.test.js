@@ -17,16 +17,6 @@
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import { URI } from "$lib/models/dto/index.ts";
-
-vi.mock("$lib/api/generated", () => ({
-    listDatasets: vi.fn(),
-    listGraphs: vi.fn(),
-    resolveIri: vi.fn(),
-    getClassInformation: vi.fn(),
-    search: vi.fn(),
-}));
-
 import {
     getClassInformation,
     listDatasets,
@@ -34,6 +24,7 @@ import {
     resolveIri,
     search,
 } from "$lib/api/generated";
+import { URI } from "$lib/models/dto/index.ts";
 import { resolveClassTarget, resolveTermTarget } from "$lib/utils/deep-link.js";
 
 const CLASS_IRI = "https://cim.example.org/CIM#ACLineSegment";
@@ -111,6 +102,14 @@ function mockApiFor(model, { searchResults = [] } = {}) {
         },
     }));
 }
+
+vi.mock("$lib/api/generated", () => ({
+    listDatasets: vi.fn(),
+    listGraphs: vi.fn(),
+    resolveIri: vi.fn(),
+    getClassInformation: vi.fn(),
+    search: vi.fn(),
+}));
 
 beforeEach(() => {
     vi.clearAllMocks();
