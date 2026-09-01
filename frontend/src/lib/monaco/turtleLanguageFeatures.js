@@ -179,12 +179,22 @@ export function registerTurtleLanguageFeatures(monaco, languageId) {
             // opener below recognises the scheme and navigates the app instead of opening a model.
             // The package rides along in the query because it is what says which diagram to put on
             // screen, and a class that belongs to none simply leaves it empty.
+            const uri = monaco.Uri.from({
+                scheme: CLASS_SCHEME,
+                path: `/${encodeURIComponent(detail.graphUri)}/${detail.classUUID}`,
+                query: detail.packageUUID ?? "",
+            });
+            // Ctrl+hover asks Monaco's own preview widget to resolve this uri to a model before the
+            // opener above ever runs, so one has to exist even though nothing will display it.
+            if (!monaco.editor.getModel(uri)) {
+                monaco.editor.createModel(
+                    detail.label ?? term.text,
+                    undefined,
+                    uri,
+                );
+            }
             return {
-                uri: monaco.Uri.from({
-                    scheme: CLASS_SCHEME,
-                    path: `/${encodeURIComponent(detail.graphUri)}/${detail.classUUID}`,
-                    query: detail.packageUUID ?? "",
-                }),
+                uri,
                 range: {
                     startLineNumber: 1,
                     endLineNumber: 1,
