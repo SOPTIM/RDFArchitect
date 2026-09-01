@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -232,8 +233,11 @@ class GraphToCIMCollectionConverterServiceNoFilterTest {
                 .isEqualTo(new URI(prefixMapping.get("xsd") + "string"));
         assertThat(attribute1.getMultiplicity().getUri())
                 .isEqualTo(new URI(prefixMapping.get("cims") + "M:1..1"));
-        assertThat(attribute1.getStereotype())
-                .isEqualTo(new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#attribute"));
+        assertThat(attribute1.getStereotypes())
+                .isEqualTo(
+                        List.of(
+                                new CIMSStereotype(
+                                        "http://iec.ch/TC57/NonStandard/UML#attribute")));
 
         var attribute2 = attributesIterator.next();
         assertThat(attribute2.getUri())
@@ -245,8 +249,11 @@ class GraphToCIMCollectionConverterServiceNoFilterTest {
                 .isEqualTo(new URI(prefixMapping.get("xsd") + "integer"));
         assertThat(attribute2.getMultiplicity().getUri())
                 .isEqualTo(new URI(prefixMapping.get("cims") + "M:1..1"));
-        assertThat(attribute2.getStereotype())
-                .isEqualTo(new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#attribute"));
+        assertThat(attribute2.getStereotypes())
+                .isEqualTo(
+                        List.of(
+                                new CIMSStereotype(
+                                        "http://iec.ch/TC57/NonStandard/UML#attribute")));
     }
 
     @Test
