@@ -84,6 +84,7 @@ class AttributeMapperTest {
                                         "string",
                                         "http://www.w3.org/2001/XMLSchema#",
                                         DataTypeDTO.Type.PRIMITIVE))
+                        .stereotypes(List.of("http://iec.ch/TC57/NonStandard/UML#attribute"))
                         .build();
     }
 
