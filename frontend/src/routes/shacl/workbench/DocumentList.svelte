@@ -227,7 +227,7 @@
                         />
                     {:else}
                         <button
-                            class="min-w-0 flex-1 cursor-pointer text-left"
+                            class="flex min-w-0 flex-1 cursor-pointer text-left"
                             ondblclick={() => {
                                 if (!readOnly && !document.generated) {
                                     startRename(document);
@@ -235,24 +235,27 @@
                             }}
                             onclick={() => open(document.id)}
                         >
-                            <span
-                                class="block truncate text-sm {document.enabled
-                                    ? 'text-default-text'
-                                    : 'text-text-subtle italic'}"
-                                title={document.sourceFileName ?? document.name}
-                            >
-                                {document.name}
-                            </span>
-                            <span
-                                class="text-text-subtle block truncate text-xs"
-                            >
-                                {#if document.generated}
-                                    from the schema · read-only
-                                {:else}
-                                    {document.tripleCount ?? 0} triples{summary
-                                        ? ` · ${summary}`
-                                        : ""}
-                                {/if}
+                            <span class="min-w-0 flex-1">
+                                <span
+                                    class="block truncate text-sm {document.enabled
+                                        ? 'text-default-text'
+                                        : 'text-text-subtle italic'}"
+                                    title={document.sourceFileName ??
+                                        document.name}
+                                >
+                                    {document.name}
+                                </span>
+                                <span
+                                    class="text-text-subtle block truncate text-xs"
+                                >
+                                    {#if document.generated}
+                                        from the schema · read-only
+                                    {:else}
+                                        {document.tripleCount ?? 0} triples{summary
+                                            ? ` · ${summary}`
+                                            : ""}
+                                    {/if}
+                                </span>
                             </span>
                         </button>
                     {/if}

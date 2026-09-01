@@ -142,7 +142,7 @@
                                     <div
                                         class="text-text-subtle flex flex-wrap items-center gap-2 text-xs"
                                     >
-                                        <span class="font-semibold {meta.text}">
+                                        <span class="font-semibold">
                                             {problem.documentName}
                                         </span>
                                         {#if problem.line}
