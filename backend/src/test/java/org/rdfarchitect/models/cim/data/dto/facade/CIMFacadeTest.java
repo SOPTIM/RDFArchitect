@@ -36,6 +36,7 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
+import java.util.List;
 import java.util.UUID;
 
 class CIMFacadeTest {
@@ -278,7 +279,7 @@ class CIMFacadeTest {
         assertThat(attribute.getMultiplicity())
                 .isEqualTo(new CIMSMultiplicity(CIMS.namespace + "M:0..1"));
         assertThat(attribute.getStereotypes())
-                .isEqualTo(new CIMSStereotype(CIMStereotypes.attributeString));
+                .isEqualTo(List.of(new CIMSStereotype(CIMStereotypes.attributeString)));
         assertThat(attribute.getDataType()).isInstanceOf(ExternalCIMClass.class);
         assertThat(attribute.getDataType().getUri().toString()).isEqualTo(XSD.xstring.getURI());
     }

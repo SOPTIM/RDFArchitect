@@ -121,7 +121,7 @@ public interface AttributeMapper {
 
     default List<CIMSStereotype> buildStereotypes(List<String> stereotypes) {
         if (stereotypes == null || stereotypes.isEmpty()) {
-            return List.of(new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#attribute"));
+            return List.of();
         }
         return stereotypes.stream().map(CIMSStereotype::new).toList();
     }
