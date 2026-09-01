@@ -20,6 +20,7 @@ package org.rdfarchitect.services.shacl;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
+import org.apache.jena.graph.Node;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -45,6 +46,8 @@ import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.merge.ModelResourceExclusiveMerge;
+import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
+import org.rdfarchitect.services.shacl.form.ShapeBlockLocator;
 import org.rdfarchitect.shacl.PropertyShapeToClassAssigner;
 import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 import org.rdfarchitect.shacl.SHACLShapesFetcher;
@@ -53,6 +56,7 @@ import org.rdfarchitect.shacl.dto.NodeShape;
 import org.rdfarchitect.shacl.dto.PropertyShape;
 import org.rdfarchitect.shacl.dto.PropertyShapesWrapper;
 import org.rdfarchitect.shacl.dto.SHACLToClassRelations;
+import org.rdfarchitect.shacl.dto.ShapeOrigin;
 import org.rdfarchitect.shacl.dto.ShapesDocumentInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,7 +68,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -515,11 +524,98 @@ public class SHACLStoringService
                     new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true)
                             .generateForClassOnly(classUUID);
             var shaclResult = new CustomAndGeneratedTuple<SHACLToClassRelations>();
-            shaclResult.setCustom(getSHACLToClassRelations(ontologyModel, customSHACL, classUUID));
+            var custom = getSHACLToClassRelations(ontologyModel, customSHACL, classUUID);
+            attributeToDocuments(custom, ctx);
+            shaclResult.setCustom(custom);
             shaclResult.setGenerated(
                     getSHACLToClassRelations(ontologyModel, generatedSHACL, classUUID));
             return shaclResult;
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Where a shape came from, and what it asks for
+    // -------------------------------------------------------------------------
+
+    /**
+     * Names the documents behind every shape of a merged result.
+     *
+     * <p>The shapes were read from the union of the enabled documents, which is the only way to
+     * answer "what constrains this class" — official constraints are split across files. Merging is
+     * also what throws away the one thing a reader needs in order to change a rule, so it is put
+     * back here.
+     *
+     * <p>Shapes are matched by the id the fetchers already produce, which is {@code
+     * RDFNode.toString()} — the IRI for a named shape, the label for a blank node. Blank node
+     * identity survives the merge, because adding a model copies its triples rather than rewriting
+     * them, so an inlined property shape is attributed as reliably as a named one.
+     */
+    private static void attributeToDocuments(SHACLToClassRelations relations, GraphContext ctx) {
+        var byId = new LinkedHashMap<String, List<ShapeOrigin>>();
+        ctx.getShapesDocuments().values().stream()
+                .filter(ShapesDocument::isEnabled)
+                .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
+                .forEach(document -> indexSubjects(byId, document));
+
+        for (NodeShape shape : orEmpty(relations.getNodeShapes())) {
+            shape.setOrigins(byId.getOrDefault(shape.getId(), List.of()));
+        }
+        for (PropertyShapesWrapper wrapper :
+                concat(relations.getPropertyShapes(), relations.getDerivedPropertyShapes())) {
+            for (PropertyShape shape : orEmpty(wrapper.getPropertyShapes())) {
+                shape.setOrigins(byId.getOrDefault(shape.getId(), List.of()));
+            }
+        }
+    }
+
+    /** Records every subject a document states something about, under its shape id. */
+    private static void indexSubjects(
+            Map<String, List<ShapeOrigin>> byId, ShapesDocument document) {
+        var model = ModelFactory.createModelForGraph(document.getGraph());
+        var text = document.getRawText();
+        var seen = new HashSet<String>();
+        model.listSubjects()
+                .forEachRemaining(
+                        subject -> {
+                            var id = subject.toString();
+                            if (!seen.add(id)) {
+                                return;
+                            }
+                            byId.computeIfAbsent(id, ignored -> new ArrayList<>())
+                                    .add(
+                                            ShapeOrigin.builder()
+                                                    .documentId(document.getId())
+                                                    .documentName(document.getName())
+                                                    .line(lineOf(text, subject, model))
+                                                    .build());
+                        });
+    }
+
+    /**
+     * The 1-based line a shape's statement starts on, or {@code null} when it cannot be found.
+     *
+     * <p>Counted in the document's own text rather than in a re-serialisation, because the text is
+     * what the workbench will open and the line has to agree with it. A blank-node shape has no
+     * subject to search for, and a document restored from a snapshot has no text at all.
+     */
+    private static Integer lineOf(String turtle, Resource subject, Model model) {
+        if (turtle == null || !subject.isURIResource()) {
+            return null;
+        }
+        return ShapeBlockLocator.locate(turtle, subject.getURI(), model)
+                .map(statement -> (int) turtle.substring(0, statement.start()).lines().count() + 1)
+                .orElse(null);
+    }
+
+    private static List<PropertyShapesWrapper> concat(
+            List<PropertyShapesWrapper> first, List<PropertyShapesWrapper> second) {
+        var all = new ArrayList<>(orEmpty(first));
+        all.addAll(orEmpty(second));
+        return all;
+    }
+
+    private static <T> List<T> orEmpty(List<T> list) {
+        return list == null ? List.of() : list;
     }
 
     private SHACLToClassRelations getSHACLToClassRelations(
@@ -534,13 +630,44 @@ public class SHACLStoringService
         prefixMapping.setNsPrefixes(shaclModel.getNsPrefixMap());
         var shaclShapesFetcher = new SHACLShapesFetcher(shaclModel);
         var shaclToClassAssigner = new PropertyShapeToClassAssigner(shaclModel, ontologyModel);
-        return SHACLToClassRelations.builder()
-                .namespaces(prefixMappingToTtlString(prefixMapping))
-                .nodeShapes(shaclShapesFetcher.getNodeShapesOfClass(classUri))
-                .propertyShapes(shaclToClassAssigner.getPropertyShapes(classUUID))
-                .derivedPropertyShapes(
-                        shaclToClassAssigner.getDerivedPropertyShapesOfClass(classUUID))
-                .build();
+        var relations =
+                SHACLToClassRelations.builder()
+                        .namespaces(prefixMappingToTtlString(prefixMapping))
+                        .nodeShapes(shaclShapesFetcher.getNodeShapesOfClass(classUri))
+                        .propertyShapes(shaclToClassAssigner.getPropertyShapes(classUUID))
+                        .derivedPropertyShapes(
+                                shaclToClassAssigner.getDerivedPropertyShapesOfClass(classUUID))
+                        .build();
+        summarise(relations, shaclModel, prefixMapping);
+        return relations;
+    }
+
+    /**
+     * Puts the effective rule of each property into words, so it can be read without expanding the
+     * Turtle underneath it.
+     *
+     * <p>Shapes are looked up by the id the fetcher recorded, which is {@code RDFNode.toString()};
+     * building the index once and matching on it exactly avoids having to guess how a blank node
+     * spells itself.
+     */
+    private static void summarise(
+            SHACLToClassRelations relations, Model shaclModel, PrefixMapping prefixes) {
+        var subjects = new HashMap<String, Node>();
+        shaclModel
+                .listSubjects()
+                .forEachRemaining(subject -> subjects.put(subject.toString(), subject.asNode()));
+
+        for (PropertyShapesWrapper wrapper :
+                concat(relations.getPropertyShapes(), relations.getDerivedPropertyShapes())) {
+            var shapes =
+                    orEmpty(wrapper.getPropertyShapes()).stream()
+                            .map(shape -> subjects.get(shape.getId()))
+                            .filter(Objects::nonNull)
+                            .toList();
+            wrapper.setSummary(
+                    EffectiveConstraints.describe(
+                            EffectiveConstraints.readAll(shaclModel.getGraph(), shapes), prefixes));
+        }
     }
 
     private String prefixMappingToTtlString(PrefixMapping prefixMapping) {

@@ -29,6 +29,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
 import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 import org.rdfarchitect.shacl.dto.ConformanceFinding;
 import org.rdfarchitect.shacl.dto.ConformanceReport;

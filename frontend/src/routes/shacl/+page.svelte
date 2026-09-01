@@ -34,6 +34,10 @@
     import { ShapesFormView } from "$lib/shacl/formState.svelte.js";
     import { SchemaTermSource } from "$lib/shacl/schemaTermSource.svelte.js";
     import { parsePrefixes } from "$lib/shacl/turtleTerms.js";
+    import {
+        WORKBENCH_PATH,
+        workbenchTarget,
+    } from "$lib/shacl/workbenchLink.js";
     import { ShapesWorkbench } from "$lib/shacl/workbenchState.svelte.js";
     import {
         ClassType,
@@ -48,6 +52,7 @@
     import ProblemsPanel from "./workbench/ProblemsPanel.svelte";
 
     import { goto } from "$app/navigation";
+    import { page } from "$app/state";
 
     const VIEWS = [
         { id: "ttl", label: "Turtle" },
@@ -60,6 +65,9 @@
 
     /** Which view of the open document is showing. Both edit the same unsaved buffer. */
     let view = $state("ttl");
+
+    /** The link already followed, so selecting its document does not re-trigger the follow. */
+    let followedLink = null;
 
     /** Resolved when the user has answered the unsaved-changes dialog. */
     let pendingSwitch = $state(null);
@@ -139,6 +147,26 @@
     });
 
     /**
+     * Opens the document a link asked for, once the workbench has finished loading.
+     *
+     * Followed at most once per link. Selecting the document changes state this effect reads, so
+     * without the guard the effect re-enters and reveals the line a second time; and the query is
+     * cleared afterwards so a reload does not drag the user back to the rule either.
+     */
+    $effect(() => {
+        const target = workbenchTarget(page.url);
+        if (!target.documentId || !workbench || workbench.loading) {
+            return;
+        }
+        const link = `${target.documentId}:${target.line ?? ""}`;
+        if (followedLink === link) {
+            return;
+        }
+        followedLink = link;
+        followLink(target);
+    });
+
+    /**
      * Following a term opens the class it belongs to and puts it on screen.
      *
      * The same three steps the search bar takes, because "go to definition" and "search for a
@@ -208,6 +236,20 @@
         const resolve = pendingSwitch;
         pendingSwitch = null;
         resolve?.(answer);
+    }
+
+    async function followLink(target) {
+        if (workbench.selectedId !== target.documentId) {
+            if (!(await confirmSwitch())) {
+                return;
+            }
+            await workbench.select(target.documentId);
+        }
+        view = "ttl";
+        if (target.line) {
+            reveal(target.line);
+        }
+        goto(WORKBENCH_PATH, { replaceState: true, noScroll: true });
     }
 
     function onTextChanged() {

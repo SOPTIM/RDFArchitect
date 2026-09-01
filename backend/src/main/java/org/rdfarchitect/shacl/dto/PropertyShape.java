@@ -19,9 +19,13 @@ package org.rdfarchitect.shacl.dto;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
+
+import java.util.List;
 
 @Builder
 @Getter
+@Setter
 public class PropertyShape {
 
     private String id;
@@ -29,4 +33,12 @@ public class PropertyShape {
     private double order;
 
     private String triples;
+
+    /**
+     * The documents this shape was read from. Empty for a generated shape, which has no document.
+     *
+     * <p>Empty rather than absent so a reader never has to tell "generated" apart from "not filled
+     * in yet".
+     */
+    @Builder.Default private List<ShapeOrigin> origins = List.of();
 }

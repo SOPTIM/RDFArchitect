@@ -73,6 +73,15 @@ Two things about the comparison are load-bearing, and both were got wrong first:
 - **The right-hand side is every enabled document, not the open one.** A graph's constraints are their conjunction, and official releases split their rules across files: the CGMES 3.0 DiagramLayout file states 11 of its property shapes itself and defers 41 to the shared IdentifiedObject file. Reading one document alone reported its neighbours' coverage as missing. The open document joins in even when it is disabled, because it is the one the question is about, and `ConformanceFinding.statedIn` names the documents behind each finding so a merged answer still points at a file.
 - **Coverage is counted apart from agreement.** `compared` is the *overlap* — the keys both sides state — and `agreeing` is that minus the contradictions and differences. Counting the schema's whole surface instead scored silence as disagreement, so a 55-line cross-profile constraints file with one rule in it announced "0 of 49 property constraints agree" about a profile it had no quarrel with. `ConformanceAcrossDocumentsTest` pins both, against the real DiagramLayout files.
 
+### What one class is constrained by
+
+`GET /classes/{classUUID}/shacl` answers in two halves — the shapes the schema generates and the shapes the documents state — and the class dialog folds them into one row per property. Two things make that possible and both live in `SHACLStoringService`:
+
+- **Provenance.** Shapes are read from the union of the enabled documents, and merging is what throws away the file a reader needs in order to change a rule. `ShapeOrigin` puts it back: the document, and the line the shape starts on in that document's own text (via `ShapeBlockLocator`). Shapes are matched to documents by the id the fetchers already produce — `RDFNode.toString()` — which is the IRI for a named shape and the label for a blank node. Blank node identity survives the merge because adding a model copies triples rather than rewriting them, so an inlined property shape is attributed as reliably as a named one.
+- **A summary in words.** `PropertyShapesWrapper.summary` is the conjunction of the wrapper's shapes, rendered by `services/shacl/effective/EffectiveConstraints`. That class is shared with the conformance check on purpose, so `0..1, xsd:float` means the same thing in both places.
+
+Neither dialog writes. See the deprecation note on `updateClassSHACL` for why.
+
 ## Diagram layout
 
 Layout positions are persisted as RDF using a small custom vocabulary under `dl/rdf/` (Diagram Layout). Layout DTOs live in `api/dto/rendering/` with renderer-specific subdirectories (`svelteflow/`, `mermaid/`). When changing the layout schema, update both the `dl/` model and any code that reads or writes layout data.

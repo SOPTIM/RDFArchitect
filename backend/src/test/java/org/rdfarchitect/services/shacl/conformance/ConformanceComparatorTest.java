@@ -25,6 +25,7 @@ import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
 import org.rdfarchitect.shacl.dto.ConformanceFinding;
 
 import java.util.List;

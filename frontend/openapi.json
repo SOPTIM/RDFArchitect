@@ -1137,6 +1137,12 @@
           "id" : {
             "type" : "string"
           },
+          "origins" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ShapeOrigin"
+            },
+            "type" : "array"
+          },
           "triples" : {
             "type" : "string"
           }
@@ -1423,6 +1429,12 @@
             "format" : "double",
             "type" : "number"
           },
+          "origins" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ShapeOrigin"
+            },
+            "type" : "array"
+          },
           "triples" : {
             "type" : "string"
           }
@@ -1504,6 +1516,9 @@
             "type" : "array"
           },
           "propertyType" : {
+            "type" : "string"
+          },
+          "summary" : {
             "type" : "string"
           }
         },
@@ -2334,6 +2349,22 @@
               "type" : "string"
             },
             "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ShapeOrigin" : {
+        "properties" : {
+          "documentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "documentName" : {
+            "type" : "string"
+          },
+          "line" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"

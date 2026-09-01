@@ -86,7 +86,13 @@ A document with problems still saves. Validation is a report, not a gate — you
 
 In the class editor, every attribute and association row has a SHACL icon. Clicking it opens the **property-specific constraints (SHACL) dialog** — the subset of both generated and custom shapes that target that exact property on that exact class. This is by far the fastest way to answer *"what constraint is enforced on this attribute?"* without leaving the class you are looking at.
 
-A similar dialog at class level shows the class rules, property rules and inherited property rules that target the selected class, alongside the classes that reference it.
+A similar dialog at class level answers the same question for a whole class, and is worth knowing properly:
+
+- **One row per property**, showing what the rule requires in words — `0..1, xsd:float` — so you do not have to read Turtle to learn a cardinality. Expanding a row shows the shapes it is made of.
+- **Generated and custom rules are merged**, because "what is enforced on this property?" is the question, and which half a rule came from is an answer to a different one. The **Generated / Custom** buttons narrow it when you do want one half. Where the two disagree, both readings are shown side by side.
+- **Every row names its sources** — `generated`, or the constraints document. Clicking a document opens it in the workbench with the cursor on the rule.
+- **A filter** matches property names and rules alike, so `xsd:float` finds every float-valued property.
+- **Referenced by** lists the classes that point at this one. Relations that reference nothing are left out.
 
 **Both dialogs read; the workbench writes.** They show constraints merged from every enabled document, and merged shapes cannot be written back — there is no way to tell which document a rule came from once they are combined, and the endpoints that used to try wrote every edit into the graph's default document instead. **Edit in workbench** takes you to the document the rule really lives in.
 

@@ -18,14 +18,17 @@
 <script>
     import { faFileShield } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
+    import { Pane, Splitpanes } from "svelte-splitpanes";
 
     import { getShaclRelatedToClass } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { workbenchHref } from "$lib/shacl/workbenchLink.js";
     import { ClassType, editorState } from "$lib/sharedState.svelte.js";
 
+    import ClassConstraintsView from "./ClassConstraintsView.svelte";
     import ClassReferencedVia from "./ClassReferencedVia.svelte";
-    import SHACLShapeTtlRenderer from "./SHACLShapeTtlRenderer.svelte";
 
     import { goto } from "$app/navigation";
 
@@ -36,52 +39,66 @@
         showDialog = $bindable(),
     } = $props();
 
-    let defaultShacl = () => ({
+    let customShacl = $state(emptyShacl());
+    let generatedShacl = $state(emptyShacl());
+    let loading = $state(false);
+    let error = $state(null);
+    let fetchKey = $state(0);
+
+    const emptyShacl = () => ({
         namespaces: "",
         nodeShapes: [],
         propertyShapes: [],
         derivedPropertyShapes: [],
     });
 
-    let customShacl = $state(defaultShacl());
-    let generatedShacl = $state(defaultShacl());
-    let showGeneratedShacl = $state(false);
-    let fetchKey = $state(0);
-
     function onOpen() {
         fetchShacl();
     }
 
     function onClose() {
-        customShacl = defaultShacl();
-        generatedShacl = defaultShacl();
+        customShacl = emptyShacl();
+        generatedShacl = emptyShacl();
+        error = null;
         fetchKey = 0;
     }
 
-    /**
-     * fetches the SHACL rules for the selected class.
-     */
+    /** The shapes that target this class, both halves of the answer. */
     async function fetchShacl() {
+        loading = true;
         try {
-            const { data, error } = await getShaclRelatedToClass({
+            const { data, error: failure } = await getShaclRelatedToClass({
                 path: {
                     datasetName: workspaceName,
                     graphURI: graphUri,
                     classUUID: reactiveClass.uuid.value,
                 },
             });
-
-            if (error) {
-                console.warn("Failed to fetch SHACL:", error);
+            if (failure) {
+                error = "The constraints for this class could not be read.";
                 return;
             }
-
             customShacl = data.custom;
             generatedShacl = data.generated;
+            error = null;
             fetchKey++;
-        } catch (error) {
-            console.warn("Failed to fetch SHACL:", error);
+        } catch (failure) {
+            console.warn("Failed to fetch SHACL:", failure);
+            error = "The constraints for this class could not be read.";
+        } finally {
+            loading = false;
         }
+    }
+
+    /**
+     * Follows a provenance chip into the workbench, at the document and line the rule lives in.
+     *
+     * Without the document the workbench opens on whatever it opened last, which for a graph with
+     * a dozen constraints files is rarely the one being asked about.
+     */
+    function openInWorkbench(documentId = null, line = null) {
+        showDialog = false;
+        goto(workbenchHref(documentId, line));
     }
 
     function goToClass(classUUID) {
@@ -103,79 +120,50 @@
     title={`Constraints (SHACL) for: "${reactiveClass.label.value}"`}
     primaryLabel={null}
 >
-    <div class="flex h-full flex-col space-y-2">
-        <!-- main content area -->
-        <div class="flex min-h-0 flex-1 space-x-2">
-            <!-- main content/display of shacl shapes-->
-            <div class="flex w-3/4 flex-col">
-                <!-- button controls -->
-                <div class="flex h-9 w-full shrink-0 space-x-2">
-                    <div class="text-nowrap">
-                        <ButtonControl
-                            callOnClick={() => (showGeneratedShacl = true)}
-                            variant={showGeneratedShacl ? "" : "inline"}
-                        >
-                            Generated Constraints
-                        </ButtonControl>
-                    </div>
-                    <div class="text-nowrap">
-                        <ButtonControl
-                            callOnClick={() => (showGeneratedShacl = false)}
-                            variant={showGeneratedShacl ? "inline" : ""}
-                        >
-                            Custom Constraints
-                        </ButtonControl>
-                    </div>
-                    <!--
-                      This popup reads; the workbench writes. Shapes arrive here merged from every
-                      enabled document, and there is no honest way to write one back without
-                      knowing which document it came from — see the component comment on
-                      SHACLShapeTtlRenderer.
-                    -->
-                    <div class="ml-auto w-48 text-nowrap">
-                        <ButtonControl
-                            callOnClick={() => {
-                                showDialog = false;
-                                goto("/shacl");
-                            }}
-                        >
-                            <span class="flex items-center gap-2">
-                                <Fa icon={faFileShield} />
-                                Edit in workbench
-                            </span>
-                        </ButtonControl>
-                    </div>
-                </div>
-
-                <!-- scrollable content area -->
-                <div class="min-h-0 w-full flex-1 overflow-y-auto">
-                    {#key fetchKey}
-                        {#if showGeneratedShacl}
-                            <SHACLShapeTtlRenderer
-                                namespaces={generatedShacl.namespaces}
-                                nodeShapesList={generatedShacl.nodeShapes}
-                                propertyShapesWrapperList={generatedShacl.propertyShapes}
-                                derivedPropertyShapesWrapperList={generatedShacl.derivedPropertyShapes}
-                            />
-                        {:else}
-                            <SHACLShapeTtlRenderer
-                                namespaces={customShacl?.namespaces}
-                                nodeShapesList={customShacl?.nodeShapes}
-                                propertyShapesWrapperList={customShacl?.propertyShapes}
-                                derivedPropertyShapesWrapperList={customShacl?.derivedPropertyShapes}
-                            />
-                        {/if}
-                    {/key}
-                </div>
-            </div>
-
-            <!-- sidebar -->
-            <div class="w-1/4">
-                <ClassReferencedVia
-                    classUUID={editorState.selectedClass.getProperty("id")}
-                    onClickOnClass={goToClass}
-                />
+    <div class="flex h-full min-h-0 flex-col gap-2">
+        <div class="flex shrink-0 items-center gap-2">
+            <div class="ml-auto w-48 text-nowrap">
+                <ButtonControl callOnClick={() => openInWorkbench()}>
+                    <span class="flex items-center gap-2">
+                        <Fa icon={faFileShield} />
+                        Edit in workbench
+                    </span>
+                </ButtonControl>
             </div>
         </div>
+
+        {#if error}
+            <p
+                class="bg-red-background border-red-border text-red-text shrink-0 rounded border px-3 py-2 text-sm"
+            >
+                {error}
+            </p>
+        {/if}
+
+        {#if loading}
+            <div class="flex flex-1 items-center justify-center">
+                <LoadingSpinner />
+            </div>
+        {:else}
+            <Splitpanes theme="opencgmes-theme" class="flex min-h-0 flex-1">
+                <Pane size={75} minSize={45}>
+                    {#key fetchKey}
+                        <ClassConstraintsView
+                            custom={customShacl}
+                            generated={generatedShacl}
+                            onopen={openInWorkbench}
+                        />
+                    {/key}
+                </Pane>
+                <Pane size={25} minSize={15} maxSize={45}>
+                    <div class="h-full min-h-0 pl-2">
+                        <ClassReferencedVia
+                            classUUID={reactiveClass.uuid.value}
+                            onClickOnClass={goToClass}
+                        />
+                    </div>
+                </Pane>
+            </Splitpanes>
+        {/if}
     </div>
 </ActionDialog>

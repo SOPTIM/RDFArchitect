@@ -15,14 +15,16 @@
  *
  */
 
-package org.rdfarchitect.services.shacl.conformance;
+package org.rdfarchitect.services.shacl.effective;
 
 import de.soptim.opencgmes.cimvocabcheck.core.shacl.Shacl;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
+import org.apache.jena.shared.PrefixMapping;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -44,25 +46,25 @@ import java.util.Set;
  * two different ones is not a stricter rule — it is a contradiction, and the comparison needs to
  * see it as one.
  */
-final class EffectiveConstraints {
+public final class EffectiveConstraints {
 
     /** One property of one class — the only identity a cross-file comparison can rely on. */
-    record Key(String targetClass, String path) {}
+    public record Key(String targetClass, String path) {}
 
     /** Everything a shapes graph asks of that property, merged. */
-    record Constraint(
+    public record Constraint(
             Integer minCount,
             Integer maxCount,
             Set<String> dataTypes,
             Set<String> valueClasses,
             Set<String> nodeKinds) {
 
-        static Constraint empty() {
+        public static Constraint empty() {
             return new Constraint(null, null, Set.of(), Set.of(), Set.of());
         }
 
         /** Whether anything was actually said. A shape may name a path and constrain nothing. */
-        boolean isEmpty() {
+        public boolean isEmpty() {
             return minCount == null
                     && maxCount == null
                     && dataTypes.isEmpty()
@@ -83,9 +85,9 @@ final class EffectiveConstraints {
      * <p>{@code statedIn} exists so a finding can name the file to open, which a merged view would
      * otherwise have thrown away.
      */
-    record Asserted(Map<Key, Constraint> constraints, Map<Key, List<String>> statedIn) {
+    public record Asserted(Map<Key, Constraint> constraints, Map<Key, List<String>> statedIn) {
 
-        static Asserted empty() {
+        public static Asserted empty() {
             return new Asserted(Map.of(), Map.of());
         }
     }
@@ -93,7 +95,7 @@ final class EffectiveConstraints {
     private EffectiveConstraints() {}
 
     /** Reads several documents as one set of constraints, remembering where each came from. */
-    static Asserted of(Map<String, Graph> documents) {
+    public static Asserted of(Map<String, Graph> documents) {
         var merged = new LinkedHashMap<Key, Constraint>();
         var statedIn = new LinkedHashMap<Key, List<String>>();
         documents.forEach(
@@ -113,7 +115,7 @@ final class EffectiveConstraints {
     }
 
     /** Reads a shapes graph into one constraint per class and property. */
-    static Map<Key, Constraint> of(Graph shapes) {
+    public static Map<Key, Constraint> of(Graph shapes) {
         var merged = new LinkedHashMap<Key, Constraint>();
         shapes.stream(Node.ANY, Shacl.TARGET_CLASS, Node.ANY)
                 .filter(triple -> triple.getObject().isURI())
@@ -144,6 +146,61 @@ final class EffectiveConstraints {
                             merged.merge(
                                     key, read(shapes, property), EffectiveConstraints::conjunction);
                         });
+    }
+
+    /**
+     * What a chosen set of property shapes requires between them.
+     *
+     * <p>Used where the shapes are already known — the constraints on one property of one class, as
+     * the class dialog lists them — rather than discovered by walking {@code sh:targetClass}. The
+     * merge is the same conjunction: every shape applies.
+     */
+    public static Constraint readAll(Graph shapes, Collection<Node> propertyShapes) {
+        return propertyShapes.stream()
+                .map(shape -> read(shapes, shape))
+                .reduce(EffectiveConstraints::conjunction)
+                .orElseGet(Constraint::empty);
+    }
+
+    /**
+     * A constraint in words, listing only what was actually stated.
+     *
+     * <p>Lives here rather than beside either caller so that "0..1, xsd:float" means the same thing
+     * in the conformance report and in the class dialog.
+     */
+    public static String describe(Constraint constraint, PrefixMapping prefixes) {
+        var parts = new ArrayList<String>();
+        if (constraint.minCount() != null || constraint.maxCount() != null) {
+            parts.add(
+                    "%s..%s"
+                            .formatted(
+                                    constraint.minCount() == null ? "0" : constraint.minCount(),
+                                    constraint.maxCount() == null ? "n" : constraint.maxCount()));
+        }
+        if (!constraint.dataTypes().isEmpty()) {
+            parts.add(terms(constraint.dataTypes(), prefixes));
+        }
+        if (!constraint.valueClasses().isEmpty()) {
+            parts.add("of class " + terms(constraint.valueClasses(), prefixes));
+        }
+        if (!constraint.nodeKinds().isEmpty()) {
+            parts.add(terms(constraint.nodeKinds(), prefixes));
+        }
+        return String.join(", ", parts);
+    }
+
+    /** The terms of a set, shortest form first, joined as prose. */
+    public static String terms(Set<String> iris, PrefixMapping prefixes) {
+        return iris.stream()
+                .map(iri -> term(iri, prefixes))
+                .sorted()
+                .reduce((a, b) -> a + " and " + b)
+                .orElse("");
+    }
+
+    private static String term(String iri, PrefixMapping prefixes) {
+        var shortened = prefixes.shortForm(iri);
+        return shortened.equals(iri) ? "<" + iri + ">" : shortened;
     }
 
     private static Constraint read(Graph shapes, Node property) {

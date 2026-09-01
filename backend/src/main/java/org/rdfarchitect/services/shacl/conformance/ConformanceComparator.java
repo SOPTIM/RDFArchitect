@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.shacl.conformance;
 
 import org.apache.jena.shared.PrefixMapping;
+import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
 import org.rdfarchitect.shacl.dto.ConformanceFinding;
 
 import java.util.ArrayList;
@@ -211,38 +212,12 @@ final class ConformanceComparator {
                 .build();
     }
 
-    /** A constraint in words, listing only what was actually stated. */
-    static String describe(EffectiveConstraints.Constraint constraint, PrefixMapping prefixes) {
-        var parts = new ArrayList<String>();
-        if (constraint.minCount() != null || constraint.maxCount() != null) {
-            parts.add(
-                    "%s..%s"
-                            .formatted(
-                                    constraint.minCount() == null ? "0" : constraint.minCount(),
-                                    constraint.maxCount() == null ? "n" : constraint.maxCount()));
-        }
-        if (!constraint.dataTypes().isEmpty()) {
-            parts.add(terms(constraint.dataTypes(), prefixes));
-        }
-        if (!constraint.valueClasses().isEmpty()) {
-            parts.add("of class " + terms(constraint.valueClasses(), prefixes));
-        }
-        if (!constraint.nodeKinds().isEmpty()) {
-            parts.add(terms(constraint.nodeKinds(), prefixes));
-        }
-        return String.join(", ", parts);
+    private static String describe(
+            EffectiveConstraints.Constraint constraint, PrefixMapping prefixes) {
+        return EffectiveConstraints.describe(constraint, prefixes);
     }
 
     private static String terms(Set<String> iris, PrefixMapping prefixes) {
-        return iris.stream()
-                .map(iri -> term(iri, prefixes))
-                .sorted()
-                .reduce((a, b) -> a + " and " + b)
-                .orElse("");
-    }
-
-    private static String term(String iri, PrefixMapping prefixes) {
-        var shortened = prefixes.shortForm(iri);
-        return shortened.equals(iri) ? "<" + iri + ">" : shortened;
+        return EffectiveConstraints.terms(iris, prefixes);
     }
 }

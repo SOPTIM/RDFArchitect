@@ -36,10 +36,10 @@ import java.util.Optional;
  * full stop: comments, string literals (including the triple-quoted ones that embedded SPARQL lives
  * in), and bracket nesting.
  */
-final class ShapeBlockLocator {
+public final class ShapeBlockLocator {
 
     /** One top-level statement: its subject as written, and the text it covers. */
-    record Statement(String subjectToken, int start, int end) {}
+    public record Statement(String subjectToken, int start, int end) {}
 
     private ShapeBlockLocator() {}
 
@@ -49,7 +49,7 @@ final class ShapeBlockLocator {
      * <p>Empty when the shape is not written as its own top-level statement — nested in another
      * shape, say. The caller then has nothing to replace surgically and must fall back.
      */
-    static Optional<Statement> locate(String turtle, String iri, PrefixMapping prefixes) {
+    public static Optional<Statement> locate(String turtle, String iri, PrefixMapping prefixes) {
         return statements(turtle).stream()
                 .filter(statement -> iri.equals(expand(statement.subjectToken(), prefixes)))
                 .findFirst();
