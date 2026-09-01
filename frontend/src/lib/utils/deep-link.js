@@ -86,7 +86,9 @@ export async function resolveTermTarget({ dataset, graph, ref }) {
  */
 export async function resolveClassTarget({ dataset, graph, classRef }) {
     const candidates =
-        dataset && graph ? [[dataset, graph]] : await listGraphPairs(dataset, graph);
+        dataset && graph
+            ? [[dataset, graph]]
+            : await listGraphPairs(dataset, graph);
     for (const [datasetName, graphUri] of candidates) {
         const classUUID = validate(classRef)
             ? classRef
