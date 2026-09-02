@@ -34,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -48,8 +49,8 @@ import java.util.stream.Stream;
  * {@link ShapeModelWriter} writes plain literals, so a shape stating {@code sh:targetClass} twice,
  * or {@code sh:message "…"@en, "…"@de}, would come back with all but one value gone and the
  * language tag stripped — silently, on a shape the form had called editable. Every modelled
- * predicate therefore declares the shape of value the writer can reproduce ({@link ValueKind}),
- * and one it cannot reproduce makes the shape read-only exactly as an unknown predicate does.
+ * predicate therefore declares the shape of value the writer can reproduce ({@link ValueKind}), and
+ * one it cannot reproduce makes the shape read-only exactly as an unknown predicate does.
  *
  * <p>The SHACL predicates come from CIMVocabCheck's {@code Shacl} rather than being redeclared,
  * except for the handful that class has no constant for.
@@ -307,8 +308,7 @@ final class ShapeModelReader {
                             .map(
                                     members ->
                                             members.stream()
-                                                    .allMatch(
-                                                            ShapeModelReader::faithfulListMember))
+                                                    .allMatch(ShapeModelReader::faithfulListMember))
                             .orElse(false);
             case TYPE_NODE_SHAPE, TYPE_PROPERTY_SHAPE, SHAPES -> true;
         };
@@ -333,7 +333,7 @@ final class ShapeModelReader {
     /** A literal the writer reproduces by printing a bare {@code true} or {@code false}. */
     private static boolean isCanonicalBoolean(Node value) {
         return isTyped(value, XSD.xboolean.getURI())
-                && parseBoolean(value.getLiteralLexicalForm()) != null
+                && parseBoolean(value.getLiteralLexicalForm()).isPresent()
                 && value.getLiteralLexicalForm().equals(value.getLiteralLexicalForm().trim());
     }
 
@@ -409,21 +409,25 @@ final class ShapeModelReader {
 
     private static Boolean bool(Graph graph, Node subject, Node predicate) {
         var lexical = string(graph, subject, predicate);
-        return lexical == null ? null : parseBoolean(lexical);
+        return lexical == null ? null : parseBoolean(lexical).orElse(null);
     }
 
     /**
-     * {@code true} or {@code false}, or {@code null} for anything else.
+     * {@code true} or {@code false}, or empty for anything else.
      *
      * <p>Anything-that-is-not-true used to read as {@code false}, which invented a rule: {@code
      * sh:closed "yes"} became {@code sh:closed false} on the next save. An unreadable value is
      * reported as unrepresentable instead, and the shape is left to the Turtle view.
+     *
+     * <p>{@code Optional} rather than a nullable {@code Boolean}: a three-valued Boolean is a
+     * standing invitation to unbox one, and the two callers want different things from a value that
+     * will not parse — one reports it as unrepresentable, the other treats it as absent.
      */
-    private static Boolean parseBoolean(String lexical) {
+    private static Optional<Boolean> parseBoolean(String lexical) {
         var trimmed = lexical.trim();
         if ("true".equals(trimmed)) {
-            return Boolean.TRUE;
+            return Optional.of(Boolean.TRUE);
         }
-        return "false".equals(trimmed) ? Boolean.FALSE : null;
+        return "false".equals(trimmed) ? Optional.of(Boolean.FALSE) : Optional.empty();
     }
 }

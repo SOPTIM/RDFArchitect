@@ -197,11 +197,7 @@ public class SchemaIndexCache {
         synchronized (cacheLock) {
             cache.put(
                     key,
-                    new Entry(
-                            versions,
-                            built.api(),
-                            built.indexedTriples(),
-                            clock.getAsLong()));
+                    new Entry(versions, built.api(), built.indexedTriples(), clock.getAsLong()));
             evictBySize();
         }
         return built.api();

@@ -182,7 +182,8 @@ class SchemaIndexCacheTest {
     void theLeastRecentlyUsedWorkspaceMakesRoomForANewOne() {
         databasePort.createDataset("other");
         databasePort.createGraph(
-                new GraphIdentifier("other", "http://ex.org/EQ"), GraphFactory.createDefaultGraph());
+                new GraphIdentifier("other", "http://ex.org/EQ"),
+                GraphFactory.createDefaultGraph());
         var bounded = bounded(1, Duration.ofDays(1), 64);
 
         var first = bounded.apiFor(DATASET);
@@ -196,7 +197,8 @@ class SchemaIndexCacheTest {
     void theEntryCountIsBoundedForWorkspacesTooSmallToTripTheSizeBound() {
         databasePort.createDataset("other");
         databasePort.createGraph(
-                new GraphIdentifier("other", "http://ex.org/EQ"), GraphFactory.createDefaultGraph());
+                new GraphIdentifier("other", "http://ex.org/EQ"),
+                GraphFactory.createDefaultGraph());
         var bounded = bounded(Long.MAX_VALUE, Duration.ofDays(1), 1);
 
         var first = bounded.apiFor(DATASET);

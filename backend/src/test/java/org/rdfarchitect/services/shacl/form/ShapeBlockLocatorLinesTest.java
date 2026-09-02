@@ -70,8 +70,7 @@ class ShapeBlockLocatorLinesTest {
         lines.forEach(
                 (iri, line) -> {
                     var located = ShapeBlockLocator.locate(TURTLE, iri, prefixes).orElseThrow();
-                    var expected =
-                            (int) TURTLE.substring(0, located.start()).lines().count() + 1;
+                    var expected = (int) TURTLE.substring(0, located.start()).lines().count() + 1;
                     assertThat(line).as(iri).isEqualTo(expected);
                 });
     }

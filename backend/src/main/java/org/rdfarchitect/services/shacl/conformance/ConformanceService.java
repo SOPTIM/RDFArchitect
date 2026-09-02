@@ -88,8 +88,7 @@ public class ConformanceService implements ConformanceUseCase {
                     .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
                     .forEach(
                             document -> {
-                                documentShapes.put(
-                                        document.getName(), copyOf(document.getGraph()));
+                                documentShapes.put(document.getName(), copyOf(document.getGraph()));
                                 documentRefs.add(
                                         new ConformanceDocument(
                                                 document.getId(), document.getName()));

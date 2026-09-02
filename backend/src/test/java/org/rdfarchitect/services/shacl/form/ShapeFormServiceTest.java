@@ -376,8 +376,9 @@ class ShapeFormServiceTest {
 
         var form = service.parse(turtle);
 
-        assertThat(form.getShapes()).extracting(NodeShapeModel::getIri).containsExactly(
-                "http://example.org/shapes#Implied");
+        assertThat(form.getShapes())
+                .extracting(NodeShapeModel::getIri)
+                .containsExactly("http://example.org/shapes#Implied");
         assertThat(form.getShapes().get(0).getEditable()).isFalse();
         assertThat(form.getShapes().get(0).getReadOnlyReason()).contains("sh:NodeShape");
     }
