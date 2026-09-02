@@ -451,6 +451,7 @@ public class SchemaMigrationService
         var context = migrationSessionStore.getContext();
         var changes = context.getDiffAfterDefaultValueConfirm();
         var ignorePrefixes = context.isIgnorePrefixes();
+        var originalGraph = context.getOriginalSchema();
         var updatedGraph = context.getUpdatedSchema();
 
         var newChangeList = new ArrayList<SemanticClassChange>();
@@ -474,7 +475,7 @@ public class SchemaMigrationService
 
         sb.append(
                 migrationReportBuilder.generateSummaryMigrationReport(
-                        newChangeList, updatedGraph, ignorePrefixes));
+                        newChangeList, originalGraph, updatedGraph, ignorePrefixes));
         return sb.toString();
     }
 

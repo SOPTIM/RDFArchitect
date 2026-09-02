@@ -26,4 +26,5 @@ public enum SemanticResourceChangeType {
     CHANGE,
     RENAME,
     INHERITS_CHANGE,
+    INDIRECT_CHANGE,
 }

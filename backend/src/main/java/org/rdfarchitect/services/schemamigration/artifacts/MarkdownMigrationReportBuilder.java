@@ -21,12 +21,15 @@ import static org.apache.jena.rdf.model.ModelFactory.createModelForGraph;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.config.SchemaConfig;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
@@ -87,6 +90,8 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                         .toSet();
         concreteClassIRIs.addAll(updatedConcreteClassIRIs);
 
+        visibleChanges = findInvalidAssociationTargets(originalGraph, updatedGraph, visibleChanges);
+
         var sortedConcreteClassIRIs =
                 concreteClassIRIs.stream()
                         .sorted(Comparator.comparing(iri -> new URI(iri).getSuffix()))
@@ -105,7 +110,10 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
 
     @Override
     public String generateSummaryMigrationReport(
-            List<SemanticClassChange> classChanges, Graph updatedGraph, boolean ignorePrefixes) {
+            List<SemanticClassChange> classChanges,
+            Graph originalGraph,
+            Graph updatedGraph,
+            boolean ignorePrefixes) {
         var visibleChanges = ignorePrefixes ? applyPrefixRenameFilter(classChanges) : classChanges;
 
         var sb = new StringBuilder();
@@ -115,6 +123,8 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
 
         sb.append(
                 "Classes with direct changes. For parent classes, affected concrete subclasses are listed.\n\n");
+
+        visibleChanges = findInvalidAssociationTargets(originalGraph, updatedGraph, visibleChanges);
 
         var directlyChanged =
                 visibleChanges.stream()
@@ -174,12 +184,91 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
         sb.append("\n---\n\n");
     }
 
+    private List<SemanticClassChange> findInvalidAssociationTargets(
+            Graph originalGraph, Graph updatedGraph, List<SemanticClassChange> classChanges) {
+        var originalModel = createModelForGraph(originalGraph);
+        var updatedModel = createModelForGraph(updatedGraph);
+        var classChangeMap =
+                classChanges.stream()
+                        .collect(Collectors.toMap(SemanticClassChange::getIri, c -> c));
+
+        var result = new ArrayList<SemanticClassChange>();
+
+        for (var classChange : classChanges) {
+            result.add(new SemanticClassChange(classChange));
+            if (classChange.getChanges().stream()
+                    .noneMatch(
+                            c ->
+                                    c.getSemanticFieldChangeType()
+                                            == SemanticFieldChangeType.SUPERCLASS_CHANGE)) {
+                continue;
+            }
+
+            var updatedModelResource = updatedModel.getResource(classChange.getIri());
+
+            var superClasses =
+                    CIMClassUtils.listSuperClasses(updatedModelResource).stream()
+                            .map(Resource::getURI)
+                            .collect(Collectors.toSet());
+            superClasses.add(updatedModelResource.getURI());
+
+            var affectedAssociations =
+                    originalModel
+                            .listStatements(null, RDFS.range, (RDFNode) null)
+                            .filterKeep(stmt -> superClasses.contains(stmt.getObject().toString()))
+                            .mapWith(Statement::getSubject)
+                            .toSet();
+
+            if (affectedAssociations.isEmpty()) {
+                continue;
+            }
+
+            for (var affectedAssociation : affectedAssociations) {
+                var domain = affectedAssociation.getProperty(RDFS.domain).getObject().asResource();
+                var target = affectedAssociation.getProperty(RDFS.range).getObject().asResource();
+                var derivingClasses = CIMClassUtils.findDerivingClasses(target);
+                derivingClasses.add(target);
+
+                var affectedClassChange = classChangeMap.get(domain.getURI());
+                if (affectedClassChange == null) {
+                    affectedClassChange =
+                            new SemanticClassChange(
+                                    domain, SemanticResourceChangeType.INDIRECT_CHANGE);
+                    result.add(affectedClassChange);
+                }
+
+                var associationChange =
+                        affectedClassChange.getAssociations().stream()
+                                .filter(a -> a.getIri().equals(affectedAssociation.getURI()))
+                                .findFirst()
+                                .orElse(null);
+                if (associationChange == null) {
+                    associationChange =
+                            new SemanticAssociationChange(
+                                    affectedAssociation,
+                                    SemanticResourceChangeType.INDIRECT_CHANGE);
+                }
+
+                for (var invalidTarget : derivingClasses) {
+                    associationChange
+                            .getChanges()
+                            .add(
+                                    new SemanticFieldChange(
+                                            SemanticFieldChangeType.POTENTIALLY_INVALID_TARGET,
+                                            invalidTarget.getURI(),
+                                            null));
+                }
+            }
+        }
+
+        return result;
+    }
+
     private void appendDetailedClassSection(
             StringBuilder sb,
             String classIRI,
             Model model,
             Map<String, SemanticClassChange> classChangesMap) {
-
         SemanticClassChange classChange;
         if (classChangesMap.containsKey(classIRI)) {
             classChange = classChangesMap.get(classIRI);
@@ -221,7 +310,10 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                                                                             .ADDED_FROM_INHERITANCE
                                                             && p.getSemanticResourceChangeType()
                                                                     != SemanticResourceChangeType
-                                                                            .DELETED_FROM_INHERITANCE)
+                                                                            .DELETED_FROM_INHERITANCE
+                                                            && p.getSemanticResourceChangeType()
+                                                                    != SemanticResourceChangeType
+                                                                            .INDIRECT_CHANGE)
                                     .forEach(ancestorChangedAssociations::add);
                             superclass.getEnumEntries().stream()
                                     .filter(
@@ -320,6 +412,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
             case ASSOCIATION_USED_CHANGE -> formatTransition("Association used set", from, to);
             case DEFAULT_VALUE_CHANGE -> formatTransition("Default value set", from, to);
             case FIXED_VALUE_CHANGE -> formatTransition("Fixed value set", from, to);
+            default -> "";
         };
     }
 
@@ -368,7 +461,29 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
             if (prop.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE
                     && prop.getSemanticResourceChangeType()
                             != SemanticResourceChangeType.DELETED_FROM_INHERITANCE) {
-                appendFieldChangesAsSentences(sb, prop.getChanges());
+                var regularChanges =
+                        prop.getChanges().stream()
+                                .filter(
+                                        c ->
+                                                c.getSemanticFieldChangeType()
+                                                        != SemanticFieldChangeType
+                                                                .POTENTIALLY_INVALID_TARGET)
+                                .toList();
+                appendFieldChangesAsSentences(sb, regularChanges);
+                var invalidTargets =
+                        prop.getChanges().stream()
+                                .filter(
+                                        p ->
+                                                p.getSemanticFieldChangeType()
+                                                        == SemanticFieldChangeType
+                                                                .POTENTIALLY_INVALID_TARGET)
+                                .toList();
+                if (!invalidTargets.isEmpty()) {
+                    sb.append("**Potentially invalid targets due to superclass changes:**\n\n");
+                    for (var invalidTarget : invalidTargets) {
+                        sb.append("- ").append(shorten(invalidTarget.getFrom())).append("\n");
+                    }
+                }
             }
         }
     }
@@ -436,6 +551,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
             case ADDED_FROM_INHERITANCE -> "[Added via inheritance]";
             case DELETED_FROM_INHERITANCE -> "[Deleted via inheritance]";
             case INHERITS_CHANGE -> "[Inherits changes]";
+            case INDIRECT_CHANGE -> "[Indirectly changed]";
         };
     }
 
