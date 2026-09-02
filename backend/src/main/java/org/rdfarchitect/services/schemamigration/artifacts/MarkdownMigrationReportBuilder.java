@@ -204,30 +204,30 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                 continue;
             }
 
+            var originalModelResource = originalModel.getResource(classChange.getIri());
             var updatedModelResource = updatedModel.getResource(classChange.getIri());
 
-            var superClasses =
-                    CIMClassUtils.listSuperClasses(updatedModelResource).stream()
-                            .map(Resource::getURI)
-                            .collect(Collectors.toSet());
-            superClasses.add(updatedModelResource.getURI());
+            var originalSuperClasses = CIMClassUtils.listSuperClasses(originalModelResource).stream().map(Resource::getURI).collect(Collectors.toSet());
+            var updatedSuperClasses = CIMClassUtils.listSuperClasses(updatedModelResource).stream().map(Resource::getURI).collect(Collectors.toSet());
+            var removedSuperClasses = originalSuperClasses.stream().filter(s -> !updatedSuperClasses.contains(s)).collect(Collectors.toSet());
 
             var affectedAssociations =
                     originalModel
                             .listStatements(null, RDFS.range, (RDFNode) null)
-                            .filterKeep(stmt -> superClasses.contains(stmt.getObject().toString()))
+                            .filterKeep(stmt -> removedSuperClasses.contains(stmt.getObject().toString()))
                             .mapWith(Statement::getSubject)
+                            .filterKeep(resource -> resource.getProperty(CIMS.associationUsed).getString().equals("Yes"))
                             .toSet();
 
             if (affectedAssociations.isEmpty()) {
                 continue;
             }
 
+            var derivingClasses = CIMClassUtils.findDerivingClasses(updatedModelResource);
+            derivingClasses.add(updatedModelResource);
+
             for (var affectedAssociation : affectedAssociations) {
                 var domain = affectedAssociation.getProperty(RDFS.domain).getObject().asResource();
-                var target = affectedAssociation.getProperty(RDFS.range).getObject().asResource();
-                var derivingClasses = CIMClassUtils.findDerivingClasses(target);
-                derivingClasses.add(target);
 
                 var affectedClassChange = classChangeMap.get(domain.getURI());
                 if (affectedClassChange == null) {
@@ -247,6 +247,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                             new SemanticAssociationChange(
                                     affectedAssociation,
                                     SemanticResourceChangeType.INDIRECT_CHANGE);
+                    affectedClassChange.getAssociations().add(associationChange);
                 }
 
                 for (var invalidTarget : derivingClasses) {
