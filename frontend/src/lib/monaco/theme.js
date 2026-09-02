@@ -43,6 +43,63 @@ export const THEME_OPTIONS = [
     { value: "system", name: "Follow system" },
 ];
 
+/**
+ * The colours of everything the editor draws outside the text: its context menu, the completion
+ * list, the hover. Monaco resolves these into the CSS variables its own widgets are painted with,
+ * which is why they are set here rather than in a stylesheet — `monaco-menus.css` only has the
+ * shape of those menus to answer for.
+ *
+ * A menu's selected row is `list.hover*` rather than `menu.selection*`: that is the pair Monaco's
+ * menu styles actually read.
+ */
+const MENU_AND_WIDGETS_LIGHT = {
+    "menu.background": "#f9f9f9",
+    "menu.foreground": "#303030",
+    "menu.border": "#e0e0e0",
+    "menu.separatorBackground": "#e0e0e0",
+    "list.hoverBackground": "#90c1f1",
+    "list.hoverForeground": "#ffffff",
+    "widget.border": "#e0e0e0",
+    "widget.shadow": "#0000001f",
+    "editorWidget.background": "#f9f9f9",
+    "editorWidget.foreground": "#303030",
+    "editorWidget.border": "#e0e0e0",
+    "editorSuggestWidget.background": "#f9f9f9",
+    "editorSuggestWidget.foreground": "#303030",
+    "editorSuggestWidget.border": "#e0e0e0",
+    "editorSuggestWidget.selectedBackground": "#90c1f1",
+    "editorSuggestWidget.selectedForeground": "#ffffff",
+    "editorSuggestWidget.highlightForeground": "#1f75cb",
+    "editorHoverWidget.background": "#f9f9f9",
+    "editorHoverWidget.foreground": "#303030",
+    "editorHoverWidget.border": "#e0e0e0",
+    focusBorder: "#1f75cb",
+};
+
+const MENU_AND_WIDGETS_DARK = {
+    "menu.background": "#1e2140",
+    "menu.foreground": "#e0e0e0",
+    "menu.border": "#2b2f4d",
+    "menu.separatorBackground": "#2b2f4d",
+    "list.hoverBackground": "#2c3a63",
+    "list.hoverForeground": "#ffffff",
+    "widget.border": "#2b2f4d",
+    "widget.shadow": "#00000066",
+    "editorWidget.background": "#1e2140",
+    "editorWidget.foreground": "#e0e0e0",
+    "editorWidget.border": "#2b2f4d",
+    "editorSuggestWidget.background": "#1e2140",
+    "editorSuggestWidget.foreground": "#e0e0e0",
+    "editorSuggestWidget.border": "#2b2f4d",
+    "editorSuggestWidget.selectedBackground": "#2c3a63",
+    "editorSuggestWidget.selectedForeground": "#ffffff",
+    "editorSuggestWidget.highlightForeground": "#6fb8f5",
+    "editorHoverWidget.background": "#1e2140",
+    "editorHoverWidget.foreground": "#e0e0e0",
+    "editorHoverWidget.border": "#2b2f4d",
+    focusBorder: "#6fb8f5",
+};
+
 const LIGHT = {
     base: "vs",
     inherit: true,
@@ -75,6 +132,7 @@ const LIGHT = {
         "editor.selectionBackground": "#cfe3f8",
         "editorIndentGuide.background1": "#e0e0e0",
         "editorGutter.background": "#f9f9f9",
+        ...MENU_AND_WIDGETS_LIGHT,
     },
 };
 
@@ -110,6 +168,7 @@ const DARK = {
         "editor.selectionBackground": "#2c3a63",
         "editorIndentGuide.background1": "#2b2f4d",
         "editorGutter.background": "#14162b",
+        ...MENU_AND_WIDGETS_DARK,
     },
 };
 
