@@ -175,6 +175,16 @@ describe("DocumentList", () => {
         expect(workbench.move).toHaveBeenCalledWith("eq", 1);
     });
 
+    test("the ends of the list cannot be moved past", () => {
+        const list = render({ workbench: fakeWorkbench() });
+        const rows = documentRows(list);
+
+        expect(button(rows[0], "Move up").disabled).toBe(true);
+        expect(button(rows[0], "Move down").disabled).toBe(false);
+        expect(button(rows[1], "Move up").disabled).toBe(false);
+        expect(button(rows[1], "Move down").disabled).toBe(true);
+    });
+
     test("the default document cannot be deleted", () => {
         const list = render({ workbench: fakeWorkbench() });
         const rows = documentRows(list);
