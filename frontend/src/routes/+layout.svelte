@@ -30,6 +30,7 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ToastContainer from "$lib/components/ToastContainer.svelte";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import { ownsKeyboardInput } from "$lib/eventhandling/keyboardTargets.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { versionControlStore } from "$lib/stores/versionControlStore.ts";
@@ -142,16 +143,6 @@
         goto("/mainpage");
     }
 
-    function isInputElement(target) {
-        return (
-            target instanceof HTMLElement &&
-            (target.isContentEditable ||
-                target.tagName === "INPUT" ||
-                target.tagName === "TEXTAREA" ||
-                target.tagName === "SELECT")
-        );
-    }
-
     function isDialogOpen() {
         return !!document.querySelector(
             '[role="dialog"], [role="alertdialog"]',
@@ -183,7 +174,7 @@
 
         const key = event.key.toLowerCase();
         const hasCtrl = event.ctrlKey || event.metaKey;
-        const inputFocused = isInputElement(event.target);
+        const inputFocused = ownsKeyboardInput(event.target);
 
         const hasCtrlAltViaAltGr =
             event.getModifierState("AltGraph") && isLeftAltPressed;
