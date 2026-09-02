@@ -15,25 +15,20 @@
  *
  */
 
-package org.rdfarchitect.dl.data.dto;
+package org.rdfarchitect.services.dl.update.packagelayout;
 
-import lombok.Builder;
-import lombok.Data;
+import org.rdfarchitect.database.GraphIdentifier;
 
-import org.rdfarchitect.dl.data.dto.relations.MRID;
-import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
+import java.util.UUID;
 
-@Data
-@Builder(toBuilder = true)
-public class DiagramObjectPoint {
+public interface ReplaceDiagramUseCase {
 
-    private MRID mRID;
-
-    private XYZPosition position;
-
-    private MRID belongsToDiagramObject;
-
-    private Integer sequenceNumber;
-
-    private MRID belongsToGluePoint;
+    /**
+     * Replaces the diagram with a new diagram created using the values in the parameters
+     *
+     * @param graphIdentifier the identifier of the graph
+     * @param packageUUID the UUID of the package identifying the diagram
+     * @param packageName the name of the new diagram
+     */
+    void replaceDiagram(GraphIdentifier graphIdentifier, UUID packageUUID, String packageName);
 }

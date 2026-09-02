@@ -15,20 +15,23 @@
  *
  */
 
-package org.rdfarchitect.services.dl.update;
+package org.rdfarchitect.api.dto.dl;
 
-import org.rdfarchitect.database.GraphIdentifier;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.UUID;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-public interface ReplaceDiagramUseCase {
+@Data
+@NoArgsConstructor
+public class BendPointDTO {
 
-    /**
-     * Replaces the diagram with a new diagram created using the values in the parameters
-     *
-     * @param graphIdentifier the identifier of the graph
-     * @param packageUUID the UUID of the package identifying the diagram
-     * @param packageName the name of the new diagram
-     */
-    void replaceDiagram(GraphIdentifier graphIdentifier, UUID packageUUID, String packageName);
+    @JsonProperty("xPosition")
+    private float xPosition;
+
+    @JsonProperty("yPosition")
+    private float yPosition;
+
+    @JsonProperty("sequenceNumber")
+    private int sequenceNumber;
 }
