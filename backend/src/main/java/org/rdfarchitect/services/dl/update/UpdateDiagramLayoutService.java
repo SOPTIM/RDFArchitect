@@ -20,6 +20,7 @@ package org.rdfarchitect.services.dl.update;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.dl.data.dto.Diagram;
@@ -28,10 +29,10 @@ import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
-import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -78,18 +79,13 @@ public class UpdateDiagramLayoutService implements CreateDiagramLayoutUseCase {
                             .build());
 
             for (var cimClassOrEnum : defaultPackageClassesCIMCollection.getClassesAndEnums()) {
-                var doMRID =
-                        DiagramLayoutServiceUtils.insertDiagramObject(
-                                diagramLayoutModel,
-                                diagramLayout.getDefaultPackageMRID().getUuid(),
-                                cimClassOrEnum.getLabel().getValue(),
-                                cimClassOrEnum.getUuid());
-                DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                DiagramLayoutServiceUtils.insertClassLayoutData(
                         diagramLayoutModel,
-                        packageGraphFilter.getPackageUUID() == null
-                                ? diagramLayout.getDefaultPackageMRID().getUuid()
-                                : UUID.fromString(packageGraphFilter.getPackageUUID()),
-                        doMRID);
+                        diagramLayout.getDefaultPackageMRID().getUuid(),
+                        cimClassOrEnum.getLabel().getValue(),
+                        cimClassOrEnum.getUuid(),
+                        0,
+                        0);
             }
 
             for (var entry : classesByPackage.entrySet()) {
@@ -97,17 +93,60 @@ public class UpdateDiagramLayoutService implements CreateDiagramLayoutUseCase {
                 DiagramLayoutServiceUtils.insertDiagram(
                         diagramLayoutModel, cimPackage.getUuid(), cimPackage.getLabel().getValue());
                 for (var cimClassOrEnum : entry.getValue().getClassesAndEnums()) {
-                    var doMRID =
-                            DiagramLayoutServiceUtils.insertDiagramObject(
-                                    diagramLayoutModel,
-                                    cimPackage.getUuid(),
-                                    cimClassOrEnum.getLabel().getValue(),
-                                    cimClassOrEnum.getUuid());
-                    DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                            diagramLayoutModel, cimPackage.getUuid(), doMRID);
+                    DiagramLayoutServiceUtils.insertClassLayoutData(
+                            diagramLayoutModel,
+                            cimPackage.getUuid(),
+                            cimClassOrEnum.getLabel().getValue(),
+                            cimClassOrEnum.getUuid(),
+                            0,
+                            0);
                 }
             }
+
+            insertEdgeDiagramObjects(
+                    diagramLayoutModel,
+                    diagramLayout.getDefaultPackageMRID().getUuid(),
+                    defaultPackageClassesCIMCollection);
+
+            for (var entry : classesByPackage.entrySet()) {
+                insertEdgeDiagramObjects(
+                        diagramLayoutModel, entry.getKey().getUuid(), entry.getValue());
+            }
+
             ctx.commit();
+        }
+    }
+
+    private void insertEdgeDiagramObjects(
+            Model diagramLayoutModel, UUID diagramUUID, CIMCollection cimCollection) {
+
+        for (var cimClassOrEnum : cimCollection.getClassesAndEnums()) {
+            var superClass = cimClassOrEnum.getSuperClass();
+            if (superClass != null) {
+                DiagramLayoutServiceUtils.insertDiagramObject(
+                        diagramLayoutModel,
+                        diagramUUID,
+                        cimClassOrEnum.getLabel().getValue()
+                                + " inheritance "
+                                + superClass.getLabel().getValue(),
+                        cimClassOrEnum.getUuid());
+            }
+        }
+
+        var handledAssociationUris = new HashSet<String>();
+        for (var association : cimCollection.getAssociations()) {
+            if (handledAssociationUris.contains(association.getUri().toString())) {
+                continue;
+            }
+            DiagramLayoutServiceUtils.insertDiagramObject(
+                    diagramLayoutModel,
+                    diagramUUID,
+                    association.getDomain().getLabel().getValue()
+                            + " association "
+                            + association.getRange().getLabel().getValue(),
+                    association.getUuid());
+            handledAssociationUris.add(association.getUri().toString());
+            handledAssociationUris.add(association.getInverseRoleName().getUri().toString());
         }
     }
 }

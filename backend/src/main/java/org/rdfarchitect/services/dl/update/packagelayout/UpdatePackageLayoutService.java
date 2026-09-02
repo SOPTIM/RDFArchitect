@@ -31,7 +31,6 @@ import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
-import org.rdfarchitect.services.dl.update.ReplaceDiagramUseCase;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
 import org.springframework.stereotype.Service;
 
@@ -76,7 +75,7 @@ public class UpdatePackageLayoutService
 
             for (var cimClassOrEnum : classesCIMCollection.getClassesAndEnums()) {
                 var diagramObject =
-                        DLObjectFetcher.fetchDiagramDOForClass(
+                        DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
                                 diagramLayoutModel, packageUUID, cimClassOrEnum.getUuid());
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
             }

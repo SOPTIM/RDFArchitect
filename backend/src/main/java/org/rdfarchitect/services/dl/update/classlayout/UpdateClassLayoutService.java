@@ -71,14 +71,14 @@ public class UpdateClassLayoutService
                             : diagramLayout.getDefaultPackageMRID().getUuid();
 
             var existingDiagramObject =
-                    DLObjectFetcher.fetchDiagramDOForClass(
+                    DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
                             diagramLayoutModel, packageUUID, classUUID);
             if (existingDiagramObject != null) {
                 // The class takes over an uri that already had layout data, for example because a
                 // class of that name was deleted while references to it remained. Keeping that
                 // layout data avoids a second diagram object for the same class.
                 if (classLayoutPosition != null) {
-                    moveDiagramObject(
+                    moveClassDOPPosition(
                             diagramLayoutModel,
                             existingDiagramObject,
                             packageUUID,
@@ -89,44 +89,15 @@ public class UpdateClassLayoutService
                 }
                 return;
             }
-
-            var doMRID =
-                    DiagramLayoutServiceUtils.insertDiagramObject(
-                            diagramLayoutModel, packageUUID, className, classUUID);
-            float xPosition = classLayoutPosition != null ? classLayoutPosition.getXPosition() : 0;
-            float yPosition = classLayoutPosition != null ? classLayoutPosition.getYPosition() : 0;
-            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                    diagramLayoutModel, doMRID, packageUUID, xPosition, yPosition);
+            DiagramLayoutServiceUtils.insertClassLayoutData(
+                    diagramLayoutModel,
+                    packageUUID,
+                    className,
+                    classUUID,
+                    classLayoutPosition != null ? classLayoutPosition.getXPosition() : 0,
+                    classLayoutPosition != null ? classLayoutPosition.getYPosition() : 0);
             ctx.commit();
         }
-    }
-
-    /**
-     * Moves the point of an existing diagram object.
-     *
-     * @param zPosition the stacking order to apply, or {@code null} to keep the current one.
-     */
-    private void moveDiagramObject(
-            Model diagramLayoutModel,
-            DiagramObject diagramObject,
-            UUID diagramUUID,
-            float xPosition,
-            float yPosition,
-            Integer zPosition) {
-        var diagramObjectPoint =
-                DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, diagramObject.getMRID());
-        if (diagramObjectPoint == null) {
-            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                    diagramLayoutModel, diagramObject.getMRID(), diagramUUID, xPosition, yPosition);
-            return;
-        }
-        DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint.getMRID());
-        diagramObjectPoint.setPosition(
-                new XYZPosition(
-                        xPosition,
-                        yPosition,
-                        zPosition != null ? zPosition : diagramObjectPoint.getPosition().getZ()));
-        DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);
     }
 
     @Override
@@ -142,40 +113,7 @@ public class UpdateClassLayoutService
                             ? packageUUID
                             : diagramLayout.getDefaultPackageMRID().getUuid();
 
-            for (var classPositionDTO : classPositionDTOList) {
-                var diagramObject =
-                        DLObjectFetcher.fetchDiagramDOForClass(
-                                diagramLayoutModel,
-                                resolvedPackageUUID,
-                                classPositionDTO.getClassUUID());
-                if (diagramObject == null) {
-                    if (DLObjectFetcher.fetchDiagram(diagramLayoutModel, resolvedPackageUUID)
-                            == null) {
-                        DiagramLayoutServiceUtils.insertDiagram(
-                                diagramLayoutModel, resolvedPackageUUID, "");
-                    }
-                    var doMRID =
-                            DiagramLayoutServiceUtils.insertDiagramObject(
-                                    diagramLayoutModel,
-                                    resolvedPackageUUID,
-                                    "",
-                                    classPositionDTO.getClassUUID());
-                    DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                            diagramLayoutModel,
-                            doMRID,
-                            resolvedPackageUUID,
-                            classPositionDTO.getXPosition(),
-                            classPositionDTO.getYPosition());
-                    continue;
-                }
-                moveDiagramObject(
-                        diagramLayoutModel,
-                        diagramObject,
-                        resolvedPackageUUID,
-                        classPositionDTO.getXPosition(),
-                        classPositionDTO.getYPosition(),
-                        classPositionDTO.getZPosition());
-            }
+            applyClassPositions(diagramLayoutModel, resolvedPackageUUID, classPositionDTOList);
 
             ctx.commit();
         }
@@ -184,32 +122,34 @@ public class UpdateClassLayoutService
     @Override
     public void updateClassPositions(
             String datasetName, UUID diagramUUID, List<ClassPositionDTO> classPositionDTOList) {
-        var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
-        var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
+        var diagramLayoutModel =
+                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
 
+        applyClassPositions(diagramLayoutModel, diagramUUID, classPositionDTOList);
+    }
+
+    private void applyClassPositions(
+            Model diagramLayoutModel,
+            UUID diagramUUID,
+            List<ClassPositionDTO> classPositionDTOList) {
         for (var classPositionDTO : classPositionDTOList) {
             var diagramObject =
-                    DLObjectFetcher.fetchDiagramDOForClass(
+                    DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
                             diagramLayoutModel, diagramUUID, classPositionDTO.getClassUUID());
             if (diagramObject == null) {
                 if (DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null) {
                     DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, diagramUUID, "");
                 }
-                var doMRID =
-                        DiagramLayoutServiceUtils.insertDiagramObject(
-                                diagramLayoutModel,
-                                diagramUUID,
-                                "",
-                                classPositionDTO.getClassUUID());
-                DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                DiagramLayoutServiceUtils.insertClassLayoutData(
                         diagramLayoutModel,
-                        doMRID,
                         diagramUUID,
+                        "",
+                        classPositionDTO.getClassUUID(),
                         classPositionDTO.getXPosition(),
                         classPositionDTO.getYPosition());
                 continue;
             }
-            moveDiagramObject(
+            moveClassDOPPosition(
                     diagramLayoutModel,
                     diagramObject,
                     diagramUUID,
@@ -217,6 +157,55 @@ public class UpdateClassLayoutService
                     classPositionDTO.getYPosition(),
                     classPositionDTO.getZPosition());
         }
+    }
+
+    /**
+     * Moves the diagram object point of an existing class diagram object. If the diagram object has
+     * no point yet, a new one is created. The glue point invariant is upheld: the (re)created point
+     * always references the class' glue point, reusing an existing one or creating it if missing.
+     *
+     * @param zPosition the stacking order to apply, or {@code null} to keep the current one.
+     */
+    private void moveClassDOPPosition(
+            Model diagramLayoutModel,
+            DiagramObject diagramObject,
+            UUID diagramUUID,
+            float xPosition,
+            float yPosition,
+            Integer zPosition) {
+        var diagramObjectPoint =
+                DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, diagramObject.getMRID());
+
+        if (diagramObjectPoint == null) {
+            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                    diagramLayoutModel,
+                    diagramObject.getMRID(),
+                    diagramUUID,
+                    xPosition,
+                    yPosition,
+                    null,
+                    resolveGluePointMRID(diagramLayoutModel, diagramObject.getMRID()));
+            return;
+        }
+
+        DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint.getMRID());
+        diagramObjectPoint.setPosition(
+                new XYZPosition(
+                        xPosition,
+                        yPosition,
+                        zPosition != null ? zPosition : diagramObjectPoint.getPosition().getZ()));
+        DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);
+    }
+
+    /**
+     * Resolves the glue point mRID for a class diagram object, reusing the existing glue point or
+     * creating a new one if the class does not have one yet.
+     */
+    private MRID resolveGluePointMRID(Model diagramLayoutModel, MRID diagramObjectMRID) {
+        var gluePoint = DLObjectFetcher.fetchGluePointForDO(diagramLayoutModel, diagramObjectMRID);
+        return gluePoint != null
+                ? gluePoint.getMRID()
+                : DiagramLayoutServiceUtils.insertDiagramObjectGluePoint(diagramLayoutModel);
     }
 
     @Override
@@ -261,11 +250,8 @@ public class UpdateClassLayoutService
                 DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, diagramUUID, "");
             }
             for (var cls : classes) {
-                var doMRID =
-                        DiagramLayoutServiceUtils.insertDiagramObject(
-                                diagramLayoutModel, diagramUUID, "", cls.getUuid());
-                DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                        diagramLayoutModel, diagramUUID, doMRID);
+                DiagramLayoutServiceUtils.insertClassLayoutData(
+                        diagramLayoutModel, diagramUUID, "", cls.getUuid(), 0, 0);
             }
             ctx.commit();
         }
@@ -288,7 +274,7 @@ public class UpdateClassLayoutService
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             for (var classUUID : classUUIDs) {
                 var diagramObject =
-                        DLObjectFetcher.fetchDiagramDOForClass(
+                        DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
                                 diagramLayoutModel, diagramUUID, classUUID);
                 if (diagramObject != null) {
                     DLUpdates.deleteDiagramObjectCascade(
@@ -325,11 +311,8 @@ public class UpdateClassLayoutService
             DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, diagramUUID, "");
         }
         for (var cls : classes) {
-            var doMRID =
-                    DiagramLayoutServiceUtils.insertDiagramObject(
-                            diagramLayoutModel, diagramUUID, "", cls.getUuid());
-            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                    diagramLayoutModel, diagramUUID, doMRID);
+            DiagramLayoutServiceUtils.insertClassLayoutData(
+                    diagramLayoutModel, diagramUUID, "", cls.getUuid(), 0, 0);
         }
     }
 
@@ -350,7 +333,7 @@ public class UpdateClassLayoutService
                 databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
         for (var classUUID : classUUIDs) {
             var diagramObject =
-                    DLObjectFetcher.fetchDiagramDOForClass(
+                    DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
                             diagramLayoutModel, diagramUUID, classUUID);
             if (diagramObject != null) {
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
@@ -371,14 +354,14 @@ public class UpdateClassLayoutService
         }
 
         var existingNew =
-                DLObjectFetcher.fetchDiagramDOForClass(
+                DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
                         model, crossProfileDiagramUUID, newMergedUuid);
         if (existingNew != null) {
             return;
         }
 
         var oldDO =
-                DLObjectFetcher.fetchDiagramDOForClass(
+                DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
                         model, crossProfileDiagramUUID, oldMergedUuid);
         if (oldDO == null) {
             return;
@@ -387,6 +370,7 @@ public class UpdateClassLayoutService
         var oldDOP = DLObjectFetcher.fetchDOPForDO(model, oldDO.getMRID());
         var position = oldDOP.getPosition();
 
+        var gluePointMRID = DiagramLayoutServiceUtils.insertDiagramObjectGluePoint(model);
         var newDoMRID =
                 DiagramLayoutServiceUtils.insertDiagramObject(
                         model, crossProfileDiagramUUID, newClassUri, newMergedUuid);
@@ -398,6 +382,7 @@ public class UpdateClassLayoutService
                                 new XYZPosition(
                                         position.getX(), position.getY(), position.getZ() + 1))
                         .belongsToDiagramObject(newDoMRID)
+                        .belongsToGluePoint(gluePointMRID)
                         .build();
         DLUpdates.insertDiagramObjectPoint(model, newDiagramObjectPoint);
     }

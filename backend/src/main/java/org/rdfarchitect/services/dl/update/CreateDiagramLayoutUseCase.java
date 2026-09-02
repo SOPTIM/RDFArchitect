@@ -15,25 +15,16 @@
  *
  */
 
-package org.rdfarchitect.dl.data.dto;
+package org.rdfarchitect.services.dl.update;
 
-import lombok.Builder;
-import lombok.Data;
+import org.rdfarchitect.database.GraphIdentifier;
 
-import org.rdfarchitect.dl.data.dto.relations.MRID;
-import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
+public interface CreateDiagramLayoutUseCase {
 
-@Data
-@Builder(toBuilder = true)
-public class DiagramObjectPoint {
-
-    private MRID mRID;
-
-    private XYZPosition position;
-
-    private MRID belongsToDiagramObject;
-
-    private Integer sequenceNumber;
-
-    private MRID belongsToGluePoint;
+    /**
+     * Creates the initial diagram layout structure for a newly imported graph
+     *
+     * @param graphIdentifier the identifier of the graph
+     */
+    void createDiagramLayout(GraphIdentifier graphIdentifier);
 }
