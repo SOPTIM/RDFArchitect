@@ -45,6 +45,9 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { graphStore } from "$lib/stores/graphStore.ts";
+    import { graphLabelOf } from "$lib/utils/graph-label.js";
+    import { uriSuffix } from "$lib/utils/iri.js";
 
     import ConformanceReportView from "./workbench/ConformanceReportView.svelte";
     import DocumentInspector from "./workbench/DocumentInspector.svelte";
@@ -63,6 +66,9 @@
 
     let editor = $state(null);
     let problemsExpanded = $state(true);
+
+    /** The open schema's name, as the navigation writes it: its dcat:keyword, not its URI. */
+    let schemaName = $state("");
 
     /** Which view of the open document is showing. Both edit the same unsaved buffer. */
     let view = $state("ttl");
@@ -140,6 +146,29 @@
     $effect(() => {
         editorState.selectedWorkspace.subscribe();
         editorState.selectedGraph.subscribe();
+    });
+
+    /**
+     * Names the schema the way the rest of the app names it.
+     *
+     * The graph list is fetched, so the URI's tail stands in until it arrives rather than leaving
+     * the heading to fill itself in a moment later.
+     */
+    $effect(() => {
+        const workspace = selectedWorkspace;
+        const uri = selectedGraph;
+        if (!workspace || !uri) {
+            schemaName = "";
+            return;
+        }
+        let current = true;
+        schemaName = uriSuffix(uri);
+        graphStore.getGraphs(workspace).then(graphs => {
+            if (current) {
+                schemaName = graphLabelOf(graphs, uri);
+            }
+        });
+        return () => (current = false);
     });
 
     $effect(() => {
@@ -358,8 +387,9 @@
             <Fa icon={faFileShield} class="text-blue" />
             <h1
                 class="text-default-text min-w-0 truncate text-sm font-semibold"
+                title={selectedGraph}
             >
-                Constraints — {selectedWorkspace} / {selectedGraph}
+                Constraints — {selectedWorkspace} / {schemaName}
             </h1>
             {#if workbench.dirty}
                 <span class="text-orange shrink-0 text-xs">
