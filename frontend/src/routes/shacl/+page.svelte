@@ -493,16 +493,11 @@
                 </Pane>
             </Splitpanes>
 
-            <div
-                class="flex min-h-0 shrink-0 flex-col"
-                style={problemsExpanded ? "height: 33%" : undefined}
-            >
-                <ProblemsPanel
-                    {workbench}
-                    bind:expanded={problemsExpanded}
-                    onselect={jumpTo}
-                />
-            </div>
+            <ProblemsPanel
+                {workbench}
+                bind:expanded={problemsExpanded}
+                onselect={jumpTo}
+            />
         </div>
     {/if}
 </div>

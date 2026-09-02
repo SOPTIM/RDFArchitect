@@ -151,6 +151,88 @@ describe("ProblemsPanel", () => {
         expect(panel.querySelectorAll("li")).toHaveLength(0);
     });
 
+    /** The strip above the header that sizes the panel. */
+    function handle(panel) {
+        return panel.querySelector("[role='separator']");
+    }
+
+    /** The panel's own element, whose inline height the drag changes. */
+    function sized(panel) {
+        return panel.firstElementChild;
+    }
+
+    /** jsdom lays nothing out, so the room the panel may take has to be stated for it. */
+    function giveRoom(panel, height = 900) {
+        Object.defineProperty(panel, "clientHeight", { value: height });
+    }
+
+    test("dragging the handle upwards makes the panel taller", () => {
+        const panel = render(ProblemsPanel, { workbench: fakeWorkbench() });
+        flushSync();
+        giveRoom(panel);
+        const before = parseInt(sized(panel).style.height, 10);
+
+        handle(panel).dispatchEvent(
+            new MouseEvent("pointerdown", { bubbles: true, clientY: 500 }),
+        );
+        window.dispatchEvent(new MouseEvent("pointermove", { clientY: 420 }));
+        window.dispatchEvent(new MouseEvent("pointerup", {}));
+        flushSync();
+
+        expect(parseInt(sized(panel).style.height, 10)).toBe(before + 80);
+    });
+
+    test("the drag stops once the pointer is released", () => {
+        const panel = render(ProblemsPanel, { workbench: fakeWorkbench() });
+        flushSync();
+        giveRoom(panel);
+
+        handle(panel).dispatchEvent(
+            new MouseEvent("pointerdown", { bubbles: true, clientY: 500 }),
+        );
+        window.dispatchEvent(new MouseEvent("pointerup", {}));
+        const height = sized(panel).style.height;
+        window.dispatchEvent(new MouseEvent("pointermove", { clientY: 100 }));
+        flushSync();
+
+        expect(sized(panel).style.height).toBe(height);
+    });
+
+    test("the arrow keys size it too, and neither direction runs away", () => {
+        const panel = render(ProblemsPanel, { workbench: fakeWorkbench() });
+        flushSync();
+        giveRoom(panel);
+        const before = parseInt(sized(panel).style.height, 10);
+
+        handle(panel).dispatchEvent(
+            new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }),
+        );
+        flushSync();
+        expect(parseInt(sized(panel).style.height, 10)).toBe(before + 24);
+
+        for (let press = 0; press < 40; press += 1) {
+            handle(panel).dispatchEvent(
+                new KeyboardEvent("keydown", {
+                    key: "ArrowDown",
+                    bubbles: true,
+                }),
+            );
+        }
+        flushSync();
+        // Still tall enough to read the header and a finding.
+        expect(parseInt(sized(panel).style.height, 10)).toBe(120);
+    });
+
+    test("collapsing gives the space back and takes the handle away", () => {
+        const panel = render(ProblemsPanel, {
+            workbench: fakeWorkbench(),
+            expanded: false,
+        });
+
+        expect(handle(panel)).toBeNull();
+        expect(sized(panel).style.height).toBe("");
+    });
+
     test("revalidating on demand goes through the workbench", () => {
         const workbench = fakeWorkbench();
         const panel = render(ProblemsPanel, { workbench });

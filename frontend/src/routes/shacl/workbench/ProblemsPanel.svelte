@@ -38,6 +38,19 @@
         expanded = $bindable(true),
     } = $props();
 
+    /** Nothing below this is worth showing: the header plus about one finding. */
+    const MIN_HEIGHT = 120;
+
+    /** Room the panel always leaves the editor above it, however far the handle is dragged. */
+    const KEEP_ABOVE = 160;
+
+    /** How far one arrow key moves the handle. */
+    const STEP = 24;
+
+    /** The panel's height while it is expanded. Collapsed, the header sizes itself. */
+    let height = $state(260);
+    let panel = $state(null);
+
     const problems = $derived(
         workbench.results
             .flatMap(result =>
@@ -51,6 +64,46 @@
     );
 
     const totals = $derived(workbench.totals);
+
+    /**
+     * Drags the panel taller or shorter.
+     *
+     * The pointer is followed on the window rather than on the handle so a fast drag that leaves
+     * the eight-pixel strip behind keeps resizing instead of stopping where the pointer left.
+     */
+    function startResize(event) {
+        if (event.button !== 0) {
+            return;
+        }
+        event.preventDefault();
+        const startY = event.clientY;
+        const startHeight = height;
+        const onMove = move => resizeTo(startHeight + (startY - move.clientY));
+        const onUp = () => {
+            window.removeEventListener("pointermove", onMove);
+            window.removeEventListener("pointerup", onUp);
+        };
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+    }
+
+    function onHandleKeydown(event) {
+        if (event.key === "ArrowUp") {
+            resizeTo(height + STEP);
+        } else if (event.key === "ArrowDown") {
+            resizeTo(height - STEP);
+        } else {
+            return;
+        }
+        event.preventDefault();
+    }
+
+    /** Bounded by what is actually on screen, so the panel cannot swallow the editor. */
+    function resizeTo(next) {
+        const available = panel?.parentElement?.clientHeight ?? 0;
+        const max = Math.max(MIN_HEIGHT, available - KEEP_ABOVE);
+        height = Math.min(Math.max(next, MIN_HEIGHT), max);
+    }
 </script>
 
 <!--
@@ -62,7 +115,35 @@
   this panel exists alongside the editor's squiggles rather than duplicating them.
 -->
 
-<div class="border-border bg-window-background flex min-h-0 flex-col border-t">
+<div
+    bind:this={panel}
+    class="border-border bg-window-background flex min-h-0 shrink-0 flex-col border-t"
+    style={expanded ? `height: ${height}px` : undefined}
+>
+    {#if expanded}
+        <!--
+          The window-splitter pattern: a separator that takes focus so the panel can be sized from
+          the keyboard as well as dragged. Svelte's a11y rules only know the static separator, which
+          is why the two warnings below are turned off here rather than the role being changed.
+        -->
+        <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+        <div
+            class="group/handle flex h-2 shrink-0 cursor-row-resize items-center justify-center"
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="Resize the problems panel"
+            aria-valuenow={Math.round(height)}
+            aria-valuemin={MIN_HEIGHT}
+            tabindex="0"
+            onpointerdown={startResize}
+            onkeydown={onHandleKeydown}
+        >
+            <span
+                class="bg-border-strong group-hover/handle:bg-blue h-1 w-8 rounded-full transition-colors"
+            ></span>
+        </div>
+    {/if}
+
     <div class="flex shrink-0 items-center gap-4 px-3 py-1.5">
         <button
             class="text-default-text flex cursor-pointer items-center gap-2 text-sm font-semibold"
