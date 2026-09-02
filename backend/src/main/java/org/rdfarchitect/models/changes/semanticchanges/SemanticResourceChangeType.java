@@ -25,6 +25,7 @@ public enum SemanticResourceChangeType {
     DELETED_FROM_INHERITANCE,
     CHANGE,
     RENAME,
+    // should only be created and used when creating the report
     INHERITS_CHANGE,
     INDIRECT_CHANGE,
 }

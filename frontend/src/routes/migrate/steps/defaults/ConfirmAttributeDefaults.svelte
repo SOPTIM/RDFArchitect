@@ -82,12 +82,12 @@
 
     function requiresInput(attribute) {
         return (
-            (attribute.semanticResourceChangeType === "ADD" &&
+            ((attribute.semanticResourceChangeType === "ADD" ||
+                attribute.semanticResourceChangeType ===
+                    "ADDED_FROM_INHERITANCE") &&
                 !attribute.optional) ||
-            (attribute.semanticResourceChangeType ===
-                "ADDED_FROM_INHERITANCE" &&
-                !attribute.optional) ||
-            (attribute.semanticResourceChangeType === "CHANGE" &&
+            ((attribute.semanticResourceChangeType === "CHANGE" ||
+                attribute.semanticResourceChangeType === "RENAME") &&
                 (attribute.changes?.some(
                     c => c.semanticFieldChangeType === "MADE_REQUIRED",
                 ) ||
