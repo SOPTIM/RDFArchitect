@@ -62,6 +62,16 @@
         handle(result);
     }
 
+    /**
+     * The same edit, once typing pauses.
+     *
+     * The wait lives in the form view rather than here so that leaving the tab, or saving, still
+     * sends what was typed: this component is unmounted when the Turtle view is shown.
+     */
+    function applySoon(shape) {
+        form.schedule(turtle, shape, handle);
+    }
+
     async function remove(shape) {
         const result = await form.removeShape(turtle, shape.iri);
         handle(result);
@@ -69,7 +79,10 @@
 
     function handle(result) {
         if (!result) {
-            toastStore.error("Not applied", "The change could not be applied.");
+            toastStore.error(
+                "Not applied",
+                form.error ?? "The change could not be applied.",
+            );
             return;
         }
         onturtle(result.turtle);
@@ -164,6 +177,7 @@
                             (expandedIri =
                                 expandedIri === shape.iri ? null : shape.iri)}
                         onchange={() => apply(shape)}
+                        onedit={() => applySoon(shape)}
                         onremove={() => remove(shape)}
                     />
                 {/each}

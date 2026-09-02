@@ -239,6 +239,10 @@
 
     /** Saves the open document. Returns whether it was written, which the switch dialog needs. */
     async function save() {
+        // A field typed in and saved straight away — with Ctrl+S, or by clicking Save — still has
+        // its edit on the way to the buffer. Saving first would write the document without it and
+        // then show it coming back as an unsaved change.
+        await formView?.settle();
         const { saved, reason } = await workbench.save();
         if (saved) {
             // A save moves the schema graph's version, so the terms and hovers cached against the
@@ -264,9 +268,12 @@
      * Returns a promise the list awaits, so the switch either happens after the answer or not at
      * all. Without it, opening another document would silently discard the buffer.
      */
-    function confirmSwitch() {
+    async function confirmSwitch() {
+        // Land anything typed in the form before asking, or an edit still on its way would decide
+        // the question by arriving after the answer.
+        await formView?.settle();
         if (!workbench?.dirty) {
-            return Promise.resolve(true);
+            return true;
         }
         return new Promise(resolve => {
             pendingSwitch = resolve;

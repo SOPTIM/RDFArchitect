@@ -52,9 +52,44 @@ public final class ShapeBlockLocator {
      * shape, say. The caller then has nothing to replace surgically and must fall back.
      */
     public static Optional<Statement> locate(String turtle, String iri, PrefixMapping prefixes) {
+        return locateAll(turtle, iri, prefixes).stream().findFirst();
+    }
+
+    /**
+     * Every top-level statement whose subject is {@code iri}, in reading order.
+     *
+     * <p>Turtle lets one subject be written as many statements, and the form reads all of a
+     * subject's triples whichever statement they came from. A writer that replaced only the first
+     * of them — which is what asking for one statement invites — would rewrite the whole shape into
+     * that statement and leave the others standing: the rules in them came back a second time, and
+     * grew by one on every further edit. Callers that rewrite a shape need to see all of them.
+     */
+    public static List<Statement> locateAll(String turtle, String iri, PrefixMapping prefixes) {
         return statements(turtle).stream()
                 .filter(statement -> iri.equals(expand(statement.subjectToken(), prefixes)))
-                .findFirst();
+                .toList();
+    }
+
+    /**
+     * How many top-level statements each named subject is written as.
+     *
+     * <p>One scan for the whole document, so the form can say up front which shapes it cannot
+     * rewrite rather than failing when the user tries. Subjects written once — nearly all of them —
+     * are in here too, so a caller can also tell "written once" from "not found at all".
+     */
+    public static Map<String, Integer> statementCountsBySubject(
+            String turtle, PrefixMapping prefixes) {
+        if (turtle == null || turtle.isEmpty()) {
+            return Map.of();
+        }
+        var counts = new HashMap<String, Integer>();
+        for (Statement statement : statements(turtle)) {
+            var iri = expand(statement.subjectToken(), prefixes);
+            if (iri != null) {
+                counts.merge(iri, 1, Integer::sum);
+            }
+        }
+        return Map.copyOf(counts);
     }
 
     /**

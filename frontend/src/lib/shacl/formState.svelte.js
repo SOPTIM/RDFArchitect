@@ -16,6 +16,16 @@
  */
 
 import { applyEdit, readForm } from "$lib/api/generated/index.ts";
+import { reasonFrom } from "$lib/shacl/workbenchState.svelte.js";
+
+/**
+ * How long typing is collected before it is sent.
+ *
+ * Long enough that a word is one request rather than five, short enough that nobody notices the
+ * form is behind. A field that is left — blurred, tabbed out of, or committed with Enter — is sent
+ * at once and does not wait for this.
+ */
+const TYPING_PAUSE_MS = 400;
 
 /**
  * A blank shape, for adding one through the form.
@@ -77,6 +87,19 @@ export class ShapesFormView {
     #readFrom = null;
     /** Counts reads so a slower earlier one cannot land on top of a newer one. */
     #reads = 0;
+    /**
+     * The text the last applied edit produced, which the next edit is applied to.
+     *
+     * The caller hands its buffer to every edit, but a buffer set from an edit that is still in
+     * flight has not reached it yet. Without this, two quick edits would both be applied to the
+     * text as it stood before either of them and the first would be lost.
+     */
+    #applied = null;
+    /** Edits run one at a time and in order; a form edit is a read-modify-write on one document. */
+    #queue = Promise.resolve();
+    /** An edit typed but not yet sent, as `{ shape, turtle, handler }`. */
+    #pending = null;
+    #timer = null;
 
     constructor({ datasetName, graphUri, requestOptions = {} }) {
         this.#datasetName = datasetName;
@@ -97,6 +120,14 @@ export class ShapesFormView {
     async read(turtle) {
         if (this.describes(turtle)) {
             return;
+        }
+        if (turtle !== this.#applied) {
+            // The buffer moved for a reason that is not one of our edits — someone typed in the
+            // Turtle view, or another document was opened. An edit still waiting to be sent
+            // describes text that no longer exists, and sending it would overwrite the change that
+            // replaced it, so it is dropped rather than applied to the wrong document.
+            this.#discardPending();
+            this.#applied = null;
         }
         const read = ++this.#reads;
         this.loading = true;
@@ -137,28 +168,107 @@ export class ShapesFormView {
      * both views at once and leaves it unsaved until the user says so.
      */
     async applyShape(turtle, shape) {
-        return this.#apply(turtle, { turtle, shape });
+        await this.#clearPendingFor(shape);
+        return this.#apply(turtle, { shape });
     }
 
     /** Removes a shape from the document. */
     async removeShape(turtle, shapeIri) {
-        return this.#apply(turtle, { turtle, removeShapeIri: shapeIri });
+        await this.flush();
+        return this.#apply(turtle, { removeShapeIri: shapeIri });
     }
 
-    async #apply(turtle, body) {
+    /**
+     * Applies a shape once typing pauses, calling `handler` with the result.
+     *
+     * For fields that change as they are typed. Every keystroke used to be its own request, each
+     * one built on the text as it stood before the request before it, so a typed word arrived
+     * partly or not at all. The handler is held with the edit rather than taken from the caller
+     * later, so it still runs if the form view is switched away before the pause is over.
+     */
+    schedule(turtle, shape, handler) {
+        if (this.#pending && this.#pending.shape !== shape) {
+            // Two shapes edited within one pause: the earlier edit goes first, because the later
+            // one has to be applied to the text the earlier one produces.
+            this.flush();
+        }
+        this.#pending = { shape, turtle, handler };
+        clearTimeout(this.#timer);
+        this.#timer = setTimeout(() => this.flush(), TYPING_PAUSE_MS);
+    }
+
+    /** Sends a scheduled edit now, if there is one. */
+    async flush() {
+        const pending = this.#pending;
+        this.#discardPending();
+        if (!pending) {
+            return;
+        }
+        pending.handler(
+            await this.#apply(pending.turtle, { shape: pending.shape }),
+        );
+    }
+
+    /**
+     * Waits until every edit has been applied and its text handed back.
+     *
+     * What a save has to await: a document written while an edit was still on its way would be the
+     * document without that edit, and the form would show it coming back.
+     */
+    async settle() {
+        await this.flush();
+        await this.#queue;
+    }
+
+    /** Drops a scheduled edit for this shape; sends one for any other shape first. */
+    async #clearPendingFor(shape) {
+        if (!this.#pending) {
+            return;
+        }
+        if (this.#pending.shape === shape) {
+            // The same object, so whatever was typed is already part of what is about to be sent.
+            this.#discardPending();
+            return;
+        }
+        await this.flush();
+    }
+
+    #discardPending() {
+        clearTimeout(this.#timer);
+        this.#timer = null;
+        this.#pending = null;
+    }
+
+    #apply(turtle, body) {
+        const run = this.#queue.then(() => this.#send(turtle, body));
+        // The queue survives a failed edit: chaining the run itself would leave every later edit
+        // rejected with the same error.
+        this.#queue = run.then(
+            () => {},
+            () => {},
+        );
+        return run;
+    }
+
+    async #send(turtle, body) {
         this.applying = true;
         try {
             const { data, error } = await applyEdit({
                 ...this.#requestOptions,
                 path: this.#path,
-                body,
+                body: { ...body, turtle: this.#applied ?? turtle },
             });
             if (error || !data) {
-                this.error = "The change could not be applied.";
+                // The server says why — the shape spans two statements, a rule has no property.
+                // Replacing that with "could not be applied" throws away the only part of the
+                // answer the user can act on.
+                this.error =
+                    reasonFrom(error) ?? "The change could not be applied.";
                 return null;
             }
             this.error = null;
             this.#readFrom = null;
+            this.#applied = data.turtle;
             return { turtle: data.turtle, warnings: data.warnings ?? [] };
         } finally {
             this.applying = false;

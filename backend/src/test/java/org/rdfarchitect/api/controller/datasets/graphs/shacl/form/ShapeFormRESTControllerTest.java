@@ -28,6 +28,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.exception.handlers.GenericExceptionHandler;
 import org.rdfarchitect.services.shacl.form.ShapeFormUseCase;
 import org.rdfarchitect.shacl.dto.NodeShapeModel;
 import org.rdfarchitect.shacl.dto.ShapeEditRequest;
@@ -124,6 +126,32 @@ class ShapeFormRESTControllerTest {
         assertThat(request.getValue().getTurtle()).isEqualTo("ex:S a sh:NodeShape .");
         assertThat(request.getValue().getShape().getTargetClass())
                 .isEqualTo("http://example.org/C");
+    }
+
+    @Test
+    void aRefusedEditAnswersWithTheReasonTheFormShows() throws Exception {
+        // The form puts this in front of the user instead of "the change could not be applied",
+        // so the reason has to survive as far as the response body: it is the only part of a
+        // refusal anybody can act on.
+        var refused =
+                MockMvcBuilders.standaloneSetup(new ShapeFormRESTController(shapeFormUseCase))
+                        .setControllerAdvice(new GenericExceptionHandler())
+                        .build();
+        when(shapeFormUseCase.apply(any()))
+                .thenThrow(
+                        new ResourceConflictException(
+                                "This shape is written as 2 separate statements."));
+
+        refused.perform(
+                        post(URL + "/apply")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"turtle\":\"x\",\"shape\":{\"iri\":\"urn:s\"}}"))
+                .andExpect(
+                        result -> {
+                            assertThat(result.getResponse().getStatus()).isEqualTo(409);
+                            assertThat(result.getResponse().getContentAsString())
+                                    .contains("This shape is written as 2 separate statements.");
+                        });
     }
 
     @Test

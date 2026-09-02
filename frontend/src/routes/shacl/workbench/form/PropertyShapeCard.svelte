@@ -40,6 +40,8 @@
         targetClass = null,
         readOnly = false,
         onchange = () => {},
+        /** A field still being typed in: the same edit, to be sent once typing pauses. */
+        onedit = () => {},
         onremove = () => {},
     } = $props();
 
@@ -104,17 +106,35 @@
             : "no property chosen",
     );
 
-    /** A cleared number field means "no bound stated", which is not the same as zero. */
-    function numberOf(event) {
-        const raw = event?.target?.value;
-        return raw === "" || raw === undefined || raw === null
-            ? null
-            : Number(raw);
+    /**
+     * A cleared number field means "no bound stated", which is not the same as zero.
+     *
+     * The controls hand their callbacks the input's **value**, not the event — reading
+     * `event.target.value` here is what made the number fields write `null` for everything typed
+     * into them, and the message field throw on every keystroke.
+     */
+    function numberOf(raw) {
+        if (raw === "" || raw === undefined || raw === null) {
+            return null;
+        }
+        const value = Number(raw);
+        return Number.isFinite(value) ? value : null;
     }
 
-    function set(field, value) {
+    /**
+     * Writes one field and asks for the shape to be applied.
+     *
+     * `soon` is for a field that changes while it is being typed in: the model is updated at once,
+     * so the form never shows something the user did not type, but the document is rewritten once
+     * the typing stops.
+     */
+    function set(field, value, { soon = false } = {}) {
         property[field] = value === "" ? null : value;
-        onchange();
+        if (soon) {
+            onedit();
+        } else {
+            onchange();
+        }
     }
 </script>
 
@@ -158,13 +178,15 @@
             label="Minimum values"
             value={property.minCount}
             readonly={locked}
-            callOnInput={event => set("minCount", numberOf(event))}
+            callOnInput={raw => set("minCount", numberOf(raw), { soon: true })}
+            callOnChange={raw => set("minCount", numberOf(raw))}
         />
         <NumberInputControl
             label="Maximum values"
             value={property.maxCount}
             readonly={locked}
-            callOnInput={event => set("maxCount", numberOf(event))}
+            callOnInput={raw => set("maxCount", numberOf(raw), { soon: true })}
+            callOnChange={raw => set("maxCount", numberOf(raw))}
         />
 
         <div>
@@ -175,7 +197,7 @@
                 getOptionValue={option => option.iri}
                 getOptionLabel={option => option.label}
                 disabled={locked}
-                onchange={() => onchange()}
+                onchange={value => set("dataType", value)}
             />
         </div>
         <div>
@@ -198,7 +220,7 @@
                 getOptionValue={option => option.value}
                 getOptionLabel={option => option.label}
                 disabled={locked}
-                onchange={() => onchange()}
+                onchange={value => set("nodeKind", value)}
             />
         </div>
         <div>
@@ -209,7 +231,7 @@
                 getOptionValue={option => option.value}
                 getOptionLabel={option => option.label}
                 disabled={locked}
-                onchange={() => onchange()}
+                onchange={value => set("severity", value)}
             />
         </div>
 
@@ -218,7 +240,8 @@
                 label="Message shown when the rule is broken"
                 value={property.message ?? ""}
                 readonly={locked}
-                callOnInput={event => set("message", event.target.value)}
+                callOnInput={text => set("message", text, { soon: true })}
+                callOnChange={text => set("message", text)}
             />
         </div>
 

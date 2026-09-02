@@ -203,7 +203,135 @@ describe("applying an edit", () => {
         const failing = viewFor(server);
 
         expect(await failing.applyShape("original", SHAPES[0])).toBeNull();
-        expect(failing.error).toBe("The change could not be applied.");
+        expect(failing.error).toBe("nope");
+    });
+
+    test("says why the server refused, because that is the actionable part", async () => {
+        // The server refuses a shape written as two statements, or a rule with no property, and
+        // says which. Replacing that with "could not be applied" threw the answer away.
+        server.fetch = async () =>
+            new Response(
+                JSON.stringify({
+                    detail: "This shape is written as 2 separate statements.",
+                }),
+                {
+                    status: 409,
+                    headers: { "content-type": "application/json" },
+                },
+            );
+        const refusing = viewFor(server);
+
+        expect(await refusing.applyShape("original", SHAPES[0])).toBeNull();
+        expect(refusing.error).toBe(
+            "This shape is written as 2 separate statements.",
+        );
+    });
+});
+
+describe("one edit at a time", () => {
+    test("applies the next edit to the text the last one produced", async () => {
+        // Both edits are handed the buffer as it stood before either of them, because the buffer
+        // only catches up once an edit comes back. Sending both against that text applied one and
+        // lost the other.
+        let round = 0;
+        server.fetch = async request => {
+            const body = JSON.parse(await request.text());
+            server.requests.push({ path: new URL(request.url).pathname, body });
+            round += 1;
+            return new Response(
+                JSON.stringify({ turtle: `after ${round}`, warnings: [] }),
+                {
+                    status: 200,
+                    headers: { "content-type": "application/json" },
+                },
+            );
+        };
+        const queued = viewFor(server);
+
+        const first = queued.applyShape("original", SHAPES[0]);
+        const second = queued.applyShape("original", SHAPES[0]);
+        expect((await first).turtle).toBe("after 1");
+        expect((await second).turtle).toBe("after 2");
+
+        expect(server.requests.map(sent => sent.body.turtle)).toEqual([
+            "original",
+            "after 1",
+        ]);
+    });
+
+    test("a failed edit does not stop the ones behind it", async () => {
+        let firstCall = true;
+        server.fetch = async () => {
+            if (firstCall) {
+                firstCall = false;
+                return new Response("nope", { status: 500 });
+            }
+            return new Response(
+                JSON.stringify({ turtle: "recovered", warnings: [] }),
+                {
+                    status: 200,
+                    headers: { "content-type": "application/json" },
+                },
+            );
+        };
+        const queued = viewFor(server);
+
+        const failed = queued.applyShape("original", SHAPES[0]);
+        const next = queued.applyShape("original", SHAPES[0]);
+
+        expect(await failed).toBeNull();
+        expect((await next).turtle).toBe("recovered");
+    });
+});
+
+describe("collecting what is being typed", () => {
+    test("sends one request for a scheduled edit, not one per keystroke", async () => {
+        const handled = [];
+
+        view.schedule("original", SHAPES[0], result => handled.push(result));
+        view.schedule("original", SHAPES[0], result => handled.push(result));
+        view.schedule("original", SHAPES[0], result => handled.push(result));
+        expect(server.requests).toHaveLength(0);
+
+        await view.settle();
+
+        expect(server.requests).toHaveLength(1);
+        expect(handled).toHaveLength(1);
+        expect(handled[0].turtle).toBe("edited turtle");
+    });
+
+    test("an edit to another shape goes first, because the later one builds on it", async () => {
+        const other = { ...SHAPES[0], iri: "http://example.org/shapes#Other" };
+
+        view.schedule("original", SHAPES[0], () => {});
+        view.schedule("original", other, () => {});
+        await view.settle();
+
+        expect(
+            server.requests.map(sent => JSON.parse(sent.body).shape.iri),
+        ).toEqual([SHAPES[0].iri, other.iri]);
+    });
+
+    test("applying a shape at once sends what was typed into it as part of that edit", async () => {
+        view.schedule("original", SHAPES[0], () => {});
+        await view.applyShape("original", SHAPES[0]);
+
+        // One request: the scheduled edit was superseded by the one that carries the same shape.
+        expect(server.requests).toHaveLength(1);
+    });
+
+    test("a buffer that moved for another reason drops what was typed", async () => {
+        // Typing in the Turtle view within the pause. Sending the scheduled edit would overwrite
+        // that change with text that no longer exists.
+        const handled = vi.fn();
+        view.schedule("original", SHAPES[0], handled);
+        await view.read("typed in the editor instead");
+        await view.settle();
+
+        expect(server.requests.map(sent => sent.path)).not.toContain(
+            "/api/datasets/cgmes/graphs/http%3A%2F%2Fex.org%2FEQ/shacl/form/apply",
+        );
+        expect(handled).not.toHaveBeenCalled();
     });
 });
 

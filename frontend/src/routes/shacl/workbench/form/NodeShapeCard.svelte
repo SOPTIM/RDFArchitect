@@ -46,8 +46,26 @@
         expanded = false,
         ontoggle = () => {},
         onchange = () => {},
+        /** A field still being typed in: the same edit, to be sent once typing pauses. */
+        onedit = () => {},
         onremove = () => {},
     } = $props();
+
+    /**
+     * Rules added here but not yet written to the document, because they name no property.
+     *
+     * A rule with no `sh:path` says nothing, so there is nothing to write: it used to be posted
+     * the instant the button was pressed, dropped by the writer, and gone from the card on the
+     * next read — the button looked broken. A draft therefore stays on this card until a property
+     * is picked, and only then joins the shape and is applied.
+     *
+     * Held raw rather than deeply reactive: the rule card writes the fields of the draft it was
+     * given, and a proxied draft would make that a child mutating this component's state, which
+     * Svelte reports as an ownership violation. Nothing needs to re-render while a draft is being
+     * filled in — the inputs hold what was typed — and adding or dropping one is a reassignment,
+     * which is reactive either way.
+     */
+    let drafts = $state.raw([]);
 
     /** Either the workspace forbids changes, or the shape is not one the form can write back. */
     const locked = $derived(readOnly || shape.editable === false);
@@ -89,12 +107,26 @@
     }
 
     function addRule() {
-        shape.properties = [...(shape.properties ?? []), { path: null }];
-        onchange();
+        drafts = [...drafts, { path: null }];
     }
 
     function removeRule(index) {
         shape.properties = shape.properties.filter((_, at) => at !== index);
+        onchange();
+    }
+
+    function removeDraft(index) {
+        drafts = drafts.filter((_, at) => at !== index);
+    }
+
+    /** Moves a draft into the shape once it names a property. Until then it stays a draft. */
+    function promoteDraft(index) {
+        const draft = drafts[index];
+        if (!draft?.path) {
+            return;
+        }
+        drafts = drafts.filter((_, at) => at !== index);
+        shape.properties = [...(shape.properties ?? []), { ...draft }];
         onchange();
     }
 </script>
@@ -177,7 +209,21 @@
                     targetClass={shape.targetClass}
                     readOnly={locked}
                     {onchange}
+                    {onedit}
                     onremove={() => removeRule(index)}
+                />
+            {/each}
+
+            {#each drafts as draft, index (index)}
+                <PropertyShapeCard
+                    property={draft}
+                    {terms}
+                    {prefixes}
+                    targetClass={shape.targetClass}
+                    readOnly={locked}
+                    onchange={() => promoteDraft(index)}
+                    onedit={() => promoteDraft(index)}
+                    onremove={() => removeDraft(index)}
                 />
             {/each}
 

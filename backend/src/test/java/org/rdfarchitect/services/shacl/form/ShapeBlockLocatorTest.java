@@ -238,4 +238,47 @@ class ShapeBlockLocatorTest {
         var unterminated = "@prefix ex: <http://example.org/> .\n\nex:Shape a ex:Thing ;\n";
         assertThat(ShapeBlockLocator.locate(unterminated, EX + "Shape", prefixes())).isPresent();
     }
+
+    @Test
+    void findsEveryStatementASubjectIsWrittenAs() {
+        var turtle =
+                """
+                @prefix sh: <http://www.w3.org/ns/shacl#> .
+                @prefix ex: <http://example.org/> .
+
+                ex:Shape a sh:NodeShape .
+
+                ex:Other a sh:NodeShape .
+
+                ex:Shape sh:targetClass ex:Thing .
+                """;
+
+        var found = ShapeBlockLocator.locateAll(turtle, EX + "Shape", prefixes());
+
+        assertThat(found).hasSize(2);
+        assertThat(textOf(turtle, found.get(0))).isEqualTo("ex:Shape a sh:NodeShape .");
+        assertThat(textOf(turtle, found.get(1))).isEqualTo("ex:Shape sh:targetClass ex:Thing .");
+        // `locate` is the first of them, which is what a caller replacing one statement gets.
+        assertThat(ShapeBlockLocator.locate(turtle, EX + "Shape", prefixes()).orElseThrow())
+                .isEqualTo(found.get(0));
+    }
+
+    @Test
+    void countsHowManyStatementsEachSubjectIsWrittenAs() {
+        var turtle =
+                """
+                @prefix sh: <http://www.w3.org/ns/shacl#> .
+                @prefix ex: <http://example.org/> .
+
+                ex:Shape a sh:NodeShape .
+                ex:Shape sh:targetClass ex:Thing .
+                ex:Other a sh:NodeShape .
+                """;
+
+        var counts = ShapeBlockLocator.statementCountsBySubject(turtle, prefixes());
+
+        assertThat(counts).containsEntry(EX + "Shape", 2).containsEntry(EX + "Other", 1);
+        assertThat(counts).doesNotContainKey(EX + "Missing");
+        assertThat(ShapeBlockLocator.statementCountsBySubject("", prefixes())).isEmpty();
+    }
 }

@@ -19,6 +19,8 @@ package org.rdfarchitect.services.shacl.form;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFParser;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.shacl.dto.NodeShapeModel;
 import org.rdfarchitect.shacl.dto.ShapeEditRequest;
@@ -26,6 +28,7 @@ import org.rdfarchitect.shacl.dto.ShapeEditRequest;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -147,6 +150,88 @@ class ShapeFormAgainstEntsoeProfilesTest {
         request.setTurtle(turtle);
         request.setShape(shape);
         return request;
+    }
+
+    /**
+     * The whole official library, as the measure of how far the form reaches.
+     *
+     * <p>Measured 2026-09-02: 314 of 2959 shapes are editable, and the reasons are recorded in the
+     * RDFA-645 form-editor plan. The floor is asserted rather than the exact number, because a new
+     * ENTSO-E release moves it — but a change that quietly locks shapes the form used to offer
+     * should fail here, which is what happened to be at stake when the split-subject check was
+     * added.
+     */
+    @Test
+    void theFormReachesAsFarOverTheWholeLibraryAsItDidBefore() throws IOException {
+        var editable = 0;
+        var shapes = 0;
+        for (Path file : constraintsFiles()) {
+            var form = service.parse(Files.readString(file));
+            if (form.getParseError() != null) {
+                continue;
+            }
+            shapes += form.getShapes().size();
+            editable +=
+                    (int)
+                            form.getShapes().stream()
+                                    .filter(shape -> Boolean.TRUE.equals(shape.getEditable()))
+                                    .count();
+        }
+
+        assertThat(shapes).isGreaterThanOrEqualTo(2959);
+        assertThat(editable).isGreaterThanOrEqualTo(314);
+    }
+
+    /**
+     * No shape is offered for editing that the writer cannot put back where it came from.
+     *
+     * <p>The invariant behind the split-subject refusal: a shape written as two statements would
+     * have been rewritten into one of them and the other left standing, which duplicates what it
+     * says. If this ever fails, the form is offering an edit that corrupts the document.
+     */
+    @Test
+    void everyEditableShapeIsWrittenAsExactlyOneStatement() throws IOException {
+        for (Path file : constraintsFiles()) {
+            var turtle = Files.readString(file);
+            var form = service.parse(turtle);
+            if (form.getParseError() != null) {
+                continue;
+            }
+            var prefixes = RDFParser.fromString(turtle, Lang.TURTLE).toGraph().getPrefixMapping();
+            var counts = ShapeBlockLocator.statementCountsBySubject(turtle, prefixes);
+            assertThat(form.getShapes())
+                    .filteredOn(shape -> Boolean.TRUE.equals(shape.getEditable()))
+                    .allSatisfy(
+                            shape ->
+                                    assertThat(counts.get(shape.getIri()))
+                                            .describedAs(
+                                                    "%s in %s", shape.getIri(), file.getFileName())
+                                            .isEqualTo(1));
+        }
+    }
+
+    /** Every official constraints file in the submodule, CGMES and the NC profiles alike. */
+    private static List<Path> constraintsFiles() throws IOException {
+        var roots =
+                List.of(
+                        Path.of(CONSTRAINTS),
+                        Path.of(
+                                "../external/entsoe-application-profiles-library/NCP/CurrentRelease/SHACL"));
+        var files = new ArrayList<Path>();
+        for (Path root : roots) {
+            if (!Files.isDirectory(root)) {
+                continue;
+            }
+            try (var listed = Files.list(root)) {
+                listed.filter(path -> path.toString().endsWith(".ttl"))
+                        .sorted()
+                        .forEach(files::add);
+            }
+        }
+        assertThat(files)
+                .describedAs("is the entsoe-application-profiles-library submodule initialised?")
+                .isNotEmpty();
+        return files;
     }
 
     @Test

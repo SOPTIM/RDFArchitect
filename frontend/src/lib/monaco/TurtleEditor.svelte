@@ -16,6 +16,7 @@
   -->
 
 <script>
+    import { pushExternalText } from "./externalText.js";
     import { MARKER_OWNER, toMarkers } from "./markers.js";
     import { loadMonaco, TURTLE_LANGUAGE_ID } from "./monaco.js";
     import { resolveThemeName } from "./theme.js";
@@ -136,19 +137,16 @@
     /**
      * Pushes an external change into the editor.
      *
-     * Compared against what the editor already holds rather than against the last value emitted,
-     * so a keystroke — which sets `value` from the editor itself — does not bounce back as a
-     * `setValue` that would move the cursor and drop the undo stack.
+     * Kept as an edit on the model rather than a `setValue`, so a form edit stays undoable and the
+     * view does not jump — see `pushExternalText`.
      */
     $effect(() => {
         const next = value ?? "";
-        if (editor && editor.getValue() !== next) {
-            applyingExternalChange = true;
-            try {
-                editor.setValue(next);
-            } finally {
-                applyingExternalChange = false;
-            }
+        applyingExternalChange = true;
+        try {
+            pushExternalText(editor, next);
+        } finally {
+            applyingExternalChange = false;
         }
     });
 

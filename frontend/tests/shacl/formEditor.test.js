@@ -93,6 +93,14 @@ function fakeForm(overrides = {}) {
     };
 }
 
+/** Presses the card's "Add a rule" button. */
+function addRule(view) {
+    [...view.querySelectorAll("button")]
+        .find(button => button.textContent.includes("Add a rule"))
+        .click();
+    flushSync();
+}
+
 function render(component, props) {
     target = document.createElement("div");
     document.body.appendChild(target);
@@ -230,7 +238,9 @@ describe("NodeShapeCard", () => {
         ).toBe(true);
     });
 
-    test("adding a rule reports the change so it can be written back", () => {
+    test("adding a rule shows an empty one without writing anything yet", () => {
+        // A rule with no property says nothing, so there is nothing to write: it used to be sent
+        // at once, dropped by the writer, and gone from the card on the next read.
         const onchange = vi.fn();
         const model = shape();
         const view = render(NodeShapeCard, {
@@ -241,13 +251,71 @@ describe("NodeShapeCard", () => {
             onchange,
         });
 
-        [...view.querySelectorAll("button")]
-            .find(button => button.textContent.includes("Add a rule"))
-            .click();
+        addRule(view);
+
+        expect(view.querySelectorAll("select")).toHaveLength(6);
+        expect(model.properties).toHaveLength(1);
+        expect(onchange).not.toHaveBeenCalled();
+    });
+
+    test("the rule joins the shape once it names a property", () => {
+        const onchange = vi.fn();
+        const model = shape();
+        const view = render(NodeShapeCard, {
+            shape: model,
+            terms: TERMS,
+            prefixes: PREFIXES,
+            expanded: true,
+            onchange,
+        });
+
+        addRule(view);
+        // The draft's own property picker, which is the last of them on the card.
+        const picker = [
+            ...view.querySelectorAll('input[placeholder="pick a property"]'),
+        ].at(-1);
+        picker.value = "cim:Terminal.sequenceNumber";
+        // `input` is what the binding listens to; `change` is what commits the pick, and both is
+        // what a browser sends whether the term was typed or taken from the suggestions.
+        picker.dispatchEvent(new Event("input", { bubbles: true }));
+        picker.dispatchEvent(new Event("change", { bubbles: true }));
         flushSync();
 
         expect(model.properties).toHaveLength(2);
+        expect(model.properties.at(-1).path).toBe(
+            `${CIM}Terminal.sequenceNumber`,
+        );
         expect(onchange).toHaveBeenCalled();
+        // The draft is gone from the card, rather than standing next to the rule it became.
+        expect(
+            view.querySelectorAll('input[placeholder="pick a property"]'),
+        ).toHaveLength(1);
+    });
+
+    test("an empty rule can be dropped again without writing anything", () => {
+        const onchange = vi.fn();
+        const model = shape();
+        const view = render(NodeShapeCard, {
+            shape: model,
+            terms: TERMS,
+            prefixes: PREFIXES,
+            expanded: true,
+            onchange,
+        });
+
+        addRule(view);
+        [...view.querySelectorAll("button")]
+            .filter(
+                button =>
+                    button.getAttribute("aria-label") === "Remove this rule",
+            )
+            .at(-1)
+            .click();
+        flushSync();
+
+        expect(view.querySelectorAll("select")).toHaveLength(3);
+        expect(model.properties).toHaveLength(1);
+        expect(onchange).not.toHaveBeenCalled();
     });
 
     test("collapsed, it summarises without showing the fields", () => {
