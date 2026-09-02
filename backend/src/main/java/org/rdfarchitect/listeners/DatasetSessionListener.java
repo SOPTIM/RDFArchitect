@@ -26,7 +26,7 @@ import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
+import org.rdfarchitect.services.dl.update.CreateDiagramLayoutUseCase;
 import org.springframework.stereotype.Component;
 
 @Component

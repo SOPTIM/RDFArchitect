@@ -61,6 +61,14 @@ public class DL {
             ResourceFactory.createProperty(
                     constructDLNamespacedTerm("DiagramObjectPoint.zPosition"));
 
+    public final Property sequenceNumber =
+            ResourceFactory.createProperty(
+                    constructDLNamespacedTerm("DiagramObjectPoint.sequenceNumber"));
+
+    public final Property belongsToGluePoint =
+            ResourceFactory.createProperty(
+                    constructDLNamespacedTerm("DiagramObjectPoint.DiagramObjectGluePoint"));
+
     // OBJECTS
     public final Resource diagramType =
             ResourceFactory.createResource(constructDLNamespacedTerm("Diagram"));
@@ -73,6 +81,9 @@ public class DL {
 
     public final Resource diagramObjectPointType =
             ResourceFactory.createResource(constructDLNamespacedTerm("DiagramObjectPoint"));
+
+    public final Resource diagramObjectGluePointType =
+            ResourceFactory.createResource(constructDLNamespacedTerm("DiagramObjectGluePoint"));
 
     public final Resource negativeOrientation =
             ResourceFactory.createResource(constructDLNamespacedTerm("OrientationKind.negative"));

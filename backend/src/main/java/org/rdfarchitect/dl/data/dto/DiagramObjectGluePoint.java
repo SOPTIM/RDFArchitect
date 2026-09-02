@@ -21,19 +21,10 @@ import lombok.Builder;
 import lombok.Data;
 
 import org.rdfarchitect.dl.data.dto.relations.MRID;
-import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 
 @Data
 @Builder(toBuilder = true)
-public class DiagramObjectPoint {
+public class DiagramObjectGluePoint {
 
     private MRID mRID;
-
-    private XYZPosition position;
-
-    private MRID belongsToDiagramObject;
-
-    private Integer sequenceNumber;
-
-    private MRID belongsToGluePoint;
 }
