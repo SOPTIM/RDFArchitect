@@ -49,6 +49,16 @@
     /** Height of the auto-growing box; ignored when the parent sizes the editor. */
     let grownHeight = $state(minHeight);
 
+    /**
+     * The theme Monaco should be painting in.
+     *
+     * Held as state rather than called where it is needed, because it depends on two things that
+     * are reactive in different ways: the user setting, which lives in `userSettings`, and the OS
+     * preference, which `matchMedia` only reports through an event. Folding both into one value
+     * keeps the effect that applies it reading a single dependency.
+     */
+    let themeName = $state(resolveThemeName());
+
     /** Set while a new document is being pushed in, to tell that apart from a keystroke. */
     let applyingExternalChange = false;
 
@@ -157,11 +167,25 @@
         return () => detachTermSource(model);
     });
 
+    $effect(() => {
+        // Reads the user setting, so a change to it re-runs this.
+        themeName = resolveThemeName();
+    });
+
+    $effect(() => {
+        if (!browser || typeof window.matchMedia !== "function") {
+            return;
+        }
+        const query = window.matchMedia("(prefers-color-scheme: dark)");
+        const onChange = () => (themeName = resolveThemeName());
+        query.addEventListener("change", onChange);
+        return () => query.removeEventListener("change", onChange);
+    });
+
     // Monaco's theme is global rather than per editor, so changing the setting repaints every
     // open editor at once — which is what the user asking for a dark editor means.
     $effect(() => {
-        const theme = resolveThemeName();
-        monaco?.editor.setTheme(theme);
+        monaco?.editor.setTheme(themeName);
     });
 
     $effect(() => {

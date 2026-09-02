@@ -78,7 +78,18 @@ public interface GraphContext extends Transactional, VersionControl {
      */
     ShapesDocument createShapesDocument(String name, ShapesDocument.Origin origin);
 
-    /** Removes a shapes document and stops its graph taking part in transactions. */
+    /**
+     * Removes a shapes document and stops its graph taking part in transactions.
+     *
+     * <p><strong>Not undoable.</strong> Every other change to a document — its text, its name,
+     * emptying it entirely — is a write to a participant of this context and rewinds with it. Which
+     * documents <em>exist</em> is not versioned: the removed graph leaves the participant list
+     * before the commit, so there is nothing for an undo to restore it from, and the commit that
+     * records the deletion rewinds only the documents that remain.
+     *
+     * <p>Callers must therefore treat this as destructive and confirm it. Making it undoable means
+     * versioning the document list itself, not patching this method.
+     */
     void removeShapesDocument(UUID documentId);
 
     /**

@@ -46,9 +46,11 @@ import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -122,13 +124,10 @@ public class GraphWithContextCollection {
      *
      * <p>Shapes whose owner is not in the dataset are dropped: without its schema a constraint set
      * has nothing to apply to, and keeping it would resurrect a graph the snapshot did not contain.
-     *
-     * <p>A snapshot written before documents existed names its shapes graph {@code default} rather
-     * than a uuid; those land in the graph's default document, which is where that single shapes
-     * graph used to live.
      */
     private static Map<String, List<ShapesDocumentSeed>> collectShapesGraphs(Dataset dataset) {
         Map<String, List<ShapesDocumentSeed>> shapesByOwner = new HashMap<>();
+        Map<String, Set<UUID>> seenByOwner = new HashMap<>();
         for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
             var graphURI = it.next().getURI();
             var name = ShapesGraphNaming.decode(graphURI);
@@ -137,28 +136,71 @@ public class GraphWithContextCollection {
             }
             var owner = name.get().ownerGraphUri();
             var documentId = parseDocumentId(name.get().documentId());
-            var metadata = metadataOf(dataset, owner);
-            var entry = ShapesDocumentMetadata.read(metadata, documentId);
+            seenByOwner.computeIfAbsent(owner, _ -> new HashSet<>()).add(documentId);
             shapesByOwner
                     .computeIfAbsent(owner, _ -> new ArrayList<>())
                     .add(
-                            new ShapesDocumentSeed(
+                            seed(
                                     documentId,
-                                    entry.map(ShapesDocumentMetadata.Entry::name)
-                                            .orElseGet(
-                                                    () ->
-                                                            ShapesDocumentMetadata.defaultName(
-                                                                    documentId)),
-                                    entry.map(ShapesDocumentMetadata.Entry::sourceFileName)
-                                            .orElse(null),
-                                    entry.map(ShapesDocumentMetadata.Entry::origin)
-                                            .orElse(ShapesDocument.Origin.IMPORTED),
-                                    entry.map(ShapesDocumentMetadata.Entry::enabled).orElse(true),
-                                    entry.map(ShapesDocumentMetadata.Entry::order).orElse(0),
-                                    entry.map(ShapesDocumentMetadata.Entry::rawText).orElse(null),
+                                    metadataOf(dataset, owner),
                                     dataset.getNamedModel(graphURI).getGraph()));
         }
+        collectEmptyDocuments(dataset, shapesByOwner, seenByOwner);
         return shapesByOwner;
+    }
+
+    /**
+     * Adds the documents the metadata describes but no shapes graph carries.
+     *
+     * <p>A document holding no triples is not written as a graph — a snapshot store will not take
+     * an empty one — so discovering documents by their shapes alone silently dropped every empty
+     * one, name, position and all. The metadata is the complete list, and it is what says such a
+     * document existed.
+     */
+    private static void collectEmptyDocuments(
+            Dataset dataset,
+            Map<String, List<ShapesDocumentSeed>> shapesByOwner,
+            Map<String, Set<UUID>> seenByOwner) {
+        for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
+            var graphURI = it.next().getURI();
+            var owner = ShapesGraphNaming.decodeMetadata(graphURI);
+            if (owner.isEmpty()) {
+                continue;
+            }
+            var metadata = dataset.getNamedModel(graphURI);
+            var seen = seenByOwner.getOrDefault(owner.get(), Set.of());
+            for (UUID documentId : ShapesDocumentMetadata.documentIds(metadata)) {
+                if (seen.contains(documentId)) {
+                    continue;
+                }
+                shapesByOwner
+                        .computeIfAbsent(owner.get(), _ -> new ArrayList<>())
+                        .add(seed(documentId, metadata, GraphFactory.createDefaultGraph()));
+            }
+        }
+    }
+
+    /**
+     * Describes one document as storage recorded it.
+     *
+     * <p>A snapshot written before documents existed names its shapes graph {@code default} rather
+     * than a uuid; those land in the graph's default document, which is where that single shapes
+     * graph used to live. Fields fall back where the metadata predates them, so such a snapshot
+     * still loads.
+     */
+    private static ShapesDocumentSeed seed(UUID documentId, Model metadata, Graph graph) {
+        var entry = ShapesDocumentMetadata.read(metadata, documentId);
+        return new ShapesDocumentSeed(
+                documentId,
+                entry.map(ShapesDocumentMetadata.Entry::name)
+                        .orElseGet(() -> ShapesDocumentMetadata.defaultName(documentId)),
+                entry.map(ShapesDocumentMetadata.Entry::sourceFileName).orElse(null),
+                entry.map(ShapesDocumentMetadata.Entry::origin)
+                        .orElse(ShapesDocument.Origin.IMPORTED),
+                entry.map(ShapesDocumentMetadata.Entry::enabled).orElse(true),
+                entry.map(ShapesDocumentMetadata.Entry::order).orElse(0),
+                entry.map(ShapesDocumentMetadata.Entry::rawText).orElse(null),
+                graph);
     }
 
     private static Model metadataOf(Dataset dataset, String ownerGraphUri) {

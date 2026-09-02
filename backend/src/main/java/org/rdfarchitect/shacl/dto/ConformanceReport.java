@@ -61,8 +61,13 @@ public class ConformanceReport {
     /** Every property constraint the documents state, whether or not the schema implies it. */
     private int stated;
 
-    /** The documents the comparison read, in reading order. */
-    private List<String> documents;
+    /**
+     * The documents the comparison read, in the graph's own reading order.
+     *
+     * <p>Named and identified, so a finding's {@code statedIn} can be turned into a link to the
+     * document that states it.
+     */
+    private List<ConformanceDocument> documents;
 
     private int contradictedCount;
 

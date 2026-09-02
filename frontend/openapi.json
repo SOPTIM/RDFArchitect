@@ -619,6 +619,18 @@
         },
         "type" : "object"
       },
+      "ConformanceDocument" : {
+        "properties" : {
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ConformanceFinding" : {
         "properties" : {
           "documentSays" : {
@@ -684,7 +696,7 @@
           },
           "documents" : {
             "items" : {
-              "type" : "string"
+              "$ref" : "#/components/schemas/ConformanceDocument"
             },
             "type" : "array"
           },
@@ -1184,6 +1196,9 @@
             },
             "type" : "array"
           },
+          "readOnlyReason" : {
+            "type" : "string"
+          },
           "severity" : {
             "type" : "string"
           },
@@ -1496,6 +1511,9 @@
           },
           "severity" : {
             "type" : "string"
+          },
+          "typed" : {
+            "type" : "boolean"
           }
         },
         "type" : "object"

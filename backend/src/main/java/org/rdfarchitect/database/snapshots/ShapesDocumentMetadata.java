@@ -24,6 +24,8 @@ import org.apache.jena.rdf.model.ResourceFactory;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.ShapesDocument;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -84,6 +86,35 @@ public final class ShapesDocumentMetadata {
             boolean enabled,
             int order,
             String rawText) {}
+
+    /**
+     * Every document the metadata describes, in no particular order.
+     *
+     * <p>The load path finds documents by their shapes graphs, and a document holding no triples
+     * has none — an empty snapshot graph is not something Fuseki will accept. This is how such a
+     * document is still found, so an empty-but-named one survives a share link.
+     */
+    public static List<UUID> documentIds(Model metadata) {
+        var ids = new ArrayList<UUID>();
+        metadata.listSubjects()
+                .forEachRemaining(
+                        subject -> {
+                            if (!subject.isURIResource()
+                                    || !subject.getURI().startsWith(DOCUMENT_URI_PREFIX)) {
+                                return;
+                            }
+                            try {
+                                ids.add(
+                                        UUID.fromString(
+                                                subject.getURI()
+                                                        .substring(DOCUMENT_URI_PREFIX.length())));
+                            } catch (IllegalArgumentException _) {
+                                // A subject in our namespace that is not a uuid was not written by
+                                // us; ignoring it is safer than failing the whole snapshot load.
+                            }
+                        });
+        return List.copyOf(ids);
+    }
 
     /** Reads what was recorded about {@code documentId}, if anything. */
     public static Optional<Entry> read(Model metadata, UUID documentId) {

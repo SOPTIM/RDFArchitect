@@ -32,6 +32,8 @@ The text is the source of truth. Official ENTSO-E files carry comments and a del
 
 Storage lives in `database/` (`GraphContext.getShapesDocuments()`), and `services/shacl/SHACLStoringService` is the use-case layer. Reads that need "the constraints of this graph" merge every **enabled** document in order; the first document to bind a prefix keeps it, so a later document rebinding it cannot change what earlier shapes mean.
 
+Which documents *exist* is the one thing not versioned. Their content is — a document's graph is a transaction participant like any other, so emptying one is undoable — but `removeShapesDocument` takes the graph out of the participant list before the commit, so a deletion has nothing to rewind from. Deleting is therefore destructive and the UI confirms it; making it undoable means versioning the document list, not patching that method.
+
 Two invariants worth not breaking:
 
 - **Conjunction, not precedence.** Every enabled document applies. Contradictions between documents are reported as findings (`ShapesConflictAnalyzer`), never resolved by preferring one document.
@@ -62,7 +64,13 @@ Editor completion, hover and go-to-definition are plain REST endpoints plus Mona
 
 ### Editing text without reformatting it
 
-`services/shacl/form/ShapeBlockLocator` finds the span of one Turtle statement so a form edit can replace it and copy the rest of the document through unchanged. It **scans** rather than parses, because the source positions a surgical edit needs are exactly what a parse discards. The scan tracks comments, string literals (including the triple-quoted ones that embedded SPARQL lives in), bracket nesting, the dot inside a name like `cim:ACLineSegment.length`, and SPARQL-style `PREFIX` with no terminator. Its tests are the safety net for the whole form feature: getting a span wrong corrupts a file rather than merely reformatting it.
+Two things decide whether the form may write a shape at all, and both live in `ShapeModelReader`. A predicate it does not model makes the shape read-only, which is the obvious half. The other half is that naming a predicate is not enough: the form holds one value per predicate and `ShapeModelWriter` writes plain literals, so a second `sh:targetClass`, or `sh:message "…"@en`, would come back with a value gone or a language tag stripped — silently, on a shape the form had called editable. Every modelled predicate therefore declares the shape of value the writer can reproduce (`ValueKind`), and one it cannot makes the shape read-only exactly as an unknown predicate does.
+
+`ShapeModelWriter.term` shortens IRIs with `qnameFor`, never `shortForm`. `shortForm` matches on the namespace alone, so with `ex: <http://example.org/>` bound it shortens `http://example.org/a/b` to `ex:a/b` — which is not Turtle, and turns a form edit into a document that no longer parses.
+
+`services/shacl/form/ShapeBlockLocator` finds the span of one Turtle statement so a form edit can replace it and copy the rest of the document through unchanged. It **scans** rather than parses, because the source positions a surgical edit needs are exactly what a parse discards. The scan tracks comments, string literals (including the triple-quoted ones that embedded SPARQL lives in), bracket nesting, the dot inside a name like `cim:ACLineSegment.length`, and SPARQL-style `PREFIX` with no terminator. Its tests are the safety net for the whole form feature: getting a span wrong corrupts a file rather than merely reformatting it. `linesBySubject` is the same scan run once for every subject at a time, for callers — the class-constraints dialog — that need many lines rather than one; asking `locate` per subject is quadratic in the file's length.
+
+A snapshot stores each document as its own named graph, and a document holding no triples has none, because an empty graph is not something the store will take. Documents are therefore recovered from the **metadata** graph as well as from the shapes graphs, or an empty-but-named one would be lost with its name, position and text.
 
 ### Comparing schema with document
 

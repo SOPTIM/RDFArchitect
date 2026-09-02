@@ -48,6 +48,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -69,8 +71,21 @@ public class ShapesValidationService implements ShapesValidationUseCase {
 
     private final SchemaIndexCache schemaIndexCache;
 
-    /** A document's content as validation needs it, detached from the transaction it came from. */
-    private record Snapshot(UUID id, String name, Graph graph, String rawText) {}
+    /**
+     * A document's content as validation needs it, detached from the transaction it came from.
+     *
+     * <p>The text is a memoised supplier rather than a string. Resolving a finding to a line needs
+     * it, but most documents produce no finding, and one restored from a snapshot has no stored
+     * text so it would have to be serialised from its triples first — per document, on every
+     * keystroke, to answer a question about one of them.
+     */
+    private record Snapshot(UUID id, String name, Graph graph, Supplier<String> rawText) {}
+
+    /** Runs {@code source} at most once, on the first call. */
+    private static Supplier<String> memoised(Supplier<String> source) {
+        var value = new AtomicReference<String>();
+        return () -> value.updateAndGet(existing -> existing != null ? existing : source.get());
+    }
 
     @Override
     public ShapesValidationReport validateShapes(GraphIdentifier graphIdentifier, UUID documentId) {
@@ -114,7 +129,7 @@ public class ShapesValidationService implements ShapesValidationUseCase {
             SparqlValidationApi api,
             Snapshot snapshot,
             Map<UUID, List<ShapesValidationFinding>> conflicts) {
-        var findings = new ArrayList<>(validate(api, snapshot.graph(), snapshot.rawText()));
+        var findings = new ArrayList<>(validate(api, snapshot.graph(), snapshot.rawText().get()));
         findings.addAll(conflicts.getOrDefault(snapshot.id(), List.of()));
         return findings;
     }
@@ -150,7 +165,7 @@ public class ShapesValidationService implements ShapesValidationUseCase {
                         .filter(snapshot -> !documentId.equals(snapshot.id()))
                         .map(ShapesValidationService::asDocument)
                         .collect(Collectors.toCollection(ArrayList::new));
-        documents.add(new ShapesConflictAnalyzer.Document(documentId, name, graph, turtle));
+        documents.add(new ShapesConflictAnalyzer.Document(documentId, name, graph, () -> turtle));
         return ShapesConflictAnalyzer.analyze(documents).getOrDefault(documentId, List.of());
     }
 
@@ -189,18 +204,24 @@ public class ShapesValidationService implements ShapesValidationUseCase {
         var copy = GraphFactory.createDefaultGraph();
         GraphUtil.addInto(copy, document.getGraph());
         copy.getPrefixMapping().setNsPrefixes(document.getGraph().getPrefixMapping());
-        return new Snapshot(document.getId(), document.getName(), copy, rawTextOf(document, copy));
+        // The text is read out here, inside the transaction, but serialising a document that has
+        // none is deferred until something actually needs a position in it.
+        var stored = document.getRawText();
+        return new Snapshot(
+                document.getId(),
+                document.getName(),
+                copy,
+                stored != null ? () -> stored : memoised(() -> serialise(copy)));
     }
 
     /**
-     * The text positions are resolved against. A document normally keeps the source it was written
-     * from; one restored from a pre-{@code rawText} snapshot, or rewound by an undo, has none, and
-     * serialising its triples at least gives the findings somewhere to point.
+     * Text for a document that has none of its own.
+     *
+     * <p>A document normally keeps the source it was written from; one restored from a pre-{@code
+     * rawText} snapshot, or rewound by an undo, has none, and serialising its triples at least
+     * gives the findings somewhere to point.
      */
-    private static String rawTextOf(ShapesDocument document, Graph parsed) {
-        if (document.getRawText() != null) {
-            return document.getRawText();
-        }
+    private static String serialise(Graph parsed) {
         return RDFWriter.source(ModelFactory.createModelForGraph(parsed))
                 .format(RDFFormat.TURTLE_PRETTY)
                 .lang(Lang.TURTLE)

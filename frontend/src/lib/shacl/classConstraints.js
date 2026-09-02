@@ -38,6 +38,21 @@ export const GENERATED = "generated";
 export const CUSTOM = "custom";
 
 /**
+ * An empty answer, for before the request lands and after the dialog closes.
+ *
+ * A factory rather than a constant: the caller holds it as mutable state, and handing out one
+ * shared object would let two dialogs write into each other's.
+ */
+export function emptyRelations() {
+    return {
+        namespaces: "",
+        nodeShapes: [],
+        propertyShapes: [],
+        derivedPropertyShapes: [],
+    };
+}
+
+/**
  * One row per property, each carrying the shapes that constrain it and where they came from.
  *
  * Rows are keyed by the property's name because that is the only thing the two halves share:

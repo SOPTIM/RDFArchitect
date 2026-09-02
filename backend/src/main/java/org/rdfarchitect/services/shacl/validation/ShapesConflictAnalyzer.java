@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * Contradictions between the shapes a graph holds, across all of its enabled documents.
@@ -68,7 +69,15 @@ final class ShapesConflictAnalyzer {
     private static final Node PROPERTY_SHAPE = NodeFactory.createURI(Shacl.NS + "PropertyShape");
 
     /** One document as this analyzer needs to see it. */
-    record Document(UUID id, String name, Graph graph, String rawText) {}
+    /**
+     * One document to compare against the others.
+     *
+     * <p>The source text is a supplier because most comparisons produce no finding for most
+     * documents, and a document restored from a snapshot has to have its text serialised from its
+     * triples before a position can be resolved against it. Passing it eagerly made every
+     * keystroke in the editor pay that for every other document in the graph.
+     */
+    record Document(UUID id, String name, Graph graph, Supplier<String> rawText) {}
 
     private ShapesConflictAnalyzer() {}
 
@@ -349,7 +358,8 @@ final class ShapesConflictAnalyzer {
 
     private static ShapesValidationFinding finding(
             String code, String message, Node term, Document document, Node hint) {
-        var location = SourcePositions.locate(document.rawText(), document.graph(), term, hint);
+        var location =
+                SourcePositions.locate(document.rawText().get(), document.graph(), term, hint);
         return ShapesValidationFinding.builder()
                 .severity(ShapesValidationFinding.Severity.ERROR)
                 .source(ShapesValidationFinding.Source.CONFLICT)

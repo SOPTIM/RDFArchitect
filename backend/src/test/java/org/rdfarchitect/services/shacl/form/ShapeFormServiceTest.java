@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.services.shacl.ShapesTurtleParser;
 import org.rdfarchitect.shacl.dto.NodeShapeModel;
 import org.rdfarchitect.shacl.dto.PropertyShapeModel;
 import org.rdfarchitect.shacl.dto.ShapeEditRequest;
@@ -297,5 +298,129 @@ class ShapeFormServiceTest {
 
         assertThat(after.getTargetClass()).isEqualTo(before.getTargetClass());
         assertThat(after.getProperties()).isEqualTo(before.getProperties());
+    }
+
+    // -------------------------------------------------------------------------
+    // What a rewrite must never quietly lose
+    // -------------------------------------------------------------------------
+
+    @Test
+    void anIriThePrefixesCannotShortenLegallyIsWrittenInFull() {
+        // ex: matches by namespace, but "a/b" is not a legal local name. Shortening on the
+        // namespace alone produced "ex:a/b" and a document that no longer parsed.
+        var turtle =
+                """
+                @prefix sh: <http://www.w3.org/ns/shacl#> .
+                @prefix ex: <http://example.org/> .
+
+                <http://example.org/shapes/S> a sh:NodeShape ;
+                    sh:targetClass <http://example.org/a/b> .
+                """;
+        var shape = shapeNamed(turtle, "http://example.org/shapes/S");
+
+        var result = service.apply(edit(turtle, shape));
+
+        assertThat(result.getTurtle()).contains("<http://example.org/a/b>");
+        assertThat(ShapesTurtleParser.parse(result.getTurtle()).failed()).isFalse();
+    }
+
+    @Test
+    void aSecondValueForAOneFieldPredicateMakesTheShapeReadOnly() {
+        var turtle =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://example.org/shapes#> .
+
+                ex:S  a sh:NodeShape ;
+                      sh:targetClass cim:ACLineSegment ;
+                      sh:targetClass cim:Conductor .
+                """;
+
+        var shape = shapeNamed(turtle, "http://example.org/shapes#S");
+
+        // The form holds one target class, so offering this shape as editable would drop the other.
+        assertThat(shape.getEditable()).isFalse();
+        assertThat(shape.getUnsupported()).contains("http://www.w3.org/ns/shacl#targetClass");
+        assertThatExceptionOfType(ResourceConflictException.class)
+                .isThrownBy(() -> service.apply(edit(turtle, shape)));
+    }
+
+    @Test
+    void aLanguageTaggedMessageMakesTheShapeReadOnly() {
+        var turtle =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://example.org/shapes#> .
+
+                ex:S  a sh:NodeShape ;
+                      sh:targetClass cim:ACLineSegment ;
+                      sh:message "Broken"@en .
+                """;
+
+        // The writer has no way to spell a language tag, so it used to strip it silently.
+        assertThat(shapeNamed(turtle, "http://example.org/shapes#S").getEditable()).isFalse();
+    }
+
+    @Test
+    void aShapeNotTypedAsANodeShapeIsShownButNotEdited() {
+        var turtle =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://example.org/shapes#> .
+
+                ex:Implied  sh:targetClass cim:ACLineSegment .
+                """;
+
+        var form = service.parse(turtle);
+
+        assertThat(form.getShapes()).extracting(NodeShapeModel::getIri).containsExactly(
+                "http://example.org/shapes#Implied");
+        assertThat(form.getShapes().get(0).getEditable()).isFalse();
+        assertThat(form.getShapes().get(0).getReadOnlyReason()).contains("sh:NodeShape");
+    }
+
+    @Test
+    void anExplicitPropertyShapeTypeSurvivesARewrite() {
+        var turtle =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://example.org/shapes#> .
+
+                ex:S  a sh:NodeShape ;
+                      sh:targetClass cim:ACLineSegment ;
+                      sh:property [
+                          a sh:PropertyShape ;
+                          sh:path cim:ACLineSegment.r ;
+                          sh:datatype xsd:float ;
+                      ] .
+                """;
+        var shape = shapeNamed(turtle, "http://example.org/shapes#S");
+        assertThat(shape.getEditable()).isTrue();
+
+        var result = service.apply(edit(turtle, shape));
+
+        assertThat(result.getTurtle()).contains("a sh:PropertyShape");
+    }
+
+    @Test
+    void aBooleanThatIsNeitherTrueNorFalseIsNotInvented() {
+        var turtle =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://example.org/shapes#> .
+
+                ex:S  a sh:NodeShape ;
+                      sh:targetClass cim:ACLineSegment ;
+                      sh:closed "yes" .
+                """;
+
+        // Reading this as sh:closed false and writing it back would state a rule nobody wrote.
+        assertThat(shapeNamed(turtle, "http://example.org/shapes#S").getEditable()).isFalse();
     }
 }

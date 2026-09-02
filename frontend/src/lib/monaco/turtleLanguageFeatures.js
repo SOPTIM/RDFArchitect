@@ -37,6 +37,19 @@ import {
 
 const CLASS_SCHEME = "rdfa-class";
 
+/**
+ * How many go-to-definition placeholder models to keep before disposing the oldest.
+ *
+ * Each Ctrl+hover on a new term mints one, and nothing else ever disposes them, so a long editing
+ * session would leak one model per term followed. Only the model being previewed right now is
+ * actually needed; a couple of spares cover a preview that is still on screen when the next one is
+ * resolved.
+ */
+const MAX_PREVIEW_MODELS = 4;
+
+/** The placeholder models minted above, oldest first. */
+const previewModels = [];
+
 /** Model → the schema it should be completed against. Weak, so a closed editor is forgotten. */
 const sources = new WeakMap();
 
@@ -45,6 +58,14 @@ const prefixCache = new WeakMap();
 
 /** Where following a term should go. Set by the workbench; without it, definitions do nothing. */
 let openClass = null;
+
+/** Keeps `model` and disposes whichever placeholder has gone longest without being needed. */
+function trackPreviewModel(model) {
+    previewModels.push(model);
+    while (previewModels.length > MAX_PREVIEW_MODELS) {
+        previewModels.shift()?.dispose();
+    }
+}
 
 export function attachTermSource(model, source) {
     sources.set(model, source);
@@ -187,10 +208,12 @@ export function registerTurtleLanguageFeatures(monaco, languageId) {
             // Ctrl+hover asks Monaco's own preview widget to resolve this uri to a model before the
             // opener above ever runs, so one has to exist even though nothing will display it.
             if (!monaco.editor.getModel(uri)) {
-                monaco.editor.createModel(
-                    detail.label ?? term.text,
-                    undefined,
-                    uri,
+                trackPreviewModel(
+                    monaco.editor.createModel(
+                        detail.label ?? term.text,
+                        undefined,
+                        uri,
+                    ),
                 );
             }
             return {

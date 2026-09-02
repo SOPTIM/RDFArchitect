@@ -26,6 +26,7 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -102,7 +103,7 @@ final class ConformanceComparator {
      * cardinality both drifted is one thing that went wrong, and reporting it twice would make the
      * list longer without making it more useful.
      */
-    private static java.util.Optional<ConformanceFinding> disagreement(
+    private static Optional<ConformanceFinding> disagreement(
             EffectiveConstraints.Key key,
             EffectiveConstraints.Constraint schema,
             EffectiveConstraints.Constraint document,
@@ -110,7 +111,7 @@ final class ConformanceComparator {
             PrefixMapping prefixes) {
         var contradictions = contradictions(schema, document, prefixes);
         if (!contradictions.isEmpty()) {
-            return java.util.Optional.of(
+            return Optional.of(
                     finding(
                             ConformanceFinding.Kind.CONTRADICTED,
                             key,
@@ -120,9 +121,9 @@ final class ConformanceComparator {
                             statedIn));
         }
         if (schema.equals(document)) {
-            return java.util.Optional.empty();
+            return Optional.empty();
         }
-        return java.util.Optional.of(
+        return Optional.of(
                 finding(
                         ConformanceFinding.Kind.DIFFERENT,
                         key,
@@ -138,30 +139,27 @@ final class ConformanceComparator {
             EffectiveConstraints.Constraint document,
             PrefixMapping prefixes) {
         var reasons = new ArrayList<String>();
-        disjoint(schema.dataTypes(), document.dataTypes())
-                .ifPresent(
-                        pair ->
-                                reasons.add(
-                                        "A value cannot be both %s and %s."
-                                                .formatted(
-                                                        terms(schema.dataTypes(), prefixes),
-                                                        terms(document.dataTypes(), prefixes))));
-        disjoint(schema.valueClasses(), document.valueClasses())
-                .ifPresent(
-                        pair ->
-                                reasons.add(
-                                        "A value cannot be an instance of both %s and %s."
-                                                .formatted(
-                                                        terms(schema.valueClasses(), prefixes),
-                                                        terms(document.valueClasses(), prefixes))));
-        disjoint(schema.nodeKinds(), document.nodeKinds())
-                .ifPresent(
-                        pair ->
-                                reasons.add(
-                                        "A value cannot be both %s and %s."
-                                                .formatted(
-                                                        terms(schema.nodeKinds(), prefixes),
-                                                        terms(document.nodeKinds(), prefixes))));
+        if (disjoint(schema.dataTypes(), document.dataTypes())) {
+            reasons.add(
+                    "A value cannot be both %s and %s."
+                            .formatted(
+                                    terms(schema.dataTypes(), prefixes),
+                                    terms(document.dataTypes(), prefixes)));
+        }
+        if (disjoint(schema.valueClasses(), document.valueClasses())) {
+            reasons.add(
+                    "A value cannot be an instance of both %s and %s."
+                            .formatted(
+                                    terms(schema.valueClasses(), prefixes),
+                                    terms(document.valueClasses(), prefixes)));
+        }
+        if (disjoint(schema.nodeKinds(), document.nodeKinds())) {
+            reasons.add(
+                    "A value cannot be both %s and %s."
+                            .formatted(
+                                    terms(schema.nodeKinds(), prefixes),
+                                    terms(document.nodeKinds(), prefixes)));
+        }
         if (exceeds(schema.minCount(), document.maxCount())) {
             reasons.add(
                     "The schema requires at least %d, the document allows at most %d."
@@ -175,14 +173,19 @@ final class ConformanceComparator {
         return reasons;
     }
 
-    /** Two stated sets with nothing in common: both apply, so nothing can satisfy them. */
-    private static java.util.Optional<Boolean> disjoint(Set<String> left, Set<String> right) {
+    /**
+     * Two stated sets with nothing in common: both apply, so nothing can satisfy them.
+     *
+     * <p>A set nobody stated is not a disagreement — silence constrains nothing — so an empty side
+     * is never disjoint from the other.
+     */
+    private static boolean disjoint(Set<String> left, Set<String> right) {
         if (left.isEmpty() || right.isEmpty()) {
-            return java.util.Optional.empty();
+            return false;
         }
         var shared = new LinkedHashSet<>(left);
         shared.retainAll(right);
-        return shared.isEmpty() ? java.util.Optional.of(true) : java.util.Optional.empty();
+        return shared.isEmpty();
     }
 
     private static boolean exceeds(Integer minimum, Integer maximum) {

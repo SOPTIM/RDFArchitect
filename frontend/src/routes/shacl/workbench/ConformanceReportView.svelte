@@ -46,7 +46,12 @@
     } from "$lib/shacl/conformanceState.svelte.js";
     import { writeTerm } from "$lib/shacl/turtleTerms.js";
 
-    let { conformance, documentId = null, prefixes = {} } = $props();
+    let {
+        conformance,
+        documentId = null,
+        prefixes = {},
+        onopen = undefined,
+    } = $props();
 
     /** Reuses the validation palette, so the same word means the same colour across the app. */
     const STYLE = {
@@ -99,6 +104,21 @@
     );
 
     const verdict = $derived(conformanceVerdict(report));
+
+    /**
+     * Document name to its id, so a finding can be opened where it is stated.
+     *
+     * Findings name the documents rather than identify them, because a name is what reads well in
+     * "stated in EQ.ttl". Names are unique within a graph, so this turns one into the other.
+     */
+    const idsByName = $derived(
+        new Map(
+            (report?.documents ?? []).map(document => [
+                document.name,
+                document.id,
+            ]),
+        ),
+    );
 
     const groups = $derived.by(() => {
         const byKind = new Map();
@@ -195,7 +215,9 @@
                 </p>
                 {#if report.documents?.length}
                     <p class="text-text-subtle mt-1 text-xs">
-                        Read together: {report.documents.join(", ")}
+                        Read together: {report.documents
+                            .map(document => document.name)
+                            .join(", ")}
                     </p>
                 {/if}
             </div>
@@ -259,10 +281,36 @@
                                             {#if finding.statedIn?.length}
                                                 <div class="flex gap-1">
                                                     <dt>stated in:</dt>
-                                                    <dd>
-                                                        {finding.statedIn.join(
-                                                            ", ",
-                                                        )}
+                                                    <dd
+                                                        class="flex flex-wrap gap-x-2"
+                                                    >
+                                                        <!--
+                                                          Naming the file is half an answer; the
+                                                          other half is getting to it, which is a
+                                                          click rather than a hunt through the
+                                                          document list.
+                                                        -->
+                                                        {#each finding.statedIn as name (name)}
+                                                            {@const target =
+                                                                idsByName.get(
+                                                                    name,
+                                                                )}
+                                                            {#if target && onopen}
+                                                                <button
+                                                                    class="text-blue cursor-pointer underline underline-offset-2"
+                                                                    onclick={() =>
+                                                                        onopen(
+                                                                            target,
+                                                                        )}
+                                                                >
+                                                                    {name}
+                                                                </button>
+                                                            {:else}
+                                                                <span>
+                                                                    {name}
+                                                                </span>
+                                                            {/if}
+                                                        {/each}
                                                     </dd>
                                                 </div>
                                             {/if}

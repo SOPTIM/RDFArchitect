@@ -127,7 +127,13 @@ export class SchemaTermSource {
         return request;
     }
 
-    /** Drops everything, so the next question re-reads a schema that has since been edited. */
+    /**
+     * Drops everything, so the next question re-reads a schema that has since been edited.
+     *
+     * Called after a save, because a shapes save moves the schema graph's version and anything
+     * derived from it — the term list, and every cached hover — is then describing the version
+     * before the edit.
+     */
     invalidate() {
         this.#details.clear();
         this.#pending.clear();

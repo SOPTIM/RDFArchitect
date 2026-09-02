@@ -31,11 +31,14 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.services.shacl.SHACLStoringService;
+import org.rdfarchitect.shacl.dto.ConformanceDocument;
 import org.rdfarchitect.shacl.dto.ConformanceFinding;
+import org.rdfarchitect.shacl.dto.ConformanceReport;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -133,7 +136,7 @@ class ConformanceAcrossDocumentsTest {
         assertThat(report.getCompared()).isEqualTo(IMPLIED);
         assertThat(report.getMissingInDocumentCount()).isZero();
         assertThat(report.isConforms()).isTrue();
-        assertThat(report.getDocuments()).contains("simple.ttl", "one-rule.ttl");
+        assertThat(documentNames(report)).contains("simple.ttl", "one-rule.ttl");
     }
 
     // -------------------------------------------------------------------------
@@ -149,7 +152,7 @@ class ConformanceAcrossDocumentsTest {
         var report = service.compare(GRAPH, documentId);
 
         assertThat(report.getCompared()).isZero();
-        assertThat(report.getDocuments()).doesNotContain("simple.ttl");
+        assertThat(documentNames(report)).doesNotContain("simple.ttl");
     }
 
     @Test
@@ -161,7 +164,7 @@ class ConformanceAcrossDocumentsTest {
 
         // Otherwise opening a disabled document and asking the question answers about everything
         // except the document you are looking at.
-        assertThat(report.getDocuments()).contains("simple.ttl");
+        assertThat(documentNames(report)).contains("simple.ttl");
         assertThat(report.getCompared()).isEqualTo(IMPLIED);
     }
 
@@ -224,5 +227,10 @@ class ConformanceAcrossDocumentsTest {
 
     private static String official(String file) throws IOException {
         return Files.readString(Path.of(BASE + file));
+    }
+
+    /** The names of the documents a report read, which is what {@code statedIn} spells. */
+    private static List<String> documentNames(ConformanceReport report) {
+        return report.getDocuments().stream().map(ConformanceDocument::name).toList();
     }
 }

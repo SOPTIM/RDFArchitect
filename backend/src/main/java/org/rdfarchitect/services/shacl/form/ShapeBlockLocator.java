@@ -20,7 +20,9 @@ package org.rdfarchitect.services.shacl.form;
 import org.apache.jena.shared.PrefixMapping;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -53,6 +55,40 @@ public final class ShapeBlockLocator {
         return statements(turtle).stream()
                 .filter(statement -> iri.equals(expand(statement.subjectToken(), prefixes)))
                 .findFirst();
+    }
+
+    /**
+     * The 1-based line each named subject's statement starts on.
+     *
+     * <p>One scan for the whole document, for callers that need the line of many subjects rather
+     * than of one. Asking {@link #locate} per subject rescans the text from the start every time,
+     * which on an official constraints file with thousands of subjects is quadratic in its length.
+     *
+     * <p>The first statement wins where a subject is written more than once, matching {@code
+     * locate}: it is where a reader would start looking.
+     */
+    public static Map<String, Integer> linesBySubject(String turtle, PrefixMapping prefixes) {
+        if (turtle == null || turtle.isEmpty()) {
+            return Map.of();
+        }
+        var lines = new HashMap<String, Integer>();
+        // Newlines are counted once from the front rather than per statement: the statements come
+        // back in reading order, so the cursor only ever moves forward.
+        int counted = 0;
+        int line = 1;
+        for (Statement statement : statements(turtle)) {
+            while (counted < statement.start()) {
+                if (turtle.charAt(counted) == '\n') {
+                    line++;
+                }
+                counted++;
+            }
+            var iri = expand(statement.subjectToken(), prefixes);
+            if (iri != null) {
+                lines.putIfAbsent(iri, line);
+            }
+        }
+        return Map.copyOf(lines);
     }
 
     /** Every top-level statement in reading order, directives excluded. */

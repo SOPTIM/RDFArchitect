@@ -69,4 +69,13 @@ public class NodeShapeModel {
      * absent JSON member onto a primitive.
      */
     private Boolean editable;
+
+    /**
+     * Why the form will not write this shape back, in words, or {@code null} when it will.
+     *
+     * <p>{@link #unsupported} names the predicates, which answers "which part?" but not "why can I
+     * not edit this?" — a shape can be read-only for something no predicate list shows, such as
+     * being a shape SHACL infers rather than one the document types.
+     */
+    private String readOnlyReason;
 }

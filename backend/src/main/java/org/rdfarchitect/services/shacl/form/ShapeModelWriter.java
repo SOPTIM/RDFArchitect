@@ -87,6 +87,9 @@ final class ShapeModelWriter {
                 continue;
             }
             var clauses = new ArrayList<String>();
+            if (Boolean.TRUE.equals(property.getTyped())) {
+                clauses.add("a " + term(Shacl.NS + "PropertyShape", prefixes));
+            }
             addIri(clauses, prefixes, Shacl.PATH.getURI(), property.getPath());
             addString(clauses, prefixes, ShapeModelReader.NAME.getURI(), property.getName());
             addString(
@@ -177,10 +180,22 @@ final class ShapeModelWriter {
                 || value.startsWith("urn:");
     }
 
-    /** The shortest form of an IRI this document can read: a prefixed name, else angle brackets. */
+    /**
+     * The shortest form of an IRI this document can read: a prefixed name, else angle brackets.
+     *
+     * <p>{@code qnameFor} rather than {@code shortForm}, because only the former checks that the
+     * local part is a legal name. {@code shortForm} matches on the namespace alone, so with {@code
+     * ex: <http://example.org/>} bound it happily shortens {@code http://example.org/a/b} to {@code
+     * ex:a/b} — which is not Turtle, and turns a form edit into a document that no longer parses.
+     *
+     * <p>The check is stricter than Turtle needs: it demands an XML NCName, so a local part
+     * starting with a digit falls back to angle brackets even though {@code ex:9lives} would have
+     * parsed. Writing a valid absolute IRI where a shorter valid one existed is the harmless half
+     * of that trade.
+     */
     static String term(String iri, PrefixMapping prefixes) {
-        var shortened = prefixes.shortForm(iri);
-        return shortened.equals(iri) ? "<" + iri + ">" : shortened;
+        var qname = prefixes.qnameFor(iri);
+        return qname == null ? "<" + iri + ">" : qname;
     }
 
     private static String quote(String value) {

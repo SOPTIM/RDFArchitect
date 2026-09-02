@@ -74,4 +74,12 @@ public class PropertyShapeModel {
     private String group;
 
     private Boolean deactivated;
+
+    /**
+     * Whether the document states {@code a sh:PropertyShape} on this shape.
+     *
+     * <p>Carried so a rewrite puts it back. Most property shapes leave the type implicit, so the
+     * writer cannot simply always state it, and dropping it would edit a line nobody asked it to.
+     */
+    private Boolean typed;
 }

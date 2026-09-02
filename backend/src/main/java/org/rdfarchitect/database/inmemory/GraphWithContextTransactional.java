@@ -250,6 +250,13 @@ public class GraphWithContextTransactional implements GraphContext {
         return document;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The graph is dropped rather than emptied: clearing it inside the caller's transaction
+     * would record deletions on a participant that is about to stop committing, so the work would
+     * be thrown away with the object anyway.
+     */
     @Override
     public void removeShapesDocument(UUID documentId) {
         if (DEFAULT_SHAPES_DOCUMENT_ID.equals(documentId)) {

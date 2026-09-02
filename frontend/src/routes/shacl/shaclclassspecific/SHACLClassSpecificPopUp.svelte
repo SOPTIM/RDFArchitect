@@ -24,6 +24,7 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { emptyRelations } from "$lib/shacl/classConstraints.js";
     import { workbenchHref } from "$lib/shacl/workbenchLink.js";
     import { ClassType, editorState } from "$lib/sharedState.svelte.js";
 
@@ -39,15 +40,8 @@
         showDialog = $bindable(),
     } = $props();
 
-    const emptyShacl = () => ({
-        namespaces: "",
-        nodeShapes: [],
-        propertyShapes: [],
-        derivedPropertyShapes: [],
-    });
-
-    let customShacl = $state(emptyShacl());
-    let generatedShacl = $state(emptyShacl());
+    let customShacl = $state(emptyRelations());
+    let generatedShacl = $state(emptyRelations());
     let loading = $state(false);
     let error = $state(null);
     let fetchKey = $state(0);
@@ -57,8 +51,8 @@
     }
 
     function onClose() {
-        customShacl = emptyShacl();
-        generatedShacl = emptyShacl();
+        customShacl = emptyRelations();
+        generatedShacl = emptyRelations();
         error = null;
         fetchKey = 0;
     }

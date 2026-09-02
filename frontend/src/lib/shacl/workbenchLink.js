@@ -18,8 +18,13 @@
 /**
  * Linking into the constraints workbench at a particular rule.
  *
- * The workbench is a route rather than a dialog, so the target travels in the URL. That also makes
- * the link shareable and survivable across a reload, which a piece of shared state would not be.
+ * The workbench is a route rather than a dialog, so the target travels in the URL, which survives a
+ * reload where a piece of shared state would not.
+ *
+ * The workspace and schema are deliberately not in the link: the workbench opens whichever schema
+ * is selected, and a link carrying its own would have to either override that selection or disagree
+ * with it. A consequence worth knowing is that the link is only meaningful within a session that
+ * has the same schema selected — it is a jump, not a shareable address.
  */
 
 export const WORKBENCH_PATH = "/shacl";

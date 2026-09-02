@@ -135,6 +135,18 @@ class SHACLDocumentServiceTest {
     }
 
     @Test
+    void anEmptiedDocumentReadsBackAsEmpty() {
+        var created = createTurtleDocument("eq.ttl");
+
+        // A document emptied in the editor has to be sent as something — Spring rejects an absent
+        // plain-string body — so the editor sends a space. Storing that verbatim made the text read
+        // back differ from the text sent, and a freshly saved document looked unsaved.
+        service.replaceShapesDocumentText(GRAPH, created.getId(), " ");
+
+        assertThat(service.getShapesDocumentText(GRAPH, created.getId())).isEmpty();
+    }
+
+    @Test
     void renameAndDisableArePersisted() {
         var created = createTurtleDocument("eq.ttl");
 

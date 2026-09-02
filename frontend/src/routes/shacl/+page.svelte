@@ -201,11 +201,16 @@
         return () => onOpenClass(null);
     });
 
+    /** Saves the open document. Returns whether it was written, which the switch dialog needs. */
     async function save() {
         const { saved, reason } = await workbench.save();
         if (saved) {
+            // A save moves the schema graph's version, so the terms and hovers cached against the
+            // old one are describing a schema that no longer exists.
+            termSource?.invalidate();
+            termSource?.load();
             toastStore.success("Constraints saved");
-            return;
+            return true;
         }
         // The reason is almost always a syntax error with a line and column. Saying only that the
         // save failed leaves the user hunting for something the server already located.
@@ -214,6 +219,7 @@
             reason ??
                 "The constraints could not be saved. The document is unchanged on the server.",
         );
+        return false;
     }
 
     /**
@@ -258,6 +264,18 @@
 
     function reveal(line, column = 1) {
         editor?.reveal(line, column);
+    }
+
+    /** Opens another document from a report, asking about unsaved changes on the way. */
+    async function openDocument(target) {
+        if (!target || target === workbench.selectedId) {
+            return;
+        }
+        if (!(await confirmSwitch())) {
+            return;
+        }
+        await workbench.select(target);
+        view = "ttl";
     }
 
     async function jumpTo(problem) {
@@ -422,6 +440,7 @@
                                         {conformance}
                                         documentId={workbench.selectedId}
                                         prefixes={parsePrefixes(workbench.text)}
+                                        onopen={openDocument}
                                     />
                                 {/if}
                             </div>
@@ -452,7 +471,9 @@
     onCancel={() => answerSwitch(false)}
     onDiscard={() => answerSwitch(true)}
     onSave={async () => {
-        await save();
-        answerSwitch(true);
+        // Only leave the document once it is actually written. A save that failed on a syntax
+        // error would otherwise switch away and take the buffer with it — losing exactly the
+        // text the user had just asked to keep.
+        answerSwitch(await save());
     }}
 />

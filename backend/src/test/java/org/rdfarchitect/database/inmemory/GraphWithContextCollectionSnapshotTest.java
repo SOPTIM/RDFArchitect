@@ -221,6 +221,53 @@ class GraphWithContextCollectionSnapshotTest {
         assertThat(collection.listGraphUris()).containsExactly(GRAPH_URI);
     }
 
+    @Test
+    void aDocumentWithNoTriplesIsStillRestored() {
+        // A document holding nothing is not written as a graph — a snapshot store will not take an
+        // empty one — so discovering documents by their shapes alone dropped it entirely.
+        var emptyId = UUID.randomUUID();
+        var dataset = DatasetFactory.createGeneral();
+        dataset.addNamedModel(GRAPH_URI, schemaModel());
+        var metadata = ShapesDocumentMetadata.emptyModel();
+        metadata.add(documentMetadata(emptyId, "notes.ttl", null, 1, true, "# nothing yet"));
+        dataset.addNamedModel(ShapesGraphNaming.encodeMetadata(GRAPH_URI), metadata);
+
+        var collection = new GraphWithContextCollection(dataset);
+
+        try (var ctx = collection.getGraphWithContext(GRAPH_URI).begin(ReadWrite.READ)) {
+            var document = ctx.getShapesDocuments().get(emptyId);
+            assertThat(document).isNotNull();
+            assertThat(document.getName()).isEqualTo("notes.ttl");
+            assertThat(document.getOrder()).isEqualTo(1);
+            assertThat(document.getRawText()).isEqualTo("# nothing yet");
+            assertThat(document.getGraph().isEmpty()).isTrue();
+        }
+    }
+
+    @Test
+    void anEmptyDocumentDoesNotDisplaceOneThatHasShapes() {
+        var emptyId = UUID.randomUUID();
+        var shapesId = UUID.randomUUID();
+        var dataset = DatasetFactory.createGeneral();
+        dataset.addNamedModel(GRAPH_URI, schemaModel());
+        dataset.addNamedModel(
+                ShapesGraphNaming.encode(GRAPH_URI, shapesId.toString()),
+                namedShapeModel("EqShape"));
+        var metadata = ShapesDocumentMetadata.emptyModel();
+        metadata.add(documentMetadata(emptyId, "empty.ttl", null, 1, true, null));
+        metadata.add(documentMetadata(shapesId, "eq.ttl", "EQ.ttl", 2, true, "# eq"));
+        dataset.addNamedModel(ShapesGraphNaming.encodeMetadata(GRAPH_URI), metadata);
+
+        var collection = new GraphWithContextCollection(dataset);
+
+        try (var ctx = collection.getGraphWithContext(GRAPH_URI).begin(ReadWrite.READ)) {
+            var documents = ctx.getShapesDocuments();
+            assertThat(documents).containsKeys(emptyId, shapesId);
+            assertThat(documents.get(shapesId).getGraph().isEmpty()).isFalse();
+            assertThat(documents.get(emptyId).getGraph().isEmpty()).isTrue();
+        }
+    }
+
     /** Builds the metadata statements a snapshot records for one document. */
     private static Model documentMetadata(
             UUID id, String name, String sourceFile, int order, boolean enabled, String rawText) {

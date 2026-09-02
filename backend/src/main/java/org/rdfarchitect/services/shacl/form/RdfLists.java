@@ -22,7 +22,9 @@ import org.apache.jena.graph.Node;
 import org.apache.jena.vocabulary.RDF;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Reading the RDF collections SHACL uses for {@code sh:in} and {@code sh:ignoredProperties}.
@@ -36,23 +38,39 @@ final class RdfLists {
 
     private RdfLists() {}
 
-    /** The list's members, as written. Empty when the node is absent or not a list. */
-    static List<String> values(Graph graph, Node head) {
-        var values = new ArrayList<String>();
-        var seen = new java.util.HashSet<Node>();
+    /**
+     * The list's members as nodes, or empty when the node is absent, is not a list, or is
+     * malformed.
+     *
+     * <p>A truncated or cyclic list is reported as absent rather than as the prefix that could be
+     * walked, so a caller deciding whether the form may rewrite the shape is not told a partial
+     * list is the whole of it.
+     */
+    static Optional<List<Node>> nodes(Graph graph, Node head) {
+        if (head == null) {
+            return Optional.empty();
+        }
+        var members = new ArrayList<Node>();
+        var seen = new HashSet<Node>();
         var current = head;
-        while (current != null && !current.equals(RDF.nil.asNode()) && values.size() < MAX_LENGTH) {
-            if (!seen.add(current)) {
-                break;
+        while (!current.equals(RDF.nil.asNode())) {
+            if (members.size() >= MAX_LENGTH || !seen.add(current)) {
+                return Optional.empty();
             }
             var first = objectOf(graph, current, RDF.first.asNode());
-            if (first == null) {
-                break;
+            var rest = objectOf(graph, current, RDF.rest.asNode());
+            if (first == null || rest == null) {
+                return Optional.empty();
             }
-            values.add(asString(first));
-            current = objectOf(graph, current, RDF.rest.asNode());
+            members.add(first);
+            current = rest;
         }
-        return List.copyOf(values);
+        return Optional.of(List.copyOf(members));
+    }
+
+    /** The list's members, as written. Empty when the node is absent or not a well-formed list. */
+    static List<String> values(Graph graph, Node head) {
+        return nodes(graph, head).orElseGet(List::of).stream().map(RdfLists::asString).toList();
     }
 
     /** The list's members that are IRIs, which is what {@code sh:ignoredProperties} holds. */

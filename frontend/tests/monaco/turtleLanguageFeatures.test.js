@@ -39,7 +39,7 @@ let registered;
 
 /** Just enough of the Monaco namespace for the providers to be registered and then called. */
 function fakeMonaco() {
-    registered = {};
+    registered = { models: new Map() };
     return {
         languages: {
             CompletionItemKind: {
@@ -61,6 +61,15 @@ function fakeMonaco() {
         editor: {
             registerEditorOpener: opener => {
                 registered.opener = opener;
+            },
+            // Go-to-definition backs its target uri with a model, because Monaco's own
+            // Ctrl+hover preview resolves the uri before the opener ever runs.
+            getModel: uri => registered.models.get(String(uri.path)) ?? null,
+            createModel: (value, language, uri) => {
+                const model = { value, language, uri, disposed: false };
+                model.dispose = () => (model.disposed = true);
+                registered.models.set(String(uri.path), model);
+                return model;
             },
         },
         Uri: { from: parts => ({ ...parts }) },

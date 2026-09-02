@@ -27,13 +27,17 @@ import org.apache.jena.riot.system.PrefixEntry;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
 import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
+import org.rdfarchitect.shacl.dto.ConformanceDocument;
 import org.rdfarchitect.shacl.dto.ConformanceFinding;
 import org.rdfarchitect.shacl.dto.ConformanceReport;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
@@ -67,6 +71,7 @@ public class ConformanceService implements ConformanceUseCase {
 
         Graph schemaShapes;
         var documentShapes = new LinkedHashMap<String, Graph>();
+        var documentRefs = new ArrayList<ConformanceDocument>();
         String documentName;
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             var documents = ctx.getShapesDocuments();
@@ -78,10 +83,17 @@ public class ConformanceService implements ConformanceUseCase {
             documentName = opened.getName();
             documents.values().stream()
                     .filter(document -> document.isEnabled() || document.getId().equals(documentId))
+                    // Reading order, matching the document list and every other merge, so the
+                    // report's "read together" line names them the way the workbench shows them.
+                    .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
                     .forEach(
-                            document ->
-                                    documentShapes.put(
-                                            document.getName(), copyOf(document.getGraph())));
+                            document -> {
+                                documentShapes.put(
+                                        document.getName(), copyOf(document.getGraph()));
+                                documentRefs.add(
+                                        new ConformanceDocument(
+                                                document.getId(), document.getName()));
+                            });
 
             var ontology = ModelFactory.createModelForGraph(copyOf(ctx.getRdfGraph()));
             ontology.setNsPrefixes(prefixes);
@@ -109,7 +121,7 @@ public class ConformanceService implements ConformanceUseCase {
         return ConformanceReport.builder()
                 .documentId(documentId)
                 .documentName(documentName)
-                .documents(List.copyOf(documentShapes.keySet()))
+                .documents(List.copyOf(documentRefs))
                 .conforms(contradicted == 0 && different == 0 && notInSchema == 0)
                 .compared(compared)
                 .agreeing(compared - contradicted - different)

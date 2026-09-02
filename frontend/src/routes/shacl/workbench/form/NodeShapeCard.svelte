@@ -55,6 +55,18 @@
     /** Only the shape's own limits are worth explaining; a read-only workspace says so elsewhere. */
     const turtleOnly = $derived(shape.editable === false);
 
+    /**
+     * Why the form will not write this shape.
+     *
+     * The server says it, because it is the side that knows: a shape can be read-only for
+     * something no predicate list shows, such as a second `sh:targetClass` or a message with a
+     * language tag. The predicate list stays as the detail underneath.
+     */
+    const readOnlyTitle = $derived(
+        shape.readOnlyReason ??
+            "This shape uses something the form does not write back. Edit it in the Turtle view.",
+    );
+
     const title = $derived(shortForm(shape.iri));
 
     const target = $derived(
@@ -111,7 +123,7 @@
         {#if turtleOnly}
             <span
                 class="text-text-subtle flex shrink-0 items-center gap-1 text-xs"
-                title={`This shape uses ${shape.unsupported?.join(", ")}, which the form does not edit. Use the Turtle view.`}
+                title={readOnlyTitle}
             >
                 <Fa icon={faLock} />
                 Turtle only
@@ -134,12 +146,13 @@
                 <p
                     class="text-text-subtle bg-background-subtle rounded p-2 text-sm"
                 >
-                    This shape uses
-                    <span class="font-mono">
-                        {shape.unsupported?.join(", ")}
-                    </span>
-                    , which the form does not represent. Edit it in the Turtle view
-                    so nothing is lost.
+                    {readOnlyTitle}
+                    {#if shape.unsupported?.length}
+                        <br />
+                        <span class="font-mono text-xs">
+                            {shape.unsupported.join(", ")}
+                        </span>
+                    {/if}
                 </p>
             {/if}
 

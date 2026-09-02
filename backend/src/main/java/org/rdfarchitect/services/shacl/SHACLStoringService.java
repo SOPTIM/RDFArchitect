@@ -189,6 +189,12 @@ public class SHACLStoringService
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Destructive: see {@link GraphContext#removeShapesDocument} for why an undo does not bring
+     * the document back. The UI confirms before calling this and says so.
+     */
     @Override
     public void deleteShapesDocument(GraphIdentifier graphIdentifier, UUID documentId) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
@@ -266,9 +272,13 @@ public class SHACLStoringService
         storedModel.clearNsPrefixMap();
         storedModel.add(parsed);
         storedModel.setNsPrefixes(parsed);
+        // A document emptied in the editor still has to be sent as something — Spring rejects an
+        // absent plain-string body — so whitespace-only content is stored as the empty document it
+        // means. Keeping the sent " " would make the text read back differ from the text sent, and
+        // the editor would call a freshly saved document unsaved.
         document.setRawText(
                 Lang.TURTLE.equals(lang) && content != null
-                        ? content
+                        ? (content.isBlank() ? "" : content)
                         : serialiseToTurtle(storedModel));
     }
 
@@ -313,21 +323,10 @@ public class SHACLStoringService
     }
 
     /**
-     * All enabled shapes documents of the graph, read as one model.
+     * Exports the named documents as one file, optionally merged with the generated shapes.
      *
-     * <p>SHACL is conjunctive: shapes targeting the same focus node all apply, and the language has
-     * no notion of one shape overriding another. Documents are therefore unioned, never resolved
-     * against each other — a precedence rule here would disagree with the file the user exports and
-     * with every SHACL engine that validates it. Where two documents genuinely cannot both hold (an
-     * unsatisfiable pair, or the same shape IRI defined twice), that is reported as a validation
-     * finding rather than silently decided.
-     *
-     * <p>Documents are added in {@link ShapesDocument#getOrder()} order so serialisation is stable.
-     * Disabled documents are left out: switching a document off is how a user takes its constraints
-     * out of validation and export.
-     *
-     * <p>Must be called inside a transaction on {@code ctx}. The result is detached from the stored
-     * graphs, so writes to it are not persisted.
+     * <p>Enabled state is ignored: a document is included because the user ticked it. Switching one
+     * off takes it out of validation, not out of the user's reach.
      */
     @Override
     public ByteArrayOutputStream exportSelectedSHACLGraph(
@@ -375,6 +374,23 @@ public class SHACLStoringService
         return union;
     }
 
+    /**
+     * All enabled shapes documents of the graph, read as one model.
+     *
+     * <p>SHACL is conjunctive: shapes targeting the same focus node all apply, and the language has
+     * no notion of one shape overriding another. Documents are therefore unioned, never resolved
+     * against each other — a precedence rule here would disagree with the file the user exports and
+     * with every SHACL engine that validates it. Where two documents genuinely cannot both hold (an
+     * unsatisfiable pair, or the same shape IRI defined twice), that is reported as a validation
+     * finding rather than silently decided.
+     *
+     * <p>Documents are added in {@link ShapesDocument#getOrder()} order so serialisation is stable.
+     * Disabled documents are left out: switching a document off is how a user takes its constraints
+     * out of validation and export.
+     *
+     * <p>Must be called inside a transaction on {@code ctx}. The result is detached from the stored
+     * graphs, so writes to it are not persisted.
+     */
     private static Model readEnabledShapes(GraphContext ctx) {
         var union = ModelFactory.createDefaultModel();
         ctx.getShapesDocuments().values().stream()
@@ -568,11 +584,23 @@ public class SHACLStoringService
         }
     }
 
-    /** Records every subject a document states something about, under its shape id. */
+    /**
+     * Records every subject a document states something about, under its shape id.
+     *
+     * <p>The lines every subject starts on are taken in one scan of the text. Asking {@link
+     * ShapeBlockLocator#locate} per subject rescans from the front each time, which on an official
+     * constraints file with thousands of subjects is quadratic in the file's length — paid on every
+     * open of the class-constraints dialog.
+     *
+     * <p>Lines are counted in the document's own text rather than in a re-serialisation, because
+     * the text is what the workbench will open and the line has to agree with it. A blank-node
+     * shape has no subject to look for, and a document restored from a snapshot may have no text at
+     * all; both simply get no line.
+     */
     private static void indexSubjects(
             Map<String, List<ShapeOrigin>> byId, ShapesDocument document) {
         var model = ModelFactory.createModelForGraph(document.getGraph());
-        var text = document.getRawText();
+        var lines = ShapeBlockLocator.linesBySubject(document.getRawText(), model);
         var seen = new HashSet<String>();
         model.listSubjects()
                 .forEachRemaining(
@@ -586,25 +614,12 @@ public class SHACLStoringService
                                             ShapeOrigin.builder()
                                                     .documentId(document.getId())
                                                     .documentName(document.getName())
-                                                    .line(lineOf(text, subject, model))
+                                                    .line(
+                                                            subject.isURIResource()
+                                                                    ? lines.get(subject.getURI())
+                                                                    : null)
                                                     .build());
                         });
-    }
-
-    /**
-     * The 1-based line a shape's statement starts on, or {@code null} when it cannot be found.
-     *
-     * <p>Counted in the document's own text rather than in a re-serialisation, because the text is
-     * what the workbench will open and the line has to agree with it. A blank-node shape has no
-     * subject to search for, and a document restored from a snapshot has no text at all.
-     */
-    private static Integer lineOf(String turtle, Resource subject, Model model) {
-        if (turtle == null || !subject.isURIResource()) {
-            return null;
-        }
-        return ShapeBlockLocator.locate(turtle, subject.getURI(), model)
-                .map(statement -> (int) turtle.substring(0, statement.start()).lines().count() + 1)
-                .orElse(null);
     }
 
     private static List<PropertyShapesWrapper> concat(

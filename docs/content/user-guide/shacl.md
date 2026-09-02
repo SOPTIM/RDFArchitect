@@ -27,7 +27,7 @@ Switching a document **off** means it takes no part in validation or in a combin
 
 **View → Constraints (SHACL)** (`Ctrl+Shift+L`) opens the workbench for the selected schema. It is also reachable from a schema's context menu and from the constraints popup in the class editor.
 
-- **Documents** (left) lists the graph's constraints documents: add an empty one, import a file, rename, reorder, delete, and switch one off. Each row carries a badge summarising what validation found in it, so a file with problems is visible without opening it. The first row is not a document but the **generated rules** — what RDFArchitect derives from the schema itself, shown read-only so you can read it beside whatever you imported.
+- **Documents** (left) lists the graph's constraints documents: add an empty one, import a file, rename, reorder, delete, and switch one off. Deleting is the one action that cannot be undone — everything else a document can have done to it, including being emptied, rewinds with the schema's history. Each row carries a badge summarising what validation found in it, so a file with problems is visible without opening it. The first row is not a document but the **generated rules** — what RDFArchitect derives from the schema itself, shown read-only so you can read it beside whatever you imported.
 - **Editor** (middle) shows the open document in one of three views — see below.
 - **Inspector** (right) shows what the document is, the shapes it declares — click one to jump to it — and which profiles the constraints are being checked against.
 - **Problems** (bottom) collects everything found across *all* of the documents. Clicking an entry opens the document it belongs to and puts the cursor on it.
@@ -53,7 +53,14 @@ The same document, shown as shapes rather than as text, for people who would rat
 
 An edit here rewrites exactly the shape you changed and copies the rest of the file through untouched, so using the form on an imported official file does not reformat it. The one thing that cannot survive is a comment written *inside* the shape you edited, and you are told when that happens.
 
-Some shapes are shown **read-only** with a "Turtle only" marker. Those use something the form does not model — an embedded SPARQL query, or a path expression rather than a plain property. They are displayed rather than hidden, but only the Turtle view will edit them, because writing them back from a form would drop the part it cannot represent. Official ENTSO-E constraints files are largely of this kind; the form is at its best on constraints you write yourself.
+Some shapes are shown **read-only** with a "Turtle only" marker, and the marker says why. A shape is read-only when it holds something the form cannot write back unchanged:
+
+- something the form does not model at all — an embedded SPARQL query, or a path expression rather than a plain property;
+- a rule stated **twice**, such as two `sh:targetClass`, where the form has one field and would keep only one of them;
+- a value the form cannot spell — a message with a language tag (`"…"@en`), a number that is not a plain integer, a `sh:closed` that is neither `true` nor `false`;
+- a shape SHACL *infers* rather than one the document declares, with no `a sh:NodeShape` of its own — writing it back would add the `rdf:type` its author left out.
+
+They are displayed rather than hidden, but only the Turtle view will edit them, because writing them back from a form would drop the part it cannot represent. Official ENTSO-E constraints files are largely of this kind; the form is at its best on constraints you write yourself.
 
 ### Schema check
 
@@ -70,7 +77,7 @@ What it finds is grouped:
 | **Not covered** | The schema implies a constraint no document states. |
 | **Not in the schema** | A document constrains a property the schema does not have on that class. |
 
-Coverage and agreement are counted separately, and the headline only turns red for a contradiction. A file that says nothing about a property does not disagree with the schema about it: the report says how many of the constraints *both* sides state agree, and reports the rest as a gap. Each finding also names the document that states it, so a report over several files still points at the one to open.
+Coverage and agreement are counted separately, and the headline only turns red for a contradiction. A file that says nothing about a property does not disagree with the schema about it: the report says how many of the constraints *both* sides state agree, and reports the rest as a gap. Each finding also names the document that states it, and the name is a link that opens it, so a report over several files still points at the one to open.
 
 Shapes are matched by class and property, never by name, because generated and official shapes share no naming convention and both spread one property's rules over several shapes.
 

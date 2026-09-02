@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.services.shacl.form;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.services.shacl.ShapesTurtleParser;
@@ -65,7 +66,36 @@ public class ShapeFormService implements ShapeFormUseCase {
         if (request.getRemoveShapeIri() != null) {
             return remove(turtle, request.getRemoveShapeIri(), prefixes);
         }
+        assertWritable(parsed.graph(), request.getShape());
         return write(turtle, request.getShape(), prefixes);
+    }
+
+    /**
+     * Refuses to rewrite a shape the form cannot represent.
+     *
+     * <p>The reader already decides this and the form already honours it, so reaching here means
+     * the client asked for something its own UI does not offer. Checking again is cheap and the
+     * failure it prevents is not: rewriting a shape carrying {@code sh:sparql} or a second {@code
+     * sh:targetClass} would drop it, in the one place the whole feature promises not to.
+     *
+     * <p>Judged against the document as stored, not against what was posted — a request claiming a
+     * shape is editable is exactly the request not to trust.
+     */
+    private static void assertWritable(Graph graph, NodeShapeModel shape) {
+        if (shape == null || shape.getIri() == null) {
+            return;
+        }
+        ShapeModelReader.read(graph).stream()
+                .filter(stored -> shape.getIri().equals(stored.getIri()))
+                .filter(stored -> !Boolean.TRUE.equals(stored.getEditable()))
+                .findFirst()
+                .ifPresent(
+                        stored -> {
+                            throw new ResourceConflictException(
+                                    stored.getReadOnlyReason() != null
+                                            ? stored.getReadOnlyReason()
+                                            : "This shape cannot be written back from the form.");
+                        });
     }
 
     private ShapeEditResult write(String turtle, NodeShapeModel shape, PrefixMapping prefixes) {

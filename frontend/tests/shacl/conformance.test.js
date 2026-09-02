@@ -28,7 +28,7 @@ const DOCUMENT = "eq-document-id";
 const REPORT = {
     documentId: DOCUMENT,
     documentName: "official.ttl",
-    documents: ["official.ttl"],
+    documents: [{ id: DOCUMENT, name: "official.ttl" }],
     conforms: false,
     compared: 1343,
     agreeing: 1341,
@@ -158,6 +158,35 @@ describe("ConformanceReportView", () => {
         run: vi.fn(),
         forget: vi.fn(),
         ...overrides,
+    });
+
+    test("opens the document a finding is stated in", async () => {
+        const onopen = vi.fn();
+        const view = render({
+            conformance: conformance(),
+            documentId: DOCUMENT,
+            onopen,
+        });
+
+        // Naming the file is half an answer; getting to it is the other half.
+        const link = [...view.querySelectorAll("button")].find(
+            button => button.textContent.trim() === "official.ttl",
+        );
+        expect(link).toBeDefined();
+
+        link.click();
+        await Promise.resolve();
+
+        expect(onopen).toHaveBeenCalledWith(DOCUMENT);
+    });
+
+    test("still names the documents when there is nowhere to open them", () => {
+        const view = render({
+            conformance: conformance(),
+            documentId: DOCUMENT,
+        });
+
+        expect(view.textContent).toContain("Read together: official.ttl");
     });
 
     test("offers the comparison before it has been run", () => {
