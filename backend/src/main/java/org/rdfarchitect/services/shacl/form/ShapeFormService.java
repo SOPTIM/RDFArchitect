@@ -17,7 +17,6 @@
 
 package org.rdfarchitect.services.shacl.form;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.shared.PrefixMapping;
@@ -28,24 +27,23 @@ import org.rdfarchitect.shacl.dto.ShapeEditRequest;
 import org.rdfarchitect.shacl.dto.ShapeEditResult;
 import org.rdfarchitect.shacl.dto.ShapesForm;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * The form view of a constraints document, and the edits made through it.
  *
  * <p>Resolves the tension between two things this feature wants at once: the document's verbatim
  * text is the source of truth, and people who do not read Turtle must be able to change it. An edit
- * therefore rewrites exactly one statement — the shape that was edited — and copies the rest of the
- * file through untouched. A comment written inside that one shape is the only thing lost, and the
- * caller is told when that happens.
+ * therefore changes the clauses it was made on — one field, one clause — and copies every other
+ * character of the file through untouched, comments and clause order included. What the form has no
+ * field for is not in its way: it stays as written and is reported so the form can say so.
  */
 public class ShapeFormService implements ShapeFormUseCase {
 
     @Override
     public ShapesForm parse(String turtle) {
-        var parsed = ShapesTurtleParser.parse(turtle);
+        var text = turtle == null ? "" : turtle;
+        var parsed = ShapesTurtleParser.parse(text);
         if (parsed.failed()) {
             // The form has nothing to show for text that does not parse; the editor shows why.
             return ShapesForm.builder()
@@ -53,43 +51,8 @@ public class ShapeFormService implements ShapeFormUseCase {
                     .parseError(parsed.findings().isEmpty() ? null : parsed.findings().get(0))
                     .build();
         }
-        var shapes = ShapeModelReader.read(parsed.graph());
-        var counts =
-                ShapeBlockLocator.statementCountsBySubject(
-                        turtle == null ? "" : turtle, parsed.graph().getPrefixMapping());
-        shapes.forEach(shape -> markUnlocatable(shape, counts));
-        return ShapesForm.builder().shapes(shapes).build();
-    }
-
-    /**
-     * Locks a shape the writer would not be able to put back where it came from.
-     *
-     * <p>The reader works on the graph, which does not remember how the text was laid out, so this
-     * is the one judgement only the text can make. Two cases, both of which used to be found out
-     * the hard way: a subject written as several statements, where a rewrite of one of them
-     * duplicates what the others say; and a subject the scanner cannot find at all — written
-     * against a {@code @base}, say — where a rewrite is appended and the shape ends up defined
-     * twice. Saying so on the card is the point: the alternative is an error after the edit.
-     */
-    private static void markUnlocatable(NodeShapeModel shape, Map<String, Integer> counts) {
-        if (!Boolean.TRUE.equals(shape.getEditable())) {
-            return;
-        }
-        int written = counts.getOrDefault(shape.getIri(), 0);
-        if (written == 1) {
-            return;
-        }
-        shape.setEditable(false);
-        shape.setReadOnlyReason(
-                written == 0
-                        ? "This shape is not written as a statement of its own in the document, so"
-                                + " the form cannot write it back without defining it a second"
-                                + " time. Edit it in the Turtle view."
-                        : "This shape is written as "
-                                + written
-                                + " separate statements. Rewriting one of them from the form would"
-                                + " repeat what the others say, so the form leaves it alone. Edit"
-                                + " it in the Turtle view, or write the shape as one statement.");
+        var source = ShapeSource.of(text, parsed.graph().getPrefixMapping());
+        return ShapesForm.builder().shapes(ShapeModelReader.read(parsed.graph(), source)).build();
     }
 
     @Override
@@ -105,9 +68,38 @@ public class ShapeFormService implements ShapeFormUseCase {
         if (request.getRemoveShapeIri() != null) {
             return remove(turtle, request.getRemoveShapeIri(), prefixes);
         }
-        assertWritable(parsed.graph(), request.getShape());
-        assertRulesNameAProperty(request.getShape());
-        return write(turtle, request.getShape(), parsed.graph(), prefixes);
+        var shape = request.getShape();
+        if (shape == null || shape.getIri() == null || shape.getIri().isBlank()) {
+            throw new ResourceConflictException("A shape needs an IRI before it can be written.");
+        }
+        assertRulesNameAProperty(shape);
+
+        var source = ShapeSource.of(turtle, prefixes);
+        var stored =
+                ShapeModelReader.read(parsed.graph(), source).stream()
+                        .filter(known -> shape.getIri().equals(known.getIri()))
+                        .findFirst();
+        if (stored.isEmpty()) {
+            return append(
+                    turtle,
+                    shape,
+                    parsed.graph()
+                            .contains(NodeFactory.createURI(shape.getIri()), Node.ANY, Node.ANY),
+                    prefixes);
+        }
+        // Judged against the document as stored, not against what was posted: a request claiming a
+        // shape is editable is exactly the request not to trust.
+        if (!Boolean.TRUE.equals(stored.get().getEditable())) {
+            throw new ResourceConflictException(
+                    stored.get().getReadOnlyReason() != null
+                            ? stored.get().getReadOnlyReason()
+                            : "This shape cannot be written back from the form.");
+        }
+        var written = ShapeClauseWriter.rewrite(turtle, stored.get(), shape, prefixes);
+        return ShapeEditResult.builder()
+                .turtle(written.turtle())
+                .warnings(written.warnings())
+                .build();
     }
 
     /**
@@ -120,7 +112,7 @@ public class ShapeFormService implements ShapeFormUseCase {
      * client that has got ahead of itself, and it is told so.
      */
     private static void assertRulesNameAProperty(NodeShapeModel shape) {
-        if (shape == null || shape.getProperties() == null) {
+        if (shape.getProperties() == null) {
             return;
         }
         var unnamed =
@@ -139,80 +131,37 @@ public class ShapeFormService implements ShapeFormUseCase {
     }
 
     /**
-     * Refuses to rewrite a shape the form cannot represent.
+     * Adds a shape the document does not hold yet.
      *
-     * <p>The reader already decides this and the form already honours it, so reaching here means
-     * the client asked for something its own UI does not offer. Checking again is cheap and the
-     * failure it prevents is not: rewriting a shape carrying {@code sh:sparql} or a second {@code
-     * sh:targetClass} would drop it, in the one place the whole feature promises not to.
-     *
-     * <p>Judged against the document as stored, not against what was posted — a request claiming a
-     * shape is editable is exactly the request not to trust.
+     * <p>The ordinary case is a shape added through the form, which is written out in full and
+     * appended. The other one is a subject the document says something about in a form the reader
+     * does not read as a shape, where appending would define it a second time.
      */
-    private static void assertWritable(Graph graph, NodeShapeModel shape) {
-        if (shape == null || shape.getIri() == null) {
-            return;
-        }
-        ShapeModelReader.read(graph).stream()
-                .filter(stored -> shape.getIri().equals(stored.getIri()))
-                .filter(stored -> !Boolean.TRUE.equals(stored.getEditable()))
-                .findFirst()
-                .ifPresent(
-                        stored -> {
-                            throw new ResourceConflictException(
-                                    stored.getReadOnlyReason() != null
-                                            ? stored.getReadOnlyReason()
-                                            : "This shape cannot be written back from the form.");
-                        });
-    }
-
-    private ShapeEditResult write(
-            String turtle, NodeShapeModel shape, Graph graph, PrefixMapping prefixes) {
-        if (shape == null || shape.getIri() == null || shape.getIri().isBlank()) {
-            throw new ResourceConflictException("A shape needs an IRI before it can be written.");
-        }
-        var replacement = ShapeModelWriter.write(shape, prefixes);
-        var existing = ShapeBlockLocator.locateAll(turtle, shape.getIri(), prefixes);
-        if (existing.isEmpty()) {
-            // Nothing to replace. Either the shape is new — the ordinary case, and it is appended —
-            // or the document says something about that subject in a form the scanner cannot find,
-            // in which case appending would define the shape twice.
-            if (graph.contains(NodeFactory.createURI(shape.getIri()), Node.ANY, Node.ANY)) {
-                throw new ResourceConflictException(
-                        "This shape is not written as a statement of its own in the document, so"
-                                + " the form cannot write it back without defining it a second"
-                                + " time. Edit it in the Turtle view.");
-            }
-            return ShapeEditResult.builder()
-                    .turtle(append(turtle, replacement))
-                    .warnings(List.of())
-                    .build();
-        }
-        if (existing.size() > 1) {
-            // Rewriting one of them would repeat what the others say, and deleting the others
-            // would delete text the user never edited. `parse` marks such a shape read-only, so
-            // getting here means the client asked anyway.
+    private ShapeEditResult append(
+            String turtle, NodeShapeModel shape, boolean alreadyMentioned, PrefixMapping prefixes) {
+        if (alreadyMentioned) {
             throw new ResourceConflictException(
-                    "This shape is written as "
-                            + existing.size()
-                            + " separate statements. Rewriting one of them from the form would"
-                            + " repeat what the others say, so the form leaves it alone. Edit it in"
-                            + " the Turtle view, or write the shape as one statement.");
+                    "The document already says something about this subject in a form the form"
+                            + " view does not read as a shape, so writing it here would define it"
+                            + " twice. Edit it in the Turtle view.");
         }
-        var statement = existing.get(0);
-        var warnings = warningsFor(turtle.substring(statement.start(), statement.end()));
+        var statement = ShapeModelWriter.write(shape, prefixes);
+        var separator =
+                turtle.isEmpty() || turtle.endsWith("\n\n")
+                        ? ""
+                        : turtle.endsWith("\n") ? "\n" : "\n\n";
         return ShapeEditResult.builder()
-                .turtle(ShapeBlockLocator.replace(turtle, statement, replacement))
-                .warnings(warnings)
+                .turtle(turtle + separator + statement + "\n")
+                .warnings(List.of())
                 .build();
     }
 
     /**
      * Removes a shape, however many statements it is written as.
      *
-     * <p>All of them, unlike a rewrite: deleting a shape is a request about the shape, not about
-     * one statement, and leaving the others behind would leave half a shape in the document.
-     * Removed from the back so the earlier statements' offsets still hold.
+     * <p>All of them, unlike an edit: deleting a shape is a request about the shape, not about one
+     * statement, and leaving the others behind would leave half a shape in the document. Removed
+     * from the back so the earlier statements' offsets still hold.
      */
     private ShapeEditResult remove(String turtle, String iri, PrefixMapping prefixes) {
         var existing = ShapeBlockLocator.locateAll(turtle, iri, prefixes);
@@ -229,24 +178,5 @@ public class ShapeFormService implements ShapeFormUseCase {
             remaining = remaining.substring(0, statement.start()) + after;
         }
         return ShapeEditResult.builder().turtle(remaining).warnings(List.of()).build();
-    }
-
-    private static String append(String turtle, String replacement) {
-        var separator =
-                turtle.isEmpty() || turtle.endsWith("\n\n")
-                        ? ""
-                        : turtle.endsWith("\n") ? "\n" : "\n\n";
-        return turtle + separator + replacement + "\n";
-    }
-
-    /** What the rewrite costs beyond the change itself. */
-    private static List<String> warningsFor(String replaced) {
-        var warnings = new ArrayList<String>();
-        if (ShapeBlockLocator.containsComment(replaced)) {
-            warnings.add(
-                    "Comments written inside this shape were removed, because the shape was"
-                            + " rewritten from the form. The rest of the document is unchanged.");
-        }
-        return List.copyOf(warnings);
     }
 }

@@ -1199,13 +1199,16 @@
           "readOnlyReason" : {
             "type" : "string"
           },
+          "retained" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RetainedClause"
+            },
+            "type" : "array"
+          },
           "severity" : {
             "type" : "string"
           },
-          "targetClass" : {
-            "type" : "string"
-          },
-          "unsupported" : {
+          "targetClasses" : {
             "items" : {
               "type" : "string"
             },
@@ -1509,8 +1512,18 @@
           "pattern" : {
             "type" : "string"
           },
+          "retained" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RetainedClause"
+            },
+            "type" : "array"
+          },
           "severity" : {
             "type" : "string"
+          },
+          "sourceIndex" : {
+            "format" : "int32",
+            "type" : "integer"
           },
           "typed" : {
             "type" : "boolean"
@@ -1874,6 +1887,23 @@
       "RestoreVersionDTO" : {
         "properties" : {
           "versionId" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "RetainedClause" : {
+        "properties" : {
+          "field" : {
+            "type" : "string"
+          },
+          "predicate" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "value" : {
             "type" : "string"
           }
         },

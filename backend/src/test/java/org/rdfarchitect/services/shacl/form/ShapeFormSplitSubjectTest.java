@@ -85,7 +85,8 @@ class ShapeFormSplitSubjectTest {
     void theShapeIsShownWithEverythingItSaysAcrossItsStatements() {
         var shape = shapeNamed(SPLIT, "http://example.org/shapes#ACLineSegmentShape");
 
-        assertThat(shape.getTargetClass()).isEqualTo("http://iec.ch/TC57/CIM100#ACLineSegment");
+        assertThat(shape.getTargetClasses())
+                .containsExactly("http://iec.ch/TC57/CIM100#ACLineSegment");
         assertThat(shape.getProperties()).hasSize(1);
     }
 
@@ -194,7 +195,8 @@ class ShapeFormSplitSubjectTest {
 
         var after = service.apply(edit(referencing, shape)).getTurtle();
 
-        assertThat(after).contains("sh:property ex:SharedRule");
+        // The spacing is the document's own: the reference is not respelled, only added to.
+        assertThat(after).contains("sh:property    ex:SharedRule");
         assertThat(after).contains("ex:SharedRule");
         assertThat(service.parse(after).getParseError()).isNull();
         assertThat(triples(after)).isEqualTo(triples(referencing) + 1);
@@ -205,7 +207,7 @@ class ShapeFormSplitSubjectTest {
         var shape =
                 NodeShapeModel.builder()
                         .iri("http://example.org/shapes#NewShape")
-                        .targetClass("http://iec.ch/TC57/CIM100#Breaker")
+                        .targetClasses(List.of("http://iec.ch/TC57/CIM100#Breaker"))
                         .properties(List.of())
                         .build();
 

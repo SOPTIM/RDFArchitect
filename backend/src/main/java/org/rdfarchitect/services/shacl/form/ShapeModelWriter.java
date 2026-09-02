@@ -27,151 +27,178 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Writes one shape back as a Turtle statement.
+ * Spells the Turtle a form edit adds to a document.
  *
- * <p>Only the edited shape is written; the rest of the document is left as its author wrote it. The
- * output uses the document's own prefixes so an edited shape reads like its neighbours, and falls
- * back to an absolute IRI rather than adding a prefix the document does not declare.
+ * <p>Only what is genuinely new: a shape the document does not hold yet, a rule just added to one,
+ * or the object of a single clause. Changing something the document already says is {@link
+ * ShapeClauseWriter}'s job and goes through the clause it is written in, so nothing else about the
+ * shape is respelled.
+ *
+ * <p>The output uses the document's own prefixes so added text reads like its neighbours, and falls
+ * back to an absolute IRI rather than binding a prefix the document does not declare.
  */
 final class ShapeModelWriter {
 
-    private static final String INDENT = "    ";
+    static final String INDENT = "    ";
 
     private ShapeModelWriter() {}
 
-    /** The shape as a statement, ending with its {@code .} and no trailing newline. */
+    /** A whole shape as a statement, ending with its {@code .} and no trailing newline. */
     static String write(NodeShapeModel shape, PrefixMapping prefixes) {
         var lines = new ArrayList<String>();
         lines.add(term(shape.getIri(), prefixes));
 
         var clauses = new ArrayList<String>();
         clauses.add("a " + term(Shacl.NS + "NodeShape", prefixes));
-        addIri(clauses, prefixes, Shacl.TARGET_CLASS.getURI(), shape.getTargetClass());
-        addString(clauses, prefixes, ShapeModelReader.NAME.getURI(), shape.getName());
-        addString(clauses, prefixes, ShapeModelReader.DESCRIPTION.getURI(), shape.getDescription());
-        addBoolean(clauses, prefixes, ShapeModelReader.CLOSED.getURI(), shape.getClosed());
-        addList(
+        add(
                 clauses,
-                prefixes,
+                Shacl.TARGET_CLASS.getURI(),
+                terms(shape.getTargetClasses(), prefixes),
+                prefixes);
+        add(clauses, ShapeModelReader.NAME.getURI(), string(shape.getName()), prefixes);
+        add(
+                clauses,
+                ShapeModelReader.DESCRIPTION.getURI(),
+                string(shape.getDescription()),
+                prefixes);
+        add(clauses, ShapeModelReader.CLOSED.getURI(), flag(shape.getClosed()), prefixes);
+        add(
+                clauses,
                 Shacl.IGNORED_PROPERTIES.getURI(),
-                shape.getIgnoredProperties(),
-                true);
-        addIri(clauses, prefixes, ShapeModelReader.SEVERITY.getURI(), shape.getSeverity());
-        addString(clauses, prefixes, ShapeModelReader.MESSAGE.getURI(), shape.getMessage());
-        addBoolean(clauses, prefixes, Shacl.DEACTIVATED.getURI(), shape.getDeactivated());
+                collection(shape.getIgnoredProperties(), true, prefixes),
+                prefixes);
+        add(
+                clauses,
+                ShapeModelReader.SEVERITY.getURI(),
+                iri(shape.getSeverity(), prefixes),
+                prefixes);
+        add(clauses, ShapeModelReader.MESSAGE.getURI(), string(shape.getMessage()), prefixes);
+        add(clauses, Shacl.DEACTIVATED.getURI(), flag(shape.getDeactivated()), prefixes);
 
-        for (String block : propertyBlocks(shape.getProperties(), prefixes)) {
-            clauses.add(block);
+        for (PropertyShapeModel property : rules(shape)) {
+            clauses.add(propertyClause(property, prefixes, INDENT));
         }
 
         for (int i = 0; i < clauses.size(); i++) {
-            var separator = i == clauses.size() - 1 ? " ." : " ;";
-            lines.add(INDENT + clauses.get(i) + separator);
+            lines.add(INDENT + clauses.get(i) + (i == clauses.size() - 1 ? " ." : " ;"));
         }
         return String.join("\n", lines);
     }
 
-    private static List<String> propertyBlocks(
-            List<PropertyShapeModel> properties, PrefixMapping prefixes) {
-        var blocks = new ArrayList<String>();
-        for (PropertyShapeModel property :
-                properties == null ? List.<PropertyShapeModel>of() : properties) {
-            // A property shape written as its own resource stays a reference. Inlining it would
-            // orphan the statement that defines it and duplicate its constraints; the form shows
-            // such a rule but does not offer to change it.
-            if (property.getIri() != null) {
-                blocks.add(
-                        term(Shacl.PROPERTY.getURI(), prefixes)
-                                + " "
-                                + term(property.getIri(), prefixes));
-                continue;
-            }
-            var clauses = new ArrayList<String>();
-            if (Boolean.TRUE.equals(property.getTyped())) {
-                clauses.add("a " + term(Shacl.NS + "PropertyShape", prefixes));
-            }
-            addIri(clauses, prefixes, Shacl.PATH.getURI(), property.getPath());
-            addString(clauses, prefixes, ShapeModelReader.NAME.getURI(), property.getName());
-            addString(
-                    clauses,
-                    prefixes,
-                    ShapeModelReader.DESCRIPTION.getURI(),
-                    property.getDescription());
-            addIri(clauses, prefixes, Shacl.DATATYPE.getURI(), property.getDataType());
-            addIri(clauses, prefixes, Shacl.CLASS.getURI(), property.getClassIri());
-            addIri(clauses, prefixes, Shacl.NODE_KIND.getURI(), property.getNodeKind());
-            addInteger(clauses, prefixes, Shacl.MIN_COUNT.getURI(), property.getMinCount());
-            addInteger(clauses, prefixes, Shacl.MAX_COUNT.getURI(), property.getMaxCount());
-            addList(clauses, prefixes, Shacl.IN.getURI(), property.getAllowedValues(), false);
-            addString(clauses, prefixes, ShapeModelReader.PATTERN.getURI(), property.getPattern());
-            addIri(clauses, prefixes, ShapeModelReader.SEVERITY.getURI(), property.getSeverity());
-            addString(clauses, prefixes, ShapeModelReader.MESSAGE.getURI(), property.getMessage());
-            addInteger(clauses, prefixes, ShapeModelReader.ORDER.getURI(), property.getOrder());
-            addIri(clauses, prefixes, ShapeModelReader.GROUP.getURI(), property.getGroup());
-            addBoolean(clauses, prefixes, Shacl.DEACTIVATED.getURI(), property.getDeactivated());
-            if (clauses.isEmpty()) {
-                continue;
-            }
-            var block = new StringBuilder(term(Shacl.PROPERTY.getURI(), prefixes) + " [\n");
-            for (String clause : clauses) {
-                block.append(INDENT).append(INDENT).append(clause).append(" ;\n");
-            }
-            block.append(INDENT).append("]");
-            blocks.add(block.toString());
+    private static List<PropertyShapeModel> rules(NodeShapeModel shape) {
+        return shape.getProperties() == null ? List.of() : shape.getProperties();
+    }
+
+    /**
+     * One {@code sh:property} clause, for a rule the document does not hold yet.
+     *
+     * <p>{@code indent} is the indentation of the clause itself, so its inner lines are laid out
+     * one step further in and the block sits under the shape the way its neighbours do.
+     *
+     * <p>A rule written as its own resource stays a reference. Inlining it would orphan the
+     * statement that defines it and duplicate its constraints.
+     */
+    static String propertyClause(
+            PropertyShapeModel property, PrefixMapping prefixes, String indent) {
+        var predicate = term(Shacl.PROPERTY.getURI(), prefixes);
+        if (property.getIri() != null) {
+            return predicate + " " + term(property.getIri(), prefixes);
         }
-        return blocks;
+        var clauses = new ArrayList<String>();
+        if (Boolean.TRUE.equals(property.getTyped())) {
+            clauses.add("a " + term(Shacl.NS + "PropertyShape", prefixes));
+        }
+        add(clauses, Shacl.PATH.getURI(), iri(property.getPath(), prefixes), prefixes);
+        add(clauses, ShapeModelReader.NAME.getURI(), string(property.getName()), prefixes);
+        add(
+                clauses,
+                ShapeModelReader.DESCRIPTION.getURI(),
+                string(property.getDescription()),
+                prefixes);
+        add(clauses, Shacl.DATATYPE.getURI(), iri(property.getDataType(), prefixes), prefixes);
+        add(clauses, Shacl.CLASS.getURI(), iri(property.getClassIri(), prefixes), prefixes);
+        add(clauses, Shacl.NODE_KIND.getURI(), iri(property.getNodeKind(), prefixes), prefixes);
+        add(clauses, Shacl.MIN_COUNT.getURI(), number(property.getMinCount()), prefixes);
+        add(clauses, Shacl.MAX_COUNT.getURI(), number(property.getMaxCount()), prefixes);
+        add(
+                clauses,
+                Shacl.IN.getURI(),
+                collection(property.getAllowedValues(), false, prefixes),
+                prefixes);
+        add(clauses, ShapeModelReader.PATTERN.getURI(), string(property.getPattern()), prefixes);
+        add(
+                clauses,
+                ShapeModelReader.SEVERITY.getURI(),
+                iri(property.getSeverity(), prefixes),
+                prefixes);
+        add(clauses, ShapeModelReader.MESSAGE.getURI(), string(property.getMessage()), prefixes);
+        add(clauses, ShapeModelReader.ORDER.getURI(), number(property.getOrder()), prefixes);
+        add(clauses, ShapeModelReader.GROUP.getURI(), iri(property.getGroup(), prefixes), prefixes);
+        add(clauses, Shacl.DEACTIVATED.getURI(), flag(property.getDeactivated()), prefixes);
+
+        var block = new StringBuilder(predicate + " [\n");
+        for (String clause : clauses) {
+            block.append(indent).append(INDENT).append(clause).append(" ;\n");
+        }
+        return block.append(indent).append("]").toString();
+    }
+
+    private static void add(
+            List<String> clauses, String predicate, String object, PrefixMapping prefixes) {
+        if (object != null) {
+            clauses.add(term(predicate, prefixes) + " " + object);
+        }
     }
 
     // -------------------------------------------------------------------------
-    // Clauses
+    // Objects
     // -------------------------------------------------------------------------
 
-    private static void addIri(
-            List<String> clauses, PrefixMapping prefixes, String predicate, String value) {
-        if (value != null && !value.isBlank()) {
-            clauses.add(term(predicate, prefixes) + " " + term(value, prefixes));
-        }
+    /** One term, or {@code null} when the field says nothing. */
+    static String iri(String value, PrefixMapping prefixes) {
+        return value == null || value.isBlank() ? null : term(value, prefixes);
     }
 
-    private static void addString(
-            List<String> clauses, PrefixMapping prefixes, String predicate, String value) {
-        if (value != null && !value.isEmpty()) {
-            clauses.add(term(predicate, prefixes) + " " + quote(value));
+    /** A comma-separated object list, the way SHACL writes several target classes. */
+    static String terms(List<String> values, PrefixMapping prefixes) {
+        if (values == null || values.isEmpty()) {
+            return null;
         }
+        var written = values.stream().filter(value -> value != null && !value.isBlank()).toList();
+        return written.isEmpty()
+                ? null
+                : written.stream()
+                        .map(value -> term(value, prefixes))
+                        .reduce((a, b) -> a + " , " + b)
+                        .orElseThrow();
     }
 
-    private static void addInteger(
-            List<String> clauses, PrefixMapping prefixes, String predicate, Integer value) {
-        if (value != null) {
-            clauses.add(term(predicate, prefixes) + " " + value);
-        }
+    /** A plain string literal, or {@code null} for one nobody wrote. */
+    static String string(String value) {
+        return value == null || value.isEmpty() ? null : quote(value);
     }
 
-    private static void addBoolean(
-            List<String> clauses, PrefixMapping prefixes, String predicate, Boolean value) {
-        if (value != null) {
-            clauses.add(term(predicate, prefixes) + " " + value);
-        }
+    static String number(Integer value) {
+        return value == null ? null : value.toString();
+    }
+
+    static String flag(Boolean value) {
+        return value == null ? null : value.toString();
     }
 
     /**
      * An RDF collection. {@code sh:ignoredProperties} holds IRIs; {@code sh:in} may hold either, so
      * anything that does not look like an absolute IRI is written as a string.
      */
-    private static void addList(
-            List<String> clauses,
-            PrefixMapping prefixes,
-            String predicate,
-            List<String> values,
-            boolean iris) {
+    static String collection(List<String> values, boolean iris, PrefixMapping prefixes) {
         if (values == null || values.isEmpty()) {
-            return;
+            return null;
         }
         var written = new ArrayList<String>();
         for (String value : values) {
             written.add(iris || looksLikeIri(value) ? term(value, prefixes) : quote(value));
         }
-        clauses.add(term(predicate, prefixes) + " ( " + String.join(" ", written) + " )");
+        return "( " + String.join(" ", written) + " )";
     }
 
     private static boolean looksLikeIri(String value) {

@@ -36,7 +36,15 @@ public class NodeShapeModel {
 
     private String iri;
 
-    private String targetClass;
+    /**
+     * The classes the shape applies to, in the order the document writes them.
+     *
+     * <p>A list because SHACL lets a shape target several — {@code sh:targetClass
+     * cim:AsynchronousMachine , cim:SynchronousMachine} is one clause with two classes, and 462
+     * shapes in the official library are written that way. Holding one of them made every one of
+     * those shapes read-only, because writing the shape back would have dropped the others.
+     */
+    private List<String> targetClasses;
 
     private Boolean closed;
 
@@ -55,12 +63,14 @@ public class NodeShapeModel {
     private List<PropertyShapeModel> properties;
 
     /**
-     * Predicates the form does not represent, such as {@code sh:or} or {@code sh:sparql}.
+     * What this shape says that the form shows but never rewrites.
      *
-     * <p>Listed rather than ignored because writing the shape back from the form would drop them. A
-     * shape with any of these is shown read-only, and the Turtle view is where it is edited.
+     * <p>A clause the form has no field for, and a field whose value it could not reproduce, are
+     * both kept exactly as the document wrote them. Listing them is what made shapes editable that
+     * used to be locked over a single clause: the form now says "these two lines stay as they are"
+     * instead of "this shape is Turtle only".
      */
-    private List<String> unsupported;
+    private List<RetainedClause> retained;
 
     /**
      * Whether the form may write this shape back. False when it is not fully represented.
@@ -73,9 +83,9 @@ public class NodeShapeModel {
     /**
      * Why the form will not write this shape back, in words, or {@code null} when it will.
      *
-     * <p>{@link #unsupported} names the predicates, which answers "which part?" but not "why can I
-     * not edit this?" — a shape can be read-only for something no predicate list shows, such as
-     * being a shape SHACL infers rather than one the document types.
+     * <p>{@link #retained} names what the form is keeping as written, which answers "which part?"
+     * but not "why can I not edit this at all?" — after clause-preserving edits a shape is
+     * read-only only for something no clause list shows, such as being written as two statements.
      */
     private String readOnlyReason;
 }

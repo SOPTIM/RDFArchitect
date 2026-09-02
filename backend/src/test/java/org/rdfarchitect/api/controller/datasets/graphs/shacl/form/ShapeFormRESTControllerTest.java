@@ -115,7 +115,7 @@ class ShapeFormRESTControllerTest {
                                         """
                                         {"turtle":"ex:S a sh:NodeShape .",
                                          "shape":{"iri":"http://example.org/S",
-                                                  "targetClass":"http://example.org/C"}}"""))
+                                                  "targetClasses":["http://example.org/C"]}}"""))
                 .andExpect(
                         result ->
                                 assertThat(result.getResponse().getContentAsString())
@@ -124,8 +124,8 @@ class ShapeFormRESTControllerTest {
         var request = ArgumentCaptor.forClass(ShapeEditRequest.class);
         verify(shapeFormUseCase).apply(request.capture());
         assertThat(request.getValue().getTurtle()).isEqualTo("ex:S a sh:NodeShape .");
-        assertThat(request.getValue().getShape().getTargetClass())
-                .isEqualTo("http://example.org/C");
+        assertThat(request.getValue().getShape().getTargetClasses())
+                .containsExactly("http://example.org/C");
     }
 
     @Test

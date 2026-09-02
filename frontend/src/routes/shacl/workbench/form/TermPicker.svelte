@@ -24,7 +24,11 @@
      */
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { resolveTerm, writeTerm } from "$lib/shacl/turtleTerms.js";
+    import {
+        abbreviate,
+        resolveTerm,
+        writeTerm,
+    } from "$lib/shacl/turtleTerms.js";
 
     let {
         label,
@@ -70,18 +74,7 @@
             return "";
         }
         const known = options.find(option => option.iri === value);
-        if (known) {
-            return known.written;
-        }
-        const cut = Math.max(value.lastIndexOf("#"), value.lastIndexOf("/"));
-        return writeTerm(
-            {
-                iri: value,
-                namespace: value.slice(0, cut + 1),
-                localName: value.slice(cut + 1),
-            },
-            prefixes,
-        );
+        return known ? known.written : abbreviate(value, prefixes);
     });
 
     /**

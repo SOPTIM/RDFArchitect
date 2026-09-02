@@ -19,8 +19,10 @@
     /**
      * One rule about one property: which property, how many values, of what kind.
      *
-     * Fields the form does not show — sh:pattern, sh:order, sh:group — are still carried on the
-     * model and written back untouched, so editing here never silently drops part of a shape.
+     * Fields the form does not show — sh:pattern, sh:group — are carried on the model and left
+     * where the document wrote them. A field whose value the form cannot spell again is shown as
+     * that value instead of as an empty box, and one clause it cannot write no longer costs the
+     * rule its other fields.
      */
     import { faTrash } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
@@ -29,8 +31,11 @@
     import NumberInputControl from "$lib/components/NumberInputControl.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
-    import { writeTerm } from "$lib/shacl/turtleTerms.js";
+    import { keptClauses, keptFields } from "$lib/shacl/retained.js";
+    import { abbreviate } from "$lib/shacl/turtleTerms.js";
 
+    import KeptClause from "./KeptClause.svelte";
+    import KeptClauseList from "./KeptClauseList.svelte";
     import TermPicker from "./TermPicker.svelte";
 
     let {
@@ -74,36 +79,34 @@
         "date",
     ].map(name => ({ iri: `${XSD}${name}`, label: name }));
 
+    /** The fields this card puts on screen. Anything else kept as written is listed instead. */
+    const SHOWN = [
+        "path",
+        "minCount",
+        "maxCount",
+        "dataType",
+        "classIri",
+        "nodeKind",
+        "severity",
+        "message",
+        "deactivated",
+    ];
+
     /**
-     * A rule written as its own resource is kept as a reference rather than inlined, so editing it
-     * here would have nowhere to go. It is shown, and changed in the Turtle view.
+     * A rule written as its own resource is shared: changing it here would change every shape that
+     * references it, so it is shown with what it says and edited in the Turtle view for now.
      */
     const referenced = $derived(property.iri != null);
 
     const locked = $derived(readOnly || referenced);
 
+    /** The fields whose value the form shows but will not write. */
+    const kept = $derived(keptFields(property.retained));
+
     const pathLabel = $derived(
         property.path
-            ? writeTerm(
-                  {
-                      iri: property.path,
-                      namespace: property.path.slice(
-                          0,
-                          Math.max(
-                              property.path.lastIndexOf("#"),
-                              property.path.lastIndexOf("/"),
-                          ) + 1,
-                      ),
-                      localName: property.path.slice(
-                          Math.max(
-                              property.path.lastIndexOf("#"),
-                              property.path.lastIndexOf("/"),
-                          ) + 1,
-                      ),
-                  },
-                  prefixes,
-              )
-            : "no property chosen",
+            ? abbreviate(property.path, prefixes)
+            : (kept.get("path")?.[0]?.value ?? "no property chosen"),
     );
 
     /**
@@ -162,96 +165,147 @@
 
     <div class="grid grid-cols-2 gap-3">
         <div class="col-span-2">
-            <TermPicker
-                label="Property"
-                kind="PROPERTY"
-                value={property.path}
-                {terms}
-                {prefixes}
-                preferredDomain={targetClass}
-                disabled={locked}
-                onpick={iri => set("path", iri)}
-            />
+            {#if kept.has("path")}
+                <KeptClause label="Property" clauses={kept.get("path")} />
+            {:else}
+                <TermPicker
+                    label="Property"
+                    kind="PROPERTY"
+                    value={property.path}
+                    {terms}
+                    {prefixes}
+                    preferredDomain={targetClass}
+                    disabled={locked}
+                    onpick={iri => set("path", iri)}
+                />
+            {/if}
         </div>
 
-        <NumberInputControl
-            label="Minimum values"
-            value={property.minCount}
-            readonly={locked}
-            callOnInput={raw => set("minCount", numberOf(raw), { soon: true })}
-            callOnChange={raw => set("minCount", numberOf(raw))}
-        />
-        <NumberInputControl
-            label="Maximum values"
-            value={property.maxCount}
-            readonly={locked}
-            callOnInput={raw => set("maxCount", numberOf(raw), { soon: true })}
-            callOnChange={raw => set("maxCount", numberOf(raw))}
-        />
+        {#if kept.has("minCount")}
+            <KeptClause label="Minimum values" clauses={kept.get("minCount")} />
+        {:else}
+            <NumberInputControl
+                label="Minimum values"
+                value={property.minCount}
+                readonly={locked}
+                callOnInput={raw =>
+                    set("minCount", numberOf(raw), { soon: true })}
+                callOnChange={raw => set("minCount", numberOf(raw))}
+            />
+        {/if}
+        {#if kept.has("maxCount")}
+            <KeptClause label="Maximum values" clauses={kept.get("maxCount")} />
+        {:else}
+            <NumberInputControl
+                label="Maximum values"
+                value={property.maxCount}
+                readonly={locked}
+                callOnInput={raw =>
+                    set("maxCount", numberOf(raw), { soon: true })}
+                callOnChange={raw => set("maxCount", numberOf(raw))}
+            />
+        {/if}
 
-        <div>
-            <span class="text-default-text text-sm">Value type</span>
-            <SelectEditControl
-                value={property.dataType}
-                options={[{ iri: null, label: "any" }, ...DATATYPES]}
-                getOptionValue={option => option.iri}
-                getOptionLabel={option => option.label}
-                disabled={locked}
-                onchange={value => set("dataType", value)}
-            />
-        </div>
-        <div>
-            <TermPicker
-                label="Value class"
-                kind="CLASS"
-                value={property.classIri}
-                {terms}
-                {prefixes}
-                disabled={locked}
-                onpick={iri => set("classIri", iri)}
-            />
-        </div>
+        {#if kept.has("dataType")}
+            <KeptClause label="Value type" clauses={kept.get("dataType")} />
+        {:else}
+            <div>
+                <span class="text-default-text text-sm">Value type</span>
+                <SelectEditControl
+                    value={property.dataType}
+                    options={[{ iri: null, label: "any" }, ...DATATYPES]}
+                    getOptionValue={option => option.iri}
+                    getOptionLabel={option => option.label}
+                    disabled={locked}
+                    onchange={value => set("dataType", value)}
+                />
+            </div>
+        {/if}
+        {#if kept.has("classIri")}
+            <KeptClause label="Value class" clauses={kept.get("classIri")} />
+        {:else}
+            <div>
+                <TermPicker
+                    label="Value class"
+                    kind="CLASS"
+                    value={property.classIri}
+                    {terms}
+                    {prefixes}
+                    disabled={locked}
+                    onpick={iri => set("classIri", iri)}
+                />
+            </div>
+        {/if}
 
-        <div>
-            <span class="text-default-text text-sm">Value form</span>
-            <SelectEditControl
-                value={property.nodeKind}
-                options={NODE_KINDS}
-                getOptionValue={option => option.value}
-                getOptionLabel={option => option.label}
-                disabled={locked}
-                onchange={value => set("nodeKind", value)}
-            />
-        </div>
-        <div>
-            <span class="text-default-text text-sm">Severity</span>
-            <SelectEditControl
-                value={property.severity}
-                options={SEVERITIES}
-                getOptionValue={option => option.value}
-                getOptionLabel={option => option.label}
-                disabled={locked}
-                onchange={value => set("severity", value)}
-            />
+        {#if kept.has("nodeKind")}
+            <KeptClause label="Value form" clauses={kept.get("nodeKind")} />
+        {:else}
+            <div>
+                <span class="text-default-text text-sm">Value form</span>
+                <SelectEditControl
+                    value={property.nodeKind}
+                    options={NODE_KINDS}
+                    getOptionValue={option => option.value}
+                    getOptionLabel={option => option.label}
+                    disabled={locked}
+                    onchange={value => set("nodeKind", value)}
+                />
+            </div>
+        {/if}
+        {#if kept.has("severity")}
+            <KeptClause label="Severity" clauses={kept.get("severity")} />
+        {:else}
+            <div>
+                <span class="text-default-text text-sm">Severity</span>
+                <SelectEditControl
+                    value={property.severity}
+                    options={SEVERITIES}
+                    getOptionValue={option => option.value}
+                    getOptionLabel={option => option.label}
+                    disabled={locked}
+                    onchange={value => set("severity", value)}
+                />
+            </div>
+        {/if}
+
+        <div class="col-span-2">
+            {#if kept.has("message")}
+                <KeptClause
+                    label="Message shown when the rule is broken"
+                    clauses={kept.get("message")}
+                />
+            {:else}
+                <TextEditControl
+                    label="Message shown when the rule is broken"
+                    value={property.message ?? ""}
+                    readonly={locked}
+                    callOnInput={text => set("message", text, { soon: true })}
+                    callOnChange={text => set("message", text)}
+                />
+            {/if}
         </div>
 
         <div class="col-span-2">
-            <TextEditControl
-                label="Message shown when the rule is broken"
-                value={property.message ?? ""}
-                readonly={locked}
-                callOnInput={text => set("message", text, { soon: true })}
-                callOnChange={text => set("message", text)}
-            />
+            {#if kept.has("deactivated")}
+                <KeptClause
+                    label="Switched off"
+                    clauses={kept.get("deactivated")}
+                />
+            {:else}
+                <CheckBoxEditControl
+                    label="Switched off"
+                    value={property.deactivated === true}
+                    readonly={locked}
+                    callOnInputTrue={() => set("deactivated", true)}
+                    callOnInputFalse={() => set("deactivated", null)}
+                />
+            {/if}
         </div>
 
         <div class="col-span-2">
-            <CheckBoxEditControl
-                label="Switched off"
-                value={property.deactivated === true}
-                readonly={locked}
-                callOnInputTrue={() => set("deactivated", true)}
-                callOnInputFalse={() => set("deactivated", null)}
+            <KeptClauseList
+                clauses={keptClauses(property.retained, SHOWN)}
+                {prefixes}
             />
         </div>
     </div>

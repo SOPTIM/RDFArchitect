@@ -192,6 +192,53 @@ describe("the message on a rule", () => {
     });
 });
 
+describe("a field the form keeps as the document wrote it", () => {
+    const ORDER = "http://www.w3.org/ns/shacl#order";
+    const MIN_INCLUSIVE = "http://www.w3.org/ns/shacl#minInclusive";
+
+    test("the count is shown as written instead of as an empty box", () => {
+        // sh:minCount "1"^^xsd:int is not something the writer can spell again, so the form shows
+        // the value and does not offer the control. An empty number field here would read as "no
+        // lower bound stated" — a lie about a bound the document states.
+        const { view } = card({
+            minCount: null,
+            retained: [
+                {
+                    predicate: "http://www.w3.org/ns/shacl#minCount",
+                    value: '"1"^^xsd:int',
+                    field: "minCount",
+                    reason: "The form cannot write this value back unchanged.",
+                },
+            ],
+        });
+
+        expect(view.textContent).toContain('"1"^^xsd:int');
+        expect(view.querySelectorAll("input[type=number]")).toHaveLength(1);
+    });
+
+    test("two values for a one-value field are both shown, and neither is offered", () => {
+        const { view } = card({
+            retained: [
+                { predicate: ORDER, value: "1", field: "order" },
+                { predicate: ORDER, value: "2", field: "order" },
+            ],
+        });
+
+        // sh:order has no control of its own, so the pair only has to reach the card at all.
+        expect(view.textContent).toContain("sh:order 1");
+        expect(view.textContent).toContain("sh:order 2");
+    });
+
+    test("a clause with no field at all is listed under the rule", () => {
+        const { view } = card({
+            retained: [{ predicate: MIN_INCLUSIVE, value: "0", field: null }],
+        });
+
+        expect(view.textContent).toContain("Kept as written");
+        expect(view.textContent).toContain("sh:minInclusive 0");
+    });
+});
+
 describe("picking a term", () => {
     function picker(props = {}) {
         const onpick = vi.fn();

@@ -17,10 +17,11 @@
 
 <script>
     /**
-     * One shape: the class it applies to, and the rules written under it.
+     * One shape: the classes it applies to, and the rules written under it.
      *
-     * A shape the form cannot fully represent is shown read-only rather than hidden. Offering to
-     * edit it would mean writing it back without the part the form does not model.
+     * Anything the shape says that the form cannot write is shown rather than hidden, and does not
+     * stop the rest of the shape from being edited: an edit changes the clause it was made on and
+     * leaves the others as their author wrote them.
      */
 
     import {
@@ -33,8 +34,11 @@
     import { Fa } from "svelte-fa";
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import { writeTerm } from "$lib/shacl/turtleTerms.js";
+    import { keptClauses, keptFields } from "$lib/shacl/retained.js";
+    import { abbreviate } from "$lib/shacl/turtleTerms.js";
 
+    import KeptClause from "./KeptClause.svelte";
+    import KeptClauseList from "./KeptClauseList.svelte";
     import PropertyShapeCard from "./PropertyShapeCard.svelte";
     import TermPicker from "./TermPicker.svelte";
 
@@ -50,6 +54,9 @@
         onedit = () => {},
         onremove = () => {},
     } = $props();
+
+    /** The fields this card puts on screen. Anything else kept as written is listed instead. */
+    const SHOWN = ["targetClasses"];
 
     /**
      * Rules added here but not yet written to the document, because they name no property.
@@ -67,6 +74,9 @@
      */
     let drafts = $state.raw([]);
 
+    /** Whether a picker for one more target class is on screen. */
+    let addingClass = $state(false);
+
     /** Either the workspace forbids changes, or the shape is not one the form can write back. */
     const locked = $derived(readOnly || shape.editable === false);
 
@@ -76,34 +86,46 @@
     /**
      * Why the form will not write this shape.
      *
-     * The server says it, because it is the side that knows: a shape can be read-only for
-     * something no predicate list shows, such as a second `sh:targetClass` or a message with a
-     * language tag. The predicate list stays as the detail underneath.
+     * The server says it, because it is the side that knows: after clause-preserving edits the
+     * remaining reasons are all about the text — a subject written as two statements, or two rules
+     * so alike that an edit cannot be placed.
      */
     const readOnlyTitle = $derived(
         shape.readOnlyReason ??
-            "This shape uses something the form does not write back. Edit it in the Turtle view.",
+            "This shape is written in a way the form cannot edit. Edit it in the Turtle view.",
     );
 
-    const title = $derived(shortForm(shape.iri));
+    const kept = $derived(keptFields(shape.retained));
+
+    const classes = $derived(shape.targetClasses ?? []);
+
+    const title = $derived(abbreviate(shape.iri, prefixes));
 
     const target = $derived(
-        shape.targetClass ? shortForm(shape.targetClass) : "no class chosen",
+        classes.length
+            ? classes.map(iri => abbreviate(iri, prefixes)).join(", ")
+            : "no class chosen",
     );
 
-    function shortForm(iri) {
-        if (!iri) {
-            return "";
+    /** Replaces one target class, or drops it when the picker was cleared. */
+    function setClass(index, iri) {
+        const next = [...classes];
+        if (iri) {
+            next[index] = iri;
+        } else {
+            next.splice(index, 1);
         }
-        const cut = Math.max(iri.lastIndexOf("#"), iri.lastIndexOf("/"));
-        return writeTerm(
-            {
-                iri,
-                namespace: iri.slice(0, cut + 1),
-                localName: iri.slice(cut + 1),
-            },
-            prefixes,
-        );
+        shape.targetClasses = next;
+        onchange();
+    }
+
+    function addClass(iri) {
+        addingClass = false;
+        if (!iri) {
+            return;
+        }
+        shape.targetClasses = [...classes, iri];
+        onchange();
     }
 
     function addRule() {
@@ -179,34 +201,51 @@
                     class="text-text-subtle bg-background-subtle rounded p-2 text-sm"
                 >
                     {readOnlyTitle}
-                    {#if shape.unsupported?.length}
-                        <br />
-                        <span class="font-mono text-xs">
-                            {shape.unsupported.join(", ")}
-                        </span>
-                    {/if}
                 </p>
             {/if}
 
-            <TermPicker
-                label="Applies to class"
-                kind="CLASS"
-                value={shape.targetClass}
-                {terms}
-                {prefixes}
-                disabled={locked}
-                onpick={iri => {
-                    shape.targetClass = iri;
-                    onchange();
-                }}
-            />
+            {#if kept.has("targetClasses")}
+                <KeptClause
+                    label="Applies to class"
+                    clauses={kept.get("targetClasses")}
+                />
+            {:else}
+                {#each classes.length ? classes : [null] as iri, index (index)}
+                    <TermPicker
+                        label={index === 0 ? "Applies to class" : "and also to"}
+                        kind="CLASS"
+                        value={iri}
+                        {terms}
+                        {prefixes}
+                        disabled={locked}
+                        onpick={picked => setClass(index, picked)}
+                    />
+                {/each}
+                {#if addingClass}
+                    <TermPicker
+                        label="and also to"
+                        kind="CLASS"
+                        value={null}
+                        {terms}
+                        {prefixes}
+                        onpick={addClass}
+                    />
+                {:else if !locked && classes.length > 0}
+                    <button
+                        class="text-text-subtle hover:text-default-text cursor-pointer text-xs"
+                        onclick={() => (addingClass = true)}
+                    >
+                        + another class
+                    </button>
+                {/if}
+            {/if}
 
             {#each shape.properties ?? [] as property, index (index)}
                 <PropertyShapeCard
                     {property}
                     {terms}
                     {prefixes}
-                    targetClass={shape.targetClass}
+                    targetClass={classes[0] ?? null}
                     readOnly={locked}
                     {onchange}
                     {onedit}
@@ -219,13 +258,18 @@
                     property={draft}
                     {terms}
                     {prefixes}
-                    targetClass={shape.targetClass}
+                    targetClass={classes[0] ?? null}
                     readOnly={locked}
                     onchange={() => promoteDraft(index)}
                     onedit={() => promoteDraft(index)}
                     onremove={() => removeDraft(index)}
                 />
             {/each}
+
+            <KeptClauseList
+                clauses={keptClauses(shape.retained, SHOWN)}
+                {prefixes}
+            />
 
             {#if !locked}
                 <div class="h-8 w-40">

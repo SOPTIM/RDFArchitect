@@ -27,10 +27,11 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
 import org.rdfarchitect.shacl.dto.NodeShapeModel;
 import org.rdfarchitect.shacl.dto.PropertyShapeModel;
+import org.rdfarchitect.shacl.dto.RetainedClause;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -39,18 +40,19 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Reads a shapes graph into the structured model the form edits.
+ * Reads a shapes document into the structured model the form edits.
  *
- * <p>Only what the form can show is read, and anything else a shape says is reported rather than
- * dropped: a shape carrying {@code sh:or} or an embedded query is handed back marked un-editable,
- * so the form can show it without ever offering to write it back and lose it.
+ * <p>Two sources, deliberately: the graph says what a shape means, and {@link ShapeSource} says how
+ * the document writes it. The form needs both, because an edit has to land in the right clause and
+ * leave the rest of the text alone.
  *
- * <p>Naming a predicate is not enough to make it safe. The form holds one value per predicate and
- * {@link ShapeModelWriter} writes plain literals, so a shape stating {@code sh:targetClass} twice,
- * or {@code sh:message "…"@en, "…"@de}, would come back with all but one value gone and the
- * language tag stripped — silently, on a shape the form had called editable. Every modelled
- * predicate therefore declares the shape of value the writer can reproduce ({@link ValueKind}), and
- * one it cannot reproduce makes the shape read-only exactly as an unknown predicate does.
+ * <p>Naming a predicate is not enough to make it editable. The form holds one value per predicate
+ * and the writer spells plain literals, so a shape stating {@code sh:message "…"@en, "…"@de} has
+ * nowhere to put the second value and no way to write the language tag. What used to happen then
+ * was that the whole shape went read-only. Now the *clause* is kept exactly as written and reported
+ * as a {@link RetainedClause}, and everything else about the shape stays editable. Only two things
+ * still lock a shape outright: the document not writing it as one statement of its own, and a rule
+ * whose path is an expression rather than a property, which the form has no way to show.
  *
  * <p>The SHACL predicates come from CIMVocabCheck's {@code Shacl} rather than being redeclared,
  * except for the handful that class has no constant for.
@@ -67,69 +69,71 @@ final class ShapeModelReader {
     static final Node CLOSED = NodeFactory.createURI(Shacl.NS + "closed");
     static final Node PATTERN = NodeFactory.createURI(Shacl.NS + "pattern");
 
+    /** The one {@code rdf:type} the writer states on a rule it adds. */
+    static final Node PROPERTY_SHAPE = NodeFactory.createURI(Shacl.NS + "PropertyShape");
+
     /**
-     * The shape of value {@link ShapeModelWriter} can write back for a predicate.
+     * The shape of value the writer can spell for a predicate.
      *
      * <p>Each case names what the writer emits, which is what decides whether reading a value and
      * writing it again returns the same triple.
      */
-    private enum ValueKind {
+    enum ValueKind {
         /** Written as a term: only a URI survives. */
         IRI,
+        /** Written as a comma-separated list of terms, so any number of URIs survives. */
+        IRIS,
         /** Written as a plain string literal: a language tag or a datatype would be dropped. */
         STRING,
         /** Written as a bare integer. */
         INTEGER,
         /** Written as a bare {@code true} or {@code false}. */
         BOOLEAN,
-        /** Written as an RDF collection of terms and plain strings. */
+        /** Written as an RDF collection of terms. */
         IRI_LIST,
         /** Written as an RDF collection whose members may be terms or plain strings. */
-        MIXED_LIST,
-        /** {@code rdf:type} on a node shape, which the writer re-states as {@code sh:NodeShape}. */
-        TYPE_NODE_SHAPE,
-        /** {@code rdf:type} on a property shape, which the writer re-states if it was there. */
-        TYPE_PROPERTY_SHAPE,
-        /** {@code sh:property}, repeatable and read as its own shape rather than as a value. */
-        SHAPES
+        MIXED_LIST
     }
 
-    /** Everything the form models on a node shape. Anything else makes the shape read-only. */
-    private static final Map<Node, ValueKind> KNOWN_NODE_PREDICATES =
+    /** One predicate the form owns: how the writer spells it, and the field it fills. */
+    record Field(ValueKind kind, String name) {}
+
+    /** Everything the form models on a node shape. */
+    static final Map<Node, Field> NODE_FIELDS =
             Map.ofEntries(
-                    Map.entry(RDF.type.asNode(), ValueKind.TYPE_NODE_SHAPE),
-                    Map.entry(Shacl.TARGET_CLASS, ValueKind.IRI),
-                    Map.entry(Shacl.PROPERTY, ValueKind.SHAPES),
-                    Map.entry(Shacl.IGNORED_PROPERTIES, ValueKind.IRI_LIST),
-                    Map.entry(Shacl.DEACTIVATED, ValueKind.BOOLEAN),
-                    Map.entry(CLOSED, ValueKind.BOOLEAN),
-                    Map.entry(NAME, ValueKind.STRING),
-                    Map.entry(DESCRIPTION, ValueKind.STRING),
-                    Map.entry(MESSAGE, ValueKind.STRING),
-                    Map.entry(SEVERITY, ValueKind.IRI));
+                    Map.entry(Shacl.TARGET_CLASS, new Field(ValueKind.IRIS, "targetClasses")),
+                    Map.entry(
+                            Shacl.IGNORED_PROPERTIES,
+                            new Field(ValueKind.IRI_LIST, "ignoredProperties")),
+                    Map.entry(Shacl.DEACTIVATED, new Field(ValueKind.BOOLEAN, "deactivated")),
+                    Map.entry(CLOSED, new Field(ValueKind.BOOLEAN, "closed")),
+                    Map.entry(NAME, new Field(ValueKind.STRING, "name")),
+                    Map.entry(DESCRIPTION, new Field(ValueKind.STRING, "description")),
+                    Map.entry(MESSAGE, new Field(ValueKind.STRING, "message")),
+                    Map.entry(SEVERITY, new Field(ValueKind.IRI, "severity")));
 
     /** Everything the form models on a property shape. */
-    private static final Map<Node, ValueKind> KNOWN_PROPERTY_PREDICATES =
+    static final Map<Node, Field> PROPERTY_FIELDS =
             Map.ofEntries(
-                    Map.entry(RDF.type.asNode(), ValueKind.TYPE_PROPERTY_SHAPE),
-                    Map.entry(Shacl.PATH, ValueKind.IRI),
-                    Map.entry(Shacl.DATATYPE, ValueKind.IRI),
-                    Map.entry(Shacl.CLASS, ValueKind.IRI),
-                    Map.entry(Shacl.NODE_KIND, ValueKind.IRI),
-                    Map.entry(Shacl.MIN_COUNT, ValueKind.INTEGER),
-                    Map.entry(Shacl.MAX_COUNT, ValueKind.INTEGER),
-                    Map.entry(Shacl.IN, ValueKind.MIXED_LIST),
-                    Map.entry(Shacl.DEACTIVATED, ValueKind.BOOLEAN),
-                    Map.entry(PATTERN, ValueKind.STRING),
-                    Map.entry(NAME, ValueKind.STRING),
-                    Map.entry(DESCRIPTION, ValueKind.STRING),
-                    Map.entry(MESSAGE, ValueKind.STRING),
-                    Map.entry(SEVERITY, ValueKind.IRI),
-                    Map.entry(ORDER, ValueKind.INTEGER),
-                    Map.entry(GROUP, ValueKind.IRI));
+                    Map.entry(Shacl.PATH, new Field(ValueKind.IRI, "path")),
+                    Map.entry(Shacl.DATATYPE, new Field(ValueKind.IRI, "dataType")),
+                    Map.entry(Shacl.CLASS, new Field(ValueKind.IRI, "classIri")),
+                    Map.entry(Shacl.NODE_KIND, new Field(ValueKind.IRI, "nodeKind")),
+                    Map.entry(Shacl.MIN_COUNT, new Field(ValueKind.INTEGER, "minCount")),
+                    Map.entry(Shacl.MAX_COUNT, new Field(ValueKind.INTEGER, "maxCount")),
+                    Map.entry(Shacl.IN, new Field(ValueKind.MIXED_LIST, "allowedValues")),
+                    Map.entry(Shacl.DEACTIVATED, new Field(ValueKind.BOOLEAN, "deactivated")),
+                    Map.entry(PATTERN, new Field(ValueKind.STRING, "pattern")),
+                    Map.entry(NAME, new Field(ValueKind.STRING, "name")),
+                    Map.entry(DESCRIPTION, new Field(ValueKind.STRING, "description")),
+                    Map.entry(MESSAGE, new Field(ValueKind.STRING, "message")),
+                    Map.entry(SEVERITY, new Field(ValueKind.IRI, "severity")),
+                    Map.entry(ORDER, new Field(ValueKind.INTEGER, "order")),
+                    Map.entry(GROUP, new Field(ValueKind.IRI, "group")));
 
-    /** The one {@code rdf:type} the writer re-states on an inlined property shape. */
-    private static final Node PROPERTY_SHAPE = NodeFactory.createURI(Shacl.NS + "PropertyShape");
+    /** Predicates that carry structure rather than a field, and are never rewritten as one. */
+    private static final List<String> STRUCTURAL =
+            List.of(RDF.type.getURI(), Shacl.PROPERTY.getURI());
 
     private ShapeModelReader() {}
 
@@ -137,12 +141,11 @@ final class ShapeModelReader {
      * Every node shape the document declares under its own IRI, in IRI order.
      *
      * <p>A shape SHACL infers rather than types — one carrying {@code sh:targetClass} or {@code
-     * sh:property} but no {@code a sh:NodeShape} — is read too, and shown read-only. Leaving such a
-     * shape out made it invisible in the form for no reason the user could see; writing one back
-     * would add the {@code rdf:type} its author chose to leave implicit, which is the form
-     * reformatting a document it promised not to touch.
+     * sh:property} but no {@code a sh:NodeShape} — is read too, and is editable like any other: a
+     * clause-level edit changes the clause it was made on and adds no {@code rdf:type} its author
+     * chose to leave out.
      */
-    static List<NodeShapeModel> read(Graph graph) {
+    static List<NodeShapeModel> read(Graph graph, ShapeSource source) {
         var declared =
                 graph.stream(Node.ANY, RDF.type.asNode(), NODE_SHAPE)
                         .map(Triple::getSubject)
@@ -156,34 +159,25 @@ final class ShapeModelReader {
                         .filter(subject -> !declared.contains(subject))
                         .collect(Collectors.toCollection(LinkedHashSet::new));
 
-        return Stream.concat(
-                        declared.stream().map(shape -> readShape(graph, shape, false)),
-                        implied.stream().map(shape -> readShape(graph, shape, true)))
+        return Stream.concat(declared.stream(), implied.stream())
+                .map(shape -> readShape(graph, shape, source))
                 .sorted(Comparator.comparing(NodeShapeModel::getIri))
                 .toList();
     }
 
-    private static NodeShapeModel readShape(Graph graph, Node shape, boolean implicit) {
-        var unsupported = unsupportedPredicates(graph, shape, KNOWN_NODE_PREDICATES);
-        var properties = new ArrayList<PropertyShapeModel>();
-        graph.stream(shape, Shacl.PROPERTY, Node.ANY)
-                .map(triple -> triple.getObject())
-                .forEach(
-                        property -> {
-                            unsupported.addAll(
-                                    unsupportedPredicates(
-                                            graph, property, KNOWN_PROPERTY_PREDICATES));
-                            properties.add(readProperty(graph, property));
-                        });
-        // A path that is not a plain IRI is a path expression, which the form cannot show.
-        properties.stream()
-                .filter(property -> property.getPath() == null)
-                .findAny()
-                .ifPresent(property -> unsupported.add(Shacl.PATH.getURI()));
+    private static NodeShapeModel readShape(Graph graph, Node shape, ShapeSource source) {
+        var written = source.forSubject(shape.getURI());
+        var clauses = written == null ? List.<ClauseLocator.Clause>of() : written.clauses();
+        var byPredicate = source.byPredicate(clauses);
+        var rules = readRules(graph, shape, clauses, source);
 
         return NodeShapeModel.builder()
                 .iri(shape.getURI())
-                .targetClass(uri(graph, shape, Shacl.TARGET_CLASS))
+                .targetClasses(
+                        asWritten(
+                                byPredicate.get(Shacl.TARGET_CLASS.getURI()),
+                                source,
+                                () -> uris(graph, shape, Shacl.TARGET_CLASS)))
                 .closed(bool(graph, shape, CLOSED))
                 .ignoredProperties(
                         RdfLists.uris(graph, object(graph, shape, Shacl.IGNORED_PROPERTIES)))
@@ -192,29 +186,158 @@ final class ShapeModelReader {
                 .severity(uri(graph, shape, SEVERITY))
                 .message(string(graph, shape, MESSAGE))
                 .deactivated(bool(graph, shape, Shacl.DEACTIVATED))
-                .properties(properties.stream().sorted(byOrderThenPath()).toList())
-                .unsupported(unsupported.stream().distinct().sorted().toList())
-                .editable(unsupported.isEmpty() && !implicit)
-                .readOnlyReason(readOnlyReason(unsupported, implicit))
+                .properties(rules.properties())
+                .retained(retainedOf(graph, shape, byPredicate, NODE_FIELDS, source))
+                .editable(rules.problem() == null && locatable(written) == null)
+                .readOnlyReason(locatable(written) != null ? locatable(written) : rules.problem())
                 .build();
     }
 
-    /** Why the form will not write this shape back, or {@code null} when it will. */
-    private static String readOnlyReason(List<String> unsupported, boolean implicit) {
-        if (implicit) {
-            return "This shape is not declared as a sh:NodeShape, so writing it back from the form"
-                    + " would add an rdf:type its author left out. Edit it in the Turtle view.";
+    /**
+     * Why the form cannot write this subject back at all, or {@code null} when it can.
+     *
+     * <p>The one judgement only the text can make, and both cases used to be found out the hard
+     * way. A subject written as several statements would have been rewritten into one of them and
+     * the others left standing, repeating everything they said. A subject the scanner cannot find —
+     * written against a {@code @base}, or nested inside another shape — would have been appended,
+     * defining the shape a second time.
+     */
+    private static String locatable(ShapeSource.SubjectSource written) {
+        if (written == null) {
+            return "This shape is not written as a statement of its own in the document, so the"
+                    + " form cannot write it back without defining it a second time. Edit it in"
+                    + " the Turtle view.";
         }
-        if (unsupported.isEmpty()) {
-            return null;
+        if (written.statements().size() > 1) {
+            return "This shape is written as "
+                    + written.statements().size()
+                    + " separate statements. The form would not know which of them an edit"
+                    + " belongs in. Edit it in the Turtle view, or write the shape as one"
+                    + " statement.";
         }
-        return "This shape uses something the form does not write back. Edit it in the Turtle"
-                + " view.";
+        return null;
     }
 
-    private static PropertyShapeModel readProperty(Graph graph, Node property) {
+    // -------------------------------------------------------------------------
+    // Rules
+    // -------------------------------------------------------------------------
+
+    /**
+     * The shape's rules, and why they cannot be edited when they cannot.
+     *
+     * @param properties the rules, for showing, whether or not they can be written
+     * @param problem why the shape is read-only, or {@code null}
+     */
+    private record Rules(List<PropertyShapeModel> properties, String problem) {}
+
+    /**
+     * How a rule is picked out of the document's text.
+     *
+     * <p>A rule usually has no name — {@code sh:property [ … ]} is a blank node — so the graph's
+     * view of it and the text's view of it have to be matched up some other way, and its path is
+     * the only thing both sides can see. Matching once, here, is what lets the writer address a
+     * rule by position afterwards, so that editing the path itself does not move the rule out from
+     * under the edit.
+     *
+     * @param named whether the document writes the rule as its own resource
+     * @param iri that resource's IRI, or the path of an inline rule
+     */
+    private record RuleKey(boolean named, String iri) {}
+
+    private static Rules readRules(
+            Graph graph, Node shape, List<ClauseLocator.Clause> clauses, ShapeSource source) {
+        var slots = new ArrayList<ClauseLocator.ObjectSpan>();
+        var ordinals = new HashMap<RuleKey, Integer>();
+        var ambiguous = false;
+        for (ClauseLocator.Clause clause : clauses) {
+            if (!Shacl.PROPERTY.getURI().equals(source.predicateIri(clause))) {
+                continue;
+            }
+            for (ClauseLocator.ObjectSpan object : clause.objects()) {
+                var key = keyFromText(object, source);
+                if (key != null && ordinals.put(key, slots.size()) != null) {
+                    // The same rule written twice under one shape. The graph holds it once, so
+                    // there is no telling which of the two an edit belongs in.
+                    ambiguous = true;
+                }
+                slots.add(object);
+            }
+        }
+
+        var properties = new ArrayList<PropertyShapeModel>();
+        var unmatched = false;
+        var pathExpression = false;
+        var objects = graph.stream(shape, Shacl.PROPERTY, Node.ANY).map(Triple::getObject).toList();
+        for (Node rule : objects) {
+            var key = keyOf(graph, rule);
+            var ordinal = key == null ? null : ordinals.get(key);
+            if (key == null) {
+                pathExpression = true;
+            } else if (ordinal == null) {
+                unmatched = true;
+            }
+            properties.add(
+                    readProperty(
+                            graph,
+                            rule,
+                            ordinal,
+                            ordinal == null ? null : slots.get(ordinal),
+                            source));
+        }
+
+        var problem =
+                rulesProblem(ambiguous, unmatched, pathExpression, objects.size() != slots.size());
+        return new Rules(properties.stream().sorted(byOrderThenPath()).toList(), problem);
+    }
+
+    private static String rulesProblem(
+            boolean ambiguous, boolean unmatched, boolean pathExpression, boolean countMismatch) {
+        if (pathExpression) {
+            return "One of this shape's rules is about a path expression rather than a single"
+                    + " property, which the form cannot show. Edit the shape in the Turtle view.";
+        }
+        if (ambiguous || unmatched || countMismatch) {
+            return "The form cannot tell which part of the document each of this shape's rules is"
+                    + " written in, so it will not edit them. Edit the shape in the Turtle view.";
+        }
+        return null;
+    }
+
+    /** The rule a {@code sh:property} object names, as the text writes it. */
+    private static RuleKey keyFromText(ClauseLocator.ObjectSpan object, ShapeSource source) {
+        if (object.nested().isEmpty()) {
+            var iri = source.objectIri(object);
+            return iri == null ? null : new RuleKey(true, iri);
+        }
+        return object.nested().stream()
+                .filter(clause -> Shacl.PATH.getURI().equals(source.predicateIri(clause)))
+                .filter(clause -> clause.objects().size() == 1)
+                .map(clause -> source.objectIri(clause.objects().get(0)))
+                .filter(iri -> iri != null)
+                .findFirst()
+                .map(iri -> new RuleKey(false, iri))
+                .orElse(null);
+    }
+
+    /** The same rule as the graph sees it. */
+    private static RuleKey keyOf(Graph graph, Node rule) {
+        if (rule.isURI()) {
+            return new RuleKey(true, rule.getURI());
+        }
+        var path = uri(graph, rule, Shacl.PATH);
+        return path == null ? null : new RuleKey(false, path);
+    }
+
+    private static PropertyShapeModel readProperty(
+            Graph graph,
+            Node property,
+            Integer ordinal,
+            ClauseLocator.ObjectSpan written,
+            ShapeSource source) {
+        var clauses = clausesOf(property, written, source);
         return PropertyShapeModel.builder()
                 .iri(property.isURI() ? property.getURI() : null)
+                .sourceIndex(ordinal)
                 .path(uri(graph, property, Shacl.PATH))
                 .name(string(graph, property, NAME))
                 .description(string(graph, property, DESCRIPTION))
@@ -230,10 +353,33 @@ final class ShapeModelReader {
                 .order(integer(graph, property, ORDER))
                 .group(uri(graph, property, GROUP))
                 .deactivated(bool(graph, property, Shacl.DEACTIVATED))
-                // Recorded so the writer can put it back. Restating it unconditionally would add a
+                // Recorded so a rewrite puts it back. Restating it unconditionally would add a
                 // type to the shapes that leave it implicit, which is most of them.
                 .typed(graph.contains(property, RDF.type.asNode(), PROPERTY_SHAPE))
+                .retained(
+                        retainedOf(
+                                graph,
+                                property,
+                                source.byPredicate(clauses),
+                                PROPERTY_FIELDS,
+                                source))
                 .build();
+    }
+
+    /**
+     * Where the document writes this rule's own clauses.
+     *
+     * <p>Inline for {@code sh:property [ … ]}, and for a rule written as its own resource, the
+     * clauses of that resource's statement — which is how the {@code -Con-Simple-} profiles are
+     * composed, and why a shared rule can be shown with the values it actually holds.
+     */
+    private static List<ClauseLocator.Clause> clausesOf(
+            Node property, ClauseLocator.ObjectSpan written, ShapeSource source) {
+        if (property.isURI()) {
+            var subject = source.forSubject(property.getURI());
+            return subject == null ? List.of() : subject.clauses();
+        }
+        return written == null ? List.of() : written.nested();
     }
 
     /** Reading order in the form: whatever sh:order says, then by path so it is stable. */
@@ -246,48 +392,82 @@ final class ShapeModelReader {
                         Comparator.nullsLast(Comparator.naturalOrder()));
     }
 
-    /**
-     * The predicates of {@code subject} the form cannot write back unchanged.
-     *
-     * <p>Two ways that happens, and both have to be caught here or the shape is offered as editable
-     * and quietly loses something on the next save: the predicate is one the form does not model at
-     * all, or it is modelled but carries a value the form cannot hold — a second value where the
-     * form has one field, or a literal whose language tag or datatype the writer would drop.
-     */
-    private static List<String> unsupportedPredicates(
-            Graph graph, Node subject, Map<Node, ValueKind> known) {
-        var lossy = new LinkedHashSet<String>();
-        var valuesByPredicate = new LinkedHashMap<Node, List<Node>>();
-        graph.stream(subject, Node.ANY, Node.ANY)
-                .forEach(
-                        triple ->
-                                valuesByPredicate
-                                        .computeIfAbsent(
-                                                triple.getPredicate(), ignored -> new ArrayList<>())
-                                        .add(triple.getObject()));
+    // -------------------------------------------------------------------------
+    // What the form keeps as written
+    // -------------------------------------------------------------------------
 
-        valuesByPredicate.forEach(
-                (predicate, values) -> {
-                    var kind = known.get(predicate);
-                    if (kind == null || !faithful(graph, kind, values)) {
-                        lossy.add(predicate.getURI());
+    /**
+     * The clauses of {@code subject} the form shows but will not rewrite.
+     *
+     * <p>Three ways a clause ends up here, and all three used to make the whole shape read-only:
+     * the form has no field for the predicate; the document states the predicate more than once,
+     * where the form has one field; or the value is one the writer cannot spell again — an {@code
+     * xsd:decimal} order, a message with a language tag, {@code sh:closed "yes"}.
+     */
+    private static List<RetainedClause> retainedOf(
+            Graph graph,
+            Node subject,
+            Map<String, List<ClauseLocator.Clause>> byPredicate,
+            Map<Node, Field> fields,
+            ShapeSource source) {
+        var retained = new ArrayList<RetainedClause>();
+        byPredicate.forEach(
+                (predicate, stated) -> {
+                    if (STRUCTURAL.contains(predicate)) {
+                        return;
                     }
+                    var field = fields.get(NodeFactory.createURI(predicate));
+                    var reason = reasonToKeep(graph, subject, predicate, stated, field);
+                    if (reason == null) {
+                        return;
+                    }
+                    stated.forEach(
+                            clause ->
+                                    retained.add(
+                                            RetainedClause.builder()
+                                                    .predicate(predicate)
+                                                    .value(source.objectsAsWritten(clause))
+                                                    .field(field == null ? null : field.name())
+                                                    .reason(reason)
+                                                    .build()));
                 });
-        return new ArrayList<>(lossy);
+        return List.copyOf(retained);
+    }
+
+    private static String reasonToKeep(
+            Graph graph,
+            Node subject,
+            String predicate,
+            List<ClauseLocator.Clause> stated,
+            Field field) {
+        if (field == null) {
+            return "The form has no field for this, so it stays exactly as the document writes it.";
+        }
+        if (stated.size() > 1) {
+            return "The document states this "
+                    + stated.size()
+                    + " times and the form has one field for it, so it stays exactly as the"
+                    + " document writes it.";
+        }
+        var values =
+                graph.stream(subject, NodeFactory.createURI(predicate), Node.ANY)
+                        .map(Triple::getObject)
+                        .toList();
+        if (faithful(graph, field.kind(), values)) {
+            return null;
+        }
+        return "The form cannot write this value back unchanged, so it stays exactly as the"
+                + " document writes it.";
     }
 
     /** Whether every value of one predicate survives a read and a write unchanged. */
     private static boolean faithful(Graph graph, ValueKind kind, List<Node> values) {
-        if (kind == ValueKind.SHAPES) {
-            // Repeatable by design: each object is read as a property shape of its own.
+        if (values.isEmpty()) {
             return true;
         }
-        if (kind == ValueKind.TYPE_NODE_SHAPE || kind == ValueKind.TYPE_PROPERTY_SHAPE) {
-            // The writer states the type itself rather than copying it, so it can reproduce
-            // exactly the one type it knows how to state — and a shape typed as something else as
-            // well would come back having lost the other type.
-            var expected = kind == ValueKind.TYPE_NODE_SHAPE ? NODE_SHAPE : PROPERTY_SHAPE;
-            return values.size() == 1 && expected.equals(values.get(0));
+        if (kind == ValueKind.IRIS) {
+            // Repeatable by design: the writer spells them as one comma-separated object list.
+            return values.stream().allMatch(Node::isURI);
         }
         // Every other predicate is one field on the form, so a second value has nowhere to go.
         return values.size() == 1 && faithful(graph, kind, values.get(0));
@@ -295,7 +475,7 @@ final class ShapeModelReader {
 
     private static boolean faithful(Graph graph, ValueKind kind, Node value) {
         return switch (kind) {
-            case IRI -> value.isURI();
+            case IRI, IRIS -> value.isURI();
             case STRING -> isPlainString(value);
             case INTEGER -> isCanonicalInteger(value);
             case BOOLEAN -> isCanonicalBoolean(value);
@@ -310,7 +490,6 @@ final class ShapeModelReader {
                                             members.stream()
                                                     .allMatch(ShapeModelReader::faithfulListMember))
                             .orElse(false);
-            case TYPE_NODE_SHAPE, TYPE_PROPERTY_SHAPE, SHAPES -> true;
         };
     }
 
@@ -374,12 +553,12 @@ final class ShapeModelReader {
     }
 
     // -------------------------------------------------------------------------
-    // Single values
+    // Values
     // -------------------------------------------------------------------------
 
     private static Node object(Graph graph, Node subject, Node predicate) {
         return graph.stream(subject, predicate, Node.ANY)
-                .map(triple -> triple.getObject())
+                .map(Triple::getObject)
                 .findFirst()
                 .orElse(null);
     }
@@ -387,6 +566,44 @@ final class ShapeModelReader {
     private static String uri(Graph graph, Node subject, Node predicate) {
         var object = object(graph, subject, predicate);
         return object != null && object.isURI() ? object.getURI() : null;
+    }
+
+    /**
+     * A repeatable field's values in the order the document writes them, not the graph's.
+     *
+     * <p>The graph has no order, and showing two target classes the other way round would be the
+     * form reordering a clause nobody edited the moment anything else about it changed. Falls back
+     * to the graph only where the document does not write the shape as a statement of its own, and
+     * so has no order to take.
+     */
+    private static List<String> asWritten(
+            List<ClauseLocator.Clause> stated,
+            ShapeSource source,
+            java.util.function.Supplier<List<String>> fromGraph) {
+        if (stated == null || stated.isEmpty()) {
+            return fromGraph.get();
+        }
+        var values = new ArrayList<String>();
+        for (ClauseLocator.Clause clause : stated) {
+            for (ClauseLocator.ObjectSpan object : clause.objects()) {
+                var iri = source.objectIri(object);
+                if (iri == null) {
+                    return fromGraph.get();
+                }
+                values.add(iri);
+            }
+        }
+        return List.copyOf(values);
+    }
+
+    /** Every URI value of a repeatable predicate, in the order the graph holds them. */
+    private static List<String> uris(Graph graph, Node subject, Node predicate) {
+        return graph.stream(subject, predicate, Node.ANY)
+                .map(Triple::getObject)
+                .filter(Node::isURI)
+                .map(Node::getURI)
+                .distinct()
+                .toList();
     }
 
     private static String string(Graph graph, Node subject, Node predicate) {
@@ -417,11 +634,11 @@ final class ShapeModelReader {
      *
      * <p>Anything-that-is-not-true used to read as {@code false}, which invented a rule: {@code
      * sh:closed "yes"} became {@code sh:closed false} on the next save. An unreadable value is
-     * reported as unrepresentable instead, and the shape is left to the Turtle view.
+     * reported as kept-as-written instead, and the field is shown but not offered for editing.
      *
      * <p>{@code Optional} rather than a nullable {@code Boolean}: a three-valued Boolean is a
      * standing invitation to unbox one, and the two callers want different things from a value that
-     * will not parse — one reports it as unrepresentable, the other treats it as absent.
+     * will not parse — one reports it as unwritable, the other treats it as absent.
      */
     private static Optional<Boolean> parseBoolean(String lexical) {
         var trimmed = lexical.trim();

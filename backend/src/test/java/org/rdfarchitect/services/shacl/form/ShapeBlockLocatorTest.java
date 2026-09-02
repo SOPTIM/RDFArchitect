@@ -264,7 +264,10 @@ class ShapeBlockLocatorTest {
     }
 
     @Test
-    void countsHowManyStatementsEachSubjectIsWrittenAs() {
+    void everyStatementOfASubjectIsGatheredUnderIt() {
+        // How many statements a subject is written as decides whether the form may edit it, and
+        // ShapeSource is where that is asked now: one scan for the whole document rather than one
+        // per subject, which on a file with thousands of them was quadratic in its length.
         var turtle =
                 """
                 @prefix sh: <http://www.w3.org/ns/shacl#> .
@@ -275,10 +278,11 @@ class ShapeBlockLocatorTest {
                 ex:Other a sh:NodeShape .
                 """;
 
-        var counts = ShapeBlockLocator.statementCountsBySubject(turtle, prefixes());
+        var source = ShapeSource.of(turtle, prefixes());
 
-        assertThat(counts).containsEntry(EX + "Shape", 2).containsEntry(EX + "Other", 1);
-        assertThat(counts).doesNotContainKey(EX + "Missing");
-        assertThat(ShapeBlockLocator.statementCountsBySubject("", prefixes())).isEmpty();
+        assertThat(source.forSubject(EX + "Shape").statements()).hasSize(2);
+        assertThat(source.forSubject(EX + "Other").statements()).hasSize(1);
+        assertThat(source.forSubject(EX + "Missing")).isNull();
+        assertThat(ShapeSource.of("", prefixes()).forSubject(EX + "Shape")).isNull();
     }
 }

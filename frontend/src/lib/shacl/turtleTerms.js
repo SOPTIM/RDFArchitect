@@ -154,6 +154,28 @@ export function writeTerm(term, prefixes) {
 }
 
 /**
+ * A bare IRI written the way a document that binds these prefixes writes it.
+ *
+ * `writeTerm` wants a term already split into a namespace and a local name, which every caller
+ * holding nothing but an IRI was splitting for itself — the same `lastIndexOf` pair, four times
+ * over, in the form's cards and pickers.
+ */
+export function abbreviate(iri, prefixes) {
+    if (!iri) {
+        return "";
+    }
+    const cut = Math.max(iri.lastIndexOf("#"), iri.lastIndexOf("/"));
+    return writeTerm(
+        {
+            iri,
+            namespace: iri.slice(0, cut + 1),
+            localName: iri.slice(cut + 1),
+        },
+        prefixes,
+    );
+}
+
+/**
  * Completion entries for a document, as `{ label, insertText, detail, kind, sortText }`.
  *
  * Terms the document has no prefix for are still offered — the schema spans profiles a given file

@@ -71,28 +71,6 @@ public final class ShapeBlockLocator {
     }
 
     /**
-     * How many top-level statements each named subject is written as.
-     *
-     * <p>One scan for the whole document, so the form can say up front which shapes it cannot
-     * rewrite rather than failing when the user tries. Subjects written once — nearly all of them —
-     * are in here too, so a caller can also tell "written once" from "not found at all".
-     */
-    public static Map<String, Integer> statementCountsBySubject(
-            String turtle, PrefixMapping prefixes) {
-        if (turtle == null || turtle.isEmpty()) {
-            return Map.of();
-        }
-        var counts = new HashMap<String, Integer>();
-        for (Statement statement : statements(turtle)) {
-            var iri = expand(statement.subjectToken(), prefixes);
-            if (iri != null) {
-                counts.merge(iri, 1, Integer::sum);
-            }
-        }
-        return Map.copyOf(counts);
-    }
-
-    /**
      * The 1-based line each named subject's statement starts on.
      *
      * <p>One scan for the whole document, for callers that need the line of many subjects rather
@@ -284,7 +262,8 @@ public final class ShapeBlockLocator {
         return Character.isWhitespace(next) || next == '#';
     }
 
-    private static int endOfLiteral(String text, int start) {
+    /** Just past the literal starting at {@code start}. Shared with {@link ClauseLocator}. */
+    static int endOfLiteral(String text, int start) {
         char quote = text.charAt(start);
         var triple = "" + quote + quote + quote;
         if (text.startsWith(triple, start)) {
@@ -306,7 +285,8 @@ public final class ShapeBlockLocator {
         return text.length();
     }
 
-    private static String expand(String token, PrefixMapping prefixes) {
+    /** The IRI a subject or predicate token stands for, or {@code null} when none does. */
+    static String expand(String token, PrefixMapping prefixes) {
         if (token.startsWith("<") && token.endsWith(">")) {
             return token.substring(1, token.length() - 1);
         }

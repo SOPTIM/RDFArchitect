@@ -42,6 +42,16 @@ public class PropertyShapeModel {
     /** Set when the property shape is written as a named resource rather than inline. */
     private String iri;
 
+    /**
+     * Where the document writes this rule, so an edit can find it again. Opaque to the form.
+     *
+     * <p>A rule has no name of its own to be identified by — most are blank nodes — and its path
+     * cannot serve as one, because the path is itself editable. So the reader records which {@code
+     * sh:property} of the shape a rule came from and the form hands it back untouched. {@code null}
+     * means a rule the form has just added, which is written rather than found.
+     */
+    private Integer sourceIndex;
+
     /** {@code sh:path}, always a plain IRI here — a path expression is not form-editable. */
     private String path;
 
@@ -82,4 +92,13 @@ public class PropertyShapeModel {
      * writer cannot simply always state it, and dropping it would edit a line nobody asked it to.
      */
     private Boolean typed;
+
+    /**
+     * What this rule says that the form shows but never rewrites.
+     *
+     * <p>The rule-level half of clause preservation: {@code sh:minInclusive}, an embedded query, or
+     * an {@code sh:order 0.1} the form cannot spell as an integer are kept as the document wrote
+     * them, and the rest of the rule stays editable. See {@link NodeShapeModel#getRetained()}.
+     */
+    private List<RetainedClause> retained;
 }

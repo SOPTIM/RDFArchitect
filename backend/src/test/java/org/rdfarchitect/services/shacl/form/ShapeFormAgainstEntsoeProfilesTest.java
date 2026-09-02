@@ -23,6 +23,7 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.shacl.dto.NodeShapeModel;
+import org.rdfarchitect.shacl.dto.RetainedClause;
 import org.rdfarchitect.shacl.dto.ShapeEditRequest;
 
 import java.io.IOException;
@@ -75,7 +76,7 @@ class ShapeFormAgainstEntsoeProfilesTest {
         assertThat(form.getParseError()).isNull();
         assertThat(form.getShapes()).isNotEmpty();
         assertThat(form.getShapes())
-                .anySatisfy(shape -> assertThat(shape.getTargetClass()).isNotNull());
+                .anySatisfy(shape -> assertThat(shape.getTargetClasses()).isNotEmpty());
     }
 
     @Test
@@ -122,15 +123,34 @@ class ShapeFormAgainstEntsoeProfilesTest {
     }
 
     @Test
-    void aShapeWithAnEmbeddedQueryIsShownButNeverOfferedForWriting() {
-        // Official files use sh:sparql heavily. The form must show those shapes without ever
-        // letting an edit drop the query.
-        var shapes = service.parse(read()).getShapes();
-
+    void aShapeWithAnEmbeddedQueryIsEditableAndKeepsTheQuery() {
+        // Official files use sh:sparql heavily, and it used to lock every shape whose rules carry
+        // one. Now the query is a clause nobody touches, and the shape is edited around it.
+        var original = read();
         var withQuery =
-                shapes.stream().filter(shape -> !shape.getEditable()).findFirst().orElseThrow();
-        assertThat(withQuery.getUnsupported()).isNotEmpty();
-        assertThat(shapes.stream().filter(NodeShapeModel::getEditable).toList()).isNotEmpty();
+                service.parse(original).getShapes().stream()
+                        .filter(NodeShapeModel::getEditable)
+                        .filter(shape -> query(shape) != null)
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("No editable sh:sparql shape"));
+        var query = query(withQuery);
+        withQuery.setMessage("Checked by RDFArchitect");
+
+        var edited = service.apply(request(original, withQuery)).getTurtle();
+
+        assertThat(edited).contains(query);
+        assertThat(edited).contains("Checked by RDFArchitect");
+        assertThat(service.parse(edited).getParseError()).isNull();
+    }
+
+    /** The embedded query one of a shape's rules carries, as the file writes it. */
+    private static String query(NodeShapeModel shape) {
+        return shape.getProperties().stream()
+                .flatMap(rule -> rule.getRetained().stream())
+                .filter(clause -> clause.getPredicate().endsWith("#sparql"))
+                .map(RetainedClause::getValue)
+                .findFirst()
+                .orElse(null);
     }
 
     @Test
@@ -155,14 +175,16 @@ class ShapeFormAgainstEntsoeProfilesTest {
     /**
      * The whole official library, as the measure of how far the form reaches.
      *
-     * <p>Measured 2026-09-02: 314 of 2959 shapes are editable, and the reasons are recorded in the
-     * RDFA-645 form-editor plan. The floor is asserted rather than the exact number, because a new
-     * ENTSO-E release moves it — but a change that quietly locks shapes the form used to offer
-     * should fail here, which is what happened to be at stake when the split-subject check was
-     * added.
+     * <p>314 of 2959 before clause-preserving edits; 2721 after, because what the form can offer is
+     * no longer decided by whether it understands every last thing a shape says. The 238 left over
+     * are honest: 207 are shapes of the generated {@code -AllowedProperties} families, which write
+     * the same rule twice, so there is no telling which of two identical {@code sh:property}
+     * clauses an edit belongs in; 31 are subjects written as more than one statement. The floor is
+     * asserted rather than the exact number, because a new ENTSO-E release moves it — but a change
+     * that quietly locks shapes the form used to offer fails here.
      */
     @Test
-    void theFormReachesAsFarOverTheWholeLibraryAsItDidBefore() throws IOException {
+    void theFormReachesMostOfTheWholeLibrary() throws IOException {
         var editable = 0;
         var shapes = 0;
         for (Path file : constraintsFiles()) {
@@ -179,15 +201,15 @@ class ShapeFormAgainstEntsoeProfilesTest {
         }
 
         assertThat(shapes).isGreaterThanOrEqualTo(2959);
-        assertThat(editable).isGreaterThanOrEqualTo(314);
+        assertThat(editable).isGreaterThanOrEqualTo(2600);
     }
 
     /**
-     * No shape is offered for editing that the writer cannot put back where it came from.
+     * No shape is offered for editing that the writer cannot put an edit back into.
      *
-     * <p>The invariant behind the split-subject refusal: a shape written as two statements would
-     * have been rewritten into one of them and the other left standing, which duplicates what it
-     * says. If this ever fails, the form is offering an edit that corrupts the document.
+     * <p>The invariant behind the split-subject refusal: a shape written as two statements gives
+     * the writer no way to say which of them a new clause belongs in. If this ever fails, the form
+     * is offering an edit it cannot place.
      */
     @Test
     void everyEditableShapeIsWrittenAsExactlyOneStatement() throws IOException {
@@ -198,16 +220,62 @@ class ShapeFormAgainstEntsoeProfilesTest {
                 continue;
             }
             var prefixes = RDFParser.fromString(turtle, Lang.TURTLE).toGraph().getPrefixMapping();
-            var counts = ShapeBlockLocator.statementCountsBySubject(turtle, prefixes);
+            var source = ShapeSource.of(turtle, prefixes);
             assertThat(form.getShapes())
                     .filteredOn(shape -> Boolean.TRUE.equals(shape.getEditable()))
                     .allSatisfy(
                             shape ->
-                                    assertThat(counts.get(shape.getIri()))
+                                    assertThat(source.forSubject(shape.getIri()).statements())
                                             .describedAs(
                                                     "%s in %s", shape.getIri(), file.getFileName())
-                                            .isEqualTo(1));
+                                            .hasSize(1));
         }
+    }
+
+    /**
+     * A no-op edit over every editable shape in the library leaves every file byte for byte.
+     *
+     * <p>The strongest form of the promise the form makes, and the one a user checks by looking at
+     * the diff: applying a shape nobody changed is an ordinary event — the form applies whole
+     * shapes, not fields — and it has to cost nothing. Cheap enough to run over all 104 files
+     * because a no-op produces no text edits at all.
+     */
+    @Test
+    void applyingEveryShapeUnchangedLeavesTheWholeLibraryUntouched() throws IOException {
+        for (Path file : constraintsFiles()) {
+            var original = Files.readString(file);
+            var form = service.parse(original);
+            if (form.getParseError() != null) {
+                continue;
+            }
+            var turtle = original;
+            for (NodeShapeModel shape : form.getShapes()) {
+                if (Boolean.TRUE.equals(shape.getEditable())) {
+                    turtle = service.apply(request(turtle, shape)).getTurtle();
+                }
+            }
+            assertThat(turtle).describedAs("%s", file.getFileName()).isEqualTo(original);
+        }
+    }
+
+    /**
+     * The profile family the form could do nothing at all with, and the reason 3.2 exists.
+     *
+     * <p>Every rule in a {@code -Con-Simple-} file is a named property shape referenced from the
+     * node shapes, and each of those rules carries something the form has no field for. Two of the
+     * file's 145 shapes were editable; all 145 are now, because a referenced rule's own clauses are
+     * no longer the referencing shape's problem.
+     */
+    @Test
+    void theProfileFamilyTheFormCouldNotTouchIsNowEditableThroughout() throws IOException {
+        var turtle =
+                Files.readString(
+                        Path.of(CONSTRAINTS, "61970-600-2_Equipment-AP-Con-Simple-SHACL.ttl"));
+
+        var shapes = service.parse(turtle).getShapes();
+
+        assertThat(shapes).hasSizeGreaterThanOrEqualTo(145);
+        assertThat(shapes).allSatisfy(shape -> assertThat(shape.getEditable()).isTrue());
     }
 
     /** Every official constraints file in the submodule, CGMES and the NC profiles alike. */
@@ -235,7 +303,7 @@ class ShapeFormAgainstEntsoeProfilesTest {
     }
 
     @Test
-    void everyShapeInTheFileSurvivesAReadWriteRoundTrip() {
+    void everyShapeInTheFileSurvivesAnEditToEveryOneOfThem() {
         var original = read();
         var editable =
                 service.parse(original).getShapes().stream()
@@ -245,6 +313,7 @@ class ShapeFormAgainstEntsoeProfilesTest {
 
         var turtle = original;
         for (NodeShapeModel shape : editable) {
+            shape.setMessage("Checked by RDFArchitect");
             turtle = service.apply(request(turtle, shape)).getTurtle();
         }
 
@@ -253,8 +322,8 @@ class ShapeFormAgainstEntsoeProfilesTest {
         assertThat(after.getShapes()).hasSameSizeAs(service.parse(original).getShapes());
         assertThat(List.copyOf(after.getShapes()))
                 .filteredOn(NodeShapeModel::getEditable)
-                .extracting(NodeShapeModel::getTargetClass)
+                .extracting(NodeShapeModel::getTargetClasses)
                 .containsExactlyElementsOf(
-                        editable.stream().map(NodeShapeModel::getTargetClass).toList());
+                        editable.stream().map(NodeShapeModel::getTargetClasses).toList());
     }
 }

@@ -26,9 +26,9 @@ import {
 const SHAPES = [
     {
         iri: "http://example.org/shapes#ACLineSegmentShape",
-        targetClass: "http://iec.ch/TC57/CIM100#ACLineSegment",
+        targetClasses: ["http://iec.ch/TC57/CIM100#ACLineSegment"],
         properties: [],
-        unsupported: [],
+        retained: [],
         editable: true,
     },
 ];
@@ -360,5 +360,11 @@ describe("naming a new shape", () => {
         expect(shape.iri).toBe("http://example.org/shapes#BreakerShape");
         expect(shape.editable).toBe(true);
         expect(shape.properties).toEqual([]);
+        // A list, because a shape may target several classes; a shape added with no class yet
+        // targets none rather than targeting null.
+        expect(shape.targetClasses).toEqual(["http://ex.org/Breaker"]);
+        expect(
+            newShape("http://example.org/shapes#", null, "New").targetClasses,
+        ).toEqual([]);
     });
 });

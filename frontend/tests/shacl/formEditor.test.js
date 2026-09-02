@@ -65,9 +65,11 @@ let target = null;
 function shape(overrides = {}) {
     return {
         iri: "http://example.org/shapes#ACLineSegmentShape",
-        targetClass: `${CIM}ACLineSegment`,
-        properties: [{ path: `${CIM}ACLineSegment.r`, minCount: 1 }],
-        unsupported: [],
+        targetClasses: [`${CIM}ACLineSegment`],
+        properties: [
+            { path: `${CIM}ACLineSegment.r`, minCount: 1, sourceIndex: 0 },
+        ],
+        retained: [],
         editable: true,
         ...overrides,
     };
@@ -198,11 +200,12 @@ describe("FormEditor", () => {
 });
 
 describe("NodeShapeCard", () => {
-    test("shows a shape the form cannot represent as read-only", () => {
+    test("shows a shape the form cannot edit as read-only", () => {
         const view = render(NodeShapeCard, {
             shape: shape({
                 editable: false,
-                unsupported: ["http://www.w3.org/ns/shacl#sparql"],
+                readOnlyReason:
+                    "This shape is written as 2 separate statements.",
             }),
             terms: TERMS,
             prefixes: PREFIXES,
@@ -210,7 +213,7 @@ describe("NodeShapeCard", () => {
         });
 
         expect(view.textContent).toContain("Turtle only");
-        expect(view.textContent).toContain("shacl#sparql");
+        expect(view.textContent).toContain("2 separate statements");
         // Nothing that would write the shape back may be offered.
         expect(
             [...view.querySelectorAll("button")].some(button =>
@@ -220,6 +223,113 @@ describe("NodeShapeCard", () => {
         expect(
             view.querySelector('[aria-label="Delete this shape"]'),
         ).toBeNull();
+    });
+
+    test("every class the shape targets gets a picker of its own", () => {
+        // 462 shapes in the official library target two classes in one clause, and holding one of
+        // them is what made all 462 read-only.
+        const view = render(NodeShapeCard, {
+            // No rules, so the only class pickers on screen are the shape's own targets: a
+            // rule's "Value class" picker carries the same placeholder.
+            shape: shape({
+                properties: [],
+                targetClasses: [`${CIM}ACLineSegment`, `${CIM}Conductor`],
+            }),
+            terms: TERMS,
+            prefixes: PREFIXES,
+            expanded: true,
+        });
+
+        expect(view.textContent).toContain(
+            "applies to cim:ACLineSegment, cim:Conductor",
+        );
+        const pickers = [...view.querySelectorAll("input[list]")].filter(
+            input => input.placeholder === "pick a class",
+        );
+        expect(pickers.map(input => input.value)).toEqual([
+            "cim:ACLineSegment",
+            "cim:Conductor",
+        ]);
+    });
+
+    test("another class can be added to the ones already there", () => {
+        const model = shape({ properties: [] });
+        const onchange = vi.fn();
+        const view = render(NodeShapeCard, {
+            shape: model,
+            terms: TERMS,
+            prefixes: PREFIXES,
+            expanded: true,
+            onchange,
+        });
+
+        [...view.querySelectorAll("button")]
+            .find(button => button.textContent.includes("another class"))
+            .click();
+        flushSync();
+
+        const added = [...view.querySelectorAll("input[list]")].findLast(
+            input => input.placeholder === "pick a class",
+        );
+        added.value = "cim:Terminal";
+        added.dispatchEvent(new Event("input", { bubbles: true }));
+        added.dispatchEvent(new Event("change", { bubbles: true }));
+        flushSync();
+
+        expect(model.targetClasses).toEqual([
+            `${CIM}ACLineSegment`,
+            `${CIM}Terminal`,
+        ]);
+        expect(onchange).toHaveBeenCalled();
+    });
+
+    test("clearing a class picker drops that class and keeps the others", () => {
+        const model = shape({
+            properties: [],
+            targetClasses: [`${CIM}ACLineSegment`, `${CIM}Terminal`],
+        });
+        const view = render(NodeShapeCard, {
+            shape: model,
+            terms: TERMS,
+            prefixes: PREFIXES,
+            expanded: true,
+        });
+
+        const first = [...view.querySelectorAll("input[list]")].find(
+            input => input.placeholder === "pick a class",
+        );
+        first.value = "";
+        first.dispatchEvent(new Event("input", { bubbles: true }));
+        first.dispatchEvent(new Event("change", { bubbles: true }));
+        flushSync();
+
+        expect(model.targetClasses).toEqual([`${CIM}Terminal`]);
+    });
+
+    test("a target the form keeps as written is shown instead of a picker", () => {
+        const view = render(NodeShapeCard, {
+            shape: shape({
+                properties: [],
+                retained: [
+                    {
+                        predicate: "http://www.w3.org/ns/shacl#targetClass",
+                        value: "cim:ACLineSegment",
+                        field: "targetClasses",
+                        reason: "The document states this 2 times.",
+                    },
+                ],
+            }),
+            terms: TERMS,
+            prefixes: PREFIXES,
+            expanded: true,
+        });
+
+        expect(
+            [...view.querySelectorAll("input[list]")].some(
+                input => input.placeholder === "pick a class",
+            ),
+        ).toBe(false);
+        expect(view.textContent).toContain("cim:ACLineSegment");
     });
 
     test("an editable shape offers its rules and a way to add one", () => {

@@ -36,9 +36,9 @@ const TYPING_PAUSE_MS = 400;
 export function newShape(shapeNamespace, targetClass, localName) {
     return {
         iri: `${shapeNamespace}${localName}Shape`,
-        targetClass,
+        targetClasses: targetClass ? [targetClass] : [],
         properties: [],
-        unsupported: [],
+        retained: [],
         editable: true,
     };
 }

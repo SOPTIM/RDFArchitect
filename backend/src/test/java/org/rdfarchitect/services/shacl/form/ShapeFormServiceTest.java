@@ -19,6 +19,7 @@ package org.rdfarchitect.services.shacl.form;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.tuple;
 
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.exception.database.ResourceConflictException;
@@ -87,7 +88,8 @@ class ShapeFormServiceTest {
 
         assertThat(form.getShapes()).hasSize(2);
         var segment = shapeNamed(SHAPES, "http://example.org/shapes#ACLineSegmentShape");
-        assertThat(segment.getTargetClass()).isEqualTo("http://iec.ch/TC57/CIM100#ACLineSegment");
+        assertThat(segment.getTargetClasses())
+                .containsExactly("http://iec.ch/TC57/CIM100#ACLineSegment");
         assertThat(segment.getEditable()).isTrue();
         assertThat(segment.getProperties())
                 .singleElement()
@@ -103,8 +105,10 @@ class ShapeFormServiceTest {
     }
 
     @Test
-    void marksAShapeTheFormCannotFullyRepresentAsNotEditable() {
-        // Writing this back from the form would silently drop the sh:sparql constraint.
+    void aShapeCarryingSomethingTheFormCannotWriteIsStillEditable() {
+        // This used to be the rule that cost the form 90 % of the official library: one clause the
+        // form has no field for and the whole shape went read-only. The clause is now reported as
+        // kept-as-written, and everything else about the shape can be changed.
         var withQuery =
                 SHAPES.replace(
                         "sh:targetClass cim:Terminal .",
@@ -114,8 +118,16 @@ class ShapeFormServiceTest {
 
         var shape = shapeNamed(withQuery, "http://example.org/shapes#TerminalShape");
 
-        assertThat(shape.getEditable()).isFalse();
-        assertThat(shape.getUnsupported()).contains("http://www.w3.org/ns/shacl#sparql");
+        assertThat(shape.getEditable()).isTrue();
+        assertThat(shape.getRetained())
+                .singleElement()
+                .satisfies(
+                        clause -> {
+                            assertThat(clause.getPredicate())
+                                    .isEqualTo("http://www.w3.org/ns/shacl#sparql");
+                            assertThat(clause.getValue()).contains("SELECT $this WHERE { }");
+                            assertThat(clause.getField()).isNull();
+                        });
     }
 
     @Test
@@ -138,23 +150,16 @@ class ShapeFormServiceTest {
 
         var result = service.apply(edit(SHAPES, shape));
 
-        assertThat(result.getTurtle()).contains("sh:minCount 0");
-        // The header, the comment and the neighbouring shape are untouched.
-        assertThat(result.getTurtle())
-                .contains("# The line segment rules, as agreed with the TSO.");
-        assertThat(result.getTurtle())
-                .contains(
-                        """
-                        ex:TerminalShape
-                                a              sh:NodeShape ;
-                                sh:targetClass cim:Terminal .""");
-        assertThat(result.getTurtle()).startsWith("@prefix sh:   <http://www.w3.org/ns/shacl#> .");
+        // Character for character the same document, with three characters different: the clause
+        // the edit was made on, and nothing else. Not "the statement is rewritten faithfully" —
+        // the rest of the statement is not rewritten at all.
+        assertThat(result.getTurtle()).isEqualTo(SHAPES.replace("sh:minCount 1", "sh:minCount 0"));
     }
 
     @Test
     void writesTermsWithTheDocumentsOwnPrefixes() {
         var shape = shapeNamed(SHAPES, "http://example.org/shapes#TerminalShape");
-        shape.setTargetClass("http://iec.ch/TC57/CIM100#ConnectivityNode");
+        shape.setTargetClasses(List.of("http://iec.ch/TC57/CIM100#ConnectivityNode"));
 
         var result = service.apply(edit(SHAPES, shape));
 
@@ -166,7 +171,7 @@ class ShapeFormServiceTest {
     @Test
     void fallsBackToAnAbsoluteIriRatherThanInventingAPrefix() {
         var shape = shapeNamed(SHAPES, "http://example.org/shapes#TerminalShape");
-        shape.setTargetClass("http://other.example/Thing");
+        shape.setTargetClasses(List.of("http://other.example/Thing"));
 
         var result = service.apply(edit(SHAPES, shape));
 
@@ -178,7 +183,7 @@ class ShapeFormServiceTest {
         var added =
                 NodeShapeModel.builder()
                         .iri("http://example.org/shapes#NewShape")
-                        .targetClass("http://iec.ch/TC57/CIM100#Breaker")
+                        .targetClasses(List.of("http://iec.ch/TC57/CIM100#Breaker"))
                         .properties(
                                 List.of(
                                         PropertyShapeModel.builder()
@@ -218,7 +223,8 @@ class ShapeFormServiceTest {
 
         var result = service.apply(edit(referencing, shape));
 
-        assertThat(result.getTurtle()).contains("sh:property ex:rRule");
+        // The reference keeps the spacing its author gave it, because it is not rewritten.
+        assertThat(result.getTurtle()).contains("sh:property    ex:rRule");
         assertThat(result.getTurtle()).contains("Edited through the form");
         // The rule's own statement is untouched, and its constraints are not duplicated inline.
         assertThat(result.getTurtle()).contains("sh:minCount 1 .");
@@ -239,9 +245,10 @@ class ShapeFormServiceTest {
     }
 
     @Test
-    void saysWhenARewriteCostACommentInsideTheShape() {
-        // The one thing surgical replacement cannot preserve is a comment written inside the shape
-        // being rewritten. Everything outside its statement is copied through untouched.
+    void aCommentInsideTheShapeSurvivesAnEditToIt() {
+        // It did not, while a shape was respelled whole from the model: the one loss the feature
+        // used to accept. A clause-level edit does not touch the lines around the clause, so
+        // there is nothing left to warn about either.
         var withComment =
                 SHAPES.replace(
                         "sh:targetClass cim:Terminal .",
@@ -251,11 +258,9 @@ class ShapeFormServiceTest {
 
         var result = service.apply(edit(withComment, shape));
 
-        assertThat(result.getTurtle()).doesNotContain("# only terminals of the boundary");
-        assertThat(result.getWarnings())
-                .singleElement()
-                .asString()
-                .contains("Comments written inside this shape were removed");
+        assertThat(result.getTurtle()).contains("# only terminals of the boundary");
+        assertThat(result.getTurtle()).contains("sh:message \"Now with a message\"");
+        assertThat(result.getWarnings()).isEmpty();
     }
 
     @Test
@@ -305,21 +310,23 @@ class ShapeFormServiceTest {
 
     @Test
     void refusesAShapeWithoutAnIri() {
-        var nameless = NodeShapeModel.builder().targetClass("http://example.org/A").build();
+        var nameless =
+                NodeShapeModel.builder().targetClasses(List.of("http://example.org/A")).build();
 
         assertThatExceptionOfType(ResourceConflictException.class)
                 .isThrownBy(() -> service.apply(edit(SHAPES, nameless)));
     }
 
     @Test
-    void aReadWriteRoundTripWithNoChangeKeepsTheShapeMeaningTheSame() {
+    void applyingAShapeNobodyChangedChangesNothingAtAll() {
+        // The form applies the whole shape, not the field that moved, so a save right after a
+        // read is an ordinary event. It now costs zero characters rather than a respelling.
         var before = shapeNamed(SHAPES, "http://example.org/shapes#ACLineSegmentShape");
 
         var result = service.apply(edit(SHAPES, before));
-        var after = shapeNamed(result.getTurtle(), "http://example.org/shapes#ACLineSegmentShape");
 
-        assertThat(after.getTargetClass()).isEqualTo(before.getTargetClass());
-        assertThat(after.getProperties()).isEqualTo(before.getProperties());
+        assertThat(result.getTurtle()).isEqualTo(SHAPES);
+        assertThat(result.getWarnings()).isEmpty();
     }
 
     // -------------------------------------------------------------------------
@@ -347,7 +354,7 @@ class ShapeFormServiceTest {
     }
 
     @Test
-    void aSecondValueForAOneFieldPredicateMakesTheShapeReadOnly() {
+    void aPredicateWrittenTwiceKeepsItsClausesAndLocksJustThatField() {
         var turtle =
                 """
                 @prefix sh:  <http://www.w3.org/ns/shacl#> .
@@ -355,21 +362,32 @@ class ShapeFormServiceTest {
                 @prefix ex:  <http://example.org/shapes#> .
 
                 ex:S  a sh:NodeShape ;
-                      sh:targetClass cim:ACLineSegment ;
-                      sh:targetClass cim:Conductor .
+                      sh:message "one" ;
+                      sh:message "two" ;
+                      sh:targetClass cim:ACLineSegment .
                 """;
 
         var shape = shapeNamed(turtle, "http://example.org/shapes#S");
 
-        // The form holds one target class, so offering this shape as editable would drop the other.
-        assertThat(shape.getEditable()).isFalse();
-        assertThat(shape.getUnsupported()).contains("http://www.w3.org/ns/shacl#targetClass");
+        // The form has one message field and the document states two, so that field stays as
+        // written — but the shape is not read-only over it any more.
+        assertThat(shape.getEditable()).isTrue();
+        assertThat(shape.getRetained())
+                .extracting("field", "value")
+                .containsExactly(tuple("message", "\"one\""), tuple("message", "\"two\""));
+
+        shape.setTargetClasses(List.of("http://iec.ch/TC57/CIM100#Conductor"));
+        assertThat(service.apply(edit(turtle, shape)).getTurtle())
+                .isEqualTo(turtle.replace("cim:ACLineSegment", "cim:Conductor"));
+
+        shape.setMessage("three");
         assertThatExceptionOfType(ResourceConflictException.class)
-                .isThrownBy(() -> service.apply(edit(turtle, shape)));
+                .isThrownBy(() -> service.apply(edit(turtle, shape)))
+                .withMessageContaining("The document states this 2 times");
     }
 
     @Test
-    void aLanguageTaggedMessageMakesTheShapeReadOnly() {
+    void aLanguageTaggedMessageIsKeptAsWrittenRatherThanStripped() {
         var turtle =
                 """
                 @prefix sh:  <http://www.w3.org/ns/shacl#> .
@@ -380,29 +398,45 @@ class ShapeFormServiceTest {
                       sh:targetClass cim:ACLineSegment ;
                       sh:message "Broken"@en .
                 """;
+        var shape = shapeNamed(turtle, "http://example.org/shapes#S");
 
-        // The writer has no way to spell a language tag, so it used to strip it silently.
-        assertThat(shapeNamed(turtle, "http://example.org/shapes#S").getEditable()).isFalse();
+        // The writer has no way to spell a language tag. It used to strip it silently, then the
+        // shape was locked over it; now the clause is left alone and named as such.
+        assertThat(shape.getEditable()).isTrue();
+        assertThat(shape.getRetained())
+                .singleElement()
+                .satisfies(
+                        clause -> {
+                            assertThat(clause.getField()).isEqualTo("message");
+                            assertThat(clause.getValue()).isEqualTo("\"Broken\"@en");
+                        });
+
+        shape.setName("A name");
+        assertThat(service.apply(edit(turtle, shape)).getTurtle()).contains("\"Broken\"@en");
     }
 
     @Test
-    void aShapeNotTypedAsANodeShapeIsShownButNotEdited() {
+    void aShapeSHACLOnlyInfersIsEditedWithoutBeingGivenAType() {
         var turtle =
                 """
                 @prefix sh:  <http://www.w3.org/ns/shacl#> .
                 @prefix cim: <http://iec.ch/TC57/CIM100#> .
                 @prefix ex:  <http://example.org/shapes#> .
 
-                ex:Implied  sh:targetClass cim:ACLineSegment .
+                ex:Implied  sh:targetClass cim:ACLineSegment ;
+                            sh:property [ sh:path cim:ACLineSegment.r ] .
                 """;
+        var shape = shapeNamed(turtle, "http://example.org/shapes#Implied");
 
-        var form = service.parse(turtle);
+        // Respelling this shape would have added the rdf:type its author left out, which is why
+        // it used to be read-only. A clause-level edit never writes a clause nobody asked for.
+        assertThat(shape.getEditable()).isTrue();
+        shape.getProperties().get(0).setMinCount(1);
 
-        assertThat(form.getShapes())
-                .extracting(NodeShapeModel::getIri)
-                .containsExactly("http://example.org/shapes#Implied");
-        assertThat(form.getShapes().get(0).getEditable()).isFalse();
-        assertThat(form.getShapes().get(0).getReadOnlyReason()).contains("sh:NodeShape");
+        var result = service.apply(edit(turtle, shape));
+
+        assertThat(result.getTurtle()).doesNotContain("sh:NodeShape");
+        assertThat(result.getTurtle()).contains("sh:path cim:ACLineSegment.r ; sh:minCount 1");
     }
 
     @Test
@@ -442,8 +476,14 @@ class ShapeFormServiceTest {
                       sh:targetClass cim:ACLineSegment ;
                       sh:closed "yes" .
                 """;
+        var shape = shapeNamed(turtle, "http://example.org/shapes#S");
 
         // Reading this as sh:closed false and writing it back would state a rule nobody wrote.
-        assertThat(shapeNamed(turtle, "http://example.org/shapes#S").getEditable()).isFalse();
+        assertThat(shape.getClosed()).isNull();
+        assertThat(shape.getRetained())
+                .extracting("field", "value")
+                .containsExactly(tuple("closed", "\"yes\""));
+        // And it no longer costs the shape its other fields.
+        assertThat(shape.getEditable()).isTrue();
     }
 }
