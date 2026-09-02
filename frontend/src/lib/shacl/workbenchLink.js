@@ -59,3 +59,26 @@ export function workbenchTarget(url) {
         line: Number.isFinite(line) && line > 0 ? line : null,
     };
 }
+
+/**
+ * Whether leaving the workbench has to be asked about first.
+ *
+ * Pulled out of the page because the interesting part is the exceptions, not the guard: a
+ * navigation that stays on the workbench is not leaving it — following a deep link clears its
+ * query that way — and a navigation the user has already agreed to must not be questioned again,
+ * or agreeing would cancel the very navigation it agreed to.
+ *
+ * @param dirty whether the editor holds unsaved changes
+ * @param toPathname where the navigation is going, or null when it leaves the app entirely
+ * @param alreadyConfirmed whether this navigation is one the user has already agreed to
+ */
+export function leavingNeedsConfirmation({
+    dirty,
+    toPathname = null,
+    alreadyConfirmed = false,
+} = {}) {
+    if (!dirty || alreadyConfirmed) {
+        return false;
+    }
+    return toPathname !== WORKBENCH_PATH;
+}

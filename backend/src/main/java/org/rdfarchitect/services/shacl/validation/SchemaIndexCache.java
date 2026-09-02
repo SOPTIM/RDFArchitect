@@ -22,8 +22,6 @@ import de.soptim.opencgmes.cimvocabcheck.core.SparqlValidationApi;
 import de.soptim.opencgmes.cimvocabcheck.core.VersionIri;
 import de.soptim.opencgmes.cimvocabcheck.core.schema.RdfsSchemaIndex;
 
-import lombok.RequiredArgsConstructor;
-
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.GraphUtil;
 import org.apache.jena.query.ReadWrite;
@@ -34,11 +32,13 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.LongSupplier;
 
 /**
  * The CIM schema of a workspace, indexed for term lookups and kept until the schema changes.
@@ -73,19 +73,73 @@ import java.util.UUID;
  * to one profile, none scoped to the workspace. A term that no profile in the workspace declares is
  * still an error, which is the question worth answering.
  */
-@RequiredArgsConstructor
 public class SchemaIndexCache {
 
     private static final Logger logger = LoggerFactory.getLogger(SchemaIndexCache.class);
 
     /**
-     * How many indexed schemas to keep. An index of a full CGMES profile set is large, and there is
-     * one per workspace per session, so the map is bounded and evicts the least recently used
-     * rather than growing with every workspace a server has ever been asked about.
+     * How much indexed schema to keep, across every workspace and session, counted in the triples
+     * the indexes were built from.
+     *
+     * <p>Counting entries instead said nothing about memory: eight indexes is a few megabytes of
+     * one-profile workspaces and something else entirely of eight full CGMES releases, and the
+     * bound that matters is the second one. Triples are a proxy rather than a measurement, but they
+     * are the thing an index is proportional to and they are free to count.
+     *
+     * <p>Five million is roughly a dozen full CGMES profile sets. A workspace bigger than the whole
+     * budget is still cached — see {@link #evictBySize} — because evicting the entry a caller is
+     * about to use would turn the cache into pure overhead.
      */
-    private static final int MAX_ENTRIES = 8;
+    private static final long DEFAULT_MAX_INDEXED_TRIPLES = 5_000_000;
+
+    /**
+     * How long an index is kept after the last time anything asked for it.
+     *
+     * <p>The size bound alone only releases memory when some other workspace needs the room, so a
+     * server that indexed a large workspace an hour ago and has been idle since would hold it for
+     * ever. Sessions end without telling anyone, and this is what notices.
+     */
+    private static final Duration DEFAULT_MAX_IDLE = Duration.ofMinutes(30);
+
+    /**
+     * A backstop on the number of entries, for workspaces small enough that the size bound never
+     * bites. Generous on purpose: it is not the bound that is meant to do the work.
+     */
+    private static final int DEFAULT_MAX_ENTRIES = 64;
 
     private final DatabasePort databasePort;
+
+    private final long maxIndexedTriples;
+
+    private final Duration maxIdle;
+
+    private final int maxEntries;
+
+    /** Wall clock, in milliseconds. Injected so the idle bound can be tested without waiting. */
+    private final LongSupplier clock;
+
+    public SchemaIndexCache(DatabasePort databasePort) {
+        this(
+                databasePort,
+                DEFAULT_MAX_INDEXED_TRIPLES,
+                DEFAULT_MAX_IDLE,
+                DEFAULT_MAX_ENTRIES,
+                System::currentTimeMillis);
+    }
+
+    /** Visible for testing: the bounds and the clock are what the eviction rules are about. */
+    SchemaIndexCache(
+            DatabasePort databasePort,
+            long maxIndexedTriples,
+            Duration maxIdle,
+            int maxEntries,
+            LongSupplier clock) {
+        this.databasePort = databasePort;
+        this.maxIndexedTriples = maxIndexedTriples;
+        this.maxIdle = maxIdle;
+        this.maxEntries = maxEntries;
+        this.clock = clock;
+    }
 
     /**
      * Keyed by session as well as workspace: the in-memory database is per session, so two sessions
@@ -93,7 +147,23 @@ public class SchemaIndexCache {
      */
     private record CacheKey(String sessionId, String datasetName) {}
 
-    private record Entry(Map<String, UUID> graphVersions, SparqlValidationApi api) {}
+    /**
+     * @param indexedTriples what the index was built from, standing in for how much room it takes
+     * @param lastUsedMillis when it was last handed out, for the idle bound
+     */
+    private record Entry(
+            Map<String, UUID> graphVersions,
+            SparqlValidationApi api,
+            long indexedTriples,
+            long lastUsedMillis) {
+
+        Entry usedAt(long now) {
+            return new Entry(graphVersions, api, indexedTriples, now);
+        }
+    }
+
+    /** An index and the size it was built from. */
+    private record Built(SparqlValidationApi api, long indexedTriples) {}
 
     /**
      * Access-ordered so the eldest entry is the least recently used. Guarded by {@link #cacheLock};
@@ -112,20 +182,63 @@ public class SchemaIndexCache {
         var key = new CacheKey(SessionContext.getSessionId(), datasetName);
         var versions = graphVersions(datasetName);
         synchronized (cacheLock) {
+            // Only the idle pass here. Evicting for size before the lookup could drop the very
+            // entry this call is about to hit, and rebuilding it would cost more than the room it
+            // was holding; the miss path below is where the size bound is enforced, and a miss is
+            // the only thing that can push the cache over it.
+            evictIdle(clock.getAsLong());
             var cached = cache.get(key);
             if (cached != null && cached.graphVersions().equals(versions)) {
+                cache.put(key, cached.usedAt(clock.getAsLong()));
                 return cached.api();
             }
         }
-        var api = build(datasetName, versions.keySet());
+        var built = build(datasetName, versions.keySet());
         synchronized (cacheLock) {
-            cache.put(key, new Entry(versions, api));
-            while (cache.size() > MAX_ENTRIES) {
-                var eldest = cache.keySet().iterator().next();
-                cache.remove(eldest);
-            }
+            cache.put(
+                    key,
+                    new Entry(
+                            versions,
+                            built.api(),
+                            built.indexedTriples(),
+                            clock.getAsLong()));
+            evictBySize();
         }
-        return api;
+        return built.api();
+    }
+
+    /**
+     * Drops indexes nothing has asked for in {@code maxIdle}.
+     *
+     * <p>Sessions end without telling anyone, so nothing else would ever release the schema of a
+     * workspace the server has finished with. Applies whatever an entry's size — an index nobody
+     * has wanted for half an hour is worth the rebuild if it turns out to be wanted again.
+     *
+     * <p>Callers hold {@link #cacheLock}.
+     */
+    private void evictIdle(long now) {
+        cache.entrySet()
+                .removeIf(entry -> now - entry.getValue().lastUsedMillis() > maxIdle.toMillis());
+    }
+
+    /**
+     * Drops the least recently used indexes until the cache is inside both bounds.
+     *
+     * <p>The most recently used entry is never dropped. A workspace bigger than the whole budget
+     * would otherwise be evicted the moment it was cached and rebuilt on every call — slower than
+     * having no cache at all, and silently so.
+     *
+     * <p>Callers hold {@link #cacheLock}.
+     */
+    private void evictBySize() {
+        // Access-ordered, so iteration runs least-recently-used first.
+        var iterator = cache.entrySet().iterator();
+        var total = cache.values().stream().mapToLong(Entry::indexedTriples).sum();
+        while ((total > maxIndexedTriples || cache.size() > maxEntries) && cache.size() > 1) {
+            var eldest = iterator.next();
+            total -= eldest.getValue().indexedTriples();
+            iterator.remove();
+        }
     }
 
     /** Committed version id per graph, which together identify the workspace's schema. */
@@ -140,7 +253,7 @@ public class SchemaIndexCache {
         return versions;
     }
 
-    private SparqlValidationApi build(String datasetName, Iterable<String> graphUris) {
+    private Built build(String datasetName, Iterable<String> graphUris) {
         var started = System.currentTimeMillis();
         var copies = new LinkedHashMap<String, Graph>();
         for (String graphUri : graphUris) {
@@ -163,16 +276,18 @@ public class SchemaIndexCache {
         }
         var index = builder.build();
 
+        var indexedTriples = copies.values().stream().mapToLong(Graph::size).sum();
         logger.info(
-                "Indexed the schema of workspace \"{}\" in {} ms: {} graph(s), {} profile(s), {}"
-                        + " class(es), {} property(ies).",
+                "Indexed the schema of workspace \"{}\" in {} ms: {} graph(s), {} triple(s), {}"
+                        + " profile(s), {} class(es), {} property(ies).",
                 datasetName,
                 System.currentTimeMillis() - started,
                 copies.size(),
+                indexedTriples,
                 index.getAllProfiles().size(),
                 index.allClasses().size(),
                 index.allProperties().size());
-        return new SparqlValidationApi(index);
+        return new Built(new SparqlValidationApi(index), indexedTriples);
     }
 
     /**

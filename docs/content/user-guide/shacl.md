@@ -34,6 +34,8 @@ Switching a document **off** means it takes no part in validation or in a combin
 
 In a **read-only** workspace the workbench reads and validates as usual, but nothing can be changed and the header says so.
 
+Unsaved changes are not thrown away quietly. Opening another document, following a finding to the file it came from, or leaving the workbench altogether — including the editor's own Ctrl+click, the browser's back button, and closing the tab — asks first, and offers to save.
+
 ### Turtle view
 
 The document as text, with syntax highlighting that extends into the SPARQL inside `sh:select`, and squiggles under whatever validation objects to. `Ctrl+S` saves; `F8` walks from one problem to the next; hovering a marker shows the message.

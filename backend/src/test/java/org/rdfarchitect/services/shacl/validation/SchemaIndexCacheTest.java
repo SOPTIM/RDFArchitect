@@ -34,6 +34,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 
+import java.time.Duration;
 import java.util.UUID;
 
 /** Keeping an indexed schema only as long as the schema it was built from. */
@@ -55,6 +56,9 @@ class SchemaIndexCacheTest {
     private final InMemoryDatabaseAdapter databasePort = new InMemoryDatabaseAdapter(database);
 
     private SchemaIndexCache cache;
+
+    /** The clock the bounded caches below read, so the idle bound can be tested without waiting. */
+    private long now = 1_000_000L;
 
     @BeforeEach
     void setUp() {
@@ -128,6 +132,77 @@ class SchemaIndexCacheTest {
         databasePort.createGraph(GRAPH, GraphFactory.createDefaultGraph());
 
         assertThat(cache.apiFor(DATASET)).isNotSameAs(firstSession);
+    }
+
+    // -------------------------------------------------------------------------
+    // Staying inside its bounds
+    // -------------------------------------------------------------------------
+
+    /** A cache with the given bounds and a clock the test moves by hand. */
+    private SchemaIndexCache bounded(long maxIndexedTriples, Duration maxIdle, int maxEntries) {
+        return new SchemaIndexCache(
+                databasePort, maxIndexedTriples, maxIdle, maxEntries, () -> now);
+    }
+
+    @Test
+    void anIndexNothingHasAskedForIsReleased() {
+        var bounded = bounded(Long.MAX_VALUE, Duration.ofMinutes(30), 64);
+        var first = bounded.apiFor(DATASET);
+
+        now += Duration.ofMinutes(31).toMillis();
+
+        // Sessions end without telling anyone, so nothing else would ever release this.
+        assertThat(bounded.apiFor(DATASET)).isNotSameAs(first);
+    }
+
+    @Test
+    void anIndexStillInUseIsKept() {
+        var bounded = bounded(Long.MAX_VALUE, Duration.ofMinutes(30), 64);
+        var first = bounded.apiFor(DATASET);
+
+        now += Duration.ofMinutes(20).toMillis();
+        var second = bounded.apiFor(DATASET);
+        now += Duration.ofMinutes(20).toMillis();
+
+        // Asking again is what keeps it: the bound is on idleness, not on age.
+        assertThat(second).isSameAs(first);
+        assertThat(bounded.apiFor(DATASET)).isSameAs(first);
+    }
+
+    @Test
+    void aWorkspaceTooBigForTheBudgetIsStillCached() {
+        // Evicting the entry the caller is about to use would rebuild on every call — slower than
+        // having no cache at all, and silently so.
+        var bounded = bounded(1, Duration.ofDays(1), 64);
+
+        assertThat(bounded.apiFor(DATASET)).isSameAs(bounded.apiFor(DATASET));
+    }
+
+    @Test
+    void theLeastRecentlyUsedWorkspaceMakesRoomForANewOne() {
+        databasePort.createDataset("other");
+        databasePort.createGraph(
+                new GraphIdentifier("other", "http://ex.org/EQ"), GraphFactory.createDefaultGraph());
+        var bounded = bounded(1, Duration.ofDays(1), 64);
+
+        var first = bounded.apiFor(DATASET);
+        bounded.apiFor("other");
+
+        // Two entries and room for one, so the older one went.
+        assertThat(bounded.apiFor(DATASET)).isNotSameAs(first);
+    }
+
+    @Test
+    void theEntryCountIsBoundedForWorkspacesTooSmallToTripTheSizeBound() {
+        databasePort.createDataset("other");
+        databasePort.createGraph(
+                new GraphIdentifier("other", "http://ex.org/EQ"), GraphFactory.createDefaultGraph());
+        var bounded = bounded(Long.MAX_VALUE, Duration.ofDays(1), 1);
+
+        var first = bounded.apiFor(DATASET);
+        bounded.apiFor("other");
+
+        assertThat(bounded.apiFor(DATASET)).isNotSameAs(first);
     }
 
     private void addClass(String classUri) {

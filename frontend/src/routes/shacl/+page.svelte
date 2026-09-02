@@ -35,6 +35,7 @@
     import { SchemaTermSource } from "$lib/shacl/schemaTermSource.svelte.js";
     import { parsePrefixes } from "$lib/shacl/turtleTerms.js";
     import {
+        leavingNeedsConfirmation,
         WORKBENCH_PATH,
         workbenchTarget,
     } from "$lib/shacl/workbenchLink.js";
@@ -51,7 +52,7 @@
     import FormEditor from "./workbench/FormEditor.svelte";
     import ProblemsPanel from "./workbench/ProblemsPanel.svelte";
 
-    import { goto } from "$app/navigation";
+    import { beforeNavigate, goto } from "$app/navigation";
     import { page } from "$app/state";
 
     const VIEWS = [
@@ -72,6 +73,12 @@
     /** Resolved when the user has answered the unsaved-changes dialog. */
     let pendingSwitch = $state(null);
     let showUnsavedDialog = $state(false);
+
+    /**
+     * Set while a navigation the user has already agreed to is being re-issued, so the guard
+     * below lets it through instead of asking the same question twice.
+     */
+    let leaveConfirmed = false;
 
     let selectedWorkspace = $derived(editorState.selectedWorkspace.getValue());
     let selectedGraph = $derived(editorState.selectedGraph.getValue());
@@ -289,6 +296,40 @@
             reveal(problem.line, problem.column ?? 1);
         }
     }
+
+    /**
+     * Asks about unsaved changes before the user leaves the workbench altogether.
+     *
+     * `confirmSwitch` only covers opening another document; without this, the same buffer was
+     * thrown away silently by anything that navigated — the menu bar, the browser's back button,
+     * a reload, or the editor's own Ctrl+click, which opens the class the cursor is on.
+     *
+     * `beforeNavigate` runs synchronously and the dialog does not, so the navigation is cancelled
+     * first and re-issued once the user has answered. A full unload is the exception: the browser
+     * will not wait for anything of ours, and cancelling is what asks its own question instead.
+     */
+    beforeNavigate(navigation => {
+        const needsAsking = leavingNeedsConfirmation({
+            dirty: workbench?.dirty ?? false,
+            toPathname: navigation.to?.url?.pathname ?? null,
+            alreadyConfirmed: leaveConfirmed,
+        });
+        if (!needsAsking) {
+            return;
+        }
+        navigation.cancel();
+        if (navigation.willUnload) {
+            return;
+        }
+        const destination = navigation.to?.url;
+        confirmSwitch().then(agreed => {
+            if (!agreed || !destination) {
+                return;
+            }
+            leaveConfirmed = true;
+            goto(destination).finally(() => (leaveConfirmed = false));
+        });
+    });
 </script>
 
 <!--

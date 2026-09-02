@@ -50,6 +50,8 @@ Everything that reasons *about* shapes rather than generating them is built on `
 | `services/shacl/form/` | What shapes does this document declare, and how do I write one back without reformatting the file? |
 | `services/shacl/conformance/` | Does this document still agree with what the schema implies? |
 
+It is bounded by *size* rather than by entry count — the triples its indexes were built from, which is the thing an index is proportional to and is free to count. Counting entries said nothing about memory: eight indexes is a few megabytes of one-profile workspaces and something else entirely of eight full CGMES releases. An index nothing has asked for in half an hour is dropped as well, because sessions end without telling anyone and nothing else would ever release one. The most recently used entry is never dropped for size, so a workspace larger than the whole budget is still cached rather than rebuilt on every call.
+
 Three things about that cache are load-bearing:
 
 - It is keyed on `{graphUri → committed version id}` **and the session id**, because the in-memory database is per HTTP session. A commit, an undo or a redo invalidates it without the commit path knowing the cache exists.
