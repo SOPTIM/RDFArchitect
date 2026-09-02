@@ -79,4 +79,16 @@ public class DLQuerySolutionParser {
         }
         return new XYZPosition(xPosition, yPosition, zPosition);
     }
+
+    /**
+     * Extracts the sequence number from the query solution.
+     *
+     * @return the sequence number or null, if the variable doesn't exist in the solution
+     */
+    public Integer getSequenceNumber() {
+        if (!qs.contains(DLQueryVars.SEQUENCE_NUMBER)) {
+            return null;
+        }
+        return qs.getLiteral(DLQueryVars.SEQUENCE_NUMBER).getInt();
+    }
 }
