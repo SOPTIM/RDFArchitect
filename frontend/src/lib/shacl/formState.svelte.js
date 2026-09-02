@@ -75,6 +75,8 @@ export class ShapesFormView {
     #requestOptions;
     /** The text the shapes were read from, so a stale read is not shown as current. */
     #readFrom = null;
+    /** Counts reads so a slower earlier one cannot land on top of a newer one. */
+    #reads = 0;
 
     constructor({ datasetName, graphUri, requestOptions = {} }) {
         this.#datasetName = datasetName;
@@ -96,6 +98,7 @@ export class ShapesFormView {
         if (this.describes(turtle)) {
             return;
         }
+        const read = ++this.#reads;
         this.loading = true;
         try {
             const { data, error } = await readForm({
@@ -105,6 +108,13 @@ export class ShapesFormView {
                 bodySerializer: null,
                 headers: { "Content-Type": "text/plain" },
             });
+            // A newer read started while this one was in flight, so this answer describes text the
+            // buffer has moved past. Landing it would leave the cards showing one document's
+            // shapes over another's text, and applying an edit from one would rewrite the wrong
+            // statement — `describes` would say so, but nothing re-reads until the text changes.
+            if (read !== this.#reads) {
+                return;
+            }
             if (error) {
                 this.error = "The constraints could not be read as a form.";
                 return;
@@ -114,7 +124,9 @@ export class ShapesFormView {
             this.error = null;
             this.#readFrom = turtle;
         } finally {
-            this.loading = false;
+            if (read === this.#reads) {
+                this.loading = false;
+            }
         }
     }
 

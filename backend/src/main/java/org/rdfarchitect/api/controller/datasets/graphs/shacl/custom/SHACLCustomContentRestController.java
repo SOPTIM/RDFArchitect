@@ -26,8 +26,8 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.api.controller.Response;
+import org.rdfarchitect.api.controller.datasets.graphs.shacl.SHACLFileResponse;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.graph.source.implementations.GraphFileSourceImpl;
 import org.rdfarchitect.rdf.graph.source.implementations.GraphStringSourceImpl;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -48,11 +48,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.AbstractMap;
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom")
@@ -201,13 +197,13 @@ public class SHACLCustomContentRestController {
                 originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var format = getRdfFormat(acceptHeader);
+        var format = SHACLFileResponse.rdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 shaclExportUseCase.exportCustomSHACLGraph(
                         new GraphIdentifier(datasetName, extendedGraphURI), format);
-        var body = buildResponseEntity(extendedGraphURI, format, outStream);
+        var body = SHACLFileResponse.of(extendedGraphURI, format, outStream);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/file\" to \"{}\".",
@@ -263,38 +259,5 @@ public class SHACLCustomContentRestController {
                 graphURI,
                 originURL);
         return shaclString;
-    }
-
-    private ResponseEntity<byte[]> buildResponseEntity(
-            String extendedGraphURI, RDFFormat format, ByteArrayOutputStream outStream) {
-        // add suggested file name to response
-        var fileName = "shacl";
-        if (!extendedGraphURI.equals("default")) {
-            fileName = new URI(extendedGraphURI + "-shacl").getSuffix();
-        }
-        fileName += "." + format.getLang().getFileExtensions().getFirst();
-
-        var headers = new HttpHeaders();
-        headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));
-        return ResponseEntity.ok()
-                .headers(headers)
-                .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
-                .body(outStream.toByteArray());
-    }
-
-    private final Map<String, RDFFormat> supportedFormats =
-            Map.ofEntries(
-                    new AbstractMap.SimpleEntry<>("text/turtle", RDFFormat.TURTLE),
-                    new AbstractMap.SimpleEntry<>("application/rdf+xml", RDFFormat.RDFXML),
-                    new AbstractMap.SimpleEntry<>("application/rdf+json", RDFFormat.RDFJSON),
-                    new AbstractMap.SimpleEntry<>("application/n-triples", RDFFormat.NTRIPLES));
-
-    private RDFFormat getRdfFormat(String acceptHeader) {
-        for (var entry : supportedFormats.entrySet()) {
-            if (acceptHeader.contains(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-        throw new IllegalArgumentException("unsupported Media Type");
     }
 }

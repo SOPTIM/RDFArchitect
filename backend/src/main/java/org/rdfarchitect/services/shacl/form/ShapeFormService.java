@@ -125,10 +125,11 @@ public class ShapeFormService implements ShapeFormUseCase {
         }
         var statement = existing.get();
         // Take the blank line the statement left behind with it, so removing shapes one by one
-        // does not slowly fill the document with gaps.
-        var after = turtle.substring(statement.end()).replaceFirst("^\\n\\n", "\n");
+        // does not slowly fill the document with gaps. What preceded the statement is kept, so the
+        // shape that follows keeps the separation the removed one had in front of it.
+        var after = turtle.substring(statement.end()).stripLeading();
         return ShapeEditResult.builder()
-                .turtle(turtle.substring(0, statement.start()) + after.stripLeading())
+                .turtle(turtle.substring(0, statement.start()) + after)
                 .warnings(List.of())
                 .build();
     }
@@ -144,7 +145,7 @@ public class ShapeFormService implements ShapeFormUseCase {
     /** What the rewrite costs beyond the change itself. */
     private static List<String> warningsFor(String replaced) {
         var warnings = new ArrayList<String>();
-        if (replaced.contains("#")) {
+        if (ShapeBlockLocator.containsComment(replaced)) {
             warnings.add(
                     "Comments written inside this shape were removed, because the shape was"
                             + " rewritten from the form. The rest of the document is unchanged.");

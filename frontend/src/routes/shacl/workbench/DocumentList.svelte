@@ -129,6 +129,11 @@
     async function confirmDelete() {
         const document = pendingDelete;
         pendingDelete = null;
+        // A second confirm before the first resolves — a double click, or Enter and a click —
+        // arrives with nothing left to delete.
+        if (!document) {
+            return;
+        }
         if (!(await workbench.remove(document.id))) {
             toastStore.error(
                 "Not deleted",

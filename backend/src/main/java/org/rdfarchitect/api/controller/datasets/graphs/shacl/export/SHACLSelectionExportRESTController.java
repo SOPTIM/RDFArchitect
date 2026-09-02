@@ -24,9 +24,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.riot.RDFFormat;
+import org.rdfarchitect.api.controller.datasets.graphs.shacl.SHACLFileResponse;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.slf4j.Logger;
@@ -41,7 +40,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -60,13 +58,6 @@ public class SHACLSelectionExportRESTController {
             LoggerFactory.getLogger(SHACLSelectionExportRESTController.class);
 
     /** The same set the other export endpoints accept, keyed by what a browser sends. */
-    private static final Map<String, RDFFormat> SUPPORTED_FORMATS =
-            Map.ofEntries(
-                    Map.entry("text/turtle", RDFFormat.TURTLE),
-                    Map.entry("application/rdf+xml", RDFFormat.RDFXML),
-                    Map.entry("application/rdf+json", RDFFormat.RDFJSON),
-                    Map.entry("application/n-triples", RDFFormat.NTRIPLES));
-
     private final ExpandURIUseCase expandURIUseCase;
 
     private final SHACLExportUseCase shaclExportUseCase;
@@ -114,7 +105,7 @@ public class SHACLSelectionExportRESTController {
                 originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var format = rdfFormat(acceptHeader);
+        var format = SHACLFileResponse.rdfFormat(acceptHeader);
         var outStream =
                 shaclExportUseCase.exportSelectedSHACLGraph(
                         new GraphIdentifier(datasetName, extendedGraphURI),
@@ -122,25 +113,6 @@ public class SHACLSelectionExportRESTController {
                         documentIds == null ? List.of() : documentIds,
                         includeGenerated);
 
-        var fileName =
-                "default".equals(extendedGraphURI)
-                        ? "shacl"
-                        : new URI(extendedGraphURI + "-shacl").getSuffix();
-        fileName += "." + format.getLang().getFileExtensions().getFirst();
-
-        var headers = new HttpHeaders();
-        headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));
-        return ResponseEntity.ok()
-                .headers(headers)
-                .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
-                .body(outStream.toByteArray());
-    }
-
-    private static RDFFormat rdfFormat(String acceptHeader) {
-        return SUPPORTED_FORMATS.entrySet().stream()
-                .filter(entry -> acceptHeader.contains(entry.getKey()))
-                .map(Map.Entry::getValue)
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("unsupported Media Type"));
+        return SHACLFileResponse.of(extendedGraphURI, format, outStream);
     }
 }

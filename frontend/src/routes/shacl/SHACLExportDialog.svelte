@@ -46,6 +46,8 @@
     let selected = $state(new Set());
     let includeGenerated = $state(true);
     let loadFailed = $state(false);
+    /** Identifies the newest listing, so an earlier one that answers later is dropped. */
+    let loadingFor = null;
 
     let nothingChosen = $derived(!includeGenerated && selected.size === 0);
 
@@ -62,6 +64,11 @@
      * set rather than an empty file.
      */
     async function loadDocuments(workspaceName, graphUri) {
+        // The selection can change again while a listing is in flight, and the older request may
+        // answer last. Its documents belong to the graph that is no longer chosen, and exporting
+        // would ask the new graph for ids it has never heard of — which it skips in silence.
+        const load = {};
+        loadingFor = load;
         if (!workspaceName || !graphUri) {
             documents = [];
             selected = new Set();
@@ -70,6 +77,9 @@
         const { data, error } = await listShapesDocuments({
             path: { datasetName: workspaceName, graphURI: graphUri },
         });
+        if (loadingFor !== load) {
+            return;
+        }
         loadFailed = !!error;
         documents = error
             ? []

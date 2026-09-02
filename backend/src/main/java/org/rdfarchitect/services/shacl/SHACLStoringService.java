@@ -84,13 +84,19 @@ import java.util.UUID;
  * shape-level and property-level writes still target the graph's default document, which is what
  * the endpoints predating multiple documents address.
  *
- * <p>That asymmetry is why {@link #updateClassSHACL} and {@link #updatePropertyShacl} are
- * deprecated and no longer reached from the UI. Editing a rule that came from an imported document
- * could not remove it — it is not in the default document — so the edit was <em>added</em> beside
- * the original, and SHACL being conjunctive the two then contradicted each other. Neither method
- * updates the default document's {@code rawText} either, so the workbench kept showing the text
- * from before the edit and overwrote it on the next save. Write through {@link
+ * <p>That asymmetry is why {@link #updateClassSHACL}, {@link #updatePropertyShacl}, {@link
+ * #replaceSHACLShape} and {@link #deleteSHACLShape} are deprecated and no longer reached from the
+ * UI. Editing a rule that came from an imported document could not remove it — it is not in the
+ * default document — so the edit was <em>added</em> beside the original, and SHACL being
+ * conjunctive the two then contradicted each other. Write through {@link
  * #replaceShapesDocumentText}, which addresses one document and keeps its text authoritative.
+ *
+ * <p>All four still have endpoints, so all four re-record the default document's {@code rawText}
+ * from its triples before committing. Without that they would leave the stored text describing the
+ * graph as it was before the edit, and since {@link #getShapesDocumentText} prefers that text, the
+ * workbench would show the edit as never having happened and undo it on the next save. Re-recording
+ * costs the document its comments and its ordering, which is the other half of why these paths are
+ * superseded rather than merely older.
  */
 @RequiredArgsConstructor
 public class SHACLStoringService
@@ -135,9 +141,18 @@ public class SHACLStoringService
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             assertNameIsFree(ctx, name, null);
             var document = ctx.createShapesDocument(name, resolveOrigin(sourceFileName));
-            document.setSourceFileName(sourceFileName);
-            writeContent(document, parsed, content, lang);
-            ctx.commit("Add constraints \"%s\"".formatted(name));
+            // Creating a document changes the context itself — its document list, its transaction
+            // participants, its undo history — and none of that is part of the transaction the
+            // try-with-resources aborts. Without undoing it here, a failure below would leave an
+            // empty document that nothing committed and no undo can remove.
+            try {
+                document.setSourceFileName(sourceFileName);
+                writeContent(document, parsed, content, lang);
+                ctx.commit("Add constraints \"%s\"".formatted(name));
+            } catch (RuntimeException e) {
+                ctx.removeShapesDocument(document.getId());
+                throw e;
+            }
             return toInfo(document);
         }
     }
@@ -207,8 +222,12 @@ public class SHACLStoringService
                                 + "Replace its content with an empty document instead.");
             }
             var name = document.getName();
-            ctx.removeShapesDocument(documentId);
+            // Committed before the document leaves the context, not after. Removal is a change to
+            // the context that no abort undoes, so a commit that failed afterwards would have
+            // destroyed the document without recording anything — the one order in which the
+            // failure is unrecoverable.
             ctx.commit("Delete constraints \"%s\"".formatted(name));
+            ctx.removeShapesDocument(documentId);
         }
     }
 
@@ -792,6 +811,12 @@ public class SHACLStoringService
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Deprecated: writes the default document alone and reformats it. See this class's
+     * documentation for why, and write through {@link #replaceShapesDocumentText} instead.
+     */
     @Override
     public void deleteSHACLShape(GraphIdentifier graphIdentifier, String shaclShapeURI) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
@@ -800,10 +825,17 @@ public class SHACLStoringService
             copySHACLShapeToNewModel(
                     customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
             customSHACL.remove(deleteModel);
+            recordDefaultDocumentText(ctx);
             ctx.commit("Delete SHACL shape");
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Deprecated: writes the default document alone and reformats it. See this class's
+     * documentation for why, and write through {@link #replaceShapesDocumentText} instead.
+     */
     @Override
     public void replaceSHACLShape(
             GraphIdentifier graphIdentifier, String shaclShapeURI, String shaclToInsert) {
@@ -815,6 +847,7 @@ public class SHACLStoringService
                     customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
             customSHACL.remove(deleteModel);
             customSHACL.add(insertModel);
+            recordDefaultDocumentText(ctx);
             ctx.commit("Replace SHACL shape");
         }
     }
@@ -829,6 +862,12 @@ public class SHACLStoringService
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Deprecated: writes the default document alone and reformats it. See this class's
+     * documentation for why, and write through {@link #replaceShapesDocumentText} instead.
+     */
     @Override
     public void updateClassSHACL(
             GraphIdentifier graphIdentifier, UUID classUUID, String ttlShaclString) {
@@ -842,10 +881,17 @@ public class SHACLStoringService
             customSHACL.clearNsPrefixMap();
             customSHACL.setNsPrefixes(insertModel);
             customSHACL.add(insertModel);
+            recordDefaultDocumentText(ctx);
             ctx.commit("Update class SHACL");
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Deprecated: writes the default document alone and reformats it. See this class's
+     * documentation for why, and write through {@link #replaceShapesDocumentText} instead.
+     */
     @Override
     public void updatePropertyShacl(
             GraphIdentifier graphIdentifier, UUID propertyUUID, String ttlShaclString) {
@@ -869,8 +915,24 @@ public class SHACLStoringService
             customSHACL.clearNsPrefixMap();
             customSHACL.setNsPrefixes(insertModel);
             customSHACL.add(insertModel);
+            recordDefaultDocumentText(ctx);
             ctx.commit("Update property SHACL");
         }
+    }
+
+    /**
+     * Re-derives the default document's text from the triples now in its graph.
+     *
+     * <p>For the superseded write paths only, which edit that graph directly. {@link
+     * #getShapesDocumentText} answers from the stored text whenever there is one, so leaving it
+     * behind makes the edit invisible to the editor and lets the next save write the pre-edit text
+     * back over it. These paths have no user-authored text to preserve — they were handed triples —
+     * so the serialised graph is the best source there is.
+     */
+    private static void recordDefaultDocumentText(GraphContext ctx) {
+        var document = ctx.getShapesDocuments().get(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
+        document.setRawText(
+                serialiseToTurtle(ModelFactory.createModelForGraph(document.getGraph())));
     }
 
     /**

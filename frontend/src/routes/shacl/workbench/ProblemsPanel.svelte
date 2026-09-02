@@ -51,6 +51,9 @@
     let height = $state(260);
     let panel = $state(null);
 
+    /** Unbinds the listeners of the drag in progress, or null when none is. */
+    let stopResize = null;
+
     const problems = $derived(
         workbench.results
             .flatMap(result =>
@@ -65,6 +68,10 @@
 
     const totals = $derived(workbench.totals);
 
+    // Navigating away mid-drag would otherwise leave the handlers writing height into a component
+    // that is gone, holding its DOM alive with them.
+    $effect(() => () => stopResize?.());
+
     /**
      * Drags the panel taller or shorter.
      *
@@ -76,15 +83,23 @@
             return;
         }
         event.preventDefault();
+        stopResize?.();
         const startY = event.clientY;
         const startHeight = height;
         const onMove = move => resizeTo(startHeight + (startY - move.clientY));
-        const onUp = () => {
+        const onEnd = () => stopResize?.();
+        // pointercancel as well as pointerup: a touch the browser takes over for a scroll ends
+        // without ever firing pointerup, and the listeners would go on resizing the panel from
+        // every pointer move on the page for as long as it is open.
+        stopResize = () => {
             window.removeEventListener("pointermove", onMove);
-            window.removeEventListener("pointerup", onUp);
+            window.removeEventListener("pointerup", onEnd);
+            window.removeEventListener("pointercancel", onEnd);
+            stopResize = null;
         };
         window.addEventListener("pointermove", onMove);
-        window.addEventListener("pointerup", onUp);
+        window.addEventListener("pointerup", onEnd);
+        window.addEventListener("pointercancel", onEnd);
     }
 
     function onHandleKeydown(event) {

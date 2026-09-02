@@ -194,6 +194,15 @@ public class SchemaIndexCache {
             }
         }
         var built = build(datasetName, versions.keySet());
+        // Building reads the graphs again, outside the lock, so a commit landing in between means
+        // the index describes content newer than the versions it was asked for. Filing it under
+        // those would hand a later reader of the *older* version an index of the newer schema —
+        // after an undo, terms the schema no longer declares would still validate. The caller gets
+        // the index it built either way; only the caching waits for a version that stayed put.
+        var versionsAfter = graphVersions(datasetName);
+        if (!versionsAfter.equals(versions)) {
+            return built.api();
+        }
         synchronized (cacheLock) {
             cache.put(
                     key,

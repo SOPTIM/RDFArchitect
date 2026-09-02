@@ -237,7 +237,11 @@ public class GraphWithContextTransactional implements GraphContext {
 
         var document = new ShapesDocument(id, name, origin, graph);
         synchronized (shapesDocumentsLock) {
-            document.setOrder(shapesDocuments.size());
+            // One past the highest position held, rather than the count: removing a document
+            // leaves a gap in the numbering, so counting would hand the new document a position an
+            // existing one already holds — and every reader that sorts by it would fall back to
+            // the map's insertion order for the tie, ignoring the arrangement the user chose.
+            document.setOrder(nextOrder());
             shapesDocuments.put(id, document);
         }
         graphParticipants.add(graph);
@@ -248,6 +252,12 @@ public class GraphWithContextTransactional implements GraphContext {
                 DEFAULT_SHAPES_DOCUMENT_ID.equals(id) ? "shacl" : "shacl:" + document.getName();
         coreRewindables.add(new NamedRewindable(contextName, graph));
         return document;
+    }
+
+    /** The position that puts a document last. Callers hold {@link #shapesDocumentsLock}. */
+    private int nextOrder() {
+        return shapesDocuments.values().stream().mapToInt(ShapesDocument::getOrder).max().orElse(-1)
+                + 1;
     }
 
     /**

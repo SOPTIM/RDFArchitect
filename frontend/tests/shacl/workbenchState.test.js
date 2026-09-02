@@ -497,6 +497,23 @@ describe("the document list", () => {
         expect(await workbench.remove(EQ)).toBe(true);
         expect(workbench.selectedId).toBe(CUSTOM);
     });
+
+    test("deleting the open document loads the text of the one it opens", async () => {
+        // The regression this guards: relisting moves the selection off the document that is gone,
+        // so asking afterwards whether the deleted one was open always said no. The editor kept
+        // the deleted document's text, and saving wrote it into the document now selected.
+        await workbench.load();
+        expect(workbench.text).toBe(SHAPES);
+        server.documents = server.documents.filter(
+            document => document.id !== EQ,
+        );
+
+        await workbench.remove(EQ);
+
+        expect(workbench.text).toBe("");
+        expect(workbench.savedText).toBe("");
+        expect(workbench.dirty).toBe(false);
+    });
 });
 
 describe("the generated rules", () => {

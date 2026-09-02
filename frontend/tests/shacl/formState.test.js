@@ -119,6 +119,38 @@ describe("reading the buffer as shapes", () => {
         expect(view.shapes).toEqual([]);
     });
 
+    test("an earlier read that answers late does not replace a newer one", async () => {
+        // The regression this guards: switching to the form and typing straight away leaves two
+        // reads in flight. The older answering last used to leave the cards describing text the
+        // buffer had moved past — and applying an edit from one rewrote the wrong statement.
+        const gates = {};
+        server.fetch = async request => {
+            const body = await request.text();
+            const shapes = [{ ...SHAPES[0], iri: `urn:shape:${body}` }];
+            await new Promise(resolve => {
+                gates[body] = resolve;
+            });
+            return new Response(JSON.stringify({ shapes, parseError: null }), {
+                status: 200,
+                headers: { "content-type": "application/json" },
+            });
+        };
+        const racing = viewFor(server);
+
+        const older = racing.read("older");
+        const newer = racing.read("newer");
+        await vi.waitFor(() => expect(Object.keys(gates)).toHaveLength(2));
+
+        gates.newer();
+        await newer;
+        gates.older();
+        await older;
+
+        expect(racing.shapes[0].iri).toBe("urn:shape:newer");
+        expect(racing.describes("newer")).toBe(true);
+        expect(racing.loading).toBe(false);
+    });
+
     test("reports a failure rather than showing a stale form", async () => {
         server.fetch = async () => new Response("nope", { status: 500 });
         const failing = viewFor(server);

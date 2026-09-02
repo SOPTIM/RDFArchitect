@@ -26,6 +26,7 @@ import org.apache.jena.vocabulary.RDF;
 import org.rdfarchitect.shacl.dto.ShapesValidationFinding;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -172,17 +173,25 @@ final class ShapesConflictAnalyzer {
         }
 
         minCounts.forEach(
-                (key, mins) -> {
-                    var maxes = maxCounts.get(key);
-                    if (maxes == null) {
+                (key, statedMins) -> {
+                    var statedMaxes = maxCounts.get(key);
+                    if (statedMaxes == null) {
                         return;
                     }
-                    var strictestMin =
-                            mins.stream().max(ShapesConflictAnalyzer::byIntValue).orElseThrow();
-                    var strictestMax =
-                            maxes.stream().min(ShapesConflictAnalyzer::byIntValue).orElseThrow();
-                    int min = intValue(strictestMin.value()).orElse(Integer.MIN_VALUE);
-                    int max = intValue(strictestMax.value()).orElse(Integer.MAX_VALUE);
+                    // A count that is not a number states no bound this can reason about, and
+                    // leaving it in does more than skip it: it sorts below every real value, so it
+                    // wins the search for the strictest max and widens the bound to
+                    // Integer.MAX_VALUE — hiding the genuinely unsatisfiable pair it displaced.
+                    // The malformed literal itself is reported by the shape validation.
+                    var mins = numeric(statedMins);
+                    var maxes = numeric(statedMaxes);
+                    if (mins.isEmpty() || maxes.isEmpty()) {
+                        return;
+                    }
+                    var strictestMin = mins.stream().max(BY_INT_VALUE).orElseThrow();
+                    var strictestMax = maxes.stream().min(BY_INT_VALUE).orElseThrow();
+                    int min = numberOf(strictestMin);
+                    int max = numberOf(strictestMax);
                     if (min <= max) {
                         return;
                     }
@@ -335,25 +344,39 @@ final class ShapesConflictAnalyzer {
         }
     }
 
-    private static int byIntValue(PropertyConstraint left, PropertyConstraint right) {
-        return Integer.compare(
-                intValue(left.value()).orElse(Integer.MIN_VALUE),
-                intValue(right.value()).orElse(Integer.MIN_VALUE));
+    /** The constraints that state a number, which are the only ones a bound can be read from. */
+    private static List<PropertyConstraint> numeric(List<PropertyConstraint> constraints) {
+        return constraints.stream().filter(c -> intValue(c.value()).isPresent()).toList();
     }
+
+    /** Only for constraints {@link #numeric} has kept. */
+    private static int numberOf(PropertyConstraint constraint) {
+        return intValue(constraint.value()).orElseThrow();
+    }
+
+    private static final Comparator<PropertyConstraint> BY_INT_VALUE =
+            Comparator.comparingInt(ShapesConflictAnalyzer::numberOf);
 
     private static void addTo(
             Map<UUID, List<ShapesValidationFinding>> findings,
             String code,
             String message,
             PropertyConstraint constraint) {
-        findings.get(constraint.document().id())
-                .add(
-                        finding(
-                                code,
-                                message,
-                                constraint.path(),
-                                constraint.document(),
-                                constraint.shape()));
+        var forDocument = findings.get(constraint.document().id());
+        var candidate =
+                finding(
+                        code,
+                        message,
+                        constraint.path(),
+                        constraint.document(),
+                        constraint.shape());
+        // A contradiction stated inside a single document is reported from both of its halves, and
+        // both anchor on the same node shape — so the two calls produce the same finding twice.
+        // Nothing downstream removes it: the validation's own set covers only what validate()
+        // returns, and the panel would list the error twice and count it twice.
+        if (!forDocument.contains(candidate)) {
+            forDocument.add(candidate);
+        }
     }
 
     private static ShapesValidationFinding finding(

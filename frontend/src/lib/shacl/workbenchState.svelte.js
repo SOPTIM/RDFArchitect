@@ -410,9 +410,13 @@ export class ShapesWorkbench {
         if (error) {
             return false;
         }
+        // Asked before the relisting, which moves the selection off a document that is gone: asked
+        // after, this is always false, the editor keeps the deleted document's text, and the next
+        // save writes that text into whichever document the list moved to.
+        const wasOpen = this.selectedId === documentId;
         await this.#refreshDocuments();
-        if (this.selectedId === documentId) {
-            await this.select(this.documents[0]?.id ?? null);
+        if (wasOpen) {
+            await this.select(this.selectedId);
         }
         await this.validateAll();
         return true;

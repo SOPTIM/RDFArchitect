@@ -128,6 +128,34 @@ public final class ShapeBlockLocator {
     // Scanning
     // -------------------------------------------------------------------------
 
+    /**
+     * Whether {@code turtle} holds a comment.
+     *
+     * <p>Scanned rather than searched for {@code #}: the character is ordinary inside an absolute
+     * IRI — every CIM term ends {@code …#ACLineSegment} — and inside a literal, so looking for it
+     * alone calls almost every shape commented.
+     */
+    static boolean containsComment(String turtle) {
+        int index = 0;
+        while (index < turtle.length()) {
+            char c = turtle.charAt(index);
+            if (c == '#') {
+                return true;
+            }
+            if (c == '"' || c == '\'') {
+                index = endOfLiteral(turtle, index);
+                continue;
+            }
+            if (c == '<') {
+                int close = turtle.indexOf('>', index);
+                index = close < 0 ? turtle.length() : close + 1;
+                continue;
+            }
+            index++;
+        }
+        return false;
+    }
+
     private static int skipIgnorable(String text, int from) {
         int index = from;
         while (index < text.length()) {

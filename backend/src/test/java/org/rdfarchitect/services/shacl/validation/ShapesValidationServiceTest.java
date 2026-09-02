@@ -347,6 +347,88 @@ class ShapesValidationServiceTest {
     }
 
     @Test
+    void aMaxCountThatIsNotANumberDoesNotHideTheConflict() {
+        // The regression this guards: an unparsable count used to sort below every real one, so it
+        // won the search for the strictest max, widened the bound to Integer.MAX_VALUE, and the
+        // genuinely unsatisfiable pair it displaced went unreported.
+        var tighter =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://ex.org/other#> .
+
+                ex:ACLineSegmentMaxShape
+                    a sh:NodeShape ;
+                    sh:targetClass cim:ACLineSegment ;
+                    sh:property [
+                        sh:path cim:ACLineSegment.length ;
+                        sh:maxCount 0 ;
+                    ] .
+                """;
+        var malformed =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://ex.org/third#> .
+
+                ex:ACLineSegmentVagueShape
+                    a sh:NodeShape ;
+                    sh:targetClass cim:ACLineSegment ;
+                    sh:property [
+                        sh:path cim:ACLineSegment.length ;
+                        sh:maxCount "many" ;
+                    ] .
+                """;
+        documents.replaceShapesDocumentText(
+                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+        documents.createShapesDocument(GRAPH, "tighter.ttl", null, tighter, Lang.TURTLE);
+        documents.createShapesDocument(GRAPH, "vague.ttl", null, malformed, Lang.TURTLE);
+
+        var report = service.validateShapes(GRAPH, null);
+
+        assertThat(findings(report.getDocuments()))
+                .filteredOn(finding -> "UNSATISFIABLE_CARDINALITY".equals(finding.getCode()))
+                .hasSize(2)
+                .allSatisfy(
+                        finding ->
+                                assertThat(finding.getMessage())
+                                        .contains("sh:minCount 1")
+                                        .contains("sh:maxCount 0"));
+    }
+
+    @Test
+    void aContradictionInsideOneDocumentIsReportedOnce() {
+        // Both halves of the pair are in the same document and anchor on the same node shape, so
+        // the two calls that report it produce the same finding — which nothing downstream removes.
+        var selfContradictory =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://ex.org/shapes#> .
+
+                ex:TerminalShape
+                    a sh:NodeShape ;
+                    sh:targetClass cim:Terminal ;
+                    sh:property [
+                        sh:path cim:Terminal.sequenceNumber ;
+                        sh:minCount 2 ;
+                    ] ;
+                    sh:property [
+                        sh:path cim:Terminal.sequenceNumber ;
+                        sh:maxCount 1 ;
+                    ] .
+                """;
+        documents.replaceShapesDocumentText(
+                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, selfContradictory);
+
+        var report = service.validateShapes(GRAPH, null);
+
+        assertThat(findings(report.getDocuments()))
+                .filteredOn(finding -> "UNSATISFIABLE_CARDINALITY".equals(finding.getCode()))
+                .hasSize(1);
+    }
+
+    @Test
     void twoDatatypesOnOnePathAreReported() {
         var stringShape = datatypeShapes("http://www.w3.org/2001/XMLSchema#string", "ex:First");
         var intShape = datatypeShapes("http://www.w3.org/2001/XMLSchema#integer", "ex:Second");

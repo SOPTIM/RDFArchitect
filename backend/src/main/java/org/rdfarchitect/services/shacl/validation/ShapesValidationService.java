@@ -32,6 +32,7 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.RDFWriter;
 import org.apache.jena.sparql.graph.GraphFactory;
+import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.ShapesDocument;
@@ -70,6 +71,25 @@ public class ShapesValidationService implements ShapesValidationUseCase {
     private final DatabasePort databasePort;
 
     private final SchemaIndexCache schemaIndexCache;
+
+    /** Identifies a graph's committed content, within the session whose database holds it. */
+    private record ComparisonKey(String sessionId, GraphIdentifier graph, UUID version) {}
+
+    private record Comparison(ComparisonKey key, List<ShapesConflictAnalyzer.Document> documents) {}
+
+    /**
+     * The stored documents an unsaved buffer is compared against, held until the graph changes.
+     *
+     * <p>The editor asks for this on every debounced keystroke, and answering it copies every
+     * shapes document of the graph — tens of thousands of triples for a full ENTSO-E set — to
+     * compare them against a buffer that is the only thing that moved. A commit, an undo or a redo
+     * mints a new version id for the whole context, so keying on that id is enough to notice a
+     * change without the write path having to know this exists.
+     *
+     * <p>One entry, because typing happens in one document of one graph at a time and a second
+     * would only pin copies nothing is going to ask for again.
+     */
+    private final AtomicReference<Comparison> comparison = new AtomicReference<>();
 
     /**
      * A document's content as validation needs it, detached from the transaction it came from.
@@ -161,12 +181,36 @@ public class ShapesValidationService implements ShapesValidationUseCase {
             return List.of();
         }
         var documents =
-                readDocuments(graphIdentifier, null).stream()
-                        .filter(snapshot -> !documentId.equals(snapshot.id()))
-                        .map(ShapesValidationService::asDocument)
+                storedForComparison(graphIdentifier).stream()
+                        .filter(document -> !documentId.equals(document.id()))
                         .collect(Collectors.toCollection(ArrayList::new));
         documents.add(new ShapesConflictAnalyzer.Document(documentId, name, graph, () -> turtle));
         return ShapesConflictAnalyzer.analyze(documents).getOrDefault(documentId, List.of());
+    }
+
+    /** The graph's enabled documents, from {@link #comparison} unless the graph has changed. */
+    private List<ShapesConflictAnalyzer.Document> storedForComparison(
+            GraphIdentifier graphIdentifier) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var key =
+                    new ComparisonKey(
+                            SessionContext.getSessionId(),
+                            graphIdentifier,
+                            ctx.getRdfGraphVersion());
+            var cached = comparison.get();
+            if (cached != null && cached.key().equals(key)) {
+                return cached.documents();
+            }
+            var documents =
+                    ctx.getShapesDocuments().values().stream()
+                            .filter(ShapesDocument::isEnabled)
+                            .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
+                            .map(ShapesValidationService::snapshot)
+                            .map(ShapesValidationService::asDocument)
+                            .toList();
+            comparison.set(new Comparison(key, documents));
+            return documents;
+        }
     }
 
     private static ShapesConflictAnalyzer.Document asDocument(Snapshot snapshot) {

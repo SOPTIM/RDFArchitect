@@ -259,6 +259,28 @@ class ShapeFormServiceTest {
     }
 
     @Test
+    void absoluteIrisAreNotMistakenForComments() {
+        // The regression this guards: the warning used to be raised for any "#" in the replaced
+        // statement, and every CIM term carries one — so a shape written with absolute IRIs, and
+        // no comment anywhere, warned that its comments had been destroyed.
+        var absolute =
+                """
+                @prefix sh: <http://www.w3.org/ns/shacl#> .
+
+                <http://example.org/shapes#TerminalShape>
+                        a              sh:NodeShape ;
+                        sh:targetClass <http://iec.ch/TC57/CIM100#Terminal> ;
+                        sh:message     "A terminal needs a number, e.g. #1" .
+                """;
+        var shape = shapeNamed(absolute, "http://example.org/shapes#TerminalShape");
+        shape.setMessage("Now with a different message");
+
+        var result = service.apply(edit(absolute, shape));
+
+        assertThat(result.getWarnings()).isEmpty();
+    }
+
+    @Test
     void aCommentAfterTheStatementIsNotTouched() {
         var withTrailing =
                 SHAPES.replace(

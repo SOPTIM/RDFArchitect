@@ -152,6 +152,37 @@ class GraphWithContextShapesDocumentTest {
     }
 
     @Test
+    void aDocumentCreatedAfterADeletionDoesNotShareAPosition() {
+        // The regression this guards: positions used to be handed out by counting the documents,
+        // and a deletion leaves a gap in the numbering — so the next document claimed a position
+        // an existing one already held, and every reader that sorts by it fell back to the map's
+        // insertion order for the tie.
+        var first = new UUID[1];
+        inWriteTransaction(
+                () -> {
+                    first[0] =
+                            ctx.createShapesDocument("first.ttl", ShapesDocument.Origin.IMPORTED)
+                                    .getId();
+                    ctx.createShapesDocument("second.ttl", ShapesDocument.Origin.IMPORTED);
+                },
+                "import");
+
+        inWriteTransaction(() -> ctx.removeShapesDocument(first[0]), "delete constraints");
+        inWriteTransaction(
+                () -> ctx.createShapesDocument("third.ttl", ShapesDocument.Origin.IMPORTED),
+                "import");
+
+        assertThat(ctx.getShapesDocuments().values())
+                .extracting(ShapesDocument::getOrder)
+                .doesNotHaveDuplicates();
+        assertThat(ctx.getShapesDocuments().values())
+                .filteredOn(document -> "third.ttl".equals(document.getName()))
+                .singleElement()
+                .extracting(ShapesDocument::getOrder)
+                .isEqualTo(3);
+    }
+
+    @Test
     void removedDocumentNoLongerTakesPart() {
         var id = new UUID[1];
         inWriteTransaction(
