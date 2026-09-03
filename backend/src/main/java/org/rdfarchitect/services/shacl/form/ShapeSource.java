@@ -21,6 +21,7 @@ import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.vocabulary.RDF;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,11 +47,26 @@ final class ShapeSource {
     private final PrefixMapping prefixes;
     private final Map<String, SubjectSource> bySubject;
 
+    /** Where each line begins, so an offset can be turned into a line number by bisection. */
+    private final int[] lineStarts;
+
     private ShapeSource(
             String turtle, PrefixMapping prefixes, Map<String, SubjectSource> bySubject) {
         this.turtle = turtle;
         this.prefixes = prefixes;
         this.bySubject = bySubject;
+        this.lineStarts = lineStarts(turtle);
+    }
+
+    private static int[] lineStarts(String turtle) {
+        var starts = new ArrayList<Integer>();
+        starts.add(0);
+        for (int index = 0; index < turtle.length(); index++) {
+            if (turtle.charAt(index) == '\n') {
+                starts.add(index + 1);
+            }
+        }
+        return starts.stream().mapToInt(Integer::intValue).toArray();
     }
 
     static ShapeSource of(String turtle, PrefixMapping prefixes) {
@@ -80,6 +96,18 @@ final class ShapeSource {
 
     String turtle() {
         return turtle;
+    }
+
+    /**
+     * The 1-based line an offset falls on.
+     *
+     * <p>What the form needs to send anybody to the text a card was read from — and what the cards
+     * are ordered by, because a document's own order is the one its author chose and the only one a
+     * reader can follow with the Turtle view open beside it.
+     */
+    int lineAt(int offset) {
+        int found = Arrays.binarySearch(lineStarts, offset);
+        return found >= 0 ? found + 1 : -found - 1;
     }
 
     PrefixMapping prefixes() {

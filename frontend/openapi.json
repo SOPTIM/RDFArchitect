@@ -1184,6 +1184,10 @@
           "iri" : {
             "type" : "string"
           },
+          "line" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "message" : {
             "type" : "string"
           },
@@ -1511,6 +1515,10 @@
           },
           "iri" : {
             "type" : "string"
+          },
+          "line" : {
+            "format" : "int32",
+            "type" : "integer"
           },
           "maxCount" : {
             "format" : "int32",

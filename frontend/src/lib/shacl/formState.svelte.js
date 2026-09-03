@@ -15,6 +15,8 @@
  *
  */
 
+import { SvelteSet } from "svelte/reactivity";
+
 import { applyEdit, readForm } from "$lib/api/generated/index.ts";
 import { reasonFrom } from "$lib/shacl/workbenchState.svelte.js";
 
@@ -82,6 +84,28 @@ export class ShapesFormView {
     propertyShapes = $state([]);
     /** A syntax error in the buffer; the form has nothing to show until it is fixed. */
     parseError = $state(null);
+    /**
+     * The IRIs of the cards that are open.
+     *
+     * Held here rather than in the card list because the form view is unmounted when the Turtle
+     * view is shown, and coming back to find every card shut is the tab forgetting what you were
+     * doing. A set, because one card at a time made comparing two shapes impossible.
+     *
+     * @type {Set<string>}
+     */
+    expanded = $state(new SvelteSet());
+    /** What the cards are filtered by, likewise kept across a switch to the Turtle view. */
+    filter = $state("");
+    /** Whether only the shapes the form will not write are listed. */
+    lockedOnly = $state(false);
+    /**
+     * A line of the document to show the card for, set from somewhere the cards are not.
+     *
+     * The Turtle view and the problems panel both know a line and nothing about shapes; the form
+     * knows shapes and reads them asynchronously. So the line is left here and picked up once
+     * there is something to match it against.
+     */
+    focusLine = $state(null);
     loading = $state(false);
     applying = $state(false);
     error = $state(null);
@@ -195,6 +219,13 @@ export class ShapesFormView {
     async removeShape(turtle, shapeIri) {
         await this.flush();
         return this.#apply(turtle, { removeShapeIri: shapeIri });
+    }
+
+    /** Opens or shuts one card. */
+    toggle(iri) {
+        if (!this.expanded.delete(iri)) {
+            this.expanded.add(iri);
+        }
     }
 
     /** Reads the buffer again even though the shapes already describe it, undoing a local edit. */

@@ -309,6 +309,31 @@
         editor?.reveal(line, column);
     }
 
+    /**
+     * Shows a line of the document in the Turtle view, from a card in the form.
+     *
+     * The editor stays mounted behind the form, so it is already scrolled by the time the view
+     * changes over.
+     */
+    function showInTurtle(line) {
+        view = "ttl";
+        reveal(line);
+    }
+
+    /**
+     * The way back: the form card for the line the cursor is on.
+     *
+     * The line is left with the form view rather than resolved here, because which card holds a
+     * line is a question about shapes the form has not necessarily read yet.
+     */
+    function showInForm(line) {
+        if (!formView || !views.some(option => option.id === "form")) {
+            return;
+        }
+        formView.focusLine = line;
+        view = "form";
+    }
+
     /** Opens another document from a report, asking about unsaved changes on the way. */
     async function openDocument(target) {
         if (!target || target === workbench.selectedId) {
@@ -330,6 +355,11 @@
         }
         if (problem.line) {
             reveal(problem.line, problem.column ?? 1);
+            // The form is the view the reader is in; sending them to a line of Turtle they cannot
+            // see would be answering a question they did not ask.
+            if (view === "form" && formView) {
+                formView.focusLine = problem.line;
+            }
         }
     }
 
@@ -501,6 +531,7 @@
                                         readOnly={workbench.editorReadOnly}
                                         onSave={save}
                                         onchange={onTextChanged}
+                                        onshowinform={showInForm}
                                     />
                                 </div>
                                 {#if view === "form" && formView}
@@ -512,6 +543,7 @@
                                         onturtle={next =>
                                             (workbench.text = next)}
                                         onvalidate={onTextChanged}
+                                        onreveal={showInTurtle}
                                     />
                                 {:else if view === "conformance" && conformance}
                                     <ConformanceReportView

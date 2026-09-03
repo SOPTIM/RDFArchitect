@@ -26,6 +26,7 @@
 
     import {
         faCircleExclamation,
+        faLock,
         faPlus,
     } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
@@ -34,7 +35,13 @@
     import CollapseToggle from "$lib/components/CollapseToggle.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
+    import TextEditControl from "$lib/components/TextEditControl.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import {
+        entryAtLine,
+        matchingRules,
+        matchingShapes,
+    } from "$lib/shacl/formNavigation.js";
     import { newShape, shapeNamespaceOf } from "$lib/shacl/formState.svelte.js";
     import { parsePrefixes } from "$lib/shacl/turtleTerms.js";
 
@@ -49,9 +56,9 @@
         readOnly = false,
         onturtle = () => {},
         onvalidate = () => {},
+        /** Shows a line of the document in the Turtle view. */
+        onreveal = () => {},
     } = $props();
-
-    let expandedIri = $state(null);
 
     /** A change to a rule several shapes use, waiting for the user to say how far it should go. */
     let sharedEdit = $state(null);
@@ -67,13 +74,66 @@
      */
     let showingSharedRules = $state(false);
 
+    let list = $state(null);
+
     const prefixes = $derived(parsePrefixes(turtle));
 
-    const sharedRules = $derived(form.propertyShapes ?? []);
+    const sharedRules = $derived(
+        matchingRules(form.propertyShapes, filters, prefixes),
+    );
+
+    const filters = $derived({
+        filter: form.filter,
+        lockedOnly: form.lockedOnly,
+    });
+
+    /** The shapes the filter leaves, in the order the document writes them. */
+    const shapes = $derived(matchingShapes(form.shapes, filters, prefixes));
+
+    const filtering = $derived(form.filter.trim() !== "" || form.lockedOnly);
+
+    /**
+     * Opens the card holding a line somebody asked for from outside the form.
+     *
+     * The line arrives before the shapes do — the Turtle view knows one the moment the form is
+     * switched to, and reading the document is a round trip — so it waits here until there is
+     * something to match it against.
+     */
+    $effect(() => {
+        if (form.focusLine === null || form.shapes.length === 0) {
+            return;
+        }
+        const entry = entryAtLine(
+            form.shapes,
+            form.propertyShapes,
+            form.focusLine,
+        );
+        form.focusLine = null;
+        if (!entry) {
+            return;
+        }
+        // A line inside a shared rule is in neither shape above it; the section holding it opens
+        // instead, which is where that rule's card is.
+        if (entry.kind === "rule") {
+            showingSharedRules = true;
+        } else {
+            form.expanded.add(entry.iri);
+        }
+        scrollTo(entry.iri);
+    });
 
     $effect(() => {
         form?.read(turtle);
     });
+
+    /** Brings a card into view once it has been rendered. */
+    function scrollTo(iri) {
+        requestAnimationFrame(() => {
+            list?.querySelector(
+                `[data-shape="${CSS.escape(iri)}"]`,
+            )?.scrollIntoView({ block: "nearest" });
+        });
+    }
 
     /** Sends one shape back and puts the resulting document into the buffer. */
     async function apply(shape) {
@@ -178,7 +238,7 @@
             name = `New${suffix}`;
         }
         const shape = newShape(namespace, null, name);
-        expandedIri = shape.iri;
+        form.expanded.add(shape.iri);
         await apply(shape);
     }
 </script>
@@ -187,7 +247,25 @@
     <div
         class="border-border flex shrink-0 items-center gap-2 border-b px-3 py-2"
     >
-        <h2 class="text-default-text grow text-sm font-semibold">Shapes</h2>
+        <h2 class="text-default-text shrink-0 text-sm font-semibold">Shapes</h2>
+        <div class="min-w-0 grow">
+            <TextEditControl
+                value={form.filter}
+                placeholder="filter by class, property, name or message"
+                callOnInput={text => (form.filter = text)}
+            />
+        </div>
+        <button
+            class="flex shrink-0 cursor-pointer items-center gap-1 rounded px-2 py-1 text-xs {form.lockedOnly
+                ? 'bg-background-select text-nav-active-text'
+                : 'text-text-subtle hover:text-default-text'}"
+            title="Show only what the form will not write"
+            aria-pressed={form.lockedOnly}
+            onclick={() => (form.lockedOnly = !form.lockedOnly)}
+        >
+            <Fa icon={faLock} />
+            Locked only
+        </button>
         {#if !readOnly}
             <div class="h-7 w-32">
                 <ButtonControl
@@ -207,7 +285,7 @@
         {/if}
     </div>
 
-    <div class="min-h-0 flex-1 overflow-y-auto p-3">
+    <div class="min-h-0 flex-1 overflow-y-auto p-3" bind:this={list}>
         {#if form.loading && form.shapes.length === 0}
             <div class="flex h-full items-center justify-center">
                 <LoadingSpinner />
@@ -233,31 +311,37 @@
                     </p>
                 </div>
             </div>
-        {:else if form.shapes.length === 0 && sharedRules.length === 0}
+        {:else if form.shapes.length === 0 && form.propertyShapes.length === 0}
             <div class="flex h-full items-center justify-center">
                 <EmptyStateCard
                     title="No shapes yet"
                     description="Add a shape to say which class it applies to and what its values must look like."
                 />
             </div>
+        {:else if filtering && shapes.length === 0 && sharedRules.length === 0}
+            <div class="flex h-full items-center justify-center">
+                <EmptyStateCard
+                    title="Nothing matches"
+                    description="No shape or rule in this document matches what you are looking for."
+                />
+            </div>
         {:else}
             <div class="flex flex-col gap-2">
-                {#each form.shapes as shape (shape.iri)}
+                {#each shapes as shape (shape.iri)}
                     <NodeShapeCard
                         {shape}
                         {terms}
                         {prefixes}
-                        {sharedRules}
+                        sharedRules={form.propertyShapes ?? []}
                         readOnly={readOnly || shape.editable === false}
-                        expanded={expandedIri === shape.iri}
-                        ontoggle={() =>
-                            (expandedIri =
-                                expandedIri === shape.iri ? null : shape.iri)}
+                        expanded={form.expanded.has(shape.iri)}
+                        ontoggle={() => form.toggle(shape.iri)}
                         onchange={() => apply(shape)}
                         onedit={() => applySoon(shape)}
                         onremove={() => remove(shape)}
                         onrulechange={rule => applyRule(rule, shape.iri)}
                         onruleedit={applyRuleSoon}
+                        {onreveal}
                     />
                 {/each}
             </div>
@@ -290,6 +374,7 @@
                                 {readOnly}
                                 onchange={() => applyRule(rule)}
                                 onedit={() => applyRuleSoon(rule)}
+                                {onreveal}
                             />
                         {/each}
                     </div>

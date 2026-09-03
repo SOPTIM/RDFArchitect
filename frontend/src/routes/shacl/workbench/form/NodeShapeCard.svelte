@@ -27,6 +27,7 @@
     import {
         faChevronDown,
         faChevronRight,
+        faCode,
         faLock,
         faPlus,
         faTrash,
@@ -60,6 +61,8 @@
         /** A field still being typed in: the same edit, to be sent once typing pauses. */
         onedit = () => {},
         onremove = () => {},
+        /** Shows the line the document writes this shape on, in the Turtle view. */
+        onreveal = () => {},
         /**
          * A change to a rule the document writes as a shape of its own.
          *
@@ -306,7 +309,7 @@
     }
 </script>
 
-<div class="border-border rounded border">
+<div class="border-border rounded border" data-shape={shape.iri}>
     <div class="flex items-center gap-2 px-3 py-2">
         <button
             class="text-default-text flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
@@ -327,6 +330,16 @@
             </span>
         </button>
 
+        {#if shape.line}
+            <button
+                class="text-text-subtle hover:text-default-text shrink-0 cursor-pointer p-1 text-xs"
+                title="Show this shape in the Turtle view (line {shape.line})"
+                aria-label="Show this shape in the Turtle view"
+                onclick={() => onreveal(shape.line)}
+            >
+                <Fa icon={faCode} />
+            </button>
+        {/if}
         {#if turtleOnly}
             <span
                 class="text-text-subtle flex shrink-0 items-center gap-1 text-xs"
@@ -434,6 +447,7 @@
                     onchange={() => changeRule(property)}
                     onedit={() => editRule(property)}
                     onremove={() => removeRule(index)}
+                    {onreveal}
                 />
             {/each}
 

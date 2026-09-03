@@ -42,6 +42,9 @@ public class PropertyShapeModel {
     /** Set when the property shape is written as a named resource rather than inline. */
     private String iri;
 
+    /** The 1-based line the document writes this rule on. See {@link NodeShapeModel#getLine()}. */
+    private Integer line;
+
     /**
      * Where the document writes this rule, so an edit can find it again. Opaque to the form.
      *

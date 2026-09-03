@@ -79,7 +79,13 @@ function shape(overrides = {}) {
 function fakeForm(overrides = {}) {
     return {
         shapes: [shape()],
+        propertyShapes: [],
         parseError: null,
+        expanded: new Set(),
+        toggle: vi.fn(),
+        filter: "",
+        lockedOnly: false,
+        focusLine: null,
         loading: false,
         applying: false,
         error: null,

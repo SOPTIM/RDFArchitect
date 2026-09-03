@@ -37,6 +37,15 @@ public class NodeShapeModel {
     private String iri;
 
     /**
+     * The 1-based line the document writes this shape on, or {@code null} where it writes none.
+     *
+     * <p>Carried for two things at once: the form lists shapes in the order the document writes
+     * them rather than by IRI — an official profile's order is the one its author chose — and a
+     * card can send the reader to the text it was read from.
+     */
+    private Integer line;
+
+    /**
      * The classes the shape applies to, in the order the document writes them.
      *
      * <p>A list because SHACL lets a shape target several — {@code sh:targetClass

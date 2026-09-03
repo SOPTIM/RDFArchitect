@@ -19,6 +19,8 @@ package org.rdfarchitect.services.shacl.form;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.graph.Triple;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
 import org.junit.jupiter.api.Test;
@@ -32,7 +34,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 /**
  * The promise the form view rests on, tested against the files it actually has to keep intact.
@@ -367,6 +371,127 @@ class ShapeFormAgainstEntsoeProfilesTest {
 
         assertThat(shapes).hasSizeGreaterThanOrEqualTo(145);
         assertThat(shapes).allSatisfy(shape -> assertThat(shape.getEditable()).isTrue());
+    }
+
+    /**
+     * An edit adds the triple it was made for, and changes no other.
+     *
+     * <p>The complement of the byte-for-byte tests above, which prove a *no-op* costs nothing: this
+     * one makes a real change and holds the rest of the graph to being the same graph. Byte
+     * equality cannot say that — the edited statement's bytes are meant to move — and a writer that
+     * dropped a neighbouring clause while inserting one would slip past every other test here.
+     *
+     * <p>Counted for every file and checked for isomorphism on the smallest few. Isomorphism over a
+     * graph with thousands of blank nodes is minutes apiece, and the counts are what would catch a
+     * clause going missing anyway.
+     */
+    @Test
+    void aRealEditLeavesEveryOtherTripleOfTheDocumentAlone() throws IOException {
+        var files = constraintsFiles();
+        var smallest = new ArrayList<>(files);
+        smallest.sort(Comparator.comparingLong(ShapeFormAgainstEntsoeProfilesTest::sizeOf));
+        var thorough = Set.copyOf(smallest.subList(0, Math.min(5, smallest.size())));
+
+        for (Path file : files) {
+            var original = Files.readString(file);
+            var form = service.parse(original);
+            if (form.getParseError() != null) {
+                continue;
+            }
+            var shape =
+                    form.getShapes().stream()
+                            .filter(known -> Boolean.TRUE.equals(known.getEditable()))
+                            .filter(known -> known.getMessage() == null)
+                            .filter(known -> named(known.getRetained(), "message") == null)
+                            .findFirst()
+                            .orElse(null);
+            if (shape == null) {
+                continue;
+            }
+            shape.setMessage(MARKER);
+            var before = RDFParser.fromString(original, Lang.TURTLE).toGraph();
+            var after =
+                    RDFParser.fromString(
+                                    service.apply(request(original, shape)).getTurtle(),
+                                    Lang.TURTLE)
+                            .toGraph();
+
+            var added =
+                    Triple.create(
+                            NodeFactory.createURI(shape.getIri()),
+                            ShapeModelReader.MESSAGE,
+                            NodeFactory.createLiteralString(MARKER));
+            assertThat(after.contains(added)).describedAs("%s", file.getFileName()).isTrue();
+            assertThat(after.size())
+                    .describedAs("%s", file.getFileName())
+                    .isEqualTo(before.size() + 1);
+            if (thorough.contains(file)) {
+                after.delete(added);
+                assertThat(before.isIsomorphicWith(after))
+                        .describedAs("%s", file.getFileName())
+                        .isTrue();
+            }
+        }
+    }
+
+    private static final String MARKER = "Checked by RDFArchitect";
+
+    /** The clause the form keeps as written for one field, or {@code null} when it keeps none. */
+    private static RetainedClause named(List<RetainedClause> retained, String field) {
+        return retained == null
+                ? null
+                : retained.stream()
+                        .filter(clause -> field.equals(clause.getField()))
+                        .findFirst()
+                        .orElse(null);
+    }
+
+    private static long sizeOf(Path file) {
+        try {
+            return Files.size(file);
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not size " + file, e);
+        }
+    }
+
+    /**
+     * Reading, writing and reading again reaches a fixed point at the first write.
+     *
+     * <p>What a user sees as "the diff stopped growing". A writer that spelled its own output
+     * differently from the way it reads it would pass every no-op test — a no-op makes no changes
+     * to spell — and then rewrite the same shape a second time on the next save, for as long as
+     * anybody kept saving.
+     */
+    @Test
+    void writingAnEditedShapeAgainChangesNothingFurther() throws IOException {
+        for (Path file : constraintsFiles()) {
+            var original = Files.readString(file);
+            var form = service.parse(original);
+            if (form.getParseError() != null) {
+                continue;
+            }
+            var shape =
+                    form.getShapes().stream()
+                            .filter(known -> Boolean.TRUE.equals(known.getEditable()))
+                            .filter(known -> named(known.getRetained(), "message") == null)
+                            .findFirst()
+                            .orElse(null);
+            if (shape == null) {
+                continue;
+            }
+            shape.setMessage(MARKER);
+            var once = service.apply(request(original, shape)).getTurtle();
+
+            var reread =
+                    service.parse(once).getShapes().stream()
+                            .filter(known -> shape.getIri().equals(known.getIri()))
+                            .findFirst()
+                            .orElseThrow();
+            assertThat(reread.getMessage()).describedAs("%s", file.getFileName()).isEqualTo(MARKER);
+
+            var twice = service.apply(request(once, reread)).getTurtle();
+            assertThat(twice).describedAs("%s", file.getFileName()).isEqualTo(once);
+        }
     }
 
     /** Every official constraints file in the submodule, CGMES and the NC profiles alike. */

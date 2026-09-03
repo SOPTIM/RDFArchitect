@@ -29,7 +29,7 @@
      * because that is what the user needs before changing it — the card is the same either way, so
      * a rule cannot say one thing in one place and another somewhere else.
      */
-    import { faLock, faTrash } from "@fortawesome/free-solid-svg-icons";
+    import { faCode, faLock, faTrash } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
@@ -56,6 +56,8 @@
         onedit = () => {},
         /** Left out where there is nothing to remove the rule from, as on its own card. */
         onremove = null,
+        /** Shows the line the document writes this rule on, in the Turtle view. */
+        onreveal = () => {},
     } = $props();
 
     const SHACL = "http://www.w3.org/ns/shacl#";
@@ -215,7 +217,10 @@
     }
 </script>
 
-<div class="border-border bg-window-background rounded border p-3">
+<div
+    class="border-border bg-window-background rounded border p-3"
+    data-shape={property.iri}
+>
     <div class="mb-2 flex items-center gap-2">
         <span class="text-default-text truncate font-mono text-sm">
             {pathLabel}
@@ -235,10 +240,21 @@
                 shared rule · used by {shares} shape{shares === 1 ? "" : "s"}
             </span>
         {/if}
+        {#if property.line}
+            <button
+                class="text-text-subtle hover:text-default-text shrink-0 cursor-pointer p-1 text-xs"
+                class:ml-auto={!referenced}
+                title="Show this rule in the Turtle view (line {property.line})"
+                aria-label="Show this rule in the Turtle view"
+                onclick={() => onreveal(property.line)}
+            >
+                <Fa icon={faCode} />
+            </button>
+        {/if}
         {#if turtleOnly}
             <span
                 class="text-text-subtle flex shrink-0 items-center gap-1 text-xs"
-                class:ml-auto={!referenced}
+                class:ml-auto={!referenced && !property.line}
                 title={readOnlyTitle}
             >
                 <Fa icon={faLock} />
@@ -247,7 +263,7 @@
         {:else if !readOnly && onremove}
             <button
                 class="text-text-subtle hover:text-red cursor-pointer p-1 text-xs"
-                class:ml-auto={!referenced}
+                class:ml-auto={!referenced && !property.line}
                 title={referenced
                     ? "Remove this rule from the shape"
                     : "Remove this rule"}

@@ -221,10 +221,24 @@ final class ShapeModelReader {
         var nodeShapes =
                 Stream.concat(declared.stream(), implied.stream())
                         .map(shape -> readShape(reading, shape))
-                        .sorted(Comparator.comparing(NodeShapeModel::getIri))
+                        .sorted(byLineThenIri())
                         .toList();
         var byIri = nodeShapes.stream().map(NodeShapeModel::getIri).collect(Collectors.toSet());
         return new Shapes(nodeShapes, readPropertyShapes(reading, byIri));
+    }
+
+    /**
+     * Reading order in the form: the order the document writes the shapes in.
+     *
+     * <p>Not IRI order, which is what an alphabet says rather than what the author did. Official
+     * profiles group their shapes by subject and comment the groups, and a form that reordered them
+     * made the Turtle view beside it unfollowable. A shape the document does not write as a
+     * statement has no line and sorts last, by IRI, so the order is still total.
+     */
+    private static Comparator<NodeShapeModel> byLineThenIri() {
+        return Comparator.comparing(
+                        NodeShapeModel::getLine, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(NodeShapeModel::getIri);
     }
 
     /**
@@ -262,6 +276,7 @@ final class ShapeModelReader {
 
         return NodeShapeModel.builder()
                 .iri(shape.getURI())
+                .line(lineOf(written, source))
                 .targetClasses(
                         asWritten(
                                 byPredicate.get(Shacl.TARGET_CLASS.getURI()),
@@ -283,6 +298,13 @@ final class ShapeModelReader {
                 .editable(rules.problem() == null && unwritable == null)
                 .readOnlyReason(unwritable != null ? unwritable : rules.problem())
                 .build();
+    }
+
+    /** The line a subject's first statement starts on, or {@code null} where it has none. */
+    private static Integer lineOf(ShapeSource.SubjectSource written, ShapeSource source) {
+        return written == null || written.statements().isEmpty()
+                ? null
+                : source.lineAt(written.statements().get(0).start());
     }
 
     /**
@@ -310,8 +332,12 @@ final class ShapeModelReader {
                 .filter(iri -> !nodeShapes.contains(iri))
                 .map(NodeFactory::createURI)
                 .filter(rule -> reading.graph().contains(rule, Node.ANY, Node.ANY))
-                .sorted(Comparator.comparing(Node::getURI))
                 .map(rule -> readProperty(reading, rule, null, null, Lock.OPEN))
+                .sorted(
+                        Comparator.comparing(
+                                        PropertyShapeModel::getLine,
+                                        Comparator.nullsLast(Comparator.naturalOrder()))
+                                .thenComparing(PropertyShapeModel::getIri))
                 .toList();
     }
 
@@ -566,6 +592,7 @@ final class ShapeModelReader {
         var clauses = clausesOf(property, written, source);
         return PropertyShapeModel.builder()
                 .iri(property.isURI() ? property.getURI() : null)
+                .line(ruleLine(property, written, source))
                 .sourceIndex(ordinal)
                 .path(uri(graph, property, Shacl.PATH))
                 .name(string(graph, property, NAME))
@@ -607,6 +634,21 @@ final class ShapeModelReader {
                 .editable(effective.editable())
                 .readOnlyReason(effective.reason())
                 .build();
+    }
+
+    /**
+     * The line the document writes this rule on: its own statement, or the clause it sits in.
+     *
+     * <p>A named rule is written somewhere else entirely from the shapes referencing it, so its
+     * line is its statement's — following it from a shape card is a jump across the document, which
+     * is exactly what makes that link worth having.
+     */
+    private static Integer ruleLine(
+            Node property, ClauseLocator.ObjectSpan written, ShapeSource source) {
+        if (property.isURI()) {
+            return lineOf(source.forSubject(property.getURI()), source);
+        }
+        return written == null ? null : source.lineAt(written.start());
     }
 
     /**
