@@ -23,6 +23,7 @@ import org.apache.jena.query.QuerySolution;
 import org.rdfarchitect.dl.data.dto.Diagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
+import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
 import org.rdfarchitect.dl.queries.DLQuerySolutionParser;
 import org.rdfarchitect.dl.queries.DLQueryVars;
@@ -62,8 +63,10 @@ public class DLObjectFactory {
         return DiagramObject.builder()
                 .mRID(parser.getMRID(DLQueryVars.DO_MRID))
                 .name(parser.getName(DLQueryVars.DO_NAME))
+                .style(DiagramObjectStyle.byName(parser.getName(DLQueryVars.STYLE_NAME)))
                 .belongsToDiagram(parser.getMRID(DLQueryVars.DIAGRAM_MRID))
                 .belongsToIdentifiedObject(parser.getMRID(DLQueryVars.IO_MRID))
+                .offset(parser.getXYOffset())
                 .build();
     }
 

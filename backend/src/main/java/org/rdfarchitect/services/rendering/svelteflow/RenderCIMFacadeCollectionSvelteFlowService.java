@@ -153,7 +153,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         for (var merged : renderedClasses.values()) {
             nodes.add(assembleMergedNode(merged, mergedClasses, layoutData));
         }
-        var edges = assembleMergedEdges(renderedClasses);
+        var edges = assembleMergedEdges(renderedClasses, layoutData);
 
         return SvelteFlowDTO.builder().nodes(nodes).edges(edges).build();
     }
@@ -188,7 +188,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                         new MergedFacadeClass(
                                                 classUri,
                                                 cimClass.getLabel().getValue(),
-                                                CrossProfileUtils.mergedClassUuid(classUri),
+                                                CrossProfileUtils.mergedUuid(classUri),
                                                 new ArrayList<>()));
                 entry.sources()
                         .add(
@@ -328,10 +328,11 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         return new ArrayList<>(refs.values());
     }
 
-    private List<EdgeDTO> assembleMergedEdges(Map<String, MergedFacadeClass> mergedClasses) {
+    private List<EdgeDTO> assembleMergedEdges(
+            Map<String, MergedFacadeClass> mergedClasses, RenderingLayoutData layoutData) {
         var edges = new ArrayList<EdgeDTO>();
         edges.addAll(assembleMergedInheritanceEdges(mergedClasses));
-        edges.addAll(assembleMergedAssociationEdges(mergedClasses));
+        edges.addAll(assembleMergedAssociationEdges(mergedClasses, layoutData));
         return edges;
     }
 
@@ -358,7 +359,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
     }
 
     private List<EdgeDTO> assembleMergedAssociationEdges(
-            Map<String, MergedFacadeClass> mergedClasses) {
+            Map<String, MergedFacadeClass> mergedClasses, RenderingLayoutData layoutData) {
         var edges = new ArrayList<EdgeDTO>();
         var handledAssociationUris = new HashSet<String>();
         for (var merged : mergedClasses.values()) {
@@ -378,11 +379,17 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     handledAssociationUris.add(inverse.getUri().toString());
                     var edgeData =
                             EdgeDataDTO.builder()
-                                    .fromMultiplicity(
-                                            extractMultiplicityString(
-                                                    association.getMultiplicity()))
-                                    .toMultiplicity(
-                                            extractMultiplicityString(inverse.getMultiplicity()))
+                                    .labels(
+                                            SvelteFlowLabels.forAssociation(
+                                                    CrossProfileUtils.mergedUuid(
+                                                            inverse.getUri().toString()),
+                                                    extractMultiplicityString(
+                                                            inverse.getMultiplicity()),
+                                                    CrossProfileUtils.mergedUuid(
+                                                            association.getUri().toString()),
+                                                    extractMultiplicityString(
+                                                            association.getMultiplicity()),
+                                                    layoutData))
                                     .useToAssociation(
                                             getAssociationUsedValue(
                                                     association.getAssociationUsed()))
@@ -743,7 +750,8 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                 }
                 var to = from.getInverseAssociation();
 
-                associationEdgeDTOList.add(assembleAssociationEdgeDTO(cimClass, from, to));
+                associationEdgeDTOList.add(
+                        assembleAssociationEdgeDTO(renderContext, cimClass, from, to));
 
                 handledAssociationUris.add(from.getUri().toString());
                 handledAssociationUris.add(to.getUri().toString());
@@ -753,11 +761,20 @@ public class RenderCIMFacadeCollectionSvelteFlowService
     }
 
     private EdgeDTO assembleAssociationEdgeDTO(
-            ICIMClass sourceClass, ICIMAssociation from, ICIMAssociation to) {
+            RenderContext renderContext,
+            ICIMClass sourceClass,
+            ICIMAssociation from,
+            ICIMAssociation to) {
+        var layoutData = renderContext.layoutingData();
         var edgeDataDTO =
                 EdgeDataDTO.builder()
-                        .fromMultiplicity(extractMultiplicityString(from.getMultiplicity()))
-                        .toMultiplicity(extractMultiplicityString(to.getMultiplicity()))
+                        .labels(
+                                SvelteFlowLabels.forAssociation(
+                                        to.getUuid(),
+                                        extractMultiplicityString(to.getMultiplicity()),
+                                        from.getUuid(),
+                                        extractMultiplicityString(from.getMultiplicity()),
+                                        layoutData))
                         .useToAssociation(getAssociationUsedValue(from.getAssociationUsed()))
                         .useFromAssociation(getAssociationUsedValue(to.getAssociationUsed()))
                         .build();

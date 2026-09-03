@@ -81,6 +81,11 @@ public class UpdatePackageLayoutService
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
             }
 
+            for (var label :
+                    DLObjectFetcher.fetchDiagramLabelDOs(diagramLayoutModel, packageUUID)) {
+                DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, label.getMRID());
+            }
+
             DLUpdates.deleteDiagram(diagramLayoutModel, new MRID(packageUUID));
             ctx.commit();
         }

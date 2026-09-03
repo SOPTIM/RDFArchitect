@@ -25,10 +25,13 @@
         useSvelteFlow,
     } from "@xyflow/svelte";
     import { onDestroy, onMount, tick, untrack } from "svelte";
+    import { SvelteMap } from "svelte/reactivity";
 
     import {
         updateClassPositions,
         updateDatasetClassPositions,
+        updateDatasetLabelPositions,
+        updateLabelPositions,
     } from "$lib/api/generated/index.ts";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import {
@@ -40,6 +43,7 @@
 
     import AssociationEdge from "./components/AssociationEdge.svelte";
     import ClassNode from "./components/ClassNode.svelte";
+    import DiagramLabelNode from "./components/DiagramLabelNode.svelte";
     import EdgeMarkers from "./components/EdgeMarkers.svelte";
     import InheritanceEdge from "./components/InheritanceEdge.svelte";
     import SvelteFlowClassContextMenu from "./components/SvelteFlowClassContextMenu.svelte";
@@ -48,8 +52,18 @@
         decorateEdges,
         hasDefaultNodeLayout,
     } from "./diagram/diagramElements.js";
+    import {
+        buildLabelNodes,
+        clampToAnchor,
+        collectLabels,
+        effectiveOffset,
+        LABEL_NODE_TYPE,
+        labelNodeId,
+        offsetFromClass,
+    } from "./diagram/labelNodes.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
     import { DiagramSelectionController } from "./interaction/diagramSelection.svelte.js";
+    import { labelHighlight } from "./interaction/labelHighlight.svelte.js";
     import { NodeOrderController } from "./interaction/nodeOrder.svelte.js";
     import { PanController } from "./interaction/panController.svelte.js";
     import { getLayoutedNodes } from "./layout/elkLayout.js";
@@ -63,6 +77,7 @@
 
     const nodeTypes = {
         class: ClassNode,
+        label: DiagramLabelNode,
     };
     const edgeTypes = {
         association: AssociationEdge,
@@ -109,6 +124,17 @@
 
     let selectionZFrame = null;
     let boxSelecting = false;
+    // Offsets of labels moved in this session, so a drag takes effect without refetching the
+    // diagram. An entry holding null resets that label to its default placement. A SvelteMap so
+    // mutating it alone is enough to re-trigger syncLabelNodes below.
+    let labelOffsets = new SvelteMap();
+    // Memoizes edge-intersection geometry per class pair, so dragging one class does not
+    // recompute the placement of every other edge in the diagram.
+    let labelPlacementCache = new Map();
+    let labelDragActive = false;
+    let classNodes = $derived(
+        nodes.filter(node => node.type !== LABEL_NODE_TYPE),
+    );
     let hasDefaultLayout = $derived(hasDefaultNodeLayout(nodes));
     let applyLayout = $derived(
         nodesInit.current && !layouted && hasDefaultLayout,
@@ -124,6 +150,10 @@
     $effect(() => {
         forceReloadTrigger.subscribe();
         applyAutoLayoutIfNeeded();
+    });
+
+    $effect(() => {
+        syncLabelNodes(nodes, edges);
     });
 
     $effect(() => {
@@ -222,6 +252,7 @@
             return;
         }
         lastSelectedDiagramId = diagramId;
+        labelHighlight.clear();
         pan.clearBoxMode();
         multiSelectState.clear();
     }
@@ -262,6 +293,8 @@
     }
 
     function syncDiagramElements() {
+        labelOffsets = new SvelteMap();
+        labelPlacementCache = new Map();
         const nextNodes = [...inputNodes];
         const nextHasDefaultLayout = hasDefaultNodeLayout(nextNodes);
 
@@ -318,8 +351,176 @@
         });
     }
 
+    /**
+     * Rebuilds the label nodes whenever the classes they are anchored to move. Skipped while a
+     * label itself is being dragged, which would otherwise pull it back to its stored offset.
+     */
+    function syncLabelNodes(currentNodes, currentEdges) {
+        if (labelDragActive) {
+            return;
+        }
+        const nextLabelNodes = buildLabelNodes(
+            currentNodes,
+            currentEdges,
+            labelOffsets,
+            labelPlacementCache,
+        );
+        if (!labelNodesChanged(currentNodes, nextLabelNodes)) {
+            return;
+        }
+        nodes = [
+            ...currentNodes.filter(node => node.type !== LABEL_NODE_TYPE),
+            ...nextLabelNodes,
+        ];
+    }
+
+    function labelNodesChanged(currentNodes, nextLabelNodes) {
+        const current = currentNodes.filter(
+            node => node.type === LABEL_NODE_TYPE,
+        );
+        if (current.length !== nextLabelNodes.length) {
+            return true;
+        }
+        const currentById = new Map(current.map(node => [node.id, node]));
+        return nextLabelNodes.some(next => {
+            const node = currentById.get(next.id);
+            return (
+                !node ||
+                node.data.text !== next.data.text ||
+                node.position.x !== next.position.x ||
+                node.position.y !== next.position.y ||
+                node.data.anchorPoint.x !== next.data.anchorPoint.x ||
+                node.data.anchorPoint.y !== next.data.anchorPoint.y
+            );
+        });
+    }
+
+    /**
+     * Holds a dragged label within its maximum distance from the anchor point. SvelteFlow can only
+     * constrain a node to a rectangle, so the radial limit is applied per drag event instead.
+     *
+     * This relies on the drag event firing after SvelteFlow has written its own position, so that
+     * the clamped one is what the frame ends on. The drag itself keeps following the pointer
+     * unclamped, which is what lets the label pick it up again on the way back in.
+     */
+    function clampDraggedLabels(draggedNodes) {
+        const clampedById = new Map();
+        for (const dragged of draggedNodes) {
+            if (dragged.type !== LABEL_NODE_TYPE) {
+                continue;
+            }
+            const clamped = clampToAnchor(
+                dragged.position,
+                dragged.data.anchorPoint,
+            );
+            if (clamped !== dragged.position) {
+                clampedById.set(dragged.id, clamped);
+            }
+        }
+        if (clampedById.size === 0) {
+            return;
+        }
+        nodes = nodes.map(node =>
+            clampedById.has(node.id)
+                ? { ...node, position: clampedById.get(node.id) }
+                : node,
+        );
+    }
+
+    function toLabelPositionDTO(identifiedObjectUUID, kind, offset) {
+        return {
+            identifiedObjectUUID,
+            kind,
+            xOffset: offset?.x ?? null,
+            yOffset: offset?.y ?? null,
+        };
+    }
+
+    function handleLabelMove(movedLabelNodes) {
+        const nodesById = new Map(nodes.map(node => [node.id, node]));
+        const movedLabels = [];
+        for (const labelNode of movedLabelNodes) {
+            const anchorClass = nodesById.get(labelNode.data.anchorClassId);
+            if (!anchorClass) {
+                continue;
+            }
+            const offset = offsetFromClass(
+                {
+                    position: clampToAnchor(
+                        labelNode.position,
+                        labelNode.data.anchorPoint,
+                    ),
+                },
+                anchorClass,
+            );
+            labelOffsets.set(labelNode.id, offset);
+            movedLabels.push(
+                toLabelPositionDTO(
+                    labelNode.data.identifiedObjectUUID,
+                    labelNode.data.kind,
+                    offset,
+                ),
+            );
+        }
+        persistLabelPositions(movedLabels);
+    }
+
+    /** Drops the manual placement of every label, so they return to their default placement. */
+    function resetLabelPositions() {
+        const resetLabels = [];
+        for (const { label } of collectLabels(edges)) {
+            if (!effectiveOffset(label, labelOffsets)) {
+                continue;
+            }
+            labelOffsets.set(labelNodeId(label), null);
+            resetLabels.push(
+                toLabelPositionDTO(
+                    label.identifiedObjectUUID,
+                    label.kind,
+                    null,
+                ),
+            );
+        }
+        persistLabelPositions(resetLabels);
+    }
+
+    function persistLabelPositions(labelPositionDTOList) {
+        const diagramUUID = editorState.selectedDiagram.getProperty("id");
+        if (!diagramUUID || labelPositionDTOList.length === 0) {
+            return;
+        }
+
+        if (editorState.selectedGraph.getValue()) {
+            updateLabelPositions({
+                path: {
+                    datasetName: editorState.selectedWorkspace.getValue(),
+                    graphURI: editorState.selectedGraph.getValue(),
+                    diagramUUID: diagramUUID,
+                },
+                body: labelPositionDTOList,
+            });
+        } else {
+            updateDatasetLabelPositions({
+                path: {
+                    datasetName: editorState.selectedWorkspace.getValue(),
+                    diagramUUID: diagramUUID,
+                },
+                body: labelPositionDTOList,
+            });
+        }
+    }
+
     function handleNodeMove(nodeMoveEvent) {
-        updateNodePositions(nodeMoveEvent.nodes);
+        const movedNodes = nodeMoveEvent.nodes ?? [];
+        const movedLabels = movedNodes.filter(
+            node => node.type === LABEL_NODE_TYPE,
+        );
+        if (movedLabels.length > 0) {
+            handleLabelMove(movedLabels);
+        }
+        updateNodePositions(
+            movedNodes.filter(node => node.type !== LABEL_NODE_TYPE),
+        );
     }
 
     function updateNodePositions(movedNodes) {
@@ -335,7 +536,7 @@
         }
 
         const diagramUUID = editorState.selectedDiagram.getProperty("id");
-        if (!diagramUUID) return;
+        if (!diagramUUID || classPositionDTOList.length === 0) return;
 
         if (editorState.selectedGraph.getValue()) {
             updateClassPositions({
@@ -360,9 +561,11 @@
     export async function applyELKLayout() {
         if (!isLoading) isLoading = true;
         layouted = true;
-        const layoutedNodes = await getLayoutedNodes(nodes, edges);
+        const layoutedNodes = await getLayoutedNodes(classNodes, edges);
         nodes = [...layoutedNodes];
         updateNodePositions(nodes);
+        resetLabelPositions();
+        syncLabelNodes(nodes, edges);
         await svelteFlowAPI.svelteFlow.fitView();
         isLoading = false;
     }
@@ -388,9 +591,20 @@
         elementsSelectable={true}
         nodesFocusable={false}
         zIndexMode={"manual"}
-        onnodeclick={e => selection.handleNodeClick(e)}
-        onnodecontextmenu={e => contextMenus.handleNodeContextMenu(e)}
-        onpaneclick={() => contextMenus.close()}
+        onnodeclick={e => {
+            if (e.node?.type === LABEL_NODE_TYPE) {
+                return;
+            }
+            selection.handleNodeClick(e);
+        }}
+        onnodecontextmenu={e => {
+            if (e.node?.type !== LABEL_NODE_TYPE) {
+                contextMenus.handleNodeContextMenu(e);
+            }
+        }}
+        onpaneclick={() => {
+            contextMenus.close();
+        }}
         onpanecontextmenu={e => contextMenus.handlePaneContextMenu(e)}
         onedgecontextmenu={e => contextMenus.handleEdgeContextMenu(e)}
         onselectionchange={e => selection.handleSelectionChange(e)}
@@ -402,11 +616,29 @@
             selection.handleSelectionEnd();
             applySelectionZIndices();
         }}
-        onnodedragstart={({ node }) => {
+        onnodedragstart={e => {
+            // Dragging a label makes SvelteFlow clear the selection, because label nodes are not
+            // selectable. Announcing the drag keeps the class selection from following along.
             selection.notifyNodeDragStart();
-            nodeOrderCtrl.bringToFrontTemporarily(node?.id);
+            if (e.targetNode?.type === LABEL_NODE_TYPE) {
+                labelDragActive = true;
+                return;
+            }
+            nodeOrderCtrl.bringToFrontTemporarily(e.targetNode?.id);
+        }}
+        onnodedrag={e => {
+            if (labelDragActive) {
+                clampDraggedLabels(e.nodes ?? []);
+            }
         }}
         onnodedragstop={e => {
+            if (labelDragActive) {
+                labelDragActive = false;
+                selection.notifyNodeDragStop();
+                handleNodeMove(e);
+                syncLabelNodes(nodes, edges);
+                return;
+            }
             selection.notifyNodeDragStop();
             handleNodeMove(e);
         }}
@@ -430,7 +662,7 @@
         lockedWorkspaceName={editorState.selectedWorkspace.getValue()}
         lockedGraphUri={editorState.selectedGraph.getValue()}
         lockedPackage={editorState.selectedDiagram.getProperty("id")}
-        classes={nodes.map(node => ({
+        classes={classNodes.map(node => ({
             id: node.id,
             graphUri: node.data?.graphUri,
         }))}
@@ -444,7 +676,7 @@
         workspaceName={editorState.selectedWorkspace.getValue()}
         graphUri={editorState.selectedGraph.getValue()}
         nodeOrder={nodeOrderCtrl.nodeOrder}
-        nodeCount={nodes.length}
+        nodeCount={classNodes.length}
         onClose={() => contextMenus.close()}
         onMoveClass={e => nodeOrderCtrl.moveClass(e)}
         onSetLayer={e => nodeOrderCtrl.setLayer(e)}

@@ -28,10 +28,10 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
-import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.rdf.graph.GraphUtils;
+import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
 import org.rdfarchitect.services.rendering.CIMProfileModels;
 import org.rdfarchitect.services.rendering.RenderCIMFacadeCollectionUseCase;
 import org.rdfarchitect.services.select.ListGraphsUseCase;
@@ -48,6 +48,7 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
     private final DatabasePort databasePort;
     private final RenderCIMFacadeCollectionUseCase renderer;
     private final ListGraphsUseCase listGraphsUseCase;
+    private final FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase;
 
     @Override
     public RenderingDataDTO getRenderingData(
@@ -93,14 +94,8 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
     }
 
     private RenderingLayoutData fetchLayoutData(GraphContext ctx, UUID diagramUUID) {
-        var diagramLayout = ctx.getDiagramLayout();
-        var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
-        var classLayoutingData =
-                diagramUUID == null
-                        ? DLObjectFetcher.fetchDiagramDOPPerClass(
-                                diagramLayoutModel, diagramLayout.getDefaultPackageMRID().getUuid())
-                        : DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, diagramUUID);
-        return RenderingLayoutData.builder().classLayoutingData(classLayoutingData).build();
+        return fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(
+                ctx.getDiagramLayout(), diagramUUID);
     }
 
     private RenderingDataDTO render(

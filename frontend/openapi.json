@@ -970,6 +970,34 @@
         },
         "type" : "object"
       },
+      "LabelPositionDTO" : {
+        "properties" : {
+          "identifiedObjectUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "xOffset" : {
+            "format" : "float",
+            "type" : "number"
+          },
+          "xoffset" : {
+            "format" : "float",
+            "type" : "number"
+          },
+          "yOffset" : {
+            "format" : "float",
+            "type" : "number"
+          },
+          "yoffset" : {
+            "format" : "float",
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
       "ListPackagesResponse" : {
         "properties" : {
           "externalPackageList" : {
@@ -5882,6 +5910,83 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}/labels" : {
+      "put" : {
+        "description" : "Updates the offsets for all the labels provided in the request body. Labels without an offset are reset to their default placement.",
+        "operationId" : "updateLabelPositions",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The UUID of the package or custom diagram being updated.",
+            "in" : "path",
+            "name" : "diagramUUID",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "items" : {
+                  "$ref" : "#/components/schemas/LabelPositionDTO"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "description" : "The DTO with necessary information for label reposition",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "updates label positions",
+        "tags" : [
+          "diagram",
+          "layout",
+          "label"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/ontology" : {
       "delete" : {
         "description" : "Deletes the currently stored ontology.",
@@ -7742,6 +7847,74 @@
           "diagram",
           "layout",
           "class"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/layout/{diagramUUID}/labels" : {
+      "put" : {
+        "description" : "Updates the offsets for all the labels provided in the request body. Labels without an offset are reset to their default placement.",
+        "operationId" : "updateDatasetLabelPositions",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The UUID of the package or custom diagram being updated.",
+            "in" : "path",
+            "name" : "diagramUUID",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "items" : {
+                  "$ref" : "#/components/schemas/LabelPositionDTO"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "description" : "The DTO with necessary information for label reposition",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "updates label positions on dataset level",
+        "tags" : [
+          "diagram",
+          "layout",
+          "label"
         ]
       }
     },
