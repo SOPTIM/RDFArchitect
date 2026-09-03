@@ -73,6 +73,21 @@ function card(overrides = {}) {
     return { property, onchange, onedit, view };
 }
 
+/**
+ * The input a label names.
+ *
+ * By label rather than by position: the card groups sixteen fields now, and "the last text input"
+ * stopped meaning "the message" the moment a second one was added.
+ */
+function field(view, label) {
+    const found = [...view.querySelectorAll("label")].find(
+        element => element.textContent.trim() === label,
+    );
+    return found
+        ? view.querySelector(`#${CSS.escape(found.getAttribute("for"))}`)
+        : null;
+}
+
 function select(view, label) {
     const labels = ["Value type", "Value form", "Severity"];
     return view.querySelectorAll("select")[labels.indexOf(label)];
@@ -174,7 +189,7 @@ describe("the counts on a rule", () => {
 describe("the message on a rule", () => {
     test("typing it writes the text instead of throwing", () => {
         const { property, onedit } = card();
-        const message = [...target.querySelectorAll("input[type=text]")].at(-1);
+        const message = field(target, "Message shown when the rule is broken");
 
         type(message, "Missing required property");
 
@@ -184,7 +199,7 @@ describe("the message on a rule", () => {
 
     test("emptying it removes the message rather than writing an empty one", () => {
         const { property } = card({ message: "was here" });
-        const message = [...target.querySelectorAll("input[type=text]")].at(-1);
+        const message = field(target, "Message shown when the rule is broken");
 
         commit(message, "");
 
@@ -213,7 +228,8 @@ describe("a field the form keeps as the document wrote it", () => {
         });
 
         expect(view.textContent).toContain('"1"^^xsd:int');
-        expect(view.querySelectorAll("input[type=number]")).toHaveLength(1);
+        expect(field(view, "Minimum values")).toBeNull();
+        expect(field(view, "Maximum values")).not.toBeNull();
     });
 
     test("two values for a one-value field are both shown, and neither is offered", () => {
@@ -224,9 +240,11 @@ describe("a field the form keeps as the document wrote it", () => {
             ],
         });
 
-        // sh:order has no control of its own, so the pair only has to reach the card at all.
-        expect(view.textContent).toContain("sh:order 1");
-        expect(view.textContent).toContain("sh:order 2");
+        // sh:order has a control of its own now, so the pair replaces it rather than being
+        // listed underneath: an empty box where the document states an order twice would claim
+        // there is none.
+        expect(field(view, "Shown at")).toBeNull();
+        expect(view.textContent).toContain("1 · 2");
     });
 
     test("a clause with no field at all is listed under the rule", () => {

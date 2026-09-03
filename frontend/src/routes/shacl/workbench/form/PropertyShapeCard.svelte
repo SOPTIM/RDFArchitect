@@ -39,9 +39,11 @@
     import { keptClauses, keptFields } from "$lib/shacl/retained.js";
     import { abbreviate } from "$lib/shacl/turtleTerms.js";
 
+    import CardSection from "./CardSection.svelte";
     import KeptClause from "./KeptClause.svelte";
     import KeptClauseList from "./KeptClauseList.svelte";
     import TermPicker from "./TermPicker.svelte";
+    import ValueListEditor from "./ValueListEditor.svelte";
 
     let {
         property,
@@ -93,10 +95,43 @@
         "dataType",
         "classIri",
         "nodeKind",
+        "hasValue",
+        "allowedValues",
+        "minInclusive",
+        "maxInclusive",
+        "minExclusive",
+        "maxExclusive",
+        "minLength",
+        "maxLength",
+        "pattern",
+        "flags",
+        "name",
+        "description",
         "severity",
         "message",
+        "order",
+        "group",
         "deactivated",
     ];
+
+    /** The four bounds a value range can state, in the order a reader expects them. */
+    const RANGES = [
+        { field: "minInclusive", label: "At least" },
+        { field: "maxInclusive", label: "At most" },
+        { field: "minExclusive", label: "More than" },
+        { field: "maxExclusive", label: "Less than" },
+    ];
+
+    /** Which groups already say something, and so open themselves. */
+    const filled = $derived({
+        range: says([
+            "minInclusive",
+            "maxInclusive",
+            "minExclusive",
+            "maxExclusive",
+        ]),
+        text: says(["minLength", "maxLength", "pattern", "flags"]),
+    });
 
     /** A rule written as its own resource, which any number of shapes may reference. */
     const referenced = $derived(property.iri != null);
@@ -124,6 +159,17 @@
             : (kept.get("path")?.[0]?.value ?? "no property chosen"),
     );
 
+    /** Whether the rule states any of these fields, or the document does where the form cannot. */
+    function says(fields) {
+        return fields.some(field => {
+            const value = property[field];
+            return (
+                kept.has(field) ||
+                (Array.isArray(value) ? value.length > 0 : Boolean(value))
+            );
+        });
+    }
+
     /**
      * A cleared number field means "no bound stated", which is not the same as zero.
      *
@@ -137,6 +183,19 @@
         }
         const value = Number(raw);
         return Number.isFinite(value) ? value : null;
+    }
+
+    /**
+     * A value range is the number the document writes, not a number the form computes.
+     *
+     * Kept as the text it was typed as, so `0.0` stays `0.0` rather than becoming `0`: the writer
+     * puts these digits back inside the literal the document already holds, and respelling them on
+     * the way through would change a value nobody edited.
+     */
+    function lexicalOf(raw) {
+        const typed =
+            raw === undefined || raw === null ? "" : String(raw).trim();
+        return typed === "" ? null : typed;
     }
 
     /**
@@ -210,8 +269,8 @@
         </p>
     {/if}
 
-    <div class="grid grid-cols-2 gap-3">
-        <div class="col-span-2">
+    <div class="space-y-3">
+        <div>
             {#if kept.has("path")}
                 <KeptClause label="Property" clauses={kept.get("path")} />
             {:else}
@@ -228,132 +287,304 @@
             {/if}
         </div>
 
-        {#if kept.has("minCount")}
-            <KeptClause label="Minimum values" clauses={kept.get("minCount")} />
-        {:else}
-            <NumberInputControl
-                label="Minimum values"
-                value={property.minCount}
-                readonly={locked}
-                callOnInput={raw =>
-                    set("minCount", numberOf(raw), { soon: true })}
-                callOnChange={raw => set("minCount", numberOf(raw))}
-            />
-        {/if}
-        {#if kept.has("maxCount")}
-            <KeptClause label="Maximum values" clauses={kept.get("maxCount")} />
-        {:else}
-            <NumberInputControl
-                label="Maximum values"
-                value={property.maxCount}
-                readonly={locked}
-                callOnInput={raw =>
-                    set("maxCount", numberOf(raw), { soon: true })}
-                callOnChange={raw => set("maxCount", numberOf(raw))}
-            />
-        {/if}
-
-        {#if kept.has("dataType")}
-            <KeptClause label="Value type" clauses={kept.get("dataType")} />
-        {:else}
-            <div>
-                <span class="text-default-text text-sm">Value type</span>
-                <SelectEditControl
-                    value={property.dataType}
-                    options={[{ iri: null, label: "any" }, ...DATATYPES]}
-                    getOptionValue={option => option.iri}
-                    getOptionLabel={option => option.label}
-                    disabled={locked}
-                    onchange={value => set("dataType", value)}
-                />
-            </div>
-        {/if}
-        {#if kept.has("classIri")}
-            <KeptClause label="Value class" clauses={kept.get("classIri")} />
-        {:else}
-            <div>
-                <TermPicker
-                    label="Value class"
-                    kind="CLASS"
-                    value={property.classIri}
-                    {terms}
-                    {prefixes}
-                    disabled={locked}
-                    onpick={iri => set("classIri", iri)}
-                />
-            </div>
-        {/if}
-
-        {#if kept.has("nodeKind")}
-            <KeptClause label="Value form" clauses={kept.get("nodeKind")} />
-        {:else}
-            <div>
-                <span class="text-default-text text-sm">Value form</span>
-                <SelectEditControl
-                    value={property.nodeKind}
-                    options={NODE_KINDS}
-                    getOptionValue={option => option.value}
-                    getOptionLabel={option => option.label}
-                    disabled={locked}
-                    onchange={value => set("nodeKind", value)}
-                />
-            </div>
-        {/if}
-        {#if kept.has("severity")}
-            <KeptClause label="Severity" clauses={kept.get("severity")} />
-        {:else}
-            <div>
-                <span class="text-default-text text-sm">Severity</span>
-                <SelectEditControl
-                    value={property.severity}
-                    options={SEVERITIES}
-                    getOptionValue={option => option.value}
-                    getOptionLabel={option => option.label}
-                    disabled={locked}
-                    onchange={value => set("severity", value)}
-                />
-            </div>
-        {/if}
-
-        <div class="col-span-2">
-            {#if kept.has("message")}
+        <CardSection title="How many" filled={true}>
+            {#if kept.has("minCount")}
                 <KeptClause
-                    label="Message shown when the rule is broken"
-                    clauses={kept.get("message")}
+                    label="Minimum values"
+                    clauses={kept.get("minCount")}
+                />
+            {:else}
+                <NumberInputControl
+                    label="Minimum values"
+                    value={property.minCount}
+                    readonly={locked}
+                    callOnInput={raw =>
+                        set("minCount", numberOf(raw), { soon: true })}
+                    callOnChange={raw => set("minCount", numberOf(raw))}
+                />
+            {/if}
+            {#if kept.has("maxCount")}
+                <KeptClause
+                    label="Maximum values"
+                    clauses={kept.get("maxCount")}
+                />
+            {:else}
+                <NumberInputControl
+                    label="Maximum values"
+                    value={property.maxCount}
+                    readonly={locked}
+                    callOnInput={raw =>
+                        set("maxCount", numberOf(raw), { soon: true })}
+                    callOnChange={raw => set("maxCount", numberOf(raw))}
+                />
+            {/if}
+        </CardSection>
+
+        <CardSection title="What kind of value" filled={true}>
+            {#if kept.has("dataType")}
+                <KeptClause label="Value type" clauses={kept.get("dataType")} />
+            {:else}
+                <div>
+                    <span class="text-default-text text-sm">Value type</span>
+                    <SelectEditControl
+                        value={property.dataType}
+                        options={[{ iri: null, label: "any" }, ...DATATYPES]}
+                        getOptionValue={option => option.iri}
+                        getOptionLabel={option => option.label}
+                        disabled={locked}
+                        onchange={value => set("dataType", value)}
+                    />
+                </div>
+            {/if}
+            {#if kept.has("classIri")}
+                <KeptClause
+                    label="Value class"
+                    clauses={kept.get("classIri")}
+                />
+            {:else}
+                <div>
+                    <TermPicker
+                        label="Value class"
+                        kind="CLASS"
+                        value={property.classIri}
+                        {terms}
+                        {prefixes}
+                        disabled={locked}
+                        onpick={iri => set("classIri", iri)}
+                    />
+                </div>
+            {/if}
+            {#if kept.has("nodeKind")}
+                <KeptClause label="Value form" clauses={kept.get("nodeKind")} />
+            {:else}
+                <div>
+                    <span class="text-default-text text-sm">Value form</span>
+                    <SelectEditControl
+                        value={property.nodeKind}
+                        options={NODE_KINDS}
+                        getOptionValue={option => option.value}
+                        getOptionLabel={option => option.label}
+                        disabled={locked}
+                        onchange={value => set("nodeKind", value)}
+                    />
+                </div>
+            {/if}
+            {#if kept.has("hasValue")}
+                <KeptClause
+                    label="Must be exactly"
+                    clauses={kept.get("hasValue")}
                 />
             {:else}
                 <TextEditControl
-                    label="Message shown when the rule is broken"
-                    value={property.message ?? ""}
+                    label="Must be exactly"
+                    value={property.hasValue ?? ""}
                     readonly={locked}
-                    callOnInput={text => set("message", text, { soon: true })}
-                    callOnChange={text => set("message", text)}
+                    callOnChange={text => set("hasValue", text)}
                 />
             {/if}
-        </div>
+            <div class="col-span-2">
+                {#if kept.has("allowedValues")}
+                    <KeptClause
+                        label="One of"
+                        clauses={kept.get("allowedValues")}
+                    />
+                {:else}
+                    <ValueListEditor
+                        label="One of"
+                        mode="value"
+                        values={property.allowedValues ?? []}
+                        {terms}
+                        {prefixes}
+                        disabled={locked}
+                        onchange={values => set("allowedValues", values)}
+                    />
+                {/if}
+            </div>
+        </CardSection>
 
-        <div class="col-span-2">
-            {#if kept.has("deactivated")}
-                <KeptClause
-                    label="Switched off"
-                    clauses={kept.get("deactivated")}
-                />
+        <CardSection title="Between which values" filled={filled.range}>
+            {#each RANGES as range (range.field)}
+                {#if kept.has(range.field)}
+                    <KeptClause
+                        label={range.label}
+                        clauses={kept.get(range.field)}
+                    />
+                {:else}
+                    <NumberInputControl
+                        label={range.label}
+                        value={property[range.field]}
+                        readonly={locked}
+                        callOnInput={raw =>
+                            set(range.field, lexicalOf(raw), { soon: true })}
+                        callOnChange={raw => set(range.field, lexicalOf(raw))}
+                    />
+                {/if}
+            {/each}
+        </CardSection>
+
+        <CardSection title="What the text must look like" filled={filled.text}>
+            {#if kept.has("minLength")}
+                <KeptClause label="Shortest" clauses={kept.get("minLength")} />
             {:else}
-                <CheckBoxEditControl
-                    label="Switched off"
-                    value={property.deactivated === true}
+                <NumberInputControl
+                    label="Shortest"
+                    value={property.minLength}
                     readonly={locked}
-                    callOnInputTrue={() => set("deactivated", true)}
-                    callOnInputFalse={() => set("deactivated", null)}
+                    callOnInput={raw =>
+                        set("minLength", numberOf(raw), { soon: true })}
+                    callOnChange={raw => set("minLength", numberOf(raw))}
                 />
             {/if}
-        </div>
+            {#if kept.has("maxLength")}
+                <KeptClause label="Longest" clauses={kept.get("maxLength")} />
+            {:else}
+                <NumberInputControl
+                    label="Longest"
+                    value={property.maxLength}
+                    readonly={locked}
+                    callOnInput={raw =>
+                        set("maxLength", numberOf(raw), { soon: true })}
+                    callOnChange={raw => set("maxLength", numberOf(raw))}
+                />
+            {/if}
+            {#if kept.has("pattern")}
+                <KeptClause label="Matching" clauses={kept.get("pattern")} />
+            {:else}
+                <TextEditControl
+                    label="Matching"
+                    value={property.pattern ?? ""}
+                    readonly={locked}
+                    callOnInput={text => set("pattern", text, { soon: true })}
+                    callOnChange={text => set("pattern", text)}
+                />
+            {/if}
+            {#if kept.has("flags")}
+                <KeptClause label="Match flags" clauses={kept.get("flags")} />
+            {:else}
+                <TextEditControl
+                    label="Match flags"
+                    value={property.flags ?? ""}
+                    readonly={locked}
+                    callOnInput={text => set("flags", text, { soon: true })}
+                    callOnChange={text => set("flags", text)}
+                />
+            {/if}
+        </CardSection>
 
-        <div class="col-span-2">
-            <KeptClauseList
-                clauses={keptClauses(property.retained, SHOWN)}
-                {prefixes}
-            />
-        </div>
+        <!--
+          Open like the two above it: the message, the severity and the switch have been on this
+          card since it shipped, and folding them away to make room for the new fields would be a
+          worse card than the flat one this grouping replaces.
+        -->
+        <CardSection title="What it is called and reports" filled={true}>
+            <div class="col-span-2">
+                {#if kept.has("name")}
+                    <KeptClause label="Name" clauses={kept.get("name")} />
+                {:else}
+                    <TextEditControl
+                        label="Name"
+                        value={property.name ?? ""}
+                        readonly={locked}
+                        callOnInput={text => set("name", text, { soon: true })}
+                        callOnChange={text => set("name", text)}
+                    />
+                {/if}
+            </div>
+            <div class="col-span-2">
+                {#if kept.has("description")}
+                    <KeptClause
+                        label="Description"
+                        clauses={kept.get("description")}
+                    />
+                {:else}
+                    <TextEditControl
+                        label="Description"
+                        value={property.description ?? ""}
+                        readonly={locked}
+                        callOnInput={text =>
+                            set("description", text, { soon: true })}
+                        callOnChange={text => set("description", text)}
+                    />
+                {/if}
+            </div>
+            <div class="col-span-2">
+                {#if kept.has("message")}
+                    <KeptClause
+                        label="Message shown when the rule is broken"
+                        clauses={kept.get("message")}
+                    />
+                {:else}
+                    <TextEditControl
+                        label="Message shown when the rule is broken"
+                        value={property.message ?? ""}
+                        readonly={locked}
+                        callOnInput={text =>
+                            set("message", text, { soon: true })}
+                        callOnChange={text => set("message", text)}
+                    />
+                {/if}
+            </div>
+            {#if kept.has("severity")}
+                <KeptClause label="Severity" clauses={kept.get("severity")} />
+            {:else}
+                <div>
+                    <span class="text-default-text text-sm">Severity</span>
+                    <SelectEditControl
+                        value={property.severity}
+                        options={SEVERITIES}
+                        getOptionValue={option => option.value}
+                        getOptionLabel={option => option.label}
+                        disabled={locked}
+                        onchange={value => set("severity", value)}
+                    />
+                </div>
+            {/if}
+            {#if kept.has("order")}
+                <KeptClause label="Shown at" clauses={kept.get("order")} />
+            {:else}
+                <NumberInputControl
+                    label="Shown at"
+                    value={property.order}
+                    readonly={locked}
+                    callOnChange={raw => set("order", lexicalOf(raw))}
+                />
+            {/if}
+            <div class="col-span-2">
+                {#if kept.has("group")}
+                    <KeptClause label="In group" clauses={kept.get("group")} />
+                {:else}
+                    <TermPicker
+                        label="In group"
+                        kind="NODE"
+                        value={property.group}
+                        {terms}
+                        {prefixes}
+                        disabled={locked}
+                        onpick={iri => set("group", iri)}
+                    />
+                {/if}
+            </div>
+            <div class="col-span-2">
+                {#if kept.has("deactivated")}
+                    <KeptClause
+                        label="Switched off"
+                        clauses={kept.get("deactivated")}
+                    />
+                {:else}
+                    <CheckBoxEditControl
+                        label="Switched off"
+                        value={property.deactivated === true}
+                        readonly={locked}
+                        callOnInputTrue={() => set("deactivated", true)}
+                        callOnInputFalse={() => set("deactivated", null)}
+                    />
+                {/if}
+            </div>
+        </CardSection>
+
+        <KeptClauseList
+            clauses={keptClauses(property.retained, SHOWN)}
+            {prefixes}
+        />
     </div>
 </div>

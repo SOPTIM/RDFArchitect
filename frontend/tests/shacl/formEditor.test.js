@@ -95,6 +95,18 @@ function fakeForm(overrides = {}) {
     };
 }
 
+/**
+ * How many rule cards are on screen, counted by a label only a rule card has.
+ *
+ * Counting the card's `<select>`s used to serve for this and no longer can: the shape's own
+ * targets, severity and metadata bring selects of their own.
+ */
+function ruleCards(view) {
+    return [...view.querySelectorAll("label")].filter(
+        label => label.textContent.trim() === "Minimum values",
+    ).length;
+}
+
 /** Presses the card's "Add a rule" button. */
 function addRule(view) {
     [...view.querySelectorAll("button")]
@@ -264,7 +276,7 @@ describe("NodeShapeCard", () => {
         });
 
         [...view.querySelectorAll("button")]
-            .find(button => button.textContent.includes("another class"))
+            .find(button => button.textContent.includes("another target"))
             .click();
         flushSync();
 
@@ -363,7 +375,7 @@ describe("NodeShapeCard", () => {
 
         addRule(view);
 
-        expect(view.querySelectorAll("select")).toHaveLength(6);
+        expect(ruleCards(view)).toBe(2);
         expect(model.properties).toHaveLength(1);
         expect(onchange).not.toHaveBeenCalled();
     });
@@ -423,7 +435,7 @@ describe("NodeShapeCard", () => {
             .click();
         flushSync();
 
-        expect(view.querySelectorAll("select")).toHaveLength(3);
+        expect(ruleCards(view)).toBe(1);
         expect(model.properties).toHaveLength(1);
         expect(onchange).not.toHaveBeenCalled();
     });

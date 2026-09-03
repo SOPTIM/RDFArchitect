@@ -20,6 +20,7 @@ package org.rdfarchitect.services.shacl.form;
 import de.soptim.opencgmes.cimvocabcheck.core.shacl.Shacl;
 
 import org.apache.jena.shared.PrefixMapping;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.shacl.dto.NodeShapeModel;
 import org.rdfarchitect.shacl.dto.PropertyShapeModel;
 
@@ -54,6 +55,21 @@ final class ShapeModelWriter {
                 clauses,
                 Shacl.TARGET_CLASS.getURI(),
                 terms(shape.getTargetClasses(), prefixes),
+                prefixes);
+        add(
+                clauses,
+                ShapeModelReader.TARGET_SUBJECTS_OF.getURI(),
+                terms(shape.getTargetSubjectsOf(), prefixes),
+                prefixes);
+        add(
+                clauses,
+                ShapeModelReader.TARGET_OBJECTS_OF.getURI(),
+                terms(shape.getTargetObjectsOf(), prefixes),
+                prefixes);
+        add(
+                clauses,
+                ShapeModelReader.TARGET_NODE.getURI(),
+                terms(shape.getTargetNodes(), prefixes),
                 prefixes);
         add(clauses, ShapeModelReader.NAME.getURI(), string(shape.getName()), prefixes);
         add(
@@ -125,7 +141,43 @@ final class ShapeModelWriter {
                 Shacl.IN.getURI(),
                 collection(property.getAllowedValues(), false, prefixes),
                 prefixes);
+        add(
+                clauses,
+                ShapeModelReader.HAS_VALUE.getURI(),
+                member(property.getHasValue(), prefixes),
+                prefixes);
+        add(
+                clauses,
+                ShapeModelReader.MIN_INCLUSIVE.getURI(),
+                number(property.getMinInclusive()),
+                prefixes);
+        add(
+                clauses,
+                ShapeModelReader.MAX_INCLUSIVE.getURI(),
+                number(property.getMaxInclusive()),
+                prefixes);
+        add(
+                clauses,
+                ShapeModelReader.MIN_EXCLUSIVE.getURI(),
+                number(property.getMinExclusive()),
+                prefixes);
+        add(
+                clauses,
+                ShapeModelReader.MAX_EXCLUSIVE.getURI(),
+                number(property.getMaxExclusive()),
+                prefixes);
+        add(
+                clauses,
+                ShapeModelReader.MIN_LENGTH.getURI(),
+                number(property.getMinLength()),
+                prefixes);
+        add(
+                clauses,
+                ShapeModelReader.MAX_LENGTH.getURI(),
+                number(property.getMaxLength()),
+                prefixes);
         add(clauses, ShapeModelReader.PATTERN.getURI(), string(property.getPattern()), prefixes);
+        add(clauses, ShapeModelReader.FLAGS.getURI(), string(property.getFlags()), prefixes);
         add(
                 clauses,
                 ShapeModelReader.SEVERITY.getURI(),
@@ -182,6 +234,37 @@ final class ShapeModelWriter {
         return value == null ? null : value.toString();
     }
 
+    /**
+     * A number written bare, for a clause the document does not have yet.
+     *
+     * <p>Where the clause already exists the digits are replaced inside the literal the document
+     * wrote, datatype and all — see {@link ShapeClauseWriter}. Only a brand new clause has no
+     * spelling to keep, and a bare number is the plainest thing to give it.
+     */
+    static String number(String lexical) {
+        if (lexical == null || lexical.isBlank()) {
+            return null;
+        }
+        assertIsANumber(lexical);
+        return lexical;
+    }
+
+    /** Refuses anything a bare number's place in Turtle cannot hold. */
+    static void assertIsANumber(String lexical) {
+        if (!ShapeModelReader.isBareNumber(lexical)) {
+            throw new ResourceConflictException(
+                    "\"" + lexical + "\" is not a number, so the form will not write it.");
+        }
+    }
+
+    /** One value of {@code sh:in} or {@code sh:hasValue}: a term, or a plain string. */
+    static String member(String value, PrefixMapping prefixes) {
+        if (value == null || value.isEmpty()) {
+            return null;
+        }
+        return looksLikeIri(value) ? term(value, prefixes) : quote(value);
+    }
+
     static String flag(Boolean value) {
         return value == null ? null : value.toString();
     }
@@ -196,7 +279,7 @@ final class ShapeModelWriter {
         }
         var written = new ArrayList<String>();
         for (String value : values) {
-            written.add(iris || looksLikeIri(value) ? term(value, prefixes) : quote(value));
+            written.add(iris ? term(value, prefixes) : member(value, prefixes));
         }
         return "( " + String.join(" ", written) + " )";
     }

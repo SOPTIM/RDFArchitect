@@ -46,6 +46,21 @@ public class NodeShapeModel {
      */
     private List<String> targetClasses;
 
+    /**
+     * {@code sh:targetSubjectsOf}: the shape applies to whatever states one of these predicates.
+     *
+     * <p>One list per kind of target rather than a kind-and-value pair, because SHACL lets a shape
+     * carry several kinds at once and each is its own predicate. The form shows them as rows of
+     * kind plus value, which is the same thing read the other way round.
+     */
+    private List<String> targetSubjectsOf;
+
+    /** {@code sh:targetObjectsOf}: the shape applies to whatever is the object of one of these. */
+    private List<String> targetObjectsOf;
+
+    /** {@code sh:targetNode}: the shape applies to these resources and no others. */
+    private List<String> targetNodes;
+
     private Boolean closed;
 
     private List<String> ignoredProperties;

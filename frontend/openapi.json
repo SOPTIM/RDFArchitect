@@ -1213,6 +1213,24 @@
               "type" : "string"
             },
             "type" : "array"
+          },
+          "targetNodes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "targetObjectsOf" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "targetSubjectsOf" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -1482,13 +1500,29 @@
           "editable" : {
             "type" : "boolean"
           },
+          "flags" : {
+            "type" : "string"
+          },
           "group" : {
+            "type" : "string"
+          },
+          "hasValue" : {
             "type" : "string"
           },
           "iri" : {
             "type" : "string"
           },
           "maxCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "maxExclusive" : {
+            "type" : "string"
+          },
+          "maxInclusive" : {
+            "type" : "string"
+          },
+          "maxLength" : {
             "format" : "int32",
             "type" : "integer"
           },
@@ -1499,6 +1533,16 @@
             "format" : "int32",
             "type" : "integer"
           },
+          "minExclusive" : {
+            "type" : "string"
+          },
+          "minInclusive" : {
+            "type" : "string"
+          },
+          "minLength" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "name" : {
             "type" : "string"
           },
@@ -1506,8 +1550,7 @@
             "type" : "string"
           },
           "order" : {
-            "format" : "int32",
-            "type" : "integer"
+            "type" : "string"
           },
           "path" : {
             "type" : "string"

@@ -77,6 +77,17 @@ final class ShapeModelReader {
     static final Node GROUP = NodeFactory.createURI(Shacl.NS + "group");
     static final Node CLOSED = NodeFactory.createURI(Shacl.NS + "closed");
     static final Node PATTERN = NodeFactory.createURI(Shacl.NS + "pattern");
+    static final Node FLAGS = NodeFactory.createURI(Shacl.NS + "flags");
+    static final Node HAS_VALUE = NodeFactory.createURI(Shacl.NS + "hasValue");
+    static final Node MIN_INCLUSIVE = NodeFactory.createURI(Shacl.NS + "minInclusive");
+    static final Node MAX_INCLUSIVE = NodeFactory.createURI(Shacl.NS + "maxInclusive");
+    static final Node MIN_EXCLUSIVE = NodeFactory.createURI(Shacl.NS + "minExclusive");
+    static final Node MAX_EXCLUSIVE = NodeFactory.createURI(Shacl.NS + "maxExclusive");
+    static final Node MIN_LENGTH = NodeFactory.createURI(Shacl.NS + "minLength");
+    static final Node MAX_LENGTH = NodeFactory.createURI(Shacl.NS + "maxLength");
+    static final Node TARGET_SUBJECTS_OF = NodeFactory.createURI(Shacl.NS + "targetSubjectsOf");
+    static final Node TARGET_OBJECTS_OF = NodeFactory.createURI(Shacl.NS + "targetObjectsOf");
+    static final Node TARGET_NODE = NodeFactory.createURI(Shacl.NS + "targetNode");
 
     /** The one {@code rdf:type} the writer states on a rule it adds. */
     static final Node PROPERTY_SHAPE = NodeFactory.createURI(Shacl.NS + "PropertyShape");
@@ -98,6 +109,16 @@ final class ShapeModelReader {
         INTEGER,
         /** Written as a bare {@code true} or {@code false}. */
         BOOLEAN,
+        /**
+         * A number, written back into the literal the document already holds.
+         *
+         * <p>The model carries the lexical form alone, so {@code "0.0"^^xsd:float} — which is how
+         * every value range in the official library is written — comes back as {@code 0.0} with its
+         * datatype untouched. Only the digits are ever replaced.
+         */
+        NUMBER,
+        /** Written as a term or as a plain string, decided by whether the value reads as an IRI. */
+        TERM,
         /** Written as an RDF collection of terms. */
         IRI_LIST,
         /** Written as an RDF collection whose members may be terms or plain strings. */
@@ -111,6 +132,9 @@ final class ShapeModelReader {
     static final Map<Node, Field> NODE_FIELDS =
             Map.ofEntries(
                     Map.entry(Shacl.TARGET_CLASS, new Field(ValueKind.IRIS, "targetClasses")),
+                    Map.entry(TARGET_SUBJECTS_OF, new Field(ValueKind.IRIS, "targetSubjectsOf")),
+                    Map.entry(TARGET_OBJECTS_OF, new Field(ValueKind.IRIS, "targetObjectsOf")),
+                    Map.entry(TARGET_NODE, new Field(ValueKind.IRIS, "targetNodes")),
                     Map.entry(
                             Shacl.IGNORED_PROPERTIES,
                             new Field(ValueKind.IRI_LIST, "ignoredProperties")),
@@ -131,13 +155,21 @@ final class ShapeModelReader {
                     Map.entry(Shacl.MIN_COUNT, new Field(ValueKind.INTEGER, "minCount")),
                     Map.entry(Shacl.MAX_COUNT, new Field(ValueKind.INTEGER, "maxCount")),
                     Map.entry(Shacl.IN, new Field(ValueKind.MIXED_LIST, "allowedValues")),
+                    Map.entry(HAS_VALUE, new Field(ValueKind.TERM, "hasValue")),
+                    Map.entry(MIN_INCLUSIVE, new Field(ValueKind.NUMBER, "minInclusive")),
+                    Map.entry(MAX_INCLUSIVE, new Field(ValueKind.NUMBER, "maxInclusive")),
+                    Map.entry(MIN_EXCLUSIVE, new Field(ValueKind.NUMBER, "minExclusive")),
+                    Map.entry(MAX_EXCLUSIVE, new Field(ValueKind.NUMBER, "maxExclusive")),
+                    Map.entry(MIN_LENGTH, new Field(ValueKind.INTEGER, "minLength")),
+                    Map.entry(MAX_LENGTH, new Field(ValueKind.INTEGER, "maxLength")),
                     Map.entry(Shacl.DEACTIVATED, new Field(ValueKind.BOOLEAN, "deactivated")),
                     Map.entry(PATTERN, new Field(ValueKind.STRING, "pattern")),
+                    Map.entry(FLAGS, new Field(ValueKind.STRING, "flags")),
                     Map.entry(NAME, new Field(ValueKind.STRING, "name")),
                     Map.entry(DESCRIPTION, new Field(ValueKind.STRING, "description")),
                     Map.entry(MESSAGE, new Field(ValueKind.STRING, "message")),
                     Map.entry(SEVERITY, new Field(ValueKind.IRI, "severity")),
-                    Map.entry(ORDER, new Field(ValueKind.INTEGER, "order")),
+                    Map.entry(ORDER, new Field(ValueKind.NUMBER, "order")),
                     Map.entry(GROUP, new Field(ValueKind.IRI, "group")));
 
     /** Predicates that carry structure rather than a field, and are never rewritten as one. */
@@ -235,6 +267,9 @@ final class ShapeModelReader {
                                 byPredicate.get(Shacl.TARGET_CLASS.getURI()),
                                 source,
                                 () -> uris(graph, shape, Shacl.TARGET_CLASS)))
+                .targetSubjectsOf(targets(graph, shape, byPredicate, source, TARGET_SUBJECTS_OF))
+                .targetObjectsOf(targets(graph, shape, byPredicate, source, TARGET_OBJECTS_OF))
+                .targetNodes(targets(graph, shape, byPredicate, source, TARGET_NODE))
                 .closed(bool(graph, shape, CLOSED))
                 .ignoredProperties(
                         RdfLists.uris(graph, object(graph, shape, Shacl.IGNORED_PROPERTIES)))
@@ -541,10 +576,18 @@ final class ShapeModelReader {
                 .minCount(integer(graph, property, Shacl.MIN_COUNT))
                 .maxCount(integer(graph, property, Shacl.MAX_COUNT))
                 .allowedValues(RdfLists.values(graph, object(graph, property, Shacl.IN)))
+                .hasValue(term(graph, property, HAS_VALUE))
+                .minInclusive(string(graph, property, MIN_INCLUSIVE))
+                .maxInclusive(string(graph, property, MAX_INCLUSIVE))
+                .minExclusive(string(graph, property, MIN_EXCLUSIVE))
+                .maxExclusive(string(graph, property, MAX_EXCLUSIVE))
+                .minLength(integer(graph, property, MIN_LENGTH))
+                .maxLength(integer(graph, property, MAX_LENGTH))
                 .pattern(string(graph, property, PATTERN))
+                .flags(string(graph, property, FLAGS))
                 .severity(uri(graph, property, SEVERITY))
                 .message(string(graph, property, MESSAGE))
-                .order(integer(graph, property, ORDER))
+                .order(string(graph, property, ORDER))
                 .group(uri(graph, property, GROUP))
                 .deactivated(bool(graph, property, Shacl.DEACTIVATED))
                 // Recorded so a rewrite puts it back. Restating it unconditionally would add a
@@ -582,14 +625,31 @@ final class ShapeModelReader {
         return written == null ? List.of() : written.nested();
     }
 
-    /** Reading order in the form: whatever sh:order says, then by path so it is stable. */
+    /**
+     * Reading order in the form: whatever sh:order says, then by path so it is stable.
+     *
+     * <p>Compared as a number rather than as the text it is held as — the official library writes
+     * {@code sh:order 0.1} next to {@code sh:order 10}, and sorting those as strings would put the
+     * tenth rule second.
+     */
     private static Comparator<PropertyShapeModel> byOrderThenPath() {
         return Comparator.comparing(
-                        PropertyShapeModel::getOrder,
-                        Comparator.nullsLast(Comparator.naturalOrder()))
+                        ShapeModelReader::orderOf, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparing(
                         PropertyShapeModel::getPath,
                         Comparator.nullsLast(Comparator.naturalOrder()));
+    }
+
+    /** A rule's {@code sh:order} as a number, or {@code null} where it does not read as one. */
+    private static Double orderOf(PropertyShapeModel rule) {
+        if (rule.getOrder() == null) {
+            return null;
+        }
+        try {
+            return Double.valueOf(rule.getOrder());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -678,6 +738,8 @@ final class ShapeModelReader {
             case IRI, IRIS -> value.isURI();
             case STRING -> isPlainString(value);
             case INTEGER -> isCanonicalInteger(value);
+            case NUMBER -> isNumber(value);
+            case TERM -> faithfulListMember(value);
             case BOOLEAN -> isCanonicalBoolean(value);
             case IRI_LIST ->
                     RdfLists.nodes(graph, value)
@@ -707,6 +769,56 @@ final class ShapeModelReader {
         var lexical = value.getLiteralLexicalForm();
         var parsed = parseInt(lexical);
         return parsed != null && parsed.toString().equals(lexical);
+    }
+
+    /** The XSD datatypes a value the form shows as a number may carry. */
+    private static final Set<String> NUMERIC =
+            Stream.of(
+                            "decimal",
+                            "integer",
+                            "long",
+                            "int",
+                            "short",
+                            "byte",
+                            "nonPositiveInteger",
+                            "negativeInteger",
+                            "nonNegativeInteger",
+                            "positiveInteger",
+                            "unsignedLong",
+                            "unsignedInt",
+                            "unsignedShort",
+                            "unsignedByte",
+                            "float",
+                            "double")
+                    .map(name -> XSD.NS + name)
+                    .collect(Collectors.toUnmodifiableSet());
+
+    /**
+     * A number the form can show and put back without touching how it is written.
+     *
+     * <p>Weaker than {@link #isCanonicalInteger} on purpose, and that is the point: the writer does
+     * not respell the literal, it replaces the digits inside the one the document already has. So
+     * {@code "0.0"^^xsd:float} qualifies where a form holding a {@code double} could not have put
+     * it back, and 1282 value ranges in the official library are editable rather than displayed.
+     */
+    private static boolean isNumber(Node value) {
+        return value.isLiteral()
+                && value.getLiteralLanguage().isEmpty()
+                && NUMERIC.contains(value.getLiteralDatatypeURI())
+                && isBareNumber(value.getLiteralLexicalForm());
+    }
+
+    /**
+     * Whether a lexical form is a number Turtle could read, and nothing else.
+     *
+     * <p>Checked on the way in as well as on the way out: what goes back between the quotes is
+     * whatever the form sends, and a value that is not a number there would be a document that no
+     * longer parses — or, worse, one that parses as something else.
+     */
+    static boolean isBareNumber(String lexical) {
+        return lexical.matches("[+-]?\\d+")
+                || lexical.matches("[+-]?\\d*\\.\\d+")
+                || lexical.matches("[+-]?(\\d+\\.\\d*|\\.\\d+|\\d+)[eE][+-]?\\d+");
     }
 
     /** A literal the writer reproduces by printing a bare {@code true} or {@code false}. */
@@ -796,6 +908,17 @@ final class ShapeModelReader {
         return List.copyOf(values);
     }
 
+    /** One kind of target, in the order the document writes it. */
+    private static List<String> targets(
+            Graph graph,
+            Node shape,
+            Map<String, List<ClauseLocator.Clause>> byPredicate,
+            ShapeSource source,
+            Node predicate) {
+        return asWritten(
+                byPredicate.get(predicate.getURI()), source, () -> uris(graph, shape, predicate));
+    }
+
     /** Every URI value of a repeatable predicate, in the order the graph holds them. */
     private static List<String> uris(Graph graph, Node subject, Node predicate) {
         return graph.stream(subject, predicate, Node.ANY)
@@ -804,6 +927,17 @@ final class ShapeModelReader {
                 .map(Node::getURI)
                 .distinct()
                 .toList();
+    }
+
+    /** A value written either as a term or as a plain string, as {@code sh:in}'s members are. */
+    private static String term(Graph graph, Node subject, Node predicate) {
+        var object = object(graph, subject, predicate);
+        if (object == null) {
+            return null;
+        }
+        return object.isURI()
+                ? object.getURI()
+                : object.isLiteral() ? object.getLiteralLexicalForm() : null;
     }
 
     private static String string(Graph graph, Node subject, Node predicate) {

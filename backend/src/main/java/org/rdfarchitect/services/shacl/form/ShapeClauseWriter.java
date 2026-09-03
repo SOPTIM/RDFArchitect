@@ -53,8 +53,19 @@ final class ShapeClauseWriter {
     /** The edited document, and what the edit cost beyond the change itself. */
     record Result(String turtle, List<String> warnings) {}
 
-    /** One clause to change: {@code object} of {@code null} means the field was cleared. */
-    private record ClauseChange(Integer ordinal, String predicate, String field, String object) {}
+    /**
+     * One clause to change: {@code object} of {@code null} means the field was cleared.
+     *
+     * <p>{@code keepsSpelling} is for a number: the new digits go inside the literal the document
+     * already wrote, so {@code "0.0"^^xsd:float} becomes {@code "1.5"^^xsd:float} rather than a
+     * bare decimal. It says "replace the value, not the way it is written".
+     */
+    private record ClauseChange(
+            Integer ordinal,
+            String predicate,
+            String field,
+            String object,
+            boolean keepsSpelling) {}
 
     /** Where a new clause goes, and how the surrounding text lays its clauses out. */
     private record Insertion(int at, String indent, String before, String after) {}
@@ -244,6 +255,21 @@ final class ShapeClauseWriter {
                 "targetClasses",
                 stored.getTargetClasses(),
                 incoming.getTargetClasses());
+        diff.iris(
+                ShapeModelReader.TARGET_SUBJECTS_OF,
+                "targetSubjectsOf",
+                stored.getTargetSubjectsOf(),
+                incoming.getTargetSubjectsOf());
+        diff.iris(
+                ShapeModelReader.TARGET_OBJECTS_OF,
+                "targetObjectsOf",
+                stored.getTargetObjectsOf(),
+                incoming.getTargetObjectsOf());
+        diff.iris(
+                ShapeModelReader.TARGET_NODE,
+                "targetNodes",
+                stored.getTargetNodes(),
+                incoming.getTargetNodes());
         diff.text(ShapeModelReader.NAME, "name", stored.getName(), incoming.getName());
         diff.text(
                 ShapeModelReader.DESCRIPTION,
@@ -365,10 +391,36 @@ final class ShapeClauseWriter {
         diff.number(Shacl.MAX_COUNT, "maxCount", was.getMaxCount(), now.getMaxCount());
         diff.collection(
                 Shacl.IN, "allowedValues", was.getAllowedValues(), now.getAllowedValues(), false);
+        diff.member(ShapeModelReader.HAS_VALUE, "hasValue", was.getHasValue(), now.getHasValue());
+        diff.numeric(
+                ShapeModelReader.MIN_INCLUSIVE,
+                "minInclusive",
+                was.getMinInclusive(),
+                now.getMinInclusive());
+        diff.numeric(
+                ShapeModelReader.MAX_INCLUSIVE,
+                "maxInclusive",
+                was.getMaxInclusive(),
+                now.getMaxInclusive());
+        diff.numeric(
+                ShapeModelReader.MIN_EXCLUSIVE,
+                "minExclusive",
+                was.getMinExclusive(),
+                now.getMinExclusive());
+        diff.numeric(
+                ShapeModelReader.MAX_EXCLUSIVE,
+                "maxExclusive",
+                was.getMaxExclusive(),
+                now.getMaxExclusive());
+        diff.number(
+                ShapeModelReader.MIN_LENGTH, "minLength", was.getMinLength(), now.getMinLength());
+        diff.number(
+                ShapeModelReader.MAX_LENGTH, "maxLength", was.getMaxLength(), now.getMaxLength());
         diff.text(ShapeModelReader.PATTERN, "pattern", was.getPattern(), now.getPattern());
+        diff.text(ShapeModelReader.FLAGS, "flags", was.getFlags(), now.getFlags());
         diff.iri(ShapeModelReader.SEVERITY, "severity", was.getSeverity(), now.getSeverity());
         diff.text(ShapeModelReader.MESSAGE, "message", was.getMessage(), now.getMessage());
-        diff.number(ShapeModelReader.ORDER, "order", was.getOrder(), now.getOrder());
+        diff.numeric(ShapeModelReader.ORDER, "order", was.getOrder(), now.getOrder());
         diff.iri(ShapeModelReader.GROUP, "group", was.getGroup(), now.getGroup());
         diff.flag(Shacl.DEACTIVATED, "deactivated", was.getDeactivated(), now.getDeactivated());
     }
@@ -448,6 +500,22 @@ final class ShapeClauseWriter {
             note(predicate, field, was, now, ShapeModelWriter.number(now));
         }
 
+        /** A number whose new digits go inside whatever literal the document already wrote. */
+        void numeric(Node predicate, String field, String was, String now) {
+            var value = blank(now);
+            note(predicate, field, blank(was), value, ShapeModelWriter.number(value), true);
+        }
+
+        /** One value written the way a {@code sh:in} member is: a term, or a plain string. */
+        void member(Node predicate, String field, String was, String now) {
+            note(
+                    predicate,
+                    field,
+                    empty(was),
+                    empty(now),
+                    ShapeModelWriter.member(empty(now), prefixes));
+        }
+
         void flag(Node predicate, String field, Boolean was, Boolean now) {
             note(predicate, field, was, now, ShapeModelWriter.flag(now));
         }
@@ -463,6 +531,16 @@ final class ShapeClauseWriter {
         }
 
         private void note(Node predicate, String field, Object was, Object now, String object) {
+            note(predicate, field, was, now, object, false);
+        }
+
+        private void note(
+                Node predicate,
+                String field,
+                Object was,
+                Object now,
+                String object,
+                boolean keepsSpelling) {
             if (Objects.equals(was, now)) {
                 return;
             }
@@ -476,7 +554,8 @@ final class ShapeClauseWriter {
                                         : " on this rule. ")
                                 + reason);
             }
-            changes.add(new ClauseChange(ordinal, predicate.getURI(), field, object));
+            changes.add(
+                    new ClauseChange(ordinal, predicate.getURI(), field, object, keepsSpelling));
         }
 
         /** An IRI field: written and blank mean the same thing, which is "not stated". */
@@ -538,9 +617,33 @@ final class ShapeClauseWriter {
         if (change.object() == null) {
             return delete(text, region, clause, warnings);
         }
+        var written = text.substring(clause.objectsStart(), clause.objectsEnd());
+        var replacement =
+                change.keepsSpelling() && clause.objects().size() == 1
+                        ? respell(written, change.object())
+                        : change.object();
         return text.substring(0, clause.objectsStart())
-                + change.object()
+                + replacement
                 + text.substring(clause.objectsEnd());
+    }
+
+    /**
+     * The object the document wrote, saying {@code value} instead.
+     *
+     * <p>Only the part between the quotes is replaced, so the datatype and the quoting style the
+     * author chose survive an edit to the number they hold. A bare number has no shell to keep and
+     * is simply replaced. This is what makes the official library's 1282 {@code "0.0"^^xsd:float}
+     * value ranges editable rather than merely visible: a form holding a {@code double} would have
+     * written back {@code 0.0} and quietly changed the datatype.
+     */
+    private static String respell(String written, String value) {
+        if (written.isEmpty() || (written.charAt(0) != '"' && written.charAt(0) != '\'')) {
+            return value;
+        }
+        var quote = String.valueOf(written.charAt(0));
+        var delimiter = written.startsWith(quote.repeat(3)) ? quote.repeat(3) : quote;
+        var closes = written.indexOf(delimiter, delimiter.length());
+        return closes < 0 ? value : delimiter + value + written.substring(closes);
     }
 
     private static String applyAddition(

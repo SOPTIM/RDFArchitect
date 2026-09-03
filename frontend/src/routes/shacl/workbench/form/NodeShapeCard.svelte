@@ -34,14 +34,18 @@
     import { Fa } from "svelte-fa";
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
+    import TextEditControl from "$lib/components/TextEditControl.svelte";
     import { keptClauses, keptFields } from "$lib/shacl/retained.js";
     import { abbreviate } from "$lib/shacl/turtleTerms.js";
 
+    import CardSection from "./CardSection.svelte";
     import KeptClause from "./KeptClause.svelte";
     import KeptClauseList from "./KeptClauseList.svelte";
     import PropertyShapeCard from "./PropertyShapeCard.svelte";
     import TermPicker from "./TermPicker.svelte";
+    import ValueListEditor from "./ValueListEditor.svelte";
 
     let {
         shape,
@@ -69,7 +73,49 @@
     } = $props();
 
     /** The fields this card puts on screen. Anything else kept as written is listed instead. */
-    const SHOWN = ["targetClasses"];
+    const SHOWN = [
+        "targetClasses",
+        "targetSubjectsOf",
+        "targetObjectsOf",
+        "targetNodes",
+        "name",
+        "description",
+        "message",
+        "severity",
+        "closed",
+        "ignoredProperties",
+        "deactivated",
+    ];
+
+    /**
+     * The four ways SHACL says what a shape applies to.
+     *
+     * Shown as rows of kind plus value rather than as four separate lists, because that is the
+     * question being answered — "what does this apply to?" — and a shape may answer it more than
+     * once and in more than one way. `sh:targetNode` names a resource rather than a schema term,
+     * so it has no list to pick from and its box is typed into.
+     */
+    const TARGET_KINDS = [
+        { field: "targetClasses", label: "every instance of", pick: "CLASS" },
+        {
+            field: "targetSubjectsOf",
+            label: "whatever states",
+            pick: "PROPERTY",
+        },
+        {
+            field: "targetObjectsOf",
+            label: "whatever is the object of",
+            pick: "PROPERTY",
+        },
+        { field: "targetNodes", label: "the resource", pick: "NODE" },
+    ];
+
+    const SEVERITIES = [
+        { value: null, label: "Violation (default)" },
+        { value: "http://www.w3.org/ns/shacl#Violation", label: "Violation" },
+        { value: "http://www.w3.org/ns/shacl#Warning", label: "Warning" },
+        { value: "http://www.w3.org/ns/shacl#Info", label: "Info" },
+    ];
 
     /**
      * Rules added here but not yet written to the document, because they name no property.
@@ -87,8 +133,8 @@
      */
     let drafts = $state.raw([]);
 
-    /** Whether a picker for one more target class is on screen. */
-    let addingClass = $state(false);
+    /** Whether a picker for one more target is on screen, and which kind it would be. */
+    let addingTarget = $state(null);
 
     /** The picker is an action rather than a field, so it goes back to its placeholder. */
     let picked = $state(null);
@@ -113,14 +159,38 @@
 
     const kept = $derived(keptFields(shape.retained));
 
+    /** Whether the shape says anything about itself, which decides if that group starts open. */
+    const saysSomething = $derived(
+        Boolean(
+            shape.name ||
+            shape.description ||
+            shape.message ||
+            shape.severity ||
+            shape.closed ||
+            shape.deactivated ||
+            (shape.ignoredProperties ?? []).length,
+        ),
+    );
+
     const classes = $derived(shape.targetClasses ?? []);
 
     const title = $derived(abbreviate(shape.iri, prefixes));
 
+    /** Every target the shape states, in kind order, each knowing where it lives. */
+    const targets = $derived(
+        TARGET_KINDS.filter(entry => !kept.has(entry.field)).flatMap(entry =>
+            (shape[entry.field] ?? []).map((iri, at) => ({
+                ...entry,
+                iri,
+                at,
+            })),
+        ),
+    );
+
     const target = $derived(
-        classes.length
-            ? classes.map(iri => abbreviate(iri, prefixes)).join(", ")
-            : "no class chosen",
+        targets.length
+            ? targets.map(entry => abbreviate(entry.iri, prefixes)).join(", ")
+            : "nothing chosen",
     );
 
     /** The document's own rules this shape does not reference yet. */
@@ -131,24 +201,51 @@
         return sharedRules.filter(rule => !used.has(rule.iri));
     });
 
-    /** Replaces one target class, or drops it when the picker was cleared. */
-    function setClass(index, iri) {
-        const next = [...classes];
+    /** Replaces one target's value, or drops the target when the picker was cleared. */
+    function setTarget(entry, iri) {
+        const next = [...(shape[entry.field] ?? [])];
         if (iri) {
-            next[index] = iri;
+            next[entry.at] = iri;
         } else {
-            next.splice(index, 1);
+            next.splice(entry.at, 1);
         }
-        shape.targetClasses = next;
+        shape[entry.field] = next;
         onchange();
     }
 
-    function addClass(iri) {
-        addingClass = false;
+    /** Moves a target to another kind, which is a different predicate rather than a new value. */
+    function setTargetKind(entry, field) {
+        if (field === entry.field) {
+            return;
+        }
+        const from = [...(shape[entry.field] ?? [])];
+        from.splice(entry.at, 1);
+        shape[entry.field] = from;
+        shape[field] = [...(shape[field] ?? []), entry.iri];
+        onchange();
+    }
+
+    function addTarget(field, iri) {
+        addingTarget = null;
         if (!iri) {
             return;
         }
-        shape.targetClasses = [...classes, iri];
+        shape[field] = [...(shape[field] ?? []), iri];
+        onchange();
+    }
+
+    /** Writes one of the shape's own fields and applies it. */
+    function set(field, value, { soon = false } = {}) {
+        shape[field] = value === "" ? null : value;
+        if (soon) {
+            onedit();
+        } else {
+            onchange();
+        }
+    }
+
+    function setList(field, values) {
+        shape[field] = values;
         onchange();
     }
 
@@ -260,41 +357,72 @@
                 </p>
             {/if}
 
-            {#if kept.has("targetClasses")}
-                <KeptClause
-                    label="Applies to class"
-                    clauses={kept.get("targetClasses")}
-                />
-            {:else}
-                {#each classes.length ? classes : [null] as iri, index (index)}
-                    <TermPicker
-                        label={index === 0 ? "Applies to class" : "and also to"}
-                        kind="CLASS"
-                        value={iri}
-                        {terms}
-                        {prefixes}
-                        disabled={locked}
-                        onpick={picked => setClass(index, picked)}
-                    />
+            <div class="space-y-2">
+                <span class="text-default-text text-sm">Applies to</span>
+                {#each TARGET_KINDS as entry (entry.field)}
+                    {#if kept.has(entry.field)}
+                        <KeptClause
+                            label={entry.label}
+                            clauses={kept.get(entry.field)}
+                        />
+                    {/if}
                 {/each}
-                {#if addingClass}
-                    <TermPicker
-                        label="and also to"
-                        kind="CLASS"
-                        value={null}
-                        {terms}
-                        {prefixes}
-                        onpick={addClass}
-                    />
-                {:else if !locked && classes.length > 0}
+                {#each targets as entry (`${entry.field}-${entry.at}`)}
+                    <div class="flex items-end gap-2">
+                        <div class="w-56 shrink-0">
+                            <SelectEditControl
+                                value={entry.field}
+                                options={TARGET_KINDS}
+                                getOptionValue={kind => kind.field}
+                                getOptionLabel={kind => kind.label}
+                                disabled={locked}
+                                onchange={field => setTargetKind(entry, field)}
+                            />
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <TermPicker
+                                kind={entry.pick}
+                                value={entry.iri}
+                                {terms}
+                                {prefixes}
+                                disabled={locked}
+                                onpick={picked => setTarget(entry, picked)}
+                            />
+                        </div>
+                    </div>
+                {/each}
+                {#if addingTarget}
+                    <div class="flex items-end gap-2">
+                        <div class="w-56 shrink-0">
+                            <SelectEditControl
+                                value={addingTarget}
+                                options={TARGET_KINDS}
+                                getOptionValue={kind => kind.field}
+                                getOptionLabel={kind => kind.label}
+                                onchange={field => (addingTarget = field)}
+                            />
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <TermPicker
+                                kind={TARGET_KINDS.find(
+                                    kind => kind.field === addingTarget,
+                                )?.pick}
+                                value={null}
+                                {terms}
+                                {prefixes}
+                                onpick={iri => addTarget(addingTarget, iri)}
+                            />
+                        </div>
+                    </div>
+                {:else if !locked}
                     <button
                         class="text-text-subtle hover:text-default-text cursor-pointer text-xs"
-                        onclick={() => (addingClass = true)}
+                        onclick={() => (addingTarget = "targetClasses")}
                     >
-                        + another class
+                        + {targets.length ? "another target" : "a target"}
                     </button>
                 {/if}
-            {/if}
+            </div>
 
             {#each shape.properties ?? [] as property, index (index)}
                 <PropertyShapeCard
@@ -321,6 +449,128 @@
                     onremove={() => removeDraft(index)}
                 />
             {/each}
+
+            <CardSection title="This shape's own words" filled={saysSomething}>
+                <div class="col-span-2">
+                    {#if kept.has("name")}
+                        <KeptClause label="Name" clauses={kept.get("name")} />
+                    {:else}
+                        <TextEditControl
+                            label="Name"
+                            value={shape.name ?? ""}
+                            readonly={locked}
+                            callOnInput={text =>
+                                set("name", text, { soon: true })}
+                            callOnChange={text => set("name", text)}
+                        />
+                    {/if}
+                </div>
+                <div class="col-span-2">
+                    {#if kept.has("description")}
+                        <KeptClause
+                            label="Description"
+                            clauses={kept.get("description")}
+                        />
+                    {:else}
+                        <TextEditControl
+                            label="Description"
+                            value={shape.description ?? ""}
+                            readonly={locked}
+                            callOnInput={text =>
+                                set("description", text, { soon: true })}
+                            callOnChange={text => set("description", text)}
+                        />
+                    {/if}
+                </div>
+                <div class="col-span-2">
+                    {#if kept.has("message")}
+                        <KeptClause
+                            label="Message shown when the shape is broken"
+                            clauses={kept.get("message")}
+                        />
+                    {:else}
+                        <TextEditControl
+                            label="Message shown when the shape is broken"
+                            value={shape.message ?? ""}
+                            readonly={locked}
+                            callOnInput={text =>
+                                set("message", text, { soon: true })}
+                            callOnChange={text => set("message", text)}
+                        />
+                    {/if}
+                </div>
+                {#if kept.has("severity")}
+                    <KeptClause
+                        label="Severity"
+                        clauses={kept.get("severity")}
+                    />
+                {:else}
+                    <div>
+                        <span class="text-default-text text-sm">Severity</span>
+                        <SelectEditControl
+                            value={shape.severity}
+                            options={SEVERITIES}
+                            getOptionValue={option => option.value}
+                            getOptionLabel={option => option.label}
+                            disabled={locked}
+                            onchange={value => set("severity", value)}
+                        />
+                    </div>
+                {/if}
+                <div class="flex items-end">
+                    {#if kept.has("deactivated")}
+                        <KeptClause
+                            label="Switched off"
+                            clauses={kept.get("deactivated")}
+                        />
+                    {:else}
+                        <CheckBoxEditControl
+                            label="Switched off"
+                            value={shape.deactivated === true}
+                            readonly={locked}
+                            callOnInputTrue={() => set("deactivated", true)}
+                            callOnInputFalse={() => set("deactivated", null)}
+                        />
+                    {/if}
+                </div>
+                <div class="col-span-2">
+                    {#if kept.has("closed")}
+                        <KeptClause
+                            label="No other properties allowed"
+                            clauses={kept.get("closed")}
+                        />
+                    {:else}
+                        <CheckBoxEditControl
+                            label="No other properties allowed"
+                            value={shape.closed === true}
+                            readonly={locked}
+                            callOnInputTrue={() => set("closed", true)}
+                            callOnInputFalse={() => set("closed", null)}
+                        />
+                    {/if}
+                </div>
+                {#if shape.closed === true || (shape.ignoredProperties ?? []).length}
+                    <div class="col-span-2">
+                        {#if kept.has("ignoredProperties")}
+                            <KeptClause
+                                label="Except these properties"
+                                clauses={kept.get("ignoredProperties")}
+                            />
+                        {:else}
+                            <ValueListEditor
+                                label="Except these properties"
+                                values={shape.ignoredProperties ?? []}
+                                kind="PROPERTY"
+                                {terms}
+                                {prefixes}
+                                disabled={locked}
+                                onchange={values =>
+                                    setList("ignoredProperties", values)}
+                            />
+                        {/if}
+                    </div>
+                {/if}
+            </CardSection>
 
             <KeptClauseList
                 clauses={keptClauses(shape.retained, SHOWN)}

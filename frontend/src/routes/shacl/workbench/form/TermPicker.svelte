@@ -42,6 +42,18 @@
         onpick = () => {},
     } = $props();
 
+    /**
+     * What each kind of box invites.
+     *
+     * A kind the schema has no list for — a target node, a property group — says so rather than
+     * offering to "pick a property" it cannot pick from. The box still takes a prefixed name or an
+     * absolute IRI, which is the only way to name one of those.
+     */
+    const PLACEHOLDERS = {
+        CLASS: "pick a class",
+        PROPERTY: "pick a property",
+    };
+
     /** Bumped to put the box back to the term it holds after something unusable was typed in. */
     let reverts = $state(0);
 
@@ -138,7 +150,7 @@
         optionObjectList={options}
         accessDisplayData={option => option.written}
         accessIdentifier={option => option.written}
-        placeholder={kind === "CLASS" ? "pick a class" : "pick a property"}
+        placeholder={PLACEHOLDERS[kind] ?? "write a term"}
         callOnChange={picked}
     />
 {/key}

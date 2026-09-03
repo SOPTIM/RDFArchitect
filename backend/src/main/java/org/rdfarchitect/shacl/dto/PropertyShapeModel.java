@@ -70,16 +70,50 @@ public class PropertyShapeModel {
 
     private Integer maxCount;
 
+    /**
+     * {@code sh:minInclusive} and its three companions, as the number the document writes.
+     *
+     * <p>The lexical form on its own, not a Java number: every value range in the official library
+     * is written {@code "0.0"^^xsd:float}, and a form that read that as a {@code double} would
+     * write it back as a bare decimal — changing a datatype nobody asked it to touch. The writer
+     * replaces the number inside the literal the document already has and leaves the rest of it
+     * alone, so the datatype is preserved by never being handled.
+     */
+    private String minInclusive;
+
+    private String maxInclusive;
+
+    private String minExclusive;
+
+    private String maxExclusive;
+
+    private Integer minLength;
+
+    private Integer maxLength;
+
     /** {@code sh:in}: the closed list of values allowed, as written. */
     private List<String> allowedValues;
 
+    /** {@code sh:hasValue}: the one value allowed, an IRI or a plain string. */
+    private String hasValue;
+
     private String pattern;
+
+    /** {@code sh:flags}: how {@link #pattern} is matched, e.g. {@code i} for case-insensitive. */
+    private String flags;
 
     private String severity;
 
     private String message;
 
-    private Integer order;
+    /**
+     * {@code sh:order}, as the number the document writes rather than as an integer.
+     *
+     * <p>Held the same way as the value ranges above, and for a sharper reason: {@code sh:order
+     * 0.1} on one shared rule of the official library used to make every node shape referencing it
+     * read-only, over an ordering hint the form did not even display.
+     */
+    private String order;
 
     private String group;
 

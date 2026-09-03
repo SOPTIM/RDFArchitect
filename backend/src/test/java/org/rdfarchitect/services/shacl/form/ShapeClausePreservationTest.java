@@ -109,32 +109,42 @@ class ShapeClausePreservationTest {
                                 null));
     }
 
+    /** A rule whose message carries a language tag, which the form has no way to write back. */
+    private static final String TAGGED =
+            """
+            @prefix sh:  <http://www.w3.org/ns/shacl#> .
+            @prefix cim: <http://iec.ch/TC57/CIM100#> .
+            @prefix ex:  <http://example.org/shapes#> .
+
+            ex:S a sh:NodeShape ;
+                 sh:targetClass cim:ACLineSegment ;
+                 sh:property [ sh:path cim:ACLineSegment.r ;
+                               sh:message "Die Resistanz fehlt"@de ] .
+            """;
+
     @Test
     void aValueTheFormCannotSpellNamesTheFieldItWouldHaveFilled() {
-        // sh:order 0.1 is an xsd:decimal and the form holds an integer. That one clause used to
-        // make its whole shape — and every shape referencing it — read-only.
-        var rule = ruleAt(shapeIn(SHAPES), 0);
+        var rule = ruleAt(shapeIn(TAGGED), 0);
 
-        assertThat(rule.getOrder()).isNull();
         assertThat(rule.getRetained())
                 .extracting("predicate", "value", "field")
                 .containsExactly(
                         org.assertj.core.groups.Tuple.tuple(
-                                "http://www.w3.org/ns/shacl#minInclusive", "0", null),
-                        org.assertj.core.groups.Tuple.tuple(
-                                "http://www.w3.org/ns/shacl#order", "0.1", "order"));
-        assertThat(rule.getRetained().get(1).getReason())
+                                "http://www.w3.org/ns/shacl#message",
+                                "\"Die Resistanz fehlt\"@de",
+                                "message"));
+        assertThat(rule.getRetained().get(0).getReason())
                 .contains("cannot write this value back unchanged");
     }
 
     @Test
     void changingAFieldTheFormKeepsAsWrittenIsRefusedAndSaysWhich() {
-        var shape = shapeIn(SHAPES);
-        ruleAt(shape, 0).setOrder(3);
+        var shape = shapeIn(TAGGED);
+        ruleAt(shape, 0).setMessage("The resistance is missing");
 
         assertThatExceptionOfType(ResourceConflictException.class)
-                .isThrownBy(() -> service.apply(edit(SHAPES, shape)))
-                .withMessageContaining("does not change order on this rule");
+                .isThrownBy(() -> service.apply(edit(TAGGED, shape)))
+                .withMessageContaining("does not change message on this rule");
     }
 
     @Test
@@ -515,12 +525,10 @@ class ShapeClausePreservationTest {
                         rule -> {
                             assertThat(rule.getIri())
                                     .isEqualTo("http://example.org/shapes#SequenceNumberRule");
-                            assertThat(rule.getMinCount()).isEqualTo(1);
                             // Read from the rule's own statement, so a shared rule is shown with
                             // what it actually says rather than as an opaque reference.
-                            assertThat(rule.getRetained())
-                                    .extracting("predicate")
-                                    .containsExactly("http://www.w3.org/ns/shacl#minInclusive");
+                            assertThat(rule.getMinCount()).isEqualTo(1);
+                            assertThat(rule.getMinInclusive()).isEqualTo("1");
                         });
     }
 
