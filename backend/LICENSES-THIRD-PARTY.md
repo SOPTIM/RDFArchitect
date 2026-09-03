@@ -26,7 +26,7 @@
 
 ### Jackson-dataformat-YAML
 - **Package:** com.fasterxml.jackson.dataformat
-- **Version:** 2.21.4
+- **Version:** 2.21.5
 - **License:** Apache License 2.0
 - **URL:** [https://github.com/FasterXML/jackson-dataformats-text](https://github.com/FasterXML/jackson-dataformats-text)
 
@@ -56,51 +56,51 @@
 
 ### spring-boot-starter
 - **Package:** org.springframework.boot
-- **Version:** 4.1.0
+- **Version:** 4.1.1
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-log4j2
 - **Package:** org.springframework.boot
-- **Version:** 4.1.0
+- **Version:** 4.1.1
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-test
 - **Package:** org.springframework.boot
-- **Version:** 4.1.0
+- **Version:** 4.1.1
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-thymeleaf
 - **Package:** org.springframework.boot
-- **Version:** 4.1.0
+- **Version:** 4.1.1
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-webflux
 - **Package:** org.springframework.boot
-- **Version:** 4.1.0
+- **Version:** 4.1.1
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-webmvc
 - **Package:** org.springframework.boot
-- **Version:** 4.1.0
+- **Version:** 4.1.1
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
-
-### spring-session-core
-- **Package:** org.springframework.session
-- **Version:** 4.1.0
-- **License:** Apache License 2.0
-- **URL:** [https://spring.io/projects/spring-session](https://spring.io/projects/spring-session)
 
 ### springdoc-openapi-starter-webmvc-ui
 - **Package:** org.springdoc
 - **Version:** 3.1.0
 - **License:** Apache License 2.0
 - **URL:** [https://springdoc.org/springdoc-openapi-starter-webmvc-ui/](https://springdoc.org/springdoc-openapi-starter-webmvc-ui/)
+
+### spring-session-core
+- **Package:** org.springframework.session
+- **Version:** 4.1.1
+- **License:** Broadcom Foundation License
+- **URL:** [https://spring.io/projects/spring-session](https://spring.io/projects/spring-session)
 
 ### Lombok Mapstruct Binding
 - **Package:** org.projectlombok

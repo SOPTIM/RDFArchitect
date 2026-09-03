@@ -98,7 +98,7 @@
 
         if (diagramId) {
             if (diagramType === DiagramType.CUSTOM_GRAPH_DIAGRAM) {
-                await fetchGraphDiagramRenderingData(diagramId);
+                await fetchGraphDiagramRenderingData(diagramId, filter);
             } else if (diagramType === DiagramType.CUSTOM_WORKSPACE_DIAGRAM) {
                 await fetchWorkspaceDiagramRenderingData(diagramId);
             } else if (diagramType === DiagramType.CROSS_PROFILE) {
@@ -188,13 +188,21 @@
         }
     }
 
-    async function fetchGraphDiagramRenderingData(diagramId) {
+    async function fetchGraphDiagramRenderingData(diagramId, filter) {
         try {
             const { data, error } = await getCustomProfileViewRenderingData({
                 path: {
                     datasetName: editorState.selectedWorkspace.getValue(),
                     graphURI: editorState.selectedGraph.getValue(),
                     diagramId: diagramId,
+                },
+                body: {
+                    includeEnumEntries: filter.includeEnumEntries,
+                    includeAttributes: filter.includeAttributes,
+                    includeAssociations: filter.includeAssociations,
+                    includeInheritance: filter.includeInheritance,
+                    includePropertiesFromOtherProfiles:
+                        filter.includePropertiesFromOtherProfiles,
                 },
             });
 

@@ -19,7 +19,14 @@ package org.rdfarchitect.models.dto.rendering;
 
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 
-public interface RenderCrossProfileDiagramUseCase {
+import java.util.UUID;
+
+/**
+ * Renders the diagrams that show classes merged across the profiles of a dataset: the cross-profile
+ * diagram, which holds every class, and the workspace-level custom diagrams, which hold a manually
+ * chosen subset. Graph-level custom diagrams are not merged - they render like a package diagram.
+ */
+public interface RenderMergedDiagramUseCase {
 
     /**
      * Renders the cross-profile (merged) diagram for a dataset from the CIM facades of all its
@@ -29,4 +36,14 @@ public interface RenderCrossProfileDiagramUseCase {
      * @return The rendering data for the merged diagram.
      */
     RenderingDataDTO renderCrossProfileDiagram(String datasetName);
+
+    /**
+     * Renders a workspace-level custom diagram: the merged diagram narrowed down to the classes the
+     * diagram holds.
+     *
+     * @param datasetName The name of the dataset.
+     * @param diagramId The id of the custom diagram.
+     * @return The rendering data for the merged diagram.
+     */
+    RenderingDataDTO renderCustomDatasetDiagram(String datasetName, UUID diagramId);
 }

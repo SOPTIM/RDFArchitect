@@ -26,6 +26,14 @@ public interface ICIMModelFacade {
 
     List<ICIMClass> getCIMClasses();
 
+    /**
+     * Looks a single class up by the uuid it carries in this graph, without reading the other
+     * classes of the graph.
+     *
+     * @return the class, or null if the graph holds no class under that uuid
+     */
+    ICIMClass getCIMClass(UUID uuid);
+
     List<ICIMClassCategory> getCIMClassCategories();
 
     ICIMClassCategory getCIMClassCategory(UUID uuid);

@@ -140,19 +140,37 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
     @Override
     public RenderingDataDTO renderMergedUML(
-            List<CIMProfileModel> profiles, RenderingLayoutData layoutData) {
+            List<CIMProfileModel> profiles,
+            RenderingLayoutData layoutData,
+            Set<String> renderedClassUris) {
         var mergedClasses = mergeClassesByUri(profiles);
-        if (mergedClasses.isEmpty()) {
+        var renderedClasses = restrictToRenderedUris(mergedClasses, renderedClassUris);
+        if (renderedClasses.isEmpty()) {
             return createEmptyDiagram();
         }
 
         var nodes = new ArrayList<NodeDTO>();
-        for (var merged : mergedClasses.values()) {
+        for (var merged : renderedClasses.values()) {
             nodes.add(assembleMergedNode(merged, mergedClasses, layoutData));
         }
-        var edges = assembleMergedEdges(mergedClasses);
+        var edges = assembleMergedEdges(renderedClasses);
 
         return SvelteFlowDTO.builder().nodes(nodes).edges(edges).build();
+    }
+
+    private Map<String, MergedFacadeClass> restrictToRenderedUris(
+            Map<String, MergedFacadeClass> mergedClasses, Set<String> renderedClassUris) {
+        if (renderedClassUris == null) {
+            return mergedClasses;
+        }
+        var rendered = new LinkedHashMap<String, MergedFacadeClass>();
+        for (var classUri : renderedClassUris) {
+            var merged = mergedClasses.get(classUri);
+            if (merged != null) {
+                rendered.put(classUri, merged);
+            }
+        }
+        return rendered;
     }
 
     private Map<String, MergedFacadeClass> mergeClassesByUri(List<CIMProfileModel> profiles) {
@@ -395,13 +413,10 @@ public class RenderCIMFacadeCollectionSvelteFlowService
     private SelectedClasses selectClasses(ICIMModelFacade cimModel, GraphFilter filter) {
         var classes = new LinkedHashMap<String, ICIMClass>();
 
-        if (!CollectionUtils.isEmpty(filter.getAllowedUUIDs())) {
-            var allowedUUIDs =
-                    filter.getAllowedUUIDs().stream()
-                            .map(UUID::fromString)
-                            .collect(Collectors.toSet());
-            for (var cimClass : cimModel.getCIMClasses()) {
-                if (allowedUUIDs.contains(cimClass.getUuid())) {
+        if (filter.getAllowedUUIDs() != null) {
+            for (var allowedUUID : filter.getAllowedUUIDs()) {
+                var cimClass = cimModel.getCIMClass(UUID.fromString(allowedUUID));
+                if (cimClass != null) {
                     classes.put(cimClass.getUri().toString(), cimClass);
                 }
             }

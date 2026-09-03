@@ -44,9 +44,9 @@
 
 ### @hey-api/openapi-ts
 - **Package:** @hey-api/openapi-ts
-- **Version:** 0.97.3
+- **Version:** 0.99.0
 - **License:** MIT
-- **URL:** [https://heyapi.dev/](https://heyapi.dev/)
+- **URL:** [https://heyapi.dev/docs/openapi/typescript/get-started](https://heyapi.dev/docs/openapi/typescript/get-started)
 
 ### @sveltejs/adapter-auto
 - **Package:** @sveltejs/adapter-auto
@@ -86,7 +86,7 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.67.0
+- **Version:** 8.68.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
@@ -132,7 +132,7 @@
 
 ### eslint
 - **Package:** eslint
-- **Version:** 10.8.1
+- **Version:** 10.9.1
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -185,7 +185,7 @@
 
 ### mermaid
 - **Package:** mermaid
-- **Version:** 11.17.0
+- **Version:** 11.17.1
 - **License:** MIT
 - **URL:** [https://github.com/mermaid-js/mermaid](https://github.com/mermaid-js/mermaid)
 
@@ -215,7 +215,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.56.9
+- **Version:** 5.56.10
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -257,7 +257,7 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.67.0
+- **Version:** 8.68.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 

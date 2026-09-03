@@ -79,6 +79,10 @@ public class DiagramLayoutServicesTestBase {
     }
 
     public static void addGraphFromFile(String fileName) {
+        addGraphFromFile(fileName, graphIdentifier.graphUri());
+    }
+
+    public static void addGraphFromFile(String fileName, String graphUri) {
         byte[] content;
         try {
             content = Files.readAllBytes(Path.of(TTL_FILES_PATH + fileName));
@@ -89,11 +93,12 @@ public class DiagramLayoutServicesTestBase {
         var graph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.graphUri())
+                        .setGraphName(graphUri)
                         .build()
                         .graph();
-        databasePort.createGraph(graphIdentifier, graph);
-        diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
+        var identifier = new GraphIdentifier(graphIdentifier.datasetName(), graphUri);
+        databasePort.createGraph(identifier, graph);
+        diagramLayout = databasePort.getGraphWithContext(identifier).getDiagramLayout();
     }
 
     /**

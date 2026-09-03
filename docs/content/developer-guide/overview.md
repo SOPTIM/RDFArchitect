@@ -35,10 +35,23 @@ mvn spring-boot:run
 # Frontend (terminal 2)
 cd frontend
 npm install
+npm run api:generate
 npm run dev
 ```
 
 Open `http://localhost:1407`. Swagger UI for the backend is at `http://localhost:8080/swagger-ui.html`.
+
+### The generated API client
+
+`npm run api:generate` runs [`@hey-api/openapi-ts`](https://heyapi.dev/) over the committed `frontend/openapi.json` contract and writes the typed backend client to `frontend/src/lib/api/generated`. That directory is git-ignored, so it does not exist in a fresh checkout — running the frontend without generating it first fails.
+
+Run it:
+
+- after cloning, and after every `npm run clean-install`;
+- after switching to a branch that changes `frontend/openapi.json`;
+- before `npm run build` (a stale client fails the build with `[MISSING_EXPORT] ... is not exported by "src/lib/api/generated/index.ts"` while `npm run test` and `npm run lint` still pass).
+
+When you change backend routes or DTOs, regenerate the contract itself from the backend module with `mvn exec:java@export-openapi` and commit the updated `frontend/openapi.json`; backend CI fails if the committed contract has drifted from the controllers. See [Adding a feature](./adding-a-feature) for the end-to-end flow.
 
 ## IDE setup
 

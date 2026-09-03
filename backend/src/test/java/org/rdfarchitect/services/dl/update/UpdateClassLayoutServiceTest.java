@@ -19,21 +19,30 @@ package org.rdfarchitect.services.dl.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ResourceFactory;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
+import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.data.DLUtils;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.dl.rdf.resources.DL;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.dl.DiagramLayoutServicesTestBase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
@@ -42,6 +51,92 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     @BeforeAll
     static void setUpEnvironment() {
         service = new UpdateClassLayoutService(databasePort, packageMapper);
+    }
+
+    private static final String CLASS_A_URI = "http://example.com#classA";
+    private static final String GRAPH_URI = "http://example.com#graph";
+
+    @Test
+    void addClassesToCustomDatasetDiagram_layoutIsKeyedByTheMergedNodeUuid() {
+        var diagramUUID = createWorkspaceDiagram();
+
+        service.addClassesToCustomDatasetDiagram(
+                graphIdentifier.datasetName(), diagramUUID, List.of(classAInDiagram()));
+
+        var model =
+                databasePort
+                        .getDatasetDiagramLayout(graphIdentifier.datasetName())
+                        .getDiagramLayoutModel();
+        assertThat(
+                        DLObjectFetcher.fetchDiagramDOForClass(
+                                model, diagramUUID, CrossProfileUtils.mergedClassUuid(CLASS_A_URI)))
+                .isNotNull();
+        assertThat(DLObjectFetcher.fetchDiagramDOForClass(model, diagramUUID, CLASS_A_UUID))
+                .isNull();
+    }
+
+    @Test
+    void removeClassesFromCustomDatasetDiagram_mergedNodeUuid_removesTheClassBehindIt() {
+        var datasetName = graphIdentifier.datasetName();
+        var diagramUUID = createWorkspaceDiagram();
+        service.addClassesToCustomDatasetDiagram(
+                datasetName, diagramUUID, List.of(classAInDiagram()));
+
+        service.removeClassesFromCustomDatasetDiagram(
+                datasetName, diagramUUID, List.of(CrossProfileUtils.mergedClassUuid(CLASS_A_URI)));
+
+        assertThat(databasePort.getDatasetDiagrams(datasetName).get(diagramUUID).getClasses())
+                .isEmpty();
+        assertThat(
+                        DLObjectFetcher.fetchDiagramDOForClass(
+                                databasePort
+                                        .getDatasetDiagramLayout(datasetName)
+                                        .getDiagramLayoutModel(),
+                                diagramUUID,
+                                CrossProfileUtils.mergedClassUuid(CLASS_A_URI)))
+                .isNull();
+    }
+
+    @Test
+    void addClassesToCustomDiagram_schemaDiagram_layoutIsKeyedByTheClassUuid() {
+        addGraphFromFile("package_and_class.ttl");
+        var diagramUUID = UUID.randomUUID();
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            ctx.getCustomDiagrams()
+                    .put(diagramUUID, new CustomDiagram(diagramUUID, "custom", new ArrayList<>()));
+            ctx.commit("created custom diagram");
+        }
+
+        service.addClassesToCustomDiagram(graphIdentifier, diagramUUID, List.of(classAInDiagram()));
+
+        var model =
+                databasePort
+                        .getGraphWithContext(graphIdentifier)
+                        .getDiagramLayout()
+                        .getDiagramLayoutModelDirect();
+        assertThat(DLObjectFetcher.fetchDiagramDOForClass(model, diagramUUID, CLASS_A_UUID))
+                .isNotNull();
+    }
+
+    private static ClassInDiagram classAInDiagram() {
+        return new ClassInDiagram(CLASS_A_UUID, new URI(GRAPH_URI));
+    }
+
+    @AfterEach
+    void cleanUpDatasetDiagrams() {
+        var datasetName = graphIdentifier.datasetName();
+        databasePort.getDatasetDiagrams(datasetName).clear();
+        databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel().removeAll();
+        databasePort.deleteGraph(new GraphIdentifier(datasetName, GRAPH_URI));
+    }
+
+    private static UUID createWorkspaceDiagram() {
+        addGraphFromFile("package_and_class.ttl", GRAPH_URI);
+        var diagramUUID = UUID.randomUUID();
+        databasePort
+                .getDatasetDiagrams(graphIdentifier.datasetName())
+                .put(diagramUUID, new CustomDiagram(diagramUUID, "custom", new ArrayList<>()));
+        return diagramUUID;
     }
 
     @Test

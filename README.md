@@ -89,8 +89,14 @@ mvn spring-boot:run
 ```bash
 cd frontend
 npm install
+npm run api:generate   # required: generates the typed API client
 npm run dev
 ```
+
+`npm run api:generate` writes the typed backend client to `frontend/src/lib/api/generated`.
+That directory is git-ignored, so it does not exist in a fresh checkout and the frontend
+cannot be run, built, or bundled without generating it first. Rerun it whenever
+`frontend/openapi.json` changes. See [Generated frontend API client](#generated-frontend-api-client).
 
 3. Open the frontend at `http://localhost:1407`.
 
@@ -134,6 +140,11 @@ generated from it:
 cd frontend
 npm run api:generate          # writes src/lib/api/generated from ./openapi.json
 ```
+
+The generated directory is git-ignored, so this step is mandatory after cloning and after
+every `npm run clean-install`, and it has to be repeated whenever `frontend/openapi.json`
+changes. A stale or missing client typically surfaces as a build error such as
+`[MISSING_EXPORT] "createDataset" is not exported by "src/lib/api/generated/index.ts"`.
 
 When backend routes or DTOs change, regenerate and commit the contract from the backend module:
 

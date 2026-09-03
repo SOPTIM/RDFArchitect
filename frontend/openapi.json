@@ -5636,7 +5636,7 @@
           "custom-diagrams-rest-controller"
         ]
       },
-      "get" : {
+      "post" : {
         "operationId" : "getCustomProfileViewRenderingData",
         "parameters" : [
           {
@@ -5677,6 +5677,16 @@
             }
           }
         ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GraphFilter"
+              }
+            }
+          },
+          "required" : true
+        },
         "responses" : {
           "200" : {
             "content" : {

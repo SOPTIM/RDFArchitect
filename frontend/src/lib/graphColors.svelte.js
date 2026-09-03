@@ -20,10 +20,12 @@ import {
     updateCrossProfileColors,
 } from "$lib/api/generated/index.ts";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+import { renderOptions } from "$lib/renderOptions.svelte.js";
 import {
-    DiagramType,
     editorState,
     forceReloadTrigger,
+    isMergedDiagramType,
+    SINGLE_SCHEMA_DIAGRAM_TYPES,
 } from "$lib/sharedState.svelte.js";
 import { normalizeHex } from "$lib/utils/color.js";
 
@@ -123,7 +125,7 @@ function createGraphColors() {
                 );
                 return false;
             }
-            refreshMergedViewIfVisible();
+            refreshIfSchemaColorsVisible();
             return true;
         },
 
@@ -139,7 +141,7 @@ function createGraphColors() {
                 byWorkspace[workspaceName] = previous;
                 return false;
             }
-            refreshMergedViewIfVisible();
+            refreshIfSchemaColorsVisible();
             return true;
         },
     };
@@ -154,15 +156,18 @@ function normalizeColors(colorsByGraph) {
 }
 
 /**
- * Only the merged view renders the colors server-side, so a reload is
- * pointless - and disruptive, since it rebuilds the navigation - unless it
- * is the diagram currently on screen.
+ * The colors are rendered server-side, so a reload is pointless - and
+ * disruptive, since it rebuilds the navigation - unless the diagram on
+ * screen actually shows them. A merged diagram always does, a single-schema
+ * one only while it merges the other schemas in.
  */
-function refreshMergedViewIfVisible() {
-    if (
-        editorState.selectedDiagram.getProperty("type") ===
-        DiagramType.CROSS_PROFILE
-    ) {
+function refreshIfSchemaColorsVisible() {
+    const diagramType = editorState.selectedDiagram.getProperty("type");
+    const showsSchemaColors =
+        isMergedDiagramType(diagramType) ||
+        (SINGLE_SCHEMA_DIAGRAM_TYPES.includes(diagramType) &&
+            renderOptions.get("includePropertiesFromOtherProfiles"));
+    if (showsSchemaColors) {
         forceReloadTrigger.trigger();
     }
 }

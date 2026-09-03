@@ -44,6 +44,7 @@ import org.rdfarchitect.services.rendering.svelteflow.RenderCIMFacadeCollectionS
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 class RenderCIMFacadeCollectionSvelteFlowServiceTest {
@@ -915,6 +916,59 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                                                     edge.getData().getToMultiplicity()))
                                     .containsExactlyInAnyOrder("0..n", "1..1");
                         });
+    }
+
+    @Test
+    @DisplayName("merged diagram restricted to a custom diagram's classes renders only those nodes")
+    void mergedDiagramRestrictedToChosenClasses() {
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderMergedUML(
+                                List.of(new CIMProfileModel(GRAPH_URI, null, null, facade)),
+                                null,
+                                Set.of(NS + "Child", NS + "Terminal"));
+
+        assertThat(result.getNodes())
+                .extracting(node -> node.getData().getLabel())
+                .containsExactlyInAnyOrder("Child", "Terminal");
+        assertThat(result.getEdges()).extracting(EdgeDTO::getType).containsExactly("association");
+    }
+
+    @Test
+    @DisplayName("classes left out of a custom diagram still contribute their inherited properties")
+    void mergedDiagramRestrictedKeepsInheritedProperties() {
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderMergedUML(
+                                List.of(new CIMProfileModel(GRAPH_URI, null, null, facade)),
+                                null,
+                                Set.of(NS + "Child"));
+
+        assertThat(nodeByLabel(result, "Child").getData().getSuperClasses())
+                .extracting(SuperClassDTO::getLabel)
+                .contains("Base", "Root");
+        assertThat(nodeByLabel(result, "Child").getData().getSuperClasses())
+                .filteredOn(superClass -> superClass.getLabel().equals("Root"))
+                .singleElement()
+                .satisfies(
+                        superClass ->
+                                assertThat(superClass.getAttributes())
+                                        .extracting(AttributeDTO::getLabel)
+                                        .containsExactly("rootAttr"));
+    }
+
+    @Test
+    @DisplayName("merged diagram restricted to classes that no longer exist renders nothing")
+    void mergedDiagramRestrictedToUnknownClasses() {
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderMergedUML(
+                                List.of(new CIMProfileModel(GRAPH_URI, null, null, facade)),
+                                null,
+                                Set.of(NS + "Gone"));
+
+        assertThat(result.getNodes()).isEmpty();
+        assertThat(result.getEdges()).isEmpty();
     }
 
     private List<EdgeDTO> mergedAssociationEdges(List<CIMProfileModel> profiles) {

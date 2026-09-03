@@ -36,7 +36,11 @@
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { renderOptions } from "$lib/renderOptions.svelte.js";
-    import { DiagramType } from "$lib/sharedState.svelte.js";
+    import {
+        DiagramType,
+        MERGED_DIAGRAM_TYPES,
+        SINGLE_SCHEMA_DIAGRAM_TYPES,
+    } from "$lib/sharedState.svelte.js";
 
     let {
         diagramType,
@@ -50,43 +54,49 @@
             key: "includePropertiesFromOtherProfiles",
             label: "Other Schemas",
             icon: faLayerGroup,
-            appliesTo: [DiagramType.PACKAGE],
+            appliesTo: SINGLE_SCHEMA_DIAGRAM_TYPES,
         },
         {
             key: "useColoredPropertiesInMergedView",
             label: "Colored by Schema",
             icon: faPalette,
-            appliesTo: [DiagramType.PACKAGE, DiagramType.CROSS_PROFILE],
+            appliesTo: [
+                ...SINGLE_SCHEMA_DIAGRAM_TYPES,
+                ...MERGED_DIAGRAM_TYPES,
+            ],
         },
         {
             key: "showInheritedProperties",
             label: "Inherited Properties",
             icon: faAnglesUp,
-            appliesTo: [DiagramType.PACKAGE, DiagramType.CROSS_PROFILE],
+            appliesTo: [
+                ...SINGLE_SCHEMA_DIAGRAM_TYPES,
+                ...MERGED_DIAGRAM_TYPES,
+            ],
         },
         {
             key: "includeAttributes",
             label: "Attributes",
             icon: faTag,
-            appliesTo: [DiagramType.PACKAGE],
+            appliesTo: SINGLE_SCHEMA_DIAGRAM_TYPES,
         },
         {
             key: "includeAssociations",
             label: "Associations",
             icon: faLink,
-            appliesTo: [DiagramType.PACKAGE],
+            appliesTo: SINGLE_SCHEMA_DIAGRAM_TYPES,
         },
         {
             key: "includeEnumEntries",
             label: "Enum Entries",
             icon: faListUl,
-            appliesTo: [DiagramType.PACKAGE],
+            appliesTo: SINGLE_SCHEMA_DIAGRAM_TYPES,
         },
         {
             key: "includeInheritance",
             label: "Inheritance",
             icon: faSitemap,
-            appliesTo: [DiagramType.PACKAGE],
+            appliesTo: SINGLE_SCHEMA_DIAGRAM_TYPES,
         },
         {
             key: "includeRelationsToExternalPackages",

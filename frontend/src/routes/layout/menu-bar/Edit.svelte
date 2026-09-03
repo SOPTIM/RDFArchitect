@@ -41,6 +41,7 @@
         copyState,
         editorState,
         forceReloadTrigger,
+        isMergedDiagramType,
         multiSelectState,
         SelectionLevel,
     } from "$lib/sharedState.svelte.js";
@@ -112,9 +113,14 @@
     );
     let graphHasOntology = $derived(!!ontology);
 
+    let mergedDiagramShown = $derived(
+        isMergedDiagramType(editorState.selectedDiagram.getProperty("type")),
+    );
+
     let disableCopyClassButton = $derived(
-        !editorState.selectedClass.getProperty("id") &&
-            multiSelectState.getSelected().length === 0,
+        mergedDiagramShown ||
+            (!editorState.selectedClass.getProperty("id") &&
+                multiSelectState.getSelected().length === 0),
     );
 
     /*
@@ -144,6 +150,7 @@
     });
     let disableDeleteClassButton = $derived(
         isWorkspaceReadOnly ||
+            mergedDiagramShown ||
             !deleteClassSelection ||
             !deleteClassSelection.singleGraph,
     );
