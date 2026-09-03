@@ -86,7 +86,7 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.67.0
+- **Version:** 8.68.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
@@ -132,7 +132,7 @@
 
 ### eslint
 - **Package:** eslint
-- **Version:** 10.9.0
+- **Version:** 10.9.1
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -185,7 +185,7 @@
 
 ### mermaid
 - **Package:** mermaid
-- **Version:** 11.17.0
+- **Version:** 11.17.1
 - **License:** MIT
 - **URL:** [https://github.com/mermaid-js/mermaid](https://github.com/mermaid-js/mermaid)
 
@@ -257,7 +257,7 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.67.0
+- **Version:** 8.68.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 

@@ -16,6 +16,7 @@ The largest test suites today are around CIM-graph-to-DTO conversion (`cim/data/
 
 ## Frontend
 
+- **API client** — `npm run api:generate` before anything else. The generated client under `src/lib/api/generated` is git-ignored, so it is missing in a fresh checkout and stale after a branch changes `frontend/openapi.json`. CI generates it right after installing dependencies.
 - **Unit tests** — `npm run test` (Vitest, jsdom). Component-level and pure-function tests under `tests/`.
 - **Linting** — `npm run lint` runs Prettier check, ESLint, and a third-party-license consistency check.
 - **Build** — `npm run build` is run in CI; if it breaks, the lint did not catch the issue.
@@ -34,6 +35,7 @@ mvn -B verify
 
 # Frontend
 cd ../frontend
+npm run api:generate              # regenerate the typed API client
 npm run format                    # auto-format (prettier + eslint --fix)
 npm run lint
 npm run test
