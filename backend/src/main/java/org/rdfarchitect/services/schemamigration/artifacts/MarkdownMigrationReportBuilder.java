@@ -673,7 +673,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
         }
         if (change.getSemanticFieldChangeType() == SemanticFieldChangeType.DOMAIN_RENAME
                 || change.getSemanticFieldChangeType() == SemanticFieldChangeType.SUPERCLASS_RENAME
-                || change.getSemanticFieldChangeType() != SemanticFieldChangeType.TARGET_RENAME) {
+                || change.getSemanticFieldChangeType() == SemanticFieldChangeType.TARGET_RENAME) {
             return new URI(change.getFrom())
                     .getSuffix()
                     .equals(new URI(change.getTo()).getSuffix());

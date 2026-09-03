@@ -123,6 +123,13 @@ public class SparqlUpdateGenerator {
         return pss.toString();
     }
 
+    public String generateEnumDatatypeChangedUpdate(SemanticAttributeChange attributeChange) {
+        var pss = SparqlTemplateLoader.loadTemplate("migration/attribute-enum-datatype-changed");
+        pss.setIri("attribute", attributeChange.getIri());
+        pss.setIri("newValue", attributeChange.getDefaultValue());
+        return pss.toString();
+    }
+
     public String generateFixedValueUpdate(SemanticAttributeChange attributeChange) {
         var xsd =
                 TypeMapper.getInstance().getSafeTypeByName(attributeChange.getPrimitiveDataType());

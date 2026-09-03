@@ -94,7 +94,7 @@
                         <h4 class="text-default-text text-sm font-semibold">
                             Attributes
                         </h4>
-                        {#each cls.attributes as attribute (attribute.iri)}
+                        {#each cls.attributes as attribute}
                             {#if attribute.semanticResourceChangeType !== "DELETED_FROM_INHERITANCE" && attribute.semanticResourceChangeType !== "ADDED_FROM_INHERITANCE"}
                                 <ResourceChangeCard
                                     bind:resource={
@@ -115,7 +115,7 @@
                         <h4 class="text-default-text text-sm font-semibold">
                             Associations
                         </h4>
-                        {#each cls.associations as association (association.iri)}
+                        {#each cls.associations as association}
                             {#if association.semanticResourceChangeType !== "DELETED_FROM_INHERITANCE" && association.semanticResourceChangeType !== "ADDED_FROM_INHERITANCE"}
                                 <ResourceChangeCard
                                     bind:resource={

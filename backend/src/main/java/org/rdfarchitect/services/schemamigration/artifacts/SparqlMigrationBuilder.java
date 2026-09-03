@@ -145,8 +145,13 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         for (var change : attributeChange.getChanges()) {
             var update =
                     switch (change.getSemanticFieldChangeType()) {
-                        case DATATYPE_CHANGE ->
-                                updateGenerator.generateDatatypeChangedUpdate(attributeChange);
+                        case DATATYPE_CHANGE -> {
+                            if (!attributeChange.getAllowedValues().isEmpty()) {
+                                yield updateGenerator.generateEnumDatatypeChangedUpdate(attributeChange);
+                            } else {
+                                yield updateGenerator.generateDatatypeChangedUpdate(attributeChange);
+                            }
+                        }
                         case MADE_REQUIRED ->
                                 updateGenerator.generateAddAttributeToSingleClassUpdate(
                                         attributeChange, classIri);
