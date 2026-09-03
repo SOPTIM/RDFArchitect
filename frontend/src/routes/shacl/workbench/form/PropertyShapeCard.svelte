@@ -23,8 +23,13 @@
      * where the document wrote them. A field whose value the form cannot spell again is shown as
      * that value instead of as an empty box, and one clause it cannot write no longer costs the
      * rule its other fields.
+     *
+     * A rule the document writes as a shape of its own appears twice: as a card of its own, and
+     * under every shape referencing it. Both are editable and both say how many shapes rely on it,
+     * because that is what the user needs before changing it — the card is the same either way, so
+     * a rule cannot say one thing in one place and another somewhere else.
      */
-    import { faTrash } from "@fortawesome/free-solid-svg-icons";
+    import { faLock, faTrash } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
@@ -47,7 +52,8 @@
         onchange = () => {},
         /** A field still being typed in: the same edit, to be sent once typing pauses. */
         onedit = () => {},
-        onremove = () => {},
+        /** Left out where there is nothing to remove the rule from, as on its own card. */
+        onremove = null,
     } = $props();
 
     const SHACL = "http://www.w3.org/ns/shacl#";
@@ -92,13 +98,22 @@
         "deactivated",
     ];
 
-    /**
-     * A rule written as its own resource is shared: changing it here would change every shape that
-     * references it, so it is shown with what it says and edited in the Turtle view for now.
-     */
+    /** A rule written as its own resource, which any number of shapes may reference. */
     const referenced = $derived(property.iri != null);
 
-    const locked = $derived(readOnly || referenced);
+    /** How many shapes a change to this rule would reach. */
+    const shares = $derived(property.usedBy?.length ?? 0);
+
+    /** Either the workspace forbids changes, or the form cannot place an edit in this rule. */
+    const locked = $derived(readOnly || property.editable === false);
+
+    /** Only the rule's own limits are worth explaining; a read-only workspace says so elsewhere. */
+    const turtleOnly = $derived(property.editable === false);
+
+    const readOnlyTitle = $derived(
+        property.readOnlyReason ??
+            "This rule is written in a way the form cannot edit. Edit it in the Turtle view.",
+    );
 
     /** The fields whose value the form shows but will not write. */
     const kept = $derived(keptFields(property.retained));
@@ -147,21 +162,53 @@
             {pathLabel}
         </span>
         {#if referenced}
-            <span class="text-text-subtle ml-auto shrink-0 text-xs">
-                shared rule — edit in Turtle
+            <!--
+              Named, because two rules about one property are told apart only by their names — and
+              in the list of the document's own rules that is the whole of what distinguishes them.
+            -->
+            <span class="text-text-subtle shrink-0 font-mono text-xs">
+                {abbreviate(property.iri, prefixes)}
+            </span>
+            <span
+                class="text-text-subtle ml-auto shrink-0 text-xs"
+                title="This rule is written as a shape of its own, so a change to it reaches every shape that uses it."
+            >
+                shared rule · used by {shares} shape{shares === 1 ? "" : "s"}
             </span>
         {/if}
-        {#if !locked}
+        {#if turtleOnly}
+            <span
+                class="text-text-subtle flex shrink-0 items-center gap-1 text-xs"
+                class:ml-auto={!referenced}
+                title={readOnlyTitle}
+            >
+                <Fa icon={faLock} />
+                Turtle only
+            </span>
+        {:else if !readOnly && onremove}
             <button
-                class="text-text-subtle hover:text-red ml-auto cursor-pointer p-1 text-xs"
-                title="Remove this rule"
-                aria-label="Remove this rule"
+                class="text-text-subtle hover:text-red cursor-pointer p-1 text-xs"
+                class:ml-auto={!referenced}
+                title={referenced
+                    ? "Remove this rule from the shape"
+                    : "Remove this rule"}
+                aria-label={referenced
+                    ? "Remove this rule from the shape"
+                    : "Remove this rule"}
                 onclick={onremove}
             >
                 <Fa icon={faTrash} />
             </button>
         {/if}
     </div>
+
+    {#if turtleOnly}
+        <p
+            class="text-text-subtle bg-background-subtle mb-2 rounded p-2 text-sm"
+        >
+            {readOnlyTitle}
+        </p>
+    {/if}
 
     <div class="grid grid-cols-2 gap-3">
         <div class="col-span-2">

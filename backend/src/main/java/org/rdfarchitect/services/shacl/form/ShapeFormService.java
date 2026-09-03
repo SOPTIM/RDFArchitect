@@ -17,12 +17,15 @@
 
 package org.rdfarchitect.services.shacl.form;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.services.shacl.ShapesTurtleParser;
 import org.rdfarchitect.shacl.dto.NodeShapeModel;
+import org.rdfarchitect.shacl.dto.PropertyShapeModel;
+import org.rdfarchitect.shacl.dto.PropertyShapeSplit;
 import org.rdfarchitect.shacl.dto.ShapeEditRequest;
 import org.rdfarchitect.shacl.dto.ShapeEditResult;
 import org.rdfarchitect.shacl.dto.ShapesForm;
@@ -52,7 +55,11 @@ public class ShapeFormService implements ShapeFormUseCase {
                     .build();
         }
         var source = ShapeSource.of(text, parsed.graph().getPrefixMapping());
-        return ShapesForm.builder().shapes(ShapeModelReader.read(parsed.graph(), source)).build();
+        var shapes = ShapeModelReader.read(parsed.graph(), source);
+        return ShapesForm.builder()
+                .shapes(shapes.nodeShapes())
+                .propertyShapes(shapes.propertyShapes())
+                .build();
     }
 
     @Override
@@ -68,6 +75,14 @@ public class ShapeFormService implements ShapeFormUseCase {
         if (request.getRemoveShapeIri() != null) {
             return remove(turtle, request.getRemoveShapeIri(), prefixes);
         }
+        if (request.getPropertyShape() != null) {
+            return applyRule(
+                    turtle,
+                    parsed.graph(),
+                    request.getPropertyShape(),
+                    request.getSplit(),
+                    prefixes);
+        }
         var shape = request.getShape();
         if (shape == null || shape.getIri() == null || shape.getIri().isBlank()) {
             throw new ResourceConflictException("A shape needs an IRI before it can be written.");
@@ -76,7 +91,7 @@ public class ShapeFormService implements ShapeFormUseCase {
 
         var source = ShapeSource.of(turtle, prefixes);
         var stored =
-                ShapeModelReader.read(parsed.graph(), source).stream()
+                ShapeModelReader.read(parsed.graph(), source).nodeShapes().stream()
                         .filter(known -> shape.getIri().equals(known.getIri()))
                         .findFirst();
         if (stored.isEmpty()) {
@@ -103,6 +118,111 @@ public class ShapeFormService implements ShapeFormUseCase {
     }
 
     /**
+     * Changes a rule the document writes as a shape of its own, or gives one shape a copy of it.
+     *
+     * <p>Its own request rather than part of the shape that references it, because it is its own
+     * decision: a named rule in a {@code -Con-Simple-} profile carries the cardinality of dozens of
+     * classes, and the form has to say so — and offer the copy — before the change reaches them
+     * all. A split is the same edit with the copying done first, so either answer to that question
+     * is one round trip.
+     */
+    private ShapeEditResult applyRule(
+            String turtle,
+            Graph graph,
+            PropertyShapeModel rule,
+            PropertyShapeSplit split,
+            PrefixMapping prefixes) {
+        if (rule.getIri() == null || rule.getIri().isBlank()) {
+            throw new ResourceConflictException(
+                    "Only a rule the document writes as a shape of its own can be changed on its"
+                            + " own. A rule written inside a shape is changed with that shape.");
+        }
+        var source = ShapeSource.of(turtle, prefixes);
+        var stored =
+                ShapeModelReader.read(graph, source).propertyShapes().stream()
+                        .filter(known -> rule.getIri().equals(known.getIri()))
+                        .findFirst()
+                        .orElseThrow(
+                                () ->
+                                        new ResourceConflictException(
+                                                "The document does not write this rule as a shape"
+                                                        + " of its own. Reload the document and"
+                                                        + " make the change again."));
+        // Judged against the document as stored, for the same reason a node shape is: a request
+        // claiming a rule is editable is exactly the request not to trust.
+        if (!Boolean.TRUE.equals(stored.getEditable())) {
+            throw new ResourceConflictException(
+                    stored.getReadOnlyReason() != null
+                            ? stored.getReadOnlyReason()
+                            : "This rule cannot be written back from the form.");
+        }
+        var written =
+                split == null
+                        ? ShapeClauseWriter.rewriteRule(turtle, stored, rule, prefixes)
+                        : ShapeClauseWriter.splitRule(
+                                turtle,
+                                stored,
+                                rule,
+                                assertNameIsFree(graph, split, prefixes),
+                                split.getNodeShapeIri(),
+                                assertSplitNamesARule(split),
+                                prefixes);
+        return ShapeEditResult.builder()
+                .turtle(written.turtle())
+                .warnings(written.warnings())
+                .build();
+    }
+
+    /**
+     * The name a split's copy is written under, once it is known to be free.
+     *
+     * <p>Writing the copy under a name the document already says something about would merge it
+     * into whatever that subject is, which is the one way this operation could lose a constraint.
+     */
+    private static String assertNameIsFree(
+            Graph graph, PropertyShapeSplit split, PrefixMapping prefixes) {
+        var iri = split.getNewIri();
+        if (iri == null || iri.isBlank()) {
+            throw new ResourceConflictException("The copy of a rule needs a name of its own.");
+        }
+        if (ShapeModelWriter.term(iri, prefixes).startsWith("<") && !isAbsolute(iri)) {
+            throw new ResourceConflictException(
+                    "\""
+                            + iri
+                            + "\" is not a name this document can write. Use a prefixed name"
+                            + " the document binds, or an absolute IRI.");
+        }
+        if (graph.contains(NodeFactory.createURI(iri), Node.ANY, Node.ANY)) {
+            throw new ResourceConflictException(
+                    "The document already says something about \""
+                            + iri
+                            + "\". Give the copy a name of its own.");
+        }
+        return iri;
+    }
+
+    /**
+     * Whether an IRI can be written between angle brackets and read back as itself.
+     *
+     * <p>The characters Turtle forbids inside an {@code IRIREF} matter here rather than in general:
+     * a name carrying one of them would be written as {@code <a>b>} and the document would stop
+     * parsing on text nobody could see was wrong.
+     */
+    private static boolean isAbsolute(String iri) {
+        return iri.matches("[A-Za-z][A-Za-z0-9+.\\-]*:[^\\s<>\"{}|^\\\\`]+");
+    }
+
+    private static int assertSplitNamesARule(PropertyShapeSplit split) {
+        if (split.getNodeShapeIri() == null
+                || split.getNodeShapeIri().isBlank()
+                || split.getSourceIndex() == null) {
+            throw new ResourceConflictException(
+                    "A copy of a rule has to say which shape is to use it instead.");
+        }
+        return split.getSourceIndex();
+    }
+
+    /**
      * Refuses a rule that names no property.
      *
      * <p>There is nothing to write for such a rule — {@code sh:path} is what a property constraint
@@ -110,6 +230,10 @@ public class ShapeFormService implements ShapeFormUseCase {
      * edit was reported as applied and the rule was gone from the card on the next read. The form
      * now keeps a rule like this as a draft and does not send it, so a request carrying one is a
      * client that has got ahead of itself, and it is told so.
+     *
+     * <p>A rule whose path is an expression rather than a property is not one of these: it names no
+     * property in the model because the form cannot show one, but the document writes it a path all
+     * the same, and it arrives as a clause the form keeps as written.
      */
     private static void assertRulesNameAProperty(NodeShapeModel shape) {
         if (shape.getProperties() == null) {
@@ -118,12 +242,19 @@ public class ShapeFormService implements ShapeFormUseCase {
         var unnamed =
                 shape.getProperties().stream()
                         .filter(property -> property.getIri() == null)
-                        .anyMatch(property -> isBlank(property.getPath()));
+                        .filter(property -> isBlank(property.getPath()))
+                        .anyMatch(property -> !keepsAPath(property));
         if (unnamed) {
             throw new ResourceConflictException(
                     "A rule has to say which property it is about before it can be written."
                             + " Pick a property, or remove the rule.");
         }
+    }
+
+    /** Whether the document writes this rule a path the form shows but does not model. */
+    private static boolean keepsAPath(PropertyShapeModel rule) {
+        return rule.getRetained() != null
+                && rule.getRetained().stream().anyMatch(clause -> "path".equals(clause.getField()));
     }
 
     private static boolean isBlank(String value) {

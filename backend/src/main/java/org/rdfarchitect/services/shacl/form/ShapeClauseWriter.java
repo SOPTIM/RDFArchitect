@@ -95,6 +95,144 @@ final class ShapeClauseWriter {
         return new Result(text, List.copyOf(warnings));
     }
 
+    /**
+     * The same, for a rule the document writes as a shape of its own.
+     *
+     * <p>Reached instead of {@link #rewrite} when the edit was made on a shared rule: its clauses
+     * live in its own statement, so that is the statement the change goes into, and every node
+     * shape referencing it sees the change at once. Which is the point of the split below.
+     *
+     * @param stored the rule as the document holds it, read by {@link ShapeModelReader}
+     * @param incoming the rule as the form sends it back
+     */
+    static Result rewriteRule(
+            String turtle,
+            PropertyShapeModel stored,
+            PropertyShapeModel incoming,
+            PrefixMapping prefixes) {
+        var diff = new Diff(prefixes, "rule");
+        diff.about(null, stored.getRetained());
+        diffRuleFields(diff, stored, incoming);
+
+        var text = turtle;
+        var warnings = new ArrayList<String>();
+        for (ClauseChange change : diff.changes()) {
+            text = applyClause(text, stored.getIri(), change, prefixes, warnings);
+        }
+        return new Result(text, List.copyOf(warnings));
+    }
+
+    /**
+     * Changes a shared rule for one shape only, by giving that shape a copy of it.
+     *
+     * <p>The copy is taken from the rule's own text and only its subject is respelled, so it starts
+     * out saying exactly what the original says, comments and layout included — writing it out from
+     * the model would quietly drop whatever the form has no field for. Then the one reference is
+     * moved to the copy, and the edit is applied there. The original, and every other shape using
+     * it, is left as it was.
+     *
+     * @param at which of the node shape's rules is repointed, as the reader numbered them
+     */
+    static Result splitRule(
+            String turtle,
+            PropertyShapeModel stored,
+            PropertyShapeModel incoming,
+            String newIri,
+            String nodeShapeIri,
+            int at,
+            PrefixMapping prefixes) {
+        var statement = onlyStatement(turtle, stored.getIri(), prefixes, "rule");
+        var copy =
+                ShapeModelWriter.term(newIri, prefixes)
+                        + turtle.substring(
+                                statement.start() + statement.subjectToken().length(),
+                                statement.end());
+        var separator = turtle.endsWith("\n\n") ? "" : turtle.endsWith("\n") ? "\n" : "\n\n";
+        var text =
+                repoint(
+                        turtle + separator + copy + "\n",
+                        nodeShapeIri,
+                        at,
+                        stored,
+                        newIri,
+                        prefixes);
+
+        var copied = copyOf(stored);
+        copied.setIri(newIri);
+        var edited = copyOf(incoming);
+        edited.setIri(newIri);
+        return rewriteRule(text, copied, edited, prefixes);
+    }
+
+    /** Points one {@code sh:property} reference of a node shape at the copy instead. */
+    private static String repoint(
+            String text,
+            String nodeShapeIri,
+            int at,
+            PropertyShapeModel rule,
+            String newIri,
+            PrefixMapping prefixes) {
+        var statement = onlyStatement(text, nodeShapeIri, prefixes, "shape");
+        var slots = propertyObjects(ClauseLocator.of(text, statement), prefixes);
+        if (at < 0 || at >= slots.size()) {
+            throw new ResourceConflictException(
+                    "The form is showing a rule the document no longer has. Reload the document"
+                            + " and make the change again.");
+        }
+        var object = slots.get(at).object();
+        var token = text.substring(object.start(), object.end());
+        if (!rule.getIri().equals(ShapeBlockLocator.expand(token, prefixes))) {
+            throw new ResourceConflictException(
+                    "This shape no longer uses that rule where the form thought it did. Reload"
+                            + " the document and make the change again.");
+        }
+        return text.substring(0, object.start())
+                + ShapeModelWriter.term(newIri, prefixes)
+                + text.substring(object.end());
+    }
+
+    /** The one statement a subject is written as, or a refusal naming what is wrong with it. */
+    private static ShapeBlockLocator.Statement onlyStatement(
+            String text, String iri, PrefixMapping prefixes, String what) {
+        var statements = ShapeBlockLocator.locateAll(text, iri, prefixes);
+        if (statements.size() != 1) {
+            throw new ResourceConflictException(
+                    "This "
+                            + what
+                            + " is no longer written as one statement of its own, so the form"
+                            + " cannot change it. Edit it in the Turtle view.");
+        }
+        return statements.get(0);
+    }
+
+    /** A rule with the same fields, so the original the caller holds is not renamed under it. */
+    private static PropertyShapeModel copyOf(PropertyShapeModel rule) {
+        var copy = new PropertyShapeModel();
+        copy.setIri(rule.getIri());
+        copy.setSourceIndex(rule.getSourceIndex());
+        copy.setPath(rule.getPath());
+        copy.setName(rule.getName());
+        copy.setDescription(rule.getDescription());
+        copy.setDataType(rule.getDataType());
+        copy.setClassIri(rule.getClassIri());
+        copy.setNodeKind(rule.getNodeKind());
+        copy.setMinCount(rule.getMinCount());
+        copy.setMaxCount(rule.getMaxCount());
+        copy.setAllowedValues(rule.getAllowedValues());
+        copy.setPattern(rule.getPattern());
+        copy.setSeverity(rule.getSeverity());
+        copy.setMessage(rule.getMessage());
+        copy.setOrder(rule.getOrder());
+        copy.setGroup(rule.getGroup());
+        copy.setDeactivated(rule.getDeactivated());
+        copy.setTyped(rule.getTyped());
+        copy.setRetained(rule.getRetained());
+        copy.setUsedBy(rule.getUsedBy());
+        copy.setEditable(rule.getEditable());
+        copy.setReadOnlyReason(rule.getReadOnlyReason());
+        return copy;
+    }
+
     // -------------------------------------------------------------------------
     // What changed
     // -------------------------------------------------------------------------
@@ -167,19 +305,52 @@ final class ShapeClauseWriter {
             kept.add(rule.getSourceIndex());
             diffRule(diff, was, rule);
         }
-        byOrdinal.keySet().stream()
-                .filter(ordinal -> !kept.contains(ordinal))
-                .forEach(removed::add);
+        byOrdinal.forEach(
+                (ordinal, rule) -> {
+                    if (!kept.contains(ordinal)) {
+                        assertRemovable(rule);
+                        removed.add(ordinal);
+                    }
+                });
+    }
+
+    /**
+     * Refuses to remove a rule the reader could not place.
+     *
+     * <p>Such a rule was given an ordinal so it could be named at all, but which of the shape's
+     * {@code sh:property} clauses it is remains a guess — two rules written exactly alike get one
+     * ordinal each and there is no telling which. Removing by ordinal would take one of them at
+     * random. Its fields are refused one by one below; removal has to be refused as a whole.
+     */
+    private static void assertRemovable(PropertyShapeModel rule) {
+        if (Boolean.FALSE.equals(rule.getEditable())) {
+            throw new ResourceConflictException(reasonNotToWrite(rule));
+        }
+    }
+
+    private static String reasonNotToWrite(PropertyShapeModel rule) {
+        return rule.getReadOnlyReason() != null
+                ? rule.getReadOnlyReason()
+                : "The form cannot tell which part of the document this rule is written in, so it"
+                        + " will not change it.";
     }
 
     private static void diffRule(Diff diff, PropertyShapeModel was, PropertyShapeModel now) {
-        if (was.getIri() != null) {
-            // A rule written as its own shape, referenced from here. Editing it would change every
-            // shape that references it, which is a decision the form has to put to the user first.
-            diff.about(now.getSourceIndex(), sharedRuleIsReadOnly(was));
+        if (Boolean.FALSE.equals(was.getEditable())) {
+            // A rule the reader could not place in the text, or one of two written exactly alike.
+            diff.about(now.getSourceIndex(), everyFieldLocked(reasonNotToWrite(was)));
+        } else if (was.getIri() != null) {
+            // A rule written as its own shape, referenced from here. It is edited on itself, so
+            // that the form can first say how many other shapes the change would reach.
+            diff.about(now.getSourceIndex(), everyFieldLocked(SHARED_RULE));
         } else {
             diff.about(now.getSourceIndex(), was.getRetained());
         }
+        diffRuleFields(diff, was, now);
+    }
+
+    /** The fields of one rule, whichever statement it is written in. */
+    private static void diffRuleFields(Diff diff, PropertyShapeModel was, PropertyShapeModel now) {
         diff.iri(Shacl.PATH, "path", was.getPath(), now.getPath());
         diff.text(ShapeModelReader.NAME, "name", was.getName(), now.getName());
         diff.text(
@@ -202,19 +373,15 @@ final class ShapeClauseWriter {
         diff.flag(Shacl.DEACTIVATED, "deactivated", was.getDeactivated(), now.getDeactivated());
     }
 
-    /** Every field of a shared rule, locked, so a change to any of them is refused by name. */
-    private static List<RetainedClause> sharedRuleIsReadOnly(PropertyShapeModel rule) {
-        var reason =
-                "This rule is written as its own shape, so changing it here would change it for"
-                        + " every shape that references it. Edit it in the Turtle view.";
+    private static final String SHARED_RULE =
+            "This rule is written as its own shape, so changing it here would change it for every"
+                    + " shape that references it. Change it on the rule itself, where the form can"
+                    + " offer to give this shape a copy of it instead.";
+
+    /** Every field of a rule, locked, so a change to any of them is refused by name. */
+    private static List<RetainedClause> everyFieldLocked(String reason) {
         return ShapeModelReader.PROPERTY_FIELDS.values().stream()
-                .map(
-                        field ->
-                                RetainedClause.builder()
-                                        .predicate(rule.getIri())
-                                        .field(field.name())
-                                        .reason(reason)
-                                        .build())
+                .map(field -> RetainedClause.builder().field(field.name()).reason(reason).build())
                 .toList();
     }
 
@@ -223,11 +390,20 @@ final class ShapeClauseWriter {
 
         private final List<ClauseChange> changes = new ArrayList<>();
         private final PrefixMapping prefixes;
+
+        /** What the subject of this diff is called, for a refusal that has to name it. */
+        private final String subject;
+
         private Integer ordinal;
         private Map<String, String> locked = Map.of();
 
         private Diff(PrefixMapping prefixes) {
+            this(prefixes, "shape");
+        }
+
+        private Diff(PrefixMapping prefixes, String subject) {
             this.prefixes = prefixes;
+            this.subject = subject;
         }
 
         List<ClauseChange> changes() {
@@ -295,7 +471,9 @@ final class ShapeClauseWriter {
                 throw new ResourceConflictException(
                         "The form does not change "
                                 + predicate.getLocalName()
-                                + (ordinal == null ? " on this shape. " : " on this rule. ")
+                                + (ordinal == null
+                                        ? " on this " + subject + ". "
+                                        : " on this rule. ")
                                 + reason);
             }
             changes.add(new ClauseChange(ordinal, predicate.getURI(), field, object));
@@ -420,13 +598,7 @@ final class ShapeClauseWriter {
     /** The clauses an edit may touch: the shape's own, or those of one of its inline rules. */
     private static Region regionFor(
             String text, String iri, Integer ordinal, PrefixMapping prefixes) {
-        var statements = ShapeBlockLocator.locateAll(text, iri, prefixes);
-        if (statements.size() != 1) {
-            throw new ResourceConflictException(
-                    "This shape is no longer written as one statement of its own, so the form"
-                            + " cannot change it. Edit it in the Turtle view.");
-        }
-        var statement = statements.get(0);
+        var statement = onlyStatement(text, iri, prefixes, "shape");
         var clauses = ClauseLocator.of(text, statement);
         if (ordinal == null) {
             int from = statement.start() + statement.subjectToken().length();

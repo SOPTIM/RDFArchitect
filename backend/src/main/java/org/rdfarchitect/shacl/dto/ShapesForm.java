@@ -32,6 +32,17 @@ public class ShapesForm {
 
     private List<NodeShapeModel> shapes;
 
+    /**
+     * The rules the document writes as shapes of their own, rather than inside a node shape.
+     *
+     * <p>A second list rather than more entries in {@link #shapes}, because a property shape is not
+     * a node shape and answers a different question: a node shape says which class is constrained,
+     * a property shape says what one property has to look like, and the official {@code
+     * -Con-Simple-} profiles put every constraint they have in one. Each also appears inline under
+     * the node shapes that reference it, so the same rule can be reached from either direction.
+     */
+    private List<PropertyShapeModel> propertyShapes;
+
     /** A syntax error, when the text does not parse. The form then has nothing to show. */
     private ShapesValidationFinding parseError;
 }

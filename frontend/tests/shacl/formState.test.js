@@ -33,6 +33,8 @@ const SHAPES = [
     },
 ];
 
+const RULE = "http://example.org/shapes#NameCardinality";
+
 let server;
 let view;
 
@@ -119,6 +121,19 @@ describe("reading the buffer as shapes", () => {
         expect(view.shapes).toEqual([]);
     });
 
+    test("keeps the rules the document writes as shapes of their own", async () => {
+        server.form = {
+            shapes: SHAPES,
+            propertyShapes: [{ iri: RULE, usedBy: [SHAPES[0].iri] }],
+            parseError: null,
+        };
+
+        await view.read("shapes");
+
+        expect(view.propertyShapes).toHaveLength(1);
+        expect(view.propertyShapes[0].iri).toBe(RULE);
+    });
+
     test("an earlier read that answers late does not replace a newer one", async () => {
         // The regression this guards: switching to the form and typing straight away leaves two
         // reads in flight. The older answering last used to leave the cards describing text the
@@ -189,6 +204,42 @@ describe("applying an edit", () => {
         const sent = JSON.parse(server.requests.at(-1).body);
         expect(sent.removeShapeIri).toBe("http://example.org/shapes#Gone");
         expect(sent.shape).toBeUndefined();
+    });
+
+    test("sends a rule the document names on its own, as a rule", async () => {
+        // Its own statement is what a shared rule's clauses live in, so that is what is rewritten
+        // — never the shape the change happened to be made under.
+        const rule = { iri: RULE, minCount: 0, usedBy: [] };
+
+        await view.applyRule("original", rule);
+
+        const sent = JSON.parse(server.requests.at(-1).body);
+        expect(sent.propertyShape.iri).toBe(RULE);
+        expect(sent.shape).toBeUndefined();
+    });
+
+    test("asks for a copy when the change is meant for one shape only", async () => {
+        const rule = { iri: RULE, minCount: 0, sourceIndex: 1 };
+
+        await view.applyRule("original", rule, {
+            newIri: "http://example.org/shapes#LineName",
+            nodeShapeIri: SHAPES[0].iri,
+            sourceIndex: 1,
+        });
+
+        const sent = JSON.parse(server.requests.at(-1).body);
+        expect(sent.split.newIri).toBe("http://example.org/shapes#LineName");
+        expect(sent.split.nodeShapeIri).toBe(SHAPES[0].iri);
+        expect(sent.split.sourceIndex).toBe(1);
+    });
+
+    test("reads the buffer again on request, undoing what was typed", async () => {
+        // What cancelling a shared-rule change needs: the card holds the typed value, and only
+        // the document knows what stood there before it.
+        await view.read("original");
+        await view.reload("original");
+
+        expect(server.requests).toHaveLength(2);
     });
 
     test("makes the next read fetch again, because the document changed", async () => {

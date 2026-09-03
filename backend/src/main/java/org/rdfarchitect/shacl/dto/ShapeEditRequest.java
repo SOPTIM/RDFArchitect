@@ -31,4 +31,17 @@ public class ShapeEditRequest {
 
     /** Set instead of {@link #shape} to delete a shape by IRI. */
     private String removeShapeIri;
+
+    /**
+     * Set instead of {@link #shape} to change a rule the document writes as a shape of its own.
+     *
+     * <p>Its {@code iri} says which statement is rewritten. A shared rule is edited on itself
+     * rather than through a shape referencing it, because the two are different requests: changing
+     * the rule changes it for every shape that uses it, which is exactly what {@link #getSplit()}
+     * exists to offer a way out of.
+     */
+    private PropertyShapeModel propertyShape;
+
+    /** With {@link #propertyShape}: copy the rule first, and change the copy instead. */
+    private PropertyShapeSplit split;
 }

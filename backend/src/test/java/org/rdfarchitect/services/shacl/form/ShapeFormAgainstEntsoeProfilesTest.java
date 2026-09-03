@@ -23,8 +23,10 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.shacl.dto.NodeShapeModel;
+import org.rdfarchitect.shacl.dto.PropertyShapeModel;
 import org.rdfarchitect.shacl.dto.RetainedClause;
 import org.rdfarchitect.shacl.dto.ShapeEditRequest;
+import org.rdfarchitect.shacl.dto.ShapesForm;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -46,6 +48,9 @@ class ShapeFormAgainstEntsoeProfilesTest {
 
     /** A large official file with comments, embedded SPARQL and many shapes. */
     private static final String FILE = "61970-452_Equipment-AP-Con-Complex-SHACL.ttl";
+
+    /** Its counterpart: every constraint in it is a named property shape shared by many classes. */
+    private static final String SIMPLE = "61970-600-2_Equipment-AP-Con-Simple-SHACL.ttl";
 
     private final ShapeFormService service = new ShapeFormService();
 
@@ -175,13 +180,11 @@ class ShapeFormAgainstEntsoeProfilesTest {
     /**
      * The whole official library, as the measure of how far the form reaches.
      *
-     * <p>314 of 2959 before clause-preserving edits; 2721 after, because what the form can offer is
-     * no longer decided by whether it understands every last thing a shape says. The 238 left over
-     * are honest: 207 are shapes of the generated {@code -AllowedProperties} families, which write
-     * the same rule twice, so there is no telling which of two identical {@code sh:property}
-     * clauses an edit belongs in; 31 are subjects written as more than one statement. The floor is
-     * asserted rather than the exact number, because a new ENTSO-E release moves it — but a change
-     * that quietly locks shapes the form used to offer fails here.
+     * <p>314 of 2959 before clause-preserving edits, 2721 after, and 2928 once locking became a
+     * matter for the individual rule rather than the shape around it. The 31 left are the subjects
+     * written as more than one statement, which is the only thing left that stops the form placing
+     * an edit at all. The floor is asserted rather than the exact number, because a new ENTSO-E
+     * release moves it — but a change that quietly locks shapes the form used to offer fails here.
      */
     @Test
     void theFormReachesMostOfTheWholeLibrary() throws IOException {
@@ -201,7 +204,97 @@ class ShapeFormAgainstEntsoeProfilesTest {
         }
 
         assertThat(shapes).isGreaterThanOrEqualTo(2959);
-        assertThat(editable).isGreaterThanOrEqualTo(2600);
+        assertThat(editable).isGreaterThanOrEqualTo(2900);
+    }
+
+    /**
+     * The acceptance test for shared rules: a cardinality changed in a {@code -Con-Simple-} file.
+     *
+     * <p>These profiles were the case the form could do nothing with. Every constraint they hold is
+     * in a named property shape, so until a named rule could be edited on itself, the tab could
+     * show one of these files and change nothing in it. The count of shapes relying on the rule is
+     * asserted alongside the edit, because changing one of these without being told how far the
+     * change reaches would be worse than not offering it.
+     */
+    @Test
+    void aCardinalityInASimpleProfileCanBeChangedAndSaysHowFarItReaches() throws IOException {
+        var turtle = Files.readString(Path.of(CONSTRAINTS, SIMPLE));
+        var rule =
+                service.parse(turtle).getPropertyShapes().stream()
+                        .filter(shared -> Boolean.TRUE.equals(shared.getEditable()))
+                        .filter(shared -> shared.getMinCount() != null)
+                        .filter(shared -> shared.getUsedBy().size() > 1)
+                        .findFirst()
+                        .orElseThrow(
+                                () -> new AssertionError("No shared cardinality in " + SIMPLE));
+        var was = rule.getMinCount();
+        rule.setMinCount(was == 0 ? 1 : 0);
+
+        var edited = service.apply(ruleRequest(turtle, rule)).getTurtle();
+        var after = service.parse(edited);
+
+        assertThat(after.getParseError()).isNull();
+        assertThat(reread(after, rule.getIri()).getMinCount()).isEqualTo(rule.getMinCount());
+        // Only that one number moved; the classes relying on the rule are unchanged and still say
+        // so.
+        assertThat(reread(after, rule.getIri()).getUsedBy())
+                .containsExactlyElementsOf(rule.getUsedBy());
+        assertThat(edited).hasSameSizeAs(turtle);
+    }
+
+    private static PropertyShapeModel reread(ShapesForm form, String iri) {
+        return form.getPropertyShapes().stream()
+                .filter(rule -> iri.equals(rule.getIri()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No named rule " + iri));
+    }
+
+    private static ShapeEditRequest ruleRequest(String turtle, PropertyShapeModel rule) {
+        var request = new ShapeEditRequest();
+        request.setTurtle(turtle);
+        request.setPropertyShape(rule);
+        return request;
+    }
+
+    /**
+     * The F3 invariant again, for the edit path shared rules opened up.
+     *
+     * <p>{@link #applyingEveryShapeUnchangedLeavesTheWholeLibraryUntouched} covers node shapes; a
+     * named rule is written through a statement of its own, so it needs its own proof that applying
+     * one nobody changed costs nothing. 11 818 of the library's 11 819 named rules are editable, so
+     * this is the bigger half of the library by count.
+     *
+     * <p>Driven at the writer rather than through {@link ShapeFormService#apply}, which re-parses
+     * the document and re-reads every shape in it for each request: eleven thousand of those is
+     * minutes, and the invariant is the writer's. The service's own path over a named rule is
+     * covered by {@link #aCardinalityInASimpleProfileCanBeChangedAndSaysHowFarItReaches} and by
+     * {@code ShapeSharedRuleTest}. Each rule is applied to the original text rather than to what
+     * the rule before it produced, which is the stronger reading of "costs nothing" anyway.
+     */
+    @Test
+    void applyingEveryNamedRuleUnchangedLeavesTheWholeLibraryUntouched() throws IOException {
+        for (Path file : constraintsFiles()) {
+            var original = Files.readString(file);
+            if (service.parse(original).getParseError() != null) {
+                continue;
+            }
+            var graph = RDFParser.fromString(original, Lang.TURTLE).toGraph();
+            var prefixes = graph.getPrefixMapping();
+            var rules =
+                    ShapeModelReader.read(graph, ShapeSource.of(original, prefixes))
+                            .propertyShapes();
+            assertThat(rules)
+                    .filteredOn(rule -> Boolean.TRUE.equals(rule.getEditable()))
+                    .allSatisfy(
+                            rule ->
+                                    assertThat(
+                                                    ShapeClauseWriter.rewriteRule(
+                                                                    original, rule, rule, prefixes)
+                                                            .turtle())
+                                            .describedAs(
+                                                    "%s in %s", rule.getIri(), file.getFileName())
+                                            .isEqualTo(original));
+        }
     }
 
     /**
@@ -268,9 +361,7 @@ class ShapeFormAgainstEntsoeProfilesTest {
      */
     @Test
     void theProfileFamilyTheFormCouldNotTouchIsNowEditableThroughout() throws IOException {
-        var turtle =
-                Files.readString(
-                        Path.of(CONSTRAINTS, "61970-600-2_Equipment-AP-Con-Simple-SHACL.ttl"));
+        var turtle = Files.readString(Path.of(CONSTRAINTS, SIMPLE));
 
         var shapes = service.parse(turtle).getShapes();
 

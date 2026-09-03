@@ -29,14 +29,22 @@ import org.rdfarchitect.shacl.dto.NodeShapeModel;
 import org.rdfarchitect.shacl.dto.PropertyShapeModel;
 import org.rdfarchitect.shacl.dto.RetainedClause;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
@@ -50,9 +58,10 @@ import java.util.stream.Stream;
  * and the writer spells plain literals, so a shape stating {@code sh:message "…"@en, "…"@de} has
  * nowhere to put the second value and no way to write the language tag. What used to happen then
  * was that the whole shape went read-only. Now the *clause* is kept exactly as written and reported
- * as a {@link RetainedClause}, and everything else about the shape stays editable. Only two things
- * still lock a shape outright: the document not writing it as one statement of its own, and a rule
- * whose path is an expression rather than a property, which the form has no way to show.
+ * as a {@link RetainedClause}, and everything else about the shape stays editable. Locking a whole
+ * shape is now down to one cause: the document not writing it as one statement of its own, so an
+ * edit would have no home. Anything the form cannot place *within* a shape — two rules written
+ * exactly alike, a rule it cannot match to its text — locks that rule and leaves the rest alone.
  *
  * <p>The SHACL predicates come from CIMVocabCheck's {@code Shacl} rather than being redeclared,
  * except for the handful that class has no constant for.
@@ -137,15 +146,33 @@ final class ShapeModelReader {
 
     private ShapeModelReader() {}
 
+    /** The graph, the text it was parsed from, and which node shapes reference which named rule. */
+    private record Reading(Graph graph, ShapeSource source, Map<String, List<String>> usedBy) {}
+
+    /** Whether the form may write one rule back, and why not when it may not. */
+    private record Lock(boolean editable, String reason) {
+
+        static final Lock OPEN = new Lock(true, null);
+
+        /** Open when there is nothing to say, closed with the reason when there is. */
+        static Lock of(String reason) {
+            return reason == null ? OPEN : new Lock(false, reason);
+        }
+    }
+
+    /** Both halves of what a document says as shapes: its node shapes and its named rules. */
+    record Shapes(List<NodeShapeModel> nodeShapes, List<PropertyShapeModel> propertyShapes) {}
+
     /**
-     * Every node shape the document declares under its own IRI, in IRI order.
+     * Everything the document says, as shapes: node shapes in IRI order, then the named rules.
      *
      * <p>A shape SHACL infers rather than types — one carrying {@code sh:targetClass} or {@code
      * sh:property} but no {@code a sh:NodeShape} — is read too, and is editable like any other: a
      * clause-level edit changes the clause it was made on and adds no {@code rdf:type} its author
      * chose to leave out.
      */
-    static List<NodeShapeModel> read(Graph graph, ShapeSource source) {
+    static Shapes read(Graph graph, ShapeSource source) {
+        var reading = new Reading(graph, source, referencesToRules(graph));
         var declared =
                 graph.stream(Node.ANY, RDF.type.asNode(), NODE_SHAPE)
                         .map(Triple::getSubject)
@@ -159,17 +186,47 @@ final class ShapeModelReader {
                         .filter(subject -> !declared.contains(subject))
                         .collect(Collectors.toCollection(LinkedHashSet::new));
 
-        return Stream.concat(declared.stream(), implied.stream())
-                .map(shape -> readShape(graph, shape, source))
-                .sorted(Comparator.comparing(NodeShapeModel::getIri))
-                .toList();
+        var nodeShapes =
+                Stream.concat(declared.stream(), implied.stream())
+                        .map(shape -> readShape(reading, shape))
+                        .sorted(Comparator.comparing(NodeShapeModel::getIri))
+                        .toList();
+        var byIri = nodeShapes.stream().map(NodeShapeModel::getIri).collect(Collectors.toSet());
+        return new Shapes(nodeShapes, readPropertyShapes(reading, byIri));
     }
 
-    private static NodeShapeModel readShape(Graph graph, Node shape, ShapeSource source) {
+    /**
+     * Which node shapes state {@code sh:property} on each named rule, in IRI order.
+     *
+     * <p>Read once for the whole document rather than per rule: this is the number the form has to
+     * put in front of the user before a shared rule is changed, and in a {@code -Con-Simple-}
+     * profile one rule commonly carries the cardinality of dozens of classes.
+     */
+    private static Map<String, List<String>> referencesToRules(Graph graph) {
+        var references = new HashMap<String, SortedSet<String>>();
+        graph.stream(Node.ANY, Shacl.PROPERTY, Node.ANY)
+                .filter(triple -> triple.getSubject().isURI() && triple.getObject().isURI())
+                .forEach(
+                        triple ->
+                                references
+                                        .computeIfAbsent(
+                                                triple.getObject().getURI(),
+                                                ignored -> new TreeSet<>())
+                                        .add(triple.getSubject().getURI()));
+        return references.entrySet().stream()
+                .collect(
+                        Collectors.toMap(
+                                Map.Entry::getKey, entry -> List.copyOf(entry.getValue())));
+    }
+
+    private static NodeShapeModel readShape(Reading reading, Node shape) {
+        var graph = reading.graph();
+        var source = reading.source();
         var written = source.forSubject(shape.getURI());
         var clauses = written == null ? List.<ClauseLocator.Clause>of() : written.clauses();
         var byPredicate = source.byPredicate(clauses);
-        var rules = readRules(graph, shape, clauses, source);
+        var rules = readRules(reading, shape, clauses);
+        var unwritable = locatable(written, "shape");
 
         return NodeShapeModel.builder()
                 .iri(shape.getURI())
@@ -188,9 +245,39 @@ final class ShapeModelReader {
                 .deactivated(bool(graph, shape, Shacl.DEACTIVATED))
                 .properties(rules.properties())
                 .retained(retainedOf(graph, shape, byPredicate, NODE_FIELDS, source))
-                .editable(rules.problem() == null && locatable(written) == null)
-                .readOnlyReason(locatable(written) != null ? locatable(written) : rules.problem())
+                .editable(rules.problem() == null && unwritable == null)
+                .readOnlyReason(unwritable != null ? unwritable : rules.problem())
                 .build();
+    }
+
+    /**
+     * The rules the document writes as shapes of their own, in IRI order.
+     *
+     * <p>This is how the official {@code -Con-Simple-} profiles are composed: their node shapes
+     * hold nothing but references, and every cardinality and datatype in the file lives in a named
+     * property shape shared by dozens of classes. Shown as cards of their own as well as inline
+     * under each shape that references them, because the two views answer different questions —
+     * "what does this class have to look like" and "what does this rule say, and who relies on it".
+     *
+     * <p>A subject already read as a node shape is not repeated here, and neither is a rule the
+     * document references but never writes: there would be nothing to show and nothing to edit.
+     */
+    private static List<PropertyShapeModel> readPropertyShapes(
+            Reading reading, Set<String> nodeShapes) {
+        var subjects = new LinkedHashSet<String>();
+        reading.graph().stream(Node.ANY, RDF.type.asNode(), PROPERTY_SHAPE)
+                .map(Triple::getSubject)
+                .filter(Node::isURI)
+                .map(Node::getURI)
+                .forEach(subjects::add);
+        subjects.addAll(reading.usedBy().keySet());
+        return subjects.stream()
+                .filter(iri -> !nodeShapes.contains(iri))
+                .map(NodeFactory::createURI)
+                .filter(rule -> reading.graph().contains(rule, Node.ANY, Node.ANY))
+                .sorted(Comparator.comparing(Node::getURI))
+                .map(rule -> readProperty(reading, rule, null, null, Lock.OPEN))
+                .toList();
     }
 
     /**
@@ -200,20 +287,25 @@ final class ShapeModelReader {
      * way. A subject written as several statements would have been rewritten into one of them and
      * the others left standing, repeating everything they said. A subject the scanner cannot find —
      * written against a {@code @base}, or nested inside another shape — would have been appended,
-     * defining the shape a second time.
+     * defining it a second time.
      */
-    private static String locatable(ShapeSource.SubjectSource written) {
+    private static String locatable(ShapeSource.SubjectSource written, String what) {
         if (written == null) {
-            return "This shape is not written as a statement of its own in the document, so the"
-                    + " form cannot write it back without defining it a second time. Edit it in"
-                    + " the Turtle view.";
+            return "This "
+                    + what
+                    + " is not written as a statement of its own in the document, so the form"
+                    + " cannot write it back without defining it a second time. Edit it in the"
+                    + " Turtle view.";
         }
         if (written.statements().size() > 1) {
-            return "This shape is written as "
+            return "This "
+                    + what
+                    + " is written as "
                     + written.statements().size()
                     + " separate statements. The form would not know which of them an edit"
-                    + " belongs in. Edit it in the Turtle view, or write the shape as one"
-                    + " statement.";
+                    + " belongs in. Edit it in the Turtle view, or write the "
+                    + what
+                    + " as one statement.";
         }
         return null;
     }
@@ -223,117 +315,219 @@ final class ShapeModelReader {
     // -------------------------------------------------------------------------
 
     /**
-     * The shape's rules, and why they cannot be edited when they cannot.
+     * The shape's rules, and why the shape as a whole cannot be edited when it cannot.
      *
-     * @param properties the rules, for showing, whether or not they can be written
-     * @param problem why the shape is read-only, or {@code null}
+     * @param properties the rules, each carrying whether it can be written and why not
+     * @param problem why the whole shape is read-only, or {@code null}
      */
     private record Rules(List<PropertyShapeModel> properties, String problem) {}
 
+    /** How a rule is picked out of the document's text. */
+    private enum Match {
+        /** The document writes the rule as its own resource, so its IRI names it. */
+        NAMED,
+        /** An inline rule constraining one property, named by that property. */
+        PATH,
+        /** An inline rule with no plain property path, named by the predicates it states. */
+        STATED
+    }
+
     /**
-     * How a rule is picked out of the document's text.
+     * A rule's key, in whichever of the three ways both the graph and the text can see it.
      *
      * <p>A rule usually has no name — {@code sh:property [ … ]} is a blank node — so the graph's
-     * view of it and the text's view of it have to be matched up some other way, and its path is
-     * the only thing both sides can see. Matching once, here, is what lets the writer address a
-     * rule by position afterwards, so that editing the path itself does not move the rule out from
-     * under the edit.
-     *
-     * @param named whether the document writes the rule as its own resource
-     * @param iri that resource's IRI, or the path of an inline rule
+     * view of it and the text's view of it have to be matched up some other way. Its path serves
+     * where that path is a plain property; where it is an expression, which the two sides do not
+     * spell the same way, the set of predicates the rule states does. Matching once, here, is what
+     * lets the writer address a rule by position afterwards, so that editing the path itself does
+     * not move the rule out from under the edit.
      */
-    private record RuleKey(boolean named, String iri) {}
+    private record RuleKey(Match match, String value) {}
 
+    /** One {@code sh:property} object in the text, and the key it is known by. */
+    private record WrittenRule(ClauseLocator.ObjectSpan object, RuleKey key) {}
+
+    private static final String TWO_ALIKE =
+            "This shape writes two rules the form cannot tell apart, so it will not change either"
+                    + " of them — an edit would land in one of the two at random. Edit them in the"
+                    + " Turtle view.";
+
+    private static final String UNPLACEABLE =
+            "The form cannot tell which part of the document this rule is written in, so it will"
+                    + " not change it. Edit it in the Turtle view.";
+
+    /**
+     * The one thing that still locks a whole shape besides its being written twice.
+     *
+     * <p>Reached only when a rule cannot be given even a handle, which needs the graph to hold more
+     * rules for a shape than the document writes {@code sh:property} clauses for it. Nothing in the
+     * official library does, and nothing valid should — but a shape whose rules cannot all be
+     * numbered cannot have one added or removed either, so the refusal is the shape's.
+     */
+    private static final String UNNUMBERED =
+            "The form cannot tell which part of the document this shape's rules are written in, so"
+                    + " it will not change it. Edit it in the Turtle view.";
+
+    /**
+     * Every rule of one shape, matched to the text it is written in.
+     *
+     * <p>Locking is per rule. One rule the form cannot place used to make the whole shape read-only
+     * — 207 shapes of the generated {@code -AllowedProperties} families state the same rule twice
+     * and lost every other field over it — and there is no need: a rule that cannot be placed is
+     * simply not written back, while its neighbours in the same statement still can be.
+     */
     private static Rules readRules(
-            Graph graph, Node shape, List<ClauseLocator.Clause> clauses, ShapeSource source) {
-        var slots = new ArrayList<ClauseLocator.ObjectSpan>();
-        var ordinals = new HashMap<RuleKey, Integer>();
-        var ambiguous = false;
+            Reading reading, Node shape, List<ClauseLocator.Clause> clauses) {
+        var slots = slotsOf(clauses, reading.source());
+        var free = new LinkedHashMap<RuleKey, Deque<Integer>>();
+        for (int index = 0; index < slots.size(); index++) {
+            var key = slots.get(index).key();
+            if (key != null) {
+                free.computeIfAbsent(key, ignored -> new ArrayDeque<>()).add(index);
+            }
+        }
+        var slotsPerKey = new HashMap<RuleKey, Integer>();
+        free.forEach((key, ordinals) -> slotsPerKey.put(key, ordinals.size()));
+
+        var rules =
+                reading.graph().stream(shape, Shacl.PROPERTY, Node.ANY)
+                        .map(Triple::getObject)
+                        .toList();
+        var keys = rules.stream().map(rule -> keyOf(reading.graph(), rule)).toList();
+        var rulesPerKey = new HashMap<RuleKey, Integer>();
+        keys.forEach(key -> rulesPerKey.merge(key, 1, Integer::sum));
+
+        var ordinals = new Integer[rules.size()];
+        var locks = new Lock[rules.size()];
+        var matched = new boolean[rules.size()];
+        for (int index = 0; index < rules.size(); index++) {
+            var key = keys.get(index);
+            var candidates = free.get(key);
+            ordinals[index] = candidates == null ? null : candidates.poll();
+            matched[index] = ordinals[index] != null;
+            var alike = rulesPerKey.get(key) > 1 || slotsPerKey.getOrDefault(key, 0) > 1;
+            locks[index] = alike ? Lock.of(TWO_ALIKE) : Lock.OPEN;
+        }
+        // A rule whose key matched no slot still needs a handle, or the writer would read it as a
+        // rule being added and write it a second time. The graph cannot hold more rules than the
+        // text writes, so there is always a slot left to name it by — but not one known to be this
+        // rule's, so nothing is read from it and the rule is not offered for editing.
+        var spare = unclaimed(slots.size(), ordinals);
+        var placed = true;
+        for (int index = 0; index < rules.size(); index++) {
+            if (ordinals[index] == null) {
+                ordinals[index] = spare.poll();
+                locks[index] = Lock.of(UNPLACEABLE);
+                placed &= ordinals[index] != null;
+            }
+        }
+
+        var properties = new ArrayList<PropertyShapeModel>();
+        for (int index = 0; index < rules.size(); index++) {
+            properties.add(
+                    readProperty(
+                            reading,
+                            rules.get(index),
+                            ordinals[index],
+                            matched[index] ? slots.get(ordinals[index]).object() : null,
+                            locks[index]));
+        }
+        return new Rules(
+                properties.stream().sorted(byOrderThenPath()).toList(), placed ? null : UNNUMBERED);
+    }
+
+    /** Every rule the shape writes, in the order the document writes them. */
+    private static List<WrittenRule> slotsOf(
+            List<ClauseLocator.Clause> clauses, ShapeSource source) {
+        var slots = new ArrayList<WrittenRule>();
         for (ClauseLocator.Clause clause : clauses) {
             if (!Shacl.PROPERTY.getURI().equals(source.predicateIri(clause))) {
                 continue;
             }
             for (ClauseLocator.ObjectSpan object : clause.objects()) {
-                var key = keyFromText(object, source);
-                if (key != null && ordinals.put(key, slots.size()) != null) {
-                    // The same rule written twice under one shape. The graph holds it once, so
-                    // there is no telling which of the two an edit belongs in.
-                    ambiguous = true;
-                }
-                slots.add(object);
+                slots.add(new WrittenRule(object, keyFromText(object, source)));
             }
         }
-
-        var properties = new ArrayList<PropertyShapeModel>();
-        var unmatched = false;
-        var pathExpression = false;
-        var objects = graph.stream(shape, Shacl.PROPERTY, Node.ANY).map(Triple::getObject).toList();
-        for (Node rule : objects) {
-            var key = keyOf(graph, rule);
-            var ordinal = key == null ? null : ordinals.get(key);
-            if (key == null) {
-                pathExpression = true;
-            } else if (ordinal == null) {
-                unmatched = true;
-            }
-            properties.add(
-                    readProperty(
-                            graph,
-                            rule,
-                            ordinal,
-                            ordinal == null ? null : slots.get(ordinal),
-                            source));
-        }
-
-        var problem =
-                rulesProblem(ambiguous, unmatched, pathExpression, objects.size() != slots.size());
-        return new Rules(properties.stream().sorted(byOrderThenPath()).toList(), problem);
+        return slots;
     }
 
-    private static String rulesProblem(
-            boolean ambiguous, boolean unmatched, boolean pathExpression, boolean countMismatch) {
-        if (pathExpression) {
-            return "One of this shape's rules is about a path expression rather than a single"
-                    + " property, which the form cannot show. Edit the shape in the Turtle view.";
-        }
-        if (ambiguous || unmatched || countMismatch) {
-            return "The form cannot tell which part of the document each of this shape's rules is"
-                    + " written in, so it will not edit them. Edit the shape in the Turtle view.";
-        }
-        return null;
+    /** The ordinals no rule claimed, in document order. */
+    private static Deque<Integer> unclaimed(int slots, Integer[] taken) {
+        var claimed = Stream.of(taken).filter(Objects::nonNull).collect(Collectors.toSet());
+        return IntStream.range(0, slots)
+                .boxed()
+                .filter(ordinal -> !claimed.contains(ordinal))
+                .collect(Collectors.toCollection(ArrayDeque::new));
     }
 
     /** The rule a {@code sh:property} object names, as the text writes it. */
     private static RuleKey keyFromText(ClauseLocator.ObjectSpan object, ShapeSource source) {
         if (object.nested().isEmpty()) {
             var iri = source.objectIri(object);
-            return iri == null ? null : new RuleKey(true, iri);
+            return iri == null ? null : new RuleKey(Match.NAMED, iri);
         }
         return object.nested().stream()
                 .filter(clause -> Shacl.PATH.getURI().equals(source.predicateIri(clause)))
                 .filter(clause -> clause.objects().size() == 1)
                 .map(clause -> source.objectIri(clause.objects().get(0)))
-                .filter(iri -> iri != null)
+                .filter(Objects::nonNull)
                 .findFirst()
-                .map(iri -> new RuleKey(false, iri))
-                .orElse(null);
+                .map(iri -> new RuleKey(Match.PATH, iri))
+                .orElseGet(
+                        () ->
+                                new RuleKey(
+                                        Match.STATED,
+                                        statedPredicates(
+                                                object.nested().stream()
+                                                        .map(source::predicateIri))));
     }
 
     /** The same rule as the graph sees it. */
     private static RuleKey keyOf(Graph graph, Node rule) {
         if (rule.isURI()) {
-            return new RuleKey(true, rule.getURI());
+            return new RuleKey(Match.NAMED, rule.getURI());
         }
         var path = uri(graph, rule, Shacl.PATH);
-        return path == null ? null : new RuleKey(false, path);
+        if (path != null) {
+            return new RuleKey(Match.PATH, path);
+        }
+        return new RuleKey(
+                Match.STATED,
+                statedPredicates(
+                        graph.stream(rule, Node.ANY, Node.ANY)
+                                .map(triple -> triple.getPredicate().getURI())));
+    }
+
+    /**
+     * What a rule states, as a key: its distinct predicates, sorted.
+     *
+     * <p>The fallback for a rule with no name and no plain property path — a sequence path, an
+     * inverse path — which used to lock its whole shape, because there was nothing left for the two
+     * views of it to be matched by. Distinct rather than counted: a graph holds one copy of a
+     * triple the document writes twice, and the text holds both.
+     */
+    private static String statedPredicates(Stream<String> predicates) {
+        return predicates
+                .filter(Objects::nonNull)
+                .distinct()
+                .sorted()
+                .collect(Collectors.joining(" "));
     }
 
     private static PropertyShapeModel readProperty(
-            Graph graph,
+            Reading reading,
             Node property,
             Integer ordinal,
             ClauseLocator.ObjectSpan written,
-            ShapeSource source) {
+            Lock lock) {
+        var graph = reading.graph();
+        var source = reading.source();
+        // A named rule is written back through its own statement rather than through a shape that
+        // references it, so what decides whether it can be written is that statement.
+        var effective =
+                lock.editable() && property.isURI()
+                        ? Lock.of(locatable(source.forSubject(property.getURI()), "rule"))
+                        : lock;
         var clauses = clausesOf(property, written, source);
         return PropertyShapeModel.builder()
                 .iri(property.isURI() ? property.getURI() : null)
@@ -363,6 +557,12 @@ final class ShapeModelReader {
                                 source.byPredicate(clauses),
                                 PROPERTY_FIELDS,
                                 source))
+                .usedBy(
+                        property.isURI()
+                                ? reading.usedBy().getOrDefault(property.getURI(), List.of())
+                                : List.of())
+                .editable(effective.editable())
+                .readOnlyReason(effective.reason())
                 .build();
     }
 

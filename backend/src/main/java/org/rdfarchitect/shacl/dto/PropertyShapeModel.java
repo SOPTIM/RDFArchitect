@@ -101,4 +101,29 @@ public class PropertyShapeModel {
      * them, and the rest of the rule stays editable. See {@link NodeShapeModel#getRetained()}.
      */
     private List<RetainedClause> retained;
+
+    /**
+     * The node shapes that state {@code sh:property} on this rule, when it has a name of its own.
+     *
+     * <p>Empty for an inline rule, which by construction belongs to the one shape it is written in.
+     * A named rule is shared, and the number of shapes sharing it is the thing the user has to know
+     * before changing it: in the official {@code -Con-Simple-} profiles one rule commonly carries
+     * the cardinality of forty classes at once.
+     */
+    private List<String> usedBy;
+
+    /**
+     * Whether the form may write this rule back. False when it cannot place an edit in it.
+     *
+     * <p>Locking is per rule rather than per shape: a rule the form cannot find in the text, or one
+     * of two rules under a shape that say exactly the same thing, is shown with what it says while
+     * the rest of the shape stays editable.
+     *
+     * <p>Boxed like {@link NodeShapeModel#getEditable()}, and for the same reason — the rule
+     * travels back to be applied, and Jackson cannot map an absent JSON member onto a primitive.
+     */
+    private Boolean editable;
+
+    /** Why the form will not write this rule back, in words, or {@code null} when it will. */
+    private String readOnlyReason;
 }

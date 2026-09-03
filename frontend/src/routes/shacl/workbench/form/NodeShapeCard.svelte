@@ -34,6 +34,7 @@
     import { Fa } from "svelte-fa";
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { keptClauses, keptFields } from "$lib/shacl/retained.js";
     import { abbreviate } from "$lib/shacl/turtleTerms.js";
 
@@ -46,6 +47,8 @@
         shape,
         terms = [],
         prefixes = {},
+        /** The rules the document writes as shapes of their own, to reference one of them. */
+        sharedRules = [],
         readOnly = false,
         expanded = false,
         ontoggle = () => {},
@@ -53,6 +56,16 @@
         /** A field still being typed in: the same edit, to be sent once typing pauses. */
         onedit = () => {},
         onremove = () => {},
+        /**
+         * A change to a rule the document writes as a shape of its own.
+         *
+         * Not part of this shape's edit: the rule's clauses live in its own statement, and a
+         * change to them reaches every shape referencing it — which is a question to put to the
+         * user rather than an answer to assume.
+         */
+        onrulechange = () => {},
+        /** The same, still being typed in. */
+        onruleedit = () => {},
     } = $props();
 
     /** The fields this card puts on screen. Anything else kept as written is listed instead. */
@@ -76,6 +89,9 @@
 
     /** Whether a picker for one more target class is on screen. */
     let addingClass = $state(false);
+
+    /** The picker is an action rather than a field, so it goes back to its placeholder. */
+    let picked = $state(null);
 
     /** Either the workspace forbids changes, or the shape is not one the form can write back. */
     const locked = $derived(readOnly || shape.editable === false);
@@ -107,6 +123,14 @@
             : "no class chosen",
     );
 
+    /** The document's own rules this shape does not reference yet. */
+    const available = $derived.by(() => {
+        const used = new Set(
+            (shape.properties ?? []).map(rule => rule.iri).filter(Boolean),
+        );
+        return sharedRules.filter(rule => !used.has(rule.iri));
+    });
+
     /** Replaces one target class, or drops it when the picker was cleared. */
     function setClass(index, iri) {
         const next = [...classes];
@@ -130,6 +154,38 @@
 
     function addRule() {
         drafts = [...drafts, { path: null }];
+    }
+
+    /**
+     * References a rule the document already writes, rather than writing a new one here.
+     *
+     * How the official profiles are composed, and until now something the form could read but not
+     * do: every constraint in a `-Con-Simple-` file is a named rule that dozens of shapes point at.
+     */
+    function useRule(iri) {
+        picked = null;
+        if (!iri) {
+            return;
+        }
+        shape.properties = [...(shape.properties ?? []), { iri }];
+        onchange();
+    }
+
+    /** A shared rule is written back through itself; an inline one through this shape. */
+    function changeRule(rule) {
+        if (rule.iri) {
+            onrulechange(rule);
+        } else {
+            onchange();
+        }
+    }
+
+    function editRule(rule) {
+        if (rule.iri) {
+            onruleedit(rule);
+        } else {
+            onedit();
+        }
     }
 
     function removeRule(index) {
@@ -247,8 +303,8 @@
                     {prefixes}
                     targetClass={classes[0] ?? null}
                     readOnly={locked}
-                    {onchange}
-                    {onedit}
+                    onchange={() => changeRule(property)}
+                    onedit={() => editRule(property)}
                     onremove={() => removeRule(index)}
                 />
             {/each}
@@ -272,13 +328,31 @@
             />
 
             {#if !locked}
-                <div class="h-8 w-40">
-                    <ButtonControl variant="inline" callOnClick={addRule}>
-                        <span class="flex items-center gap-2 text-sm">
-                            <Fa icon={faPlus} />
-                            Add a rule
-                        </span>
-                    </ButtonControl>
+                <div class="flex items-end gap-3">
+                    <div class="h-8 w-40 shrink-0">
+                        <ButtonControl variant="inline" callOnClick={addRule}>
+                            <span class="flex items-center gap-2 text-sm">
+                                <Fa icon={faPlus} />
+                                Add a rule
+                            </span>
+                        </ButtonControl>
+                    </div>
+                    {#if available.length}
+                        <div class="min-w-0 flex-1">
+                            <span class="text-default-text text-sm">
+                                or use a rule the document already has
+                            </span>
+                            <SelectEditControl
+                                bind:value={picked}
+                                options={available}
+                                getOptionValue={rule => rule.iri}
+                                getOptionLabel={rule =>
+                                    abbreviate(rule.iri, prefixes)}
+                                placeholder="pick a shared rule"
+                                onchange={useRule}
+                            />
+                        </div>
+                    {/if}
                 </div>
             {/if}
         </div>

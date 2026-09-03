@@ -1479,6 +1479,9 @@
           "description" : {
             "type" : "string"
           },
+          "editable" : {
+            "type" : "boolean"
+          },
           "group" : {
             "type" : "string"
           },
@@ -1512,6 +1515,9 @@
           "pattern" : {
             "type" : "string"
           },
+          "readOnlyReason" : {
+            "type" : "string"
+          },
           "retained" : {
             "items" : {
               "$ref" : "#/components/schemas/RetainedClause"
@@ -1527,6 +1533,27 @@
           },
           "typed" : {
             "type" : "boolean"
+          },
+          "usedBy" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "PropertyShapeSplit" : {
+        "properties" : {
+          "newIri" : {
+            "type" : "string"
+          },
+          "nodeShapeIri" : {
+            "type" : "string"
+          },
+          "sourceIndex" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -2375,11 +2402,17 @@
       },
       "ShapeEditRequest" : {
         "properties" : {
+          "propertyShape" : {
+            "$ref" : "#/components/schemas/PropertyShapeModel"
+          },
           "removeShapeIri" : {
             "type" : "string"
           },
           "shape" : {
             "$ref" : "#/components/schemas/NodeShapeModel"
+          },
+          "split" : {
+            "$ref" : "#/components/schemas/PropertyShapeSplit"
           },
           "turtle" : {
             "type" : "string"
@@ -2490,6 +2523,12 @@
         "properties" : {
           "parseError" : {
             "$ref" : "#/components/schemas/ShapesValidationFinding"
+          },
+          "propertyShapes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PropertyShapeModel"
+            },
+            "type" : "array"
           },
           "shapes" : {
             "items" : {

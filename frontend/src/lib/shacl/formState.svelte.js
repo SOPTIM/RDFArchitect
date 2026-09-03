@@ -74,6 +74,12 @@ export function shapeNamespaceOf(shapes, prefixes) {
 export class ShapesFormView {
     /** @type {import("$lib/api/generated").NodeShapeModel[]} */
     shapes = $state([]);
+    /**
+     * The rules the document writes as shapes of their own, shared by the shapes referencing them.
+     *
+     * @type {import("$lib/api/generated").PropertyShapeModel[]}
+     */
+    propertyShapes = $state([]);
     /** A syntax error in the buffer; the form has nothing to show until it is fixed. */
     parseError = $state(null);
     loading = $state(false);
@@ -97,7 +103,7 @@ export class ShapesFormView {
     #applied = null;
     /** Edits run one at a time and in order; a form edit is a read-modify-write on one document. */
     #queue = Promise.resolve();
-    /** An edit typed but not yet sent, as `{ shape, turtle, handler }`. */
+    /** An edit typed but not yet sent, as `{ target, body, turtle, handler }`. */
     #pending = null;
     #timer = null;
 
@@ -151,6 +157,7 @@ export class ShapesFormView {
                 return;
             }
             this.shapes = data?.shapes ?? [];
+            this.propertyShapes = data?.propertyShapes ?? [];
             this.parseError = data?.parseError ?? null;
             this.error = null;
             this.#readFrom = turtle;
@@ -172,10 +179,29 @@ export class ShapesFormView {
         return this.#apply(turtle, { shape });
     }
 
+    /**
+     * Writes back a rule the document holds as a shape of its own.
+     *
+     * Its own request rather than part of the shape it was edited under, because the rule is where
+     * the change belongs: every shape referencing it is meant to see it. `split` is the way out of
+     * that when the user wants one — the rule is copied first and only the copy is changed.
+     */
+    async applyRule(turtle, rule, split = null) {
+        await this.#clearPendingFor(rule);
+        return this.#apply(turtle, { propertyShape: rule, split });
+    }
+
     /** Removes a shape from the document. */
     async removeShape(turtle, shapeIri) {
         await this.flush();
         return this.#apply(turtle, { removeShapeIri: shapeIri });
+    }
+
+    /** Reads the buffer again even though the shapes already describe it, undoing a local edit. */
+    async reload(turtle) {
+        this.#discardPending();
+        this.#readFrom = null;
+        await this.read(turtle);
     }
 
     /**
@@ -187,12 +213,21 @@ export class ShapesFormView {
      * later, so it still runs if the form view is switched away before the pause is over.
      */
     schedule(turtle, shape, handler) {
-        if (this.#pending && this.#pending.shape !== shape) {
+        this.#scheduleEdit(turtle, shape, { shape }, handler);
+    }
+
+    /** The same, for a rule written as a shape of its own. */
+    scheduleRule(turtle, rule, handler) {
+        this.#scheduleEdit(turtle, rule, { propertyShape: rule }, handler);
+    }
+
+    #scheduleEdit(turtle, target, body, handler) {
+        if (this.#pending && this.#pending.target !== target) {
             // Two shapes edited within one pause: the earlier edit goes first, because the later
             // one has to be applied to the text the earlier one produces.
             this.flush();
         }
-        this.#pending = { shape, turtle, handler };
+        this.#pending = { target, body, turtle, handler };
         clearTimeout(this.#timer);
         this.#timer = setTimeout(() => this.flush(), TYPING_PAUSE_MS);
     }
@@ -204,9 +239,7 @@ export class ShapesFormView {
         if (!pending) {
             return;
         }
-        pending.handler(
-            await this.#apply(pending.turtle, { shape: pending.shape }),
-        );
+        pending.handler(await this.#apply(pending.turtle, pending.body));
     }
 
     /**
@@ -220,12 +253,12 @@ export class ShapesFormView {
         await this.#queue;
     }
 
-    /** Drops a scheduled edit for this shape; sends one for any other shape first. */
-    async #clearPendingFor(shape) {
+    /** Drops a scheduled edit for this shape or rule; sends one for any other target first. */
+    async #clearPendingFor(target) {
         if (!this.#pending) {
             return;
         }
-        if (this.#pending.shape === shape) {
+        if (this.#pending.target === target) {
             // The same object, so whatever was typed is already part of what is about to be sent.
             this.#discardPending();
             return;

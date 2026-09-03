@@ -375,10 +375,75 @@ class ShapeClausePreservationTest {
                 .withMessageContaining("a rule the document no longer has");
     }
 
+    /**
+     * Generated profiles write the same rule twice. With two identical {@code sh:property} clauses
+     * there is no telling which of them an edit belongs in, so neither is offered — but the shape
+     * around them is, which is the difference rule-level locking makes: 207 shapes of the official
+     * {@code -AllowedProperties} families used to lose every field they had over this.
+     */
+    private static final String TWICE =
+            """
+            @prefix sh:  <http://www.w3.org/ns/shacl#> .
+            @prefix cim: <http://iec.ch/TC57/CIM100#> .
+            @prefix ex:  <http://example.org/> .
+
+            ex:S a sh:NodeShape ;
+                 sh:targetClass cim:ACLineSegment ;
+                 sh:property [ sh:path cim:IdentifiedObject.name ] ;
+                 sh:property [ sh:path cim:IdentifiedObject.name ] .
+            """;
+
     @Test
-    void twoRulesThatSayTheSameThingLockTheShapeRatherThanBeingGuessedAt() {
-        // Generated profiles do this. With two identical sh:property clauses there is no telling
-        // which of them an edit belongs in, and picking one would edit a rule at random.
+    void twoRulesThatSayTheSameThingLockThemselvesAndNotTheirShape() {
+        var shape = shapeIn(TWICE);
+
+        assertThat(shape.getEditable()).isTrue();
+        assertThat(shape.getProperties())
+                .allSatisfy(rule -> assertThat(rule.getEditable()).isFalse())
+                .allSatisfy(
+                        rule -> assertThat(rule.getReadOnlyReason()).contains("cannot tell apart"));
+    }
+
+    @Test
+    void theShapeAroundTwoRulesAlikeIsStillEditable() {
+        var shape = shapeIn(TWICE);
+        shape.setMessage("Checked");
+
+        var edited = service.apply(edit(TWICE, shape)).getTurtle();
+
+        assertThat(edited).contains("sh:message \"Checked\"");
+        assertThat(edited.replace(" ;\n     sh:message \"Checked\"", "")).isEqualTo(TWICE);
+    }
+
+    @Test
+    void oneOfTwoRulesAlikeIsNotChanged() {
+        var shape = shapeIn(TWICE);
+        shape.getProperties().get(0).setMinCount(1);
+
+        assertThatExceptionOfType(ResourceConflictException.class)
+                .isThrownBy(() -> service.apply(edit(TWICE, shape)))
+                .withMessageContaining("cannot tell apart");
+    }
+
+    @Test
+    void oneOfTwoRulesAlikeIsNotRemoved() {
+        var shape = shapeIn(TWICE);
+        shape.setProperties(List.of(shape.getProperties().get(0)));
+
+        assertThatExceptionOfType(ResourceConflictException.class)
+                .isThrownBy(() -> service.apply(edit(TWICE, shape)))
+                .withMessageContaining("cannot tell apart");
+    }
+
+    /**
+     * An inline rule about a path expression: shown, locked, and no longer its shape's problem.
+     *
+     * <p>Neither the graph nor the text can spell a sequence path the same way, so the rule is
+     * matched to its text by what it states instead — which is enough to place it, and so enough to
+     * leave the rules around it editable.
+     */
+    @Test
+    void anInlineRuleAboutAPathExpressionLocksItselfAndNotItsShape() {
         var turtle =
                 """
                 @prefix sh:  <http://www.w3.org/ns/shacl#> .
@@ -386,15 +451,32 @@ class ShapeClausePreservationTest {
                 @prefix ex:  <http://example.org/> .
 
                 ex:S a sh:NodeShape ;
-                     sh:property [ sh:path cim:IdentifiedObject.name ] ;
-                     sh:property [ sh:path cim:IdentifiedObject.name ] .
+                     sh:targetClass cim:ACLineSegment ;
+                     sh:property [ sh:path ( cim:Terminal.ConductingEquipment cim:IdentifiedObject.name ) ;
+                                   sh:minCount 1 ] ;
+                     sh:property [ sh:path cim:ACLineSegment.r ; sh:maxCount 1 ] .
                 """;
         var shape = shapeIn(turtle);
 
-        assertThat(shape.getEditable()).isFalse();
-        assertThat(shape.getReadOnlyReason()).contains("cannot tell which part of the document");
-        assertThatExceptionOfType(ResourceConflictException.class)
-                .isThrownBy(() -> service.apply(edit(turtle, shape)));
+        assertThat(shape.getEditable()).isTrue();
+        var expression =
+                shape.getProperties().stream().filter(rule -> rule.getPath() == null).findFirst();
+        assertThat(expression).isPresent();
+        assertThat(expression.get().getRetained())
+                .anySatisfy(
+                        clause ->
+                                assertThat(clause.getValue())
+                                        .contains("cim:Terminal.ConductingEquipment"));
+
+        var plain =
+                shape.getProperties().stream()
+                        .filter(rule -> rule.getPath() != null)
+                        .findFirst()
+                        .orElseThrow();
+        plain.setMaxCount(3);
+        var edited = service.apply(edit(turtle, shape)).getTurtle();
+
+        assertThat(edited).isEqualTo(turtle.replace("sh:maxCount 1", "sh:maxCount 3"));
     }
 
     // -------------------------------------------------------------------------

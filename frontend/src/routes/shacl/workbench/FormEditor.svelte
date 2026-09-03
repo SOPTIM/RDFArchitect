@@ -31,6 +31,7 @@
     import { Fa } from "svelte-fa";
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import CollapseToggle from "$lib/components/CollapseToggle.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -38,6 +39,8 @@
     import { parsePrefixes } from "$lib/shacl/turtleTerms.js";
 
     import NodeShapeCard from "./form/NodeShapeCard.svelte";
+    import PropertyShapeCard from "./form/PropertyShapeCard.svelte";
+    import SharedRuleDialog from "./form/SharedRuleDialog.svelte";
 
     let {
         form,
@@ -50,7 +53,23 @@
 
     let expandedIri = $state(null);
 
+    /** A change to a rule several shapes use, waiting for the user to say how far it should go. */
+    let sharedEdit = $state(null);
+    let askingAboutSharedRule = $state(false);
+
+    /**
+     * Whether the document's own rules are on screen. Closed to begin with, deliberately.
+     *
+     * A rule card is a dozen controls and an official `-Con-Simple-` profile holds some five
+     * hundred of them, so rendering the lot on open would cost more than the section is worth to
+     * someone who came to look at a shape. Each rule is also shown under every shape referencing
+     * it, which is the way most people will reach one.
+     */
+    let showingSharedRules = $state(false);
+
     const prefixes = $derived(parsePrefixes(turtle));
+
+    const sharedRules = $derived(form.propertyShapes ?? []);
 
     $effect(() => {
         form?.read(turtle);
@@ -75,6 +94,63 @@
     async function remove(shape) {
         const result = await form.removeShape(turtle, shape.iri);
         handle(result);
+    }
+
+    /**
+     * Writes back a rule the document holds as a shape of its own.
+     *
+     * A rule more than one shape uses is not written until the user has said what the change is
+     * meant to reach, because both answers are reasonable and only one of them is undoable by
+     * looking at it: changing a shared cardinality quietly retunes every class that relies on it.
+     *
+     * @param shapeIri the shape the change was made under, or null on the rule's own card
+     */
+    async function applyRule(rule, shapeIri = null) {
+        if ((rule.usedBy?.length ?? 0) > 1) {
+            sharedEdit = { rule, shapeIri };
+            askingAboutSharedRule = true;
+            return;
+        }
+        handle(await form.applyRule(turtle, rule));
+    }
+
+    /**
+     * The same, once typing pauses — but never for a shared rule.
+     *
+     * A dialog per keystroke would be unusable, so a shared rule's typed fields are held until the
+     * field is left, which is when the card asks for the change rather than merely noting it.
+     */
+    function applyRuleSoon(rule) {
+        if ((rule.usedBy?.length ?? 0) > 1) {
+            return;
+        }
+        form.scheduleRule(turtle, rule, handle);
+    }
+
+    async function splitSharedRule(newIri) {
+        const { rule, shapeIri } = sharedEdit;
+        handle(
+            await form.applyRule(turtle, rule, {
+                newIri,
+                nodeShapeIri: shapeIri,
+                sourceIndex: rule.sourceIndex,
+            }),
+        );
+    }
+
+    async function changeSharedRuleForAll() {
+        handle(await form.applyRule(turtle, sharedEdit.rule));
+    }
+
+    /**
+     * Puts the card back to what the document says.
+     *
+     * The card writes the field as it is typed, so by the time the question is asked the change is
+     * already on screen. Answering "neither" has to take it off again, and the document is the
+     * only thing that knows what was there before.
+     */
+    function forgetSharedRuleEdit() {
+        form.reload(turtle);
     }
 
     function handle(result) {
@@ -157,7 +233,7 @@
                     </p>
                 </div>
             </div>
-        {:else if form.shapes.length === 0}
+        {:else if form.shapes.length === 0 && sharedRules.length === 0}
             <div class="flex h-full items-center justify-center">
                 <EmptyStateCard
                     title="No shapes yet"
@@ -171,6 +247,7 @@
                         {shape}
                         {terms}
                         {prefixes}
+                        {sharedRules}
                         readOnly={readOnly || shape.editable === false}
                         expanded={expandedIri === shape.iri}
                         ontoggle={() =>
@@ -179,9 +256,55 @@
                         onchange={() => apply(shape)}
                         onedit={() => applySoon(shape)}
                         onremove={() => remove(shape)}
+                        onrulechange={rule => applyRule(rule, shape.iri)}
+                        onruleedit={applyRuleSoon}
                     />
                 {/each}
             </div>
+
+            {#if sharedRules.length}
+                <!--
+                  The rules the document writes on their own, listed once. In an official
+                  -Con-Simple- profile this is where every constraint in the file lives, and the
+                  shapes above are little more than lists of references to it.
+                -->
+                <div class="mt-4 mb-2">
+                    <CollapseToggle
+                        expanded={showingSharedRules}
+                        label="Shared rules"
+                        onclick={() =>
+                            (showingSharedRules = !showingSharedRules)}
+                    >
+                        <span class="text-sm font-semibold">
+                            Shared rules ({sharedRules.length})
+                        </span>
+                    </CollapseToggle>
+                </div>
+                {#if showingSharedRules}
+                    <div class="flex flex-col gap-2">
+                        {#each sharedRules as rule (rule.iri)}
+                            <PropertyShapeCard
+                                property={rule}
+                                {terms}
+                                {prefixes}
+                                {readOnly}
+                                onchange={() => applyRule(rule)}
+                                onedit={() => applyRuleSoon(rule)}
+                            />
+                        {/each}
+                    </div>
+                {/if}
+            {/if}
         {/if}
     </div>
 </div>
+
+<SharedRuleDialog
+    bind:showDialog={askingAboutSharedRule}
+    rule={sharedEdit?.rule}
+    shapeIri={sharedEdit?.shapeIri}
+    {prefixes}
+    onsplit={splitSharedRule}
+    onall={changeSharedRuleForAll}
+    oncancel={forgetSharedRuleEdit}
+/>
