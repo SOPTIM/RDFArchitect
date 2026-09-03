@@ -147,9 +147,11 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                     switch (change.getSemanticFieldChangeType()) {
                         case DATATYPE_CHANGE -> {
                             if (!attributeChange.getAllowedValues().isEmpty()) {
-                                yield updateGenerator.generateEnumDatatypeChangedUpdate(attributeChange);
+                                yield updateGenerator.generateEnumDatatypeChangedUpdate(
+                                        attributeChange);
                             } else {
-                                yield updateGenerator.generateDatatypeChangedUpdate(attributeChange);
+                                yield updateGenerator.generateDatatypeChangedUpdate(
+                                        attributeChange);
                             }
                         }
                         case MADE_REQUIRED ->
