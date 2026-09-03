@@ -318,8 +318,15 @@ public class SchemaMigrationService
                             .orElseThrow();
             var attributes = newClassChange.getAttributes();
             for (var attributeRename : propertyRename.getAttributeRenames()) {
-                attributes.remove(attributeRename.getNewResource());
-                attributes.remove(attributeRename.getOldResource());
+                var oldIri =
+                        attributeRename.getOldResource() != null
+                                ? attributeRename.getOldResource().getIri()
+                                : null;
+                var newIri =
+                        attributeRename.getNewResource() != null
+                                ? attributeRename.getNewResource().getIri()
+                                : null;
+                attributes.removeIf(a -> a.getIri().equals(oldIri) || a.getIri().equals(newIri));
                 var mergedAttribute =
                         (SemanticAttributeChange)
                                 RenameObjectBuilder.createRenameObject(attributeRename);
@@ -329,8 +336,15 @@ public class SchemaMigrationService
             }
             var associations = newClassChange.getAssociations();
             for (var associationRename : propertyRename.getAssociationRenames()) {
-                associations.remove(associationRename.getNewResource());
-                associations.remove(associationRename.getOldResource());
+                var oldIri =
+                        associationRename.getOldResource() != null
+                                ? associationRename.getOldResource().getIri()
+                                : null;
+                var newIri =
+                        associationRename.getNewResource() != null
+                                ? associationRename.getNewResource().getIri()
+                                : null;
+                associations.removeIf(a -> a.getIri().equals(oldIri) || a.getIri().equals(newIri));
                 var mergedAssociation =
                         (SemanticAssociationChange)
                                 RenameObjectBuilder.createRenameObject(associationRename);
@@ -340,8 +354,15 @@ public class SchemaMigrationService
             }
             var enumEntries = newClassChange.getEnumEntries();
             for (var enumEntryRename : propertyRename.getEnumEntryRenames()) {
-                enumEntries.remove(enumEntryRename.getNewResource());
-                enumEntries.remove(enumEntryRename.getOldResource());
+                var oldIri =
+                        enumEntryRename.getOldResource() != null
+                                ? enumEntryRename.getOldResource().getIri()
+                                : null;
+                var newIri =
+                        enumEntryRename.getNewResource() != null
+                                ? enumEntryRename.getNewResource().getIri()
+                                : null;
+                enumEntries.removeIf(a -> a.getIri().equals(oldIri) || a.getIri().equals(newIri));
                 var mergedEnumEntry =
                         (SemanticEnumEntryChange)
                                 RenameObjectBuilder.createRenameObject(enumEntryRename);
