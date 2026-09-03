@@ -250,6 +250,33 @@ public class CIMQueries {
     }
 
     /**
+     * Get a {@link SelectBuilder} for a query that retrieves the stereotypes of all subjects
+     * carrying one of the given UUIDs in a single query. The UUID of the subject a stereotype
+     * belongs to is bound to {@link org.rdfarchitect.models.cim.queries.CIMQueryVars#UUID}, so the
+     * results can be grouped per subject.
+     *
+     * @param prefixMapping The {@link PrefixMapping} to use for the query.
+     * @param subjectUUIDs The UUIDs of the subjects to retrieve the stereotypes of. Must not be
+     *     empty, as an empty list would match every subject of the graph.
+     * @param graphURI The URI of the graph to query.
+     * @return A {@link SelectBuilder} for the query.
+     */
+    public static SelectBuilder getStereotypesForUUIDsQuery(
+            PrefixMapping prefixMapping, List<String> subjectUUIDs, String graphURI) {
+        var baseQuery =
+                new CIMBaseQueryBuilder()
+                        .addPrefixes(prefixMapping)
+                        .setGraph(graphURI)
+                        .buildWithoutUriVar();
+
+        var builder = new CIMQueryBuilder(baseQuery, subjectUUIDs);
+
+        return builder.appendUUIDQuery(REQUIRED)
+                .appendStereotypeQuery(REQUIRED)
+                .buildSelectBuilder();
+    }
+
+    /**
      * Get a {@link SelectBuilder} for a query that retrieves the enum classes of a graph.
      *
      * @param prefixMapping The {@link PrefixMapping} to use for the query.

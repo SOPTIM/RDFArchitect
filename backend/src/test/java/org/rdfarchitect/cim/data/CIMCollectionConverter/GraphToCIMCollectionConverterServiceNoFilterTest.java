@@ -32,6 +32,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabase;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
+import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
@@ -46,6 +47,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 class GraphToCIMCollectionConverterServiceNoFilterTest {
 
@@ -254,6 +256,36 @@ class GraphToCIMCollectionConverterServiceNoFilterTest {
                         List.of(
                                 new CIMSStereotype(
                                         "http://iec.ch/TC57/NonStandard/UML#attribute")));
+    }
+
+    @Test
+    void convert_attributesWithDifferentStereotypes_stereotypesAssignedPerAttribute()
+            throws IOException {
+        // Arrange
+        addFileGraphToDatabase(PATH + "childClass.ttl");
+        addFileGraphToDatabase(PATH + "childClassAttributesWithStereotypes.ttl");
+        var filter = new GraphFilter(true);
+        filter.setPackageUUID("123e4567-e89b-12d3-a456-426614174000");
+
+        // Act
+        var cimCollection = converter.convert(graphIdentifier, filter);
+
+        // Assert
+        assertThat(cimCollection.getAttributes()).hasSize(2);
+        var stereotypesByLabel =
+                cimCollection.getAttributes().stream()
+                        .collect(
+                                Collectors.toMap(
+                                        attribute -> attribute.getLabel().getValue(),
+                                        CIMAttribute::getStereotypes));
+
+        assertThat(stereotypesByLabel.get("attribute1"))
+                .containsExactlyInAnyOrder(
+                        new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#attribute"),
+                        new CIMSStereotype("Operation"));
+        assertThat(stereotypesByLabel.get("attribute2"))
+                .containsExactly(
+                        new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#attribute"));
     }
 
     @Test
