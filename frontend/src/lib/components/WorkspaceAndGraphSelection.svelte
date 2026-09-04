@@ -21,6 +21,7 @@
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
+    import { graphLabeller, graphUri } from "$lib/utils/graph-label.js";
 
     let {
         workspace = $bindable(),
@@ -37,6 +38,9 @@
     let workspaces = $state([]);
     let graphs = $state([]);
 
+    /** Names the schemas of the selected workspace the way the navigation tree does. */
+    const graphName = $derived(graphLabeller(graphs));
+
     const workspaceLocked = $derived(lockedWorkspaceName !== undefined);
     const graphLocked = $derived(lockedGraphUri !== undefined);
 
@@ -51,7 +55,7 @@
         }
 
         graphs = (await graphStore.getGraphs(workspace)) ?? [];
-        const valid = graphs.some(graphName => getUri(graphName) === graph);
+        const valid = graphs.some(option => graphUri(option) === graph);
         if (!valid && !graphLocked) {
             graph = null;
         }
@@ -81,16 +85,6 @@
             graphs = [];
         }
     });
-
-    /**
-     * Full URI of a graph as it comes from the backend: a GraphDTO holding the
-     * URI next to its dcat:keyword. A bare URI is still accepted so that a
-     * locked graph can be passed in as is.
-     */
-    function getUri(graph) {
-        const uri = graph.uri ?? graph;
-        return (uri.prefix ?? "") + (uri.suffix ?? "");
-    }
 </script>
 
 <div
@@ -129,7 +123,7 @@
         options={graphs}
         disabled={graphSelectDisabled}
         placeholder={workspace ? "Select schema" : "Select a workspace first"}
-        getOptionValue={getUri}
-        getOptionLabel={g => g.keyword ?? g.uri.suffix}
+        getOptionValue={graphUri}
+        getOptionLabel={graphName}
     />
 </div>

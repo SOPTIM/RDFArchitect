@@ -27,8 +27,11 @@
     } from "$lib/sharedState.svelte.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
-
-    import { getUri } from "../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
+    import {
+        graphLabeller,
+        graphTooltip,
+        graphUri as getUri,
+    } from "$lib/utils/graph-label.js";
 
     let workspaceList = $state([]);
     let selectedWorkspaceName = $derived(
@@ -50,13 +53,13 @@
             showWorkspaceContents |= workspaceList.find(
                 workspaceObject => workspaceObject.label === workspaceName,
             )?.showContents;
+            const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
             newWorkspaceList.push({
                 label: workspaceName,
-                graphs: [],
+                graphs,
+                labelOf: graphLabeller(graphs),
                 showContents: showWorkspaceContents,
             });
-            const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
-            graphs.forEach(graph => newWorkspaceList.at(-1).graphs.push(graph));
         }
         workspaceList = newWorkspaceList;
     }
@@ -92,13 +95,13 @@
                             {#each workspace.graphs as graph}
                                 <NavigationEntry
                                     level={2}
-                                    label={graph.keyword ?? graph.uri.suffix}
+                                    label={workspace.labelOf(graph)}
                                     secondaryLabel={graph.uri.prefix ?? ""}
                                     icon={faDiagramProject}
                                     isSelected={selectedWorkspaceName ===
                                         workspace.label &&
                                         getUri(graph) === selectedGraphUri}
-                                    title={getUri(graph)}
+                                    title={graphTooltip(graph)}
                                     onclick={() => {
                                         editorState.selectedWorkspace.updateValue(
                                             workspace.label,
