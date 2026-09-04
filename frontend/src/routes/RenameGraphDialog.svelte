@@ -56,8 +56,9 @@
         !!resolvedGraphUri && otherGraphUris.includes(resolvedGraphUri),
     );
     const uriChanged = $derived(resolvedGraphUri !== graphUri);
-    // The tree labels a schema by its dcat:keyword and only falls back to the
-    // URI suffix, so a new label has to reach the keyword as well.
+    // A rename still writes the new label to dcat:keyword: the tree shows the
+    // keyword as a badge, and names a schema by it when the profile carries no
+    // dcterms:title of its own. A profile that does keeps the name it states.
     const labelChanged = $derived(trimmedLabel !== initialLabel);
     const disableSubmit = $derived(
         !resolvedGraphUri || namespaceIsInvalid || graphExists || !uriChanged,
