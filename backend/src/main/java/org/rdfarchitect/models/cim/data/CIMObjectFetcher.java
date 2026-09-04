@@ -36,6 +36,9 @@ import org.rdfarchitect.models.cim.queries.select.CIMQueries;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 import java.util.function.Function;
 
 public class CIMObjectFetcher {
@@ -142,13 +145,49 @@ public class CIMObjectFetcher {
      * Fetches a List of {@link CIMAttribute CIMAttributes}. Blank-node fixed/default values are
      * resolved by the SPARQL query itself (see {@link
      * org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder#appendIsFixedQuery}), so the
-     * factory only needs the {@link ResultSet}.
+     * factory only needs the {@link ResultSet}. The stereotypes of all fetched attributes are
+     * resolved with a single additional query instead of one query per attribute.
      *
      * @param query {@link Query} to fetch attributes.
      * @return List of {@link CIMAttribute CIMAttributes}.
      */
     public List<CIMAttribute> fetchCIMAttributeList(Query query) {
-        return executeQueryForList(query, CIMObjectFactory::createCIMAttributeList);
+        var attributes = executeQueryForList(query, CIMObjectFactory::createCIMAttributeList);
+        var attributeUUIDs =
+                attributes.stream()
+                        .map(CIMAttribute::getUuid)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList();
+        if (attributeUUIDs.isEmpty()) {
+            return attributes;
+        }
+        var stereotypesByUUID = fetchCIMStereotypeListsByUUID(attributeUUIDs);
+        for (var attribute : attributes) {
+            attribute.setStereotypes(
+                    new ArrayList<>(
+                            stereotypesByUUID.getOrDefault(attribute.getUuid(), List.of())));
+        }
+        return attributes;
+    }
+
+    /**
+     * Fetches the {@link CIMSStereotype CIMSStereotypes} of all subjects with one of the given
+     * UUIDs in a single query, grouped by the UUID of the subject they belong to.
+     *
+     * @param subjectUUIDs The UUIDs of the subjects to fetch the stereotypes of, must not be empty.
+     * @return Map from subject UUID to its {@link CIMSStereotype CIMSStereotypes}. Subjects without
+     *     stereotypes are absent from the map.
+     */
+    private Map<UUID, List<CIMSStereotype>> fetchCIMStereotypeListsByUUID(List<UUID> subjectUUIDs) {
+        var stereotypeQuery =
+                CIMQueries.getStereotypesForUUIDsQuery(
+                                prefixMapping,
+                                subjectUUIDs.stream().map(UUID::toString).toList(),
+                                graphURI)
+                        .build();
+        return executeQueryForList(
+                stereotypeQuery, CIMObjectFactory::createCIMStereotypeListsByUUID);
     }
 
     /**

@@ -31,6 +31,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 
+import java.util.List;
 import java.util.UUID;
 
 public class CIMAttribute extends CIMResource implements ICIMAttribute {
@@ -110,7 +111,7 @@ public class CIMAttribute extends CIMResource implements ICIMAttribute {
     }
 
     @Override
-    public CIMSStereotype getStereotype() {
+    public List<CIMSStereotype> getStereotypes() {
         var stereotypes = getStereotypeList();
         if (stereotypes.isEmpty()) {
             throw new IllegalStateException(
@@ -120,7 +121,7 @@ public class CIMAttribute extends CIMResource implements ICIMAttribute {
                             + getUuid()
                             + ".");
         }
-        return stereotypes.getFirst();
+        return stereotypes;
     }
 
     @Override
