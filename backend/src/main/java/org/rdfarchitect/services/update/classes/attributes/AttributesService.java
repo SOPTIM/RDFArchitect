@@ -79,9 +79,8 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
                     .execute();
             var classLabel = findClassLabel(graph, attributeDTO.getDomain());
             ctx.commit(
-                    "Created attribute \"%s.%s\" (%s)"
-                            .formatted(
-                                    classLabel, cimAttribute.getLabel(), cimAttribute.getUuid()));
+                    "Created attribute \"%s.%s\""
+                            .formatted(classLabel, cimAttribute.getLabel().getValue()));
         }
         return cimAttribute.getUuid();
     }
@@ -101,11 +100,8 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
                     .execute();
             var classLabel = findClassLabel(graph, attributeDTO.getDomain());
             ctx.commit(
-                    "Replaced attribute \"%s.%s\" (%s)"
-                            .formatted(
-                                    classLabel,
-                                    cimAttribute.getLabel().getValue(),
-                                    cimAttribute.getUuid()));
+                    "Replaced attribute \"%s.%s\""
+                            .formatted(classLabel, cimAttribute.getLabel().getValue()));
         }
         return cimAttribute.getUuid();
     }
@@ -131,9 +127,7 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
                     .execute();
             var classResource = CIMResourceUtils.findResourceForUuid(graph, classUUID);
             var classLabel = CIMResourceUtils.findLabelForResource(classResource);
-            ctx.commit(
-                    "Replaced all attributes for class \"%s\" (%s)"
-                            .formatted(classLabel, classUUID));
+            ctx.commit("Replaced all attributes for class \"%s\"".formatted(classLabel));
         }
     }
 
