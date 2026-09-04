@@ -831,32 +831,6 @@
         },
         "type" : "object"
       },
-      "GraphBulkImportResponse" : {
-        "properties" : {
-          "failedImports" : {
-            "items" : {
-              "type" : "string"
-            },
-            "type" : "array"
-          },
-          "importedGraphUris" : {
-            "items" : {
-              "type" : "string"
-            },
-            "type" : "array"
-          },
-          "message" : {
-            "type" : "string"
-          },
-          "warnings" : {
-            "items" : {
-              "$ref" : "#/components/schemas/ImportWarning"
-            },
-            "type" : "array"
-          }
-        },
-        "type" : "object"
-      },
       "GraphDTO" : {
         "properties" : {
           "keyword" : {
@@ -952,6 +926,100 @@
           },
           "value" : {
             "$ref" : "#/components/schemas/SuperClassDTO"
+          }
+        },
+        "type" : "object"
+      },
+      "ImportFileStatus" : {
+        "properties" : {
+          "fileName" : {
+            "type" : "string"
+          },
+          "graphUri" : {
+            "type" : "string"
+          },
+          "index" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sizeBytes" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "stage" : {
+            "enum" : [
+              "PARSING",
+              "ANALYZING",
+              "STORING"
+            ],
+            "type" : "string"
+          },
+          "state" : {
+            "enum" : [
+              "PENDING",
+              "RUNNING",
+              "IMPORTED",
+              "FAILED",
+              "SKIPPED"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ImportJobCreatedResponse" : {
+        "properties" : {
+          "jobId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ImportJobStatus" : {
+        "properties" : {
+          "datasetName" : {
+            "type" : "string"
+          },
+          "errorMessage" : {
+            "type" : "string"
+          },
+          "failedImports" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "files" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ImportFileStatus"
+            },
+            "type" : "array"
+          },
+          "importedGraphUris" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "jobId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "state" : {
+            "enum" : [
+              "RUNNING",
+              "COMPLETED",
+              "CANCELLED",
+              "FAILED"
+            ],
+            "type" : "string"
+          },
+          "warnings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ImportWarning"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -3079,10 +3147,10 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/content" : {
-      "put" : {
-        "description" : "Replace or insert one or more rdf graphs for the dataset. Accepts multiple files and/or zip archives containing several graph files.",
-        "operationId" : "replaceGraphs",
+    "/api/datasets/{datasetName}/graphs/content/imports" : {
+      "post" : {
+        "description" : "Starts a background import of one or more rdf graphs into the dataset. Accepts multiple files and/or zip archives containing several graph files, and returns the id of the job to poll for progress.",
+        "operationId" : "startImport",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -3139,18 +3207,128 @@
           }
         },
         "responses" : {
+          "202" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobCreatedResponse"
+                }
+              }
+            },
+            "description" : "Import started"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobCreatedResponse"
+                }
+              }
+            },
+            "description" : "An import is already running for this session"
+          }
+        },
+        "summary" : "Start importing multiple graphs",
+        "tags" : [
+          "graph"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/content/imports/{jobId}" : {
+      "delete" : {
+        "description" : "Asks a running import to stop after the file it is currently importing. The graphs imported up to that point are kept.",
+        "operationId" : "cancelImport",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the import job.",
+            "in" : "path",
+            "name" : "jobId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "204" : {
+            "description" : "Cancellation requested"
+          },
+          "404" : {
+            "description" : "No such import job"
+          }
+        },
+        "summary" : "Cancel an import",
+        "tags" : [
+          "graph"
+        ]
+      },
+      "get" : {
+        "description" : "Returns the progress of a running import and the result of a finished one, including the graphs that were imported, the files that failed and any warnings.",
+        "operationId" : "getImportStatus",
+        "parameters" : [
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the import job.",
+            "in" : "path",
+            "name" : "jobId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
           "200" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/GraphBulkImportResponse"
+                  "$ref" : "#/components/schemas/ImportJobStatus"
                 }
               }
             },
             "description" : "OK"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobStatus"
+                }
+              }
+            },
+            "description" : "No such import job"
           }
         },
-        "summary" : "Replace/Insert multiple graphs",
+        "summary" : "Get the progress of an import",
         "tags" : [
           "graph"
         ]

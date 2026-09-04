@@ -21,11 +21,16 @@
     import { v4 as uuidv4 } from "uuid";
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import ImportProgressPanel from "$lib/components/ImportProgressPanel.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils";
+    import {
+        ImportProgress,
+        JobState,
+    } from "$lib/utils/importProgress.svelte.js";
 
     import {
         editorState,
@@ -35,6 +40,8 @@
     let { showDialog = $bindable(), lockedWorkspaceName } = $props();
 
     const DEFAULT_WORKSPACE_NAME = "default";
+    const POLL_INTERVAL_MS = 300;
+    const MAX_FAILED_POLLS = 3;
     const GRAPH_NAMESPACE_URI = "http://graph#"; // Keep in sync with RDFA.GRAPH_URI (backend)
     const DEFAULT_GRAPH_NAME = "graph";
     const supportedFileExtensions = supportedRDFMediaTypes.map(
@@ -54,8 +61,19 @@
     let readOnlyWorkspaces = $state([]);
     let modifiableWorkspaces = $state([]);
 
+    /** Set while an import runs and until its result is dismissed; drives the progress panel. */
+    let progress = $state(null);
+    let pollTimeout = null;
+    let failedPolls = 0;
+    /** The workspace the running import writes into, applied to the editor once it is done. */
+    let importWorkspaceName = null;
+    let importJobId = null;
+
+    let importing = $derived(progress !== null && !progress.finished);
     let enableSubmit = $derived(
-        files.length > 0 && !isWorkspaceReadOnly(workspaceNameUserInput),
+        files.length > 0 &&
+            !isWorkspaceReadOnly(workspaceNameUserInput) &&
+            progress === null,
     );
 
     const workspaceSelectionLocked = $derived(!!lockedWorkspaceName);
@@ -76,6 +94,7 @@
     }
 
     function onClose() {
+        void dismissImport();
         clearInputs();
     }
 
@@ -187,36 +206,170 @@
     }
 
     async function importGraphs() {
-        const workspaceNameUserInputLocal = getUserInputWorkspaceName();
-        const filesLocal = files.map(entry => entry.file);
-        const graphUrisLocal = files.map(entry =>
+        if (progress !== null) {
+            return;
+        }
+        const workspaceName = getUserInputWorkspaceName();
+        const filesToImport = files.map(entry => entry.file);
+        const graphUris = files.map(entry =>
             entry.isZip
                 ? ""
                 : ensureGraphNamespaceUri(entry.graphUri, entry.file.name),
         );
-        const { data, error } = await graphStore.importGraphs(
-            workspaceNameUserInputLocal,
-            filesLocal,
-            graphUrisLocal,
+
+        const currentProgress = new ImportProgress();
+        progress = currentProgress;
+        failedPolls = 0;
+        importWorkspaceName = workspaceName;
+
+        const { data, error } = await graphStore.startImport(
+            workspaceName,
+            filesToImport,
+            graphUris,
+            {
+                onUploadProgress: percent =>
+                    currentProgress.uploadProgress(percent),
+                signal: currentProgress.signal,
+            },
         );
 
-        if (!error && data.importedGraphUris?.length > 0) {
-            editorState.selectedWorkspace.updateValue(
-                workspaceNameUserInputLocal,
-            );
-            editorState.selectedGraph.updateValue(
-                data.importedGraphUris[0] || null,
-            );
-            editorState.selectedDiagram.updateValue({ type: null, id: null });
-            editorState.selectedClassWorkspace.updateValue(null);
-            editorState.selectedClassGraph.updateValue(null);
-            editorState.selectedClass.updateValue({ type: null, id: null });
-
-            graphStore.invalidateWorkspace(workspaceNameUserInputLocal);
-            workspaceStore.invalidate();
-            crossProfileStore.invalidateWorkspace(workspaceNameUserInputLocal);
-            forceReloadTrigger.trigger();
+        if (error || !data) {
+            if (currentProgress.cancelling) {
+                currentProgress.cancelled();
+            } else {
+                currentProgress.fail(
+                    error?.message ?? "The import could not be started.",
+                );
+            }
+            return;
         }
+
+        currentProgress.uploaded();
+        importJobId = data.jobId;
+        if (currentProgress.cancelling) {
+            // Cancelled while the files were still going up, so the job needs to hear about it.
+            await cancelImportJob(workspaceName, data.jobId);
+        }
+        pollImportStatus();
+    }
+
+    /**
+     * Polls the backend until the job is done. A single timeout is kept in flight, so closing the
+     * dialog or finishing the import ends the polling.
+     */
+    function pollImportStatus() {
+        stopPolling();
+        pollTimeout = setTimeout(async () => {
+            const currentProgress = progress;
+            const jobId = importJobId;
+            if (!currentProgress || !jobId) {
+                return;
+            }
+
+            const { data, error } = await graphStore.getImportStatus(
+                importWorkspaceName,
+                jobId,
+            );
+
+            if (progress !== currentProgress) {
+                return;
+            }
+            if (error || !data) {
+                // A single missed poll is not worth giving up on, the import keeps running.
+                failedPolls += 1;
+                if (failedPolls > MAX_FAILED_POLLS) {
+                    currentProgress.fail(
+                        "The progress of the import could not be read.",
+                    );
+                    return;
+                }
+                pollImportStatus();
+                return;
+            }
+
+            failedPolls = 0;
+            currentProgress.apply(data);
+            if (data.state === JobState.RUNNING) {
+                pollImportStatus();
+            }
+        }, POLL_INTERVAL_MS);
+    }
+
+    function stopPolling() {
+        if (pollTimeout !== null) {
+            clearTimeout(pollTimeout);
+            pollTimeout = null;
+        }
+    }
+
+    function requestCancel() {
+        progress?.cancel();
+        void cancelImportJob(importWorkspaceName, importJobId);
+    }
+
+    /**
+     * Ends the dialog's part in the current import: cancels it while it still runs, opens what it
+     * imported either way, and forgets it. Cancelling only stops the job where it is, so the
+     * graphs it already wrote still have to reach the editor.
+     */
+    async function dismissImport() {
+        stopPolling();
+        const currentProgress = progress;
+        const jobId = importJobId;
+        const workspaceName = importWorkspaceName;
+        progress = null;
+        importJobId = null;
+        importWorkspaceName = null;
+
+        if (!currentProgress) {
+            return;
+        }
+
+        let importedGraphUris = currentProgress.importedGraphUris;
+        if (!currentProgress.finished) {
+            currentProgress.cancel();
+            await cancelImportJob(workspaceName, jobId);
+            if (workspaceName && jobId) {
+                // The last poll can predate the file the job was on when it was told to stop, so
+                // the status is read once more to catch what still made it through.
+                const { data } = await graphStore.getImportStatus(
+                    workspaceName,
+                    jobId,
+                );
+                importedGraphUris =
+                    data?.importedGraphUris ?? importedGraphUris;
+            }
+        }
+        if (importedGraphUris.length > 0) {
+            applyImportResult(importedGraphUris, workspaceName);
+        }
+    }
+
+    function closeAfterImport() {
+        void dismissImport();
+        clearInputs();
+        showDialog = false;
+    }
+
+    async function cancelImportJob(workspaceName, jobId) {
+        if (!workspaceName || !jobId) {
+            return;
+        }
+        await graphStore.cancelImport(workspaceName, jobId);
+    }
+
+    function applyImportResult(importedGraphUris, workspaceName) {
+        editorState.selectedWorkspace.updateValue(workspaceName);
+        editorState.selectedGraph.updateValue(importedGraphUris[0] || null);
+        editorState.selectedDiagram.updateValue({ type: null, id: null });
+        editorState.selectedClassWorkspace.updateValue(null);
+        editorState.selectedClassGraph.updateValue(null);
+        editorState.selectedClass.updateValue({ type: null, id: null });
+
+        graphStore.invalidateWorkspace(workspaceName);
+        workspaceStore.invalidate();
+        crossProfileStore.invalidateWorkspace(workspaceName);
+        forceReloadTrigger.trigger();
     }
 </script>
 
@@ -224,148 +377,160 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    primaryLabel="Import"
-    onPrimary={importGraphs}
-    disablePrimary={!enableSubmit}
+    primaryLabel={progress?.finished ? "Close" : "Import"}
+    onPrimary={progress?.finished ? closeAfterImport : importGraphs}
+    disablePrimary={!progress?.finished && !enableSubmit}
+    secondaryLabel={importing ? "Cancel" : undefined}
+    onSecondary={requestCancel}
+    disableSecondary={progress?.cancelling}
+    closeOnPrimary={false}
     title="Import Schema (RDFS)"
     size="w-1/3"
 >
-    <div class="mx-2 flex h-full max-h-[80vh] flex-col">
-        {#if !workspaceSelectionLocked}
-            <label for={workspaceInputId} class="mb-1">Workspace</label>
-            <input
-                class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
-                type="text"
-                id={workspaceInputId}
-                list={workspaceListId}
-                placeholder={DEFAULT_WORKSPACE_NAME}
-                bind:value={workspaceNameUserInput}
-            />
-            <datalist id={workspaceListId}>
-                {#each modifiableWorkspaces as workspaceName}
-                    <option value={workspaceName}>{workspaceName}</option>
-                {/each}
-            </datalist>
+    {#if progress}
+        <ImportProgressPanel {progress} />
+    {:else}
+        <div class="mx-2 flex h-full max-h-[80vh] flex-col">
+            {#if !workspaceSelectionLocked}
+                <label for={workspaceInputId} class="mb-1">Workspace</label>
+                <input
+                    class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
+                    type="text"
+                    id={workspaceInputId}
+                    list={workspaceListId}
+                    placeholder={DEFAULT_WORKSPACE_NAME}
+                    bind:value={workspaceNameUserInput}
+                />
+                <datalist id={workspaceListId}>
+                    {#each modifiableWorkspaces as workspaceName}
+                        <option value={workspaceName}>{workspaceName}</option>
+                    {/each}
+                </datalist>
 
-            {#if isWorkspaceReadOnly(workspaceNameUserInput)}
-                <div class="text-red mt-1 mb-1 h-6 text-sm">
-                    Cannot import into read-only workspace
-                </div>
-            {/if}
-        {/if}
-        <div class="mt-4">
-            <input
-                class="hidden"
-                type="file"
-                id={fileInputId}
-                multiple
-                accept={`${supportedFileExtensions.join(",")},.zip`}
-                onchange={event => {
-                    addFiles(event.target.files);
-                    event.target.value = "";
-                }}
-                bind:value={fileInputValue}
-            />
-            <div
-                class={`border-border hover:border-blue flex w-full flex-col rounded border-2 border-dashed px-4 py-6 transition-colors  ${dragActive ? "border-blue bg-blue/10" : "bg-window-background"}`}
-                role="group"
-                ondragover={event => {
-                    event.preventDefault();
-                    dragActive = true;
-                }}
-                ondragleave={event => {
-                    event.preventDefault();
-                    dragActive = false;
-                }}
-                ondrop={event => {
-                    event.preventDefault();
-                    handleDrop(event);
-                }}
-            >
-                <div
-                    class="flex flex-col items-start space-y-2 md:flex-row md:items-center md:space-y-0 md:space-x-3"
-                >
-                    <div class="h-9 w-24">
-                        <ButtonControl
-                            height={9}
-                            callOnClick={() => {
-                                document.getElementById(fileInputId).click();
-                            }}
-                        >
-                            Select File
-                        </ButtonControl>
-                    </div>
-                    <p class="text-font-secondary text-sm">
-                        or drag and drop files or a .zip archive
-                    </p>
-                </div>
-                <p class="text-font-secondary mt-2 text-xs">
-                    Each file becomes a schema named after the file. ZIP files
-                    are unpacked and imported automatically.
-                    <br />
-                    Supported file extensions:
-                    <b>{allowedFileExtensions}</b>
-                    . In ZIP files, schemas must be located at the root level; folders
-                    are ignored.
-                </p>
-                {#if rejectedFiles.length > 0}
-                    <div
-                        class="bg-red-background text-red-text border-red-border mt-3 rounded border px-3 py-2 text-xs"
-                    >
-                        <p class="font-semibold">Skipped unsupported files:</p>
-                        <ul class="list-disc pl-5">
-                            {#each rejectedFiles as fileName}
-                                <li>{fileName}</li>
-                            {/each}
-                        </ul>
+                {#if isWorkspaceReadOnly(workspaceNameUserInput)}
+                    <div class="text-red mt-1 mb-1 h-6 text-sm">
+                        Cannot import into read-only workspace
                     </div>
                 {/if}
-            </div>
-
-            {#if files.length > 0}
-                <div class="mt-3 max-h-[55vh] space-y-2 overflow-y-auto">
-                    {#each files as fileEntry, index}
-                        <div
-                            class="border-border flex items-center space-x-3 rounded border px-3 py-2"
-                        >
-                            <div class="flex-1">
-                                <input
-                                    id={`graph-uri-${index}`}
-                                    class="border-border bg-window-background focus:border-blue ring-none w-full rounded border-2 p-2 text-sm outline-none"
-                                    type="text"
-                                    value={fileEntry.isZip
-                                        ? fileEntry.file.name
-                                        : fileEntry.graphUri}
-                                    disabled={fileEntry.isZip}
-                                    oninput={event =>
-                                        updateGraphUri(
-                                            index,
-                                            event.target.value,
-                                        )}
-                                />
-                            </div>
-                            <div
-                                class="flex size-10 items-center justify-center p-0"
-                            >
-                                <ButtonControl
-                                    height={10}
-                                    callOnClick={() => removeFile(index)}
-                                    title="Remove file"
-                                >
-                                    <Fa
-                                        icon={faMinus}
-                                        ariaLabel="Remove file"
-                                    />
-                                </ButtonControl>
-                            </div>
-                        </div>
-                    {/each}
-                </div>
-            {:else}
-                <p class="text-font-secondary mt-2 text-sm">
-                    No files selected yet.
-                </p>
             {/if}
+            <div class="mt-4">
+                <input
+                    class="hidden"
+                    type="file"
+                    id={fileInputId}
+                    multiple
+                    accept={`${supportedFileExtensions.join(",")},.zip`}
+                    onchange={event => {
+                        addFiles(event.target.files);
+                        event.target.value = "";
+                    }}
+                    bind:value={fileInputValue}
+                />
+                <div
+                    class={`border-border hover:border-blue flex w-full flex-col rounded border-2 border-dashed px-4 py-6 transition-colors  ${dragActive ? "border-blue bg-blue/10" : "bg-window-background"}`}
+                    role="group"
+                    ondragover={event => {
+                        event.preventDefault();
+                        dragActive = true;
+                    }}
+                    ondragleave={event => {
+                        event.preventDefault();
+                        dragActive = false;
+                    }}
+                    ondrop={event => {
+                        event.preventDefault();
+                        handleDrop(event);
+                    }}
+                >
+                    <div
+                        class="flex flex-col items-start space-y-2 md:flex-row md:items-center md:space-y-0 md:space-x-3"
+                    >
+                        <div class="h-9 w-24">
+                            <ButtonControl
+                                height={9}
+                                callOnClick={() => {
+                                    document
+                                        .getElementById(fileInputId)
+                                        .click();
+                                }}
+                            >
+                                Select File
+                            </ButtonControl>
+                        </div>
+                        <p class="text-font-secondary text-sm">
+                            or drag and drop files or a .zip archive
+                        </p>
+                    </div>
+                    <p class="text-font-secondary mt-2 text-xs">
+                        Each file becomes a schema named after the file. ZIP
+                        files are unpacked and imported automatically.
+                        <br />
+                        Supported file extensions:
+                        <b>{allowedFileExtensions}</b>
+                        . In ZIP files, schemas must be located at the root level;
+                        folders are ignored.
+                    </p>
+                    {#if rejectedFiles.length > 0}
+                        <div
+                            class="bg-red-background text-red-text border-red-border mt-3 rounded border px-3 py-2 text-xs"
+                        >
+                            <p class="font-semibold">
+                                Skipped unsupported files:
+                            </p>
+                            <ul class="list-disc pl-5">
+                                {#each rejectedFiles as fileName}
+                                    <li>{fileName}</li>
+                                {/each}
+                            </ul>
+                        </div>
+                    {/if}
+                </div>
+
+                {#if files.length > 0}
+                    <div class="mt-3 max-h-[55vh] space-y-2 overflow-y-auto">
+                        {#each files as fileEntry, index}
+                            <div
+                                class="border-border flex items-center space-x-3 rounded border px-3 py-2"
+                            >
+                                <div class="flex-1">
+                                    <input
+                                        id={`graph-uri-${index}`}
+                                        class="border-border bg-window-background focus:border-blue ring-none w-full rounded border-2 p-2 text-sm outline-none"
+                                        type="text"
+                                        value={fileEntry.isZip
+                                            ? fileEntry.file.name
+                                            : fileEntry.graphUri}
+                                        disabled={fileEntry.isZip}
+                                        oninput={event =>
+                                            updateGraphUri(
+                                                index,
+                                                event.target.value,
+                                            )}
+                                    />
+                                </div>
+                                <div
+                                    class="flex size-10 items-center justify-center p-0"
+                                >
+                                    <ButtonControl
+                                        height={10}
+                                        callOnClick={() => removeFile(index)}
+                                        title="Remove file"
+                                    >
+                                        <Fa
+                                            icon={faMinus}
+                                            ariaLabel="Remove file"
+                                        />
+                                    </ButtonControl>
+                                </div>
+                            </div>
+                        {/each}
+                    </div>
+                {:else}
+                    <p class="text-font-secondary mt-2 text-sm">
+                        No files selected yet.
+                    </p>
+                {/if}
+            </div>
         </div>
-    </div>
+    {/if}
 </ActionDialog>
