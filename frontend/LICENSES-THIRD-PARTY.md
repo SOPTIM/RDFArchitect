@@ -92,7 +92,7 @@
 
 ### @xyflow/svelte
 - **Package:** @xyflow/svelte
-- **Version:** 1.6.3
+- **Version:** 1.6.5
 - **License:** MIT
 - **URL:** [https://svelteflow.dev](https://svelteflow.dev)
 
@@ -185,7 +185,7 @@
 
 ### mermaid
 - **Package:** mermaid
-- **Version:** 11.17.1
+- **Version:** 11.17.2
 - **License:** MIT
 - **URL:** [https://github.com/mermaid-js/mermaid](https://github.com/mermaid-js/mermaid)
 
