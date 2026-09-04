@@ -859,11 +859,26 @@
       },
       "GraphDTO" : {
         "properties" : {
+          "description" : {
+            "type" : "string"
+          },
           "keyword" : {
+            "type" : "string"
+          },
+          "label" : {
             "type" : "string"
           },
           "uri" : {
             "$ref" : "#/components/schemas/URI"
+          },
+          "versionInfo" : {
+            "type" : "string"
+          },
+          "versionIris" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
