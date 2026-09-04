@@ -19,6 +19,7 @@ package org.rdfarchitect.models.cim.data.dto.facade;
 
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 
 public interface ICIMAssociation extends ICIMResource {
 
@@ -38,4 +39,13 @@ public interface ICIMAssociation extends ICIMResource {
     boolean isRenderable();
 
     CIMSAssociationUsed getAssociationUsed();
+
+    /**
+     * The label of this association end, or null when the model holds none. Unlike {@link
+     * #getLabel()} this does not throw, so an association without a label still renders, just
+     * without its label.
+     *
+     * @return the label of this association end, or null
+     */
+    RDFSLabel getLabelOrNull();
 }

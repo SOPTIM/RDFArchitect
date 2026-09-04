@@ -350,10 +350,36 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         assertThat(edge.getSource()).isEqualTo(CHILD_UUID);
         assertThat(edge.getTarget()).isEqualTo(TERMINAL_UUID);
         assertThat(edge.getData().getLabels())
-                .extracting(EdgeLabelDTO::getAnchor, EdgeLabelDTO::getText)
-                .containsExactly(tuple(Anchor.SOURCE, "1..1"), tuple(Anchor.TARGET, "0..n"));
+                .extracting(EdgeLabelDTO::getAnchor, EdgeLabelDTO::getKind, EdgeLabelDTO::getText)
+                .containsExactly(
+                        tuple(Anchor.SOURCE, "multiplicity", "1..1"),
+                        tuple(Anchor.SOURCE, "associationLabel", "Child"),
+                        tuple(Anchor.TARGET, "multiplicity", "0..n"),
+                        tuple(Anchor.TARGET, "associationLabel", "Terminals"));
         assertThat(edge.getData().isUseToAssociation()).isTrue();
         assertThat(edge.getData().isUseFromAssociation()).isFalse();
+    }
+
+    @Test
+    @DisplayName("renders an association end without a label as its multiplicity alone")
+    void rendersAssociationEndWithoutLabel() {
+        model.getResource(NS + "Terminal.Child").removeAll(RDFS.label);
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
+
+        var edge =
+                result.getEdges().stream()
+                        .filter(candidate -> candidate.getType().equals("association"))
+                        .findFirst()
+                        .orElseThrow();
+        assertThat(edge.getData().getLabels())
+                .extracting(EdgeLabelDTO::getAnchor, EdgeLabelDTO::getText)
+                .containsExactly(
+                        tuple(Anchor.SOURCE, "1..1"),
+                        tuple(Anchor.TARGET, "0..n"),
+                        tuple(Anchor.TARGET, "Terminals"));
     }
 
     @Test
@@ -972,7 +998,10 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     }
 
     private List<String> multiplicityTexts(EdgeDTO edge) {
-        return edge.getData().getLabels().stream().map(EdgeLabelDTO::getText).toList();
+        return edge.getData().getLabels().stream()
+                .filter(label -> label.getKind().equals("multiplicity"))
+                .map(EdgeLabelDTO::getText)
+                .toList();
     }
 
     private List<EdgeDTO> mergedAssociationEdges(List<CIMProfileModel> profiles) {
