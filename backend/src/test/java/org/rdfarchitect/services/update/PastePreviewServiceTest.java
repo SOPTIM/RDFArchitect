@@ -25,6 +25,7 @@ import static utils.TestUtils.readMultipartFileFromFile;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.sparql.graph.GraphFactory;
+import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,6 +70,7 @@ class PastePreviewServiceTest {
     private static final String DERIVED_CLASS_UUID = "3c7d0e55-4f5a-4b72-8c83-9d4e5f6a7b14";
     private static final String ASSOCIATED_CLASS_UUID = "4e6d5c33-8b69-4d74-a1f2-8a3e9b4d5c67";
     private static final String UNKNOWN_CLASS_UUID = "0f0e0d0c-0b0a-4988-8766-554433221100";
+    private static final String CYCLIC_CLASS_UUID = "1b2c3d4e-5f60-4a71-8b82-9c0d1e2f3a51";
 
     @BeforeEach
     void setUp() {
@@ -88,6 +90,15 @@ class PastePreviewServiceTest {
                         .build();
         databasePort.createGraph(sourceGraphIdentifier, graphSource.graph());
         databasePort.createGraph(targetGraphIdentifier, GraphFactory.createDefaultGraph());
+    }
+
+    private void addClassToTargetGraph(String classUri) {
+        try (var ctx =
+                databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.WRITE)) {
+            ctx.getRdfGraph()
+                    .add(NodeFactory.createURI(classUri), RDF.type.asNode(), RDFS.Class.asNode());
+            ctx.commit("Added a class");
+        }
     }
 
     private PasteSourceClassDTO source(String classUUID) {
@@ -121,7 +132,7 @@ class PastePreviewServiceTest {
                 .containsExactly("associatedClass");
         assertThat(missing(preview, Kind.SUPER_CLASS))
                 .extracting(PasteReferenceDTO::label)
-                .containsExactly("BaseClass");
+                .containsExactly("BaseClass", "RootClass");
         assertThat(missing(preview, Kind.DATA_TYPE).get(0).uri())
                 .isEqualTo(new URI("http://example.org#MyDataType"));
     }
@@ -146,7 +157,42 @@ class PastePreviewServiceTest {
                 .containsExactly(List.of(new PasteUsageDTO("oldLabel", "associatedClass")));
         assertThat(missing(preview, Kind.SUPER_CLASS))
                 .extracting(PasteReferenceDTO::usedBy)
-                .containsExactly(List.of(new PasteUsageDTO("oldLabel", null)));
+                .containsExactly(
+                        List.of(new PasteUsageDTO("oldLabel", null)),
+                        List.of(new PasteUsageDTO("BaseClass", null)));
+    }
+
+    @Test
+    void previewPaste_superClassHasSuperClassesOfItsOwn_namesTheWholeChain() {
+        var preview =
+                pastePreviewService.previewPaste(previewRequest(CLASS_UUID), targetGraphIdentifier);
+
+        assertThat(missing(preview, Kind.SUPER_CLASS))
+                .extracting(PasteReferenceDTO::label, PasteReferenceDTO::uri)
+                .containsExactly(
+                        tuple("BaseClass", new URI("http://example.org#BaseClass")),
+                        tuple("RootClass", new URI("http://example.org#RootClass")));
+    }
+
+    @Test
+    void previewPaste_targetGraphDefinesTheSuperClass_endsTheChainThere() {
+        addClassToTargetGraph("http://example.org#BaseClass");
+
+        var preview =
+                pastePreviewService.previewPaste(previewRequest(CLASS_UUID), targetGraphIdentifier);
+
+        assertThat(missing(preview, Kind.SUPER_CLASS)).isEmpty();
+    }
+
+    @Test
+    void previewPaste_cyclicInheritance_namesEveryClassOfTheCycleOnce() {
+        var preview =
+                pastePreviewService.previewPaste(
+                        previewRequest(CYCLIC_CLASS_UUID), targetGraphIdentifier);
+
+        assertThat(missing(preview, Kind.SUPER_CLASS))
+                .extracting(PasteReferenceDTO::label)
+                .containsExactly("cyclicSuperClass");
     }
 
     @Test
