@@ -103,8 +103,7 @@ public class UpdateClassService
                             databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                             cimClass,
                             newValuesAsBlankNode);
-            ctx.commit(
-                    "Updated class \"%s\" (%s)".formatted(newClass.getLabel(), newClass.getUuid()));
+            ctx.commit("Updated class \"%s\"".formatted(newClass.getLabel()));
         }
 
         if (releasedUuid != null) {
@@ -142,7 +141,7 @@ public class UpdateClassService
                             graph,
                             databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                             newClass);
-            ctx.commit("Added class \"%s\" (%s)".formatted(newClass.getLabel(), newClassUUID));
+            ctx.commit("Added class \"%s\"".formatted(newClass.getLabel().getValue()));
         }
 
         createClassLayoutDataUseCase.createClassLayoutData(
@@ -186,7 +185,7 @@ public class UpdateClassService
                     ctx.getRdfGraph(),
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     classUUID);
-            ctx.commit("Deleted class \"%s\" (%s)".formatted(classLabel, classUUID));
+            ctx.commit("Deleted class \"%s\"".formatted(classLabel));
         }
 
         deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, classUUID);

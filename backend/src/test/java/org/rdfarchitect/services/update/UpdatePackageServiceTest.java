@@ -22,6 +22,7 @@ import static org.mockito.Mockito.*;
 
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
@@ -41,6 +42,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.rdfarchitect.services.dl.update.packagelayout.UpdatePackageLayoutService;
@@ -196,18 +198,44 @@ class UpdatePackageServiceTest {
     }
 
     @Test
-    void deletePackage_validUuid_deletesPackageAndRecordsChange() {
+    void deletePackage_validUuid_deletesPackageAndRecordsChangeWithLabel() {
         var graphIdentifier = new GraphIdentifier("default", "test");
         UUID packageUuid = UUID.randomUUID();
 
-        try (MockedStatic<CIMUpdates> mockedStatic = mockStatic(CIMUpdates.class)) {
+        try (MockedStatic<CIMUpdates> mockedStatic = mockStatic(CIMUpdates.class);
+                MockedStatic<CIMResourceUtils> mockedResourceUtils =
+                        mockStatic(CIMResourceUtils.class)) {
+            stubPackageLabel(mockedResourceUtils, packageUuid, "somePackage");
+
             service.deletePackage(graphIdentifier, packageUuid);
 
             mockedStatic.verify(
                     () -> CIMUpdates.deletePackage(eq(mockGraph), any(), eq(packageUuid)));
         }
 
-        verify(mockGraphWithContext).commit("Deleted package " + packageUuid);
+        verify(mockGraphWithContext).commit("Deleted package somePackage");
+        verify(mockGraphWithContext).close();
+    }
+
+    @Test
+    void deletePackage_packageNotInGraph_recordsChangeWithoutName() {
+        var graphIdentifier = new GraphIdentifier("default", "test");
+        UUID packageUuid = UUID.randomUUID();
+
+        try (MockedStatic<CIMUpdates> mockedStatic = mockStatic(CIMUpdates.class);
+                MockedStatic<CIMResourceUtils> mockedResourceUtils =
+                        mockStatic(CIMResourceUtils.class)) {
+            mockedResourceUtils
+                    .when(() -> CIMResourceUtils.findResourceForUuid(mockGraph, packageUuid))
+                    .thenThrow(new IllegalStateException("no resource"));
+
+            service.deletePackage(graphIdentifier, packageUuid);
+
+            mockedStatic.verify(
+                    () -> CIMUpdates.deletePackage(eq(mockGraph), any(), eq(packageUuid)));
+        }
+
+        verify(mockGraphWithContext).commit("Deleted package");
         verify(mockGraphWithContext).close();
     }
 
@@ -216,7 +244,10 @@ class UpdatePackageServiceTest {
         var graphIdentifier = new GraphIdentifier("default", "test");
         UUID packageUuid = UUID.randomUUID();
 
-        try (MockedStatic<CIMUpdates> mockedStatic = mockStatic(CIMUpdates.class)) {
+        try (MockedStatic<CIMUpdates> mockedStatic = mockStatic(CIMUpdates.class);
+                MockedStatic<CIMResourceUtils> mockedResourceUtils =
+                        mockStatic(CIMResourceUtils.class)) {
+            stubPackageLabel(mockedResourceUtils, packageUuid, "somePackage");
             mockedStatic
                     .when(() -> CIMUpdates.deletePackage(any(), any(), any(UUID.class)))
                     .thenThrow(new RuntimeException("boom"));
@@ -226,5 +257,17 @@ class UpdatePackageServiceTest {
 
             verify(mockGraphWithContext).close();
         }
+    }
+
+    private void stubPackageLabel(
+            MockedStatic<CIMResourceUtils> mockedResourceUtils, UUID packageUuid, String label) {
+        var packageResource = mock(Resource.class);
+        when(packageResource.hasProperty(RDFS.label)).thenReturn(true);
+        mockedResourceUtils
+                .when(() -> CIMResourceUtils.findResourceForUuid(mockGraph, packageUuid))
+                .thenReturn(packageResource);
+        mockedResourceUtils
+                .when(() -> CIMResourceUtils.findLabelForResource(packageResource))
+                .thenReturn(label);
     }
 }

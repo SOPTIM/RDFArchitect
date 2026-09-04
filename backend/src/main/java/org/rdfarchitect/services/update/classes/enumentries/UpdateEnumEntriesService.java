@@ -56,7 +56,7 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
                         graph,
                         databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                         cimEnumEntry);
-                message = "Created enum entry \"%s\" (%s)".formatted(cimEnumEntry.getLabel(), uuid);
+                message = "Created enum entry \"%s\"".formatted(cimEnumEntry.getLabel().getValue());
             } else {
                 uuid = enumEntryDTO.getUuid();
                 CIMUpdates.replaceEnumEntry(
@@ -64,7 +64,7 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
                         databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                         cimEnumEntry);
                 message =
-                        "Replaced enum entry \"%s\" (%s)".formatted(cimEnumEntry.getLabel(), uuid);
+                        "Replaced enum entry \"%s\"".formatted(cimEnumEntry.getLabel().getValue());
             }
 
             ctx.commit(message);
