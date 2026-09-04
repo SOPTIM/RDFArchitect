@@ -34,6 +34,7 @@
         updateLabelPositions,
     } from "$lib/api/generated/index.ts";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -59,6 +60,7 @@
         effectiveOffset,
         LABEL_NODE_TYPE,
         labelNodeId,
+        labelNodesChanged,
         offsetFromClass,
     } from "./diagram/labelNodes.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
@@ -374,27 +376,6 @@
         ];
     }
 
-    function labelNodesChanged(currentNodes, nextLabelNodes) {
-        const current = currentNodes.filter(
-            node => node.type === LABEL_NODE_TYPE,
-        );
-        if (current.length !== nextLabelNodes.length) {
-            return true;
-        }
-        const currentById = new Map(current.map(node => [node.id, node]));
-        return nextLabelNodes.some(next => {
-            const node = currentById.get(next.id);
-            return (
-                !node ||
-                node.data.text !== next.data.text ||
-                node.position.x !== next.position.x ||
-                node.position.y !== next.position.y ||
-                node.data.anchorPoint.x !== next.data.anchorPoint.x ||
-                node.data.anchorPoint.y !== next.data.anchorPoint.y
-            );
-        });
-    }
-
     /**
      * Holds a dragged label within its maximum distance from the anchor point. SvelteFlow can only
      * constrain a node to a rectangle, so the radial limit is applied per drag event instead.
@@ -561,13 +542,24 @@
     export async function applyELKLayout() {
         if (!isLoading) isLoading = true;
         layouted = true;
-        const layoutedNodes = await getLayoutedNodes(classNodes, edges);
-        nodes = [...layoutedNodes];
-        updateNodePositions(nodes);
-        resetLabelPositions();
-        syncLabelNodes(nodes, edges);
-        await svelteFlowAPI.svelteFlow.fitView();
-        isLoading = false;
+        try {
+            const layoutedNodes = await getLayoutedNodes(classNodes, edges);
+            nodes = [...layoutedNodes];
+            updateNodePositions(nodes);
+            resetLabelPositions();
+            syncLabelNodes(nodes, edges);
+            await svelteFlowAPI.svelteFlow.fitView();
+        } catch (error) {
+            // The diagram keeps the positions it has; leaving the spinner up would only look
+            // like a layout that never finishes.
+            console.error("Laying out the diagram failed:", error);
+            toastStore.error(
+                "Layout failed",
+                "The diagram could not be laid out automatically.",
+            );
+        } finally {
+            isLoading = false;
+        }
     }
 </script>
 

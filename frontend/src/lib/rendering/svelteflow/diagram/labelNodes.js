@@ -105,6 +105,34 @@ export function buildLabelNodes(
     return labelNodes;
 }
 
+/**
+ * Whether a rebuild differs from the label nodes a diagram currently holds.
+ *
+ * Coordinates are compared with `Object.is`, so that one which is not a number still compares
+ * equal to itself. The label nodes are kept in sync by an effect that writes the nodes it reads,
+ * so a `NaN !== NaN` reporting a change on every rebuild would keep that effect running forever.
+ */
+export function labelNodesChanged(currentNodes, nextLabelNodes) {
+    const current = currentNodes.filter(node => node.type === LABEL_NODE_TYPE);
+    if (current.length !== nextLabelNodes.length) {
+        return true;
+    }
+    const currentById = new Map(current.map(node => [node.id, node]));
+    return nextLabelNodes.some(next => {
+        const node = currentById.get(next.id);
+        return (
+            !node ||
+            node.data.text !== next.data.text ||
+            !samePoint(node.position, next.position) ||
+            !samePoint(node.data.anchorPoint, next.data.anchorPoint)
+        );
+    });
+}
+
+function samePoint(one, other) {
+    return Object.is(one.x, other.x) && Object.is(one.y, other.y);
+}
+
 /** The offset a label at the given position has relative to the class it is anchored to. */
 export function offsetFromClass(labelNode, anchorClass) {
     return {
