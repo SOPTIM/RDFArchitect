@@ -22,8 +22,8 @@
     } from "@fortawesome/free-regular-svg-icons";
 
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
+    import { graphLabel, graphTooltip } from "$lib/utils/graph-label.js";
 
-    import { getUri } from "../packageNavigationUtils.svelte.js";
     import PackageSelectSection from "./PackageSelectSection.svelte";
 
     let {
@@ -62,9 +62,9 @@
 <div class="flex w-full flex-col items-stretch gap-[0.1rem]">
     <NavigationEntry
         level={1}
-        label={graph.keyword ?? graph.uri.suffix}
+        label={graphLabel(graph)}
         icon={graphIcon}
-        title={getUri(graph)}
+        title={graphTooltip(graph)}
         selected={graph.selected}
         expanded={graph.expanded}
         hasChildren={hasPackages}
