@@ -114,10 +114,13 @@ public class UpdateOntologyService
 
         var entries = ontologyDTO.getEntries();
         for (var entry : entries) {
-            var entryNamespace = entry.getIri();
-            entry.setIri(expandURIUseCase.expandUri(dataset, entryNamespace));
+            entry.setIri(expandURIUseCase.expandUri(dataset, entry.getIri()));
             if (entry.getDatatypeIri() != null) {
-                entry.setDatatypeIri(expandURIUseCase.expandUri(dataset, entryNamespace));
+                entry.setDatatypeIri(expandURIUseCase.expandUri(dataset, entry.getDatatypeIri()));
+            }
+            // literal values must stay untouched, only IRI values are prefixed forms
+            if (entry.isIriEntry() && entry.getValue() != null) {
+                entry.setValue(expandURIUseCase.expandUri(dataset, entry.getValue()));
             }
         }
     }
