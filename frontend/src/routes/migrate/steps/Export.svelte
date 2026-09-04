@@ -16,9 +16,15 @@
   -->
 
 <script>
+    import { get } from "svelte/store";
+
+    import {
+        generateMigrationReport,
+        generateMigrationScript,
+    } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { migrationState } from "$lib/sharedState.svelte.js";
     import { saveFile, sparqlMediaType } from "$lib/utils/fileUtils.js";
 
     import { goto } from "$app/navigation";
@@ -27,29 +33,47 @@
         await goto("/mainpage");
     }
 
-    async function generateMigrationScript() {
+    async function downloadMigrationScript() {
         try {
-            const response = await fetchScript();
+            const { data, response } = await generateMigrationScript();
             const suggestedFilename = response.headers.get(
                 "content-disposition",
             );
-            const blob = await response.blob();
-            saveFile(blob, suggestedFilename, sparqlMediaType);
+            saveFile(data, suggestedFilename, sparqlMediaType);
         } catch (e) {
             console.error("Failed to generate script:", e);
         }
     }
 
-    async function fetchScript() {
-        return fetch(PUBLIC_BACKEND_URL + "/api/migrations/export", {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
+    async function downloadMigrationReport(reportType) {
+        const state = get(migrationState);
+        try {
+            const { data, response } = await generateMigrationReport({
+                query: {
+                    reportType: reportType,
+                    originalCGMESVersion: state.cgmesVersionA,
+                    updatedCGMESVersion: state.cgmesVersionB,
+                },
+            });
+            const suggestedFilename = response.headers.get(
+                "content-disposition",
+            );
+            saveFile(data, suggestedFilename, sparqlMediaType);
+        } catch (e) {
+            console.error("Failed to generate report:", e);
+        }
     }
 </script>
 
 <div class="text-default-text flex h-full flex-col space-y-6 p-2">
+    <InfoBox>
+        In this step you can choose which artifacts you want to generate for the
+        migration. You can generate a migration package containing the SPARQL
+        updates for automatically migrating your data as well as SHACL shapes
+        for validating your data against the new schema. You can also generate a
+        markdown file based on the semantic changes configured during this
+        migration process.
+    </InfoBox>
     <InfoBox type="warn">
         Please note that the script generation might not be able to handle all
         edge cases yet, one such case being multiplicity changes on
@@ -61,17 +85,81 @@
     </InfoBox>
 
     <div class="flex flex-col space-y-6">
-        <div>
-            <h3 class="mb-3 text-base font-medium">Migration Script</h3>
-            <p class="mb-4 text-sm">
-                The migration script contains SPARQL UPDATE queries that will
-                transform your data from the source schema to the target schema
-                based on the mappings and defaults you've configured.
-            </p>
-            <div class="w-64">
-                <ButtonControl callOnClick={generateMigrationScript}>
-                    Generate and Download Script
-                </ButtonControl>
+        <div class="flex flex-col space-y-1">
+            <div class="flex flex-col space-y-6">
+                <div class="flex flex-col space-y-3">
+                    <h3 class="text-base font-medium">Generate artifacts</h3>
+
+                    <div
+                        class="border-border flex items-start justify-between gap-4 rounded-lg border p-4"
+                    >
+                        <div class="flex min-w-0 flex-col space-y-1">
+                            <span class="text-sm font-medium">
+                                Migration Script
+                            </span>
+                            <span class="text-text-subtle text-sm">
+                                SPARQL UPDATE script for automatically migrating
+                                your data to the new schema as well as SHACL
+                                shapes for validating the data.
+                            </span>
+                        </div>
+                        <div class="w-48 shrink-0">
+                            <ButtonControl
+                                callOnClick={downloadMigrationScript}
+                            >
+                                Download script
+                            </ButtonControl>
+                        </div>
+                    </div>
+
+                    <div
+                        class="border-border flex items-start justify-between gap-4 rounded-lg border p-4"
+                    >
+                        <div class="flex min-w-0 flex-col space-y-1">
+                            <span class="text-sm font-medium">
+                                Summary Report
+                            </span>
+                            <span class="text-text-subtle text-sm">
+                                Report containing only the directly changed
+                                classes. If another class would inherit a change
+                                it is listed underneath the superclass.
+                            </span>
+                        </div>
+                        <div class="w-48 shrink-0">
+                            <ButtonControl
+                                callOnClick={() =>
+                                    downloadMigrationReport("SUMMARY")}
+                            >
+                                Download report
+                            </ButtonControl>
+                        </div>
+                    </div>
+
+                    <div
+                        class="border-border flex items-start justify-between gap-4 rounded-lg border p-4"
+                    >
+                        <div class="flex min-w-0 flex-col space-y-1">
+                            <span class="text-sm font-medium">
+                                Detailed Report
+                            </span>
+                            <span class="text-text-subtle text-sm">
+                                A report containing all affected classes.
+                                Changes inherited from a superclass are included
+                                again on every inheriting class.
+                            </span>
+                        </div>
+                        <div class="w-48 shrink-0">
+                            <ButtonControl
+                                callOnClick={() =>
+                                    downloadMigrationReport("DETAILED")}
+                            >
+                                Download report
+                            </ButtonControl>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Next Steps ... -->
             </div>
         </div>
 
@@ -89,7 +177,7 @@
                 </li>
                 <li>
                     <span class="font-medium">Apply the update:</span>
-                    Execute the SPARQL UPDATE script on your workspace
+                    Execute the SPARQL UPDATE script on your schema
                 </li>
                 <li>
                     <span class="font-medium">Verify the resulting data:</span>

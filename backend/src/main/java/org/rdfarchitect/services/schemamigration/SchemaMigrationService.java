@@ -26,6 +26,7 @@ import org.rdfarchitect.api.dto.migration.DefaultValueView;
 import org.rdfarchitect.api.dto.migration.PropertyOverview;
 import org.rdfarchitect.api.dto.migration.PropertyRenamings;
 import org.rdfarchitect.api.dto.migration.ResourceRenameOverview;
+import org.rdfarchitect.api.dto.validation.CGMESVersion;
 import org.rdfarchitect.context.MigrationSessionStore;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -34,10 +35,15 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.compare.TripleChangeAnalyser;
+import org.rdfarchitect.services.schemamigration.artifacts.GenerateMigrationReportUseCase;
+import org.rdfarchitect.services.schemamigration.artifacts.GenerateMigrationScriptUseCase;
+import org.rdfarchitect.services.schemamigration.artifacts.MigrationReportBuilder;
+import org.rdfarchitect.services.schemamigration.artifacts.MigrationScriptBuilder;
 import org.rdfarchitect.services.schemamigration.defaults.DefaultValueAssigner;
 import org.rdfarchitect.services.schemamigration.defaults.GetDefaultValueViewsUseCase;
 import org.rdfarchitect.services.schemamigration.defaults.InheritanceChangeHandler;
@@ -48,13 +54,14 @@ import org.rdfarchitect.services.schemamigration.renamings.GetClassRenamingsUseC
 import org.rdfarchitect.services.schemamigration.renamings.GetPropertyRenamingsUseCase;
 import org.rdfarchitect.services.schemamigration.renamings.RenameDetector;
 import org.rdfarchitect.services.schemamigration.renamings.RenameObjectBuilder;
-import org.rdfarchitect.services.schemamigration.scriptgeneration.GenerateMigrationScriptUseCase;
-import org.rdfarchitect.services.schemamigration.scriptgeneration.MigrationScriptBuilder;
+import org.rdfarchitect.services.validation.SchemaValidationReportToMarkdownService;
+import org.rdfarchitect.services.validation.SchemaValidationService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -68,16 +75,22 @@ public class SchemaMigrationService
                 ConfirmPropertyRenamingsUseCase,
                 ClearMigrationContextUseCase,
                 GetDefaultValueViewsUseCase,
-                SubmitDefaultValuesUseCase {
+                SubmitDefaultValuesUseCase,
+                GenerateMigrationReportUseCase,
+                MigrationChangesUseCase {
 
     private final MigrationSessionStore migrationSessionStore;
     private final DatabasePort databasePort;
     private final MigrationScriptBuilder migrationScriptBuilder;
+    private final MigrationReportBuilder migrationReportBuilder;
+    private final SchemaValidationService validationService;
 
     private static final String GRAPH_URI = "http://example.org/graph";
+    private final SchemaValidationReportToMarkdownService schemaValidationReportToMarkdownService;
 
     @Override
-    public void setMigrationContext(MultipartFile originalSchema, GraphIdentifier updatedSchema) {
+    public void setMigrationContext(
+            MultipartFile originalSchema, GraphIdentifier updatedSchema, boolean ignorePrefixes) {
         var originalGraph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(originalSchema)
@@ -91,11 +104,12 @@ public class SchemaMigrationService
             updatedGraph = GraphUtils.deepCopy(updatedCtx.getRdfGraph());
         }
 
-        initContext(originalGraph, updatedGraph);
+        initContext(originalGraph, updatedGraph, ignorePrefixes);
     }
 
     @Override
-    public void setMigrationContext(GraphIdentifier originalSchema, GraphIdentifier updatedSchema) {
+    public void setMigrationContext(
+            GraphIdentifier originalSchema, GraphIdentifier updatedSchema, boolean ignorePrefixes) {
         Graph originalGraph;
         try (var originalCtx =
                 databasePort.getGraphWithContext(originalSchema).begin(ReadWrite.READ)) {
@@ -108,11 +122,12 @@ public class SchemaMigrationService
             updatedGraph = GraphUtils.deepCopy(updatedCtx.getRdfGraph());
         }
 
-        initContext(originalGraph, updatedGraph);
+        initContext(originalGraph, updatedGraph, ignorePrefixes);
     }
 
     @Override
-    public void setMigrationContext(GraphIdentifier originalSchema, MultipartFile updatedSchema) {
+    public void setMigrationContext(
+            GraphIdentifier originalSchema, MultipartFile updatedSchema, boolean ignorePrefixes) {
         Graph originalGraph;
         try (var originalCtx =
                 databasePort.getGraphWithContext(originalSchema).begin(ReadWrite.READ)) {
@@ -126,11 +141,12 @@ public class SchemaMigrationService
                         .build()
                         .graph();
 
-        initContext(originalGraph, updatedGraph);
+        initContext(originalGraph, updatedGraph, ignorePrefixes);
     }
 
     @Override
-    public void setMigrationContext(MultipartFile originalSchema, MultipartFile updatedSchema) {
+    public void setMigrationContext(
+            MultipartFile originalSchema, MultipartFile updatedSchema, boolean ignorePrefixes) {
         var originalGraph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(originalSchema)
@@ -144,14 +160,15 @@ public class SchemaMigrationService
                         .build()
                         .graph();
 
-        initContext(originalGraph, updatedGraph);
+        initContext(originalGraph, updatedGraph, ignorePrefixes);
     }
 
-    private void initContext(Graph originalGraph, Graph updatedGraph) {
+    private void initContext(Graph originalGraph, Graph updatedGraph, boolean ignorePrefixes) {
         var context = migrationSessionStore.getContext();
         context.clear();
         context.setOriginalSchema(originalGraph);
         context.setUpdatedSchema(updatedGraph);
+        context.setIgnorePrefixes(ignorePrefixes);
         var tripleChanges =
                 TripleChangeAnalyser.compareGraphsDisregardingPackages(originalGraph, updatedGraph);
         context.setTripleDiff(tripleChanges);
@@ -185,12 +202,12 @@ public class SchemaMigrationService
         }
         // reclassify DATATYPE_CHANGE to DATATYPE_RENAMED where the change is simply
         // a consequence of an enum class rename
-        reclassifyEnumDatatypeChanges(classChanges, renames);
+        reclassifyChangesDueToRenames(classChanges, renames);
 
         migrationSessionStore.getContext().setDiffAfterClassConfirm(classChanges);
     }
 
-    private void reclassifyEnumDatatypeChanges(
+    private void reclassifyChangesDueToRenames(
             List<SemanticClassChange> classChanges,
             List<RenameCandidate<SemanticClassChange>> enumRenames) {
 
@@ -202,16 +219,44 @@ public class SchemaMigrationService
                                         r -> r.getNewResource().getIri()));
 
         for (var classChange : classChanges) {
-            for (var attribute : classChange.getAttributes()) {
-                for (var fieldChange : attribute.getChanges()) {
-                    if (fieldChange.getSemanticFieldChangeType()
-                                    == SemanticFieldChangeType.DATATYPE_CHANGE
-                            && renameMap.containsKey(fieldChange.getFrom())
-                            && renameMap.get(fieldChange.getFrom()).equals(fieldChange.getTo())) {
-                        fieldChange.setSemanticFieldChangeType(
-                                SemanticFieldChangeType.DATATYPE_RENAME);
-                    }
-                }
+            reclassifyIfRename(
+                    classChange.getChanges(),
+                    SemanticFieldChangeType.SUPERCLASS_CHANGE,
+                    SemanticFieldChangeType.SUPERCLASS_RENAME,
+                    renameMap);
+
+            classChange
+                    .getAssociations()
+                    .forEach(
+                            a ->
+                                    reclassifyIfRename(
+                                            a.getChanges(),
+                                            SemanticFieldChangeType.TARGET_CHANGE,
+                                            SemanticFieldChangeType.TARGET_RENAME,
+                                            renameMap));
+
+            classChange
+                    .getAttributes()
+                    .forEach(
+                            a ->
+                                    reclassifyIfRename(
+                                            a.getChanges(),
+                                            SemanticFieldChangeType.DATATYPE_CHANGE,
+                                            SemanticFieldChangeType.DATATYPE_RENAME,
+                                            renameMap));
+        }
+    }
+
+    private void reclassifyIfRename(
+            List<SemanticFieldChange> changes,
+            SemanticFieldChangeType changeType,
+            SemanticFieldChangeType renameType,
+            Map<String, String> renameMap) {
+
+        for (var change : changes) {
+            if (change.getSemanticFieldChangeType() == changeType
+                    && renameMap.getOrDefault(change.getFrom(), "").equals(change.getTo())) {
+                change.setSemanticFieldChangeType(renameType);
             }
         }
     }
@@ -222,15 +267,15 @@ public class SchemaMigrationService
                 new ArrayList<>(migrationSessionStore.getContext().getDiffAfterClassConfirm());
         var result = new ArrayList<PropertyOverview>();
         for (var cls : classes) {
-            if (cls.getAttributeRenameCandidates() == null) {
+            if (cls.getAttributeRenameCandidates().isEmpty()) {
                 cls.setAttributeRenameCandidates(
                         RenameDetector.detectPropertyRenames(cls.getAttributes()));
             }
-            if (cls.getAssociationRenameCandidates() == null) {
+            if (cls.getAssociationRenameCandidates().isEmpty()) {
                 cls.setAssociationRenameCandidates(
                         RenameDetector.detectPropertyRenames(cls.getAssociations()));
             }
-            if (cls.getEnumEntryRenameCandidates() == null) {
+            if (cls.getEnumEntryRenameCandidates().isEmpty()) {
                 cls.setEnumEntryRenameCandidates(
                         RenameDetector.detectPropertyRenames(cls.getEnumEntries()));
             }
@@ -273,8 +318,15 @@ public class SchemaMigrationService
                             .orElseThrow();
             var attributes = newClassChange.getAttributes();
             for (var attributeRename : propertyRename.getAttributeRenames()) {
-                attributes.remove(attributeRename.getNewResource());
-                attributes.remove(attributeRename.getOldResource());
+                var oldIri =
+                        attributeRename.getOldResource() != null
+                                ? attributeRename.getOldResource().getIri()
+                                : null;
+                var newIri =
+                        attributeRename.getNewResource() != null
+                                ? attributeRename.getNewResource().getIri()
+                                : null;
+                attributes.removeIf(a -> a.getIri().equals(oldIri) || a.getIri().equals(newIri));
                 var mergedAttribute =
                         (SemanticAttributeChange)
                                 RenameObjectBuilder.createRenameObject(attributeRename);
@@ -284,8 +336,15 @@ public class SchemaMigrationService
             }
             var associations = newClassChange.getAssociations();
             for (var associationRename : propertyRename.getAssociationRenames()) {
-                associations.remove(associationRename.getNewResource());
-                associations.remove(associationRename.getOldResource());
+                var oldIri =
+                        associationRename.getOldResource() != null
+                                ? associationRename.getOldResource().getIri()
+                                : null;
+                var newIri =
+                        associationRename.getNewResource() != null
+                                ? associationRename.getNewResource().getIri()
+                                : null;
+                associations.removeIf(a -> a.getIri().equals(oldIri) || a.getIri().equals(newIri));
                 var mergedAssociation =
                         (SemanticAssociationChange)
                                 RenameObjectBuilder.createRenameObject(associationRename);
@@ -295,8 +354,15 @@ public class SchemaMigrationService
             }
             var enumEntries = newClassChange.getEnumEntries();
             for (var enumEntryRename : propertyRename.getEnumEntryRenames()) {
-                enumEntries.remove(enumEntryRename.getNewResource());
-                enumEntries.remove(enumEntryRename.getOldResource());
+                var oldIri =
+                        enumEntryRename.getOldResource() != null
+                                ? enumEntryRename.getOldResource().getIri()
+                                : null;
+                var newIri =
+                        enumEntryRename.getNewResource() != null
+                                ? enumEntryRename.getNewResource().getIri()
+                                : null;
+                enumEntries.removeIf(a -> a.getIri().equals(oldIri) || a.getIri().equals(newIri));
                 var mergedEnumEntry =
                         (SemanticEnumEntryChange)
                                 RenameObjectBuilder.createRenameObject(enumEntryRename);
@@ -350,9 +416,88 @@ public class SchemaMigrationService
     }
 
     @Override
+    public List<SemanticClassChange> getMigrationChanges() {
+        return migrationSessionStore.getContext().getDiffAfterDefaultValueConfirm();
+    }
+
+    @Override
+    public void confirmMigrationChanges(List<SemanticClassChange> changes) {
+        migrationSessionStore.getContext().setDiffAfterDefaultValueConfirm(changes);
+    }
+
+    @Override
     public String generateMigrationScript() {
         var changes = migrationSessionStore.getContext().getDiffAfterDefaultValueConfirm();
         return migrationScriptBuilder.generateMigrationScript(changes);
+    }
+
+    @Override
+    public String generateDetailedMigrationReport(
+            CGMESVersion originalCGMESVersion, CGMESVersion updatedCGMESVersion) {
+        var context = migrationSessionStore.getContext();
+        var updatedGraph = context.getUpdatedSchema();
+        var originalGraph = context.getOriginalSchema();
+        var changes = context.getDiffAfterDefaultValueConfirm();
+        var ignorePrefixes = context.isIgnorePrefixes();
+
+        var newChangeList = new ArrayList<SemanticClassChange>();
+        for (var change : changes) {
+            newChangeList.add(new SemanticClassChange(change));
+        }
+
+        var sb = new StringBuilder();
+
+        var originalValidationReport =
+                validationService.validateSchema(context.getOriginalSchema(), originalCGMESVersion);
+        sb.append(
+                schemaValidationReportToMarkdownService.convertToMarkdown(
+                        originalValidationReport, "Validation Report Original Schema"));
+
+        var updatedValidationReport =
+                validationService.validateSchema(context.getUpdatedSchema(), updatedCGMESVersion);
+        sb.append(
+                schemaValidationReportToMarkdownService.convertToMarkdown(
+                        updatedValidationReport, "Validation Report Updated Schema"));
+
+        sb.append(
+                migrationReportBuilder.generateDetailedMigrationReport(
+                        newChangeList, originalGraph, updatedGraph, ignorePrefixes));
+
+        return sb.toString();
+    }
+
+    @Override
+    public String generateSummaryMigrationReport(
+            CGMESVersion originalCGMESVersion, CGMESVersion updatedCGMESVersion) {
+        var context = migrationSessionStore.getContext();
+        var changes = context.getDiffAfterDefaultValueConfirm();
+        var ignorePrefixes = context.isIgnorePrefixes();
+        var originalGraph = context.getOriginalSchema();
+        var updatedGraph = context.getUpdatedSchema();
+
+        var newChangeList = new ArrayList<SemanticClassChange>();
+        for (var change : changes) {
+            newChangeList.add(new SemanticClassChange(change));
+        }
+
+        var sb = new StringBuilder();
+
+        var originalValidationReport =
+                validationService.validateSchema(context.getOriginalSchema(), originalCGMESVersion);
+        sb.append(
+                schemaValidationReportToMarkdownService.convertToMarkdown(
+                        originalValidationReport, "Validation Report Original Schema"));
+
+        var updatedValidationReport =
+                validationService.validateSchema(context.getUpdatedSchema(), updatedCGMESVersion);
+        sb.append(
+                schemaValidationReportToMarkdownService.convertToMarkdown(
+                        updatedValidationReport, "Validation Report Updated Schema"));
+
+        sb.append(
+                migrationReportBuilder.generateSummaryMigrationReport(
+                        newChangeList, originalGraph, updatedGraph, ignorePrefixes));
+        return sb.toString();
     }
 
     @Override

@@ -25,18 +25,18 @@
     } = $props();
 
     function handleSelectionChange(rename, event) {
+        const value = event.target.value;
+
+        const selectedItem = unlinkedNewItems.find(
+            item => item.label === value,
+        );
+
         if (rename.newResource) {
             onDissolveMapping(rename);
         }
 
-        if (event.target.value !== "") {
-            const selectedItem = unlinkedNewItems.find(
-                item => item.label === event.target.value,
-            );
-
-            if (selectedItem) {
-                onAddMapping(rename, selectedItem);
-            }
+        if (selectedItem) {
+            onAddMapping(rename, selectedItem);
         }
     }
 </script>
@@ -57,7 +57,7 @@
                 </tr>
             </thead>
             <tbody>
-                {#each renameCandidates as rename}
+                {#each renameCandidates as rename (rename.oldResource.label)}
                     <tr>
                         <td class="px-3 py-2">
                             {rename.oldResource.label}
@@ -66,24 +66,19 @@
                             <select
                                 class="border-border bg-input-default-background text-default-text focus:ring-border-select rounded-md border px-2 py-1 text-sm focus:ring-2 focus:outline-none"
                                 onchange={e => handleSelectionChange(rename, e)}
+                                value={rename.newResource?.label ?? ""}
                             >
-                                <option value="" selected={!rename.newResource}>
-                                    —
-                                </option>
-                                {#each unlinkedNewItems as item}
-                                    <option
-                                        value={item.label}
-                                        selected={rename.newResource?.label ===
-                                            item.label}
-                                    >
-                                        {item.label}
-                                    </option>
-                                {/each}
+                                <option value="">—</option>
                                 {#if rename.newResource && allAddedItems.some(a => a.label === rename.newResource.label)}
-                                    <option value={rename.newResource} selected>
+                                    <option value={rename.newResource.label}>
                                         {rename.newResource.label}
                                     </option>
                                 {/if}
+                                {#each unlinkedNewItems as item (item.label)}
+                                    <option value={item.label}>
+                                        {item.label}
+                                    </option>
+                                {/each}
                             </select>
                         </td>
                         <td class="px-3 py-2">

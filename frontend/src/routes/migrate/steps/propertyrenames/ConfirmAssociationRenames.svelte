@@ -35,9 +35,9 @@
                 ? new Set(renamedFrom.get(cls.label).keys())
                 : new Set();
 
-            const unlinked = cls.associations.added.filter(
-                attr => !linked.has(attr.label),
-            );
+            const unlinked = cls.associations.added
+                .filter(attr => !linked.has(attr.label))
+                .sort((a, b) => a.label.localeCompare(b.label));
             result.set(cls.label, unlinked);
         }
         return result;
@@ -90,7 +90,6 @@
         return (
             cls.associations &&
             cls.associations.added.length +
-                cls.associations.modified.length +
                 cls.associations.deletedAndRenamed.length >
                 0
         );
@@ -156,7 +155,7 @@
                                         Added Associations
                                     </h3>
                                     <div class="space-y-1">
-                                        {#each cls.associations.added as addedAssociation}
+                                        {#each cls.associations.added.sort( (a, b) => a.label.localeCompare(b.label) ) as addedAssociation}
                                             <div
                                                 class="bg-lightgray flex items-center justify-between px-3 py-1 text-sm"
                                             >
@@ -177,21 +176,6 @@
                                             </div>
                                         {/each}
                                     </div>
-                                </div>
-                            {/if}
-
-                            {#if cls.associations.modified.length > 0}
-                                <div>
-                                    <h3 class="mb-3 font-semibold">
-                                        Modified Associations
-                                    </h3>
-                                    <ul
-                                        class="list-inside list-disc space-y-1 text-sm"
-                                    >
-                                        {#each cls.associations.modified as modifiedAssociation}
-                                            <li>{modifiedAssociation.label}</li>
-                                        {/each}
-                                    </ul>
                                 </div>
                             {/if}
                         </div>

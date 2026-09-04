@@ -15,17 +15,13 @@
  *
  */
 
-package org.rdfarchitect.models.changes.semanticchanges;
+import { URI } from "$lib/models/dto/index.ts";
 
-/** Types of semantic changes that can occur to a resource. */
-public enum SemanticResourceChangeType {
-    ADD,
-    ADDED_FROM_INHERITANCE,
-    DELETE,
-    DELETED_FROM_INHERITANCE,
-    CHANGE,
-    RENAME,
-    // should only be created and used when creating the report
-    INHERITS_CHANGE,
-    INDIRECT_CHANGE,
+export function isPrefixOnlyRename(oldIRI, newIRI) {
+    if (!newIRI || !oldIRI) {
+        return false;
+    }
+    const oldName = new URI(oldIRI).suffix;
+    const newName = new URI(newIRI).suffix;
+    return oldName === newName;
 }

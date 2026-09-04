@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.services.schemamigration.scriptgeneration;
+package org.rdfarchitect.services.schemamigration.artifacts;
 
 import lombok.RequiredArgsConstructor;
 
@@ -120,6 +120,13 @@ public class SparqlUpdateGenerator {
         pss.setIri("attribute", attributeChange.getIri());
         pss.setLiteral("defaultValue", attributeChange.getDefaultValue(), xsd);
         pss.setIri("newDatatype", attributeChange.getPrimitiveDataType());
+        return pss.toString();
+    }
+
+    public String generateEnumDatatypeChangedUpdate(SemanticAttributeChange attributeChange) {
+        var pss = SparqlTemplateLoader.loadTemplate("migration/attribute-enum-datatype-changed");
+        pss.setIri("attribute", attributeChange.getIri());
+        pss.setIri("newValue", attributeChange.getDefaultValue());
         return pss.toString();
     }
 

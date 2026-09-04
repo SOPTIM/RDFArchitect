@@ -167,7 +167,6 @@ class DefaultValueAssignerTest {
             attr.addProperty(RDF.type, RDF.Property);
             attr.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
             attr.addProperty(RDFS.range, enumClass);
-            attr.addProperty(CIMS.datatype, enumClass);
             attr.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:1..1"));
 
             var attributeChange =
