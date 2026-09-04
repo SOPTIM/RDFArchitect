@@ -20,6 +20,7 @@ package org.rdfarchitect.services.shacl;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
+import org.apache.jena.graph.Node;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -28,17 +29,25 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFFormat;
+import org.apache.jena.riot.RiotException;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.apache.jena.shacl.vocabulary.SHACL;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.exception.database.InvalidContentException;
+import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.merge.ModelResourceExclusiveMerge;
+import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
+import org.rdfarchitect.services.shacl.form.ShapeBlockLocator;
 import org.rdfarchitect.shacl.PropertyShapeToClassAssigner;
 import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 import org.rdfarchitect.shacl.SHACLShapesFetcher;
@@ -47,6 +56,8 @@ import org.rdfarchitect.shacl.dto.NodeShape;
 import org.rdfarchitect.shacl.dto.PropertyShape;
 import org.rdfarchitect.shacl.dto.PropertyShapesWrapper;
 import org.rdfarchitect.shacl.dto.SHACLToClassRelations;
+import org.rdfarchitect.shacl.dto.ShapeOrigin;
+import org.rdfarchitect.shacl.dto.ShapesDocumentInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,12 +66,37 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * This implementation is able to store a single shacl file. This is a temporary solution missing
- * the core concept of storing multiple shacl files.
+ * Stores and reads the sets of SHACL shapes belonging to a graph.
+ *
+ * <p>Reads span every enabled {@link ShapesDocument} (see {@code readEnabledShapes}); the
+ * shape-level and property-level writes still target the graph's default document, which is what
+ * the endpoints predating multiple documents address.
+ *
+ * <p>That asymmetry is why {@link #updateClassSHACL}, {@link #updatePropertyShacl}, {@link
+ * #replaceSHACLShape} and {@link #deleteSHACLShape} are deprecated and no longer reached from the
+ * UI. Editing a rule that came from an imported document could not remove it — it is not in the
+ * default document — so the edit was <em>added</em> beside the original, and SHACL being
+ * conjunctive the two then contradicted each other. Write through {@link
+ * #replaceShapesDocumentText}, which addresses one document and keeps its text authoritative.
+ *
+ * <p>All four still have endpoints, so all four re-record the default document's {@code rawText}
+ * from its triples before committing. Without that they would leave the stored text describing the
+ * graph as it was before the edit, and since {@link #getShapesDocumentText} prefers that text, the
+ * workbench would show the edit as never having happened and undo it on the next save. Re-recording
+ * costs the document its comments and its ordering, which is the other half of why these paths are
+ * superseded rather than merely older.
  */
 @RequiredArgsConstructor
 public class SHACLStoringService
@@ -70,7 +106,8 @@ public class SHACLStoringService
                 SHACLGetShapeUseCase,
                 SHACLReplaceShapeUseCase,
                 SHACLDeleteShapeUseCase,
-                SHACLUpdateUseCase {
+                SHACLUpdateUseCase,
+                SHACLDocumentUseCase {
 
     private static final Logger logger = LoggerFactory.getLogger(SHACLStoringService.class);
 
@@ -79,16 +116,332 @@ public class SHACLStoringService
 
     private final DatabasePort databasePort;
 
+    // -------------------------------------------------------------------------
+    // Shapes documents
+    // -------------------------------------------------------------------------
+
+    @Override
+    public List<ShapesDocumentInfo> listShapesDocuments(GraphIdentifier graphIdentifier) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            return ctx.getShapesDocuments().values().stream()
+                    .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
+                    .map(SHACLStoringService::toInfo)
+                    .toList();
+        }
+    }
+
+    @Override
+    public ShapesDocumentInfo createShapesDocument(
+            GraphIdentifier graphIdentifier,
+            String name,
+            String sourceFileName,
+            String content,
+            Lang lang) {
+        var parsed = parse(content, lang);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            assertNameIsFree(ctx, name, null);
+            var document = ctx.createShapesDocument(name, resolveOrigin(sourceFileName));
+            // Creating a document changes the context itself — its document list, its transaction
+            // participants, its undo history — and none of that is part of the transaction the
+            // try-with-resources aborts. Without undoing it here, a failure below would leave an
+            // empty document that nothing committed and no undo can remove.
+            try {
+                document.setSourceFileName(sourceFileName);
+                writeContent(document, parsed, content, lang);
+                ctx.commit("Add constraints \"%s\"".formatted(name));
+            } catch (RuntimeException e) {
+                ctx.removeShapesDocument(document.getId());
+                throw e;
+            }
+            return toInfo(document);
+        }
+    }
+
+    @Override
+    public String getShapesDocumentText(GraphIdentifier graphIdentifier, UUID documentId) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var document = requireDocument(ctx, documentId);
+            // Authoritative text, unless the document has none yet (a snapshot carries only the
+            // triples, and an undo drops the text) — then it is re-derived from the shapes.
+            return document.getRawText() != null
+                    ? document.getRawText()
+                    : serialiseToTurtle(ModelFactory.createModelForGraph(document.getGraph()));
+        }
+    }
+
+    @Override
+    public void replaceShapesDocumentText(
+            GraphIdentifier graphIdentifier, UUID documentId, String turtle) {
+        var parsed = parse(turtle, Lang.TURTLE);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var document = requireDocument(ctx, documentId);
+            writeContent(document, parsed, turtle, Lang.TURTLE);
+            ctx.commit("Edit constraints \"%s\"".formatted(document.getName()));
+        }
+    }
+
+    @Override
+    public ShapesDocumentInfo updateShapesDocument(
+            GraphIdentifier graphIdentifier,
+            UUID documentId,
+            String name,
+            Boolean enabled,
+            Integer order) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var document = requireDocument(ctx, documentId);
+            if (name != null) {
+                assertNameIsFree(ctx, name, documentId);
+                document.setName(name);
+            }
+            if (enabled != null) {
+                document.setEnabled(enabled);
+            }
+            if (order != null) {
+                reorder(ctx, document, order);
+            }
+            ctx.commit("Update constraints \"%s\"".formatted(document.getName()));
+            return toInfo(document);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Destructive: see {@link GraphContext#removeShapesDocument} for why an undo does not bring
+     * the document back. The UI confirms before calling this and says so.
+     */
+    @Override
+    public void deleteShapesDocument(GraphIdentifier graphIdentifier, UUID documentId) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var document = requireDocument(ctx, documentId);
+            if (GraphContext.DEFAULT_SHAPES_DOCUMENT_ID.equals(documentId)) {
+                // Refusing here rather than letting the context's guard surface as a server error:
+                // asking to delete it is a client mistake, not a fault.
+                throw new ResourceConflictException(
+                        "The graph's default constraints document cannot be deleted. "
+                                + "Replace its content with an empty document instead.");
+            }
+            var name = document.getName();
+            // Committed before the document leaves the context, not after. Removal is a change to
+            // the context that no abort undoes, so a commit that failed afterwards would have
+            // destroyed the document without recording anything — the one order in which the
+            // failure is unrecoverable.
+            ctx.commit("Delete constraints \"%s\"".formatted(name));
+            ctx.removeShapesDocument(documentId);
+        }
+    }
+
+    private static ShapesDocument requireDocument(GraphContext ctx, UUID documentId) {
+        var document = ctx.getShapesDocuments().get(documentId);
+        if (document == null) {
+            throw new ResourceNotFoundException(
+                    "No constraints document with id " + documentId + " in this graph.");
+        }
+        return document;
+    }
+
+    /** Names identify documents to the user, so two documents must not share one. */
+    private static void assertNameIsFree(GraphContext ctx, String name, UUID allowedId) {
+        var clash =
+                ctx.getShapesDocuments().values().stream()
+                        .anyMatch(d -> d.getName().equals(name) && !d.getId().equals(allowedId));
+        if (clash) {
+            throw new ResourceConflictException(
+                    "A constraints document named \"" + name + "\" already exists in this graph.");
+        }
+    }
+
+    /**
+     * Moves {@code document} to {@code targetOrder} and renumbers the rest so the positions stay
+     * dense — a gap would make the next insert land in an unexpected place.
+     */
+    private static void reorder(GraphContext ctx, ShapesDocument document, int targetOrder) {
+        var ordered =
+                new ArrayList<>(
+                        ctx.getShapesDocuments().values().stream()
+                                .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
+                                .toList());
+        ordered.remove(document);
+        var clamped = Math.clamp(targetOrder, 0, ordered.size());
+        ordered.add(clamped, document);
+        for (int i = 0; i < ordered.size(); i++) {
+            ordered.get(i).setOrder(i);
+        }
+    }
+
+    /** Uploaded content is treated as imported; content typed into the editor as authored. */
+    private static ShapesDocument.Origin resolveOrigin(String sourceFileName) {
+        return sourceFileName != null
+                ? ShapesDocument.Origin.IMPORTED
+                : ShapesDocument.Origin.AUTHORED;
+    }
+
+    /**
+     * Replaces a document's shapes and records the text they came from.
+     *
+     * <p>Turtle is kept exactly as the user wrote it, comments and ordering included. Any other
+     * syntax is converted to Turtle once, here, because the editor only works in Turtle — keeping
+     * the original RDF/XML would mean handing the editor something it cannot show.
+     */
+    private static void writeContent(
+            ShapesDocument document, Model parsed, String content, Lang lang) {
+        var stored = document.getGraph();
+        stored.clear();
+        var storedModel = ModelFactory.createModelForGraph(stored);
+        storedModel.clearNsPrefixMap();
+        storedModel.add(parsed);
+        storedModel.setNsPrefixes(parsed);
+        // A document emptied in the editor still has to be sent as something — Spring rejects an
+        // absent plain-string body — so whitespace-only content is stored as the empty document it
+        // means. Keeping the sent " " would make the text read back differ from the text sent, and
+        // the editor would call a freshly saved document unsaved.
+        document.setRawText(
+                Lang.TURTLE.equals(lang) && content != null
+                        ? (content.isBlank() ? "" : content)
+                        : serialiseToTurtle(storedModel));
+    }
+
+    /**
+     * Parses content the client sent, reporting a syntax error as one.
+     *
+     * <p>Jena's own message carries the line and column, which is the only part of the answer the
+     * user can do anything with, so it is passed through rather than replaced.
+     */
+    private static Model parse(String content, Lang lang) {
+        var model = ModelFactory.createDefaultModel();
+        try (var reader = new StringReader(content == null ? "" : content.trim())) {
+            model.read(reader, null, lang.getName());
+        } catch (RiotException e) {
+            throw new InvalidContentException(
+                    "The constraints could not be read as %s: %s"
+                            .formatted(lang.getLabel(), e.getMessage()));
+        }
+        return ModelFactory.createModelForGraph(GraphUtils.normalizeBlankNodes(model.getGraph()));
+    }
+
+    private static String serialiseToTurtle(Model model) {
+        try (var out = new ByteArrayOutputStream()) {
+            model.write(out, Lang.TURTLE.getName());
+            return out.toString(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new DataAccessException("Error while writing constraints as Turtle", e);
+        }
+    }
+
+    private static ShapesDocumentInfo toInfo(ShapesDocument document) {
+        return ShapesDocumentInfo.builder()
+                .id(document.getId())
+                .name(document.getName())
+                .sourceFileName(document.getSourceFileName())
+                .origin(document.getOrigin())
+                .enabled(document.isEnabled())
+                .order(document.getOrder())
+                .isDefault(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID.equals(document.getId()))
+                .tripleCount(document.getGraph().size())
+                .build();
+    }
+
+    /**
+     * Exports the named documents as one file, optionally merged with the generated shapes.
+     *
+     * <p>Enabled state is ignored: a document is included because the user ticked it. Switching one
+     * off takes it out of validation, not out of the user's reach.
+     */
+    @Override
+    public ByteArrayOutputStream exportSelectedSHACLGraph(
+            GraphIdentifier graphIdentifier,
+            RDFFormat format,
+            Collection<UUID> documentIds,
+            boolean includeGenerated) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var selected = readShapesOf(ctx, documentIds);
+            var model = selected;
+            if (includeGenerated) {
+                var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
+                ontologyModel.setNsPrefixes(
+                        databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+                var generated =
+                        new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true).generate();
+                // Custom shapes win over generated ones for the same resource: the generated ones
+                // are derived defaults, and this is the same rule the combined export follows.
+                model = new ModelResourceExclusiveMerge().merge(selected, generated);
+            }
+            try (var outStream = new ByteArrayOutputStream()) {
+                model.write(outStream, format.getLang().getName());
+                return outStream;
+            } catch (IOException e) {
+                throw new DataAccessException(
+                        "Error while writing the selected shapes to output stream", e);
+            }
+        }
+    }
+
+    /**
+     * The named documents merged, in the graph's own order.
+     *
+     * <p>Enabled state is ignored on purpose — see {@code exportSelectedSHACLGraph}. An id that
+     * names no document is skipped rather than refused, so a stale selection still exports what
+     * remains.
+     */
+    private static Model readShapesOf(GraphContext ctx, Collection<UUID> documentIds) {
+        var wanted = Set.copyOf(documentIds == null ? List.<UUID>of() : documentIds);
+        var union = ModelFactory.createDefaultModel();
+        ctx.getShapesDocuments().values().stream()
+                .filter(document -> wanted.contains(document.getId()))
+                .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
+                .forEach(document -> addWithPrefixes(union, document));
+        return union;
+    }
+
+    /**
+     * All enabled shapes documents of the graph, read as one model.
+     *
+     * <p>SHACL is conjunctive: shapes targeting the same focus node all apply, and the language has
+     * no notion of one shape overriding another. Documents are therefore unioned, never resolved
+     * against each other — a precedence rule here would disagree with the file the user exports and
+     * with every SHACL engine that validates it. Where two documents genuinely cannot both hold (an
+     * unsatisfiable pair, or the same shape IRI defined twice), that is reported as a validation
+     * finding rather than silently decided.
+     *
+     * <p>Documents are added in {@link ShapesDocument#getOrder()} order so serialisation is stable.
+     * Disabled documents are left out: switching a document off is how a user takes its constraints
+     * out of validation and export.
+     *
+     * <p>Must be called inside a transaction on {@code ctx}. The result is detached from the stored
+     * graphs, so writes to it are not persisted.
+     */
+    private static Model readEnabledShapes(GraphContext ctx) {
+        var union = ModelFactory.createDefaultModel();
+        ctx.getShapesDocuments().values().stream()
+                .filter(ShapesDocument::isEnabled)
+                .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
+                .forEach(document -> addWithPrefixes(union, document));
+        return union;
+    }
+
+    /** Adds a document's triples, letting the first document to bind a prefix keep it. */
+    private static void addWithPrefixes(Model union, ShapesDocument document) {
+        var model = ModelFactory.createModelForGraph(document.getGraph());
+        // The first document to declare a prefix keeps it, so a later document rebinding it
+        // cannot change what earlier shapes mean.
+        model.getNsPrefixMap()
+                .forEach(
+                        (prefix, uri) -> {
+                            if (union.getNsPrefixURI(prefix) == null) {
+                                union.setNsPrefix(prefix, uri);
+                            }
+                        });
+        union.add(model);
+    }
+
     @Override
     public void replaceCustomSHACLGraph(GraphIdentifier graphIdentifier, Graph shacl) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var storedGraph = ctx.getCustomSHACL();
-            storedGraph.clear();
-            var storedModel = ModelFactory.createModelForGraph(storedGraph);
+            var document = ctx.getShapesDocuments().get(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
             var newModel = ModelFactory.createModelForGraph(GraphUtils.normalizeBlankNodes(shacl));
-            storedModel.clearNsPrefixMap();
-            storedModel.add(newModel);
-            storedModel.setNsPrefixes(newModel);
+            // This path receives an already-parsed graph, so there is no user-authored text to
+            // preserve; the serialised form is the best available source for the editor.
+            writeContent(document, newModel, null, null);
 
             ctx.commit("Replace custom SHACL");
         }
@@ -98,7 +451,7 @@ public class SHACLStoringService
     public ByteArrayOutputStream exportCustomSHACLGraph(
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(ctx);
             try (var outStream = new ByteArrayOutputStream()) {
                 customSHACL.write(outStream, format.getLang().getName());
                 return outStream;
@@ -144,7 +497,7 @@ public class SHACLStoringService
     public ByteArrayOutputStream exportCombinedSHACLGraph(
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(ctx);
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             ontologyModel.setNsPrefixes(
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()));
@@ -166,7 +519,7 @@ public class SHACLStoringService
     public ByteArrayOutputStream exportCustomSHACLNamespaces(
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(ctx);
             try (var outStream = new ByteArrayOutputStream()) {
                 var prefixModel = ModelFactory.createDefaultModel();
                 prefixModel.setNsPrefixes(customSHACL.getNsPrefixMap());
@@ -198,7 +551,7 @@ public class SHACLStoringService
     public CustomAndGeneratedTuple<SHACLToClassRelations> getSHACLToClassRelations(
             GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(ctx);
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             ontologyModel.setNsPrefixes(
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()));
@@ -206,11 +559,97 @@ public class SHACLStoringService
                     new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true)
                             .generateForClassOnly(classUUID);
             var shaclResult = new CustomAndGeneratedTuple<SHACLToClassRelations>();
-            shaclResult.setCustom(getSHACLToClassRelations(ontologyModel, customSHACL, classUUID));
+            var custom = getSHACLToClassRelations(ontologyModel, customSHACL, classUUID);
+            attributeToDocuments(custom, ctx);
+            shaclResult.setCustom(custom);
             shaclResult.setGenerated(
                     getSHACLToClassRelations(ontologyModel, generatedSHACL, classUUID));
             return shaclResult;
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Where a shape came from, and what it asks for
+    // -------------------------------------------------------------------------
+
+    /**
+     * Names the documents behind every shape of a merged result.
+     *
+     * <p>The shapes were read from the union of the enabled documents, which is the only way to
+     * answer "what constrains this class" — official constraints are split across files. Merging is
+     * also what throws away the one thing a reader needs in order to change a rule, so it is put
+     * back here.
+     *
+     * <p>Shapes are matched by the id the fetchers already produce, which is {@code
+     * RDFNode.toString()} — the IRI for a named shape, the label for a blank node. Blank node
+     * identity survives the merge, because adding a model copies its triples rather than rewriting
+     * them, so an inlined property shape is attributed as reliably as a named one.
+     */
+    private static void attributeToDocuments(SHACLToClassRelations relations, GraphContext ctx) {
+        var byId = new LinkedHashMap<String, List<ShapeOrigin>>();
+        ctx.getShapesDocuments().values().stream()
+                .filter(ShapesDocument::isEnabled)
+                .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
+                .forEach(document -> indexSubjects(byId, document));
+
+        for (NodeShape shape : orEmpty(relations.getNodeShapes())) {
+            shape.setOrigins(byId.getOrDefault(shape.getId(), List.of()));
+        }
+        for (PropertyShapesWrapper wrapper :
+                concat(relations.getPropertyShapes(), relations.getDerivedPropertyShapes())) {
+            for (PropertyShape shape : orEmpty(wrapper.getPropertyShapes())) {
+                shape.setOrigins(byId.getOrDefault(shape.getId(), List.of()));
+            }
+        }
+    }
+
+    /**
+     * Records every subject a document states something about, under its shape id.
+     *
+     * <p>The lines every subject starts on are taken in one scan of the text. Asking {@link
+     * ShapeBlockLocator#locate} per subject rescans from the front each time, which on an official
+     * constraints file with thousands of subjects is quadratic in the file's length — paid on every
+     * open of the class-constraints dialog.
+     *
+     * <p>Lines are counted in the document's own text rather than in a re-serialisation, because
+     * the text is what the workbench will open and the line has to agree with it. A blank-node
+     * shape has no subject to look for, and a document restored from a snapshot may have no text at
+     * all; both simply get no line.
+     */
+    private static void indexSubjects(
+            Map<String, List<ShapeOrigin>> byId, ShapesDocument document) {
+        var model = ModelFactory.createModelForGraph(document.getGraph());
+        var lines = ShapeBlockLocator.linesBySubject(document.getRawText(), model);
+        var seen = new HashSet<String>();
+        model.listSubjects()
+                .forEachRemaining(
+                        subject -> {
+                            var id = subject.toString();
+                            if (!seen.add(id)) {
+                                return;
+                            }
+                            byId.computeIfAbsent(id, ignored -> new ArrayList<>())
+                                    .add(
+                                            ShapeOrigin.builder()
+                                                    .documentId(document.getId())
+                                                    .documentName(document.getName())
+                                                    .line(
+                                                            subject.isURIResource()
+                                                                    ? lines.get(subject.getURI())
+                                                                    : null)
+                                                    .build());
+                        });
+    }
+
+    private static List<PropertyShapesWrapper> concat(
+            List<PropertyShapesWrapper> first, List<PropertyShapesWrapper> second) {
+        var all = new ArrayList<>(orEmpty(first));
+        all.addAll(orEmpty(second));
+        return all;
+    }
+
+    private static <T> List<T> orEmpty(List<T> list) {
+        return list == null ? List.of() : list;
     }
 
     private SHACLToClassRelations getSHACLToClassRelations(
@@ -225,13 +664,44 @@ public class SHACLStoringService
         prefixMapping.setNsPrefixes(shaclModel.getNsPrefixMap());
         var shaclShapesFetcher = new SHACLShapesFetcher(shaclModel);
         var shaclToClassAssigner = new PropertyShapeToClassAssigner(shaclModel, ontologyModel);
-        return SHACLToClassRelations.builder()
-                .namespaces(prefixMappingToTtlString(prefixMapping))
-                .nodeShapes(shaclShapesFetcher.getNodeShapesOfClass(classUri))
-                .propertyShapes(shaclToClassAssigner.getPropertyShapes(classUUID))
-                .derivedPropertyShapes(
-                        shaclToClassAssigner.getDerivedPropertyShapesOfClass(classUUID))
-                .build();
+        var relations =
+                SHACLToClassRelations.builder()
+                        .namespaces(prefixMappingToTtlString(prefixMapping))
+                        .nodeShapes(shaclShapesFetcher.getNodeShapesOfClass(classUri))
+                        .propertyShapes(shaclToClassAssigner.getPropertyShapes(classUUID))
+                        .derivedPropertyShapes(
+                                shaclToClassAssigner.getDerivedPropertyShapesOfClass(classUUID))
+                        .build();
+        summarise(relations, shaclModel, prefixMapping);
+        return relations;
+    }
+
+    /**
+     * Puts the effective rule of each property into words, so it can be read without expanding the
+     * Turtle underneath it.
+     *
+     * <p>Shapes are looked up by the id the fetcher recorded, which is {@code RDFNode.toString()};
+     * building the index once and matching on it exactly avoids having to guess how a blank node
+     * spells itself.
+     */
+    private static void summarise(
+            SHACLToClassRelations relations, Model shaclModel, PrefixMapping prefixes) {
+        var subjects = new HashMap<String, Node>();
+        shaclModel
+                .listSubjects()
+                .forEachRemaining(subject -> subjects.put(subject.toString(), subject.asNode()));
+
+        for (PropertyShapesWrapper wrapper :
+                concat(relations.getPropertyShapes(), relations.getDerivedPropertyShapes())) {
+            var shapes =
+                    orEmpty(wrapper.getPropertyShapes()).stream()
+                            .map(shape -> subjects.get(shape.getId()))
+                            .filter(Objects::nonNull)
+                            .toList();
+            wrapper.setSummary(
+                    EffectiveConstraints.describe(
+                            EffectiveConstraints.readAll(shaclModel.getGraph(), shapes), prefixes));
+        }
     }
 
     private String prefixMappingToTtlString(PrefixMapping prefixMapping) {
@@ -257,7 +727,7 @@ public class SHACLStoringService
     private CustomAndGeneratedTuple<List<PropertyShape>> getSHACLShapesByProperty(
             GraphIdentifier graphIdentifier, UUID propertyUUID) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(ctx);
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             var property =
                     ontologyModel
@@ -308,7 +778,7 @@ public class SHACLStoringService
     public CustomAndGeneratedTuple<List<NodeShape>> getNodeShapesForClass(
             GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(ctx);
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             var classUri =
                     ontologyModel
@@ -333,7 +803,7 @@ public class SHACLStoringService
     public List<PropertyShapesWrapper> getPropertyShapes(
             GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = readEnabledShapes(ctx);
             var shaclToClassAssigner =
                     new PropertyShapeToClassAssigner(
                             customSHACL, ModelFactory.createModelForGraph(ctx.getRdfGraph()));
@@ -341,6 +811,12 @@ public class SHACLStoringService
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Deprecated: writes the default document alone and reformats it. See this class's
+     * documentation for why, and write through {@link #replaceShapesDocumentText} instead.
+     */
     @Override
     public void deleteSHACLShape(GraphIdentifier graphIdentifier, String shaclShapeURI) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
@@ -349,10 +825,17 @@ public class SHACLStoringService
             copySHACLShapeToNewModel(
                     customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
             customSHACL.remove(deleteModel);
+            recordDefaultDocumentText(ctx);
             ctx.commit("Delete SHACL shape");
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Deprecated: writes the default document alone and reformats it. See this class's
+     * documentation for why, and write through {@link #replaceShapesDocumentText} instead.
+     */
     @Override
     public void replaceSHACLShape(
             GraphIdentifier graphIdentifier, String shaclShapeURI, String shaclToInsert) {
@@ -364,6 +847,7 @@ public class SHACLStoringService
                     customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
             customSHACL.remove(deleteModel);
             customSHACL.add(insertModel);
+            recordDefaultDocumentText(ctx);
             ctx.commit("Replace SHACL shape");
         }
     }
@@ -378,6 +862,12 @@ public class SHACLStoringService
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Deprecated: writes the default document alone and reformats it. See this class's
+     * documentation for why, and write through {@link #replaceShapesDocumentText} instead.
+     */
     @Override
     public void updateClassSHACL(
             GraphIdentifier graphIdentifier, UUID classUUID, String ttlShaclString) {
@@ -391,10 +881,17 @@ public class SHACLStoringService
             customSHACL.clearNsPrefixMap();
             customSHACL.setNsPrefixes(insertModel);
             customSHACL.add(insertModel);
+            recordDefaultDocumentText(ctx);
             ctx.commit("Update class SHACL");
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Deprecated: writes the default document alone and reformats it. See this class's
+     * documentation for why, and write through {@link #replaceShapesDocumentText} instead.
+     */
     @Override
     public void updatePropertyShacl(
             GraphIdentifier graphIdentifier, UUID propertyUUID, String ttlShaclString) {
@@ -418,8 +915,24 @@ public class SHACLStoringService
             customSHACL.clearNsPrefixMap();
             customSHACL.setNsPrefixes(insertModel);
             customSHACL.add(insertModel);
+            recordDefaultDocumentText(ctx);
             ctx.commit("Update property SHACL");
         }
+    }
+
+    /**
+     * Re-derives the default document's text from the triples now in its graph.
+     *
+     * <p>For the superseded write paths only, which edit that graph directly. {@link
+     * #getShapesDocumentText} answers from the stored text whenever there is one, so leaving it
+     * behind makes the edit invisible to the editor and lets the next save write the pre-edit text
+     * back over it. These paths have no user-authored text to preserve — they were handed triples —
+     * so the serialised graph is the best source there is.
+     */
+    private static void recordDefaultDocumentText(GraphContext ctx) {
+        var document = ctx.getShapesDocuments().get(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
+        document.setRawText(
+                serialiseToTurtle(ModelFactory.createModelForGraph(document.getGraph())));
     }
 
     /**

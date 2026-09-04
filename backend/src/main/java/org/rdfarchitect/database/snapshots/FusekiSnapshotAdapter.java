@@ -28,6 +28,7 @@ import org.apache.jena.system.Txn;
 import org.rdfarchitect.config.DatabaseConfig;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.SnapshotPort;
 import org.rdfarchitect.database.implementations.http.FusekiHttpAdminProtocol;
@@ -109,8 +110,46 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
             GraphUtils.removeUUIDs(copiedGraph);
 
             conn.put(graphIdentifier.graphUri(), ModelFactory.createModelForGraph(copiedGraph));
+            transferShapesDocuments(conn, graphIdentifier, ctx);
         } catch (Exception e) {
             throw new FusekiServerException(e.getMessage());
+        }
+    }
+
+    /**
+     * Copies each of the graph's shapes documents into its own named graph, plus one graph holding
+     * their metadata, so that constraints a user imported or authored survive a share link instead
+     * of being silently dropped.
+     *
+     * <p>Empty documents are skipped: Fuseki rejects a {@code PUT} of an empty model, and a
+     * snapshot without the graph is exactly how a snapshot taken before this existed looks. Their
+     * metadata is still written, so an empty-but-named document is not lost.
+     *
+     * <p>Only the triples and the recorded source text travel. A shapes graph's own prefix map is
+     * left behind on purpose: a snapshot keeps prefixes per dataset, so writing them could
+     * overwrite the schema's {@code cim:} mapping with a conflicting one from an imported
+     * constraints file. The verbatim source text in the metadata is what preserves an imported file
+     * exactly.
+     */
+    private void transferShapesDocuments(
+            RDFConnection conn, GraphIdentifier graphIdentifier, GraphContext ctx) {
+        var documents = ctx.getShapesDocuments().values();
+        var metadata = ShapesDocumentMetadata.emptyModel();
+
+        for (var document : documents) {
+            ShapesDocumentMetadata.write(metadata, document);
+            if (document.getGraph().isEmpty()) {
+                continue;
+            }
+            var copiedShapes = GraphUtils.deepCopy(document.getGraph());
+            conn.put(
+                    ShapesGraphNaming.encode(
+                            graphIdentifier.graphUri(), document.getId().toString()),
+                    ModelFactory.createModelForGraph(copiedShapes));
+        }
+
+        if (!metadata.isEmpty()) {
+            conn.put(ShapesGraphNaming.encodeMetadata(graphIdentifier.graphUri()), metadata);
         }
     }
 }

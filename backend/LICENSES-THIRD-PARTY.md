@@ -48,6 +48,12 @@
 - **License:** Apache License 2.0
 - **URL:** [https://mapstruct.org/mapstruct/](https://mapstruct.org/mapstruct/)
 
+### OpenCGMES - CIMVocabCheck
+- **Package:** de.soptim.opencgmes
+- **Version:** 1.0.1
+- **License:** Apache License 2.0
+- **URL:** [https://github.com/SOPTIM/OpenCGMES](https://github.com/SOPTIM/OpenCGMES)
+
 ### OpenCGMES - IEC61970-552 CIMXML
 - **Package:** de.soptim.opencgmes
 - **Version:** 1.1.0

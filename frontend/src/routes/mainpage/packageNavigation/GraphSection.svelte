@@ -30,6 +30,7 @@
         faUpload,
         faDownload,
         faEye,
+        faFileShield,
         faRotateLeft,
         faRotateRight,
         faGear,
@@ -71,7 +72,6 @@
     import NewPackageDialog from "../../NewPackageDialog.svelte";
     import RenameGraphDialog from "../../RenameGraphDialog.svelte";
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
-    import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
     import SHACLUploadDialog from "../../shacl/SHACLUploadDialog.svelte";
     import ValidationDialog from "../../validate/ValidationDialog.svelte";
 
@@ -93,7 +93,6 @@
     let showCompareDialog = $state(false);
     let showSHACLUploadDialog = $state(false);
     let showSHACLExportDialog = $state(false);
-    let showSHACLFullViewDialog = $state(false);
     let showDeleteDependenciesDialog = $state(false);
     let showValidationDialog = $state(false);
     let canUndo = $state(false);
@@ -395,12 +394,12 @@
                     <ContextMenu.Item.Button
                         onSelect={() => {
                             focusGraphContext();
-                            showSHACLFullViewDialog = true;
+                            goto("/shacl");
                         }}
-                        faIcon={faEye}
+                        faIcon={faFileShield}
                         altText="Ctrl+Shift+L"
                     >
-                        View
+                        Open Workbench
                     </ContextMenu.Item.Button>
                 </ContextMenu.SubMenu.Content>
             </ContextMenu.SubMenu.Root>
@@ -505,7 +504,6 @@
     lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
-<SHACLFullViewDialog bind:showDialog={showSHACLFullViewDialog} />
 <SchemaColorsDialog
     bind:showDialog={showSchemaColorsDialog}
     workspaceName={workspaceNavEntry.id}

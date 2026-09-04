@@ -19,11 +19,12 @@
     import { onMount } from "svelte";
 
     import { getClassesReferencingThisClass } from "$lib/api/generated/index.ts";
-    import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     let { classUUID, onClickOnClass } = $props();
+
     let classesReferencingThisClass = $state({});
+
     let classWorkspaceName = $derived(
         editorState.selectedClassWorkspace.getValue() ??
             editorState.selectedWorkspace.getValue(),
@@ -32,7 +33,16 @@
         editorState.selectedClassGraph.getValue() ??
             editorState.selectedGraph.getValue(),
     );
+
+    /** Only the relations that actually reference something; the rest are noise. */
+    const groups = $derived(
+        Object.entries(classesReferencingThisClass).filter(
+            ([, classList]) => (classList?.length ?? 0) > 0,
+        ),
+    );
+
     onMount(() => fetchClassesReferencingThisClass(classUUID));
+
     function fetchClassesReferencingThisClass(classUUID) {
         getClassesReferencingThisClass({
             path: {
@@ -52,26 +62,42 @@
     }
 </script>
 
-<!-- right column for navigating to referencing classes -->
-<p class="mx-1">Classes referencing this class via:</p>
-{#each Object.entries(classesReferencingThisClass) as [relationType, classList]}
-    <p class="under mx-1">
-        {relationType}:
-    </p>
-    {#if classList.length === 0}
-        <p class="ml-4">
-            not referenced via "{relationType}".
-        </p>
-    {/if}
-    {#each classList as classObject}
-        <div class="ml-4 w-fit">
-            <ButtonControl
-                callOnClick={() => {
-                    onClickOnClass(classObject.uuid);
-                }}
-            >
-                {classObject.label}
-            </ButtonControl>
-        </div>
-    {/each}
-{/each}
+<!--
+  @component
+  The classes that reference this one, as links rather than as a wall of buttons.
+
+  Relations nobody uses are left out entirely: listing "not referenced via inheritance" for every
+  empty relation made the panel longer the less it had to say.
+-->
+
+<div class="flex h-full min-h-0 flex-col">
+    <h3 class="text-default-text shrink-0 pb-1 text-sm font-semibold">
+        Referenced by
+    </h3>
+    <div class="min-h-0 flex-1 overflow-y-auto">
+        {#if groups.length === 0}
+            <p class="text-text-subtle text-xs italic">
+                Nothing references this class.
+            </p>
+        {:else}
+            {#each groups as [relationType, classList] (relationType)}
+                <p class="text-text-subtle mt-2 text-xs first:mt-0">
+                    {relationType}
+                </p>
+                <ul>
+                    {#each classList as classObject (classObject.uuid)}
+                        <li>
+                            <button
+                                class="text-blue cursor-pointer truncate text-left text-sm hover:underline"
+                                title={classObject.label}
+                                onclick={() => onClickOnClass(classObject.uuid)}
+                            >
+                                {classObject.label}
+                            </button>
+                        </li>
+                    {/each}
+                </ul>
+            {/each}
+        {/if}
+    </div>
+</div>

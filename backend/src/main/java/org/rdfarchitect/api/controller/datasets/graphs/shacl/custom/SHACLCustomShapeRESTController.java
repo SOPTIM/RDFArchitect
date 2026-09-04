@@ -31,6 +31,7 @@ import org.rdfarchitect.services.shacl.SHACLReplaceShapeUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -59,7 +60,9 @@ public class SHACLCustomShapeRESTController {
                     "Replace or insert a shacl shape from a shacl graph with the given triples in a valid turtle syntax.",
             tags = {"shacl"},
             responses = {@ApiResponse(responseCode = "200")})
-    @PutMapping
+    // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
+    // body would reach Jena with its surrounding quotes and fail to parse.
+    @PutMapping(consumes = MediaType.TEXT_PLAIN_VALUE)
     public String replaceShape(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(

@@ -32,6 +32,7 @@ import org.rdfarchitect.shacl.dto.PropertyShape;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -107,9 +108,18 @@ public class ClassAttributesSHACLRESTController {
 
     @Operation(
             summary = "replace SHACL of an attribute",
-            description = "Replace the SHACL rules of an attribute.",
-            tags = {"shacl"})
-    @PutMapping
+            description =
+                    "Replace the SHACL rules of an attribute. "
+                            + "Superseded by PUT /shacl/documents/{documentId}. Writes land in "
+                            + "the graph's *default* shapes document whichever "
+                            + "document the rule came from, and do not update that "
+                            + "document's text — so an edit made here is invisible "
+                            + "to, and overwritten by, the constraints workbench.",
+            tags = {"shacl"},
+            deprecated = true)
+    // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
+    // body would reach Jena with its surrounding quotes and fail to parse.
+    @PutMapping(consumes = MediaType.TEXT_PLAIN_VALUE)
     public String replaceAttributeSHACL(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(

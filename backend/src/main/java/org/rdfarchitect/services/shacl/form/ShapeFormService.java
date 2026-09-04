@@ -1,0 +1,313 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+package org.rdfarchitect.services.shacl.form;
+
+import org.apache.jena.graph.Graph;
+import org.apache.jena.graph.Node;
+import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.shared.PrefixMapping;
+import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.services.shacl.ShapesTurtleParser;
+import org.rdfarchitect.shacl.dto.NodeShapeModel;
+import org.rdfarchitect.shacl.dto.PropertyShapeModel;
+import org.rdfarchitect.shacl.dto.PropertyShapeSplit;
+import org.rdfarchitect.shacl.dto.ShapeEditRequest;
+import org.rdfarchitect.shacl.dto.ShapeEditResult;
+import org.rdfarchitect.shacl.dto.ShapesForm;
+
+import java.util.List;
+
+/**
+ * The form view of a constraints document, and the edits made through it.
+ *
+ * <p>Resolves the tension between two things this feature wants at once: the document's verbatim
+ * text is the source of truth, and people who do not read Turtle must be able to change it. An edit
+ * therefore changes the clauses it was made on — one field, one clause — and copies every other
+ * character of the file through untouched, comments and clause order included. What the form has no
+ * field for is not in its way: it stays as written and is reported so the form can say so.
+ */
+public class ShapeFormService implements ShapeFormUseCase {
+
+    @Override
+    public ShapesForm parse(String turtle) {
+        var text = turtle == null ? "" : turtle;
+        var parsed = ShapesTurtleParser.parse(text);
+        if (parsed.failed()) {
+            // The form has nothing to show for text that does not parse; the editor shows why.
+            return ShapesForm.builder()
+                    .shapes(List.of())
+                    .parseError(parsed.findings().isEmpty() ? null : parsed.findings().get(0))
+                    .build();
+        }
+        var source = ShapeSource.of(text, parsed.graph().getPrefixMapping());
+        var shapes = ShapeModelReader.read(parsed.graph(), source);
+        return ShapesForm.builder()
+                .shapes(shapes.nodeShapes())
+                .propertyShapes(shapes.propertyShapes())
+                .build();
+    }
+
+    @Override
+    public ShapeEditResult apply(ShapeEditRequest request) {
+        var turtle = request.getTurtle() == null ? "" : request.getTurtle();
+        var parsed = ShapesTurtleParser.parse(turtle);
+        if (parsed.failed()) {
+            throw new ResourceConflictException(
+                    "The document cannot be edited as a form while its Turtle does not parse.");
+        }
+        var prefixes = parsed.graph().getPrefixMapping();
+
+        if (request.getRemoveShapeIri() != null) {
+            return remove(turtle, request.getRemoveShapeIri(), prefixes);
+        }
+        if (request.getPropertyShape() != null) {
+            return applyRule(
+                    turtle,
+                    parsed.graph(),
+                    request.getPropertyShape(),
+                    request.getSplit(),
+                    prefixes);
+        }
+        var shape = request.getShape();
+        if (shape == null || shape.getIri() == null || shape.getIri().isBlank()) {
+            throw new ResourceConflictException("A shape needs an IRI before it can be written.");
+        }
+        assertRulesNameAProperty(shape);
+
+        var source = ShapeSource.of(turtle, prefixes);
+        var stored =
+                ShapeModelReader.read(parsed.graph(), source).nodeShapes().stream()
+                        .filter(known -> shape.getIri().equals(known.getIri()))
+                        .findFirst();
+        if (stored.isEmpty()) {
+            return append(
+                    turtle,
+                    shape,
+                    parsed.graph()
+                            .contains(NodeFactory.createURI(shape.getIri()), Node.ANY, Node.ANY),
+                    prefixes);
+        }
+        // Judged against the document as stored, not against what was posted: a request claiming a
+        // shape is editable is exactly the request not to trust.
+        if (!Boolean.TRUE.equals(stored.get().getEditable())) {
+            throw new ResourceConflictException(
+                    stored.get().getReadOnlyReason() != null
+                            ? stored.get().getReadOnlyReason()
+                            : "This shape cannot be written back from the form.");
+        }
+        var written = ShapeClauseWriter.rewrite(turtle, stored.get(), shape, prefixes);
+        return ShapeEditResult.builder()
+                .turtle(written.turtle())
+                .warnings(written.warnings())
+                .build();
+    }
+
+    /**
+     * Changes a rule the document writes as a shape of its own, or gives one shape a copy of it.
+     *
+     * <p>Its own request rather than part of the shape that references it, because it is its own
+     * decision: a named rule in a {@code -Con-Simple-} profile carries the cardinality of dozens of
+     * classes, and the form has to say so — and offer the copy — before the change reaches them
+     * all. A split is the same edit with the copying done first, so either answer to that question
+     * is one round trip.
+     */
+    private ShapeEditResult applyRule(
+            String turtle,
+            Graph graph,
+            PropertyShapeModel rule,
+            PropertyShapeSplit split,
+            PrefixMapping prefixes) {
+        if (rule.getIri() == null || rule.getIri().isBlank()) {
+            throw new ResourceConflictException(
+                    "Only a rule the document writes as a shape of its own can be changed on its"
+                            + " own. A rule written inside a shape is changed with that shape.");
+        }
+        var source = ShapeSource.of(turtle, prefixes);
+        var stored =
+                ShapeModelReader.read(graph, source).propertyShapes().stream()
+                        .filter(known -> rule.getIri().equals(known.getIri()))
+                        .findFirst()
+                        .orElseThrow(
+                                () ->
+                                        new ResourceConflictException(
+                                                "The document does not write this rule as a shape"
+                                                        + " of its own. Reload the document and"
+                                                        + " make the change again."));
+        // Judged against the document as stored, for the same reason a node shape is: a request
+        // claiming a rule is editable is exactly the request not to trust.
+        if (!Boolean.TRUE.equals(stored.getEditable())) {
+            throw new ResourceConflictException(
+                    stored.getReadOnlyReason() != null
+                            ? stored.getReadOnlyReason()
+                            : "This rule cannot be written back from the form.");
+        }
+        var written =
+                split == null
+                        ? ShapeClauseWriter.rewriteRule(turtle, stored, rule, prefixes)
+                        : ShapeClauseWriter.splitRule(
+                                turtle,
+                                stored,
+                                rule,
+                                assertNameIsFree(graph, split, prefixes),
+                                split.getNodeShapeIri(),
+                                assertSplitNamesARule(split),
+                                prefixes);
+        return ShapeEditResult.builder()
+                .turtle(written.turtle())
+                .warnings(written.warnings())
+                .build();
+    }
+
+    /**
+     * The name a split's copy is written under, once it is known to be free.
+     *
+     * <p>Writing the copy under a name the document already says something about would merge it
+     * into whatever that subject is, which is the one way this operation could lose a constraint.
+     */
+    private static String assertNameIsFree(
+            Graph graph, PropertyShapeSplit split, PrefixMapping prefixes) {
+        var iri = split.getNewIri();
+        if (iri == null || iri.isBlank()) {
+            throw new ResourceConflictException("The copy of a rule needs a name of its own.");
+        }
+        if (ShapeModelWriter.term(iri, prefixes).startsWith("<") && !isAbsolute(iri)) {
+            throw new ResourceConflictException(
+                    "\""
+                            + iri
+                            + "\" is not a name this document can write. Use a prefixed name"
+                            + " the document binds, or an absolute IRI.");
+        }
+        if (graph.contains(NodeFactory.createURI(iri), Node.ANY, Node.ANY)) {
+            throw new ResourceConflictException(
+                    "The document already says something about \""
+                            + iri
+                            + "\". Give the copy a name of its own.");
+        }
+        return iri;
+    }
+
+    /**
+     * Whether an IRI can be written between angle brackets and read back as itself.
+     *
+     * <p>The characters Turtle forbids inside an {@code IRIREF} matter here rather than in general:
+     * a name carrying one of them would be written as {@code <a>b>} and the document would stop
+     * parsing on text nobody could see was wrong.
+     */
+    private static boolean isAbsolute(String iri) {
+        return iri.matches("[A-Za-z][A-Za-z0-9+.\\-]*:[^\\s<>\"{}|^\\\\`]+");
+    }
+
+    private static int assertSplitNamesARule(PropertyShapeSplit split) {
+        if (split.getNodeShapeIri() == null
+                || split.getNodeShapeIri().isBlank()
+                || split.getSourceIndex() == null) {
+            throw new ResourceConflictException(
+                    "A copy of a rule has to say which shape is to use it instead.");
+        }
+        return split.getSourceIndex();
+    }
+
+    /**
+     * Refuses a rule that names no property.
+     *
+     * <p>There is nothing to write for such a rule — {@code sh:path} is what a property constraint
+     * is about — and the writer used to leave it out, which is the worst of the three options: the
+     * edit was reported as applied and the rule was gone from the card on the next read. The form
+     * now keeps a rule like this as a draft and does not send it, so a request carrying one is a
+     * client that has got ahead of itself, and it is told so.
+     *
+     * <p>A rule whose path is an expression rather than a property is not one of these: it names no
+     * property in the model because the form cannot show one, but the document writes it a path all
+     * the same, and it arrives as a clause the form keeps as written.
+     */
+    private static void assertRulesNameAProperty(NodeShapeModel shape) {
+        if (shape.getProperties() == null) {
+            return;
+        }
+        var unnamed =
+                shape.getProperties().stream()
+                        .filter(property -> property.getIri() == null)
+                        .filter(property -> isBlank(property.getPath()))
+                        .anyMatch(property -> !keepsAPath(property));
+        if (unnamed) {
+            throw new ResourceConflictException(
+                    "A rule has to say which property it is about before it can be written."
+                            + " Pick a property, or remove the rule.");
+        }
+    }
+
+    /** Whether the document writes this rule a path the form shows but does not model. */
+    private static boolean keepsAPath(PropertyShapeModel rule) {
+        return rule.getRetained() != null
+                && rule.getRetained().stream().anyMatch(clause -> "path".equals(clause.getField()));
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    /**
+     * Adds a shape the document does not hold yet.
+     *
+     * <p>The ordinary case is a shape added through the form, which is written out in full and
+     * appended. The other one is a subject the document says something about in a form the reader
+     * does not read as a shape, where appending would define it a second time.
+     */
+    private ShapeEditResult append(
+            String turtle, NodeShapeModel shape, boolean alreadyMentioned, PrefixMapping prefixes) {
+        if (alreadyMentioned) {
+            throw new ResourceConflictException(
+                    "The document already says something about this subject in a form the form"
+                            + " view does not read as a shape, so writing it here would define it"
+                            + " twice. Edit it in the Turtle view.");
+        }
+        var statement = ShapeModelWriter.write(shape, prefixes);
+        var separator =
+                turtle.isEmpty() || turtle.endsWith("\n\n")
+                        ? ""
+                        : turtle.endsWith("\n") ? "\n" : "\n\n";
+        return ShapeEditResult.builder()
+                .turtle(turtle + separator + statement + "\n")
+                .warnings(List.of())
+                .build();
+    }
+
+    /**
+     * Removes a shape, however many statements it is written as.
+     *
+     * <p>All of them, unlike an edit: deleting a shape is a request about the shape, not about one
+     * statement, and leaving the others behind would leave half a shape in the document. Removed
+     * from the back so the earlier statements' offsets still hold.
+     */
+    private ShapeEditResult remove(String turtle, String iri, PrefixMapping prefixes) {
+        var existing = ShapeBlockLocator.locateAll(turtle, iri, prefixes);
+        if (existing.isEmpty()) {
+            return ShapeEditResult.builder().turtle(turtle).warnings(List.of()).build();
+        }
+        var remaining = turtle;
+        for (int i = existing.size() - 1; i >= 0; i--) {
+            var statement = existing.get(i);
+            // Take the blank line the statement left behind with it, so removing shapes one by one
+            // does not slowly fill the document with gaps. What preceded the statement is kept, so
+            // the shape that follows keeps the separation the removed one had in front of it.
+            var after = remaining.substring(statement.end()).stripLeading();
+            remaining = remaining.substring(0, statement.start()) + after;
+        }
+        return ShapeEditResult.builder().turtle(remaining).warnings(List.of()).build();
+    }
+}
