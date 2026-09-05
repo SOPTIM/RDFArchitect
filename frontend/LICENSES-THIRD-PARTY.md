@@ -215,7 +215,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.56.10
+- **Version:** 5.57.0
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
