@@ -381,14 +381,16 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                             EdgeDataDTO.builder()
                                     .labels(
                                             SvelteFlowLabels.forAssociation(
-                                                    CrossProfileUtils.mergedUuid(
-                                                            inverse.getUri().toString()),
-                                                    extractMultiplicityString(
-                                                            inverse.getMultiplicity()),
-                                                    CrossProfileUtils.mergedUuid(
-                                                            association.getUri().toString()),
-                                                    extractMultiplicityString(
-                                                            association.getMultiplicity()),
+                                                    associationEnd(
+                                                            CrossProfileUtils.mergedUuid(
+                                                                    inverse.getUri().toString()),
+                                                            inverse),
+                                                    associationEnd(
+                                                            CrossProfileUtils.mergedUuid(
+                                                                    association
+                                                                            .getUri()
+                                                                            .toString()),
+                                                            association),
                                                     layoutData))
                                     .useToAssociation(
                                             getAssociationUsedValue(
@@ -770,10 +772,8 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                 EdgeDataDTO.builder()
                         .labels(
                                 SvelteFlowLabels.forAssociation(
-                                        to.getUuid(),
-                                        extractMultiplicityString(to.getMultiplicity()),
-                                        from.getUuid(),
-                                        extractMultiplicityString(from.getMultiplicity()),
+                                        associationEnd(to.getUuid(), to),
+                                        associationEnd(from.getUuid(), from),
                                         layoutData))
                         .useToAssociation(getAssociationUsedValue(from.getAssociationUsed()))
                         .useFromAssociation(getAssociationUsedValue(to.getAssociationUsed()))
@@ -786,6 +786,24 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                 .target(from.getRange().getUuid())
                 .data(edgeDataDTO)
                 .build();
+    }
+
+    /**
+     * The labels of one association end, which are drawn at the class the association points to.
+     * The label is read leniently, because an association end without one is still rendered, just
+     * without its label.
+     *
+     * @param uuid the UUID the labels of this end are stored under, which is the merged UUID in a
+     *     merged diagram rather than the UUID of the association end itself
+     * @param association the association end
+     * @return the end together with the texts of its labels
+     */
+    private SvelteFlowLabels.AssociationEnd associationEnd(UUID uuid, ICIMAssociation association) {
+        var label = association.getLabelOrNull();
+        return new SvelteFlowLabels.AssociationEnd(
+                uuid,
+                extractMultiplicityString(association.getMultiplicity()),
+                label == null ? null : label.getValue());
     }
 
     private String extractMultiplicityString(CIMSMultiplicity multiplicity) {
