@@ -30,6 +30,8 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
@@ -150,6 +152,62 @@ class DefaultValueAssignerTest {
                     .isEqualTo("http://www.w3.org/2001/XMLSchema#string");
             assertThat(attributeChange.getDataType())
                     .isEqualTo("http://www.w3.org/2001/XMLSchema#string");
+        }
+
+        @Test
+        void populateDefaultsForAttributes_datatypeChanged_setsOldDataType() {
+            var attr = model.createResource(PREFIX + "Attribute1");
+            var xsdString = model.createResource("http://www.w3.org/2001/XMLSchema#string");
+            xsdString.addProperty(CIMS.stereotype, model.createResource(CIMS_PREFIX + "Primitive"));
+            attr.addProperty(CIMS.datatype, xsdString);
+            attr.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:1..1"));
+
+            var attributeChange =
+                    SemanticAttributeChange.builder()
+                            .iri(PREFIX + "Attribute1")
+                            .label("Attribute1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .build();
+            attributeChange
+                    .getChanges()
+                    .add(
+                            new SemanticFieldChange(
+                                    SemanticFieldChangeType.DATATYPE_CHANGE,
+                                    "http://www.w3.org/2001/XMLSchema#integer",
+                                    "http://www.w3.org/2001/XMLSchema#string"));
+
+            DefaultValueAssigner.assignDefaultValueToAttributes(List.of(attributeChange), model);
+
+            // both datatypes have to be available so the user can judge them equivalent
+            assertThat(attributeChange.getOldDataType())
+                    .isEqualTo("http://www.w3.org/2001/XMLSchema#integer");
+            assertThat(attributeChange.getDataType())
+                    .isEqualTo("http://www.w3.org/2001/XMLSchema#string");
+        }
+
+        @Test
+        void populateDefaultsForAttributes_datatypeUnchanged_leavesOldDataTypeUnset() {
+            var attr = model.createResource(PREFIX + "Attribute1");
+            var xsdString = model.createResource("http://www.w3.org/2001/XMLSchema#string");
+            xsdString.addProperty(CIMS.stereotype, model.createResource(CIMS_PREFIX + "Primitive"));
+            attr.addProperty(CIMS.datatype, xsdString);
+            attr.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:1..1"));
+
+            var attributeChange =
+                    SemanticAttributeChange.builder()
+                            .iri(PREFIX + "Attribute1")
+                            .label("Attribute1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .build();
+            attributeChange
+                    .getChanges()
+                    .add(
+                            new SemanticFieldChange(
+                                    SemanticFieldChangeType.MADE_REQUIRED, null, "M:1..1"));
+
+            DefaultValueAssigner.assignDefaultValueToAttributes(List.of(attributeChange), model);
+
+            assertThat(attributeChange.getOldDataType()).isNull();
         }
 
         @Test

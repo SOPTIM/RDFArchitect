@@ -146,7 +146,11 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
             var update =
                     switch (change.getSemanticFieldChangeType()) {
                         case DATATYPE_CHANGE -> {
-                            if (!attributeChange.getAllowedValues().isEmpty()) {
+                            if (attributeChange.isDataTypesEquivalent()) {
+                                // the datatypes were declared interchangeable, so every existing
+                                // value stays as it is and nothing has to be migrated
+                                yield null;
+                            } else if (!attributeChange.getAllowedValues().isEmpty()) {
                                 yield updateGenerator.generateEnumDatatypeChangedUpdate(
                                         attributeChange);
                             } else {

@@ -21,6 +21,14 @@
 
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
+    import { URI } from "$lib/models/dto/index.ts";
+    import {
+        allowsDefaultValueInput,
+        canKeepExistingValues,
+        describeAttributeChange,
+        keepsExistingValues,
+        requiresDefaultValue,
+    } from "$lib/utils/migrationUtils.js";
 
     let { classes, disableNext = $bindable(), isLoading } = $props();
 
@@ -28,7 +36,7 @@
         let allRequirementsMet = classes.every(
             cls =>
                 cls.attributes
-                    ?.filter(attr => requiresInput(attr))
+                    ?.filter(attr => requiresDefaultValue(attr))
                     .every(
                         attr =>
                             attr.defaultValue &&
@@ -38,71 +46,22 @@
         disableNext = !allRequirementsMet;
     });
 
-    function getChangeType(attribute) {
-        if (attribute.semanticResourceChangeType === "ADD") {
-            if (attribute.optional === true) {
-                return "Attribute added (optional)";
-            } else {
-                return "Attribute added (required)";
-            }
-        }
-        if (attribute.semanticResourceChangeType === "ADDED_FROM_INHERITANCE") {
-            return "Attribute newly inherited";
-        }
-        if (
-            attribute.changes?.some(
-                c => c.semanticFieldChangeType === "DATATYPE_CHANGE",
-            )
-        ) {
-            return "Data type changed";
-        }
-        if (
-            attribute.changes?.some(
-                c => c.semanticFieldChangeType === "MADE_REQUIRED",
-            )
-        ) {
-            return "Made required";
-        }
-        return "other";
-    }
-
-    function allowsInput(attribute) {
-        return (
-            attribute.semanticResourceChangeType === "ADD" ||
-            attribute.semanticResourceChangeType === "ADDED_FROM_INHERITANCE" ||
-            (attribute.semanticResourceChangeType !== "DELETE" &&
-                (attribute.changes?.some(
-                    c => c.semanticFieldChangeType === "MADE_REQUIRED",
-                ) ||
-                    attribute.changes?.some(
-                        c => c.semanticFieldChangeType === "DATATYPE_CHANGE",
-                    )))
-        );
-    }
-
-    function requiresInput(attribute) {
-        return (
-            ((attribute.semanticResourceChangeType === "ADD" ||
-                attribute.semanticResourceChangeType ===
-                    "ADDED_FROM_INHERITANCE") &&
-                !attribute.optional) ||
-            ((attribute.semanticResourceChangeType === "CHANGE" ||
-                attribute.semanticResourceChangeType === "RENAME") &&
-                (attribute.changes?.some(
-                    c => c.semanticFieldChangeType === "MADE_REQUIRED",
-                ) ||
-                    attribute.changes?.some(
-                        c => c.semanticFieldChangeType === "DATATYPE_CHANGE",
-                    )))
-        );
+    function shorten(iri) {
+        return iri ? new URI(iri).suffix : "";
     }
 
     function isDisabled(attribute) {
-        return !(requiresInput(attribute) || attribute.forceDefaultValue);
+        return !(
+            (requiresDefaultValue(attribute) || attribute.forceDefaultValue) &&
+            !keepsExistingValues(attribute)
+        );
     }
 
     function hasAttributes(cls) {
-        return cls.attributes && cls.attributes.some(attr => allowsInput(attr));
+        return (
+            cls.attributes &&
+            cls.attributes.some(attr => allowsDefaultValueInput(attr))
+        );
     }
 </script>
 
@@ -117,6 +76,11 @@
         <span class="text-red font-semibold">*</span>
         . New Attributes and their set default values will be instantiated on all
         existing instances of the class and its deriving classes.
+        <br />
+        Where a data type changed, both the old and the new one are shown. Tick
+        <span class="font-semibold">Equivalent</span>
+        if the two are interchangeable for that attribute - all existing values are
+        then kept as they are and no default value is needed.
     </InfoBox>
 
     {#if !isLoading && (classes.length === 0 || !classes.some(hasAttributes))}
@@ -162,6 +126,11 @@
                                                     Data Type
                                                 </th>
                                                 <th
+                                                    class="w-1/6 px-4 py-2 text-center font-medium"
+                                                >
+                                                    Equivalent
+                                                </th>
+                                                <th
                                                     class="w-1/3 px-4 py-2 font-medium"
                                                 >
                                                     Default Value
@@ -174,12 +143,12 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {#each cls.attributes as attribute}
-                                                {#if allowsInput(attribute)}
+                                            {#each cls.attributes as attribute (attribute.iri)}
+                                                {#if allowsDefaultValueInput(attribute)}
                                                     <tr>
                                                         <td class="px-3 py-2">
                                                             {attribute.label}
-                                                            {#if requiresInput(attribute)}
+                                                            {#if requiresDefaultValue(attribute)}
                                                                 <span
                                                                     class="text-red"
                                                                 >
@@ -188,12 +157,45 @@
                                                             {/if}
                                                         </td>
                                                         <td class="px-3 py-2">
-                                                            {getChangeType(
+                                                            {describeAttributeChange(
                                                                 attribute,
                                                             )}
                                                         </td>
-                                                        <td class="px-3 py-2">
-                                                            {attribute.dataType}
+                                                        <td
+                                                            class="px-3 py-2"
+                                                            title={attribute.oldDataType
+                                                                ? `${attribute.oldDataType} \u2192 ${attribute.dataType}`
+                                                                : attribute.dataType}
+                                                        >
+                                                            {#if attribute.oldDataType}
+                                                                <span
+                                                                    class="line-through"
+                                                                >
+                                                                    {shorten(
+                                                                        attribute.oldDataType,
+                                                                    )}
+                                                                </span>
+                                                                &rarr;
+                                                                {shorten(
+                                                                    attribute.dataType,
+                                                                )}
+                                                            {:else}
+                                                                {shorten(
+                                                                    attribute.dataType,
+                                                                )}
+                                                            {/if}
+                                                        </td>
+                                                        <td class="text-center">
+                                                            {#if canKeepExistingValues(attribute)}
+                                                                <input
+                                                                    type="checkbox"
+                                                                    class="text-button-default-text bg-default-background checked:bg-button-default-background disabled:bg-button-disabled-background mx-2 h-4 w-4 rounded border-none disabled:cursor-not-allowed"
+                                                                    title="The old and the new data type are interchangeable for this attribute - keep all existing values"
+                                                                    bind:checked={
+                                                                        attribute.dataTypesEquivalent
+                                                                    }
+                                                                />
+                                                            {/if}
                                                         </td>
                                                         <td class="px-3 py-2">
                                                             {#if attribute.allowedValues && attribute.allowedValues.length > 0}

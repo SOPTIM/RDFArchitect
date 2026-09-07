@@ -1773,11 +1773,17 @@
               "dataType" : {
                 "type" : "string"
               },
+              "dataTypesEquivalent" : {
+                "type" : "boolean"
+              },
               "defaultValue" : {
                 "type" : "string"
               },
               "forceDefaultValue" : {
                 "type" : "boolean"
+              },
+              "oldDataType" : {
+                "type" : "string"
               },
               "optional" : {
                 "type" : "boolean"

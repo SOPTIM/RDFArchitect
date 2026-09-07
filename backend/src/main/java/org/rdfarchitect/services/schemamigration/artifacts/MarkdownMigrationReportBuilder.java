@@ -30,6 +30,7 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
@@ -487,6 +488,12 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                                                                 .POTENTIALLY_INVALID_TARGET)
                                 .toList();
                 appendFieldChangesAsSentences(sb, regularChanges);
+                if (prop instanceof SemanticAttributeChange attribute
+                        && attribute.isDataTypesEquivalent()) {
+                    sb.append(
+                            "The datatypes were marked equivalent, so existing values are"
+                                    + " kept.\n\n");
+                }
                 var invalidTargets =
                         prop.getChanges().stream()
                                 .filter(

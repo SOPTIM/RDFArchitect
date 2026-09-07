@@ -28,12 +28,15 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMAttributeUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 
 import java.util.List;
+import java.util.Objects;
 
 @UtilityClass
 public class DefaultValueAssigner {
@@ -108,6 +111,8 @@ public class DefaultValueAssigner {
 
     private void assignDefaultValueToAttribute(
             SemanticAttributeChange attributeChange, Resource attributeResource) {
+        assignOldDataType(attributeChange);
+
         if (attributeResource.getProperty(CIMS.isDefault) != null) {
             attributeChange.setDefaultValue(
                     attributeResource.getProperty(CIMS.isDefault).getString());
@@ -133,6 +138,22 @@ public class DefaultValueAssigner {
             attributeChange.setDataType(datatype);
             attributeChange.setPrimitiveDataType(datatype);
         }
+    }
+
+    /**
+     * Records the datatype the attribute had before the change, taken from the recorded field
+     * change rather than the old schema, so the step can offer the two datatypes for comparison.
+     */
+    private void assignOldDataType(SemanticAttributeChange attributeChange) {
+        attributeChange.getChanges().stream()
+                .filter(
+                        change ->
+                                change.getSemanticFieldChangeType()
+                                        == SemanticFieldChangeType.DATATYPE_CHANGE)
+                .map(SemanticFieldChange::getFrom)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .ifPresent(attributeChange::setOldDataType);
     }
 
     private void assignDefaultValueToEnumAttribute(

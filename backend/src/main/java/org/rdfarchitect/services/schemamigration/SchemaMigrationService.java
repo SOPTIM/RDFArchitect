@@ -208,6 +208,9 @@ public class SchemaMigrationService
     private void reclassifyChangesDueToRenames(
             List<SemanticClassChange> classChanges,
             List<RenameCandidate<SemanticClassChange>> enumRenames) {
+        if (enumRenames == null) {
+            return;
+        }
 
         var renameMap =
                 enumRenames.stream()
@@ -321,6 +324,10 @@ public class SchemaMigrationService
             applyPropertyRenames(
                     newClassChange.getEnumEntries(), propertyRename.getEnumEntryRenames());
         }
+
+        // merging a property rename rebuilds its field changes from both sides, which mints a
+        // fresh DATATYPE_CHANGE even where the datatype was only renamed - so reclassify again
+        reclassifyChangesDueToRenames(newClassChanges, context.getRenameCandidates());
 
         context.setDiffAfterPropertyConfirm(newClassChanges);
     }
