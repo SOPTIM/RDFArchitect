@@ -193,8 +193,12 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         var associationEdgeDTO = result.getEdges().getFirst();
         assertThat(result.getEdges()).hasSize(1);
         assertThat(associationEdgeDTO.getData().getLabels())
-                .extracting(EdgeLabelDTO::getAnchor, EdgeLabelDTO::getText)
-                .containsExactly(tuple(Anchor.SOURCE, "1...1"), tuple(Anchor.TARGET, "0...n"));
+                .extracting(EdgeLabelDTO::getAnchor, EdgeLabelDTO::getKind, EdgeLabelDTO::getText)
+                .containsExactly(
+                        tuple(Anchor.SOURCE, "multiplicity", "1...1"),
+                        tuple(Anchor.SOURCE, "associationLabel", "class2.class1"),
+                        tuple(Anchor.TARGET, "multiplicity", "0...n"),
+                        tuple(Anchor.TARGET, "associationLabel", "class1.class2"));
         assertThat(associationEdgeDTO.getData().isUseFromAssociation()).isFalse();
         assertThat(associationEdgeDTO.getData().isUseToAssociation()).isTrue();
     }

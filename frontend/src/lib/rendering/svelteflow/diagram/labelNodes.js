@@ -30,7 +30,20 @@ const LABEL_MAX_DISTANCE = 120;
 
 const SELF_LOOP_LABEL_OFFSET = { x: 12, y: -30 };
 
+/**
+ * The vertical distance between the two labels of an edge end. Kept vertical whatever way the
+ * edge runs, because a label is at most a line high but can be arbitrarily wide.
+ */
+const LABEL_STACK_SPACING = 24;
+
 const SOURCE_ANCHOR = "SOURCE";
+
+/**
+ * The kinds of label an association edge carries at each of its ends, named after the diagram
+ * object styles they are stored under.
+ */
+const MULTIPLICITY_KIND = "multiplicity";
+const ASSOCIATION_LABEL_KIND = "associationLabel";
 
 export function labelNodeId(label) {
     return `${label.identifiedObjectUUID}:${label.kind}`;
@@ -132,7 +145,7 @@ function buildLabelNode(
               x: anchorClass.position.x + offset.x,
               y: anchorClass.position.y + offset.y,
           }
-        : placement.defaultCenter;
+        : defaultCenter(placement, label.kind);
 
     return {
         id,
@@ -210,49 +223,78 @@ function samePlacementInputs(cached, source, target) {
 
 /**
  * Anchor points and default label placements of both edge ends. The anchor point is where the
- * edge meets the class; the default placement is the one the labels had before they became
- * movable.
+ * edge meets the class; the default placement of the multiplicity is the one it had before an
+ * edge end carried more than one label.
  */
 function edgePlacements(source, target) {
     if (source.id === target.id) {
         const position = source.position;
         const width = source.measured.width ?? 100;
+        // Stacked upwards, into the loop the edge draws above the class, rather than downwards
+        // onto the class itself.
+        const stacked = { x: 0, y: -LABEL_STACK_SPACING };
         return {
             source: placement(
                 position.x + width * 0.25,
                 position.y,
-                -SELF_LOOP_LABEL_OFFSET.x,
-                SELF_LOOP_LABEL_OFFSET.y,
+                { x: -SELF_LOOP_LABEL_OFFSET.x, y: SELF_LOOP_LABEL_OFFSET.y },
+                stacked,
             ),
             target: placement(
                 position.x + width * 0.75,
                 position.y,
-                SELF_LOOP_LABEL_OFFSET.x,
-                SELF_LOOP_LABEL_OFFSET.y,
+                { x: SELF_LOOP_LABEL_OFFSET.x, y: SELF_LOOP_LABEL_OFFSET.y },
+                stacked,
             ),
         };
     }
 
     const edgeParams = getEdgeParams(source, target);
+    const stacked = { x: 0, y: LABEL_STACK_SPACING };
     return {
         source: placement(
             edgeParams.sx,
             edgeParams.sy,
-            edgeParams.startX,
-            edgeParams.startY,
+            { x: edgeParams.startX, y: edgeParams.startY },
+            stacked,
         ),
         target: placement(
             edgeParams.tx,
             edgeParams.ty,
-            edgeParams.endX,
-            edgeParams.endY,
+            { x: edgeParams.endX, y: edgeParams.endY },
+            stacked,
         ),
     };
 }
 
-function placement(anchorX, anchorY, offsetX, offsetY) {
+/**
+ * The anchor point of an edge end together with the default placement of each label drawn there.
+ *
+ * @param offset where the multiplicity sits relative to the anchor point
+ * @param associationLabelShift how far the association label sits from the multiplicity, so that
+ *     the two labels of an edge end do not cover each other
+ */
+function placement(anchorX, anchorY, offset, associationLabelShift) {
+    const multiplicityCenter = {
+        x: anchorX + offset.x,
+        y: anchorY + offset.y,
+    };
     return {
         anchor: { x: anchorX, y: anchorY },
-        defaultCenter: { x: anchorX + offsetX, y: anchorY + offsetY },
+        defaultCenters: {
+            [MULTIPLICITY_KIND]: multiplicityCenter,
+            [ASSOCIATION_LABEL_KIND]: {
+                x: multiplicityCenter.x + associationLabelShift.x,
+                y: multiplicityCenter.y + associationLabelShift.y,
+            },
+        },
     };
+}
+
+/** The default placement of a label kind, falling back to the one of the multiplicity. */
+function defaultCenter(placement, kind) {
+    return (
+        placement.defaultCenters[kind] ??
+        placement.defaultCenters[MULTIPLICITY_KIND]
+    );
 }

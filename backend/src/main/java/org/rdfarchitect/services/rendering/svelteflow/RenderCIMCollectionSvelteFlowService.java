@@ -341,11 +341,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                 EdgeDataDTO.builder()
                         .labels(
                                 SvelteFlowLabels.forAssociation(
-                                        to.getUuid(),
-                                        extractMultiplicityString(to.getMultiplicity()),
-                                        from.getUuid(),
-                                        extractMultiplicityString(from.getMultiplicity()),
-                                        layoutData))
+                                        associationEnd(to), associationEnd(from), layoutData))
                         .useToAssociation(useToAssociation)
                         .useFromAssociation(useFromAssociation)
                         .build();
@@ -357,6 +353,19 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                 .target(targetUUID)
                 .data(edgeDataDTO)
                 .build();
+    }
+
+    /**
+     * The labels of one association end, which are drawn at the class the association points to.
+     *
+     * @param association the association end
+     * @return the end together with the texts of its labels
+     */
+    private SvelteFlowLabels.AssociationEnd associationEnd(CIMAssociation association) {
+        return new SvelteFlowLabels.AssociationEnd(
+                association.getUuid(),
+                extractMultiplicityString(association.getMultiplicity()),
+                association.getLabel() == null ? null : association.getLabel().getValue());
     }
 
     /**
