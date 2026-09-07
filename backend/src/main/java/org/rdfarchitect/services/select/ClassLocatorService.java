@@ -100,7 +100,7 @@ public class ClassLocatorService implements LocateClassUseCase {
                 var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
                 for (var cimClass : new CIMModelFacade(graphUri, model).getCIMClasses()) {
                     var classUri = cimClass.getUri().toString();
-                    if (CrossProfileUtils.mergedClassUuid(classUri).toString().equals(classUUID)) {
+                    if (CrossProfileUtils.mergedUuid(classUri).toString().equals(classUUID)) {
                         return new LocatedClass(graphUri, classUri, cimClass.getUuid());
                     }
                 }

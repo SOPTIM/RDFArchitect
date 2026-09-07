@@ -115,7 +115,7 @@ public class CustomDiagramService
 
             for (var cimClass : profile.model().getCIMClasses()) {
                 var classUri = cimClass.getUri().toString();
-                var mergedUuid = CrossProfileUtils.mergedClassUuid(classUri);
+                var mergedUuid = CrossProfileUtils.mergedUuid(classUri);
 
                 var merged =
                         mergeMap.computeIfAbsent(

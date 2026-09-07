@@ -21,6 +21,8 @@ import {
 } from "$lib/api/generated/index.ts";
 import { editorState } from "$lib/sharedState.svelte.js";
 
+import { LABEL_NODE_TYPE } from "../diagram/labelNodes.js";
+
 const NODE_SELECTED_Z_OFFSET = 1_000_000;
 
 export class NodeOrderController {
@@ -74,6 +76,9 @@ export class NodeOrderController {
         const tempFrontRank = this.#nodeOrder.length + 1;
         const selectedIds = this.#getSelectedIds?.() ?? new Set();
         return diagramNodes.map(node => {
+            if (node.type === LABEL_NODE_TYPE) {
+                return node;
+            }
             const rank =
                 node.id === this.#temporaryFrontNodeId
                     ? tempFrontRank

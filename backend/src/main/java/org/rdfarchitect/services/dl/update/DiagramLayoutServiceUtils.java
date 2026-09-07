@@ -23,6 +23,7 @@ import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.dl.data.dto.Diagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
+import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
@@ -69,6 +70,7 @@ public class DiagramLayoutServiceUtils {
                 DiagramObject.builder()
                         .mRID(diagramObjectMRID)
                         .name(className)
+                        .style(DiagramObjectStyle.CLASS)
                         .belongsToDiagram(new MRID(packageUUID))
                         .belongsToIdentifiedObject(new MRID(classUUID))
                         .build();

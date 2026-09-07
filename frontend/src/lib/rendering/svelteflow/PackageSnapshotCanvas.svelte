@@ -26,12 +26,14 @@
 
     import AssociationEdge from "./components/AssociationEdge.svelte";
     import ClassNode from "./components/ClassNode.svelte";
+    import DiagramLabelNode from "./components/DiagramLabelNode.svelte";
     import EdgeMarkers from "./components/EdgeMarkers.svelte";
     import InheritanceEdge from "./components/InheritanceEdge.svelte";
     import {
         decorateEdges,
         hasDefaultNodeLayout,
     } from "./diagram/diagramElements.js";
+    import { buildLabelNodes, LABEL_NODE_TYPE } from "./diagram/labelNodes.js";
     import { getLayoutedNodes } from "./layout/elkLayout.js";
 
     let {
@@ -41,7 +43,7 @@
         size = $bindable(null),
     } = $props();
 
-    const nodeTypes = { class: ClassNode };
+    const nodeTypes = { class: ClassNode, label: DiagramLabelNode };
     const edgeTypes = {
         association: AssociationEdge,
         inheritance: InheritanceEdge,
@@ -66,15 +68,24 @@
             nodes = [...layouted];
         }
 
+        nodes = [...nodes, ...buildLabelNodes(nodes, edges)];
+
         const padding = 60;
+        // A label can sit well outside its class, so it has to count towards the bounds. It has
+        // not been measured yet at this point, but it is positioned by its centre and the padding
+        // covers the half of it that sticks out.
+        const nodeWidth = n =>
+            n.type === LABEL_NODE_TYPE
+                ? 0
+                : (n.measured?.width ?? n.width ?? 200);
+        const nodeHeight = n =>
+            n.type === LABEL_NODE_TYPE
+                ? 0
+                : (n.measured?.height ?? n.height ?? 100);
         const xs = nodes.map(n => n.position.x);
         const ys = nodes.map(n => n.position.y);
-        const rights = nodes.map(
-            n => n.position.x + (n.measured?.width ?? n.width ?? 200),
-        );
-        const bottoms = nodes.map(
-            n => n.position.y + (n.measured?.height ?? n.height ?? 100),
-        );
+        const rights = nodes.map(n => n.position.x + nodeWidth(n));
+        const bottoms = nodes.map(n => n.position.y + nodeHeight(n));
         const minX = Math.min(...xs);
         const minY = Math.min(...ys);
         const width = Math.max(...rights) - minX + padding * 2;
