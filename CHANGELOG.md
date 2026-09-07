@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-09-07
+
+### Added
+
+- RDFA-586: Movable multiplicity labels ([3a739ec6](https://github.com/SOPTIM/RDFArchitect/commit/3a739ec6), [#244](https://github.com/SOPTIM/RDFArchitect/pull/244))
+- RDFA-674: Merged view style for custom diagrams ([c7e8c96e](https://github.com/SOPTIM/RDFArchitect/commit/c7e8c96e), [#237](https://github.com/SOPTIM/RDFArchitect/pull/237))
+- RDFA-699: Multiprofile maintenance ([9050d16b](https://github.com/SOPTIM/RDFArchitect/commit/9050d16b), [#233](https://github.com/SOPTIM/RDFArchitect/pull/233))
+- RDFA-483: Central frontend store ([64d25ac1](https://github.com/SOPTIM/RDFArchitect/commit/64d25ac1), [#128](https://github.com/SOPTIM/RDFArchitect/pull/128))
+
+### Changed
+
+- Document required npm run api:generate step ([c7841484](https://github.com/SOPTIM/RDFArchitect/commit/c7841484), [#248](https://github.com/SOPTIM/RDFArchitect/pull/248))
+
+### Fixed
+
+- RDFA-719: Show association labels in diagrams ([33e6fd9c](https://github.com/SOPTIM/RDFArchitect/commit/33e6fd9c), [#255](https://github.com/SOPTIM/RDFArchitect/pull/255))
+- RDFA-710: Restore share snapshot ([0b0c3fa3](https://github.com/SOPTIM/RDFArchitect/commit/0b0c3fa3), [#247](https://github.com/SOPTIM/RDFArchitect/pull/247))
+- RDFA-704: Package diagram scope ([77e72d73](https://github.com/SOPTIM/RDFArchitect/commit/77e72d73), [#238](https://github.com/SOPTIM/RDFArchitect/pull/238))
+- Fix backend url in frontend docker container ([b2d39c34](https://github.com/SOPTIM/RDFArchitect/commit/b2d39c34), [#241](https://github.com/SOPTIM/RDFArchitect/pull/241))
+
 ## [1.4.0] - 2026-08-20
 
 ### Added
