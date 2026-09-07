@@ -19,6 +19,7 @@ package org.rdfarchitect.config;
 
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.services.shacl.SHACLDeleteShapeUseCase;
+import org.rdfarchitect.services.shacl.SHACLDocumentUseCase;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.rdfarchitect.services.shacl.SHACLGetClassRelationsUseCase;
 import org.rdfarchitect.services.shacl.SHACLGetShapeUseCase;
@@ -26,6 +27,15 @@ import org.rdfarchitect.services.shacl.SHACLInsertUseCase;
 import org.rdfarchitect.services.shacl.SHACLReplaceShapeUseCase;
 import org.rdfarchitect.services.shacl.SHACLStoringService;
 import org.rdfarchitect.services.shacl.SHACLUpdateUseCase;
+import org.rdfarchitect.services.shacl.conformance.ConformanceService;
+import org.rdfarchitect.services.shacl.conformance.ConformanceUseCase;
+import org.rdfarchitect.services.shacl.form.ShapeFormService;
+import org.rdfarchitect.services.shacl.form.ShapeFormUseCase;
+import org.rdfarchitect.services.shacl.terms.SchemaTermsService;
+import org.rdfarchitect.services.shacl.terms.SchemaTermsUseCase;
+import org.rdfarchitect.services.shacl.validation.SchemaIndexCache;
+import org.rdfarchitect.services.shacl.validation.ShapesValidationService;
+import org.rdfarchitect.services.shacl.validation.ShapesValidationUseCase;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -65,5 +75,41 @@ public class SHACLCustomConfig {
     @Bean
     public SHACLUpdateUseCase shaclUpdateUseCase(DatabasePort databasePort) {
         return new SHACLStoringService(databasePort);
+    }
+
+    @Bean
+    public SHACLDocumentUseCase shaclDocumentUseCase(DatabasePort databasePort) {
+        return new SHACLStoringService(databasePort);
+    }
+
+    /**
+     * Shared deliberately: indexing a workspace's schema costs a few hundred milliseconds, and the
+     * embedded language server planned for the editor will read the same index.
+     */
+    @Bean
+    public SchemaIndexCache schemaIndexCache(DatabasePort databasePort) {
+        return new SchemaIndexCache(databasePort);
+    }
+
+    @Bean
+    public ConformanceUseCase conformanceUseCase(DatabasePort databasePort) {
+        return new ConformanceService(databasePort);
+    }
+
+    @Bean
+    public ShapeFormUseCase shapeFormUseCase() {
+        return new ShapeFormService();
+    }
+
+    @Bean
+    public SchemaTermsUseCase schemaTermsUseCase(
+            DatabasePort databasePort, SchemaIndexCache schemaIndexCache) {
+        return new SchemaTermsService(databasePort, schemaIndexCache);
+    }
+
+    @Bean
+    public ShapesValidationUseCase shapesValidationUseCase(
+            DatabasePort databasePort, SchemaIndexCache schemaIndexCache) {
+        return new ShapesValidationService(databasePort, schemaIndexCache);
     }
 }

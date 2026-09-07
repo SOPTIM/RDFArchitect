@@ -279,8 +279,32 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
         return head;
     }
 
-    private int currentVersion() {
+    /**
+     * Returns how many committed versions deep this graph's history is.
+     *
+     * <p>Exposed so a graph created part-way through a session can be brought in step with the
+     * context's other participants — see {@link #padHistory(int)}.
+     */
+    public int currentVersion() {
         return pastDeltas.size() - 1;
+    }
+
+    /**
+     * Pads the history with empty versions until it is {@code targetVersion} deep.
+     *
+     * <p>The context undoes every participant the same number of times, and {@link #undo()} throws
+     * once a participant runs out of history. A graph added to a context that already has a history
+     * would therefore break the first undo that reaches past its creation. Padding states the truth
+     * — the graph existed and was empty at each of those earlier versions — and keeps every
+     * participant's version counter aligned.
+     *
+     * <p>Does nothing when the history is already at or beyond {@code targetVersion}.
+     */
+    public void padHistory(int targetVersion) {
+        while (currentVersion() < targetVersion) {
+            pastDeltas.push(currentDelta);
+            currentDelta = new DeltaCompressible(head());
+        }
     }
 
     private int countVersions() {

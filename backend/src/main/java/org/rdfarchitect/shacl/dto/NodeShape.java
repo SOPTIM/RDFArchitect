@@ -20,6 +20,8 @@ package org.rdfarchitect.shacl.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
+
 @Builder
 @Data
 public class NodeShape {
@@ -27,4 +29,12 @@ public class NodeShape {
     private String id;
 
     private String triples;
+
+    /**
+     * The documents this shape was read from. Empty for a generated shape, which has no document.
+     *
+     * <p>Empty rather than absent so a reader never has to tell "generated" apart from "not filled
+     * in yet".
+     */
+    @Builder.Default private List<ShapeOrigin> origins = List.of();
 }

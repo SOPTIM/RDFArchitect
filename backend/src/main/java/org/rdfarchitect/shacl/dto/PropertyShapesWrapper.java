@@ -36,6 +36,16 @@ public class PropertyShapesWrapper {
 
     private List<PropertyShape> propertyShapes;
 
+    /**
+     * What these shapes require between them, in words — {@code "0..1, xsd:float"}.
+     *
+     * <p>The conjunction of every shape in the wrapper, because that is what SHACL means by having
+     * several of them. It is here so a reader can see the rule without expanding the Turtle, which
+     * is the whole reason the class dialog exists. Empty when the shapes state nothing this can
+     * summarise, such as a SPARQL constraint.
+     */
+    private String summary;
+
     // Custom builder to allow custom setter
     public static class PropertyShapesWrapperBuilder {
         public PropertyShapesWrapperBuilder propertyShapes(List<PropertyShape> propertyShapes) {

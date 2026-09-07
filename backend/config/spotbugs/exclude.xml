@@ -10,4 +10,13 @@
         <Bug
             pattern="CT_CONSTRUCTOR_THROW,MC_OVERRIDABLE_METHOD_CALL_IN_CONSTRUCTOR,UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR,UL_UNRELEASED_LOCK,UL_UNRELEASED_LOCK_EXCEPTION_PATH"/>
     </Match>
+    <!--
+        This codebase reports failures as unchecked domain exceptions and maps them to HTTP
+        statuses in GenericExceptionHandler, so throwing a RuntimeException is the error strategy
+        rather than an accident. The detector also fires on a compensating handler that cleans up
+        and rethrows what it caught, which is the shape it is meant to be.
+    -->
+    <Match>
+        <Bug pattern="THROWS_METHOD_THROWS_RUNTIMEEXCEPTION"/>
+    </Match>
 </FindBugsFilter>

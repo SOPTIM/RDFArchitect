@@ -46,13 +46,8 @@
     }
 
     async function snapshotWorkspace() {
-        // The endpoint takes the workspace name as a raw request body: the
-        // backend reads it verbatim, so the default JSON serializer would send
-        // it quoted and the workspace would not be found.
         const { data, error } = await createSnapshot({
             body: workspaceName,
-            bodySerializer: null,
-            headers: { "Content-Type": "text/plain" },
         });
         if (!error) {
             base64Token = data;

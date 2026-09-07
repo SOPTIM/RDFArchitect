@@ -40,6 +40,8 @@
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
         <lombok.version>1.18.46</lombok.version>
+        <jena.version>6.2.0</jena.version>
+        <cimvocabcheck.version>1.0.1</cimvocabcheck.version>
     </properties>
     <build>
         <plugins>
@@ -337,17 +339,33 @@
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>4.1.1</version>
     </parent>
+    <dependencyManagement>
+        <dependencies>
+            <!-- Pins Jena for whoever asks for it: cimvocabcheck-core declares Jena 6.1.0, and
+                 leaving that to Maven's nearest-wins rule would make the version that ends up on
+                 the classpath depend on declaration order. jena-arq is the entry point every
+                 other Jena module is reached through, so managing it fixes the whole tree.
+                 Deliberately not importing jena-bom: it inherits Jena's parent pom, which imports
+                 shiro-bom, and that pins Spring to 5.3.x — an import here outranks the
+                 spring-boot-starter-parent's own management and downgrades the whole framework. -->
+            <dependency>
+                <groupId>org.apache.jena</groupId>
+                <artifactId>jena-arq</artifactId>
+                <version>${jena.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
         <dependency>
             <groupId>org.apache.jena</groupId>
             <artifactId>apache-jena-libs</artifactId>
             <type>pom</type>
-            <version>6.2.0</version>
+            <version>${jena.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.jena</groupId>
             <artifactId>jena-querybuilder</artifactId>
-            <version>6.2.0</version>
+            <version>${jena.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -446,6 +464,13 @@
             <groupId>de.soptim.opencgmes</groupId>
             <artifactId>cimxml</artifactId>
             <version>1.1.0</version>
+        </dependency>
+
+        <!-- Static analysis of SHACL shapes against a CIM/RDFS schema. -->
+        <dependency>
+            <groupId>de.soptim.opencgmes</groupId>
+            <artifactId>cimvocabcheck-core</artifactId>
+            <version>${cimvocabcheck.version}</version>
         </dependency>
     </dependencies>
 </project>

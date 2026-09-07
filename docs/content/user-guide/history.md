@@ -23,4 +23,4 @@ This is the view to use when reviewing what happened between two editing session
 
 ## Restore a previous version
 
-From the changelog you can restore the graph to any earlier point. This resets the graph to the selected state, including tracked class, attribute, association, enum entry, package, and ontology changes. Namespace tables and custom SHACL are not part of the undo/redo history.
+From the changelog you can restore the graph to any earlier point. This resets the graph to the selected state, including tracked class, attribute, association, enum entry, package, and ontology changes. Edits to custom constraints are tracked too and appear as `shacl` entries, named after the document they changed. Namespace tables are not part of the undo/redo history.

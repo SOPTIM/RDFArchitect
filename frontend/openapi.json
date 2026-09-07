@@ -619,6 +619,112 @@
         },
         "type" : "object"
       },
+      "ConformanceDocument" : {
+        "properties" : {
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ConformanceFinding" : {
+        "properties" : {
+          "documentSays" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [
+              "CONTRADICTED",
+              "DIFFERENT",
+              "MISSING_IN_DOCUMENT",
+              "NOT_IN_SCHEMA"
+            ],
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "schemaSays" : {
+            "type" : "string"
+          },
+          "statedIn" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "targetClass" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ConformanceReport" : {
+        "properties" : {
+          "agreeing" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "compared" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "conforms" : {
+            "type" : "boolean"
+          },
+          "contradictedCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "differentCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "documentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "documentName" : {
+            "type" : "string"
+          },
+          "documents" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ConformanceDocument"
+            },
+            "type" : "array"
+          },
+          "findings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ConformanceFinding"
+            },
+            "type" : "array"
+          },
+          "impliedBySchema" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "missingInDocumentCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "notInSchemaCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "stated" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "ContextDelta" : {
         "properties" : {
           "additions" : {
@@ -1071,8 +1177,92 @@
           "id" : {
             "type" : "string"
           },
+          "origins" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ShapeOrigin"
+            },
+            "type" : "array"
+          },
           "triples" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "NodeShapeModel" : {
+        "properties" : {
+          "closed" : {
+            "type" : "boolean"
+          },
+          "deactivated" : {
+            "type" : "boolean"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "editable" : {
+            "type" : "boolean"
+          },
+          "ignoredProperties" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "iri" : {
+            "type" : "string"
+          },
+          "line" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "properties" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PropertyShapeModel"
+            },
+            "type" : "array"
+          },
+          "readOnlyReason" : {
+            "type" : "string"
+          },
+          "retained" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RetainedClause"
+            },
+            "type" : "array"
+          },
+          "severity" : {
+            "type" : "string"
+          },
+          "targetClasses" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "targetNodes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "targetObjectsOf" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "targetSubjectsOf" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -1307,8 +1497,142 @@
             "format" : "double",
             "type" : "number"
           },
+          "origins" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ShapeOrigin"
+            },
+            "type" : "array"
+          },
           "triples" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PropertyShapeModel" : {
+        "properties" : {
+          "allowedValues" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "classIri" : {
+            "type" : "string"
+          },
+          "dataType" : {
+            "type" : "string"
+          },
+          "deactivated" : {
+            "type" : "boolean"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "editable" : {
+            "type" : "boolean"
+          },
+          "flags" : {
+            "type" : "string"
+          },
+          "group" : {
+            "type" : "string"
+          },
+          "hasValue" : {
+            "type" : "string"
+          },
+          "iri" : {
+            "type" : "string"
+          },
+          "line" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "maxCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "maxExclusive" : {
+            "type" : "string"
+          },
+          "maxInclusive" : {
+            "type" : "string"
+          },
+          "maxLength" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "minCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "minExclusive" : {
+            "type" : "string"
+          },
+          "minInclusive" : {
+            "type" : "string"
+          },
+          "minLength" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "nodeKind" : {
+            "type" : "string"
+          },
+          "order" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "pattern" : {
+            "type" : "string"
+          },
+          "readOnlyReason" : {
+            "type" : "string"
+          },
+          "retained" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RetainedClause"
+            },
+            "type" : "array"
+          },
+          "severity" : {
+            "type" : "string"
+          },
+          "sourceIndex" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "typed" : {
+            "type" : "boolean"
+          },
+          "usedBy" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "PropertyShapeSplit" : {
+        "properties" : {
+          "newIri" : {
+            "type" : "string"
+          },
+          "nodeShapeIri" : {
+            "type" : "string"
+          },
+          "sourceIndex" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -1329,6 +1653,9 @@
             "type" : "array"
           },
           "propertyType" : {
+            "type" : "string"
+          },
+          "summary" : {
             "type" : "string"
           }
         },
@@ -1671,6 +1998,23 @@
         },
         "type" : "object"
       },
+      "RetainedClause" : {
+        "properties" : {
+          "field" : {
+            "type" : "string"
+          },
+          "predicate" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "value" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "SHACLToClassRelations" : {
         "properties" : {
           "derivedPropertyShapes" : {
@@ -1691,6 +2035,119 @@
           "propertyShapes" : {
             "items" : {
               "$ref" : "#/components/schemas/PropertyShapesWrapper"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "SchemaTerm" : {
+        "properties" : {
+          "domain" : {
+            "type" : "string"
+          },
+          "iri" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [
+              "CLASS",
+              "PROPERTY",
+              "ENUM_MEMBER"
+            ],
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "localName" : {
+            "type" : "string"
+          },
+          "namespace" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SchemaTermDetail" : {
+        "properties" : {
+          "classUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "comment" : {
+            "type" : "string"
+          },
+          "domains" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "graphUri" : {
+            "type" : "string"
+          },
+          "iri" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [
+              "CLASS",
+              "PROPERTY",
+              "ENUM_MEMBER"
+            ],
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "localName" : {
+            "type" : "string"
+          },
+          "maxCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "minCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "multiplicity" : {
+            "type" : "string"
+          },
+          "namespace" : {
+            "type" : "string"
+          },
+          "packageUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "profiles" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "ranges" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "SchemaTerms" : {
+        "properties" : {
+          "profiles" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "terms" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SchemaTerm"
             },
             "type" : "array"
           }
@@ -2020,6 +2477,222 @@
         "required" : [
           "type"
         ],
+        "type" : "object"
+      },
+      "ShapeEditRequest" : {
+        "properties" : {
+          "propertyShape" : {
+            "$ref" : "#/components/schemas/PropertyShapeModel"
+          },
+          "removeShapeIri" : {
+            "type" : "string"
+          },
+          "shape" : {
+            "$ref" : "#/components/schemas/NodeShapeModel"
+          },
+          "split" : {
+            "$ref" : "#/components/schemas/PropertyShapeSplit"
+          },
+          "turtle" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ShapeEditResult" : {
+        "properties" : {
+          "turtle" : {
+            "type" : "string"
+          },
+          "warnings" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ShapeOrigin" : {
+        "properties" : {
+          "documentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "documentName" : {
+            "type" : "string"
+          },
+          "line" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ShapesDocumentInfo" : {
+        "properties" : {
+          "default" : {
+            "type" : "boolean"
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "order" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "origin" : {
+            "enum" : [
+              "IMPORTED",
+              "AUTHORED"
+            ],
+            "type" : "string"
+          },
+          "sourceFileName" : {
+            "type" : "string"
+          },
+          "tripleCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ShapesDocumentValidationResult" : {
+        "properties" : {
+          "documentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "documentName" : {
+            "type" : "string"
+          },
+          "errorCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "findings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ShapesValidationFinding"
+            },
+            "type" : "array"
+          },
+          "infoCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "valid" : {
+            "type" : "boolean"
+          },
+          "warningCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ShapesForm" : {
+        "properties" : {
+          "parseError" : {
+            "$ref" : "#/components/schemas/ShapesValidationFinding"
+          },
+          "propertyShapes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PropertyShapeModel"
+            },
+            "type" : "array"
+          },
+          "shapes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/NodeShapeModel"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ShapesValidationFinding" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "column" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "foundInProfiles" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "line" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "severity" : {
+            "enum" : [
+              "ERROR",
+              "WARNING",
+              "INFO"
+            ],
+            "type" : "string"
+          },
+          "source" : {
+            "enum" : [
+              "SYNTAX",
+              "SHAPE",
+              "SPARQL",
+              "CONFLICT"
+            ],
+            "type" : "string"
+          },
+          "term" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ShapesValidationReport" : {
+        "properties" : {
+          "documents" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ShapesDocumentValidationResult"
+            },
+            "type" : "array"
+          },
+          "errorCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "infoCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "profiles" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "valid" : {
+            "type" : "boolean"
+          },
+          "warningCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
         "type" : "object"
       },
       "SuperClassDTO" : {
@@ -4001,7 +4674,8 @@
         ]
       },
       "put" : {
-        "description" : "Replace the SHACL rules of an association.",
+        "deprecated" : true,
+        "description" : "Replace the SHACL rules of an association. Superseded by PUT /shacl/documents/{documentId}. Writes land in the graph's *default* shapes document whichever document the rule came from, and do not update that document's text — so an edit made here is invisible to, and overwritten by, the constraints workbench.",
         "operationId" : "replaceAssociationSHACL",
         "parameters" : [
           {
@@ -4053,7 +4727,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
+            "text/plain" : {
               "schema" : {
                 "description" : "The SHACL shapes to be inserted.",
                 "type" : "string"
@@ -4378,7 +5052,8 @@
         ]
       },
       "put" : {
-        "description" : "Replace the SHACL rules of an attribute.",
+        "deprecated" : true,
+        "description" : "Replace the SHACL rules of an attribute. Superseded by PUT /shacl/documents/{documentId}. Writes land in the graph's *default* shapes document whichever document the rule came from, and do not update that document's text — so an edit made here is invisible to, and overwritten by, the constraints workbench.",
         "operationId" : "replaceAttributeSHACL",
         "parameters" : [
           {
@@ -4430,7 +5105,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
+            "text/plain" : {
               "schema" : {
                 "description" : "The SHACL shapes to be inserted.",
                 "type" : "string"
@@ -4736,7 +5411,8 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/shacl/custom" : {
       "put" : {
-        "description" : "Replace or insert SHACL rules related to a class.",
+        "deprecated" : true,
+        "description" : "Replace or insert SHACL rules related to a class. Superseded by PUT /shacl/documents/{documentId}. Writes land in the graph's *default* shapes document whichever document the rule came from, and do not update that document's text — so an edit made here is invisible to, and overwritten by, the constraints workbench.",
         "operationId" : "putSHACL",
         "parameters" : [
           {
@@ -4779,7 +5455,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
+            "text/plain" : {
               "schema" : {
                 "description" : "The SHACL shapes to be inserted.",
                 "type" : "string"
@@ -7000,6 +7676,68 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/conformance" : {
+      "get" : {
+        "description" : "Reports where a constraints document and the schema it describes disagree: what the schema implies and the document omits, what the document says that the schema does not have, and — the case worth acting on — what the two assert that cannot both be true. Compared per class and property, not by shape name, because generated and official shapes share no naming convention.",
+        "operationId" : "compare",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The constraints document to compare against.",
+            "in" : "query",
+            "name" : "documentId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConformanceReport"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "compare constraints with the schema",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom/file" : {
       "get" : {
         "description" : "Export the rdf-shacl graph",
@@ -7051,7 +7789,8 @@
         ]
       },
       "put" : {
-        "description" : "Replace or insert a shacl graph stored in a file",
+        "deprecated" : true,
+        "description" : "Replace or insert a shacl graph stored in a file. Superseded by POST /shacl/documents/file, which adds a file as its own document instead of replacing the graph's default one.",
         "operationId" : "replaceGraphWithFile",
         "parameters" : [
           {
@@ -7216,7 +7955,8 @@
         ]
       },
       "put" : {
-        "description" : "Replace or insert a shacl graph stored in a Turtle String",
+        "deprecated" : true,
+        "description" : "Replace or insert a shacl graph stored in a Turtle String. Superseded by PUT /shacl/documents/{documentId}, which addresses one document explicitly.",
         "operationId" : "replaceGraphWithGraphString",
         "parameters" : [
           {
@@ -7250,7 +7990,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
+            "text/plain" : {
               "schema" : {
                 "description" : "The entire SHACL graph as a string",
                 "type" : "string"
@@ -7381,7 +8121,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
+            "text/plain" : {
               "schema" : {
                 "description" : "the triples to replace, requires valid turtle syntax.",
                 "type" : "string"
@@ -7403,6 +8143,688 @@
           }
         },
         "summary" : "Replace/Insert shacl shape",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/documents" : {
+      "get" : {
+        "description" : "Lists the sets of SHACL shapes stored for a graph, in order, without their content.",
+        "operationId" : "listShapesDocuments",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "list constraints documents",
+        "tags" : [
+          "shacl"
+        ]
+      },
+      "post" : {
+        "description" : "Creates a set of SHACL shapes from a Turtle string.",
+        "operationId" : "createShapesDocument",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "Display name of the new document.",
+            "in" : "query",
+            "name" : "name",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "text/plain" : {
+              "schema" : {
+                "description" : "The SHACL shapes in Turtle syntax.",
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "add a constraints document from Turtle",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/documents/file" : {
+      "post" : {
+        "description" : "Uploads a set of SHACL shapes. TTL, RDF/XML and N-Triples are accepted; anything other than Turtle is converted to Turtle on import.",
+        "operationId" : "createShapesDocumentFromFile",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "Display name; defaults to the file name.",
+            "in" : "query",
+            "name" : "name",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "properties" : {
+                  "file" : {
+                    "description" : "The file containing the SHACL shapes.",
+                    "format" : "binary",
+                    "type" : "string"
+                  }
+                },
+                "required" : [
+                  "file"
+                ],
+                "type" : "object"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "add a constraints document from a file",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/documents/{documentId}" : {
+      "delete" : {
+        "description" : "Deletes a set of SHACL shapes. The graph's default document cannot be deleted, only emptied.",
+        "operationId" : "deleteShapesDocument",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the constraints document.",
+            "in" : "path",
+            "name" : "documentId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "delete a constraints document",
+        "tags" : [
+          "shacl"
+        ]
+      },
+      "get" : {
+        "description" : "Returns the document's Turtle source, as the user last saved it where that text is known.",
+        "operationId" : "getShapesDocumentText",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the constraints document.",
+            "in" : "path",
+            "name" : "documentId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "get constraints document content",
+        "tags" : [
+          "shacl"
+        ]
+      },
+      "patch" : {
+        "description" : "Renames a document, switches it on or off, or moves it in the list. Omitted parameters are left unchanged. Order affects list position and serialisation order only — SHACL has no precedence between documents.",
+        "operationId" : "updateShapesDocument",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the constraints document.",
+            "in" : "path",
+            "name" : "documentId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "New display name.",
+            "in" : "query",
+            "name" : "name",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "Whether the shapes take part in validation and combined export.",
+            "in" : "query",
+            "name" : "enabled",
+            "required" : false,
+            "schema" : {
+              "type" : "boolean"
+            }
+          },
+          {
+            "description" : "New position in the document list.",
+            "in" : "query",
+            "name" : "order",
+            "required" : false,
+            "schema" : {
+              "format" : "int32",
+              "type" : "integer"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "update constraints document metadata",
+        "tags" : [
+          "shacl"
+        ]
+      },
+      "put" : {
+        "description" : "Replaces the document's shapes with the given Turtle.",
+        "operationId" : "replaceShapesDocumentText",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the constraints document.",
+            "in" : "path",
+            "name" : "documentId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "text/plain" : {
+              "schema" : {
+                "description" : "The SHACL shapes in Turtle syntax.",
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "replace constraints document content",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/export/file" : {
+      "get" : {
+        "description" : "Exports the named constraints documents as one file, optionally merged with the shapes generated from the schema. A document is included because it was asked for, whether or not it is enabled for validation.",
+        "operationId" : "exportSelection",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The constraints documents to include.",
+            "in" : "query",
+            "name" : "documentId",
+            "required" : false,
+            "schema" : {
+              "items" : {
+                "format" : "uuid",
+                "type" : "string"
+              },
+              "type" : "array"
+            }
+          },
+          {
+            "description" : "Whether to merge in the shapes derived from the schema.",
+            "in" : "query",
+            "name" : "includeGenerated",
+            "required" : false,
+            "schema" : {
+              "default" : false,
+              "type" : "boolean"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "text/turtle" : { }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "export chosen constraints",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/form" : {
+      "post" : {
+        "description" : "Reads a Turtle document into the node shapes and property shapes a form can show. A shape using anything the form does not model — sh:or or an embedded query, say — comes back marked not editable, so it can be displayed without the form ever offering to write it back.",
+        "operationId" : "readForm",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "text/plain" : {
+              "schema" : {
+                "description" : "The SHACL shapes in Turtle syntax.",
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesForm"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "read constraints as shapes",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/form/apply" : {
+      "post" : {
+        "description" : "Writes one shape back into a document and returns the new text. Only the edited shape's statement is rewritten; every other byte of the document is preserved, so an imported constraints file keeps its comments and layout.",
+        "operationId" : "applyEdit",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ShapeEditRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapeEditResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "apply a form edit",
         "tags" : [
           "shacl"
         ]
@@ -7554,6 +8976,264 @@
           }
         },
         "summary" : "export generated SHACL namespaces",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/terms" : {
+      "get" : {
+        "description" : "Every class, property and enum member the workspace's profiles declare, for an editor to complete against. Sent whole so the client can filter it locally; it changes only when the schema does.",
+        "operationId" : "listTerms",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchemaTerms"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "list the schema's terms",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/terms/detail" : {
+      "get" : {
+        "description" : "What the workspace's schema knows about a term: its label and comment, a property's domain, range and multiplicity, the profiles declaring it, and where its class can be opened for editing.",
+        "operationId" : "describeTerm",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The absolute IRI of the term.",
+            "in" : "query",
+            "name" : "iri",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchemaTermDetail"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "describe one schema term",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/validate" : {
+      "post" : {
+        "description" : "Validates the graph's SHACL shapes against the CIM schema of its workspace, and reports each problem with the document and source position it belongs to. Validates every enabled document unless one is named, in which case that document is validated even when disabled. The per-document counts are what a document list needs for its status badges.",
+        "operationId" : "validateShapes",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "A single constraints document to validate.",
+            "in" : "query",
+            "name" : "documentId",
+            "required" : false,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesValidationReport"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "validate stored constraints",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/validate/text" : {
+      "post" : {
+        "description" : "Validates a Turtle document that has not been saved, so an editor can show problems while the user types. Turtle that does not parse is reported as a finding with its position, not as a failed request.",
+        "operationId" : "validateShapesText",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "What to call the document in the report.",
+            "in" : "query",
+            "name" : "name",
+            "required" : false,
+            "schema" : {
+              "default" : "unsaved",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The stored document this text is the unsaved version of. Given one, contradictions between the text and the graph's other documents are reported too.",
+            "in" : "query",
+            "name" : "documentId",
+            "required" : false,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "text/plain" : {
+              "schema" : {
+                "description" : "The SHACL shapes in Turtle syntax.",
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesValidationReport"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "validate constraints that are not stored",
         "tags" : [
           "shacl"
         ]
@@ -8907,7 +10587,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
+            "text/plain" : {
               "schema" : {
                 "description" : "The literal name of the dataset.",
                 "type" : "string"

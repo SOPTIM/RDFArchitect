@@ -38,8 +38,66 @@ public interface GraphContext extends Transactional, VersionControl {
 
     Graph getRdfGraph();
 
+    /**
+     * Identifies the graph's current committed content. A fresh id is minted by every commit, and
+     * an undo or redo returns the id of the version it moves to, so two reads seeing the same id
+     * are looking at the same triples.
+     *
+     * <p>Exposed so that work derived from a graph — indexing its schema for term lookups, say —
+     * can be kept until the graph actually changes, without the commit path having to notify
+     * anyone.
+     */
+    UUID getRdfGraphVersion();
+
     DiagramLayoutDelta getDiagramLayout();
 
+    /**
+     * Id of the document {@link #getCustomSHACL()} reads and writes.
+     *
+     * <p>Reserved and fixed so that it survives a snapshot round-trip and so the single shapes
+     * graph of a session created before documents existed always migrates to the same place.
+     */
+    UUID DEFAULT_SHAPES_DOCUMENT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
+    /** Name given to the default document. */
+    String DEFAULT_SHAPES_DOCUMENT_NAME = "custom.ttl";
+
+    /**
+     * The graph's shapes documents, keyed by id.
+     *
+     * <p>The returned map is an ordered snapshot; use {@link #createShapesDocument} and {@link
+     * #removeShapesDocument} to change which documents exist.
+     */
+    Map<UUID, ShapesDocument> getShapesDocuments();
+
+    /**
+     * Adds a shapes document to this graph.
+     *
+     * <p>Must be called in a write transaction. The new document's graph joins the context's
+     * transactions and history, so shapes added now can be undone like any other change.
+     */
+    ShapesDocument createShapesDocument(String name, ShapesDocument.Origin origin);
+
+    /**
+     * Removes a shapes document and stops its graph taking part in transactions.
+     *
+     * <p><strong>Not undoable.</strong> Every other change to a document — its text, its name,
+     * emptying it entirely — is a write to a participant of this context and rewinds with it. Which
+     * documents <em>exist</em> is not versioned: the removed graph leaves the participant list
+     * before the commit, so there is nothing for an undo to restore it from, and the commit that
+     * records the deletion rewinds only the documents that remain.
+     *
+     * <p>Callers must therefore treat this as destructive and confirm it. Making it undoable means
+     * versioning the document list itself, not patching this method.
+     */
+    void removeShapesDocument(UUID documentId);
+
+    /**
+     * The default document's shapes.
+     *
+     * <p>Kept for callers that predate multiple documents per graph; it creates the default
+     * document on first use so it never returns {@code null}.
+     */
     RDFGraphDelta getCustomSHACL();
 
     ChangeLog getChangeLog();
