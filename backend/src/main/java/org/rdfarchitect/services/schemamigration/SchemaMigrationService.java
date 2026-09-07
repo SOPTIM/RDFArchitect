@@ -31,12 +31,10 @@ import org.rdfarchitect.context.MigrationSessionStore;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.changes.RenameCandidate;
-import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
-import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
-import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.compare.TripleChangeAnalyser;
@@ -198,7 +196,7 @@ public class SchemaMigrationService
         for (var rename : renames) {
             classChanges.remove(rename.getNewResource());
             classChanges.remove(rename.getOldResource());
-            classChanges.add((SemanticClassChange) RenameObjectBuilder.createRenameObject(rename));
+            classChanges.add(RenameObjectBuilder.createRenameObject(rename));
         }
         // reclassify DATATYPE_CHANGE to DATATYPE_RENAMED where the change is simply
         // a consequence of an enum class rename
@@ -316,63 +314,39 @@ public class SchemaMigrationService
                             .filter(c -> c.getLabel().equals(propertyRename.getClassLabel()))
                             .findFirst()
                             .orElseThrow();
-            var attributes = newClassChange.getAttributes();
-            for (var attributeRename : propertyRename.getAttributeRenames()) {
-                var oldIri =
-                        attributeRename.getOldResource() != null
-                                ? attributeRename.getOldResource().getIri()
-                                : null;
-                var newIri =
-                        attributeRename.getNewResource() != null
-                                ? attributeRename.getNewResource().getIri()
-                                : null;
-                attributes.removeIf(a -> a.getIri().equals(oldIri) || a.getIri().equals(newIri));
-                var mergedAttribute =
-                        (SemanticAttributeChange)
-                                RenameObjectBuilder.createRenameObject(attributeRename);
-                if (!mergedAttribute.getChanges().isEmpty()) {
-                    attributes.add(mergedAttribute);
-                }
-            }
-            var associations = newClassChange.getAssociations();
-            for (var associationRename : propertyRename.getAssociationRenames()) {
-                var oldIri =
-                        associationRename.getOldResource() != null
-                                ? associationRename.getOldResource().getIri()
-                                : null;
-                var newIri =
-                        associationRename.getNewResource() != null
-                                ? associationRename.getNewResource().getIri()
-                                : null;
-                associations.removeIf(a -> a.getIri().equals(oldIri) || a.getIri().equals(newIri));
-                var mergedAssociation =
-                        (SemanticAssociationChange)
-                                RenameObjectBuilder.createRenameObject(associationRename);
-                if (!mergedAssociation.getChanges().isEmpty()) {
-                    associations.add(mergedAssociation);
-                }
-            }
-            var enumEntries = newClassChange.getEnumEntries();
-            for (var enumEntryRename : propertyRename.getEnumEntryRenames()) {
-                var oldIri =
-                        enumEntryRename.getOldResource() != null
-                                ? enumEntryRename.getOldResource().getIri()
-                                : null;
-                var newIri =
-                        enumEntryRename.getNewResource() != null
-                                ? enumEntryRename.getNewResource().getIri()
-                                : null;
-                enumEntries.removeIf(a -> a.getIri().equals(oldIri) || a.getIri().equals(newIri));
-                var mergedEnumEntry =
-                        (SemanticEnumEntryChange)
-                                RenameObjectBuilder.createRenameObject(enumEntryRename);
-                if (!mergedEnumEntry.getChanges().isEmpty()) {
-                    enumEntries.add(mergedEnumEntry);
-                }
-            }
+            applyPropertyRenames(
+                    newClassChange.getAttributes(), propertyRename.getAttributeRenames());
+            applyPropertyRenames(
+                    newClassChange.getAssociations(), propertyRename.getAssociationRenames());
+            applyPropertyRenames(
+                    newClassChange.getEnumEntries(), propertyRename.getEnumEntryRenames());
         }
 
         context.setDiffAfterPropertyConfirm(newClassChanges);
+    }
+
+    /**
+     * Replaces both sides of every confirmed rename with the merged change, so a renamed property
+     * is listed once rather than as an unrelated addition plus deletion.
+     */
+    private <T extends SemanticResourceChange> void applyPropertyRenames(
+            List<T> properties, List<RenameCandidate<T>> renames) {
+        for (var rename : renames) {
+            var oldIri = iriOf(rename.getOldResource());
+            var newIri = iriOf(rename.getNewResource());
+            properties.removeIf(
+                    property ->
+                            property.getIri().equals(oldIri) || property.getIri().equals(newIri));
+
+            var merged = RenameObjectBuilder.createRenameObject(rename);
+            if (!merged.getChanges().isEmpty()) {
+                properties.add(merged);
+            }
+        }
+    }
+
+    private String iriOf(SemanticResourceChange change) {
+        return change != null ? change.getIri() : null;
     }
 
     @Override

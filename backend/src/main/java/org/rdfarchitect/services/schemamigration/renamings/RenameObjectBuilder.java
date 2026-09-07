@@ -35,10 +35,17 @@ import java.util.Objects;
 @UtilityClass
 public class RenameObjectBuilder {
 
-    public SemanticResourceChange createRenameObject(RenameCandidate renameCandidate) {
+    /**
+     * Merges the two sides of a rename into a single change of the same kind as the renamed
+     * resource, so callers keep their static type instead of casting the result back.
+     */
+    public <T extends SemanticResourceChange> T createRenameObject(
+            RenameCandidate<T> renameCandidate) {
         var addedResource = renameCandidate.getNewResource();
         var deletedResource = renameCandidate.getOldResource();
-        var result = addedResource.copy();
+        // every SemanticResourceChange subtype overrides copy() covariantly
+        @SuppressWarnings("unchecked")
+        var result = (T) addedResource.copy();
         result.setOldIRI(deletedResource.getIri());
         result.setSemanticResourceChangeType(SemanticResourceChangeType.RENAME);
         result.setChanges(mergeChanges(addedResource.getChanges(), deletedResource.getChanges()));
@@ -46,13 +53,13 @@ public class RenameObjectBuilder {
         if (result instanceof SemanticClassChange classChange
                 && addedResource instanceof SemanticClassChange addedClass
                 && deletedResource instanceof SemanticClassChange deletedClass) {
-            return createRenameClassChange(addedClass, deletedClass, classChange);
+            mergeClassMembers(addedClass, deletedClass, classChange);
         }
 
         return result;
     }
 
-    private SemanticClassChange createRenameClassChange(
+    private void mergeClassMembers(
             SemanticClassChange added,
             SemanticClassChange deleted,
             SemanticClassChange classChange) {
@@ -62,7 +69,6 @@ public class RenameObjectBuilder {
                 mergePropertyList(added.getAssociations(), deleted.getAssociations(), classChange));
         classChange.setEnumEntries(
                 mergePropertyList(added.getEnumEntries(), deleted.getEnumEntries(), classChange));
-        return classChange;
     }
 
     public <T extends SemanticResourceChange> List<T> mergePropertyList(
