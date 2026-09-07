@@ -105,6 +105,9 @@
             <br />
             Please verify that the detected renames are correct, or adjust them as
             necessary.
+            <br />
+            Associations that cannot be instantiated (AssociationUsed = "No") are
+            not listed: they hold no instance data, so there is nothing to map.
         </p>
     </div>
 

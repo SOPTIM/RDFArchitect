@@ -228,4 +228,78 @@ class SchemaMigrationServiceTest {
 
         return model;
     }
+
+    @Test
+    void getPropertyRenamings_associationNotUsed_reportsItAsNotInstantiable() {
+        initContext(
+                associationSchema("Switch.Terminals", false),
+                associationSchema("Switch.ConnectedTerminals", false));
+
+        confirmDetectedClassRenames();
+
+        // the rename step needs the flag to leave these out; only the defaults step filled it in
+        assertThat(deletedAssociationsUsed()).containsExactly(false);
+    }
+
+    @Test
+    void getPropertyRenamings_associationUsed_reportsItAsInstantiable() {
+        initContext(
+                associationSchema("Switch.Terminals", true),
+                associationSchema("Switch.ConnectedTerminals", true));
+
+        confirmDetectedClassRenames();
+
+        assertThat(deletedAssociationsUsed()).containsExactly(true);
+    }
+
+    /**
+     * A deleted association only exists in the original schema, so reading the flag from the
+     * updated one would report every deletion as not instantiable.
+     */
+    @Test
+    void getPropertyRenamings_deletedAssociation_readsFlagFromTheOriginalSchema() {
+        var updated = ModelFactory.createDefaultModel();
+        var switchClass = updated.createResource(PREFIX + "Switch");
+        switchClass.addProperty(RDF.type, RDFS.Class);
+        switchClass.addProperty(RDFS.label, updated.createLiteral("Switch"));
+        switchClass.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+
+        initContext(associationSchema("Switch.Terminals", true), updated);
+
+        confirmDetectedClassRenames();
+
+        assertThat(deletedAssociationsUsed()).containsExactly(true);
+    }
+
+    private List<Boolean> deletedAssociationsUsed() {
+        return service.getPropertyRenamings().stream()
+                .flatMap(overview -> overview.getAssociations().getDeletedAndRenamed().stream())
+                .map(candidate -> candidate.getOldResource().isAssociationUsed())
+                .toList();
+    }
+
+    private static Model associationSchema(String associationName, boolean associationUsed) {
+        var model = ModelFactory.createDefaultModel();
+
+        for (var className : List.of("Switch", "Terminal")) {
+            var cimClass = model.createResource(PREFIX + className);
+            cimClass.addProperty(RDF.type, RDFS.Class);
+            cimClass.addProperty(RDFS.label, model.createLiteral(className));
+            cimClass.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+        }
+
+        var association = model.createResource(PREFIX + associationName);
+        association.addProperty(RDF.type, RDF.Property);
+        association.addProperty(
+                RDFS.label,
+                model.createLiteral(associationName.substring(associationName.indexOf('.') + 1)));
+        association.addProperty(RDFS.domain, model.getResource(PREFIX + "Switch"));
+        association.addProperty(RDFS.range, model.getResource(PREFIX + "Terminal"));
+        association.addProperty(CIMS.associationUsed, associationUsed ? "Yes" : "No");
+        association.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:0..n"));
+        association.addProperty(
+                CIMS.inverseRoleName, model.createResource(PREFIX + "Terminal.Switch"));
+
+        return model;
+    }
 }

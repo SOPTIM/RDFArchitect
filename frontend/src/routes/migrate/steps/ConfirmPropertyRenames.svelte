@@ -25,7 +25,10 @@
     } from "$lib/api/generated/index.ts";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
-    import { isPrefixOnlyRename } from "$lib/utils/migrationUtils.js";
+    import {
+        filterRenameCandidates,
+        isNonInstantiableAssociationRename,
+    } from "$lib/utils/migrationUtils.js";
 
     let { substeps = [], currentSubstepIndex = 0 } = $props();
 
@@ -38,9 +41,16 @@
     let filteredClasses = $derived(
         classes.map(cls => ({
             ...cls,
-            attributes: filterProperties(cls.attributes),
-            associations: filterProperties(cls.associations),
-            enumEntries: filterProperties(cls.enumEntries),
+            attributes: filterRenameCandidates(cls.attributes, {
+                ignorePrefixes,
+            }),
+            associations: filterRenameCandidates(cls.associations, {
+                ignorePrefixes,
+                alsoHide: isNonInstantiableAssociationRename,
+            }),
+            enumEntries: filterRenameCandidates(cls.enumEntries, {
+                ignorePrefixes,
+            }),
         })),
     );
 
@@ -56,30 +66,6 @@
             .catch(e => console.log("Failed to fetch property overview:", e))
             .finally(() => (isLoading = false));
     });
-
-    function filterProperties(properties) {
-        if (!properties) return properties;
-        if (!ignorePrefixes) return properties;
-
-        const deletedAndRenamed = properties.deletedAndRenamed ?? [];
-        const added = properties.added ?? [];
-
-        const hidden = deletedAndRenamed.filter(r =>
-            isPrefixOnlyRename(r.oldResource.iri, r.newResource?.iri),
-        );
-        const visible = deletedAndRenamed.filter(
-            r => !isPrefixOnlyRename(r.oldResource.iri, r.newResource?.iri),
-        );
-        const hiddenTargetIRIs = hidden
-            .map(r => r.newResource?.iri)
-            .filter(iri => iri != null);
-
-        return {
-            ...properties,
-            deletedAndRenamed: visible,
-            added: added.filter(a => !hiddenTargetIRIs.includes(a.iri)),
-        };
-    }
 
     export async function onNext() {
         let body = buildPropertyRenameList();

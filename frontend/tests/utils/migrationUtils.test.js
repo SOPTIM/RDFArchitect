@@ -21,7 +21,9 @@ import {
     allowsDefaultValueInput,
     canKeepExistingValues,
     describeAttributeChange,
+    filterRenameCandidates,
     hasDataTypeChange,
+    isNonInstantiableAssociationRename,
     isPrefixOnlyRename,
     keepsExistingValues,
     requiresDefaultValue,
@@ -218,5 +220,120 @@ describe("the equivalence option", () => {
 
         expect(keepsExistingValues(alsoMandatory)).toBe(true);
         expect(requiresDefaultValue(alsoMandatory)).toBe(true);
+    });
+});
+
+describe("isNonInstantiableAssociationRename", () => {
+    const candidate = (associationUsed, newResource = null) => ({
+        oldResource: {
+            iri: `${PREFIX}Switch.Terminals`,
+            label: "Terminals",
+            associationUsed,
+        },
+        newResource,
+        confidenceScore: 0.9,
+    });
+
+    it("skips an association that cannot be instantiated", () => {
+        expect(isNonInstantiableAssociationRename(candidate(false))).toBe(true);
+    });
+
+    it("still asks about an association that can be instantiated", () => {
+        expect(isNonInstantiableAssociationRename(candidate(true))).toBe(false);
+    });
+
+    it("judges the old side, which is where the values would come from", () => {
+        const usedOldSide = candidate(true, {
+            iri: `${PREFIX}Switch.ConnectedTerminals`,
+            label: "ConnectedTerminals",
+            associationUsed: false,
+        });
+
+        expect(isNonInstantiableAssociationRename(usedOldSide)).toBe(false);
+    });
+
+    it("asks when the flag is missing rather than hiding the row", () => {
+        expect(isNonInstantiableAssociationRename(candidate(undefined))).toBe(
+            false,
+        );
+        expect(isNonInstantiableAssociationRename({})).toBe(false);
+        expect(isNonInstantiableAssociationRename(undefined)).toBe(false);
+    });
+});
+
+describe("filterRenameCandidates", () => {
+    const association = (name, associationUsed) => ({
+        iri: `${PREFIX}Switch.${name}`,
+        label: name,
+        associationUsed,
+    });
+
+    function overview() {
+        return {
+            added: [
+                association("ConnectedTerminals", false),
+                association("Ends", true),
+            ],
+            deletedAndRenamed: [
+                {
+                    oldResource: association("Terminals", false),
+                    newResource: association("ConnectedTerminals", false),
+                    confidenceScore: 0.9,
+                },
+                {
+                    oldResource: association("Windings", true),
+                    newResource: null,
+                    confidenceScore: 0,
+                },
+            ],
+        };
+    }
+
+    it("hides a non-instantiable association and its detected target", () => {
+        const filtered = filterRenameCandidates(overview(), {
+            alsoHide: isNonInstantiableAssociationRename,
+        });
+
+        expect(
+            filtered.deletedAndRenamed.map(c => c.oldResource.label),
+        ).toEqual(["Windings"]);
+        // the target is linked, just not shown, so it must not resurface as unlinked
+        expect(filtered.added.map(a => a.label)).toEqual(["Ends"]);
+    });
+
+    it("leaves the source overview untouched, so the hidden ones are still submitted", () => {
+        const source = overview();
+
+        filterRenameCandidates(source, {
+            alsoHide: isNonInstantiableAssociationRename,
+        });
+
+        expect(source.deletedAndRenamed).toHaveLength(2);
+        expect(source.added).toHaveLength(2);
+    });
+
+    it("applies the prefix-only rule only when asked to", () => {
+        const properties = {
+            added: [{ iri: "http://other#Switch.Terminals" }],
+            deletedAndRenamed: [
+                {
+                    oldResource: { iri: `${PREFIX}Switch.Terminals` },
+                    newResource: { iri: "http://other#Switch.Terminals" },
+                },
+            ],
+        };
+
+        expect(
+            filterRenameCandidates(properties, { ignorePrefixes: true })
+                .deletedAndRenamed,
+        ).toHaveLength(0);
+        expect(
+            filterRenameCandidates(properties, { ignorePrefixes: false })
+                .deletedAndRenamed,
+        ).toHaveLength(1);
+    });
+
+    it("passes an absent overview through", () => {
+        expect(filterRenameCandidates(undefined)).toBeUndefined();
     });
 });

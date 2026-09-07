@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.migration.DefaultValueView;
 import org.rdfarchitect.api.dto.migration.PropertyOverview;
@@ -31,10 +32,14 @@ import org.rdfarchitect.context.MigrationSessionStore;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.changes.RenameCandidate;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.compare.TripleChangeAnalyser;
@@ -264,10 +269,13 @@ public class SchemaMigrationService
 
     @Override
     public List<PropertyOverview> getPropertyRenamings() {
-        var classes =
-                new ArrayList<>(migrationSessionStore.getContext().getDiffAfterClassConfirm());
+        var context = migrationSessionStore.getContext();
+        var classes = new ArrayList<>(context.getDiffAfterClassConfirm());
+        var originalModel = ModelFactory.createModelForGraph(context.getOriginalSchema());
+        var updatedModel = ModelFactory.createModelForGraph(context.getUpdatedSchema());
         var result = new ArrayList<PropertyOverview>();
         for (var cls : classes) {
+            markAssociationsUsed(cls.getAssociations(), originalModel, updatedModel);
             if (cls.getAttributeRenameCandidates().isEmpty()) {
                 cls.setAttributeRenameCandidates(
                         RenameDetector.detectPropertyRenames(cls.getAttributes()));
@@ -289,6 +297,36 @@ public class SchemaMigrationService
         }
 
         return result;
+    }
+
+    /**
+     * Records whether each association can be instantiated, so the rename step can leave out the
+     * ones that carry no instance data and have nothing to map. Only the default-values step fills
+     * this in otherwise, which is a step too late.
+     *
+     * <p>The flag has to come from the schema the association still exists in — a deleted one is
+     * only in the original — with the other schema as a fallback.
+     */
+    private void markAssociationsUsed(
+            List<SemanticAssociationChange> associations, Model originalModel, Model updatedModel) {
+        for (var association : associations) {
+            var deleted =
+                    association.getSemanticResourceChangeType()
+                            == SemanticResourceChangeType.DELETE;
+            association.setAssociationUsed(
+                    isAssociationUsed(
+                            association.getIri(),
+                            deleted ? originalModel : updatedModel,
+                            deleted ? updatedModel : originalModel));
+        }
+    }
+
+    private boolean isAssociationUsed(String iri, Model preferred, Model fallback) {
+        var association = preferred.getResource(iri);
+        if (!association.hasProperty(CIMS.associationUsed)) {
+            association = fallback.getResource(iri);
+        }
+        return CIMPropertyUtils.isAssociationUsed(association);
     }
 
     @Override

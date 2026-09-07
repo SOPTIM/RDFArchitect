@@ -26,6 +26,55 @@ export function isPrefixOnlyRename(oldIRI, newIRI) {
     return oldName === newName;
 }
 
+/**
+ * Whether the user should be spared the rename mapping for this association. An association with
+ * AssociationUsed = "No" cannot be instantiated, so no instance data ever used the old predicate
+ * and there is nothing a mapping could rewrite. Judged on the old side, which is where the values
+ * would have come from.
+ */
+export function isNonInstantiableAssociationRename(renameCandidate) {
+    return renameCandidate?.oldResource?.associationUsed === false;
+}
+
+/**
+ * Drops the rename candidates the user should not be asked about from a property overview,
+ * returning a copy: the caller keeps the unfiltered overview and still submits the hidden
+ * candidates with the target that was detected for them.
+ *
+ * `alsoHide` adds a rule on top of the prefix-only one, which applies only when the migration was
+ * started with "ignore prefixes".
+ */
+export function filterRenameCandidates(
+    properties,
+    { ignorePrefixes = false, alsoHide } = {},
+) {
+    if (!properties) return properties;
+
+    const deletedAndRenamed = properties.deletedAndRenamed ?? [];
+    const added = properties.added ?? [];
+
+    const isHidden = candidate =>
+        (ignorePrefixes &&
+            isPrefixOnlyRename(
+                candidate.oldResource.iri,
+                candidate.newResource?.iri,
+            )) ||
+        (alsoHide?.(candidate) ?? false);
+
+    const hiddenTargetIRIs = deletedAndRenamed
+        .filter(isHidden)
+        .map(candidate => candidate.newResource?.iri)
+        .filter(iri => iri != null);
+
+    return {
+        ...properties,
+        deletedAndRenamed: deletedAndRenamed.filter(
+            candidate => !isHidden(candidate),
+        ),
+        added: added.filter(a => !hiddenTargetIRIs.includes(a.iri)),
+    };
+}
+
 function hasChange(attribute, changeType) {
     return (
         attribute.changes?.some(
