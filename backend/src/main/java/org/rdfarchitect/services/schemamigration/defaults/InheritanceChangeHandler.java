@@ -201,20 +201,10 @@ public class InheritanceChangeHandler {
                                             derivingClass, SemanticResourceChangeType.CHANGE));
 
             for (var property : propertiesToRemove) {
-                var propertyChange =
-                        new SemanticResourceChange(
-                                property, SemanticResourceChangeType.DELETED_FROM_INHERITANCE);
-                propertyChange.setLabel(new URI(property.getURI()).getSuffix());
-
-                if (CIMPropertyUtils.isAttribute(property)) {
-                    derivingClassChange
-                            .getAttributes()
-                            .add(new SemanticAttributeChange(propertyChange));
-                } else if (CIMPropertyUtils.isAssociation(property)) {
-                    derivingClassChange
-                            .getAssociations()
-                            .add(new SemanticAssociationChange(propertyChange));
-                }
+                addInheritedPropertyChange(
+                        derivingClassChange,
+                        property,
+                        SemanticResourceChangeType.DELETED_FROM_INHERITANCE);
             }
         }
     }
@@ -236,18 +226,48 @@ public class InheritanceChangeHandler {
                                             derivingClass, SemanticResourceChangeType.CHANGE));
 
             for (var property : propertiesToAdd) {
-                var propertyChange =
-                        new SemanticResourceChange(
-                                property, SemanticResourceChangeType.ADDED_FROM_INHERITANCE);
-                propertyChange.setLabel(new URI(property.getURI()).getSuffix());
-                if (CIMPropertyUtils.isAttribute(property)) {
-                    var attributeChange = new SemanticAttributeChange(propertyChange);
-                    derivingClassChange.getAttributes().add(attributeChange);
-                } else if (CIMPropertyUtils.isAssociation(property)) {
-                    var associationChange = new SemanticAssociationChange(propertyChange);
-                    derivingClassChange.getAssociations().add(associationChange);
-                }
+                addInheritedPropertyChange(
+                        derivingClassChange,
+                        property,
+                        SemanticResourceChangeType.ADDED_FROM_INHERITANCE);
             }
+        }
+    }
+
+    /**
+     * Records a property as inherited or no longer inherited on a class, unless that class already
+     * lists it.
+     *
+     * <p>The deduplication is what keeps a chain of inheritance changes from reporting the same
+     * property several times: super classes are collected transitively and applied to all
+     * transitively deriving classes, so a class is reached once through its own changed super class
+     * and once through every changed class above it. Without this, {@code A -> B -> C} with both
+     * super class links new would offer every property of {@code C} twice on {@code A}, three times
+     * one level deeper, and so on.
+     */
+    private void addInheritedPropertyChange(
+            SemanticClassChange classChange,
+            Resource property,
+            SemanticResourceChangeType changeType) {
+        boolean isAttribute = CIMPropertyUtils.isAttribute(property);
+        if (!isAttribute && !CIMPropertyUtils.isAssociation(property)) {
+            return;
+        }
+
+        List<? extends SemanticResourceChange> existingChanges =
+                isAttribute ? classChange.getAttributes() : classChange.getAssociations();
+        if (existingChanges.stream()
+                .anyMatch(change -> property.getURI().equals(change.getIri()))) {
+            return;
+        }
+
+        var propertyChange = new SemanticResourceChange(property, changeType);
+        propertyChange.setLabel(new URI(property.getURI()).getSuffix());
+
+        if (isAttribute) {
+            classChange.getAttributes().add(new SemanticAttributeChange(propertyChange));
+        } else {
+            classChange.getAssociations().add(new SemanticAssociationChange(propertyChange));
         }
     }
 }
