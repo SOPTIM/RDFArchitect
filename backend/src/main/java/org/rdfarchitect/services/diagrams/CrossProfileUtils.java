@@ -35,12 +35,11 @@ public class CrossProfileUtils {
     private static final float RANGE_BRIGHTNESS = 0.4f;
 
     /**
-     * The uuid the merged class of a class uri carries in the cross profile view. It is derived
-     * from the uri, because the merged class exists in no graph and therefore has no uuid of its
-     * own.
+     * The uuid a merged resource carries in the cross profile view. It is derived from the uri,
+     * because the merged resource exists in no graph and therefore has no uuid of its own.
      */
-    public static UUID mergedClassUuid(String classUri) {
-        return UUID.nameUUIDFromBytes(classUri.getBytes(StandardCharsets.UTF_8));
+    public static UUID mergedUuid(String uri) {
+        return UUID.nameUUIDFromBytes(uri.getBytes(StandardCharsets.UTF_8));
     }
 
     public static String generateRandomDarkColor() {

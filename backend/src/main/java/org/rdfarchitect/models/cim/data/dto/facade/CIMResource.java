@@ -98,6 +98,22 @@ abstract class CIMResource implements ICIMResource {
             throw new IllegalStateException(
                     "Label for resource with UUID " + uuid + " is not a literal.");
         }
+        return asLabel(node);
+    }
+
+    /**
+     * The label of this resource, or null when the model holds none. For the places a label is nice
+     * to have rather than required, such as a diagram label that is simply left out when the
+     * resource has none.
+     *
+     * @return the label of this resource, or null
+     */
+    public RDFSLabel getLabelOrNull() {
+        var node = getUniqueJenaPropertyNode(RDFS.label);
+        return node != null && node.isLiteral() ? asLabel(node) : null;
+    }
+
+    private RDFSLabel asLabel(RDFNode node) {
         var langLiteral = node.asLiteral();
         return new RDFSLabel(langLiteral.getString(), langLiteral.getLanguage());
     }

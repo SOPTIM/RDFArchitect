@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.query.QuerySolution;
 import org.rdfarchitect.dl.data.DLUtils;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
+import org.rdfarchitect.dl.data.dto.relations.XYOffset;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 
 /**
@@ -59,6 +60,20 @@ public class DLQuerySolutionParser {
             return null;
         }
         return qs.getLiteral(nameVar).getString();
+    }
+
+    /**
+     * Extracts the {@link XYOffset} from the query solution.
+     *
+     * @return The XYOffset or null, if the given variables don't exist in the solution.
+     */
+    public XYOffset getXYOffset() {
+        if (!qs.contains(DLQueryVars.OFFSET_X) || !qs.contains(DLQueryVars.OFFSET_Y)) {
+            return null;
+        }
+        return new XYOffset(
+                qs.getLiteral(DLQueryVars.OFFSET_X).getFloat(),
+                qs.getLiteral(DLQueryVars.OFFSET_Y).getFloat());
     }
 
     /**

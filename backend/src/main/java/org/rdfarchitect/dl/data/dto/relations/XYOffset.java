@@ -15,24 +15,13 @@
  *
  */
 
-package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
+package org.rdfarchitect.dl.data.dto.relations;
 
-import lombok.Builder;
-import lombok.Data;
-
-import java.util.List;
-
-/** DTO representing the specific data object in a SvelteFlow edge. */
-@Data
-@Builder
-public class EdgeDataDTO {
-
-    /** The movable labels of both edge ends. */
-    private List<EdgeLabelDTO> labels;
-
-    private boolean useToAssociation;
-    private boolean useFromAssociation;
-    private String graphUri;
-    private String graphKeyword;
-    private String color;
-}
+/**
+ * A two dimensional offset of a diagram object relative to whatever it is anchored to. Unlike a
+ * {@link XYZPosition} this is not a coordinate within the diagram and carries no stacking order.
+ *
+ * @param x the offset along the x axis
+ * @param y the offset along the y axis
+ */
+public record XYOffset(float x, float y) {}
