@@ -39,8 +39,9 @@
                     ?.filter(attr => requiresDefaultValue(attr))
                     .every(
                         attr =>
-                            attr.defaultValue &&
-                            attr.defaultValue.trim().length > 0,
+                            (attr.defaultValue &&
+                                attr.defaultValue.trim().length > 0) ||
+                            attr.noDefaultValue,
                     ) ?? true,
         );
         disableNext = !allRequirementsMet;
@@ -51,9 +52,14 @@
     }
 
     function isDisabled(attribute) {
+        if (keepsExistingValues(attribute)) {
+            return true;
+        }
+        if (attribute.noDefaultValue) {
+            return true;
+        }
         return !(
-            (requiresDefaultValue(attribute) || attribute.forceDefaultValue) &&
-            !keepsExistingValues(attribute)
+            requiresDefaultValue(attribute) || attribute.forceDefaultValue
         );
     }
 
@@ -134,6 +140,11 @@
                                                     class="w-1/3 px-4 py-2 font-medium"
                                                 >
                                                     Default Value
+                                                </th>
+                                                <th
+                                                    class="w-1/6 px-4 py-2 text-center font-medium"
+                                                >
+                                                    Don't Init
                                                 </th>
                                                 <th
                                                     class="w-1/6 px-4 py-2 text-center font-medium"
@@ -234,6 +245,17 @@
                                                                     )}
                                                                     bind:value={
                                                                         attribute.defaultValue
+                                                                    }
+                                                                />
+                                                            {/if}
+                                                        </td>
+                                                        <td class="text-center">
+                                                            {#if !attribute.optional}
+                                                                <input
+                                                                    type="checkbox"
+                                                                    class="text-button-default-text bg-default-background checked:bg-button-default-background disabled:bg-button-disabled-background mx-2 h-4 w-4 rounded border-none disabled:cursor-not-allowed"
+                                                                    bind:checked={
+                                                                        attribute.noDefaultValue
                                                                     }
                                                                 />
                                                             {/if}
