@@ -40,11 +40,17 @@
     onMount(() => (readonly = classEditorContext.readOnly));
 </script>
 
-<List legend="Stereotypes" bind:isExpanded={expandStereotypes}>
+<List
+    legend="Stereotypes"
+    bind:isExpanded={expandStereotypes}
+    accentTextClass="text-black"
+    accentBorderClass="border-black"
+>
     {#snippet actions()}
         {#if !readonly}
             <div class="size-8">
                 <FaIconButton
+                    variant="contrast"
                     callOnClick={() => {
                         attributeStereotypes.append("");
                         expandStereotypes = true;
@@ -61,6 +67,7 @@
                     classStereotypes={attributeStereotypes}
                     {stereotype}
                     readonlyStereotypes={[ATTRIBUTE_STEREOTYPE]}
+                    iconButtonVariant="contrast"
                 />
             {/each}
         </tbody>

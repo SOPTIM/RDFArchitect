@@ -26,7 +26,12 @@
     import { CONCRETE_STEREOTYPE } from "$lib/models/stereotype-constants.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
-    let { classStereotypes, stereotype, readonlyStereotypes = [] } = $props();
+    let {
+        classStereotypes,
+        stereotype,
+        readonlyStereotypes = [],
+        iconButtonVariant = "default",
+    } = $props();
 
     const classEditorContext = getContext("classEditor");
 
@@ -95,6 +100,7 @@
                 {#if !readonly && !isProtected}
                     <div class="size-8">
                         <FaIconButton
+                            variant={iconButtonVariant}
                             icon={faMinus}
                             callOnClick={() =>
                                 classStereotypes.remove(stereotype, true)}
