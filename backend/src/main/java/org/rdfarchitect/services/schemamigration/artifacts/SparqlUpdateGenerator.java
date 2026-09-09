@@ -107,10 +107,14 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateRenameAttributeUpdate(SemanticAttributeChange attributeChange) {
-        var pss = SparqlTemplateLoader.loadTemplate("migration/attribute-renamed");
-        pss.setIri("oldAttribute", attributeChange.getOldIRI());
-        pss.setIri("newAttribute", attributeChange.getIri());
-        return pss.toString();
+        var result = new UpdateRequest();
+        for (var oldIri : attributeChange.getAllOldIRIs()) {
+            var pss = SparqlTemplateLoader.loadTemplate("migration/attribute-renamed");
+            pss.setIri("oldAttribute", oldIri);
+            pss.setIri("newAttribute", attributeChange.getIri());
+            result.add(pss.toString());
+        }
+        return result.toString();
     }
 
     public String generateDatatypeChangedUpdate(SemanticAttributeChange attributeChange) {
@@ -140,10 +144,14 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateRenameEnumEntryUpdate(SemanticEnumEntryChange enumEntryChange) {
-        var pss = SparqlTemplateLoader.loadTemplate("migration/enum-entry-renamed");
-        pss.setIri("oldEnumEntry", enumEntryChange.getOldIRI());
-        pss.setIri("newEnumEntry", enumEntryChange.getIri());
-        return pss.toString();
+        var result = new UpdateRequest();
+        for (var oldIri : enumEntryChange.getAllOldIRIs()) {
+            var pss = SparqlTemplateLoader.loadTemplate("migration/enum-entry-renamed");
+            pss.setIri("oldEnumEntry", oldIri);
+            pss.setIri("newEnumEntry", enumEntryChange.getIri());
+            result.add(pss.toString());
+        }
+        return result.toString();
     }
 
     public String generateDeleteEnumEntryUpdate(SemanticEnumEntryChange enumEntryChange) {
@@ -187,10 +195,14 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateRenameAssociationUpdate(SemanticAssociationChange associationChange) {
-        var pss = SparqlTemplateLoader.loadTemplate("migration/association-renamed");
-        pss.setIri("oldAssociation", associationChange.getOldIRI());
-        pss.setIri("newAssociation", associationChange.getIri());
-        return pss.toString();
+        var result = new UpdateRequest();
+        for (var oldIri : associationChange.getAllOldIRIs()) {
+            var pss = SparqlTemplateLoader.loadTemplate("migration/association-renamed");
+            pss.setIri("oldAssociation", oldIri);
+            pss.setIri("newAssociation", associationChange.getIri());
+            result.add(pss.toString());
+        }
+        return result.toString();
     }
 
     public String generateAssociationTargetChangeUpdate(

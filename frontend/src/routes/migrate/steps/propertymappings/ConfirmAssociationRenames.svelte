@@ -23,74 +23,49 @@
     import { Fa } from "svelte-fa";
 
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
+    import { URI } from "$lib/models/dto/index.ts";
 
     import RenameTable from "../RenameTable.svelte";
 
     const { classes, isLoading } = $props();
 
-    let unlinkedAdded = $derived.by(() => {
-        const result = new Map();
-        for (let cls of classes) {
-            const linked = renamedFrom.has(cls.label)
-                ? new Set(renamedFrom.get(cls.label).keys())
-                : new Set();
-
-            const unlinked = cls.associations.added
-                .filter(attr => !linked.has(attr.label))
-                .sort((a, b) => a.label.localeCompare(b.label));
-            result.set(cls.label, unlinked);
-        }
-        return result;
-    });
-
     let renamedFrom = $derived.by(() => {
-        if (!classes || classes.length === 0) return new Map();
-
         const map = new Map();
+        if (!classes || classes.length === 0) return map;
 
         for (const cls of classes) {
-            const renameMap = buildAssociationRenameMapForClass(cls);
-            if (renameMap && renameMap.size > 0) {
-                map.set(cls.label, renameMap);
-            }
-        }
-        return map;
-    });
-
-    function buildAssociationRenameMapForClass(cls) {
-        const map = new Map();
-        const renameCandidates = cls.associations.deletedAndRenamed || [];
-        if (renameCandidates.length > 0) {
-            for (const rename of renameCandidates) {
-                if (rename.newResource) {
-                    map.set(rename.newResource.label, rename.oldResource.label);
+            for (const mapping of cls.associations?.deletedAndRemapped ?? []) {
+                if (mapping.newResources.length === 0) continue;
+                for (const target of mapping.newResources) {
+                    const froms = mapping.oldResources.map(oldLabelWithClass);
+                    map.set(target.iri, [
+                        ...(map.get(target.iri) ?? []),
+                        ...froms,
+                    ]);
                 }
             }
         }
         return map;
+    });
+
+    function oldLabelWithClass(resource) {
+        if (!resource.domain) return resource.label;
+        return `${resource.label} (in ${new URI(resource.domain).suffix})`;
     }
 
-    function addRenameMapping(classLabel, renameCandidate, newAssociation) {
-        if (!renamedFrom.has(classLabel)) {
-            renamedFrom.set(classLabel, new Map());
-        }
-        renamedFrom
-            .get(classLabel)
-            .set(newAssociation.label, renameCandidate.oldResource.label);
-        renameCandidate.newResource = newAssociation;
-        renameCandidate.confidenceScore = 1;
-    }
-
-    function dissolveRenameMapping(classLabel, renameCandidate) {
-        renamedFrom.get(classLabel).delete(renameCandidate.newResource.label);
-        renameCandidate.newResource = null;
+    function candidateSubtitle(cls) {
+        return candidate => {
+            if (!candidate.domain) return null;
+            const ownerLabel = new URI(candidate.domain).suffix;
+            return ownerLabel === cls.classLabel ? null : `in ${ownerLabel}`;
+        };
     }
 
     function hasAssociations(cls) {
         return (
             cls.associations &&
-            cls.associations.added.length +
-                cls.associations.deletedAndRenamed.length >
+            (cls.associations.addedInClass?.length ?? 0) +
+                (cls.associations.deletedAndRemapped?.length ?? 0) >
                 0
         );
     }
@@ -100,10 +75,13 @@
     <div class="text-dark flex items-start space-x-2 rounded-lg border p-4">
         <Fa icon={faCircleInfo} class="text-blue mt-0.5" />
         <p class="text-sm leading-relaxed">
-            This step lets you review potential association renames for all
-            classes.
+            This step lets you review potential association renames and moves
+            for all classes. A candidate from elsewhere in the inheritance chain
+            is labeled with its class; link a deleted association to more than
+            one target to split it, or link two deleted associations to the same
+            target to merge them.
             <br />
-            Please verify that the detected renames are correct, or adjust them as
+            Please verify that the detected mappings are correct, or adjust them as
             necessary.
             <br />
             Associations that cannot be instantiated (AssociationUsed = "No") are
@@ -122,58 +100,46 @@
                 <div class="space-y-4">
                     <CollapsibleCard>
                         <h2 slot="header" class="mb-3 text-lg font-semibold">
-                            {cls.label}
+                            {cls.classLabel}
                             <Fa icon={faCaretDown} />
                         </h2>
                         <div
                             class="border-l-blue flex-col space-y-4 border-l-4 pl-4"
                             slot="body"
                         >
-                            {#if cls.associations.deletedAndRenamed.length > 0}
+                            {#if cls.associations.deletedAndRemapped.length > 0}
                                 <RenameTable
-                                    renameCandidates={cls.associations
-                                        .deletedAndRenamed}
-                                    unlinkedNewItems={unlinkedAdded.get(
-                                        cls.label,
+                                    bind:mappings={
+                                        cls.associations.deletedAndRemapped
+                                    }
+                                    candidates={cls.associations.allAdded ?? []}
+                                    getCandidateSubtitle={candidateSubtitle(
+                                        cls,
                                     )}
-                                    allAddedItems={cls.associations.added}
-                                    onAddMapping={(rename, newItem) =>
-                                        addRenameMapping(
-                                            cls.label,
-                                            rename,
-                                            newItem,
-                                        )}
-                                    onDissolveMapping={rename =>
-                                        dissolveRenameMapping(
-                                            cls.label,
-                                            rename,
-                                        )}
                                     propertyType="Association"
                                 />
                             {/if}
 
-                            {#if cls.associations.added.length > 0}
+                            {#if cls.associations.addedInClass?.length > 0}
                                 <div>
                                     <h3 class="mb-3 font-semibold">
                                         Added Associations
                                     </h3>
                                     <div class="space-y-1">
-                                        {#each cls.associations.added.sort( (a, b) => a.label.localeCompare(b.label) ) as addedAssociation}
+                                        {#each [...cls.associations.addedInClass].sort( (a, b) => a.label.localeCompare(b.label) ) as addedAssociation}
                                             <div
                                                 class="bg-lightgray flex items-center justify-between px-3 py-1 text-sm"
                                             >
                                                 <p>{addedAssociation.label}</p>
-                                                {#if renamedFrom
-                                                    .get(cls.label)
-                                                    ?.has(addedAssociation.label)}
+                                                {#if renamedFrom.has(addedAssociation.iri)}
                                                     <span
                                                         class="text-soptim-dunkelgrau text-xs italic"
                                                     >
                                                         renamed from {renamedFrom
-                                                            .get(cls.label)
                                                             .get(
-                                                                addedAssociation.label,
-                                                            )}
+                                                                addedAssociation.iri,
+                                                            )
+                                                            .join(", ")}
                                                     </span>
                                                 {/if}
                                             </div>

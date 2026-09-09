@@ -21,7 +21,8 @@ import static org.assertj.core.api.Assertions.*;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.models.changes.RenameCandidate;
+import org.rdfarchitect.models.changes.MappingType;
+import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
@@ -66,7 +67,7 @@ class RenameObjectBuilderTest {
                                                     "New comment")))
                             .build();
 
-            var renameCandidate = new RenameCandidate<>(deleted, added, 0.9);
+            var renameCandidate = new ResourceMapping<>(deleted, added, 0.9);
 
             var result = RenameObjectBuilder.createRenameObject(renameCandidate);
 
@@ -118,7 +119,7 @@ class RenameObjectBuilderTest {
                             .enumEntries(List.of())
                             .build();
 
-            var renameCandidate = new RenameCandidate<>(deleted, added, 0.85);
+            var renameCandidate = new ResourceMapping<>(deleted, added, 0.85);
 
             var result =
                     (SemanticClassChange) RenameObjectBuilder.createRenameObject(renameCandidate);
@@ -164,7 +165,7 @@ class RenameObjectBuilderTest {
                             .enumEntries(List.of())
                             .build();
 
-            var renameCandidate = new RenameCandidate<>(deleted, added, 0.75);
+            var renameCandidate = new ResourceMapping<>(deleted, added, 0.75);
 
             var result =
                     (SemanticClassChange) RenameObjectBuilder.createRenameObject(renameCandidate);
@@ -207,7 +208,7 @@ class RenameObjectBuilderTest {
                             .enumEntries(List.of())
                             .build();
 
-            var renameCandidate = new RenameCandidate<>(deleted, added, 0.75);
+            var renameCandidate = new ResourceMapping<>(deleted, added, 0.75);
 
             var result =
                     (SemanticClassChange) RenameObjectBuilder.createRenameObject(renameCandidate);
@@ -216,6 +217,114 @@ class RenameObjectBuilderTest {
             assertThat(result.getAttributes().getFirst().getLabel()).isEqualTo("oldAttribute");
             assertThat(result.getAttributes().getFirst().getSemanticResourceChangeType())
                     .isEqualTo(SemanticResourceChangeType.DELETE);
+        }
+
+        @Test
+        void createRenameObject_moveMapping_setsMoveType() {
+            var deleted =
+                    SemanticAttributeChange.builder()
+                            .label("voltage")
+                            .iri("http://example.org#ClassA.voltage")
+                            .domain("http://example.org#ClassA")
+                            .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
+                            .changes(List.of())
+                            .build();
+
+            var added =
+                    SemanticAttributeChange.builder()
+                            .label("voltage")
+                            .iri("http://example.org#ClassB.voltage")
+                            .domain("http://example.org#ClassB")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .changes(List.of())
+                            .build();
+
+            var mapping = new ResourceMapping<>(deleted, added, 0.9);
+            assertThat(mapping.getType()).isEqualTo(MappingType.MOVE);
+
+            var result = RenameObjectBuilder.createRenameObject(mapping);
+
+            assertThat(result.getSemanticResourceChangeType())
+                    .isEqualTo(SemanticResourceChangeType.MOVE);
+            assertThat(result.getOldIRI()).isEqualTo("http://example.org#ClassA.voltage");
+        }
+
+        @Test
+        void createRenameObject_mergeMapping_populatesAdditionalOldIRIs() {
+            var deleted1 =
+                    SemanticAttributeChange.builder()
+                            .label("voltage")
+                            .iri("http://example.org#ClassA.voltage")
+                            .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
+                            .changes(List.of())
+                            .build();
+
+            var deleted2 =
+                    SemanticAttributeChange.builder()
+                            .label("volt")
+                            .iri("http://example.org#ClassB.volt")
+                            .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
+                            .changes(List.of())
+                            .build();
+
+            var added =
+                    SemanticAttributeChange.builder()
+                            .label("voltage")
+                            .iri("http://example.org#ClassC.voltage")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .changes(List.of())
+                            .build();
+
+            var mapping = new ResourceMapping<>(List.of(deleted1, deleted2), List.of(added), 0.9);
+            assertThat(mapping.getType()).isEqualTo(MappingType.MERGE);
+
+            var result = RenameObjectBuilder.createRenameObject(mapping);
+
+            assertThat(result.getOldIRI()).isEqualTo("http://example.org#ClassA.voltage");
+            assertThat(result.getAdditionalOldIRIs())
+                    .containsExactly("http://example.org#ClassB.volt");
+        }
+    }
+
+    @Nested
+    class CreateSplitObjectsTest {
+
+        @Test
+        void createSplitObjects_splitMapping_producesOneResultPerNewResource() {
+            var deleted =
+                    SemanticAttributeChange.builder()
+                            .label("voltage")
+                            .iri("http://example.org#ClassA.voltage")
+                            .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
+                            .changes(List.of())
+                            .build();
+
+            var added1 =
+                    SemanticAttributeChange.builder()
+                            .label("nominalVoltage")
+                            .iri("http://example.org#ClassB.nominalVoltage")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .changes(List.of())
+                            .build();
+
+            var added2 =
+                    SemanticAttributeChange.builder()
+                            .label("actualVoltage")
+                            .iri("http://example.org#ClassC.actualVoltage")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .changes(List.of())
+                            .build();
+
+            var mapping = new ResourceMapping<>(List.of(deleted), List.of(added1, added2), 0.9);
+            assertThat(mapping.getType()).isEqualTo(MappingType.SPLIT);
+
+            var results = RenameObjectBuilder.createSplitObjects(mapping);
+
+            assertThat(results)
+                    .hasSize(2)
+                    .allMatch(r -> r.getOldIRI().equals("http://example.org#ClassA.voltage"))
+                    .anyMatch(r -> r.getIri().equals(added1.getIri()))
+                    .anyMatch(r -> r.getIri().equals(added2.getIri()));
         }
     }
 
@@ -661,7 +770,7 @@ class RenameObjectBuilderTest {
                             "NewName", SemanticResourceChangeType.ADD);
             added.setIri("http://example.org#NewName");
 
-            var renameCandidate = new RenameCandidate<>(deleted, added, 0.8);
+            var renameCandidate = new ResourceMapping<>(deleted, added, 0.8);
 
             var result = RenameObjectBuilder.createRenameObject(renameCandidate);
 
@@ -724,7 +833,7 @@ class RenameObjectBuilderTest {
                             .enumEntries(List.of(addedEntry))
                             .build();
 
-            var renameCandidate = new RenameCandidate<>(deleted, added, 0.9);
+            var renameCandidate = new ResourceMapping<>(deleted, added, 0.9);
 
             var result =
                     (SemanticClassChange) RenameObjectBuilder.createRenameObject(renameCandidate);

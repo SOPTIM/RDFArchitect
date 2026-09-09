@@ -26,10 +26,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.migration.PropertyOverview;
-import org.rdfarchitect.api.dto.migration.PropertyRenamings;
-import org.rdfarchitect.services.schemamigration.renamings.ConfirmPropertyRenamingsUseCase;
-import org.rdfarchitect.services.schemamigration.renamings.GetPropertyRenamingsUseCase;
+import org.rdfarchitect.api.dto.migration.ClassMappingOverview;
+import org.rdfarchitect.api.dto.migration.PropertyMappingOverview;
+import org.rdfarchitect.models.changes.ResourceMapping;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
+import org.rdfarchitect.services.schemamigration.renamings.ClassRenamingsUseCase;
+import org.rdfarchitect.services.schemamigration.renamings.GetClassMappingsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,20 +44,19 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/migrations/property-renames")
+@RequestMapping("/api/migrations/class-renamings")
 @RequiredArgsConstructor
-public class PropertyRenamingsRESTController {
+public class ClassMappingsRESTController {
 
-    private static final Logger logger =
-            LoggerFactory.getLogger(PropertyRenamingsRESTController.class);
+    private static final Logger logger = LoggerFactory.getLogger(ClassMappingsRESTController.class);
 
-    private final GetPropertyRenamingsUseCase getPropertyRenamingsUseCase;
-    private final ConfirmPropertyRenamingsUseCase confirmPropertyRenamingsUseCase;
+    private final ClassRenamingsUseCase classRenamingsUseCase;
+    private final GetClassMappingsUseCase getClassMappingsUseCase;
 
     @Operation(
-            summary = "migration class property overview",
+            summary = "migration class overview",
             description =
-                    "Provides an overview of the properties on migration classes including added, modified, deleted and potentially renamed properties.",
+                    "Provides an overview of the migration classes including added, modified, deleted and potentially renamed classes.",
             tags = {"migration"},
             responses = {
                 @ApiResponse(
@@ -68,47 +69,47 @@ public class PropertyRenamingsRESTController {
                                                         schema =
                                                                 @Schema(
                                                                         implementation =
-                                                                                PropertyOverview
+                                                                                PropertyMappingOverview
                                                                                         .class))))
             })
     @GetMapping
-    public List<PropertyOverview> migrationPropertiesOverview(
+    public ClassMappingOverview getClassMappings(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL) {
         logger.info(
-                "Received GET request: \"/api/migrations/property-renames\" from \"{}\".",
+                "Received GET request: \"/api/migrations/class-renamings\" from \"{}\".",
                 originURL);
 
-        var result = getPropertyRenamingsUseCase.getPropertyRenamings();
+        var classes = getClassMappingsUseCase.getClassMappings();
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/migrations/property-renames\" from \"{}\".",
+                "Sending response to GET request: \"/api/datasets/migrations/class-renamings\" from \"{}\".",
                 originURL);
 
-        return result;
+        return classes;
     }
 
     @Operation(
-            summary = "confirm renamed properties",
+            summary = "confirm renamed classes",
             description =
-                    "Confirms the previously suggested renamed properties and updates the migration context accordingly.",
+                    "Confirms the previously suggested renamed classes and updates the migration context accordingly.",
             tags = {"migration"})
     @PostMapping
-    public void confirmRenamedProperties(
+    public void confirmRenamedClasses(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,
-            @Parameter(description = "The updated property renames") @RequestBody
-                    List<PropertyRenamings> propertyRenamings) {
+            @Parameter(description = "The updated class renamings") @RequestBody
+                    List<ResourceMapping<SemanticClassChange>> classRenamings) {
         logger.info(
-                "Received POST request: \"/api/migrations/property-renames\" from \"{}\".",
+                "Received POST request: \"/api/migrations/class-renamings\" from \"{}\".",
                 originURL);
 
-        confirmPropertyRenamingsUseCase.confirmPropertyRenamings(propertyRenamings);
+        classRenamingsUseCase.confirmClassRenamings(classRenamings);
 
         logger.info(
-                "Sending response to POST request: \"/api/migrations/property-renames\" from \"{}\".",
+                "Sending response to POST request: \"/api/migrations/class-renamings\" from \"{}\".",
                 originURL);
     }
 }

@@ -33,7 +33,7 @@ export function isPrefixOnlyRename(oldIRI, newIRI) {
  * would have come from.
  */
 export function isNonInstantiableAssociationRename(renameCandidate) {
-    return renameCandidate?.oldResource?.associationUsed === false;
+    return renameCandidate?.oldResources?.[0]?.associationUsed === false;
 }
 
 /**
@@ -43,6 +43,11 @@ export function isNonInstantiableAssociationRename(renameCandidate) {
  *
  * `alsoHide` adds a rule on top of the prefix-only one, which applies only when the migration was
  * started with "ignore prefixes".
+ *
+ * Handles both overview shapes: the class overview's `added`, and the property overview's
+ * `addedInClass`/`allAdded` (the latter spans the whole inheritance chain). Auto-detected
+ * candidates are always 1:1 at this point (a row only grows past one old/new resource once the
+ * user links it in the UI), so filtering only has to look at the first old/new resource.
  */
 export function filterRenameCandidates(
     properties,
@@ -50,29 +55,172 @@ export function filterRenameCandidates(
 ) {
     if (!properties) return properties;
 
-    const deletedAndRenamed = properties.deletedAndRenamed ?? [];
-    const added = properties.added ?? [];
+    const deletedAndRemapped = properties.deletedAndRemapped ?? [];
+    const addedInClass = properties.addedInClass ?? properties.added ?? [];
+    const allAdded = properties.allAdded ?? addedInClass;
 
-    const isHidden = candidate =>
-        (ignorePrefixes &&
-            isPrefixOnlyRename(
-                candidate.oldResource.iri,
-                candidate.newResource?.iri,
-            )) ||
-        (alsoHide?.(candidate) ?? false);
-
-    const hiddenTargetIRIs = deletedAndRenamed
-        .filter(isHidden)
-        .map(candidate => candidate.newResource?.iri)
-        .filter(iri => iri != null);
-
-    return {
-        ...properties,
-        deletedAndRenamed: deletedAndRenamed.filter(
-            candidate => !isHidden(candidate),
-        ),
-        added: added.filter(a => !hiddenTargetIRIs.includes(a.iri)),
+    const isHidden = mapping => {
+        const oldIri = mapping.oldResources?.[0]?.iri;
+        const newIri = mapping.newResources?.[0]?.iri;
+        return (
+            (ignorePrefixes && isPrefixOnlyRename(oldIri, newIri)) ||
+            (alsoHide?.(mapping) ?? false)
+        );
     };
+
+    const hiddenTargetIRIs = new Set(
+        deletedAndRemapped
+            .filter(isHidden)
+            .map(mapping => mapping.newResources?.[0]?.iri)
+            .filter(iri => iri != null),
+    );
+
+    const filtered = {
+        ...properties,
+        deletedAndRemapped: deletedAndRemapped.filter(
+            mapping => !isHidden(mapping),
+        ),
+    };
+    if (properties.addedInClass) {
+        filtered.addedInClass = addedInClass.filter(
+            a => !hiddenTargetIRIs.has(a.iri),
+        );
+    }
+    if (properties.allAdded) {
+        filtered.allAdded = allAdded.filter(a => !hiddenTargetIRIs.has(a.iri));
+    }
+    if (properties.added) {
+        filtered.added = addedInClass.filter(a => !hiddenTargetIRIs.has(a.iri));
+    }
+    return filtered;
+}
+
+/**
+ * Classifies a mapping row from the cardinality of its two sides, mirroring the backend's own
+ * `ResourceMapping` constructors so a freshly-assembled row is classified exactly the way the
+ * server would have classified it, since the server trusts whatever `type` is submitted rather
+ * than re-deriving it on the way in.
+ *
+ * A resource "moved" when it's linked 1:1 but its `domain` (the owning class IRI) differs between
+ * the old and new side; classes have no `domain`, so a class-to-class link is always a rename.
+ */
+export function computeMappingType(oldResources, newResources) {
+    if (!newResources || newResources.length === 0) return "UNMAPPED";
+    if (oldResources.length > 1) return "MERGE";
+    if (newResources.length > 1) return "SPLIT";
+
+    const oldDomain = oldResources[0]?.domain ?? null;
+    const newDomain = newResources[0]?.domain ?? null;
+    return oldDomain === newDomain ? "RENAME" : "MOVE";
+}
+
+function dedupeByIri(resources) {
+    const seen = new Set();
+    const result = [];
+    for (const resource of resources) {
+        if (resource?.iri && !seen.has(resource.iri)) {
+            seen.add(resource.iri);
+            result.push(resource);
+        }
+    }
+    return result;
+}
+
+/**
+ * Assembles the mapping rows a mapping table edited into the shape the backend expects for
+ * submission: a genuine N:M `ResourceMapping` whenever two rows ended up sharing a resource (the
+ * user merged them by linking two old resources to the same new one, or split one by linking it
+ * to more than one new resource), found via connected components over every old/new resource IRI
+ * the rows reference. Submitting repeated 1:1 mappings that merely share a target instead of one
+ * real N:M mapping would make the backend attach the same result twice.
+ *
+ * Rows with no linked target are dropped (nothing to submit). A component that ends up with more
+ * than one old AND more than one new resource at once can't be represented by the backend's model
+ * (neither a pure merge nor a pure split) - such rows are excluded from `mappings` and returned in
+ * `invalidMappingIds` so the UI can flag them and block submission until the user resolves them.
+ */
+export function groupMappingsForSubmission(mappings) {
+    const rows = (mappings ?? []).filter(
+        m => (m.newResources?.length ?? 0) > 0,
+    );
+    if (rows.length === 0) {
+        return { mappings: [], invalidMappingIds: new Set() };
+    }
+
+    const parent = new Map();
+    function find(iri) {
+        if (!parent.has(iri)) parent.set(iri, iri);
+        let root = iri;
+        while (parent.get(root) !== root) root = parent.get(root);
+        let cur = iri;
+        while (parent.get(cur) !== root) {
+            const next = parent.get(cur);
+            parent.set(cur, root);
+            cur = next;
+        }
+        return root;
+    }
+    function union(a, b) {
+        const rootA = find(a);
+        const rootB = find(b);
+        if (rootA !== rootB) parent.set(rootA, rootB);
+    }
+
+    for (const row of rows) {
+        const iris = [
+            ...row.oldResources.map(r => r.iri),
+            ...row.newResources.map(r => r.iri),
+        ];
+        iris.forEach(iri => find(iri));
+        for (let i = 1; i < iris.length; i++) {
+            union(iris[0], iris[i]);
+        }
+    }
+
+    const rowsByRoot = new Map();
+    for (const row of rows) {
+        const anchorIri = row.oldResources[0]?.iri ?? row.newResources[0]?.iri;
+        const root = find(anchorIri);
+        if (!rowsByRoot.has(root)) rowsByRoot.set(root, []);
+        rowsByRoot.get(root).push(row);
+    }
+
+    const resultMappings = [];
+    const invalidMappingIds = new Set();
+    const mappingByRowId = new Map();
+
+    for (const groupRows of rowsByRoot.values()) {
+        const oldResources = dedupeByIri(
+            groupRows.flatMap(r => r.oldResources),
+        );
+        const newResources = dedupeByIri(
+            groupRows.flatMap(r => r.newResources),
+        );
+
+        if (oldResources.length > 1 && newResources.length > 1) {
+            groupRows.forEach(r => invalidMappingIds.add(r.id));
+            continue;
+        }
+
+        const merged =
+            groupRows.length === 1
+                ? {
+                      ...groupRows[0],
+                      type: computeMappingType(oldResources, newResources),
+                  }
+                : {
+                      id: crypto.randomUUID(),
+                      oldResources,
+                      newResources,
+                      confidenceScore: 1,
+                      type: computeMappingType(oldResources, newResources),
+                  };
+
+        resultMappings.push(merged);
+        groupRows.forEach(r => mappingByRowId.set(r.id, merged));
+    }
+
+    return { mappings: resultMappings, invalidMappingIds, mappingByRowId };
 }
 
 function hasChange(attribute, changeType) {

@@ -23,22 +23,26 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.rdfarchitect.api.dto.migration.ClassMappingOverview;
+import org.rdfarchitect.api.dto.migration.ClassPropertyMappingOverview;
+import org.rdfarchitect.api.dto.migration.ClassPropertyMappings;
 import org.rdfarchitect.api.dto.migration.DefaultValueView;
-import org.rdfarchitect.api.dto.migration.PropertyOverview;
-import org.rdfarchitect.api.dto.migration.PropertyRenamings;
-import org.rdfarchitect.api.dto.migration.ResourceRenameOverview;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
 import org.rdfarchitect.context.MigrationSessionStore;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.changes.RenameCandidate;
+import org.rdfarchitect.models.changes.MappingType;
+import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticPropertyChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
-import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
@@ -52,9 +56,9 @@ import org.rdfarchitect.services.schemamigration.defaults.GetDefaultValueViewsUs
 import org.rdfarchitect.services.schemamigration.defaults.InheritanceChangeHandler;
 import org.rdfarchitect.services.schemamigration.defaults.SubmitDefaultValuesUseCase;
 import org.rdfarchitect.services.schemamigration.renamings.ClassRenamingsUseCase;
-import org.rdfarchitect.services.schemamigration.renamings.ConfirmPropertyRenamingsUseCase;
-import org.rdfarchitect.services.schemamigration.renamings.GetClassRenamingsUseCase;
-import org.rdfarchitect.services.schemamigration.renamings.GetPropertyRenamingsUseCase;
+import org.rdfarchitect.services.schemamigration.renamings.ConfirmPropertyMappingsUseCase;
+import org.rdfarchitect.services.schemamigration.renamings.GetClassMappingsUseCase;
+import org.rdfarchitect.services.schemamigration.renamings.GetPropertyMappingsUseCase;
 import org.rdfarchitect.services.schemamigration.renamings.RenameDetector;
 import org.rdfarchitect.services.schemamigration.renamings.RenameObjectBuilder;
 import org.rdfarchitect.services.validation.SchemaValidationReportToMarkdownService;
@@ -63,19 +67,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class SchemaMigrationService
         implements SetMigrationContextUseCase,
-                GetClassRenamingsUseCase,
-                GetPropertyRenamingsUseCase,
+                GetClassMappingsUseCase,
+                GetPropertyMappingsUseCase,
                 GenerateMigrationScriptUseCase,
                 ClassRenamingsUseCase,
-                ConfirmPropertyRenamingsUseCase,
+                ConfirmPropertyMappingsUseCase,
                 ClearMigrationContextUseCase,
                 GetDefaultValueViewsUseCase,
                 SubmitDefaultValuesUseCase,
@@ -180,27 +188,27 @@ public class SchemaMigrationService
     }
 
     @Override
-    public ResourceRenameOverview<SemanticClassChange> getClassRenamings() {
+    public ClassMappingOverview getClassMappings() {
         var context = migrationSessionStore.getContext();
         var changes = context.getSemanticDiff();
 
-        var renames = context.getRenameCandidates();
+        var renames = context.getResourceMappings();
         if (renames == null) {
             renames = RenameDetector.detectClassRenames(changes);
         }
 
-        return new ResourceRenameOverview<>(changes, renames);
+        return new ClassMappingOverview(changes, renames);
     }
 
     @Override
-    public void confirmClassRenamings(List<RenameCandidate<SemanticClassChange>> renames) {
+    public void confirmClassRenamings(List<ResourceMapping<SemanticClassChange>> renames) {
         var context = migrationSessionStore.getContext();
-        context.setRenameCandidates(renames);
+        context.setResourceMappings(renames);
         var classChanges = new ArrayList<>(context.getSemanticDiff());
 
         for (var rename : renames) {
-            classChanges.remove(rename.getNewResource());
-            classChanges.remove(rename.getOldResource());
+            classChanges.remove(rename.getNewResources().getFirst());
+            classChanges.remove(rename.getOldResources().getFirst());
             classChanges.add(RenameObjectBuilder.createRenameObject(rename));
         }
         // reclassify DATATYPE_CHANGE to DATATYPE_RENAMED where the change is simply
@@ -212,17 +220,31 @@ public class SchemaMigrationService
 
     private void reclassifyChangesDueToRenames(
             List<SemanticClassChange> classChanges,
-            List<RenameCandidate<SemanticClassChange>> enumRenames) {
+            List<ResourceMapping<SemanticClassChange>> enumRenames) {
         if (enumRenames == null) {
             return;
         }
 
         var renameMap =
                 enumRenames.stream()
+                        .flatMap(
+                                r ->
+                                        r.getOldResources().stream()
+                                                .flatMap(
+                                                        oldRes ->
+                                                                r.getNewResources().stream()
+                                                                        .map(
+                                                                                newRes ->
+                                                                                        Map.entry(
+                                                                                                oldRes
+                                                                                                        .getIri(),
+                                                                                                newRes
+                                                                                                        .getIri()))))
                         .collect(
-                                Collectors.toMap(
-                                        r -> r.getOldResource().getIri(),
-                                        r -> r.getNewResource().getIri()));
+                                Collectors.groupingBy(
+                                        Map.Entry::getKey,
+                                        Collectors.mapping(
+                                                Map.Entry::getValue, Collectors.toList())));
 
         for (var classChange : classChanges) {
             reclassifyIfRename(
@@ -257,42 +279,50 @@ public class SchemaMigrationService
             List<SemanticFieldChange> changes,
             SemanticFieldChangeType changeType,
             SemanticFieldChangeType renameType,
-            Map<String, String> renameMap) {
+            Map<String, List<String>> renameMap) {
 
         for (var change : changes) {
             if (change.getSemanticFieldChangeType() == changeType
-                    && renameMap.getOrDefault(change.getFrom(), "").equals(change.getTo())) {
+                    && renameMap
+                            .getOrDefault(change.getFrom(), new ArrayList<>())
+                            .contains(change.getTo())) {
                 change.setSemanticFieldChangeType(renameType);
             }
         }
     }
 
     @Override
-    public List<PropertyOverview> getPropertyRenamings() {
+    public List<ClassPropertyMappingOverview> getPropertyMappings() {
         var context = migrationSessionStore.getContext();
-        var classes = new ArrayList<>(context.getDiffAfterClassConfirm());
+        var classChanges =
+                context.getDiffAfterClassConfirm().stream()
+                        .collect(Collectors.toMap(SemanticClassChange::getIri, c -> c));
+        var result = new ArrayList<ClassPropertyMappingOverview>();
+
         var originalModel = ModelFactory.createModelForGraph(context.getOriginalSchema());
         var updatedModel = ModelFactory.createModelForGraph(context.getUpdatedSchema());
-        var result = new ArrayList<PropertyOverview>();
-        for (var cls : classes) {
+
+        for (var cls : classChanges.values()) {
             markAssociationsUsed(cls.getAssociations(), originalModel, updatedModel);
-            if (cls.getAttributeRenameCandidates().isEmpty()) {
-                cls.setAttributeRenameCandidates(
-                        RenameDetector.detectPropertyRenames(cls.getAttributes()));
+            var potentialProperties = findPotentialProperties(cls, classChanges, updatedModel);
+
+            if (cls.getAttributeResourceMappings().isEmpty()) {
+                cls.setAttributeResourceMappings(
+                        RenameDetector.detectPropertyRenames(potentialProperties.attributes));
             }
-            if (cls.getAssociationRenameCandidates().isEmpty()) {
-                cls.setAssociationRenameCandidates(
-                        RenameDetector.detectPropertyRenames(cls.getAssociations()));
+            if (cls.getAssociationResourceMappings().isEmpty()) {
+                cls.setAssociationResourceMappings(
+                        RenameDetector.detectPropertyRenames(potentialProperties.associations));
             }
-            if (cls.getEnumEntryRenameCandidates().isEmpty()) {
-                cls.setEnumEntryRenameCandidates(
-                        RenameDetector.detectPropertyRenames(cls.getEnumEntries()));
+            if (cls.getEnumEntryResourceMappings().isEmpty()) {
+                cls.setEnumEntryResourceMappings(
+                        RenameDetector.detectPropertyRenames(potentialProperties.enumEntries));
             }
             if (cls.getAttributes().size()
                             + cls.getAssociations().size()
                             + cls.getEnumEntries().size()
                     > 0) {
-                result.add(new PropertyOverview(cls));
+                result.add(new ClassPropertyMappingOverview(cls, potentialProperties));
             }
         }
 
@@ -315,30 +345,71 @@ public class SchemaMigrationService
                             == SemanticResourceChangeType.DELETE;
             association.setAssociationUsed(
                     isAssociationUsed(
-                            association.getIri(),
-                            deleted ? originalModel : updatedModel,
-                            deleted ? updatedModel : originalModel));
+                            association.getIri(), deleted ? originalModel : updatedModel));
         }
     }
 
-    private boolean isAssociationUsed(String iri, Model preferred, Model fallback) {
-        var association = preferred.getResource(iri);
-        if (!association.hasProperty(CIMS.associationUsed)) {
-            association = fallback.getResource(iri);
-        }
+    private boolean isAssociationUsed(String iri, Model model) {
+        var association = model.getResource(iri);
         return CIMPropertyUtils.isAssociationUsed(association);
     }
 
+    public record PotentialPropertyData(
+            List<SemanticAttributeChange> attributes,
+            List<SemanticAssociationChange> associations,
+            List<SemanticEnumEntryChange> enumEntries) {}
+
+    private PotentialPropertyData findPotentialProperties(
+            SemanticClassChange classChange,
+            Map<String, SemanticClassChange> classChanges,
+            Model model) {
+
+        var superClasses = CIMClassUtils.listSuperClasses(model.getResource(classChange.getIri()));
+        var derivedClasses =
+                CIMClassUtils.findDerivingClasses(model.getResource(classChange.getIri()));
+
+        var attributes = new ArrayList<>(classChange.getAttributes());
+        var associations = new ArrayList<>(classChange.getAssociations());
+        var enumEntries = new ArrayList<>(classChange.getEnumEntries());
+
+        for (var superClass : superClasses) {
+            var superClassChange = classChanges.get(superClass.getURI());
+            if (superClassChange != null) {
+                attributes.addAll(superClassChange.getAttributes());
+                associations.addAll(superClassChange.getAssociations());
+                enumEntries.addAll(superClassChange.getEnumEntries());
+            }
+        }
+
+        for (var derivedClass : derivedClasses) {
+            var derivedClassChange = classChanges.get(derivedClass.getURI());
+            if (derivedClassChange != null) {
+                attributes.addAll(derivedClassChange.getAttributes());
+                associations.addAll(derivedClassChange.getAssociations());
+                enumEntries.addAll((derivedClassChange.getEnumEntries()));
+            }
+        }
+
+        return new PotentialPropertyData(attributes, associations, enumEntries);
+    }
+
     @Override
-    public void confirmPropertyRenamings(List<PropertyRenamings> propertyRenames) {
+    public void confirmPropertyMappings(List<ClassPropertyMappings> classPropertyMappings) {
         var context = migrationSessionStore.getContext();
         var oldClassChanges = context.getDiffAfterClassConfirm();
         var newClassChanges = new ArrayList<SemanticClassChange>();
         for (var cls : oldClassChanges) {
             newClassChanges.add(new SemanticClassChange(cls));
         }
+        var newClassChangesByIri =
+                newClassChanges.stream()
+                        .collect(Collectors.toMap(SemanticClassChange::getIri, c -> c));
 
-        for (var propertyRename : propertyRenames) {
+        var allAttributeMappings = new ArrayList<ResourceMapping<SemanticAttributeChange>>();
+        var allAssociationMappings = new ArrayList<ResourceMapping<SemanticAssociationChange>>();
+        var allEnumEntryMappings = new ArrayList<ResourceMapping<SemanticEnumEntryChange>>();
+
+        for (var propertyRename : classPropertyMappings) {
             // update rename candidates in the version after the class confirm, so that the
             // suggested renames reflect the input, when going back to that step
             var oldClassChange =
@@ -346,47 +417,97 @@ public class SchemaMigrationService
                             .filter(c -> c.getLabel().equals(propertyRename.getClassLabel()))
                             .findFirst()
                             .orElseThrow();
-            oldClassChange.setAttributeRenameCandidates(propertyRename.getAttributeRenames());
-            oldClassChange.setAssociationRenameCandidates(propertyRename.getAssociationRenames());
-            oldClassChange.setEnumEntryRenameCandidates(propertyRename.getEnumEntryRenames());
+            oldClassChange.setAttributeResourceMappings(propertyRename.getAttributeMappings());
+            oldClassChange.setAssociationResourceMappings(propertyRename.getAssociationMappings());
+            oldClassChange.setEnumEntryResourceMappings(propertyRename.getEnumEntryMappings());
 
-            var newClassChange =
-                    newClassChanges.stream()
-                            .filter(c -> c.getLabel().equals(propertyRename.getClassLabel()))
-                            .findFirst()
-                            .orElseThrow();
-            applyPropertyRenames(
-                    newClassChange.getAttributes(), propertyRename.getAttributeRenames());
-            applyPropertyRenames(
-                    newClassChange.getAssociations(), propertyRename.getAssociationRenames());
-            applyPropertyRenames(
-                    newClassChange.getEnumEntries(), propertyRename.getEnumEntryRenames());
+            // a mapping that crosses class boundaries can be detected while processing either the
+            // source or the target class's candidate pool, so the same mapping id can legitimately
+            // show up under more than one class's bucket here - collect everything first and
+            // materialize/attach each mapping exactly once, by its own resolved target class,
+            // rather than blindly attaching it to whichever bucket it happened to arrive under.
+            allAttributeMappings.addAll(propertyRename.getAttributeMappings());
+            allAssociationMappings.addAll(propertyRename.getAssociationMappings());
+            allEnumEntryMappings.addAll(propertyRename.getEnumEntryMappings());
         }
+
+        applyPropertyRenames(
+                newClassChangesByIri, SemanticClassChange::getAttributes, allAttributeMappings);
+        applyPropertyRenames(
+                newClassChangesByIri, SemanticClassChange::getAssociations, allAssociationMappings);
+        applyPropertyRenames(
+                newClassChangesByIri, SemanticClassChange::getEnumEntries, allEnumEntryMappings);
 
         // merging a property rename rebuilds its field changes from both sides, which mints a
         // fresh DATATYPE_CHANGE even where the datatype was only renamed - so reclassify again
-        reclassifyChangesDueToRenames(newClassChanges, context.getRenameCandidates());
+        reclassifyChangesDueToRenames(newClassChanges, context.getResourceMappings());
 
         context.setDiffAfterPropertyConfirm(newClassChanges);
     }
 
     /**
-     * Replaces both sides of every confirmed rename with the merged change, so a renamed property
-     * is listed once rather than as an unrelated addition plus deletion.
+     * Replaces both sides of every confirmed mapping with the merged change(s), so a renamed,
+     * moved, merged, or split property is listed once per resulting property rather than as
+     * unrelated additions plus deletions - attached to the class the result actually belongs to
+     * (its own domain), not to whichever class the mapping happened to be submitted under.
      */
     private <T extends SemanticResourceChange> void applyPropertyRenames(
-            List<T> properties, List<RenameCandidate<T>> renames) {
-        for (var rename : renames) {
-            var oldIri = iriOf(rename.getOldResource());
-            var newIri = iriOf(rename.getNewResource());
-            properties.removeIf(
-                    property ->
-                            property.getIri().equals(oldIri) || property.getIri().equals(newIri));
+            Map<String, SemanticClassChange> classesByIri,
+            Function<SemanticClassChange, List<T>> propertyListAccessor,
+            List<ResourceMapping<T>> renames) {
+        var materializedMappingIds = new HashSet<UUID>();
 
-            var merged = RenameObjectBuilder.createRenameObject(rename);
-            if (!merged.getChanges().isEmpty()) {
-                properties.add(merged);
+        for (var rename : renames) {
+            if (!materializedMappingIds.add(rename.getId())) {
+                // the chain-wide candidate pool means the same mapping id can legitimately show
+                // up more than once here (surfaced while processing more than one class) - only
+                // the first occurrence is applied, the rest are no-ops rather than re-removing
+                // (and thereby deleting) the property that occurrence already materialized.
+                continue;
             }
+
+            var oldIris = rename.getOldResources().stream().map(this::iriOf).toList();
+            var newIris = rename.getNewResources().stream().map(this::iriOf).toList();
+
+            // the old and new resources of a cross-class mapping can each live in a different
+            // class's own property list, so every class has to be checked rather than just the
+            // class the mapping was submitted under.
+            for (var classChange : classesByIri.values()) {
+                propertyListAccessor
+                        .apply(classChange)
+                        .removeIf(
+                                property ->
+                                        oldIris.contains(property.getIri())
+                                                || newIris.contains(property.getIri()));
+            }
+
+            if (rename.getType() == MappingType.SPLIT) {
+                for (var merged : RenameObjectBuilder.createSplitObjects(rename)) {
+                    attachMergedProperty(classesByIri, propertyListAccessor, merged);
+                }
+            } else {
+                attachMergedProperty(
+                        classesByIri,
+                        propertyListAccessor,
+                        RenameObjectBuilder.createRenameObject(rename));
+            }
+        }
+    }
+
+    private <T extends SemanticResourceChange> void attachMergedProperty(
+            Map<String, SemanticClassChange> classesByIri,
+            Function<SemanticClassChange, List<T>> propertyListAccessor,
+            T merged) {
+        if (merged.getChanges().isEmpty()) {
+            return;
+        }
+        var domain =
+                merged instanceof SemanticPropertyChange propertyChange
+                        ? propertyChange.getDomain()
+                        : null;
+        var targetClass = domain != null ? classesByIri.get(domain) : null;
+        if (targetClass != null) {
+            propertyListAccessor.apply(targetClass).add(merged);
         }
     }
 
@@ -405,13 +526,39 @@ public class SchemaMigrationService
         var context = migrationSessionStore.getContext();
         var oldModel = ModelFactory.createModelForGraph(context.getOriginalSchema());
         var updatedModel = ModelFactory.createModelForGraph(context.getUpdatedSchema());
-        var classRenames = context.getRenameCandidates();
+        var classRenames = context.getResourceMappings();
+        var movedPropertyIris = collectMovedPropertyIris(context.getDiffAfterClassConfirm());
 
         InheritanceChangeHandler.processInheritanceChanges(
-                newChangeList, updatedModel, oldModel, classRenames);
+                newChangeList, updatedModel, oldModel, classRenames, movedPropertyIris);
         DefaultValueAssigner.assignDefaultValues(newChangeList, updatedModel, result);
 
         return result;
+    }
+
+    /**
+     * IRIs of every property already covered by a confirmed cross-class move, on either side -
+     * inheritance propagation must leave these alone, since a moved property is already represented
+     * by its own merged entry rather than by an inherited add/delete.
+     */
+    private Set<String> collectMovedPropertyIris(List<SemanticClassChange> classChanges) {
+        var movedPropertyIris = new HashSet<String>();
+        for (var classChange : classChanges) {
+            addMovedPropertyIris(movedPropertyIris, classChange.getAttributeResourceMappings());
+            addMovedPropertyIris(movedPropertyIris, classChange.getAssociationResourceMappings());
+        }
+        return movedPropertyIris;
+    }
+
+    private <T extends SemanticResourceChange> void addMovedPropertyIris(
+            Set<String> movedPropertyIris, List<ResourceMapping<T>> mappings) {
+        for (var mapping : mappings) {
+            if (mapping.getType() != MappingType.MOVE) {
+                continue;
+            }
+            mapping.getOldResources().forEach(r -> movedPropertyIris.add(iriOf(r)));
+            mapping.getNewResources().forEach(r -> movedPropertyIris.add(iriOf(r)));
+        }
     }
 
     @Override

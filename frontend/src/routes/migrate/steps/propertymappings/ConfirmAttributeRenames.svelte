@@ -23,73 +23,49 @@
     import { Fa } from "svelte-fa";
 
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
+    import { URI } from "$lib/models/dto/index.ts";
 
     import RenameTable from "../RenameTable.svelte";
 
     const { classes, isLoading } = $props();
-
-    let unlinkedAdded = $derived.by(() => {
-        const result = new Map();
-        for (let cls of classes) {
-            const linked = renamedFrom.has(cls.label)
-                ? new Set(renamedFrom.get(cls.label).keys())
-                : new Set();
-
-            const unlinked = cls.attributes.added
-                .filter(attr => !linked.has(attr.label))
-                .sort((a, b) => a.label.localeCompare(b.label));
-            result.set(cls.label, unlinked);
-        }
-        return result;
-    });
 
     let renamedFrom = $derived.by(() => {
         const map = new Map();
         if (!classes || classes.length === 0) return map;
 
         for (const cls of classes) {
-            const renameMap = buildAttributeRenameMapForClass(cls);
-            if (renameMap && renameMap.size > 0) {
-                map.set(cls.label, renameMap);
+            for (const mapping of cls.attributes?.deletedAndRemapped ?? []) {
+                if (mapping.newResources.length === 0) continue;
+                for (const target of mapping.newResources) {
+                    const froms = mapping.oldResources.map(oldLabelWithClass);
+                    map.set(target.iri, [
+                        ...(map.get(target.iri) ?? []),
+                        ...froms,
+                    ]);
+                }
             }
         }
         return map;
     });
 
-    function buildAttributeRenameMapForClass(cls) {
-        const map = new Map();
-        const renameCandidates = cls.attributes.deletedAndRenamed || [];
-        if (renameCandidates.length > 0) {
-            for (const rename of renameCandidates) {
-                if (rename.newResource) {
-                    map.set(rename.newResource.label, rename.oldResource.label);
-                }
-            }
-        }
-        return map;
+    function oldLabelWithClass(resource) {
+        if (!resource.domain) return resource.label;
+        return `${resource.label} (in ${new URI(resource.domain).suffix})`;
     }
 
-    function addRenameMapping(classLabel, renameCandidate, newAttribute) {
-        if (!renamedFrom.has(classLabel)) {
-            renamedFrom.set(classLabel, new Map());
-        }
-        renamedFrom
-            .get(classLabel)
-            .set(newAttribute, renameCandidate.oldResource.label);
-        renameCandidate.newResource = newAttribute;
-        renameCandidate.confidenceScore = 1;
-    }
-
-    function dissolveRenameMapping(classLabel, renameCandidate) {
-        renamedFrom.get(classLabel).delete(renameCandidate.newResource.label);
-        renameCandidate.newResource = null;
+    function candidateSubtitle(cls) {
+        return candidate => {
+            if (!candidate.domain) return null;
+            const ownerLabel = new URI(candidate.domain).suffix;
+            return ownerLabel === cls.classLabel ? null : `in ${ownerLabel}`;
+        };
     }
 
     function hasAttributes(cls) {
         return (
             cls.attributes &&
-            cls.attributes.added.length +
-                cls.attributes.deletedAndRenamed.length >
+            (cls.attributes.addedInClass?.length ?? 0) +
+                (cls.attributes.deletedAndRemapped?.length ?? 0) >
                 0
         );
     }
@@ -101,10 +77,13 @@
     >
         <Fa icon={faCircleInfo} class="text-blue mt-0.5" />
         <p class="text-sm leading-relaxed">
-            This step lets you review potential attribute renames for all
-            classes.
+            This step lets you review potential attribute renames and moves for
+            all classes. A candidate from elsewhere in the inheritance chain is
+            labeled with its class; link a deleted attribute to more than one
+            target to split it, or link two deleted attributes to the same
+            target to merge them.
             <br />
-            Please verify that the detected renames are correct, or adjust them as
+            Please verify that the detected mappings are correct, or adjust them as
             necessary.
         </p>
     </div>
@@ -120,58 +99,46 @@
                 <div class="space-y-4">
                     <CollapsibleCard>
                         <h2 slot="header" class="mb-3 text-lg font-semibold">
-                            {cls.label}
+                            {cls.classLabel}
                             <Fa icon={faCaretDown} />
                         </h2>
                         <div
                             class="border-l-blue flex-col space-y-4 border-l-4 pl-4"
                             slot="body"
                         >
-                            {#if cls.attributes.deletedAndRenamed.length > 0}
+                            {#if cls.attributes.deletedAndRemapped.length > 0}
                                 <RenameTable
-                                    renameCandidates={cls.attributes
-                                        .deletedAndRenamed}
-                                    unlinkedNewItems={unlinkedAdded.get(
-                                        cls.label,
+                                    bind:mappings={
+                                        cls.attributes.deletedAndRemapped
+                                    }
+                                    candidates={cls.attributes.allAdded ?? []}
+                                    getCandidateSubtitle={candidateSubtitle(
+                                        cls,
                                     )}
-                                    allAddedItems={cls.attributes.added}
-                                    onAddMapping={(rename, newItem) =>
-                                        addRenameMapping(
-                                            cls.label,
-                                            rename,
-                                            newItem,
-                                        )}
-                                    onDissolveMapping={rename =>
-                                        dissolveRenameMapping(
-                                            cls.label,
-                                            rename,
-                                        )}
                                     propertyType="Attribute"
                                 />
                             {/if}
 
-                            {#if cls.attributes.added.length > 0}
+                            {#if cls.attributes.addedInClass?.length > 0}
                                 <div>
                                     <h3 class="mb-3 font-semibold">
                                         Added Attributes
                                     </h3>
                                     <div class="space-y-1">
-                                        {#each cls.attributes.added.sort( (a, b) => a.label.localeCompare(b.label) ) as addedAttribute}
+                                        {#each [...cls.attributes.addedInClass].sort( (a, b) => a.label.localeCompare(b.label) ) as addedAttribute}
                                             <div
                                                 class="bg-lightgray flex items-center justify-between px-3 py-1 text-sm"
                                             >
                                                 <p>{addedAttribute.label}</p>
-                                                {#if renamedFrom
-                                                    .get(cls.label)
-                                                    ?.has(addedAttribute.label)}
+                                                {#if renamedFrom.has(addedAttribute.iri)}
                                                     <span
                                                         class="text-soptim-dunkelgrau text-xs italic"
                                                     >
                                                         renamed from {renamedFrom
-                                                            .get(cls.label)
                                                             .get(
-                                                                addedAttribute.label,
-                                                            )}
+                                                                addedAttribute.iri,
+                                                            )
+                                                            .join(", ")}
                                                     </span>
                                                 {/if}
                                             </div>

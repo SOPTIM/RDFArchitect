@@ -25,11 +25,12 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.api.dto.migration.PropertyRenamings;
-import org.rdfarchitect.api.dto.migration.ResourceRenameOverview;
+import org.rdfarchitect.api.dto.migration.ClassPropertyMappings;
+import org.rdfarchitect.api.dto.migration.PropertyMappingOverview;
 import org.rdfarchitect.context.MigrationSessionStore;
-import org.rdfarchitect.models.changes.RenameCandidate;
-import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
+import org.rdfarchitect.models.changes.ResourceMapping;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
@@ -124,29 +125,29 @@ class SchemaMigrationServiceTest {
 
     private void confirmDetectedClassRenames() {
         var detected =
-                service.getClassRenamings().getDeletedAndRenamed().stream()
-                        .filter(candidate -> candidate.getNewResource() != null)
+                service.getClassMappings().getDeletedAndRemapped().stream()
+                        .filter(candidate -> !candidate.getNewResources().isEmpty())
                         .toList();
         service.confirmClassRenamings(new ArrayList<>(detected));
     }
 
     private void confirmDetectedPropertyRenames() {
-        var confirmed = new ArrayList<PropertyRenamings>();
-        for (var overview : service.getPropertyRenamings()) {
-            var renamings = new PropertyRenamings();
-            renamings.setClassLabel(overview.getLabel());
-            renamings.setAttributeRenames(confirmedOf(overview.getAttributes()));
-            renamings.setAssociationRenames(confirmedOf(overview.getAssociations()));
-            renamings.setEnumEntryRenames(confirmedOf(overview.getEnumEntries()));
-            confirmed.add(renamings);
+        var confirmed = new ArrayList<ClassPropertyMappings>();
+        for (var overview : service.getPropertyMappings()) {
+            var mappings = new ClassPropertyMappings();
+            mappings.setClassLabel(overview.getClassLabel());
+            mappings.setAttributeMappings(confirmedOf(overview.getAttributes()));
+            mappings.setAssociationMappings(confirmedOf(overview.getAssociations()));
+            mappings.setEnumEntryMappings(confirmedOf(overview.getEnumEntries()));
+            confirmed.add(mappings);
         }
-        service.confirmPropertyRenamings(confirmed);
+        service.confirmPropertyMappings(confirmed);
     }
 
-    private static <T extends SemanticResourceChange> List<RenameCandidate<T>> confirmedOf(
-            ResourceRenameOverview<T> overview) {
-        return overview.getDeletedAndRenamed().stream()
-                .filter(candidate -> candidate.getNewResource() != null)
+    private static <T extends SemanticResourceChange> List<ResourceMapping<T>> confirmedOf(
+            PropertyMappingOverview<T> overview) {
+        return overview.getDeletedAndRemapped().stream()
+                .filter(candidate -> !candidate.getNewResources().isEmpty())
                 .toList();
     }
 
@@ -154,34 +155,32 @@ class SchemaMigrationServiceTest {
      * Maps an attribute rename by hand, as the user does when similarity is below the threshold.
      */
     private void confirmAttributeRename(String classLabel, String oldLabel, String newLabel) {
-        var confirmed = new ArrayList<PropertyRenamings>();
-        for (var overview : service.getPropertyRenamings()) {
-            var renamings = new PropertyRenamings();
-            renamings.setClassLabel(overview.getLabel());
-            renamings.setAssociationRenames(confirmedOf(overview.getAssociations()));
-            renamings.setEnumEntryRenames(confirmedOf(overview.getEnumEntries()));
-            renamings.setAttributeRenames(List.of());
+        var confirmed = new ArrayList<ClassPropertyMappings>();
+        for (var overview : service.getPropertyMappings()) {
+            var renamings = new ClassPropertyMappings();
+            renamings.setClassLabel(overview.getClassLabel());
+            renamings.setAssociationMappings(confirmedOf(overview.getAssociations()));
+            renamings.setEnumEntryMappings(confirmedOf(overview.getEnumEntries()));
+            renamings.setAttributeMappings(List.of());
 
-            if (overview.getLabel().equals(classLabel)) {
+            if (overview.getClassLabel().equals(classLabel)) {
                 var deleted =
-                        overview.getAttributes().getDeletedAndRenamed().stream()
-                                .map(RenameCandidate::getOldResource)
+                        overview.getAttributes().getDeletedAndRemapped().stream()
+                                .flatMap(candidate -> candidate.getOldResources().stream())
                                 .filter(attribute -> attribute.getLabel().equals(oldLabel))
                                 .findFirst();
                 var added =
-                        overview.getAttributes().getAdded().stream()
+                        overview.getAttributes().getAddedInClass().stream()
                                 .filter(attribute -> attribute.getLabel().equals(newLabel))
                                 .findFirst();
                 if (deleted.isPresent() && added.isPresent()) {
-                    renamings.setAttributeRenames(
-                            List.of(
-                                    new RenameCandidate<SemanticAttributeChange>(
-                                            deleted.get(), added.get(), 1.0)));
+                    renamings.setAttributeMappings(
+                            List.of(new ResourceMapping<>(deleted.get(), added.get(), 1.0)));
                 }
             }
             confirmed.add(renamings);
         }
-        service.confirmPropertyRenamings(confirmed);
+        service.confirmPropertyMappings(confirmed);
     }
 
     private List<SemanticFieldChangeType> fieldChangeTypesOf(String attributeLabel) {
@@ -272,10 +271,124 @@ class SchemaMigrationServiceTest {
     }
 
     private List<Boolean> deletedAssociationsUsed() {
-        return service.getPropertyRenamings().stream()
-                .flatMap(overview -> overview.getAssociations().getDeletedAndRenamed().stream())
-                .map(candidate -> candidate.getOldResource().isAssociationUsed())
+        return service.getPropertyMappings().stream()
+                .flatMap(overview -> overview.getAssociations().getDeletedAndRemapped().stream())
+                .flatMap(candidate -> candidate.getOldResources().stream())
+                .map(SemanticAssociationChange::isAssociationUsed)
                 .toList();
+    }
+
+    /**
+     * A "Base" class and a "Sub" class that is {@code rdfs:subClassOf Base}, with a "voltage"
+     * attribute declared on whichever of the two {@code attributeOnSub} selects. Using a
+     * class-prefixed attribute IRI (as CIM does) means moving the attribute to the other class
+     * changes its IRI too, so the triple diff sees a DELETE+ADD pair rather than an in-place change
+     * - exactly the shape the rename/move detector is meant to catch.
+     */
+    private static Model inheritanceSchema(boolean attributeOnSub) {
+        var model = ModelFactory.createDefaultModel();
+
+        var base = model.createResource(PREFIX + "Base");
+        base.addProperty(RDF.type, RDFS.Class);
+        base.addProperty(RDFS.label, model.createLiteral("Base"));
+        base.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+
+        var sub = model.createResource(PREFIX + "Sub");
+        sub.addProperty(RDF.type, RDFS.Class);
+        sub.addProperty(RDFS.label, model.createLiteral("Sub"));
+        sub.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+        sub.addProperty(RDFS.subClassOf, base);
+
+        var range = model.createResource(PREFIX + "VoltageLevel");
+        range.addProperty(RDF.type, RDFS.Class);
+        range.addProperty(RDFS.label, model.createLiteral("VoltageLevel"));
+        range.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+
+        var domainClass = attributeOnSub ? sub : base;
+        var attribute =
+                model.createResource(PREFIX + (attributeOnSub ? "Sub" : "Base") + ".voltage");
+        attribute.addProperty(RDF.type, RDF.Property);
+        attribute.addProperty(RDFS.label, model.createLiteral("voltage"));
+        attribute.addProperty(RDFS.domain, domainClass);
+        attribute.addProperty(RDFS.range, range);
+        attribute.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:1..1"));
+        attribute.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
+
+        return model;
+    }
+
+    @Test
+    void confirmPropertyMappings_attributeMovedUpToSuperclass_attachesToSuperclass() {
+        initContext(inheritanceSchema(true), inheritanceSchema(false));
+
+        confirmDetectedClassRenames();
+        confirmDetectedPropertyRenames();
+
+        assertThat(attributeMoveTargetClass("voltage")).isEqualTo("Base");
+    }
+
+    @Test
+    void confirmPropertyMappings_attributeMovedDownToSubclass_attachesToSubclass() {
+        initContext(inheritanceSchema(false), inheritanceSchema(true));
+
+        confirmDetectedClassRenames();
+        confirmDetectedPropertyRenames();
+
+        assertThat(attributeMoveTargetClass("voltage")).isEqualTo("Sub");
+    }
+
+    /**
+     * The chain-wide candidate pool means the same mapping can plausibly be handed back under more
+     * than one class's bucket in a single confirm call - it must only be materialized once.
+     */
+    @Test
+    void confirmPropertyMappings_sameMappingSubmittedUnderTwoClassBuckets_materializesOnce() {
+        initContext(inheritanceSchema(true), inheritanceSchema(false));
+        confirmDetectedClassRenames();
+
+        var subOverview =
+                service.getPropertyMappings().stream()
+                        .filter(o -> o.getClassLabel().equals("Sub"))
+                        .findFirst()
+                        .orElseThrow();
+        var mapping =
+                subOverview.getAttributes().getDeletedAndRemapped().stream()
+                        .filter(m -> !m.getNewResources().isEmpty())
+                        .findFirst()
+                        .orElseThrow();
+
+        var subMappings = new ClassPropertyMappings();
+        subMappings.setClassLabel("Sub");
+        subMappings.setAttributeMappings(List.of(mapping));
+        subMappings.setAssociationMappings(List.of());
+        subMappings.setEnumEntryMappings(List.of());
+
+        var baseMappings = new ClassPropertyMappings();
+        baseMappings.setClassLabel("Base");
+        baseMappings.setAttributeMappings(List.of(mapping));
+        baseMappings.setAssociationMappings(List.of());
+        baseMappings.setEnumEntryMappings(List.of());
+
+        service.confirmPropertyMappings(List.of(subMappings, baseMappings));
+
+        var voltageCount =
+                migrationSessionStore.getContext().getDiffAfterPropertyConfirm().stream()
+                        .flatMap(c -> c.getAttributes().stream())
+                        .filter(a -> a.getLabel().equals("voltage"))
+                        .count();
+
+        assertThat(voltageCount).isEqualTo(1);
+    }
+
+    private String attributeMoveTargetClass(String attributeLabel) {
+        return migrationSessionStore.getContext().getDiffAfterPropertyConfirm().stream()
+                .filter(
+                        c ->
+                                c.getAttributes().stream()
+                                        .anyMatch(a -> a.getLabel().equals(attributeLabel)))
+                .map(SemanticClassChange::getLabel)
+                .findFirst()
+                .orElseThrow();
     }
 
     private static Model associationSchema(String associationName, boolean associationUsed) {

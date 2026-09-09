@@ -98,6 +98,44 @@ class SparqlMigrationBuilderTest {
         assertThat(script).isBlank();
     }
 
+    @Test
+    void generateMigrationScript_movedAttribute_rewritesPredicateLikeARename() {
+        var attributeChange =
+                SemanticAttributeChange.builder()
+                        .iri(PREFIX + "NewClass.voltage")
+                        .oldIRI(PREFIX + "OldClass.voltage")
+                        .label("voltage")
+                        .semanticResourceChangeType(SemanticResourceChangeType.MOVE)
+                        .build();
+
+        var script = generateFor(attributeChange);
+
+        assertThat(script)
+                .contains("DELETE")
+                .contains("INSERT")
+                .contains(PREFIX + "OldClass.voltage")
+                .contains(PREFIX + "NewClass.voltage");
+    }
+
+    @Test
+    void generateMigrationScript_mergedAttribute_rewritesEveryOldIRIIntoTheSameNewOne() {
+        var attributeChange =
+                SemanticAttributeChange.builder()
+                        .iri(PREFIX + "NewClass.voltage")
+                        .oldIRI(PREFIX + "ClassA.voltage")
+                        .additionalOldIRIs(List.of(PREFIX + "ClassB.volt"))
+                        .label("voltage")
+                        .semanticResourceChangeType(SemanticResourceChangeType.RENAME)
+                        .build();
+
+        var script = generateFor(attributeChange);
+
+        assertThat(script)
+                .contains(PREFIX + "ClassA.voltage")
+                .contains(PREFIX + "ClassB.volt")
+                .contains(PREFIX + "NewClass.voltage");
+    }
+
     private String generateFor(SemanticAttributeChange attributeChange) {
         var classChange =
                 SemanticClassChange.builder()

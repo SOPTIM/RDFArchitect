@@ -39,7 +39,7 @@ import java.util.List;
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public final class SemanticAttributeChange extends SemanticResourceChange {
+public final class SemanticAttributeChange extends SemanticPropertyChange {
 
     private String dataType;
 

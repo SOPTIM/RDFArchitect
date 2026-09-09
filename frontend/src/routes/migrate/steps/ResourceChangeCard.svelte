@@ -35,6 +35,7 @@
         DELETE: "Deleted",
         CHANGE: "Changed",
         RENAME: "Renamed",
+        MOVE: "Moved",
     };
 
     const FIELD_CHANGE_LABELS = {
@@ -65,6 +66,18 @@
     );
     let newLabel = $derived(new URI(resource.iri).suffix);
 
+    let moveDomainChange = $derived(
+        resource.semanticResourceChangeType === "MOVE"
+            ? resource.changes?.find(
+                  c => c.semanticFieldChangeType === "DOMAIN_CHANGE",
+              )
+            : null,
+    );
+
+    let mergedFromLabels = $derived(
+        (resource.additionalOldIRIs ?? []).map(iri => new URI(iri).suffix),
+    );
+
     function getChangeLabel(changeType) {
         if (
             changeType === "RENAME" &&
@@ -91,6 +104,8 @@
                 } else {
                     return "bg-lightblue text-blue border-blue";
                 }
+            case "MOVE":
+                return "bg-purple/10 text-purple border-purple/40";
             case "CHANGE":
             default:
                 return "bg-lightgray text-default-text border-border";
@@ -131,6 +146,28 @@
             <span class="mx-1">→</span>
             <span class="font-mono">
                 {ignorePrefixes ? newLabel : resource.iri}
+            </span>
+        </div>
+    {/if}
+
+    {#if moveDomainChange}
+        <div class="text-purple text-xs">
+            Moved from
+            <span class="font-mono">
+                {new URI(moveDomainChange.from).suffix}
+            </span>
+            <span class="mx-1">→</span>
+            <span class="font-mono">
+                {new URI(moveDomainChange.to).suffix}
+            </span>
+        </div>
+    {/if}
+
+    {#if mergedFromLabels.length > 0}
+        <div class="text-text-subtle text-xs">
+            Merged from
+            <span class="font-mono">
+                {[oldLabel, ...mergedFromLabels].join(", ")}
             </span>
         </div>
     {/if}

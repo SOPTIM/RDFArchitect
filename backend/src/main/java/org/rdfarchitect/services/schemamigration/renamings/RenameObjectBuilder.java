@@ -19,7 +19,8 @@ package org.rdfarchitect.services.schemamigration.renamings;
 
 import lombok.experimental.UtilityClass;
 
-import org.rdfarchitect.models.changes.RenameCandidate;
+import org.rdfarchitect.models.changes.MappingType;
+import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
@@ -40,14 +41,20 @@ public class RenameObjectBuilder {
      * resource, so callers keep their static type instead of casting the result back.
      */
     public <T extends SemanticResourceChange> T createRenameObject(
-            RenameCandidate<T> renameCandidate) {
-        var addedResource = renameCandidate.getNewResource();
-        var deletedResource = renameCandidate.getOldResource();
+            ResourceMapping<T> resourceMapping) {
+        var addedResource = resourceMapping.getNewResources().getFirst();
+        var oldResources = resourceMapping.getOldResources();
+        var deletedResource = oldResources.getFirst();
         // every SemanticResourceChange subtype overrides copy() covariantly
         @SuppressWarnings("unchecked")
         var result = (T) addedResource.copy();
         result.setOldIRI(deletedResource.getIri());
-        result.setSemanticResourceChangeType(SemanticResourceChangeType.RENAME);
+        result.setAdditionalOldIRIs(
+                oldResources.stream().skip(1).map(SemanticResourceChange::getIri).toList());
+        result.setSemanticResourceChangeType(
+                resourceMapping.getType() == MappingType.MOVE
+                        ? SemanticResourceChangeType.MOVE
+                        : SemanticResourceChangeType.RENAME);
         result.setChanges(mergeChanges(addedResource.getChanges(), deletedResource.getChanges()));
 
         if (result instanceof SemanticClassChange classChange
@@ -56,6 +63,21 @@ public class RenameObjectBuilder {
             mergeClassMembers(addedClass, deletedClass, classChange);
         }
 
+        return result;
+    }
+
+    public <T extends SemanticResourceChange> List<T> createSplitObjects(
+            ResourceMapping<T> resourceMapping) {
+        var deletedResource = resourceMapping.getOldResources().getFirst();
+        var result = new ArrayList<T>();
+        for (var addedResource : resourceMapping.getNewResources()) {
+            result.add(
+                    createRenameObject(
+                            new ResourceMapping<>(
+                                    deletedResource,
+                                    addedResource,
+                                    resourceMapping.getConfidenceScore())));
+        }
         return result;
     }
 

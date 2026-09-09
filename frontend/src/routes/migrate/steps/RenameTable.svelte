@@ -15,35 +15,91 @@
   -->
 
 <script>
+    import { faXmark } from "@fortawesome/free-solid-svg-icons";
+    import { Fa } from "svelte-fa";
+
+    import { Checkbox } from "$lib/components/bitsui/checkbox/index.js";
+    import { computeMappingType } from "$lib/utils/migrationUtils.js";
+
     let {
-        renameCandidates = $bindable([]),
-        unlinkedNewItems = $bindable([]),
-        allAddedItems = $bindable([]),
-        onAddMapping,
-        onDissolveMapping,
+        mappings = $bindable([]),
+        candidates = [],
+        invalidMappingIds = new Set(),
+        getCandidateSubtitle = () => null,
         propertyType = "Item",
     } = $props();
 
-    function handleSelectionChange(rename, event) {
-        const value = event.target.value;
+    const BADGE_LABELS = {
+        RENAME: "Renamed",
+        MOVE: "Moved",
+        MERGE: "Merged",
+        SPLIT: "Split",
+        UNMAPPED: "Unmapped",
+        INVALID: "Conflicting",
+    };
 
-        const selectedItem = unlinkedNewItems.find(
-            item => item.label === value,
+    const BADGE_CLASSES = {
+        RENAME: "bg-lightblue text-blue border-blue",
+        MOVE: "bg-purple/10 text-purple border-purple/40",
+        MERGE: "bg-lightgray text-default-text border-border",
+        SPLIT: "bg-lightgray text-default-text border-border",
+        UNMAPPED: "bg-default-background text-text-subtle border-border",
+        INVALID: "bg-red-background text-red-text border-red-border",
+    };
+
+    let expandedIds = $state(new Set());
+
+    function statusOf(mapping) {
+        if (invalidMappingIds.has(mapping.id)) return "INVALID";
+        return computeMappingType(mapping.oldResources, mapping.newResources);
+    }
+
+    function isLinked(mapping, candidate) {
+        return mapping.newResources.some(r => r.iri === candidate.iri);
+    }
+
+    function toggleLink(mapping, candidate) {
+        if (isLinked(mapping, candidate)) {
+            mapping.newResources = mapping.newResources.filter(
+                r => r.iri !== candidate.iri,
+            );
+        } else {
+            mapping.newResources = [...mapping.newResources, candidate];
+        }
+    }
+
+    function unlink(mapping, candidate) {
+        mapping.newResources = mapping.newResources.filter(
+            r => r.iri !== candidate.iri,
         );
+    }
 
-        if (rename.newResource) {
-            onDissolveMapping(rename);
+    function toggleExpanded(mapping) {
+        const next = new Set(expandedIds);
+        if (next.has(mapping.id)) {
+            next.delete(mapping.id);
+        } else {
+            next.add(mapping.id);
         }
+        expandedIds = next;
+    }
 
-        if (selectedItem) {
-            onAddMapping(rename, selectedItem);
-        }
+    function otherMappingsLinking(candidate, currentMapping) {
+        return mappings.filter(
+            m =>
+                m.id !== currentMapping.id &&
+                m.newResources.some(r => r.iri === candidate.iri),
+        );
+    }
+
+    function oldLabel(mapping) {
+        return mapping.oldResources.map(r => r.label).join(", ");
     }
 </script>
 
 <div>
     <h3 class="mb-3 font-semibold">
-        Renamed and Deleted {propertyType}s
+        Deleted and Possibly Remapped {propertyType}s
     </h3>
     <div
         class="border-border bg-window-background overflow-x-auto rounded-xl border shadow-sm"
@@ -51,41 +107,113 @@
         <table class="w-full border-collapse text-left text-sm">
             <thead class="bg-lightgray">
                 <tr>
-                    <th class="w-5/11 px-3 py-2 font-medium">Old Name</th>
-                    <th class="w-5/11 px-3 py-2 font-medium">New Name</th>
+                    <th class="w-3/11 px-3 py-2 font-medium">Old Name</th>
+                    <th class="w-2/11 px-3 py-2 font-medium">Status</th>
+                    <th class="w-5/11 px-3 py-2 font-medium">Mapped To</th>
                     <th class="w-1/11 px-3 py-2 font-medium">Confidence</th>
                 </tr>
             </thead>
             <tbody>
-                {#each renameCandidates as rename (rename.oldResource.label)}
-                    <tr>
+                {#each mappings as mapping (mapping.id)}
+                    <tr class="align-top">
+                        <td class="px-3 py-2">{oldLabel(mapping)}</td>
                         <td class="px-3 py-2">
-                            {rename.oldResource.label}
-                        </td>
-                        <td class="px-3 py-2">
-                            <select
-                                class="border-border bg-input-default-background text-default-text focus:ring-border-select rounded-md border px-2 py-1 text-sm focus:ring-2 focus:outline-none"
-                                onchange={e => handleSelectionChange(rename, e)}
-                                value={rename.newResource?.label ?? ""}
+                            <span
+                                class={`rounded border px-2 py-0.5 text-xs font-medium ${BADGE_CLASSES[statusOf(mapping)]}`}
                             >
-                                <option value="">—</option>
-                                {#if rename.newResource && allAddedItems.some(a => a.label === rename.newResource.label)}
-                                    <option value={rename.newResource.label}>
-                                        {rename.newResource.label}
-                                    </option>
-                                {/if}
-                                {#each unlinkedNewItems as item (item.label)}
-                                    <option value={item.label}>
-                                        {item.label}
-                                    </option>
-                                {/each}
-                            </select>
+                                {BADGE_LABELS[statusOf(mapping)]}
+                            </span>
                         </td>
                         <td class="px-3 py-2">
-                            {#if rename.confidenceScore == null || rename.newResource == null}
+                            <div class="flex flex-wrap items-center gap-1">
+                                {#each mapping.newResources as candidate (candidate.iri)}
+                                    <span
+                                        class="bg-lightgray text-default-text flex items-center gap-1 rounded px-2 py-0.5 text-xs"
+                                    >
+                                        {candidate.label}
+                                        {#if getCandidateSubtitle(candidate)}
+                                            <span class="text-text-subtle">
+                                                ({getCandidateSubtitle(
+                                                    candidate,
+                                                )})
+                                            </span>
+                                        {/if}
+                                        <button
+                                            type="button"
+                                            class="hover:text-red-text"
+                                            aria-label={`Unlink ${candidate.label}`}
+                                            onclick={() =>
+                                                unlink(mapping, candidate)}
+                                        >
+                                            <Fa icon={faXmark} size="xs" />
+                                        </button>
+                                    </span>
+                                {/each}
+                                <button
+                                    type="button"
+                                    class="border-border text-text-subtle hover:text-default-text rounded border border-dashed px-2 py-0.5 text-xs"
+                                    onclick={() => toggleExpanded(mapping)}
+                                >
+                                    {expandedIds.has(mapping.id)
+                                        ? "Close"
+                                        : "+ Link"}
+                                </button>
+                            </div>
+
+                            {#if expandedIds.has(mapping.id)}
+                                <div
+                                    class="border-border mt-2 max-h-48 space-y-1 overflow-y-auto rounded-md border p-2"
+                                >
+                                    {#each candidates as candidate (candidate.iri)}
+                                        {@const others = otherMappingsLinking(
+                                            candidate,
+                                            mapping,
+                                        )}
+                                        <label
+                                            class="hover:bg-lightgray flex items-center gap-2 rounded px-1 py-0.5 text-xs"
+                                        >
+                                            <Checkbox
+                                                checked={isLinked(
+                                                    mapping,
+                                                    candidate,
+                                                )}
+                                                onCheckedChange={() =>
+                                                    toggleLink(
+                                                        mapping,
+                                                        candidate,
+                                                    )}
+                                            />
+                                            <span>
+                                                {candidate.label}
+                                                {#if getCandidateSubtitle(candidate)}
+                                                    <span
+                                                        class="text-text-subtle"
+                                                    >
+                                                        ({getCandidateSubtitle(
+                                                            candidate,
+                                                        )})
+                                                    </span>
+                                                {/if}
+                                                {#if others.length > 0}
+                                                    <span
+                                                        class="text-text-subtle italic"
+                                                    >
+                                                        - also linked from {others
+                                                            .map(oldLabel)
+                                                            .join(", ")}
+                                                    </span>
+                                                {/if}
+                                            </span>
+                                        </label>
+                                    {/each}
+                                </div>
+                            {/if}
+                        </td>
+                        <td class="px-3 py-2">
+                            {#if mapping.confidenceScore == null || mapping.newResources.length === 0}
                                 —
                             {:else}
-                                {Math.round(rename.confidenceScore * 10000) /
+                                {Math.round(mapping.confidenceScore * 10000) /
                                     100}%
                             {/if}
                         </td>

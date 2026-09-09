@@ -23,6 +23,7 @@ import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
+import org.rdfarchitect.models.changes.MappingType;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 import org.rdfarchitect.services.schemamigration.ChangeObjectTestBuilder;
 
@@ -49,8 +50,8 @@ class RenameDetectorTest {
                 var result = RenameDetector.detectClassRenames(List.of(deletedClass, addedClass));
 
                 assertThat(result).hasSize(1);
-                assertThat(result.getFirst().getOldResource()).isEqualTo(deletedClass);
-                assertThat(result.getFirst().getNewResource()).isEqualTo(addedClass);
+                assertThat(result.getFirst().getOldResources()).isEqualTo(List.of(deletedClass));
+                assertThat(result.getFirst().getNewResources()).isEqualTo(List.of(addedClass));
             }
         }
 
@@ -96,7 +97,7 @@ class RenameDetectorTest {
                 var result = RenameDetector.detectClassRenames(List.of(deleted, added1, added2));
 
                 assertThat(result).hasSize(1);
-                assertThat(result.getFirst().getNewResource()).isEqualTo(added2);
+                assertThat(result.getFirst().getNewResources()).isEqualTo(List.of(added2));
             }
         }
 
@@ -136,8 +137,8 @@ class RenameDetectorTest {
 
                 var result = RenameDetector.detectClassRenames(List.of(deleted1, deleted2, added));
                 assertThat(result).hasSize(1);
-                assertThat(result.getFirst().getOldResource()).isEqualTo(deleted1);
-                assertThat(result.getFirst().getNewResource()).isEqualTo(added);
+                assertThat(result.getFirst().getOldResources()).isEqualTo(List.of(deleted1));
+                assertThat(result.getFirst().getNewResources()).isEqualTo(List.of(added));
             }
         }
 
@@ -181,13 +182,13 @@ class RenameDetectorTest {
                 assertThat(result)
                         .anyMatch(
                                 r ->
-                                        r.getOldResource().equals(deleted1)
-                                                && r.getNewResource().equals(added1));
+                                        r.getOldResources().equals(List.of(deleted1))
+                                                && r.getNewResources().equals(List.of(added1)));
                 assertThat(result)
                         .anyMatch(
                                 r ->
-                                        r.getOldResource().equals(deleted2)
-                                                && r.getNewResource().equals(added2));
+                                        r.getOldResources().equals(List.of(deleted2))
+                                                && r.getNewResources().equals(List.of(added2)));
             }
         }
 
@@ -215,7 +216,7 @@ class RenameDetectorTest {
                                 List.of(deleted1, deleted2, deleted3, added));
 
                 assertThat(result).hasSize(1);
-                assertThat(result.getFirst().getOldResource()).isEqualTo(deleted1);
+                assertThat(result.getFirst().getOldResources()).isEqualTo(List.of(deleted1));
             }
         }
 
@@ -239,15 +240,15 @@ class RenameDetectorTest {
     }
 
     @Nested
-    class DetectPropertyRenamingsTest {
+    class DetectClassPropertyMappingsTest {
 
         @Test
         void detectPropertyRenames_addAndDeleteExistWithHighSimilarity_returnsRename() {
             var deletedA =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "OldA", SemanticResourceChangeType.DELETE);
             var addedA =
-                    ChangeObjectTestBuilder.resourceChange("NewA", SemanticResourceChangeType.ADD);
+                    ChangeObjectTestBuilder.propertyChange("NewA", SemanticResourceChangeType.ADD);
 
             try (MockedStatic<SimilarityCalculator> mock = mockStatic(SimilarityCalculator.class)) {
                 mock.when(() -> SimilarityCalculator.calculateSimilarity(addedA, deletedA))
@@ -256,15 +257,15 @@ class RenameDetectorTest {
                 var result = RenameDetector.detectPropertyRenames(List.of(deletedA, addedA));
 
                 assertThat(result).hasSize(1);
-                assertThat(result.getFirst().getOldResource()).isEqualTo(deletedA);
-                assertThat(result.getFirst().getNewResource()).isEqualTo(addedA);
+                assertThat(result.getFirst().getOldResources()).isEqualTo(List.of(deletedA));
+                assertThat(result.getFirst().getNewResources()).isEqualTo(List.of(addedA));
             }
         }
 
         @Test
         void detectPropertyRenames_noAddedChanges_returnsEmpty() {
             var deletedA =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "OldA", SemanticResourceChangeType.DELETE);
 
             var result = RenameDetector.detectPropertyRenames(List.of(deletedA));
@@ -275,7 +276,7 @@ class RenameDetectorTest {
         @Test
         void detectPropertyRenames_noDeletedChanges_returnsEmpty() {
             var addedA =
-                    ChangeObjectTestBuilder.resourceChange("NewA", SemanticResourceChangeType.ADD);
+                    ChangeObjectTestBuilder.propertyChange("NewA", SemanticResourceChangeType.ADD);
 
             var result = RenameDetector.detectPropertyRenames(List.of(addedA));
 
@@ -285,13 +286,13 @@ class RenameDetectorTest {
         @Test
         void detectPropertyRenames_multipleAddedProperties_matchesWithHighestSimilarity() {
             var deleted =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "Old", SemanticResourceChangeType.DELETE);
 
             var added1 =
-                    ChangeObjectTestBuilder.resourceChange("New1", SemanticResourceChangeType.ADD);
+                    ChangeObjectTestBuilder.propertyChange("New1", SemanticResourceChangeType.ADD);
             var added2 =
-                    ChangeObjectTestBuilder.resourceChange("New2", SemanticResourceChangeType.ADD);
+                    ChangeObjectTestBuilder.propertyChange("New2", SemanticResourceChangeType.ADD);
 
             try (MockedStatic<SimilarityCalculator> mock = mockStatic(SimilarityCalculator.class)) {
 
@@ -303,17 +304,17 @@ class RenameDetectorTest {
                 var result = RenameDetector.detectPropertyRenames(List.of(deleted, added1, added2));
 
                 assertThat(result).hasSize(1);
-                assertThat(result.getFirst().getNewResource()).isEqualTo(added2);
+                assertThat(result.getFirst().getNewResources()).isEqualTo(List.of(added2));
             }
         }
 
         @Test
         void detectPropertyRenames_similarityBelowThreshold_returnsEmpty() {
             var deleted =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "Old", SemanticResourceChangeType.DELETE);
             var added =
-                    ChangeObjectTestBuilder.resourceChange("New", SemanticResourceChangeType.ADD);
+                    ChangeObjectTestBuilder.propertyChange("New", SemanticResourceChangeType.ADD);
 
             try (MockedStatic<SimilarityCalculator> mock = mockStatic(SimilarityCalculator.class)) {
 
@@ -330,14 +331,14 @@ class RenameDetectorTest {
         void
                 detectPropertyRenames_multipleDeletedPropertiesWithSameAddedProperty_onlyMatchesOnce() {
             var deleted1 =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "Old1", SemanticResourceChangeType.DELETE);
             var deleted2 =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "Old2", SemanticResourceChangeType.DELETE);
 
             var added =
-                    ChangeObjectTestBuilder.resourceChange("NewA", SemanticResourceChangeType.ADD);
+                    ChangeObjectTestBuilder.propertyChange("NewA", SemanticResourceChangeType.ADD);
 
             try (MockedStatic<SimilarityCalculator> mock = mockStatic(SimilarityCalculator.class)) {
 
@@ -363,16 +364,16 @@ class RenameDetectorTest {
         @Test
         void detectPropertyRenames_multipleIndependentRenames_returnsAll() {
             var deleted1 =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "OldProp1", SemanticResourceChangeType.DELETE);
             var deleted2 =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "OldProp2", SemanticResourceChangeType.DELETE);
             var added1 =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "NewProp1", SemanticResourceChangeType.ADD);
             var added2 =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "NewProp2", SemanticResourceChangeType.ADD);
 
             try (MockedStatic<SimilarityCalculator> mock = mockStatic(SimilarityCalculator.class)) {
@@ -397,29 +398,29 @@ class RenameDetectorTest {
                 assertThat(result)
                         .anyMatch(
                                 r ->
-                                        r.getOldResource().equals(deleted1)
-                                                && r.getNewResource().equals(added1));
+                                        r.getOldResources().equals(List.of(deleted1))
+                                                && r.getNewResources().equals(List.of(added1)));
                 assertThat(result)
                         .anyMatch(
                                 r ->
-                                        r.getOldResource().equals(deleted2)
-                                                && r.getNewResource().equals(added2));
+                                        r.getOldResources().equals(List.of(deleted2))
+                                                && r.getNewResources().equals(List.of(added2)));
             }
         }
 
         @Test
         void detectPropertyRenames_moreAddedThanDeleted_returnsOnlyMatches() {
             var deleted =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "OldProp", SemanticResourceChangeType.DELETE);
             var added1 =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "NewProp1", SemanticResourceChangeType.ADD);
             var added2 =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "NewProp2", SemanticResourceChangeType.ADD);
             var added3 =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "NewProp3", SemanticResourceChangeType.ADD);
 
             try (MockedStatic<SimilarityCalculator> mock = mockStatic(SimilarityCalculator.class)) {
@@ -436,17 +437,17 @@ class RenameDetectorTest {
                                 List.of(deleted, added1, added2, added3));
 
                 assertThat(result).hasSize(1);
-                assertThat(result.getFirst().getNewResource()).isEqualTo(added1);
+                assertThat(result.getFirst().getNewResources()).isEqualTo(List.of(added1));
             }
         }
 
         @Test
         void detectPropertyRenames_scoreStoredInRenameCandidate_containsCorrectScore() {
             var deleted =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "OldProp", SemanticResourceChangeType.DELETE);
             var added =
-                    ChangeObjectTestBuilder.resourceChange(
+                    ChangeObjectTestBuilder.propertyChange(
                             "NewProp", SemanticResourceChangeType.ADD);
 
             try (MockedStatic<SimilarityCalculator> mock = mockStatic(SimilarityCalculator.class)) {
@@ -457,6 +458,70 @@ class RenameDetectorTest {
 
                 assertThat(result).hasSize(1);
                 assertThat(result.getFirst().getConfidenceScore()).isEqualTo(0.84);
+            }
+        }
+
+        @Test
+        void detectPropertyRenames_sameDomain_classifiesAsRename() {
+            var deleted =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "Old", SemanticResourceChangeType.DELETE, "urn:ClassA");
+            var added =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "New", SemanticResourceChangeType.ADD, "urn:ClassA");
+
+            try (MockedStatic<SimilarityCalculator> mock = mockStatic(SimilarityCalculator.class)) {
+                mock.when(() -> SimilarityCalculator.calculateSimilarity(added, deleted))
+                        .thenReturn(0.9);
+
+                var result = RenameDetector.detectPropertyRenames(List.of(deleted, added));
+
+                assertThat(result).hasSize(1);
+                assertThat(result.getFirst().getType()).isEqualTo(MappingType.RENAME);
+            }
+        }
+
+        @Test
+        void detectPropertyRenames_differentDomain_classifiesAsMove() {
+            var deleted =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "Old", SemanticResourceChangeType.DELETE, "urn:ClassA");
+            var added =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "New", SemanticResourceChangeType.ADD, "urn:ClassB");
+
+            try (MockedStatic<SimilarityCalculator> mock = mockStatic(SimilarityCalculator.class)) {
+                mock.when(() -> SimilarityCalculator.calculateSimilarity(added, deleted))
+                        .thenReturn(0.9);
+
+                var result = RenameDetector.detectPropertyRenames(List.of(deleted, added));
+
+                assertThat(result).hasSize(1);
+                assertThat(result.getFirst().getType()).isEqualTo(MappingType.MOVE);
+            }
+        }
+
+        /**
+         * Domain is only populated for attributes and associations in production - an enum entry
+         * never had a domain before the enum-entry domain fix, so the classification has to
+         * tolerate null on either or both sides instead of throwing.
+         */
+        @Test
+        void detectPropertyRenames_domainNeverSet_doesNotThrowAndClassifiesAsRename() {
+            var deleted =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "Old", SemanticResourceChangeType.DELETE);
+            var added =
+                    ChangeObjectTestBuilder.propertyChange("New", SemanticResourceChangeType.ADD);
+
+            try (MockedStatic<SimilarityCalculator> mock = mockStatic(SimilarityCalculator.class)) {
+                mock.when(() -> SimilarityCalculator.calculateSimilarity(added, deleted))
+                        .thenReturn(0.9);
+
+                var result = RenameDetector.detectPropertyRenames(List.of(deleted, added));
+
+                assertThat(result).hasSize(1);
+                assertThat(result.getFirst().getType()).isEqualTo(MappingType.RENAME);
             }
         }
     }

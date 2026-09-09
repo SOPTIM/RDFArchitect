@@ -115,7 +115,8 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         var update =
                 switch (attributeChange.getSemanticResourceChangeType()) {
                     case DELETE -> updateGenerator.generateDeletePropertyUpdate(attributeChange);
-                    case RENAME -> updateGenerator.generateRenameAttributeUpdate(attributeChange);
+                    case RENAME, MOVE ->
+                            updateGenerator.generateRenameAttributeUpdate(attributeChange);
                     case ADD ->
                             updateGenerator.generateAddAttributeUpdate(attributeChange, classIri);
                     case ADDED_FROM_INHERITANCE ->
@@ -133,7 +134,8 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
 
         var type = attributeChange.getSemanticResourceChangeType();
         if (type == SemanticResourceChangeType.CHANGE
-                || type == SemanticResourceChangeType.RENAME) {
+                || type == SemanticResourceChangeType.RENAME
+                || type == SemanticResourceChangeType.MOVE) {
             processAttributeFieldChanges(attributeChange, classIri, sb);
         }
 
@@ -181,7 +183,8 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         var update =
                 switch (enumEntryChange.getSemanticResourceChangeType()) {
                     case DELETE -> updateGenerator.generateDeleteEnumEntryUpdate(enumEntryChange);
-                    case RENAME -> updateGenerator.generateRenameEnumEntryUpdate(enumEntryChange);
+                    case RENAME, MOVE ->
+                            updateGenerator.generateRenameEnumEntryUpdate(enumEntryChange);
                     default -> null;
                 };
 
@@ -203,7 +206,7 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                     case ADDED_FROM_INHERITANCE ->
                             updateGenerator.generateAddAssociationToSingleClassUpdate(
                                     associationChange, associationChange.getIri());
-                    case RENAME ->
+                    case RENAME, MOVE ->
                             updateGenerator.generateRenameAssociationUpdate(associationChange);
                     default -> null;
                 };
@@ -214,7 +217,8 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
 
         var type = associationChange.getSemanticResourceChangeType();
         if (type == SemanticResourceChangeType.CHANGE
-                || type == SemanticResourceChangeType.RENAME) {
+                || type == SemanticResourceChangeType.RENAME
+                || type == SemanticResourceChangeType.MOVE) {
             processAssociationFieldChanges(associationChange, sb);
         }
 

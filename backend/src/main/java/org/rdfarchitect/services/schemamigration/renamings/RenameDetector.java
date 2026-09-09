@@ -19,14 +19,17 @@ package org.rdfarchitect.services.schemamigration.renamings;
 
 import lombok.experimental.UtilityClass;
 
-import org.rdfarchitect.models.changes.RenameCandidate;
+import org.rdfarchitect.models.changes.MappingType;
+import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticPropertyChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @UtilityClass
@@ -34,7 +37,7 @@ public class RenameDetector {
 
     private static final double SIMILARITY_THRESHOLD = 0.8;
 
-    public List<RenameCandidate<SemanticClassChange>> detectClassRenames(
+    public List<ResourceMapping<SemanticClassChange>> detectClassRenames(
             List<SemanticClassChange> semanticChanges) {
         var deletedClasses =
                 semanticChanges.stream()
@@ -51,10 +54,12 @@ public class RenameDetector {
                                                 .equals(SemanticResourceChangeType.ADD))
                         .toList();
 
-        return matchBySimilarity(addedClasses, deletedClasses);
+        var mapping = matchBySimilarity(addedClasses, deletedClasses);
+        mapping.forEach(m -> m.setType(MappingType.RENAME));
+        return mapping;
     }
 
-    public <T extends SemanticResourceChange> List<RenameCandidate<T>> detectPropertyRenames(
+    public <T extends SemanticPropertyChange> List<ResourceMapping<T>> detectPropertyRenames(
             List<T> resources) {
         var deletedResources =
                 resources.stream()
@@ -71,12 +76,22 @@ public class RenameDetector {
                                                 .equals(SemanticResourceChangeType.ADD))
                         .toList();
 
-        return matchBySimilarity(addedResources, deletedResources);
+        var mappings = matchBySimilarity(addedResources, deletedResources);
+        for (var mapping : mappings) {
+            if (!Objects.equals(
+                    mapping.getOldResources().getFirst().getDomain(),
+                    mapping.getNewResources().getFirst().getDomain())) {
+                mapping.setType(MappingType.MOVE);
+            } else {
+                mapping.setType(MappingType.RENAME);
+            }
+        }
+        return mappings;
     }
 
-    private <T extends SemanticResourceChange> List<RenameCandidate<T>> matchBySimilarity(
+    private <T extends SemanticResourceChange> List<ResourceMapping<T>> matchBySimilarity(
             List<T> added, List<T> deleted) {
-        List<RenameCandidate<T>> renames = new ArrayList<>();
+        List<ResourceMapping<T>> renames = new ArrayList<>();
         Set<T> unmatchedAdded = new HashSet<>(added);
 
         for (T deletedItem : deleted) {
@@ -99,7 +114,7 @@ public class RenameDetector {
 
             if (bestMatch != null && bestScore >= SIMILARITY_THRESHOLD) {
                 unmatchedAdded.remove(bestMatch);
-                renames.add(new RenameCandidate<>(deletedItem, bestMatch, bestScore));
+                renames.add(new ResourceMapping<>(deletedItem, bestMatch, bestScore));
             }
         }
         return renames;

@@ -21,58 +21,64 @@
 
     import {
         confirmRenamedClasses,
-        getClassRenamings,
+        getClassMappings,
     } from "$lib/api/generated/index.ts";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
-    import { isPrefixOnlyRename } from "$lib/utils/migrationUtils.js";
+    import {
+        groupMappingsForSubmission,
+        isPrefixOnlyRename,
+    } from "$lib/utils/migrationUtils.js";
 
     import RenameTable from "./RenameTable.svelte";
 
-    let hiddenRenames = $state([]);
-    let visibleRenames = $state([]);
+    let hiddenMappings = $state([]);
+    let visibleMappings = $state([]);
     let visibleAdded = $state([]);
     let isLoading = $state(true);
     let ignorePrefixes = $state(true);
 
-    let renamedFrom = $state(new Map());
-    let unlinkedAdded = $derived.by(() => {
-        const linked = new Set(renamedFrom.keys());
-        return visibleAdded
-            .filter(c => !linked.has(c.label))
-            .sort((a, b) => a.label.localeCompare(b.label));
+    let renamedFrom = $derived.by(() => {
+        const map = new Map();
+        for (const mapping of [...hiddenMappings, ...visibleMappings]) {
+            for (const newClass of mapping.newResources) {
+                const froms = mapping.oldResources.map(r => r.label);
+                map.set(newClass.label, [
+                    ...(map.get(newClass.label) ?? []),
+                    ...froms,
+                ]);
+            }
+        }
+        return map;
     });
 
     onMount(() => {
         const storedState = get(migrationState);
         ignorePrefixes = storedState.ignorePrefixes;
-        getClassRenamings()
+        getClassMappings()
             .then(res => (res.error ? Promise.reject("Failed") : res.data))
             .then(data => {
-                const deletedAndRenamed = data.deletedAndRenamed.sort((a, b) =>
-                    a.oldResource.label.localeCompare(b.oldResource.label),
+                const deletedAndRemapped = [...data.deletedAndRemapped].sort(
+                    (a, b) =>
+                        a.oldResources[0].label.localeCompare(
+                            b.oldResources[0].label,
+                        ),
                 );
-                hiddenRenames = ignorePrefixes
-                    ? deletedAndRenamed.filter(r =>
-                          isPrefixOnlyRename(
-                              r.oldResource.iri,
-                              r.newResource?.iri,
-                          ),
-                      )
+                const isPrefixOnly = mapping =>
+                    isPrefixOnlyRename(
+                        mapping.oldResources[0].iri,
+                        mapping.newResources[0]?.iri,
+                    );
+                hiddenMappings = ignorePrefixes
+                    ? deletedAndRemapped.filter(isPrefixOnly)
                     : [];
-                visibleRenames = ignorePrefixes
-                    ? deletedAndRenamed.filter(
-                          r =>
-                              !isPrefixOnlyRename(
-                                  r.oldResource.iri,
-                                  r.newResource?.iri,
-                              ),
-                      )
-                    : deletedAndRenamed;
-                const hiddenTargetIRIs = hiddenRenames
-                    .map(r => r.newResource?.iri)
+                visibleMappings = ignorePrefixes
+                    ? deletedAndRemapped.filter(m => !isPrefixOnly(m))
+                    : deletedAndRemapped;
+                const hiddenTargetIRIs = hiddenMappings
+                    .map(m => m.newResources[0]?.iri)
                     .filter(iri => iri != null);
                 visibleAdded = data.added
                     .filter(
@@ -80,42 +86,27 @@
                             !hiddenTargetIRIs.includes(addedClass.iri),
                     )
                     .sort((a, b) => a.label.localeCompare(b.label));
-
-                for (let rename of deletedAndRenamed) {
-                    if (rename.newResource) {
-                        renamedFrom.set(
-                            rename.newResource.label,
-                            rename.oldResource.label,
-                        );
-                    }
-                }
             })
             .catch(e => console.log("Failed to fetch class overview:", e))
             .finally(() => (isLoading = false));
     });
 
-    function addRenameMapping(renameCandidate, newClass) {
-        const newMap = new Map(renamedFrom);
-        newMap.set(newClass.label, renameCandidate.oldResource.label);
-        renamedFrom = newMap;
-        renameCandidate.newResource = newClass;
-        renameCandidate.confidenceScore = 1;
-    }
-
-    function dissolveRenameMapping(renameCandidate) {
-        const newMap = new Map(renamedFrom);
-        newMap.delete(renameCandidate.newResource.label);
-        renamedFrom = newMap;
-        renameCandidate.newResource = null;
-    }
-
     export async function onNext() {
-        let body = [...hiddenRenames, ...visibleRenames].filter(
-            r => r.newResource != null,
-        );
+        const { mappings, invalidMappingIds } = groupMappingsForSubmission([
+            ...hiddenMappings,
+            ...visibleMappings,
+        ]);
+
+        if (invalidMappingIds.size > 0) {
+            toastStore.warning(
+                "Some mappings were skipped",
+                "A class can't be linked as both a merge target and a split source at once. Fix those rows before continuing.",
+            );
+        }
+
         try {
             const { error } = await confirmRenamedClasses({
-                body: body,
+                body: mappings,
             });
 
             if (error) {
@@ -144,20 +135,16 @@
         </p>
     </InfoBox>
 
-    {#if !isLoading && visibleRenames.length === 0 && visibleAdded.length === 0}
+    {#if !isLoading && visibleMappings.length === 0 && visibleAdded.length === 0}
         <EmptyStateCard
             title="No Class Changes"
             description="There are no class changes to review in this migration."
         />
     {:else}
-        {#if visibleRenames.length > 0}
+        {#if visibleMappings.length > 0}
             <RenameTable
-                renameCandidates={visibleRenames}
-                unlinkedNewItems={unlinkedAdded}
-                allAddedItems={visibleAdded}
-                onAddMapping={(rename, newItem) =>
-                    addRenameMapping(rename, newItem)}
-                onDissolveMapping={rename => dissolveRenameMapping(rename)}
+                bind:mappings={visibleMappings}
+                candidates={visibleAdded}
                 propertyType="Class"
             />
         {/if}
@@ -175,9 +162,9 @@
                                 <span
                                     class="text-soptim-dunkelgrau text-xs italic"
                                 >
-                                    renamed from {renamedFrom.get(
-                                        addedClass.label,
-                                    )}
+                                    renamed from {renamedFrom
+                                        .get(addedClass.label)
+                                        .join(", ")}
                                 </span>
                             {/if}
                         </div>

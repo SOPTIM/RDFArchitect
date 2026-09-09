@@ -24,14 +24,14 @@
 
     import ConfirmClassRenames from "./steps/ConfirmClassRenames.svelte";
     import ConfirmDefaults from "./steps/ConfirmDefaults.svelte";
-    import ConfirmPropertyRenames from "./steps/ConfirmPropertyRenames.svelte";
+    import ConfirmPropertyMappings from "./steps/ConfirmPropertyMappings.svelte";
     import ConfirmAssociationDefaults from "./steps/defaults/ConfirmAssociationDefaults.svelte";
     import ConfirmAttributeDefaults from "./steps/defaults/ConfirmAttributeDefaults.svelte";
     import ConfirmEnumEntryReplacements from "./steps/defaults/ConfirmEnumEntryReplacements.svelte";
     import Export from "./steps/Export.svelte";
-    import ConfirmAssociationRenames from "./steps/propertyrenames/ConfirmAssociationRenames.svelte";
-    import ConfirmAttributeRenames from "./steps/propertyrenames/ConfirmAttributeRenames.svelte";
-    import ConfirmEnumEntryRenames from "./steps/propertyrenames/ConfirmEnumEntryRenames.svelte";
+    import ConfirmAssociationRenames from "./steps/propertymappings/ConfirmAssociationRenames.svelte";
+    import ConfirmAttributeRenames from "./steps/propertymappings/ConfirmAttributeRenames.svelte";
+    import ConfirmEnumEntryRenames from "./steps/propertymappings/ConfirmEnumEntryRenames.svelte";
     import ReviewChanges from "./steps/ReviewChanges.svelte";
     import SelectSchemas from "./steps/SelectSchemas.svelte";
     import ValidateSchemas from "./steps/ValidateSchemas.svelte";
@@ -48,7 +48,7 @@
         },
         {
             title: "Step 4: Review Property Renames",
-            component: ConfirmPropertyRenames,
+            component: ConfirmPropertyMappings,
             substeps: [
                 { title: "Attributes", component: ConfirmAttributeRenames },
                 { title: "Associations", component: ConfirmAssociationRenames },

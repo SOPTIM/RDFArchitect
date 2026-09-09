@@ -464,6 +464,9 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                         .append(" to ")
                         .append(prop.getLabel())
                         .append("\n\n");
+            } else if (prop.getSemanticResourceChangeType() == SemanticResourceChangeType.MOVE
+                    && prop.getOldIRI() != null) {
+                appendMovedHeader(sb, prop);
             } else {
                 sb.append("#### ")
                         .append(formatChangeType(prop.getSemanticResourceChangeType()))
@@ -491,8 +494,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                 if (prop instanceof SemanticAttributeChange attribute
                         && attribute.isDataTypesEquivalent()) {
                     sb.append(
-                            "The datatypes were marked equivalent, so existing values are"
-                                    + " kept.\n\n");
+                            "The datatypes were marked equivalent, so existing values are kept.\n\n");
                 }
                 var invalidTargets =
                         prop.getChanges().stream()
@@ -510,6 +512,16 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                 }
             }
         }
+    }
+
+    private void appendMovedHeader(StringBuilder sb, SemanticResourceChange prop) {
+        var oldLabel = new URI(prop.getOldIRI()).getSuffix();
+        var newLabel = new URI(prop.getIri()).getSuffix();
+        sb.append("#### Moved from ")
+                .append(oldLabel)
+                .append(" to ")
+                .append(newLabel)
+                .append("\n\n");
     }
 
     private <T extends SemanticResourceChange> void appendDirectProperties(
@@ -572,6 +584,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
             case DELETE -> "[Deleted]";
             case CHANGE -> "[Changed]";
             case RENAME -> "[Renamed]";
+            case MOVE -> "[Moved]";
             case ADDED_FROM_INHERITANCE -> "[Added via inheritance]";
             case DELETED_FROM_INHERITANCE -> "[Deleted via inheritance]";
             case INHERITS_CHANGE -> "[Inherits changes]";

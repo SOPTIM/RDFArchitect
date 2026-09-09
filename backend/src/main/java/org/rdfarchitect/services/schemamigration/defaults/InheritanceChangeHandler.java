@@ -21,7 +21,7 @@ import lombok.experimental.UtilityClass;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
-import org.rdfarchitect.models.changes.RenameCandidate;
+import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
@@ -45,7 +45,8 @@ public class InheritanceChangeHandler {
             List<SemanticClassChange> classes,
             Model newModel,
             Model oldModel,
-            List<RenameCandidate<SemanticClassChange>> classRenames) {
+            List<ResourceMapping<SemanticClassChange>> classRenames,
+            Set<String> movedPropertyIris) {
         var classChangeMap =
                 classes.stream().collect(Collectors.toMap(SemanticClassChange::getIri, c -> c));
 
@@ -56,7 +57,13 @@ public class InheritanceChangeHandler {
                                     change.getSemanticFieldChangeType()
                                             == SemanticFieldChangeType.SUPERCLASS_CHANGE)) {
                 addPropertyChangesFromInheritance(
-                        cls, classes, classChangeMap, newModel, oldModel, classRenames);
+                        cls,
+                        classes,
+                        classChangeMap,
+                        newModel,
+                        oldModel,
+                        classRenames,
+                        movedPropertyIris);
             }
         }
 
@@ -70,7 +77,8 @@ public class InheritanceChangeHandler {
             Map<String, SemanticClassChange> classChangeMap,
             Model newModel,
             Model oldModel,
-            List<RenameCandidate<SemanticClassChange>> classRenames) {
+            List<ResourceMapping<SemanticClassChange>> classRenames,
+            Set<String> movedPropertyIris) {
         var oldUri =
                 classChange.getOldIRI() != null ? classChange.getOldIRI() : classChange.getIri();
         var oldSuperClasses = CIMClassUtils.listSuperClasses(oldModel.getResource(oldUri));
@@ -85,8 +93,11 @@ public class InheritanceChangeHandler {
         removeRenamedClassesFromSuperClassChanges(
                 oldSuperClasses, newSuperClasses, classRenames, oldModel, newModel);
 
-        var propertiesToRemove = collectPropertiesToRemove(oldSuperClasses);
-        var propertiesToAdd = collectPropertiesToAdd(newSuperClasses, allClassChanges);
+        // a property that was explicitly moved is already represented by its own merged mapping
+        // entry, not by inheritance propagation, even if it also sits in a changed super/subclass
+        var propertiesToRemove = collectPropertiesToRemove(oldSuperClasses, movedPropertyIris);
+        var propertiesToAdd =
+                collectPropertiesToAdd(newSuperClasses, allClassChanges, movedPropertyIris);
         var oldIRI =
                 classChange.getOldIRI() != null ? classChange.getOldIRI() : classChange.getIri();
         var oldDerivingClasses = CIMClassUtils.findDerivingClasses(oldModel.getResource(oldIRI));
@@ -106,12 +117,12 @@ public class InheritanceChangeHandler {
     private void removeRenamedClassesFromSuperClassChanges(
             Set<Resource> oldSuperClasses,
             Set<Resource> newSuperClasses,
-            List<RenameCandidate<SemanticClassChange>> classRenames,
+            List<ResourceMapping<SemanticClassChange>> classRenames,
             Model oldModel,
             Model newModel) {
         for (var rename : classRenames) {
-            var oldResource = oldModel.getResource(rename.getOldResource().getIri());
-            var newResource = newModel.getResource(rename.getNewResource().getIri());
+            var oldResource = oldModel.getResource(rename.getOldResources().getFirst().getIri());
+            var newResource = newModel.getResource(rename.getNewResources().getFirst().getIri());
             if (oldSuperClasses.contains(oldResource) && newSuperClasses.contains(newResource)) {
                 oldSuperClasses.remove(oldResource);
                 newSuperClasses.remove(newResource);
@@ -130,16 +141,20 @@ public class InheritanceChangeHandler {
         }
     }
 
-    private Set<Resource> collectPropertiesToRemove(Set<Resource> oldSuperClasses) {
+    private Set<Resource> collectPropertiesToRemove(
+            Set<Resource> oldSuperClasses, Set<String> movedPropertyIris) {
         var propertiesToRemove = new HashSet<Resource>();
         for (var oldSuperClass : oldSuperClasses) {
             propertiesToRemove.addAll(CIMClassUtils.listDirectProperties(oldSuperClass));
         }
+        propertiesToRemove.removeIf(property -> movedPropertyIris.contains(property.getURI()));
         return propertiesToRemove;
     }
 
     private Set<Resource> collectPropertiesToAdd(
-            Set<Resource> newSuperClasses, List<SemanticClassChange> allClassChanges) {
+            Set<Resource> newSuperClasses,
+            List<SemanticClassChange> allClassChanges,
+            Set<String> movedPropertyIris) {
         var propertiesToAdd = new HashSet<Resource>();
         for (var newSuperClass : newSuperClasses) {
             var superClassChangeObject =
@@ -155,6 +170,7 @@ public class InheritanceChangeHandler {
                         propertiesToAdd, newSuperClass, superClassChangeObject);
             }
         }
+        propertiesToAdd.removeIf(property -> movedPropertyIris.contains(property.getURI()));
         return propertiesToAdd;
     }
 

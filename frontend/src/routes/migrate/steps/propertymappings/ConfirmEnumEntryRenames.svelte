@@ -23,74 +23,49 @@
     import { Fa } from "svelte-fa";
 
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
+    import { URI } from "$lib/models/dto/index.ts";
 
     import RenameTable from "../RenameTable.svelte";
 
     const { classes, isLoading } = $props();
 
-    let unlinkedAdded = $derived.by(() => {
-        const result = new Map();
-        for (let cls of classes) {
-            const linked = renamedFrom.has(cls.label)
-                ? new Set(renamedFrom.get(cls.label).keys())
-                : new Set();
-
-            const unlinked = cls.enumEntries.added
-                .filter(attr => !linked.has(attr.label))
-                .sort((a, b) => a.label.localeCompare(b.label));
-            result.set(cls.label, unlinked);
-        }
-        return result;
-    });
-
     let renamedFrom = $derived.by(() => {
-        if (!classes || classes.length === 0) return new Map();
-
         const map = new Map();
+        if (!classes || classes.length === 0) return map;
 
         for (const cls of classes) {
-            const renameMap = buildEnumEntryRenameMapForClass(cls);
-            if (renameMap && renameMap.size > 0) {
-                map.set(cls.label, renameMap);
-            }
-        }
-        return map;
-    });
-
-    function buildEnumEntryRenameMapForClass(cls) {
-        const map = new Map();
-        const renameCandidates = cls.enumEntries.deletedAndRenamed || [];
-        if (renameCandidates.length > 0) {
-            for (const rename of renameCandidates) {
-                if (rename.newResource) {
-                    map.set(rename.newResource.label, rename.oldResource.label);
+            for (const mapping of cls.enumEntries?.deletedAndRemapped ?? []) {
+                if (mapping.newResources.length === 0) continue;
+                for (const target of mapping.newResources) {
+                    const froms = mapping.oldResources.map(oldLabelWithClass);
+                    map.set(target.iri, [
+                        ...(map.get(target.iri) ?? []),
+                        ...froms,
+                    ]);
                 }
             }
         }
         return map;
+    });
+
+    function oldLabelWithClass(resource) {
+        if (!resource.domain) return resource.label;
+        return `${resource.label} (in ${new URI(resource.domain).suffix})`;
     }
 
-    function addRenameMapping(classLabel, renameCandidate, newEnumEntry) {
-        if (!renamedFrom.has(classLabel)) {
-            renamedFrom.set(classLabel, new Map());
-        }
-        renamedFrom
-            .get(classLabel)
-            .set(newEnumEntry, renameCandidate.oldResource.label);
-        renameCandidate.newResource = newEnumEntry;
-        renameCandidate.confidenceScore = 1;
-    }
-
-    function dissolveRenameMapping(classLabel, renameCandidate) {
-        renamedFrom.get(classLabel).delete(renameCandidate.newResource.label);
-        renameCandidate.newResource = null;
+    function candidateSubtitle(cls) {
+        return candidate => {
+            if (!candidate.domain) return null;
+            const ownerLabel = new URI(candidate.domain).suffix;
+            return ownerLabel === cls.classLabel ? null : `in ${ownerLabel}`;
+        };
     }
 
     function hasEnumEntries(cls) {
         return (
             cls.enumEntries &&
-            cls.enumEntries.added.length +
-                cls.enumEntries.deletedAndRenamed.length >
+            (cls.enumEntries.addedInClass?.length ?? 0) +
+                (cls.enumEntries.deletedAndRemapped?.length ?? 0) >
                 0
         );
     }
@@ -100,10 +75,11 @@
     <div class="text-dark flex items-start space-x-2 rounded-lg border p-4">
         <Fa icon={faCircleInfo} class="text-blue mt-0.5" />
         <p class="text-sm leading-relaxed">
-            This step lets you review potential enum entries renames for all
-            classes.
+            This step lets you review potential enum entry renames for all
+            classes. Link a deleted entry to more than one target to split it,
+            or link two deleted entries to the same target to merge them.
             <br />
-            Please verify that the detected renames are correct, or adjust them as
+            Please verify that the detected mappings are correct, or adjust them as
             necessary.
         </p>
     </div>
@@ -119,58 +95,46 @@
                 <div class="space-y-4">
                     <CollapsibleCard>
                         <h2 slot="header" class="mb-3 text-lg font-semibold">
-                            {cls.label}
+                            {cls.classLabel}
                             <Fa icon={faCaretDown} />
                         </h2>
                         <div
                             class="border-l-blue flex-col space-y-4 border-l-4 pl-4"
                             slot="body"
                         >
-                            {#if cls.enumEntries.deletedAndRenamed.length > 0}
+                            {#if cls.enumEntries.deletedAndRemapped.length > 0}
                                 <RenameTable
-                                    renameCandidates={cls.enumEntries
-                                        .deletedAndRenamed}
-                                    unlinkedNewItems={unlinkedAdded.get(
-                                        cls.label,
+                                    bind:mappings={
+                                        cls.enumEntries.deletedAndRemapped
+                                    }
+                                    candidates={cls.enumEntries.allAdded ?? []}
+                                    getCandidateSubtitle={candidateSubtitle(
+                                        cls,
                                     )}
-                                    allAddedItems={cls.enumEntries.added}
-                                    onAddMapping={(rename, newItem) =>
-                                        addRenameMapping(
-                                            cls.label,
-                                            rename,
-                                            newItem,
-                                        )}
-                                    onDissolveMapping={rename =>
-                                        dissolveRenameMapping(
-                                            cls.label,
-                                            rename,
-                                        )}
                                     propertyType="Enum Entry"
                                 />
                             {/if}
 
-                            {#if cls.enumEntries.added.length > 0}
+                            {#if cls.enumEntries.addedInClass?.length > 0}
                                 <div>
                                     <h3 class="mb-3 font-semibold">
                                         Added Enum Entries
                                     </h3>
                                     <div class="space-y-1">
-                                        {#each cls.enumEntries.added.sort( (a, b) => a.label.localeCompare(b.label) ) as addedEnumEntry}
+                                        {#each [...cls.enumEntries.addedInClass].sort( (a, b) => a.label.localeCompare(b.label) ) as addedEnumEntry}
                                             <div
                                                 class="bg-lightgray flex items-center justify-between px-3 py-1 text-sm"
                                             >
                                                 <p>{addedEnumEntry.label}</p>
-                                                {#if renamedFrom
-                                                    .get(cls.label)
-                                                    ?.has(addedEnumEntry.label)}
+                                                {#if renamedFrom.has(addedEnumEntry.iri)}
                                                     <span
                                                         class="text-soptim-dunkelgrau text-xs italic"
                                                     >
                                                         renamed from {renamedFrom
-                                                            .get(cls.label)
                                                             .get(
-                                                                addedEnumEntry.label,
-                                                            )}
+                                                                addedEnumEntry.iri,
+                                                            )
+                                                            .join(", ")}
                                                     </span>
                                                 {/if}
                                             </div>
