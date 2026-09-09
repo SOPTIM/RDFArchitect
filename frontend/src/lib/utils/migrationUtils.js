@@ -174,3 +174,29 @@ export function requiresDefaultValue(attribute) {
     }
     return hasDataTypeChange(attribute) && !keepsExistingValues(attribute);
 }
+
+/** Whether a default value was filled in for this attribute. */
+export function hasDefaultValue(attribute) {
+    return Boolean(attribute.defaultValue?.trim());
+}
+
+/**
+ * True once the user waived the default value for an attribute that requires one (RDFA-714): the
+ * attribute is knowingly left uninitialised because no default makes sense for it. Tied to the
+ * requirement, so the flag turns inert as soon as the attribute stops asking for a default.
+ */
+export function skipsInitialization(attribute) {
+    return requiresDefaultValue(attribute) && attribute.noDefaultValue === true;
+}
+
+/**
+ * Whether this attribute still blocks the defaults step: it requires a default value that was
+ * neither given nor waived.
+ */
+export function isDefaultValueMissing(attribute) {
+    return (
+        requiresDefaultValue(attribute) &&
+        !hasDefaultValue(attribute) &&
+        !skipsInitialization(attribute)
+    );
+}

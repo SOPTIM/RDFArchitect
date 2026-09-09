@@ -23,10 +23,13 @@ import {
     describeAttributeChange,
     filterRenameCandidates,
     hasDataTypeChange,
+    hasDefaultValue,
+    isDefaultValueMissing,
     isNonInstantiableAssociationRename,
     isPrefixOnlyRename,
     keepsExistingValues,
     requiresDefaultValue,
+    skipsInitialization,
 } from "../../src/lib/utils/migrationUtils.js";
 
 const PREFIX = "http://example.org#";
@@ -220,6 +223,61 @@ describe("the equivalence option", () => {
 
         expect(keepsExistingValues(alsoMandatory)).toBe(true);
         expect(requiresDefaultValue(alsoMandatory)).toBe(true);
+    });
+});
+
+describe("waiving the default value", () => {
+    const mandatory = (overrides = {}) =>
+        attribute({
+            semanticResourceChangeType: "ADD",
+            optional: false,
+            ...overrides,
+        });
+
+    it("blocks the step while the required default value is missing", () => {
+        expect(isDefaultValueMissing(mandatory())).toBe(true);
+    });
+
+    it("stops blocking once a default value is given", () => {
+        expect(isDefaultValueMissing(mandatory({ defaultValue: "0" }))).toBe(
+            false,
+        );
+    });
+
+    it("does not accept a blank default value", () => {
+        expect(hasDefaultValue(mandatory({ defaultValue: "  " }))).toBe(false);
+        expect(isDefaultValueMissing(mandatory({ defaultValue: "  " }))).toBe(
+            true,
+        );
+    });
+
+    it("stops blocking once the user waived the default value", () => {
+        const waived = mandatory({ noDefaultValue: true });
+
+        expect(skipsInitialization(waived)).toBe(true);
+        expect(isDefaultValueMissing(waived)).toBe(false);
+    });
+
+    it("also applies to an optional attribute whose data type changed", () => {
+        // the existing values have to be converted, so this one needs a default value too
+        const converted = dataTypeChanged({ optional: true });
+
+        expect(isDefaultValueMissing(converted)).toBe(true);
+        expect(
+            skipsInitialization({ ...converted, noDefaultValue: true }),
+        ).toBe(true);
+    });
+
+    it("turns the waiver inert where no default value is asked for", () => {
+        const optional = mandatory({ optional: true, noDefaultValue: true });
+        const equivalent = dataTypeChanged({
+            dataTypesEquivalent: true,
+            noDefaultValue: true,
+        });
+
+        expect(skipsInitialization(optional)).toBe(false);
+        expect(skipsInitialization(equivalent)).toBe(false);
+        expect(isDefaultValueMissing(equivalent)).toBe(false);
     });
 });
 

@@ -128,6 +128,44 @@ class SparqlUpdateGeneratorTest {
         assertThat(script).isEmpty();
     }
 
+    @Test
+    void generateAddAttributeUpdate_waivedDefaultValue_returnsEmpty() {
+        // RDFA-714: a mandatory attribute may be left without a default value on purpose.
+        concreteClass("DiagramObject");
+
+        var attributeChange = mandatoryAttribute("DiagramObject.test");
+        attributeChange.setDefaultValue(null);
+
+        var script =
+                generator.generateAddAttributeUpdate(attributeChange, PREFIX + "DiagramObject");
+
+        assertThat(script).isEmpty();
+    }
+
+    @Test
+    void generateAddAttributeToSingleClassUpdate_waivedDefaultValue_returnsEmpty() {
+        concreteClass("DiagramObject");
+
+        var attributeChange = mandatoryAttribute("DiagramObject.test");
+        attributeChange.setDefaultValue("   ");
+
+        var script =
+                generator.generateAddAttributeToSingleClassUpdate(
+                        attributeChange, PREFIX + "DiagramObject");
+
+        assertThat(script).isEmpty();
+    }
+
+    @Test
+    void generateDatatypeChangedUpdate_waivedDefaultValue_convertsNothing() {
+        // Without a fallback value the existing values are kept rather than dropped.
+        var attributeChange = mandatoryAttribute("DiagramObject.test");
+        attributeChange.setDefaultValue(null);
+
+        assertThat(generator.generateDatatypeChangedUpdate(attributeChange)).isEmpty();
+        assertThat(generator.generateEnumDatatypeChangedUpdate(attributeChange)).isEmpty();
+    }
+
     private Resource concreteClass(String localName) {
         var resource = schema.createResource(PREFIX + localName);
         resource.addProperty(RDF.type, RDFS.Class);

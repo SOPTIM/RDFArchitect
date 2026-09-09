@@ -59,6 +59,9 @@ public class SparqlUpdateGenerator {
         if (attributeChange.isOptional() && !attributeChange.isForceDefaultValue()) {
             return "";
         }
+        if (lacksDefaultValue(attributeChange)) {
+            return "";
+        }
 
         var subClasses = getClassHierarchy(classIri);
         var result = new UpdateRequest();
@@ -73,6 +76,9 @@ public class SparqlUpdateGenerator {
     public String generateAddAttributeToSingleClassUpdate(
             SemanticAttributeChange attributeChange, String classIri) {
         if (attributeChange.isOptional() && !attributeChange.isForceDefaultValue()) {
+            return "";
+        }
+        if (lacksDefaultValue(attributeChange)) {
             return "";
         }
 
@@ -114,6 +120,10 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateDatatypeChangedUpdate(SemanticAttributeChange attributeChange) {
+        if (lacksDefaultValue(attributeChange)) {
+            return "";
+        }
+
         var xsd =
                 TypeMapper.getInstance().getSafeTypeByName(attributeChange.getPrimitiveDataType());
         var pss = SparqlTemplateLoader.loadTemplate("migration/attribute-datatype-changed");
@@ -124,6 +134,10 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateEnumDatatypeChangedUpdate(SemanticAttributeChange attributeChange) {
+        if (lacksDefaultValue(attributeChange)) {
+            return "";
+        }
+
         var pss = SparqlTemplateLoader.loadTemplate("migration/attribute-enum-datatype-changed");
         pss.setIri("attribute", attributeChange.getIri());
         pss.setIri("newValue", attributeChange.getDefaultValue());
@@ -131,6 +145,10 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateFixedValueUpdate(SemanticAttributeChange attributeChange) {
+        if (lacksDefaultValue(attributeChange)) {
+            return "";
+        }
+
         var xsd =
                 TypeMapper.getInstance().getSafeTypeByName(attributeChange.getPrimitiveDataType());
         var pss = SparqlTemplateLoader.loadTemplate("migration/attribute-fixed-value-changed");
@@ -197,6 +215,18 @@ public class SparqlUpdateGenerator {
             SemanticAssociationChange associationChange) {
         return generateDeletePropertyUpdate(associationChange)
                 + generateAddAssociationUpdate(associationChange);
+    }
+
+    /**
+     * Whether the attribute is left without a default value. A required attribute may be waived on
+     * purpose when no default makes sense for it (RDFA-714), and then nothing is generated for it:
+     * the instances stay uninitialized instead of being filled with an invented value, and the
+     * existing ones keep the values they have. Without this guard the missing value would either
+     * end up in the script as an ill-typed empty literal or break generation altogether.
+     */
+    private boolean lacksDefaultValue(SemanticAttributeChange attributeChange) {
+        return attributeChange.getDefaultValue() == null
+                || attributeChange.getDefaultValue().isBlank();
     }
 
     private List<String> getClassHierarchy(String classIri) {
