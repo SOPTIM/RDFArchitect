@@ -19,11 +19,12 @@ Backend-only. The starting point is `services/shacl/SHACLGenerateService` and it
 
 ## Adding migration support for a new schema-change pattern
 
-Three steps:
+Four steps:
 
 1. Add a SPARQL template under `src/main/resources/sparql-templates/migration/`.
 2. Extend `services/schemamigration/` to detect and emit the new pattern.
 3. Extend the wizard's relevant step (`frontend/src/routes/migrate/steps/`) to confirm or override the proposed change.
+4. Extend `MarkdownMigrationReportBuilder` so the pattern is described in the [migration report](/user-guide/migration#the-migration-report) too — a new `SemanticFieldChangeType` without a case there renders as an empty line.
 
 ## Improving documentation
 
