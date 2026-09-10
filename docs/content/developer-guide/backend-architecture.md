@@ -94,3 +94,12 @@ Domain exceptions live in `exception/<area>/` and are translated to HTTP respons
 ## SPARQL templates
 
 Parameterised SPARQL queries live in `src/main/resources/sparql-templates/` and are loaded by classpath utility methods. The migration use cases use them heavily — see `sparql-templates/migration/*.sparql` for the templates that the wizard composes into the final UPDATE script. Keep templates here rather than inline string concatenation in Java.
+
+## Generated artefacts
+
+The migration wizard turns one list of `SemanticClassChange` objects into two artefacts. Each has a builder interface with a single implementation in `services/schemamigration/artifacts/`:
+
+- `MigrationScriptBuilder` → `SparqlMigrationBuilder` — the SPARQL UPDATE script, composed from the templates above. See [Working with RDF, SHACL, and SPARQL](./rdf-shacl-sparql#migration-scripts).
+- `MigrationReportBuilder` → `MarkdownMigrationReportBuilder` — the Markdown [migration report](/user-guide/migration#the-migration-report), in a summary and a detailed variant. `SchemaMigrationService` prepends the validation reports of both schemas via `SchemaValidationReportToMarkdownService` before handing the changes over.
+
+The report renders field changes as sentences through a `switch` over `SemanticFieldChangeType`, so a new change type needs a case there — without one it silently renders as an empty line. Keep the two builders in step: a change that migrates data but never appears in the report is invisible to whoever reviews the migration.

@@ -28,14 +28,6 @@ Layout positions are persisted as RDF using a small custom vocabulary under `dl/
 
 ## Migration scripts
 
-The migration generator stitches together templates from `src/main/resources/sparql-templates/migration/`. Each template is a parameterised SPARQL UPDATE block — `class-renamed.sparql`, `attribute-renamed.sparql`, etc. — filled in by `SparqlUpdateGenerator`; `SparqlMigrationBuilder` decides which block a given semantic change needs and in which order the blocks are emitted. Both live in `services/schemamigration/artifacts/`, behind the `MigrationScriptBuilder` interface. Adding a new migration capability means: (1) adding the template, (2) wiring it into the composer, and (3) extending the wizard's confirmation step DTOs and UI.
+The migration generator stitches together templates from `src/main/resources/sparql-templates/migration/`. Each template is a parameterised SPARQL UPDATE block — `class-renamed.sparql`, `attribute-renamed.sparql`, etc. — filled in by `SparqlUpdateGenerator`; `SparqlMigrationBuilder` decides which block a given semantic change needs and in which order the blocks are emitted. Both live in `services/schemamigration/artifacts/`. Adding a new migration capability means: (1) adding the template, (2) wiring it into the composer, and (3) extending the wizard's confirmation step DTOs and UI.
 
-The comment a user enters for a change in the wizard's review step is emitted as `#` lines directly above the block it belongs to, so the script carries its own rationale.
-
-## Migration reports
-
-The migration report is the human-readable counterpart of the script, generated from the same list of `SemanticClassChange` objects. `MigrationReportBuilder` is the interface, `MarkdownMigrationReportBuilder` the implementation, both in `services/schemamigration/artifacts/`; `SchemaMigrationService` prepends the validation reports of both schemas (via `SchemaValidationReportToMarkdownService`) before handing the changes over.
-
-Two variants are produced from the same input: the summary lists directly changed classes and names their affected concrete subclasses, the detailed one walks every affected concrete class and repeats inherited changes under each. Field changes are rendered as sentences by a `switch` over `SemanticFieldChangeType`, so a new change type needs a case there — otherwise it silently renders as an empty line. IRIs are shortened with the prefixes from `SchemaConfig`.
-
-A new migration capability should therefore reach the report as well as the script: a change that migrates data but never appears in the protocol is invisible to whoever reviews the migration.
+The comment a user enters for a change in the wizard's review step is emitted as `#` lines directly above the block it belongs to, so the script carries its own rationale. The wizard's other artefact, the Markdown migration report, is not SPARQL at all — see [Backend Architecture](./backend-architecture#generated-artefacts) for where it is built.
