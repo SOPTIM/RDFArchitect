@@ -48,10 +48,26 @@ public class SvelteFlowLabels {
     public AssociationLabels forAssociation(
             AssociationEnd source, AssociationEnd target, RenderingLayoutData layoutData) {
         return new AssociationLabels(
-                labelFor(source, DiagramObjectStyle.MULTIPLICITY, AssociationEnd::multiplicity, layoutData),
-                labelFor(target, DiagramObjectStyle.MULTIPLICITY, AssociationEnd::multiplicity, layoutData),
-                labelFor(source, DiagramObjectStyle.ASSOCIATION_LABEL, AssociationEnd::label, layoutData),
-                labelFor(target, DiagramObjectStyle.ASSOCIATION_LABEL, AssociationEnd::label, layoutData));
+                labelFor(
+                        source,
+                        DiagramObjectStyle.MULTIPLICITY,
+                        AssociationEnd::multiplicity,
+                        layoutData),
+                labelFor(
+                        target,
+                        DiagramObjectStyle.MULTIPLICITY,
+                        AssociationEnd::multiplicity,
+                        layoutData),
+                labelFor(
+                        source,
+                        DiagramObjectStyle.ASSOCIATION_LABEL,
+                        AssociationEnd::label,
+                        layoutData),
+                labelFor(
+                        target,
+                        DiagramObjectStyle.ASSOCIATION_LABEL,
+                        AssociationEnd::label,
+                        layoutData));
     }
 
     private EdgeLabelDTO labelFor(
@@ -81,6 +97,9 @@ public class SvelteFlowLabels {
         if (position == null) {
             return null;
         }
-        return PositionDTO.builder().x(position.getPosition().getX()).y(position.getPosition().getY()).build();
+        return PositionDTO.builder()
+                .x(position.getPosition().getX())
+                .y(position.getPosition().getY())
+                .build();
     }
 }

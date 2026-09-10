@@ -51,9 +51,9 @@ public class DLUpdates {
 
     /**
      * Deletes a diagram together with every diagram object that belongs to it, regardless of style,
-     * cascading each one down to its point. Mirrors the existing {@link #deleteDiagramObjectCascade}
-     * pattern one level up, so a diagram deletion no longer has to be assembled from several loops
-     * at the call site.
+     * cascading each one down to its point. Mirrors the existing {@link
+     * #deleteDiagramObjectCascade} pattern one level up, so a diagram deletion no longer has to be
+     * assembled from several loops at the call site.
      *
      * @param model the model from which the diagram is removed
      * @param diagramMRID the mRID of the diagram to remove
@@ -96,7 +96,11 @@ public class DLUpdates {
         if (diagramObject.getBelongsToDiagramObjectStyle() != null) {
             newDiagramObject.addProperty(
                     DL.belongsToDiagramObjectStyle,
-                    ResourceFactory.createResource(diagramObject.getBelongsToDiagramObjectStyle().getMRID().getFullMRID()));
+                    ResourceFactory.createResource(
+                            diagramObject
+                                    .getBelongsToDiagramObjectStyle()
+                                    .getMRID()
+                                    .getFullMRID()));
         }
 
         model.add(newDiagramObject.listProperties());

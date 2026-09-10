@@ -149,7 +149,8 @@ public class CustomDiagramService
             DiagramLayoutServiceUtils.insertDiagram(
                     model, crossProfileDiagramUUID, "CrossProfileDiagram");
         }
-        var existingDOs = DLObjectFetcher.fetchDiagramClassDOs(model, new MRID(crossProfileDiagramUUID));
+        var existingDOs =
+                DLObjectFetcher.fetchDiagramClassDOs(model, new MRID(crossProfileDiagramUUID));
         var existingClassUUIDs =
                 existingDOs.stream()
                         .map(DiagramObject::getBelongsToIdentifiedObject)

@@ -59,8 +59,7 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
     static void setUpServices() {
         service = new UpdateLabelLayoutService(databasePort);
         classLayoutService = new UpdateClassLayoutService(databasePort, packageMapper);
-        packageLayoutService =
-                new UpdatePackageLayoutService(databasePort, packageMapper);
+        packageLayoutService = new UpdatePackageLayoutService(databasePort, packageMapper);
     }
 
     @BeforeEach
@@ -94,10 +93,10 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
         assertThat(labelResource.hasProperty(RDF.type, DL.diagramObjectType)).isTrue();
         assertThat(labelResource.hasProperty(CIM.ioName)).isTrue();
         assertThat(
-                labelResource.hasProperty(
-                        DL.belongsToDiagramObjectStyle,
-                        ResourceFactory.createResource(
-                                DiagramObjectStyle.MULTIPLICITY.getMRID().getFullMRID())))
+                        labelResource.hasProperty(
+                                DL.belongsToDiagramObjectStyle,
+                                ResourceFactory.createResource(
+                                        DiagramObjectStyle.MULTIPLICITY.getMRID().getFullMRID())))
                 .isTrue();
     }
 
@@ -175,11 +174,12 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
                         .belongsToIdentifiedObject(new MRID(ASSOCIATION_END_UUID))
                         .build());
 
-        assertThat(DLObjectFetcher.fetchDiagramClassDOs(model(), new MRID(PACKAGE_A_UUID))).isEmpty();
+        assertThat(DLObjectFetcher.fetchDiagramClassDOs(model(), new MRID(PACKAGE_A_UUID)))
+                .isEmpty();
         assertThat(DLObjectFetcher.fetchAllDOs(model(), ASSOCIATION_END_UUID)).isEmpty();
         assertThat(
-                DLObjectFetcher.fetchDiagramDOForClass(
-                        model(), PACKAGE_A_UUID, ASSOCIATION_END_UUID))
+                        DLObjectFetcher.fetchDiagramDOForClass(
+                                model(), PACKAGE_A_UUID, ASSOCIATION_END_UUID))
                 .isNull();
     }
 
@@ -290,13 +290,16 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
     }
 
     /**
-     * Extracts the positions from the fetched {@link org.rdfarchitect.dl.data.dto.DiagramObjectPoint
-     * DiagramObjectPoints}, so tests can assert on plain coordinates instead of on the whole point,
-     * which also carries a freshly generated mRID that would never compare equal.
+     * Extracts the positions from the fetched {@link
+     * org.rdfarchitect.dl.data.dto.DiagramObjectPoint DiagramObjectPoints}, so tests can assert on
+     * plain coordinates instead of on the whole point, which also carries a freshly generated mRID
+     * that would never compare equal.
      */
     private static Map<LabelKey, XYZPosition> storedPositions() {
         return DLObjectFetcher.fetchLabelPositions(model(), PACKAGE_A_UUID).entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().getPosition()));
+                .collect(
+                        Collectors.toMap(
+                                Map.Entry::getKey, entry -> entry.getValue().getPosition()));
     }
 
     private static Model model() {

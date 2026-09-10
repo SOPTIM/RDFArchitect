@@ -377,10 +377,17 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     var inverse = association.getInverseAssociation();
                     handledAssociationUris.add(association.getUri().toString());
                     handledAssociationUris.add(inverse.getUri().toString());
-                    var labels = SvelteFlowLabels.forAssociation(
-                            associationEnd(CrossProfileUtils.mergedUuid(inverse.getUri().toString()), inverse),
-                            associationEnd(CrossProfileUtils.mergedUuid(association.getUri().toString()), association),
-                            layoutData);
+                    var labels =
+                            SvelteFlowLabels.forAssociation(
+                                    associationEnd(
+                                            CrossProfileUtils.mergedUuid(
+                                                    inverse.getUri().toString()),
+                                            inverse),
+                                    associationEnd(
+                                            CrossProfileUtils.mergedUuid(
+                                                    association.getUri().toString()),
+                                            association),
+                                    layoutData);
 
                     var edgeData =
                             EdgeDataDTO.builder()
@@ -388,8 +395,11 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                     .targetMultiplicityLabel(labels.targetMultiplicityLabel())
                                     .sourceAssociationLabel(labels.sourceAssociationLabel())
                                     .targetAssociationLabel(labels.targetAssociationLabel())
-                                    .useToAssociation(getAssociationUsedValue(association.getAssociationUsed()))
-                                    .useFromAssociation(getAssociationUsedValue(inverse.getAssociationUsed()))
+                                    .useToAssociation(
+                                            getAssociationUsedValue(
+                                                    association.getAssociationUsed()))
+                                    .useFromAssociation(
+                                            getAssociationUsedValue(inverse.getAssociationUsed()))
                                     .graphUri(source.graphUri())
                                     .graphKeyword(source.keyword())
                                     .color(source.color())

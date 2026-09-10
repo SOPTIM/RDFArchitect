@@ -159,10 +159,10 @@ public class DiagramLayoutServiceUtils {
     }
 
     /**
-     * Inserts every {@link DiagramObjectStyle} this application uses. Deciding which styles exist is
-     * specific to how this application uses the DiagramLayout profile, so that decision lives here
-     * rather than in {@link DLUpdates}, which only knows how to insert one style at a time and stays
-     * agnostic of how many kinds of style the application defines.
+     * Inserts every {@link DiagramObjectStyle} this application uses. Deciding which styles exist
+     * is specific to how this application uses the DiagramLayout profile, so that decision lives
+     * here rather than in {@link DLUpdates}, which only knows how to insert one style at a time and
+     * stays agnostic of how many kinds of style the application defines.
      *
      * @param diagramLayoutModel the model into which the styles are inserted
      */
