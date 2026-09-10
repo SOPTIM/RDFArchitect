@@ -6,4 +6,4 @@ INSERT {
 }
 WHERE {
     ?instance ?oldAssociation ?value .
-}
+};

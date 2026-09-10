@@ -7,4 +7,4 @@ INSERT {
 WHERE {
     ?instance a ?class .
     ?instance ?attribute ?oldValue
-}
+};
