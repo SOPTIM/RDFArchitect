@@ -49,27 +49,42 @@ public class DLUpdates {
         insertDiagram(model, diagram);
     }
 
+    /**
+     * Deletes a diagram together with every diagram object that belongs to it, regardless of style,
+     * cascading each one down to its point. Mirrors the existing {@link #deleteDiagramObjectCascade}
+     * pattern one level up, so a diagram deletion no longer has to be assembled from several loops
+     * at the call site.
+     *
+     * @param model the model from which the diagram is removed
+     * @param diagramMRID the mRID of the diagram to remove
+     */
+    public void deleteDiagramCascade(Model model, MRID diagramMRID) {
+        for (var diagramObject : DLObjectFetcher.fetchDiagramDOs(model, diagramMRID)) {
+            deleteDiagramObjectCascade(model, diagramObject.getMRID());
+        }
+        deleteDiagram(model, diagramMRID);
+    }
+
     public void deleteDiagram(Model model, MRID diagramMRID) {
         deleteBase(model, diagramMRID);
     }
 
     /**
-     * Inserts a diagram object together with the style that says what it stands for. Objects
-     * without a name or without an offset are written without those triples, which is what keeps
-     * the different kinds of diagram object queryable apart.
+     * Inserts a diagram object together with the style that says what it stands for.
      *
      * @param model the model into which the diagram object is inserted
      * @param diagramObject the diagram object to insert
      */
     public void insertDiagramObject(Model model, DiagramObject diagramObject) {
-        insertDiagramObjectStyle(model, diagramObject.getStyle());
+        if (diagramObject.getBelongsToDiagramObjectStyle() != null) {
+            insertDiagramObjectStyle(model, diagramObject.getBelongsToDiagramObjectStyle());
+        }
 
         var newDiagramObject = model.createResource(diagramObject.getMRID().getFullMRID());
 
         newDiagramObject.addProperty(RDF.type, DL.diagramObjectType);
         newDiagramObject.addProperty(
-                DL.diagramObjectStyle,
-                ResourceFactory.createResource(diagramObject.getStyle().getMRID().getFullMRID()));
+                CIM.ioName, ResourceFactory.createPlainLiteral(diagramObject.getName()));
         newDiagramObject.addProperty(
                 DL.belongsToDiagram,
                 ResourceFactory.createResource(diagramObject.getBelongsToDiagram().getFullMRID()));
@@ -78,19 +93,10 @@ public class DLUpdates {
                 ResourceFactory.createResource(
                         diagramObject.getBelongsToIdentifiedObject().getFullMRID()));
 
-        if (diagramObject.getName() != null) {
+        if (diagramObject.getBelongsToDiagramObjectStyle() != null) {
             newDiagramObject.addProperty(
-                    CIM.ioName, ResourceFactory.createPlainLiteral(diagramObject.getName()));
-        }
-        if (diagramObject.getOffset() != null) {
-            newDiagramObject.addProperty(
-                    DL.offsetX,
-                    ResourceFactory.createPlainLiteral(
-                            String.valueOf(diagramObject.getOffset().x())));
-            newDiagramObject.addProperty(
-                    DL.offsetY,
-                    ResourceFactory.createPlainLiteral(
-                            String.valueOf(diagramObject.getOffset().y())));
+                    DL.belongsToDiagramObjectStyle,
+                    ResourceFactory.createResource(diagramObject.getBelongsToDiagramObjectStyle().getMRID().getFullMRID()));
         }
 
         model.add(newDiagramObject.listProperties());

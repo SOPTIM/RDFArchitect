@@ -22,7 +22,6 @@ import lombok.experimental.SuperBuilder;
 
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
-import org.rdfarchitect.dl.data.dto.relations.XYOffset;
 
 @Data
 @SuperBuilder(toBuilder = true)
@@ -33,15 +32,9 @@ public class DiagramObject {
     /** The display name, only carried by objects that stand for a named resource. */
     private String name;
 
-    private DiagramObjectStyle style;
+    private DiagramObjectStyle belongsToDiagramObjectStyle;
 
     private MRID belongsToDiagram;
 
     private MRID belongsToIdentifiedObject;
-
-    /**
-     * The placement relative to whatever the object is anchored to, for objects that are placed by
-     * an offset instead of by a {@link DiagramObjectPoint}.
-     */
-    private XYOffset offset;
 }

@@ -26,8 +26,6 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
-import org.rdfarchitect.dl.data.dto.relations.MRID;
-import org.rdfarchitect.dl.data.dto.relations.XYOffset;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher.LabelKey;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
@@ -42,8 +40,8 @@ import java.util.UUID;
 /**
  * Stores the manual placement of movable diagram labels. A label is a {@code cim:DiagramObject}
  * whose style says what kind of label it is and which is anchored to the CIM resource whose text it
- * displays. It holds an offset relative to the class it is drawn at rather than a coordinate within
- * the diagram, so a label keeps its placement when its class is moved.
+ * displays. Its position is stored as an absolute coordinate within the diagram, exactly like a
+ * class's position.
  */
 @Service
 @RequiredArgsConstructor
@@ -104,10 +102,16 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
             if (existing != null) {
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, existing.getMRID());
             }
-            if (labelPosition.getXOffset() == null || labelPosition.getYOffset() == null) {
+            if (labelPosition.getX() == null || labelPosition.getY() == null) {
                 continue;
             }
-            insertLabel(diagramLayoutModel, diagramUUID, labelPosition, style);
+            DiagramLayoutServiceUtils.insertLabel(
+                    diagramLayoutModel,
+                    diagramUUID,
+                    labelPosition.getIdentifiedObjectUUID(),
+                    style,
+                    labelPosition.getX(),
+                    labelPosition.getY());
         }
     }
 
@@ -119,32 +123,13 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
             Model diagramLayoutModel, UUID diagramUUID) {
         Map<LabelKey, DiagramObject> byKey = new HashMap<>();
         for (var label : DLObjectFetcher.fetchDiagramLabelDOs(diagramLayoutModel, diagramUUID)) {
-            if (label.getStyle() == null) {
+            if (label.getBelongsToDiagramObjectStyle() == null) {
                 continue;
             }
             byKey.put(
-                    new LabelKey(label.getBelongsToIdentifiedObject().getUuid(), label.getStyle()),
+                    new LabelKey(label.getBelongsToIdentifiedObject().getUuid(), label.getBelongsToDiagramObjectStyle()),
                     label);
         }
         return byKey;
-    }
-
-    private void insertLabel(
-            Model diagramLayoutModel,
-            UUID diagramUUID,
-            LabelPositionDTO labelPosition,
-            DiagramObjectStyle style) {
-        DLUpdates.insertDiagramObject(
-                diagramLayoutModel,
-                DiagramObject.builder()
-                        .mRID(new MRID(UUID.randomUUID()))
-                        .style(style)
-                        .belongsToDiagram(new MRID(diagramUUID))
-                        .belongsToIdentifiedObject(
-                                new MRID(labelPosition.getIdentifiedObjectUUID()))
-                        .offset(
-                                new XYOffset(
-                                        labelPosition.getXOffset(), labelPosition.getYOffset()))
-                        .build());
     }
 }
