@@ -377,26 +377,19 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     var inverse = association.getInverseAssociation();
                     handledAssociationUris.add(association.getUri().toString());
                     handledAssociationUris.add(inverse.getUri().toString());
+                    var labels = SvelteFlowLabels.forAssociation(
+                            associationEnd(CrossProfileUtils.mergedUuid(inverse.getUri().toString()), inverse),
+                            associationEnd(CrossProfileUtils.mergedUuid(association.getUri().toString()), association),
+                            layoutData);
+
                     var edgeData =
                             EdgeDataDTO.builder()
-                                    .labels(
-                                            SvelteFlowLabels.forAssociation(
-                                                    associationEnd(
-                                                            CrossProfileUtils.mergedUuid(
-                                                                    inverse.getUri().toString()),
-                                                            inverse),
-                                                    associationEnd(
-                                                            CrossProfileUtils.mergedUuid(
-                                                                    association
-                                                                            .getUri()
-                                                                            .toString()),
-                                                            association),
-                                                    layoutData))
-                                    .useToAssociation(
-                                            getAssociationUsedValue(
-                                                    association.getAssociationUsed()))
-                                    .useFromAssociation(
-                                            getAssociationUsedValue(inverse.getAssociationUsed()))
+                                    .sourceMultiplicityLabel(labels.sourceMultiplicityLabel())
+                                    .targetMultiplicityLabel(labels.targetMultiplicityLabel())
+                                    .sourceAssociationLabel(labels.sourceAssociationLabel())
+                                    .targetAssociationLabel(labels.targetAssociationLabel())
+                                    .useToAssociation(getAssociationUsedValue(association.getAssociationUsed()))
+                                    .useFromAssociation(getAssociationUsedValue(inverse.getAssociationUsed()))
                                     .graphUri(source.graphUri())
                                     .graphKeyword(source.keyword())
                                     .color(source.color())
@@ -768,13 +761,17 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             ICIMAssociation from,
             ICIMAssociation to) {
         var layoutData = renderContext.layoutingData();
+        var labels =
+                SvelteFlowLabels.forAssociation(
+                        associationEnd(to.getUuid(), to),
+                        associationEnd(from.getUuid(), from),
+                        layoutData);
         var edgeDataDTO =
                 EdgeDataDTO.builder()
-                        .labels(
-                                SvelteFlowLabels.forAssociation(
-                                        associationEnd(to.getUuid(), to),
-                                        associationEnd(from.getUuid(), from),
-                                        layoutData))
+                        .sourceMultiplicityLabel(labels.sourceMultiplicityLabel())
+                        .targetMultiplicityLabel(labels.targetMultiplicityLabel())
+                        .sourceAssociationLabel(labels.sourceAssociationLabel())
+                        .targetAssociationLabel(labels.targetAssociationLabel())
                         .useToAssociation(getAssociationUsedValue(from.getAssociationUsed()))
                         .useFromAssociation(getAssociationUsedValue(to.getAssociationUsed()))
                         .build();

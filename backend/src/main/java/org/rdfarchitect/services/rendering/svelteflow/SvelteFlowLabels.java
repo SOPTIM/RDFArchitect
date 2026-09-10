@@ -21,14 +21,12 @@ import lombok.experimental.UtilityClass;
 
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeLabelDTO;
-import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeLabelDTO.Anchor;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher.LabelKey;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
+import java.util.function.Function;
 
 /**
  * Assembles the movable labels of an association edge, a multiplicity and an association label per
@@ -38,86 +36,51 @@ import java.util.UUID;
 @UtilityClass
 public class SvelteFlowLabels {
 
-    /**
-     * One end of an association edge: the association end whose labels are drawn at that class,
-     * together with the texts of those labels. Both the multiplicity and the label of an
-     * association end are drawn at the class its association points to, so the end at the source
-     * class carries the association leaving the target class and vice versa.
-     *
-     * @param association the UUID of the association end
-     * @param multiplicity the multiplicity text, may be null
-     * @param label the label of the association end, may be null
-     */
     public record AssociationEnd(UUID association, String multiplicity, String label) {}
 
-    /**
-     * Builds the labels of an association edge.
-     *
-     * @param source the association end whose labels sit at the source class
-     * @param target the association end whose labels sit at the target class
-     * @param layoutData the layout data holding manually placed label positions, may be null
-     * @return the labels of the edge
-     */
-    public List<EdgeLabelDTO> forAssociation(
+    /** The four fixed label slots of an association edge. Any field may be {@code null}. */
+    public record AssociationLabels(
+            EdgeLabelDTO sourceMultiplicityLabel,
+            EdgeLabelDTO targetMultiplicityLabel,
+            EdgeLabelDTO sourceAssociationLabel,
+            EdgeLabelDTO targetAssociationLabel) {}
+
+    public AssociationLabels forAssociation(
             AssociationEnd source, AssociationEnd target, RenderingLayoutData layoutData) {
-        var labels = new ArrayList<EdgeLabelDTO>();
-        addEndLabels(labels, Anchor.SOURCE, source, layoutData);
-        addEndLabels(labels, Anchor.TARGET, target, layoutData);
-        return labels;
+        return new AssociationLabels(
+                labelFor(source, DiagramObjectStyle.MULTIPLICITY, AssociationEnd::multiplicity, layoutData),
+                labelFor(target, DiagramObjectStyle.MULTIPLICITY, AssociationEnd::multiplicity, layoutData),
+                labelFor(source, DiagramObjectStyle.ASSOCIATION_LABEL, AssociationEnd::label, layoutData),
+                labelFor(target, DiagramObjectStyle.ASSOCIATION_LABEL, AssociationEnd::label, layoutData));
     }
 
-    private void addEndLabels(
-            List<EdgeLabelDTO> labels,
-            Anchor anchor,
+    private EdgeLabelDTO labelFor(
             AssociationEnd end,
+            DiagramObjectStyle style,
+            Function<AssociationEnd, String> textExtractor,
             RenderingLayoutData layoutData) {
         if (end == null || end.association() == null) {
-            return;
+            return null;
         }
-        addLabel(
-                labels,
-                anchor,
-                end.association(),
-                DiagramObjectStyle.MULTIPLICITY,
-                end.multiplicity(),
-                layoutData);
-        addLabel(
-                labels,
-                anchor,
-                end.association(),
-                DiagramObjectStyle.ASSOCIATION_LABEL,
-                end.label(),
-                layoutData);
-    }
-
-    private void addLabel(
-            List<EdgeLabelDTO> labels,
-            Anchor anchor,
-            UUID association,
-            DiagramObjectStyle style,
-            String text,
-            RenderingLayoutData layoutData) {
+        var text = textExtractor.apply(end);
         if (text == null || text.isBlank()) {
-            return;
+            return null;
         }
-        labels.add(
-                EdgeLabelDTO.builder()
-                        .anchor(anchor)
-                        .identifiedObjectUUID(association)
-                        .kind(style.getStyleName())
-                        .text(text)
-                        .offset(offsetFor(layoutData, new LabelKey(association, style)))
-                        .build());
+        return EdgeLabelDTO.builder()
+                .identifiedObjectUUID(end.association())
+                .text(text)
+                .position(positionFor(layoutData, new LabelKey(end.association(), style)))
+                .build();
     }
 
-    private PositionDTO offsetFor(RenderingLayoutData layoutData, LabelKey key) {
+    private PositionDTO positionFor(RenderingLayoutData layoutData, LabelKey key) {
         if (layoutData == null || layoutData.getLabelLayoutingData() == null) {
             return null;
         }
-        var offset = layoutData.getLabelLayoutingData().get(key);
-        if (offset == null) {
+        var position = layoutData.getLabelLayoutingData().get(key);
+        if (position == null) {
             return null;
         }
-        return PositionDTO.builder().x(offset.x()).y(offset.y()).build();
+        return PositionDTO.builder().x(position.getPosition().getX()).y(position.getPosition().getY()).build();
     }
 }

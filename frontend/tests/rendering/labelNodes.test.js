@@ -30,17 +30,17 @@ function classNode(id, x, y) {
     };
 }
 
-function label(anchor, uuid, kind, text, offset = null) {
-    return { anchor, identifiedObjectUUID: uuid, kind, text, offset };
+function label(uuid, text, position = null) {
+    return { identifiedObjectUUID: uuid, text, position };
 }
 
-function associationEdge(source, target, labels) {
+function associationEdge(source, target, labelFields) {
     return {
         id: "edge",
         type: "association",
         source,
         target,
-        data: { labels },
+        data: labelFields,
     };
 }
 
@@ -56,12 +56,12 @@ describe("buildLabelNodes", () => {
     ])("stacks the two labels of an edge end of %s", (_, target) => {
         const nodes = [classNode("source", 0, 0), target];
         const edges = [
-            associationEdge("source", "target", [
-                label("SOURCE", "from", "multiplicity", "1..1"),
-                label("SOURCE", "from", "associationLabel", "Child"),
-                label("TARGET", "to", "multiplicity", "0..n"),
-                label("TARGET", "to", "associationLabel", "Terminals"),
-            ]),
+            associationEdge("source", "target", {
+                sourceMultiplicityLabel: label("from", "1..1"),
+                sourceAssociationLabel: label("from", "Child"),
+                targetMultiplicityLabel: label("to", "0..n"),
+                targetAssociationLabel: label("to", "Terminals"),
+            }),
         ];
 
         const labelNodes = buildLabelNodes(nodes, edges);
@@ -79,8 +79,6 @@ describe("buildLabelNodes", () => {
                 `${uuid}:associationLabel`,
             );
 
-            // Whatever way the edge runs, the association label sits a line below the
-            // multiplicity, which is the one direction a label of any width clears the other in.
             expect(associationLabel.position.x).toBe(multiplicity.position.x);
             expect(
                 associationLabel.position.y - multiplicity.position.y,
@@ -91,10 +89,10 @@ describe("buildLabelNodes", () => {
     test("stacks the labels of a self loop into its arc", () => {
         const nodes = [classNode("class", 0, 0)];
         const edges = [
-            associationEdge("class", "class", [
-                label("SOURCE", "from", "multiplicity", "1..1"),
-                label("SOURCE", "from", "associationLabel", "Parent"),
-            ]),
+            associationEdge("class", "class", {
+                sourceMultiplicityLabel: label("from", "1..1"),
+                sourceAssociationLabel: label("from", "Parent"),
+            }),
         ];
 
         const labelNodes = buildLabelNodes(nodes, edges);
@@ -105,23 +103,49 @@ describe("buildLabelNodes", () => {
         expect(multiplicity.position.y - associationLabel.position.y).toBe(24);
     });
 
-    test("keeps a manually placed association label at its stored offset", () => {
+    test("keeps a manually placed association label at its stored position", () => {
         const nodes = [
             classNode("source", 10, 20),
             classNode("target", 300, 0),
         ];
         const edges = [
-            associationEdge("source", "target", [
-                label("SOURCE", "from", "associationLabel", "Child", {
-                    x: 40,
-                    y: -60,
+            associationEdge("source", "target", {
+                sourceAssociationLabel: label("from", "Child", {
+                    x: 90,
+                    y: -80,
                 }),
-            ]),
+            }),
         ];
 
         const labelNodes = buildLabelNodes(nodes, edges);
 
         expect(labelNodes).toHaveLength(1);
-        expect(labelNodes[0].position).toEqual({ x: 50, y: -40 });
+        expect(labelNodes[0].position).toEqual({ x: 90, y: -80 });
+    });
+
+    test("keeps a manually placed label following its class when the class moves", () => {
+        const nodes = [
+            classNode("source", 10, 20),
+            classNode("target", 300, 0),
+        ];
+        const edges = [
+            associationEdge("source", "target", {
+                sourceAssociationLabel: label("from", "Child", {
+                    x: 90,
+                    y: -80,
+                }),
+            }),
+        ];
+        const cache = new Map();
+        const overrides = new Map();
+
+        const first = buildLabelNodes(nodes, edges, overrides, cache);
+        const movedNodes = [classNode("source", 110, 20), nodes[1]];
+        const second = buildLabelNodes(movedNodes, edges, overrides, cache);
+
+        expect(second[0].position).toEqual({
+            x: first[0].position.x + 100,
+            y: first[0].position.y,
+        });
     });
 });

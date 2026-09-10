@@ -37,6 +37,7 @@ const SELF_LOOP_LABEL_OFFSET = { x: 12, y: -30 };
 const LABEL_STACK_SPACING = 24;
 
 const SOURCE_ANCHOR = "SOURCE";
+const TARGET_ANCHOR = "TARGET";
 
 /**
  * The kinds of label an association edge carries at each of its ends, named after the diagram
@@ -44,6 +45,49 @@ const SOURCE_ANCHOR = "SOURCE";
  */
 const MULTIPLICITY_KIND = "multiplicity";
 const ASSOCIATION_LABEL_KIND = "associationLabel";
+
+/** Maps each of the four fixed label fields on an edge's data to its anchor and kind. */
+const LABEL_FIELDS = [
+    {
+        field: "sourceMultiplicityLabel",
+        anchor: SOURCE_ANCHOR,
+        kind: MULTIPLICITY_KIND,
+    },
+    {
+        field: "targetMultiplicityLabel",
+        anchor: TARGET_ANCHOR,
+        kind: MULTIPLICITY_KIND,
+    },
+    {
+        field: "sourceAssociationLabel",
+        anchor: SOURCE_ANCHOR,
+        kind: ASSOCIATION_LABEL_KIND,
+    },
+    {
+        field: "targetAssociationLabel",
+        anchor: TARGET_ANCHOR,
+        kind: ASSOCIATION_LABEL_KIND,
+    },
+];
+
+/**
+ * Reassembles the (up to) four labels of an edge from its fixed DTO fields into a flat list, each
+ * enriched with the anchor and kind its field implies. Kept as a single adapter so the rest of this
+ * module can go on treating an edge's labels as a plain list.
+ */
+export function labelsOf(edgeData) {
+    if (!edgeData) {
+        return [];
+    }
+    const labels = [];
+    for (const { field, anchor, kind } of LABEL_FIELDS) {
+        const label = edgeData[field];
+        if (label) {
+            labels.push({ ...label, anchor, kind });
+        }
+    }
+    return labels;
+}
 
 export function labelNodeId(label) {
     return `${label.identifiedObjectUUID}:${label.kind}`;
@@ -53,7 +97,7 @@ export function labelNodeId(label) {
 export function collectLabels(edges) {
     const labels = [];
     for (const edge of edges) {
-        for (const label of edge.data?.labels ?? []) {
+        for (const label of labelsOf(edge.data)) {
             labels.push({ label, anchorClassId: anchorClassId(edge, label) });
         }
     }
@@ -66,21 +110,23 @@ function anchorClassId(edge, label) {
 
 /**
  * Builds the nodes for all movable labels. A label that has been placed manually sits at its
- * stored offset relative to its class, so it follows the class but neither the edge routing nor
- * the anchor point wandering along the class border. Labels without a stored offset fall back to
+ * delta relative to its anchor point, so it follows both the class and the edge routing but not
+ * the anchor point wandering along the class border. Labels without a stored position fall back to
  * their default placement next to the anchor point.
  *
  * @param nodes the current nodes, used for the class positions and the measured label sizes
  * @param edges the current edges, carrying the labels of both of their ends
- * @param offsetOverrides offsets of labels moved in this session, keyed by label node id; an entry
- *     holding null resets that label to its default placement
+ * @param positionOverrides deltas relative to the anchor point of labels touched in this session,
+ *     keyed by label node id; an entry holding null resets that label to its default placement.
+ *     Also doubles as a lazy cache for the delta of a label's stored position, computed once
+ *     against the anchor point at the time the label is first built in this session
  * @param placementCache memoizes the edge-intersection geometry per class pair, keyed by node id,
  *     so dragging one class does not recompute the placement of every other edge in the diagram
  */
 export function buildLabelNodes(
     nodes,
     edges,
-    offsetOverrides = new Map(),
+    positionOverrides = new Map(),
     placementCache = new Map(),
 ) {
     const classNodes = new Map();
@@ -102,14 +148,14 @@ export function buildLabelNodes(
         }
 
         const placements = cachedEdgePlacements(source, target, placementCache);
-        for (const label of edge.data?.labels ?? []) {
+        for (const label of labelsOf(edge.data)) {
             const atSource = label.anchor === SOURCE_ANCHOR;
             labelNodes.push(
                 buildLabelNode(
                     label,
                     atSource ? source : target,
                     atSource ? placements.source : placements.target,
-                    offsetOverrides,
+                    positionOverrides,
                     labelSizes,
                 ),
             );
@@ -119,60 +165,47 @@ export function buildLabelNodes(
 }
 
 /**
- * Whether a rebuild differs from the label nodes a diagram currently holds.
- *
- * Coordinates are compared with `Object.is`, so that one which is not a number still compares
- * equal to itself. The label nodes are kept in sync by an effect that writes the nodes it reads,
- * so a `NaN !== NaN` reporting a change on every rebuild would keep that effect running forever.
+ * The delta of a label relative to its anchor point: the session override if the label has been
+ * dragged or reset, or else the delta implied by its stored absolute position against the anchor
+ * point as it is right now. The latter is cached in `positionOverrides` so it is computed once per
+ * label per session rather than drifting on every subsequent anchor movement.
  */
-export function labelNodesChanged(currentNodes, nextLabelNodes) {
-    const current = currentNodes.filter(node => node.type === LABEL_NODE_TYPE);
-    if (current.length !== nextLabelNodes.length) {
-        return true;
-    }
-    const currentById = new Map(current.map(node => [node.id, node]));
-    return nextLabelNodes.some(next => {
-        const node = currentById.get(next.id);
-        return (
-            !node ||
-            node.data.text !== next.data.text ||
-            !samePoint(node.position, next.position) ||
-            !samePoint(node.data.anchorPoint, next.data.anchorPoint)
-        );
-    });
-}
-
-function samePoint(one, other) {
-    return Object.is(one.x, other.x) && Object.is(one.y, other.y);
-}
-
-/** The offset a label at the given position has relative to the class it is anchored to. */
-export function offsetFromClass(labelNode, anchorClass) {
-    return {
-        x: labelNode.position.x - anchorClass.position.x,
-        y: labelNode.position.y - anchorClass.position.y,
-    };
-}
-
-export function effectiveOffset(label, offsetOverrides) {
+function resolveDelta(label, placement, positionOverrides) {
     const id = labelNodeId(label);
-    return offsetOverrides.has(id) ? offsetOverrides.get(id) : label.offset;
+    if (positionOverrides.has(id)) {
+        return positionOverrides.get(id);
+    }
+    if (!label.position) {
+        return undefined;
+    }
+    const delta = {
+        x: label.position.x - placement.anchor.x,
+        y: label.position.y - placement.anchor.y,
+    };
+    positionOverrides.set(id, delta);
+    return delta;
+}
+
+/** Whether a label currently has a manual placement, as a delta or as a stored position. */
+export function hasManualPlacement(label, positionOverrides) {
+    const id = labelNodeId(label);
+    if (positionOverrides.has(id)) {
+        return positionOverrides.get(id) !== null;
+    }
+    return !!label.position;
 }
 
 function buildLabelNode(
     label,
     anchorClass,
     placement,
-    offsetOverrides,
+    positionOverrides,
     labelSizes,
 ) {
     const id = labelNodeId(label);
-    const offset = effectiveOffset(label, offsetOverrides);
-    const position = offset
-        ? {
-              x: anchorClass.position.x + offset.x,
-              y: anchorClass.position.y + offset.y,
-          }
+    const delta = resolveDelta(label, placement, positionOverrides);
+    const position = delta
+        ? { x: placement.anchor.x + delta.x, y: placement.anchor.y + delta.y }
         : defaultCenter(placement, label.kind);
 
     return {
@@ -180,7 +213,7 @@ function buildLabelNode(
         type: LABEL_NODE_TYPE,
         position,
         // A label is positioned by its centre, which is what both the default placement and the
-        // stored offset describe.
+        // stored position describe.
         origin: [0.5, 0.5],
         zIndex: LABEL_Z_INDEX,
         selectable: false,
@@ -325,4 +358,32 @@ function defaultCenter(placement, kind) {
         placement.defaultCenters[kind] ??
         placement.defaultCenters[MULTIPLICITY_KIND]
     );
+}
+
+/**
+ * Whether a rebuild differs from the label nodes a diagram currently holds.
+ *
+ * Coordinates are compared with `Object.is`, so that one which is not a number still compares
+ * equal to itself. The label nodes are kept in sync by an effect that writes the nodes it reads,
+ * so a `NaN !== NaN` reporting a change on every rebuild would keep that effect running forever.
+ */
+export function labelNodesChanged(currentNodes, nextLabelNodes) {
+    const current = currentNodes.filter(node => node.type === LABEL_NODE_TYPE);
+    if (current.length !== nextLabelNodes.length) {
+        return true;
+    }
+    const currentById = new Map(current.map(node => [node.id, node]));
+    return nextLabelNodes.some(next => {
+        const node = currentById.get(next.id);
+        return (
+            !node ||
+            node.data.text !== next.data.text ||
+            !samePoint(node.position, next.position) ||
+            !samePoint(node.data.anchorPoint, next.data.anchorPoint)
+        );
+    });
+}
+
+function samePoint(one, other) {
+    return Object.is(one.x, other.x) && Object.is(one.y, other.y);
 }
