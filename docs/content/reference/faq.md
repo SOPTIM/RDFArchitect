@@ -118,10 +118,6 @@ Yes. In the review step of the wizard, every class, attribute, association, and 
 
 Tick **Ignore prefixes** in the first step of the wizard. Rename detection then compares local names instead of full IRIs, so a resource that only moved to a new namespace is reported as a plain change, and renames that consist of nothing but the prefix are left out of the review steps and the report.
 
-### Can I generate the script and the report without clicking through the wizard?
-
-Yes — the endpoints behind the wizard are part of the public REST API, including `GET /api/migrations/export` and `GET /api/migrations/report`. They operate on the migration context of the current session, so the context has to be built up through the API as well. Swagger UI at `/swagger-ui.html` lists every operation.
-
 ## Sharing
 
 ### I shared a snapshot but the recipient can't open it.

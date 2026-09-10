@@ -160,16 +160,3 @@ The wizard's closing step names the recommended order, and it is worth following
 Script generation does not yet cover every edge case. **Multiplicity changes on associations** in particular are not migrated automatically — a property that went from `0..1` to `1..*` (or the other way round) needs a follow-up script. The wizard states this before you download.
 
 Because of that, validating the migrated data against the target schema's SHACL is not optional in practice, and any inconsistency it reports has to be adjusted manually.
-
-## Automating it
-
-Both artefacts are available over the REST API, against the migration context of the current session:
-
-```
-GET /api/migrations/export
-GET /api/migrations/report?reportType=SUMMARY|DETAILED
-                          &originalCGMESVersion=V2_4_15|V3_0
-                          &updatedCGMESVersion=V2_4_15|V3_0
-```
-
-`reportType` defaults to `SUMMARY`, both version parameters to `V3_0`. The full operation list, including the endpoints that build up the migration context, is in Swagger UI at `/swagger-ui.html` on the backend.
