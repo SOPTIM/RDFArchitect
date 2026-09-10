@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - RDFA-705: Added support for attribute stereotypes ([756d5a38](https://github.com/SOPTIM/RDFArchitect/commit/756d5a38), [#251](https://github.com/SOPTIM/RDFArchitect/pull/251))
+- RDFA-624: Generate change protocol during migration ([1f66539](https://github.com/SOPTIM/RDFArchitect/commit/1f66539), [#200](https://github.com/SOPTIM/RDFArchitect/pull/200))
 
 ### Fixed
 
