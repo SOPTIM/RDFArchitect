@@ -35,7 +35,10 @@ import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.queries.CIMQueryVars;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 /** Factory class that provides static methods for creating CIMObjects from queries */
@@ -110,7 +113,6 @@ public class CIMObjectFactory {
                 .domain(parser.getDomain(CIMQueryVars.DOMAIN_URI, CIMQueryVars.DOMAIN_LABEL))
                 .multiplicity(parser.getMultiplicity(CIMQueryVars.MULTIPLICITY))
                 .dataType(dataType)
-                .stereotype(parser.getStereotype(CIMQueryVars.STEREOTYPE))
                 .comment(parser.getComment(CIMQueryVars.COMMENT))
                 .fixedValue(parser.getIsFixed(CIMQueryVars.IS_FIXED, CIMQueryVars.IS_FIXED_INNER))
                 .defaultValue(
@@ -286,6 +288,28 @@ public class CIMObjectFactory {
      */
     public static List<CIMSStereotype> createCIMStereotypeList(ResultSet stereotypeResultSet) {
         return createObjectList(stereotypeResultSet, CIMObjectFactory::createCIMSStereotype);
+    }
+
+    /**
+     * Creates a map of {@link CIMSStereotype CIMSStereotypes} keyed by the UUID of the subject they
+     * belong to. Used to resolve the stereotypes of many subjects from the result of a single
+     * query.
+     *
+     * @param stereotypeResultSet {@link ResultSet} with results bound to {@link CIMQueryVars#UUID}
+     *     and {@link CIMQueryVars#STEREOTYPE}.
+     * @return a map from subject UUID to its {@link CIMSStereotype CIMSStereotypes}.
+     */
+    public static Map<UUID, List<CIMSStereotype>> createCIMStereotypeListsByUUID(
+            ResultSet stereotypeResultSet) {
+        Map<UUID, List<CIMSStereotype>> stereotypesByUUID = new HashMap<>();
+        while (stereotypeResultSet.hasNext()) {
+            var querySolution = stereotypeResultSet.next();
+            var uuid = new CIMQuerySolutionParser(querySolution).getUUID(CIMQueryVars.UUID);
+            stereotypesByUUID
+                    .computeIfAbsent(uuid, key -> new ArrayList<>())
+                    .add(createCIMSStereotype(querySolution));
+        }
+        return stereotypesByUUID;
     }
 
     /**
