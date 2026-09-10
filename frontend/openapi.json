@@ -154,6 +154,12 @@
           "prefix" : {
             "type" : "string"
           },
+          "stereotypes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "uuid" : {
             "format" : "uuid",
             "type" : "string"
@@ -199,8 +205,11 @@
           "multiplicity" : {
             "$ref" : "#/components/schemas/CIMSMultiplicity"
           },
-          "stereotype" : {
-            "type" : "string"
+          "stereotypes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           },
           "uri" : {
             "$ref" : "#/components/schemas/URI"
