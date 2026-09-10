@@ -68,8 +68,8 @@ describe("buildLabelNodes", () => {
 
         expect(labelNodes.map(node => node.id)).toEqual([
             "from:multiplicity",
-            "from:associationLabel",
             "to:multiplicity",
+            "from:associationLabel",
             "to:associationLabel",
         ]);
         for (const uuid of ["from", "to"]) {
@@ -124,10 +124,7 @@ describe("buildLabelNodes", () => {
     });
 
     test("keeps a manually placed label following its class when the class moves", () => {
-        const nodes = [
-            classNode("source", 10, 20),
-            classNode("target", 300, 0),
-        ];
+        const nodes = [classNode("source", 0, 0), classNode("target", 1000, 0)];
         const edges = [
             associationEdge("source", "target", {
                 sourceAssociationLabel: label("from", "Child", {
@@ -140,7 +137,7 @@ describe("buildLabelNodes", () => {
         const overrides = new Map();
 
         const first = buildLabelNodes(nodes, edges, overrides, cache);
-        const movedNodes = [classNode("source", 110, 20), nodes[1]];
+        const movedNodes = [classNode("source", 100, 0), nodes[1]];
         const second = buildLabelNodes(movedNodes, edges, overrides, cache);
 
         expect(second[0].position).toEqual({

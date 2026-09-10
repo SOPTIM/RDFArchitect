@@ -182,10 +182,14 @@ public class DLObjectFetcher {
         }
     }
 
-    /** Fetches a list of all {@link DiagramObject DiagramObjects} in a diagram, regardless of their style.
+    /**
+     * Fetches a list of all {@link DiagramObject DiagramObjects} in a diagram, regardless of their
+     * style.
+     *
      * @param diagramLayout the model from where the object(s) will be fetched
      * @param diagramMRID the MRID of the diagram from which the objects will be fetched
-     * @return a list of {@link DiagramObject DiagramObjects} */
+     * @return a list of {@link DiagramObject DiagramObjects}
+     */
     public List<DiagramObject> fetchDiagramDOs(Model diagramLayout, MRID diagramMRID) {
         var query =
                 """
@@ -221,7 +225,6 @@ public class DLObjectFetcher {
             return diagramObjects;
         }
     }
-
 
     /**
      * Fetches a list of all {@link DiagramObject DiagramObjects} in a diagram
@@ -397,7 +400,8 @@ public class DLObjectFetcher {
      * @param diagramUUID the diagram whose labels are fetched
      * @return a map from label key to the position of that label
      */
-    public Map<LabelKey, DiagramObjectPoint> fetchLabelPositions(Model diagramLayout, UUID diagramUUID) {
+    public Map<LabelKey, DiagramObjectPoint> fetchLabelPositions(
+            Model diagramLayout, UUID diagramUUID) {
         var query =
                 """
                   PREFIX  rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -435,7 +439,8 @@ public class DLObjectFetcher {
                     continue;
                 }
                 var dop = DLObjectFactory.createDiagramObjectPoint(querySolution);
-                resultMap.put(new LabelKey(parser.getMRID(DLQueryVars.IO_MRID).getUuid(), style), dop);
+                resultMap.put(
+                        new LabelKey(parser.getMRID(DLQueryVars.IO_MRID).getUuid(), style), dop);
             }
             return resultMap;
         }
@@ -497,8 +502,9 @@ public class DLObjectFetcher {
     }
 
     /**
-     * Fetches every label of the model, across all diagrams. Unlike {@link #fetchLabelPositions} this
-     * cannot be keyed on the label, because the same label may be placed in more than one diagram.
+     * Fetches every label of the model, across all diagrams. Unlike {@link #fetchLabelPositions}
+     * this cannot be keyed on the label, because the same label may be placed in more than one
+     * diagram.
      *
      * @param diagramLayout the model from where the objects will be fetched
      * @return a list of the label {@link DiagramObject DiagramObjects}

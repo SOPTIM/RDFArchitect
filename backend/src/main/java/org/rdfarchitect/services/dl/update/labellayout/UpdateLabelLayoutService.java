@@ -127,7 +127,9 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
                 continue;
             }
             byKey.put(
-                    new LabelKey(label.getBelongsToIdentifiedObject().getUuid(), label.getBelongsToDiagramObjectStyle()),
+                    new LabelKey(
+                            label.getBelongsToIdentifiedObject().getUuid(),
+                            label.getBelongsToDiagramObjectStyle()),
                     label);
         }
         return byKey;
