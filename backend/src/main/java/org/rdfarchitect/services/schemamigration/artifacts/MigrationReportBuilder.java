@@ -15,17 +15,23 @@
  *
  */
 
-package org.rdfarchitect.models.changes.semanticchanges;
+package org.rdfarchitect.services.schemamigration.artifacts;
 
-/** Types of semantic changes that can occur to a resource. */
-public enum SemanticResourceChangeType {
-    ADD,
-    ADDED_FROM_INHERITANCE,
-    DELETE,
-    DELETED_FROM_INHERITANCE,
-    CHANGE,
-    RENAME,
-    // should only be created and used when creating the report
-    INHERITS_CHANGE,
-    INDIRECT_CHANGE,
+import org.apache.jena.graph.Graph;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
+
+import java.util.List;
+
+public interface MigrationReportBuilder {
+    String generateDetailedMigrationReport(
+            List<SemanticClassChange> classChanges,
+            Graph originalGraph,
+            Graph updatedGraph,
+            boolean ignorePrefixes);
+
+    String generateSummaryMigrationReport(
+            List<SemanticClassChange> classChanges,
+            Graph originalGraph,
+            Graph updatedGraph,
+            boolean ignorePrefixes);
 }

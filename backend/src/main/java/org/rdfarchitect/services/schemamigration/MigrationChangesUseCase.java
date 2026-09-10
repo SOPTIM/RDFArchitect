@@ -15,19 +15,24 @@
  *
  */
 
-package org.rdfarchitect.services.validation;
+package org.rdfarchitect.services.schemamigration;
 
-import org.rdfarchitect.api.dto.validation.SchemaValidationReportDTO;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 
-public interface SchemaValidationReportToMarkdownUseCase {
+import java.util.List;
+
+public interface MigrationChangesUseCase {
+    /**
+     * lists all final changes of the migration to be displayed for review
+     *
+     * @return list of changes
+     */
+    List<SemanticClassChange> getMigrationChanges();
 
     /**
-     * Converts a schema validation report into a Markdown representation. Only issues with severity
-     * {@code ERROR} and {@code WARNING} are included; {@code INFO} issues are omitted.
+     * updates list of final changes, including any potentially submitted comments
      *
-     * @param report the schema validation report to convert
-     * @param title the title to use in the Markdown report
-     * @return the Markdown representation of the report
+     * @param changes the updated list of changes
      */
-    String convertToMarkdown(SchemaValidationReportDTO report, String title);
+    void confirmMigrationChanges(List<SemanticClassChange> changes);
 }

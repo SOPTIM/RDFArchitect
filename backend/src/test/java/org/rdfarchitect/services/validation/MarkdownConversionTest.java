@@ -30,16 +30,19 @@ public class MarkdownConversionTest extends SchemaValidationTestBase {
     @Test
     void convertToMarkdown_emptyIssues_reportsNoIssues() {
         var report = SchemaValidationReportDTO.builder().valid(true).issues(List.of()).build();
+        var title = "Schema Validation Report";
 
-        var markdown = markdownService.convertToMarkdown(report);
+        var markdown = markdownService.convertToMarkdown(report, title);
 
-        assertThat(markdown).contains("# Schema Validation Report");
-        assertThat(markdown).contains("**Status:** Valid");
-        assertThat(markdown).contains("No issues found.");
+        assertThat(markdown)
+                .contains("# Schema Validation Report")
+                .contains("**Status:** Valid")
+                .contains("No issues found.");
     }
 
     @Test
     void convertToMarkdown_onlyInfoIssues_omitsThemAndReportsNoErrorsOrWarnings() {
+        var title = "Schema Validation Report";
         var report =
                 SchemaValidationReportDTO.builder()
                         .valid(true)
@@ -53,14 +56,16 @@ public class MarkdownConversionTest extends SchemaValidationTestBase {
                                                 .build()))
                         .build();
 
-        var markdown = markdownService.convertToMarkdown(report);
+        var markdown = markdownService.convertToMarkdown(report, title);
 
-        assertThat(markdown).contains("No errors or warnings found.");
-        assertThat(markdown).doesNotContain("Optional profile header field is not set");
+        assertThat(markdown)
+                .contains("No errors or warnings found.")
+                .doesNotContain("Optional profile header field is not set");
     }
 
     @Test
     void convertToMarkdown_errorAndWarning_rendersBothSections() {
+        var title = "Schema Validation Report";
         var report =
                 SchemaValidationReportDTO.builder()
                         .valid(false)
@@ -84,20 +89,21 @@ public class MarkdownConversionTest extends SchemaValidationTestBase {
                                                 .build()))
                         .build();
 
-        var markdown = markdownService.convertToMarkdown(report);
+        var markdown = markdownService.convertToMarkdown(report, title);
 
-        assertThat(markdown).contains("**Status:** Invalid");
-        assertThat(markdown).contains("**Errors:** 1 | **Warnings:** 1");
-        assertThat(markdown).contains("## Errors");
-        assertThat(markdown).contains("## Warnings");
-        assertThat(markdown).contains("Class is missing rdfs:label.");
-        assertThat(markdown).contains("Class is missing rdfs:comment.");
-        // INFO must not appear.
-        assertThat(markdown).doesNotContain("Optional profile header field is not set");
+        assertThat(markdown)
+                .contains("**Status:** Invalid")
+                .contains("**Errors:** 1 | **Warnings:** 1")
+                .contains("## Errors")
+                .contains("## Warnings")
+                .contains("Class is missing rdfs:label.")
+                .contains("Class is missing rdfs:comment.")
+                .doesNotContain("Optional profile header field is not set"); // INFO must not appear
     }
 
     @Test
     void convertToMarkdown_pipeInMessage_isKeptAsIs() {
+        var title = "Schema Validation Report";
         var report =
                 SchemaValidationReportDTO.builder()
                         .valid(false)
@@ -110,7 +116,7 @@ public class MarkdownConversionTest extends SchemaValidationTestBase {
                                                 .build()))
                         .build();
 
-        var markdown = markdownService.convertToMarkdown(report);
+        var markdown = markdownService.convertToMarkdown(report, title);
 
         // No table is used anymore, so pipes no longer need escaping.
         assertThat(markdown).contains("value a | value b");

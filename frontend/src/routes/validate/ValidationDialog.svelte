@@ -104,7 +104,7 @@
             case ValidationMode.FILE:
                 response = await validateFile({
                     path: { cgmesVersion: cgmesVersion },
-                    body: file,
+                    body: { file },
                 });
                 break;
             case ValidationMode.STORED:

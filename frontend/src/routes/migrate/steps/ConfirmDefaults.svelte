@@ -49,7 +49,7 @@
 
     export async function onNext() {
         try {
-            const { error } = submitDefaultValues({ body: classes });
+            const { error } = await submitDefaultValues({ body: classes });
 
             if (error) {
                 toastStore.error(
@@ -80,7 +80,7 @@
         </div>
     </div>
 
-    <div class="no-scrollbar flex-1 overflow-y-auto p-2">
+    <div class="flex-1 overflow-y-auto p-2">
         <currentSubstep.component {classes} bind:disableNext {isLoading} />
     </div>
 </div>

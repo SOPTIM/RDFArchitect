@@ -35,9 +35,9 @@
                 ? new Set(renamedFrom.get(cls.label).keys())
                 : new Set();
 
-            const unlinked = cls.attributes.added.filter(
-                attr => !linked.has(attr.label),
-            );
+            const unlinked = cls.attributes.added
+                .filter(attr => !linked.has(attr.label))
+                .sort((a, b) => a.label.localeCompare(b.label));
             result.set(cls.label, unlinked);
         }
         return result;
@@ -89,7 +89,6 @@
         return (
             cls.attributes &&
             cls.attributes.added.length +
-                cls.attributes.modified.length +
                 cls.attributes.deletedAndRenamed.length >
                 0
         );
@@ -157,7 +156,7 @@
                                         Added Attributes
                                     </h3>
                                     <div class="space-y-1">
-                                        {#each cls.attributes.added as addedAttribute}
+                                        {#each cls.attributes.added.sort( (a, b) => a.label.localeCompare(b.label) ) as addedAttribute}
                                             <div
                                                 class="bg-lightgray flex items-center justify-between px-3 py-1 text-sm"
                                             >
@@ -178,21 +177,6 @@
                                             </div>
                                         {/each}
                                     </div>
-                                </div>
-                            {/if}
-
-                            {#if cls.attributes.modified.length > 0}
-                                <div>
-                                    <h3 class="mb-3 font-semibold">
-                                        Modified Attributes
-                                    </h3>
-                                    <ul
-                                        class="list-inside list-disc space-y-1 text-sm"
-                                    >
-                                        {#each cls.attributes.modified as modifiedAttribute}
-                                            <li>{modifiedAttribute.label}</li>
-                                        {/each}
-                                    </ul>
                                 </div>
                             {/if}
                         </div>

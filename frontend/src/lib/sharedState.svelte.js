@@ -335,6 +335,7 @@ export const migrationState = writable({
     fileB: null,
     cgmesVersionA: null,
     cgmesVersionB: null,
+    ignorePrefixes: false,
 });
 
 export function isMergedDiagramType(diagramType) {

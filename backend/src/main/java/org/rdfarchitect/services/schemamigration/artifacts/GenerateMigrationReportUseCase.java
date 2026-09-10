@@ -15,17 +15,14 @@
  *
  */
 
-package org.rdfarchitect.models.changes.semanticchanges;
+package org.rdfarchitect.services.schemamigration.artifacts;
 
-/** Types of semantic changes that can occur to a resource. */
-public enum SemanticResourceChangeType {
-    ADD,
-    ADDED_FROM_INHERITANCE,
-    DELETE,
-    DELETED_FROM_INHERITANCE,
-    CHANGE,
-    RENAME,
-    // should only be created and used when creating the report
-    INHERITS_CHANGE,
-    INDIRECT_CHANGE,
+import org.rdfarchitect.api.dto.validation.CGMESVersion;
+
+public interface GenerateMigrationReportUseCase {
+    String generateDetailedMigrationReport(
+            CGMESVersion originalCGMESVersion, CGMESVersion updatedCGMESVersion);
+
+    String generateSummaryMigrationReport(
+            CGMESVersion originalCGMESVersion, CGMESVersion updatedCGMESVersion);
 }

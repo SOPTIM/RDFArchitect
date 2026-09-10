@@ -22,6 +22,7 @@
     import { Fa } from "svelte-fa";
 
     import { computeMigrationContext } from "$lib/api/generated/index.ts";
+    import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
@@ -40,6 +41,7 @@
     });
 
     let compareMode = $state(CompareMode.FILE_TO_STORED);
+    let ignorePrefixes = $state(false);
     let cgmesVersionA = $state(CGMESVersion.V3_0);
     let cgmesVersionB = $state(CGMESVersion.V3_0);
 
@@ -110,6 +112,7 @@
         graphB = storedState.graphB;
         fileA = storedState.fileA;
         fileB = storedState.fileB;
+        ignorePrefixes = storedState.ignorePrefixes ?? false;
     });
 
     function onCompareModeChange() {
@@ -152,6 +155,7 @@
                     graphA: graphA,
                     datasetB: workspaceB,
                     graphB: graphB,
+                    ignorePrefixes: ignorePrefixes,
                 },
                 body: { fileA: fileA, fileB: fileB },
             });
@@ -167,6 +171,7 @@
                     graphB,
                     fileA,
                     fileB,
+                    ignorePrefixes,
                 });
             } else {
                 toastStore.error(
@@ -193,10 +198,18 @@
             system, or you can upload one or two files containing the schema(s)
             you want to migrate.
         </p>
+        <p>
+            You can toggle the flag "ignore prefixes" which cause the rename
+            detection to only consider labels and not the full IRI. Renames due
+            to a prefix change will therefore be shown as a simple change in the
+            UI.
+        </p>
     </InfoBox>
 
     <div class="flex h-full flex-col space-y-4">
-        <div class="border-border bg-background-subtle rounded border p-3">
+        <div
+            class="border-border bg-background-subtle flex-col space-y-3 rounded border p-3"
+        >
             <label for="compareMode" class="mb-1 block text-sm">
                 Comparison type
             </label>
@@ -208,6 +221,15 @@
                 getOptionLabel={o => o.label}
                 onchange={onCompareModeChange}
             />
+            <div class="flex space-x-2">
+                <label for="ignorePrefixes" class="mb-1 block text-sm">
+                    Ignore prefixes
+                </label>
+                <CheckBoxEditControl
+                    id="ignorePrefixes"
+                    bind:value={ignorePrefixes}
+                />
+            </div>
         </div>
 
         {#if compareMode === CompareMode.STORED_TO_STORED}

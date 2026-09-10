@@ -73,15 +73,21 @@ Three-way compare: stored↔stored, upload↔stored, upload↔upload. Package-le
 
 ### Schema migration wizard
 
-A five-step wizard that turns the difference between two schema versions into a **SPARQL UPDATE script**:
+A seven-step wizard that turns the difference between two schema versions into a **SPARQL UPDATE script**:
 
-1. Select source and target schemas.
-2. Confirm class renames.
-3. Confirm attribute / association / enum entry renames.
-4. Choose default values for newly added properties.
-5. Generate and download the script.
+1. Select source and target schemas, with the CGMES version of each side and an optional *ignore prefixes* mode for namespace bumps.
+2. Validate both schemas side by side.
+3. Confirm class renames.
+4. Confirm attribute / association / enum entry renames.
+5. Choose default values — literals for attributes, SPARQL target mappings for associations, replacement entries for deleted enum values. Datatype changes can be declared value-preserving, and a required default can be knowingly waived.
+6. Review all changes and comment them.
+7. Generate and download the artefacts.
 
-The script can be run against any SPARQL 1.1 endpoint to migrate instance data from the source schema to the target.
+The script can be run against any SPARQL 1.1 endpoint to migrate instance data from the source schema to the target. It is shipped as a package together with the generated SHACL of the target schema, so the migrated data can be verified immediately.
+
+### Migration report
+
+Every migration can be exported as a **Markdown migration protocol** that records what the script does and why. It contains the validation state of both schemas, a count of added, deleted, and changed classes, and one section per class with its field changes spelled out as sentences, the comments entered during the review step, and explicit warnings — for example associations whose targets may have become invalid through a superclass change. Two variants are available: a **summary** that states each change once and names the affected concrete subclasses, and a **detailed** report that repeats inherited changes under every affected concrete class.
 
 ### SHACL generation
 
@@ -123,7 +129,7 @@ The compare view produces a structured difference between two schema versions th
 
 ### Migration planning
 
-The migration wizard externalises every decision that has to be made to migrate instance data from one profile version to the next: class renames, property renames, defaults for new fields. The output is a reviewable SPARQL script that can be run in a controlled way on staging data before touching production.
+The migration wizard externalises every decision that has to be made to migrate instance data from one profile version to the next: class renames, property renames, defaults for new fields. The output is a reviewable SPARQL script that can be run in a controlled way on staging data before touching production, plus a **migration report** — a Markdown protocol of every change and of the decisions and comments behind it. The report is directly usable as the migration section of a release note, as the document a migration is signed off against, and as the record kept with the migrated dataset.
 
 ### No vendor lock-in
 
@@ -158,7 +164,7 @@ Spring Boot backend, SvelteKit frontend, Apache Jena, Apache Jena Fuseki. All ma
 | Delete package                        | Edit → Delete → Package                          |
 | Changelog                             | View → Changelog                                 |
 | Compare schemas                       | View → Compare Schemas                           |
-| Migrate schema (5-step wizard)        | View → Migrate Schema                            |
+| Migrate schema (7-step wizard)        | View → Migrate Schema                            |
 | Full SHACL view (generated+custom)    | View → View Constraints (SHACL)                  |
 | Help / feedback / about               | Help menu                                        |
 | Search across the workspace           | Search bar at the top                            |
@@ -168,6 +174,6 @@ Spring Boot backend, SvelteKit frontend, Apache Jena, Apache Jena Fuseki. All ma
 
 ## Current limitations (as of 1.0.0)
 
-- The migration script generator does **not** yet handle every edge case; multiplicity changes on associations in particular need manual review. It is strongly recommended to validate migrated data against the target profile's SHACL with an external validator after running the script.
+- The migration script generator does **not** yet handle every edge case; multiplicity changes on associations in particular need manual review. It is strongly recommended to validate migrated data against the target profile's SHACL with an external validator after running the script. The [migration report](/user-guide/migration#the-migration-report) flags the cases it knows it cannot decide, such as association targets invalidated by a superclass change.
 - Snapshots cannot currently be deleted via the UI.
 - Access control is per-snapshot-link; there is no built-in user management. For multi-user deployments this is typically handled by putting the service behind an SSO-capable reverse proxy.

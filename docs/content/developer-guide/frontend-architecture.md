@@ -26,7 +26,7 @@ SvelteKit's filesystem routing is used straightforwardly:
 /mainpage          →  Main editor (left tree + diagram + right class editor)
 /changelog         →  Edit history view
 /compare           →  Compare results view
-/migrate           →  5-step migration wizard
+/migrate           →  7-step migration wizard
 /shacl/...         →  SHACL views
 ```
 

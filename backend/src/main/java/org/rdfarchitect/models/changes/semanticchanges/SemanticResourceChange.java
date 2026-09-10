@@ -60,6 +60,8 @@ public sealed class SemanticResourceChange
 
     protected String label;
 
+    protected String comment = "";
+
     // only set in case of a rename
     protected String oldIRI;
 
@@ -84,6 +86,7 @@ public sealed class SemanticResourceChange
         this.iri = other.getIri();
         this.semanticResourceChangeType = other.getSemanticResourceChangeType();
         this.changes = other.getChanges();
+        this.comment = other.getComment();
     }
 
     public SemanticResourceChange(Resource resource, SemanticResourceChangeType changeType) {

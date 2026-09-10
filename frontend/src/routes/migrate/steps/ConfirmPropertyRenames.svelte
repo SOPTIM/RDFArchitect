@@ -17,21 +17,47 @@
 
 <script>
     import { onMount } from "svelte";
+    import { get } from "svelte/store";
 
     import {
         confirmRenamedProperties,
         migrationPropertiesOverview,
     } from "$lib/api/generated/index.ts";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { migrationState } from "$lib/sharedState.svelte.js";
+    import {
+        filterRenameCandidates,
+        isNonInstantiableAssociationRename,
+    } from "$lib/utils/migrationUtils.js";
 
     let { substeps = [], currentSubstepIndex = 0 } = $props();
 
     let classes = $state([]);
     let isLoading = $state(true);
+    let ignorePrefixes = $state(true);
 
     let currentSubstep = $derived(substeps[currentSubstepIndex]);
 
+    let filteredClasses = $derived(
+        classes.map(cls => ({
+            ...cls,
+            attributes: filterRenameCandidates(cls.attributes, {
+                ignorePrefixes,
+            }),
+            associations: filterRenameCandidates(cls.associations, {
+                ignorePrefixes,
+                alsoHide: isNonInstantiableAssociationRename,
+            }),
+            enumEntries: filterRenameCandidates(cls.enumEntries, {
+                ignorePrefixes,
+            }),
+        })),
+    );
+
     onMount(() => {
+        const storedState = get(migrationState);
+        ignorePrefixes = storedState.ignorePrefixes;
+
         migrationPropertiesOverview()
             .then(res => (res.error ? Promise.reject("Failed") : res.data))
             .then(data => {
@@ -107,7 +133,7 @@
         </div>
     </div>
 
-    <div class="no-scrollbar flex-1 overflow-y-auto p-2">
-        <currentSubstep.component {classes} {isLoading} />
+    <div class="flex-1 overflow-y-auto p-2">
+        <currentSubstep.component classes={filteredClasses} {isLoading} />
     </div>
 </div>

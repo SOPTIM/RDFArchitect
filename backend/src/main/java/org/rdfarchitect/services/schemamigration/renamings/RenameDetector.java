@@ -80,11 +80,17 @@ public class RenameDetector {
         Set<T> unmatchedAdded = new HashSet<>(added);
 
         for (T deletedItem : deleted) {
-            double bestScore = 0.0;
+            var bestScore = 0.;
             T bestMatch = null;
 
             for (T newItem : unmatchedAdded) {
-                double score = SimilarityCalculator.calculateSimilarity(newItem, deletedItem);
+                double score;
+                if (newItem.getLabel().equals(deletedItem.getLabel())) {
+                    score = 1.;
+                } else {
+                    score = SimilarityCalculator.calculateSimilarity(newItem, deletedItem);
+                }
+
                 if (score > bestScore) {
                     bestScore = score;
                     bestMatch = newItem;
