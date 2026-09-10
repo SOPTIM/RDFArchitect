@@ -39,7 +39,13 @@ The same two validation reports are embedded at the top of the migration report,
 
 Lists added classes, deleted classes, and the class renames that were detected between them. A rename proposal is a pairing of a deleted class with an added one, based on name and structural similarity.
 
-Verify each proposal. You can dissolve a wrong pairing and map the deleted class to a different added class instead. Every confirmed rename becomes a `DELETE/INSERT` block that rewrites the RDF type of all affected instances; a class left unpaired stays what it is — deleted or added.
+![Review class renames](/img/screenshots/migration-class-renames.png)
+
+The **Renamed and Deleted Classes** table names the old class, the added class the detector picked as its successor, and how sure it is of that pairing in the **Confidence** column. The score is mostly name similarity, with a structural part — superclass, stereotypes, properties — mixed in; 100% means both sides matched exactly, which happens when a class kept its name and shape and only moved to a new namespace.
+
+Verify every proposal: pick a different class from the **New Name** drop-down to re-map it, or `—` to dissolve the pairing. A deleted class without a target, like `Breaker` above, stays deleted. The **Added Classes** list underneath shows which of the added classes a rename already accounts for.
+
+Every confirmed rename becomes a `DELETE/INSERT` block that rewrites the RDF type of all affected instances; a class left unpaired stays what it is — deleted or added.
 
 ## Step 4 — Review Property Renames
 
