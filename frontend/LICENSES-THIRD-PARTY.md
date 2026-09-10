@@ -281,7 +281,7 @@
 
 ### vitest
 - **Package:** vitest
-- **Version:** 4.1.11
+- **Version:** 5.0.0
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 
