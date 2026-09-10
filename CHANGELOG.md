@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-09-10
+
+### Added
+
+- RDFA-705: Added support for attribute stereotypes ([756d5a38](https://github.com/SOPTIM/RDFArchitect/commit/756d5a38), [#251](https://github.com/SOPTIM/RDFArchitect/pull/251))
+
+### Fixed
+
+- RDFA-732: Persist a new association into its named graph ([f13d04b7](https://github.com/SOPTIM/RDFArchitect/commit/f13d04b7), [#267](https://github.com/SOPTIM/RDFArchitect/pull/267))
+- GH-254: Profile header datatypes overwritten with entry IRIs () ([fda98707](https://github.com/SOPTIM/RDFArchitect/commit/fda98707), [#257](https://github.com/SOPTIM/RDFArchitect/pull/257))
+- GH-256: Keep the diagram from freezing on an unlaid-out layout ([0b308207](https://github.com/SOPTIM/RDFArchitect/commit/0b308207), [#260](https://github.com/SOPTIM/RDFArchitect/pull/260))
+
 ## [1.5.0] - 2026-09-07
 
 ### Added
