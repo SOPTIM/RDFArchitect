@@ -5,6 +5,5 @@ INSERT {
     ?instance ?attribute ?newValue .
 }
 WHERE {
-    ?instance a ?class .
-    OPTIONAL { ?instance ?attr ?oldValue . }
+    ?instance ?attribute ?oldValue .
 };
