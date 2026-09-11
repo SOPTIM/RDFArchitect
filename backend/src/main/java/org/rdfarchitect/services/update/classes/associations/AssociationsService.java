@@ -109,9 +109,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
 
             executeOnGraph(ctx, graphIdentifier, update);
 
-            ctx.commit(
-                    "Replaced all associations for class \"%s\" (%s)"
-                            .formatted(classLabel, classUUID));
+            ctx.commit("Replaced all associations for class \"%s\"".formatted(classLabel));
         }
     }
 
@@ -143,14 +141,12 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                 CIMResourceUtils.findLabelForResource(
                         CIMResourceUtils.findResourceForUri(
                                 session.getRdfGraph(), dto.getTo().getDomain()));
-        return "%s association \"%s.%s\" (%s) → \"%s.%s\" (%s)"
+        return "%s association \"%s.%s\" → \"%s.%s\""
                 .formatted(
                         action,
                         fromClassLabel,
                         from.getLabel().getValue(),
-                        from.getUuid(),
                         toClassLabel,
-                        to.getLabel().getValue(),
-                        to.getUuid());
+                        to.getLabel().getValue());
     }
 }

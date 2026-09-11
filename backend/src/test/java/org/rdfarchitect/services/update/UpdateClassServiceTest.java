@@ -286,6 +286,47 @@ class UpdateClassServiceTest {
                 .removeFromAllDiagrams(any(GraphIdentifier.class), any(UUID.class));
     }
 
+    @Test
+    void addClass_namesTheClassInTheChangeLogWithoutItsUuid() {
+        var packageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.randomUUID())
+                        .prefix(PREFIX)
+                        .label("default")
+                        .build();
+
+        updateClassService.addClass(graphIdentifier, packageDTO, PREFIX, "newClass", null);
+
+        assertThat(latestChangeMessage()).isEqualTo("Added class \"newClass\"");
+    }
+
+    @Test
+    void replaceClass_namesTheClassInTheChangeLogWithoutItsUuid() {
+        var newClass =
+                ClassUMLAdaptedDTO.builder()
+                        .uuid(UUID.fromString(CLASS_UUID))
+                        .prefix(PREFIX)
+                        .label("newClass")
+                        .build();
+
+        updateClassService.replaceClass(graphIdentifier, newClass);
+
+        assertThat(latestChangeMessage()).isEqualTo("Updated class \"newClass\"");
+    }
+
+    @Test
+    void deleteClass_namesTheClassInTheChangeLogWithoutItsUuid() {
+        updateClassService.deleteClass(graphIdentifier, UUID.fromString(CLASS_UUID));
+
+        assertThat(latestChangeMessage()).isEqualTo("Deleted class \"oldLabel\"");
+    }
+
+    private String latestChangeMessage() {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            return ctx.getChangeLog().getUndoHistory().getFirst().getMessage();
+        }
+    }
+
     /** Referencing a uri that nothing defines makes it a referenced only resource with a uuid. */
     private UUID addReferencedOnlyResource(String label) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
