@@ -29,6 +29,14 @@ export const PUBLIC_DEPLOYMENT_ENVIRONMENT = readPublicValue(
     "PUBLIC_DEPLOYMENT_ENVIRONMENT",
 );
 
+/**
+ * Whether an embedding host may ask this app which backend session it is using
+ * (see `$lib/embedding/session-handshake.js`). Off unless the deployment sets it,
+ * because the session id grants access to the session's datasets.
+ */
+export const PUBLIC_EMBED_SESSION_HANDSHAKE =
+    readPublicValue("PUBLIC_EMBED_SESSION_HANDSHAKE").toLowerCase() === "true";
+
 function readPublicValue(key) {
     const runtimeValue = runtimeConfig?.[key];
     if (typeof runtimeValue === "string" && runtimeValue.trim()) {

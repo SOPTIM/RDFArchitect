@@ -23,10 +23,13 @@
     import { resolveIri as fetchResolveIRI } from "$lib/api/generated/index";
     import { asyncValue } from "$lib/asyncValue.svelte.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { extendSourceRequest } from "$lib/extendSourceRequest.svelte.js";
     import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
+    import { resolveTermTarget } from "$lib/utils/deep-link.js";
+    import { navigateToClass } from "$lib/utils/model-navigation.js";
 
     import NoSchemaPlaceholder from "./emptyStates/NoSchemaPlaceholder.svelte";
     import NoWorkspacePlaceholder from "./emptyStates/NoWorkspacePlaceholder.svelte";
@@ -52,7 +55,14 @@
     );
 
     onMount(() => {
-        parseModelSelectionUrlParameters();
+        // Nothing awaits this, so an unhandled rejection would leave the page silently unchanged.
+        parseModelSelectionUrlParameters().catch(error => {
+            console.error("Could not apply the URL parameters:", error);
+            toastStore.error(
+                "Could not open the link",
+                "The model selection in this link could not be applied.",
+            );
+        });
     });
 
     async function loadSchemaCount(workspaceName) {
@@ -66,17 +76,44 @@
         const workspace = queryParams.get("dataset") || null;
         const graph = queryParams.get("graph") || null;
         let pack = queryParams.get("package") || null;
+        const classRef = queryParams.get("class") || null;
+
+        // A term deep link (IRI or uuid) selects the class and its package diagram; an attribute,
+        // association or enum entry selects the class declaring it. workspace and graph merely
+        // narrow the lookup. Falls through to the plain selection when not found.
+        if (classRef && (await openTermFromUrl(workspace, graph, classRef))) {
+            return;
+        }
+
         if (!workspace) return;
         editorState.selectedWorkspace.updateValue(workspace);
         editorState.selectedGraph.updateValue(graph);
         if (!graph || !pack) return;
         if (pack !== "default" && !validate(pack)) {
             pack = await resolveIRI(workspace, graph, pack);
+            if (!pack) return;
         }
         editorState.selectedDiagram.updateValue({
             type: DiagramType.PACKAGE,
             id: pack,
         });
+    }
+
+    async function openTermFromUrl(workspace, graph, ref) {
+        const target = await resolveTermTarget({
+            dataset: workspace,
+            graph,
+            ref,
+        });
+        if (!target) {
+            toastStore.error(
+                "Not found",
+                `No schema in this session contains "${ref}".`,
+            );
+            return false;
+        }
+        navigateToClass(target);
+        return true;
     }
 
     async function resolveIRI(workspace, graph, iri) {
