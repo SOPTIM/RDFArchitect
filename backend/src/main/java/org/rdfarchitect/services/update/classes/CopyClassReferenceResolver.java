@@ -20,6 +20,8 @@ package org.rdfarchitect.services.update.classes;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.apache.jena.graph.Node;
+import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -54,7 +56,14 @@ public class CopyClassReferenceResolver {
 
     private final DatabasePort databasePort;
 
-    public List<CopyClassReference> resolve(List<ResolvedSource> sources) {
+    /**
+     * Resolves the classes the {@code sources} point at, so that a paste can offer them for the
+     * graph they are pasted into. Inheritance is followed all the way up, stopping above every
+     * class {@code targetGraphIdentifier} already defines: such a class is not copied, so a super
+     * class of it would land in the target with nothing inheriting from it.
+     */
+    public List<CopyClassReference> resolve(
+            List<ResolvedSource> sources, GraphIdentifier targetGraphIdentifier) {
 
         var urisByGraph =
                 new LinkedHashMap<GraphIdentifier, Map<CopyClassReference.Kind, Set<URI>>>();
@@ -78,8 +87,72 @@ public class CopyClassReferenceResolver {
         urisByGraph.forEach(
                 (graphIdentifier, urisByKind) ->
                         readReferences(resolved, graphIdentifier, urisByKind));
+        resolveSuperClassesOf(resolved, usedBy, targetGraphIdentifier);
         resolved.forEach((uri, reference) -> reference.usedBy().putAll(usedBy.of(uri)));
         return List.copyOf(resolved.values());
+    }
+
+    /**
+     * Adds the super classes above the ones already resolved, so that a paste offers the whole
+     * inheritance chain of a copied class instead of its direct super class alone. Each of them is
+     * named after the sub class that inherits from it, and classes already resolved as a reference
+     * of another kind only gain the {@link CopyClassReference.Kind#SUPER_CLASS} kind. Walking stops
+     * once a round discovers nothing new, which also ends a cyclic hierarchy.
+     */
+    private void resolveSuperClassesOf(
+            Map<URI, CopyClassReference> resolved,
+            UsagesByReference usedBy,
+            GraphIdentifier targetGraphIdentifier) {
+
+        var frontier =
+                resolved.values().stream()
+                        .filter(
+                                reference ->
+                                        reference
+                                                .kinds()
+                                                .contains(CopyClassReference.Kind.SUPER_CLASS))
+                        .toList();
+        if (frontier.isEmpty()) {
+            return;
+        }
+        var classesInTargetGraph = classUrisOf(targetGraphIdentifier);
+        while (!frontier.isEmpty()) {
+            var urisByGraph = new LinkedHashMap<GraphIdentifier, Set<URI>>();
+            var usages = new LinkedHashMap<URI, Set<CopyClassReference.Usage>>();
+            for (var reference : frontier) {
+                if (reference.superClassUris().isEmpty()
+                        || classesInTargetGraph.contains(reference.uri())) {
+                    continue;
+                }
+                urisByGraph
+                        .computeIfAbsent(
+                                reference.sourceGraph(), graphIdentifier -> new LinkedHashSet<>())
+                        .addAll(reference.superClassUris());
+                reference
+                        .superClassUris()
+                        .forEach(
+                                uri ->
+                                        addUsage(
+                                                usages,
+                                                uri,
+                                                new CopyClassReference.Usage(
+                                                        reference.label(), null)));
+            }
+            usedBy.add(CopyClassReference.Kind.SUPER_CLASS, usages);
+
+            var known = Set.copyOf(resolved.keySet());
+            urisByGraph.forEach(
+                    (graphIdentifier, uris) ->
+                            readReferences(
+                                    resolved,
+                                    graphIdentifier,
+                                    Map.of(CopyClassReference.Kind.SUPER_CLASS, uris)));
+            frontier =
+                    resolved.entrySet().stream()
+                            .filter(entry -> !known.contains(entry.getKey()))
+                            .map(Map.Entry::getValue)
+                            .toList();
+        }
     }
 
     public List<CopyClassReference> resolveDataTypesOf(List<CopyClassReference> copiedReferences) {
@@ -119,6 +192,21 @@ public class CopyClassReferenceResolver {
             frontier = List.copyOf(discovered.values());
         }
         return List.copyOf(resolved.values());
+    }
+
+    /** Reads the class URIs of a graph in a transaction of its own, closed before the walk. */
+    private Set<URI> classUrisOf(GraphIdentifier graphIdentifier) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            return ctx
+                    .getRdfGraph()
+                    .find(Node.ANY, RDF.type.asNode(), RDFS.Class.asNode())
+                    .toList()
+                    .stream()
+                    .map(Triple::getSubject)
+                    .filter(Node::isURI)
+                    .map(subject -> new URI(subject.getURI()))
+                    .collect(Collectors.toSet());
+        }
     }
 
     public Map<URI, Set<URI>> dataTypeDependenciesOf(List<CopyClassReference> references) {
@@ -205,7 +293,18 @@ public class CopyClassReferenceResolver {
                 referencedClass.getUri(),
                 referencedClass.getLabel().getValue(),
                 dataTypeUris(referencedClass),
+                superClassUris(referencedClass),
                 EnumSet.noneOf(CopyClassReference.Kind.class));
+    }
+
+    private Set<URI> superClassUris(ICIMClass referencedClass) {
+        var uris = new LinkedHashSet<URI>();
+        for (var superClass : referencedClass.getSuperClasses()) {
+            if (superClass.getUri() != null) {
+                uris.add(superClass.getUri());
+            }
+        }
+        return uris;
     }
 
     private Set<URI> dataTypeUris(ICIMClass referencedClass) {
