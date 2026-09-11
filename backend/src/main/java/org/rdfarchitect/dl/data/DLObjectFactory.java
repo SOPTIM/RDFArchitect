@@ -63,10 +63,10 @@ public class DLObjectFactory {
         return DiagramObject.builder()
                 .mRID(parser.getMRID(DLQueryVars.DO_MRID))
                 .name(parser.getName(DLQueryVars.DO_NAME))
-                .style(DiagramObjectStyle.byName(parser.getName(DLQueryVars.STYLE_NAME)))
+                .belongsToDiagramObjectStyle(
+                        DiagramObjectStyle.byName(parser.getName(DLQueryVars.STYLE_NAME)))
                 .belongsToDiagram(parser.getMRID(DLQueryVars.DIAGRAM_MRID))
                 .belongsToIdentifiedObject(parser.getMRID(DLQueryVars.IO_MRID))
-                .offset(parser.getXYOffset())
                 .build();
     }
 

@@ -33,7 +33,7 @@ import org.rdfarchitect.api.dto.dl.LabelPositionDTO;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
-import org.rdfarchitect.dl.data.dto.relations.XYOffset;
+import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher.LabelKey;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
@@ -49,6 +49,7 @@ import org.rdfarchitect.services.dl.update.packagelayout.UpdatePackageLayoutServ
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
@@ -75,8 +76,7 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
     static void setUpServices() {
         service = new UpdateLabelLayoutService(databasePort);
         classLayoutService = new UpdateClassLayoutService(databasePort, packageMapper);
-        packageLayoutService =
-                new UpdatePackageLayoutService(databasePort, packageMapper, converter);
+        packageLayoutService = new UpdatePackageLayoutService(databasePort, packageMapper);
     }
 
     @BeforeEach
@@ -86,15 +86,15 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
     }
 
     @Test
-    void updateLabelPositions_labelMoved_storesTheOffset() {
+    void updateLabelPositions_labelMoved_storesThePosition() {
         service.updateLabelPositions(
                 graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-37.5F, 62.25F)));
 
-        assertThat(storedOffsets()).containsExactly(entryOf(new XYOffset(-37.5F, 62.25F)));
+        assertThat(storedPositions()).containsExactly(entryOf(-37.5F, 62.25F));
     }
 
     @Test
-    void updateLabelPositions_labelIsPlacedAsADiagramObjectWithoutAPoint() {
+    void updateLabelPositions_labelMoved_isPlacedAsADiagramObjectWithAPoint() {
         service.updateLabelPositions(
                 graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(10F, 20F)));
 
@@ -104,39 +104,39 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
                         PACKAGE_A_UUID,
                         new LabelKey(ASSOCIATION_END_UUID, DiagramObjectStyle.MULTIPLICITY));
         assertThat(labelDO).isNotNull();
-        assertThat(DLObjectFetcher.fetchDOPForDO(model(), labelDO.getMRID())).isNull();
+        assertThat(DLObjectFetcher.fetchDOPForDO(model(), labelDO.getMRID())).isNotNull();
 
         var labelResource = model().getResource(labelDO.getMRID().getFullMRID());
         assertThat(labelResource.hasProperty(RDF.type, DL.diagramObjectType)).isTrue();
-        assertThat(labelResource.hasProperty(CIM.ioName)).isFalse();
+        assertThat(labelResource.hasProperty(CIM.ioName)).isTrue();
         assertThat(
                         labelResource.hasProperty(
-                                DL.diagramObjectStyle,
+                                DL.belongsToDiagramObjectStyle,
                                 ResourceFactory.createResource(
                                         DiagramObjectStyle.MULTIPLICITY.getMRID().getFullMRID())))
                 .isTrue();
     }
 
     @Test
-    void updateLabelPositions_labelMovedTwice_replacesTheOffsetWithoutDuplicating() {
+    void updateLabelPositions_labelMovedTwice_replacesThePositionWithoutDuplicating() {
         service.updateLabelPositions(
                 graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-37.5F, 62.25F)));
 
         service.updateLabelPositions(
                 graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(10F, -20F)));
 
-        assertThat(storedOffsets()).containsExactly(entryOf(new XYOffset(10F, -20F)));
+        assertThat(storedPositions()).containsExactly(entryOf(10F, -20F));
     }
 
     @Test
-    void updateLabelPositions_offsetIsNull_resetsTheLabelToItsDefaultPlacement() {
+    void updateLabelPositions_positionIsNull_resetsTheLabelToItsDefaultPlacement() {
         service.updateLabelPositions(
                 graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-37.5F, 62.25F)));
 
         service.updateLabelPositions(
                 graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(null, null)));
 
-        assertThat(storedOffsets()).isEmpty();
+        assertThat(storedPositions()).isEmpty();
     }
 
     @Test
@@ -144,13 +144,13 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
         var second = new LabelPositionDTO();
         second.setIdentifiedObjectUUID(OTHER_ASSOCIATION_END_UUID);
         second.setKind(DiagramObjectStyle.MULTIPLICITY.getStyleName());
-        second.setXOffset(1F);
-        second.setYOffset(2F);
+        second.setX(1F);
+        second.setY(2F);
 
         service.updateLabelPositions(
                 graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-1F, -2F), second));
 
-        assertThat(storedOffsets()).hasSize(2);
+        assertThat(storedPositions()).hasSize(2);
         assertThat(model().listSubjectsWithProperty(RDF.type, DL.diagramObjectStyleType).toList())
                 .hasSize(1);
     }
@@ -169,7 +169,7 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
         assertThat(DLObjectFetcher.fetchDiagramDOPPerClass(model(), PACKAGE_A_UUID))
                 .containsOnlyKeys(CLASS_A_UUID);
-        assertThat(DLObjectFetcher.fetchDiagramDOs(model(), new MRID(PACKAGE_A_UUID)))
+        assertThat(DLObjectFetcher.fetchDiagramClassDOs(model(), new MRID(PACKAGE_A_UUID)))
                 .extracting(diagramObject -> diagramObject.getBelongsToIdentifiedObject().getUuid())
                 .containsExactly(CLASS_A_UUID);
         assertThat(DLObjectFetcher.fetchAllDOs(model(), ASSOCIATION_END_UUID)).isEmpty();
@@ -186,13 +186,13 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
                 DiagramObject.builder()
                         .mRID(new MRID(UUID.randomUUID()))
                         .name("0..n")
-                        .style(DiagramObjectStyle.MULTIPLICITY)
+                        .belongsToDiagramObjectStyle(DiagramObjectStyle.MULTIPLICITY)
                         .belongsToDiagram(new MRID(PACKAGE_A_UUID))
                         .belongsToIdentifiedObject(new MRID(ASSOCIATION_END_UUID))
-                        .offset(new XYOffset(5F, 5F))
                         .build());
 
-        assertThat(DLObjectFetcher.fetchDiagramDOs(model(), new MRID(PACKAGE_A_UUID))).isEmpty();
+        assertThat(DLObjectFetcher.fetchDiagramClassDOs(model(), new MRID(PACKAGE_A_UUID)))
+                .isEmpty();
         assertThat(DLObjectFetcher.fetchAllDOs(model(), ASSOCIATION_END_UUID)).isEmpty();
         assertThat(
                         DLObjectFetcher.fetchDiagramDOForClass(
@@ -206,13 +206,13 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
         var inverseEndLabel = new LabelPositionDTO();
         inverseEndLabel.setIdentifiedObjectUUID(OTHER_ASSOCIATION_END_UUID);
         inverseEndLabel.setKind(DiagramObjectStyle.MULTIPLICITY.getStyleName());
-        inverseEndLabel.setXOffset(5F);
-        inverseEndLabel.setYOffset(6F);
+        inverseEndLabel.setX(5F);
+        inverseEndLabel.setY(6F);
         var unrelatedLabel = new LabelPositionDTO();
         unrelatedLabel.setIdentifiedObjectUUID(PACKAGE_A_UUID);
         unrelatedLabel.setKind(DiagramObjectStyle.MULTIPLICITY.getStyleName());
-        unrelatedLabel.setXOffset(3F);
-        unrelatedLabel.setYOffset(4F);
+        unrelatedLabel.setX(3F);
+        unrelatedLabel.setY(4F);
 
         service.updateLabelPositions(
                 graphIdentifier,
@@ -221,7 +221,7 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
         classLayoutService.deleteClassLayoutData(graphIdentifier, CLASS_A_UUID);
 
-        assertThat(storedOffsets())
+        assertThat(storedPositions())
                 .containsOnlyKeys(new LabelKey(PACKAGE_A_UUID, DiagramObjectStyle.MULTIPLICITY));
     }
 
@@ -288,25 +288,35 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
         packageLayoutService.deletePackageLayoutData(graphIdentifier, PACKAGE_A_UUID);
 
-        assertThat(storedOffsets()).isEmpty();
+        assertThat(storedPositions()).isEmpty();
     }
 
-    private static LabelPositionDTO labelPosition(Float xOffset, Float yOffset) {
+    private static LabelPositionDTO labelPosition(Float x, Float y) {
         var labelPosition = new LabelPositionDTO();
         labelPosition.setIdentifiedObjectUUID(ASSOCIATION_END_UUID);
         labelPosition.setKind(DiagramObjectStyle.MULTIPLICITY.getStyleName());
-        labelPosition.setXOffset(xOffset);
-        labelPosition.setYOffset(yOffset);
+        labelPosition.setX(x);
+        labelPosition.setY(y);
         return labelPosition;
     }
 
-    private static Map.Entry<LabelKey, XYOffset> entryOf(XYOffset offset) {
+    private static Map.Entry<LabelKey, XYZPosition> entryOf(float x, float y) {
         return Map.entry(
-                new LabelKey(ASSOCIATION_END_UUID, DiagramObjectStyle.MULTIPLICITY), offset);
+                new LabelKey(ASSOCIATION_END_UUID, DiagramObjectStyle.MULTIPLICITY),
+                new XYZPosition(x, y, 0));
     }
 
-    private static Map<LabelKey, XYOffset> storedOffsets() {
-        return DLObjectFetcher.fetchLabelOffsets(model(), PACKAGE_A_UUID);
+    /**
+     * Extracts the positions from the fetched {@link
+     * org.rdfarchitect.dl.data.dto.DiagramObjectPoint DiagramObjectPoints}, so tests can assert on
+     * plain coordinates instead of on the whole point, which also carries a freshly generated mRID
+     * that would never compare equal.
+     */
+    private static Map<LabelKey, XYZPosition> storedPositions() {
+        return DLObjectFetcher.fetchLabelPositions(model(), PACKAGE_A_UUID).entrySet().stream()
+                .collect(
+                        Collectors.toMap(
+                                Map.Entry::getKey, entry -> entry.getValue().getPosition()));
     }
 
     private static Model model() {
