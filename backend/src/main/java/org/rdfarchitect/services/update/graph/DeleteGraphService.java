@@ -22,7 +22,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,7 +30,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCase {
 
     private final DatabasePort databasePort;
-    private final CreateDiagramLayoutUseCase createDiagramLayoutUseCase;
 
     @Override
     public void deleteGraph(GraphIdentifier graphIdentifier) {
@@ -52,7 +50,5 @@ public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCa
                             .graph();
             databasePort.createGraph(graphIdentifier, graph);
         }
-
-        createDiagramLayoutUseCase.createDiagramLayout(graphIdentifier);
     }
 }

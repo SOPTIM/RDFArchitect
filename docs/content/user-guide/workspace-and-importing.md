@@ -27,7 +27,9 @@ There are three ways content lands in the editor.
 
 This is the standard entry point for CGMES profiles and ENTSO-E Network Code Profiles. Pick a workspace (existing or a new name), drop in an `.rdf`, `.ttl`, or `.nt` file, and the contents become a graph inside that workspace. The graph name defaults to a sanitised version of the filename but can be overridden. If the target workspace has been set to read-only, the import is blocked until editing is re-enabled.
 
-Supported input formats are **RDF/XML (.rdf)**, **Turtle (.ttl)**, and **N-Triples (.nt)**. CGMES releases are typically shipped as RDF/XML and can be imported directly.
+Supported input formats are **RDF/XML (.rdf)**, **Turtle (.ttl)**, and **N-Triples (.nt)**. CGMES releases are typically shipped as RDF/XML and can be imported directly. You can select several files at once, or a `.zip` archive, in which case every schema at the root of the archive is imported as its own graph.
+
+The dialog stays open while the import runs and shows a progress bar together with one row per file, so you can see which file is being read, checked and stored. When it is done, the same list reports what was imported, which files could not be imported, and which properties were stored but will not be displayed (properties without the CIM stereotype or association metadata). Cancelling stops the import after the file it is currently working on and keeps the schemas that were already imported. Closing the dialog opens the first imported schema.
 
 ![Import schema dialog](/img/screenshots/import-schema.png)
 

@@ -78,7 +78,12 @@ public class UpdatePackageLayoutService
                 var diagramObject =
                         DLObjectFetcher.fetchDiagramDOForClass(
                                 diagramLayoutModel, packageUUID, cimClassOrEnum.getUuid());
-                DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
+                // Layout data is created lazily, so a class of a package that was never opened
+                // has no diagram object yet and there is nothing to delete for it.
+                if (diagramObject != null) {
+                    DLUpdates.deleteDiagramObjectCascade(
+                            diagramLayoutModel, diagramObject.getMRID());
+                }
             }
 
             for (var label :
