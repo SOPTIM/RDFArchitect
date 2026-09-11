@@ -21,12 +21,16 @@ import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
 import { classStore } from "$lib/stores/classStore.ts";
 import { graphStore } from "$lib/stores/graphStore.ts";
 import { packageStore } from "$lib/stores/packageStore.ts";
+import {
+    graphLabeller,
+    graphTooltip,
+    graphUri,
+    graphVersion,
+} from "$lib/utils/graph-label.js";
 import { compareGraphs } from "$lib/utils/graph-order.js";
-import { uriSuffix } from "$lib/utils/iri.js";
 import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
 import {
-    getUri,
     isSelectedGraph,
     isSelectedPackage,
     isSelectedClass,
@@ -83,26 +87,33 @@ export async function getWorkspaceNavEntry(workspaceName, existingNavEntry) {
 async function populateWorkspace(workspaceNavEntry) {
     const existingGraphNavList = workspaceNavEntry.children;
 
-    const freshEntries = (
-        (await graphStore.getGraphs(workspaceNavEntry.id)) ?? []
-    )
-        .map(graph => {
-            const fullUri = getUri(graph);
-            return { label: graph.keyword ?? uriSuffix(fullUri), fullUri };
-        })
+    const graphs = (await graphStore.getGraphs(workspaceNavEntry.id)) ?? [];
+    const nameOf = graphLabeller(graphs);
+
+    const freshEntries = graphs
+        .map(graph => ({
+            label: nameOf(graph),
+            fullUri: graphUri(graph),
+            tooltip: graphTooltip(graph),
+            data: {
+                keyword: graph.keyword ?? "",
+                version: graphVersion(graph),
+            },
+        }))
         .sort((a, b) =>
             compareGraphs(
                 { label: a.label, uri: a.fullUri },
                 { label: b.label, uri: b.fullUri },
             ),
         )
-        .map(({ label, fullUri }) => {
-            return reuseOrCreate(existingGraphNavList, {
+        .map(({ label, fullUri, tooltip, data }) =>
+            reuseOrCreate(existingGraphNavList, {
                 label,
-                tooltip: fullUri,
+                tooltip,
                 id: fullUri,
-            });
-        });
+                data,
+            }),
+        );
 
     if (workspaceNavEntry.children) {
         syncList(workspaceNavEntry.children, freshEntries, workspaceNavEntry);
