@@ -17,6 +17,7 @@
 
 <script>
     import {
+        faAlignLeft,
         faAnglesUp,
         faArrowUpRightFromSquare,
         faCaretDown,
@@ -84,6 +85,12 @@
             key: "includeAssociations",
             label: "Associations",
             icon: faLink,
+            appliesTo: SINGLE_SCHEMA_DIAGRAM_TYPES,
+        },
+        {
+            key: "showAssociationsInClass",
+            label: "Associations in Class",
+            icon: faAlignLeft,
             appliesTo: SINGLE_SCHEMA_DIAGRAM_TYPES,
         },
         {

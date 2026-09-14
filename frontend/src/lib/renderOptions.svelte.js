@@ -24,6 +24,7 @@ export const RENDER_OPTION_DEFAULTS = {
     includeInheritance: true,
     includeRelationsToExternalPackages: true,
     includePropertiesFromOtherProfiles: false,
+    showAssociationsInClass: false,
     showInheritedProperties: false,
     useColoredPropertiesInMergedView: true,
 };
@@ -35,6 +36,7 @@ export const GRAPH_FILTER_KEYS = [
     "includeInheritance",
     "includeRelationsToExternalPackages",
     "includePropertiesFromOtherProfiles",
+    "showAssociationsInClass",
 ];
 
 export const renderOptions = createRenderOptions();
