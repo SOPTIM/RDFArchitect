@@ -19,7 +19,9 @@ package org.rdfarchitect.services.diagrams;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.ClassSourceDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramColorDataDTO;
@@ -31,6 +33,7 @@ import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
@@ -209,8 +212,8 @@ public class CustomDiagramService
     @Override
     public void deleteCustomGraphDiagram(GraphIdentifier graphIdentifier, String diagramId) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
-            ctx.commit("deleted diagram %s".formatted(diagramId));
+            var diagram = ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
+            ctx.commit("deleted diagram%s".formatted(quoted(nameOf(diagram))));
         }
     }
 
@@ -234,7 +237,7 @@ public class CustomDiagramService
                             diagramDTO.getName(),
                             diagramDTO.getClasses());
             ctx.getCustomDiagrams().put(UUID.fromString(diagramId), diagram);
-            ctx.commit("replaced diagram %s".formatted(diagramId));
+            ctx.commit("replaced diagram%s".formatted(quoted(diagram.getName())));
         }
     }
 
@@ -242,19 +245,23 @@ public class CustomDiagramService
     public void removeFromCustomGraphDiagram(
             GraphIdentifier graphIdentifier, String diagramId, UUID classId) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var classLabel = findClassLabel(ctx.getRdfGraph(), classId);
             var diagram = ctx.getCustomDiagrams().get(UUID.fromString(diagramId));
             if (diagram != null) {
                 var classes = diagram.getClasses();
                 classes.removeIf(c -> c.getUuid().equals(classId));
                 diagram.setClasses(classes);
             }
-            ctx.commit("removed class %s from diagram %s".formatted(classId, diagramId));
+            ctx.commit(
+                    "removed class%s from diagram%s"
+                            .formatted(quoted(classLabel), quoted(nameOf(diagram))));
         }
     }
 
     @Override
     public void removeFromAllDiagrams(GraphIdentifier graphIdentifier, UUID classId) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var classLabel = findClassLabel(ctx.getRdfGraph(), classId);
             for (var diagram : ctx.getCustomDiagrams().values()) {
                 var classes = diagram.getClasses();
                 classes.removeIf(c -> c.getUuid().equals(classId));
@@ -266,7 +273,7 @@ public class CustomDiagramService
                 classes.removeIf(c -> c.getUuid().equals(classId));
                 diagram.setClasses(classes);
             }
-            ctx.commit("removed class %s from all diagrams".formatted(classId));
+            ctx.commit("removed class%s from all diagrams".formatted(quoted(classLabel)));
         }
     }
 
@@ -292,5 +299,33 @@ public class CustomDiagramService
                         .setColor(graphUri, dto.getGraphColors().get(graphUri));
             }
         }
+    }
+
+    /**
+     * Labels a class for the changelog message. Diagrams only reference classes by UUID, so the
+     * label is looked up in the RDF graph. A class that is no longer in the graph - it may have
+     * just been deleted, which is what removed it from the diagrams - stays unlabelled.
+     */
+    private String findClassLabel(Graph graph, UUID classId) {
+        try {
+            var resource = CIMResourceUtils.findResourceForUuid(graph, classId);
+            return resource.hasProperty(RDFS.label)
+                    ? CIMResourceUtils.findLabelForResource(resource)
+                    : "";
+        } catch (IllegalStateException e) {
+            return "";
+        }
+    }
+
+    private String nameOf(CustomDiagram diagram) {
+        return diagram == null ? "" : diagram.getName();
+    }
+
+    /**
+     * Renders a name as {@code "name"} for the changelog message, including the separating space.
+     * An unknown name is left out entirely rather than exposing the UUID behind it.
+     */
+    private String quoted(String name) {
+        return name == null || name.isEmpty() ? "" : " \"%s\"".formatted(name);
     }
 }
