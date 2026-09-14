@@ -24,6 +24,7 @@
         faDiagramProject,
         faExpand,
         faFilter,
+        faFont,
         faLayerGroup,
         faLink,
         faListUl,
@@ -86,6 +87,15 @@
             label: "Associations",
             icon: faLink,
             appliesTo: SINGLE_SCHEMA_DIAGRAM_TYPES,
+        },
+        {
+            key: "showAssociationLabels",
+            label: "Association Labels",
+            icon: faFont,
+            appliesTo: [
+                ...SINGLE_SCHEMA_DIAGRAM_TYPES,
+                ...MERGED_DIAGRAM_TYPES,
+            ],
         },
         {
             key: "showAssociationsInClass",

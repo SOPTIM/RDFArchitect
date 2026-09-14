@@ -76,12 +76,15 @@ function anchorClassId(edge, label) {
  *     holding null resets that label to its default placement
  * @param placementCache memoizes the edge-intersection geometry per class pair, keyed by node id,
  *     so dragging one class does not recompute the placement of every other edge in the diagram
+ * @param showAssociationLabels whether the role names of the association ends are drawn; their
+ *     multiplicities are drawn either way
  */
 export function buildLabelNodes(
     nodes,
     edges,
     offsetOverrides = new Map(),
     placementCache = new Map(),
+    showAssociationLabels = true,
 ) {
     const classNodes = new Map();
     const labelSizes = new Map();
@@ -103,6 +106,12 @@ export function buildLabelNodes(
 
         const placements = cachedEdgePlacements(source, target, placementCache);
         for (const label of edge.data?.labels ?? []) {
+            if (
+                !showAssociationLabels &&
+                label.kind === ASSOCIATION_LABEL_KIND
+            ) {
+                continue;
+            }
             const atSource = label.anchor === SOURCE_ANCHOR;
             labelNodes.push(
                 buildLabelNode(
