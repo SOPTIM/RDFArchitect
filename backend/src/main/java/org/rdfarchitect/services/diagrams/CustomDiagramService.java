@@ -144,11 +144,13 @@ public class CustomDiagramService
             Map<String, MergedClassDTO> mergeMap) {
 
         var model = diagramLayout.getDiagramLayoutModel();
+        DiagramLayoutServiceUtils.insertAllDiagramObjectStyles(model);
         if (DLObjectFetcher.fetchDiagram(model, crossProfileDiagramUUID) == null) {
             DiagramLayoutServiceUtils.insertDiagram(
                     model, crossProfileDiagramUUID, "CrossProfileDiagram");
         }
-        var existingDOs = DLObjectFetcher.fetchDiagramDOs(model, new MRID(crossProfileDiagramUUID));
+        var existingDOs =
+                DLObjectFetcher.fetchDiagramClassDOs(model, new MRID(crossProfileDiagramUUID));
         var existingClassUUIDs =
                 existingDOs.stream()
                         .map(DiagramObject::getBelongsToIdentifiedObject)

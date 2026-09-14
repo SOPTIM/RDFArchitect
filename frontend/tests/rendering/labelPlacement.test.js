@@ -40,22 +40,16 @@ function associationEdge(source, target) {
         source,
         target,
         data: {
-            labels: [
-                {
-                    anchor: "SOURCE",
-                    identifiedObjectUUID: `${source}-end`,
-                    kind: "multiplicity",
-                    text: "0..1",
-                    offset: null,
-                },
-                {
-                    anchor: "TARGET",
-                    identifiedObjectUUID: `${target}-end`,
-                    kind: "multiplicity",
-                    text: "1..n",
-                    offset: null,
-                },
-            ],
+            sourceMultiplicityLabel: {
+                identifiedObjectUUID: `${source}-end`,
+                text: "0..1",
+                position: null,
+            },
+            targetMultiplicityLabel: {
+                identifiedObjectUUID: `${target}-end`,
+                text: "1..n",
+                position: null,
+            },
         },
     };
 }

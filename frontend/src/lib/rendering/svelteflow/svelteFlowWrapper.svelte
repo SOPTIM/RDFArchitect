@@ -57,11 +57,10 @@
         buildLabelNodes,
         clampToAnchor,
         collectLabels,
-        effectiveOffset,
+        hasManualPlacement,
         LABEL_NODE_TYPE,
         labelNodeId,
         labelNodesChanged,
-        offsetFromClass,
     } from "./diagram/labelNodes.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
     import { DiagramSelectionController } from "./interaction/diagramSelection.svelte.js";
@@ -126,10 +125,7 @@
 
     let selectionZFrame = null;
     let boxSelecting = false;
-    // Offsets of labels moved in this session, so a drag takes effect without refetching the
-    // diagram. An entry holding null resets that label to its default placement. A SvelteMap so
-    // mutating it alone is enough to re-trigger syncLabelNodes below.
-    let labelOffsets = new SvelteMap();
+    let labelPositions = new SvelteMap();
     // Memoizes edge-intersection geometry per class pair, so dragging one class does not
     // recompute the placement of every other edge in the diagram.
     let labelPlacementCache = new Map();
@@ -295,7 +291,7 @@
     }
 
     function syncDiagramElements() {
-        labelOffsets = new SvelteMap();
+        labelPositions = new SvelteMap();
         labelPlacementCache = new Map();
         const nextNodes = [...inputNodes];
         const nextHasDefaultLayout = hasDefaultNodeLayout(nextNodes);
@@ -364,7 +360,7 @@
         const nextLabelNodes = buildLabelNodes(
             currentNodes,
             currentEdges,
-            labelOffsets,
+            labelPositions,
             labelPlacementCache,
         );
         if (!labelNodesChanged(currentNodes, nextLabelNodes)) {
@@ -408,38 +404,32 @@
         );
     }
 
-    function toLabelPositionDTO(identifiedObjectUUID, kind, offset) {
+    function toLabelPositionDTO(identifiedObjectUUID, kind, position) {
         return {
             identifiedObjectUUID,
             kind,
-            xOffset: offset?.x ?? null,
-            yOffset: offset?.y ?? null,
+            x: position?.x ?? null,
+            y: position?.y ?? null,
         };
     }
 
     function handleLabelMove(movedLabelNodes) {
-        const nodesById = new Map(nodes.map(node => [node.id, node]));
         const movedLabels = [];
         for (const labelNode of movedLabelNodes) {
-            const anchorClass = nodesById.get(labelNode.data.anchorClassId);
-            if (!anchorClass) {
-                continue;
-            }
-            const offset = offsetFromClass(
-                {
-                    position: clampToAnchor(
-                        labelNode.position,
-                        labelNode.data.anchorPoint,
-                    ),
-                },
-                anchorClass,
+            const position = clampToAnchor(
+                labelNode.position,
+                labelNode.data.anchorPoint,
             );
-            labelOffsets.set(labelNode.id, offset);
+            const delta = {
+                x: position.x - labelNode.data.anchorPoint.x,
+                y: position.y - labelNode.data.anchorPoint.y,
+            };
+            labelPositions.set(labelNode.id, delta);
             movedLabels.push(
                 toLabelPositionDTO(
                     labelNode.data.identifiedObjectUUID,
                     labelNode.data.kind,
-                    offset,
+                    position,
                 ),
             );
         }
@@ -450,10 +440,10 @@
     function resetLabelPositions() {
         const resetLabels = [];
         for (const { label } of collectLabels(edges)) {
-            if (!effectiveOffset(label, labelOffsets)) {
+            if (!hasManualPlacement(label, labelPositions)) {
                 continue;
             }
-            labelOffsets.set(labelNodeId(label), null);
+            labelPositions.set(labelNodeId(label), null);
             resetLabels.push(
                 toLabelPositionDTO(
                     label.identifiedObjectUUID,

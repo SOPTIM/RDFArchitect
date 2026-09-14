@@ -30,25 +30,14 @@ import java.util.UUID;
 @Builder
 public class EdgeLabelDTO {
 
-    /** The end of the edge a label is anchored to. */
-    public enum Anchor {
-        SOURCE,
-        TARGET
-    }
-
-    private Anchor anchor;
-
     /** The UUID of the CIM resource this label belongs to, e.g. an association end. */
     private UUID identifiedObjectUUID;
-
-    /** The label kind, e.g. {@code multiplicity}. Together with the UUID it identifies a label. */
-    private String kind;
 
     private String text;
 
     /**
-     * The manually placed position as an offset relative to the class the label is anchored to, or
-     * {@code null} when the label has never been moved and falls back to its default placement.
+     * The manually placed absolute position of the label, or {@code null} when the label has never
+     * been moved and falls back to its default placement.
      */
-    private PositionDTO offset;
+    private PositionDTO position;
 }
