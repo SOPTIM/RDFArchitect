@@ -17,9 +17,9 @@
 /**
  * Lets an application that embeds RDFArchitect learn which backend session this app is using.
  *
- * Datasets live in a session, so a tool outside the browser — the CIMNotebook IDE extensions, for
- * instance — can only read the datasets you are editing if it addresses *this* session. The host
- * asks over `postMessage`, and the answer goes back to the exact origin that asked:
+ * Workspaces live in a session, so a tool outside the browser — the CIMNotebook IDE extensions,
+ * for instance — can only read the workspaces you are editing if it addresses *this* session. The
+ * host asks over `postMessage`, and the answer goes back to the exact origin that asked:
  *
  * ```
  * host → app:  { type: "rdfa:session-request" }
@@ -29,7 +29,7 @@
  * The id is the session cookie's value, so anyone holding it can act as that session. Two things
  * therefore gate the answer: the app must be embedded at all, and the deployment must opt in with
  * `PUBLIC_EMBED_SESSION_HANDSHAKE=true`. Without the opt-in, a page that embeds RDFArchitect in an
- * iframe would be able to read the visitor's datasets — so leave it off unless the embedder is
+ * iframe would be able to read the visitor's workspaces — so leave it off unless the embedder is
  * trusted (see the admin guide).
  */
 

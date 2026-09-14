@@ -41,9 +41,9 @@ public class SessionRESTController {
     @Operation(
             summary = "Current session",
             description =
-                    "The id of the session this request belongs to. Datasets live in a session, so"
-                            + " a tool that wants to read the very datasets a browser is editing has to"
-                            + " address that session — the app hands this id to an embedding host (see"
+                    "The id of the session this request belongs to. Workspaces live in a session, so"
+                            + " a tool that wants to read the very workspaces a browser is editing has"
+                            + " to address that session — the app hands this id to an embedding host (see"
                             + " the embedded-session handshake) which passes it on to that tool. The id"
                             + " is the session cookie's value and therefore grants full access to the"
                             + " session: treat it as a credential.",

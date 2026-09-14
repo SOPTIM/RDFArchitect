@@ -93,6 +93,6 @@ whichever graph the term is found in first. Add `graph` to say which profile you
 `?class=<iri>&graph=<profile graph>` — which is what the CIMNotebook IDE extensions send when you
 pick a profile there.
 
-All parameters refer to the browser session's own datasets. They can be combined with a
+All parameters refer to the browser session's own workspaces. They can be combined with a
 snapshot link — `/?snapshot=<token>&class=<iri>` first loads the snapshot, then navigates to
 the term.

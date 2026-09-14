@@ -20,12 +20,12 @@ Keep Fuseki on a private network reachable only by the backend. Snapshot links l
 ## Session ids handed to an embedding host
 
 The session id is a capability for a whole session: whoever holds it can read and change every
-dataset in it. `GET /api/session` returns it to the caller's own session, which is harmless in
+workspace in it. `GET /api/session` returns it to the caller's own session, which is harmless in
 itself, but the embedded-session handshake hands it to whatever page embeds RDFArchitect — and a
 webview's origin cannot be allow-listed, so "whatever page" is literal.
 
 The handshake is therefore off unless `PUBLIC_EMBED_SESSION_HANDSHAKE=true` is set on the frontend
-(see [Configuration](/admin-guide/configuration#letting-the-host-read-the-session-live-datasets)).
+(see [Configuration](/admin-guide/configuration#letting-the-host-read-the-session-live-workspaces)).
 Enable it only where you would also be comfortable with those users embedding the instance at all,
 and remember it composes with `same-site: none`: that already lets a foreign page make authenticated
 requests, and the handshake additionally lets it read the answers.

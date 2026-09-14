@@ -88,7 +88,7 @@
         installBackendFetchInterceptor();
         probeBackendConnection();
         loadSnapshot();
-        // Lets an embedding IDE read the datasets of this very session; opt-in per deployment.
+        // Lets an embedding IDE read the workspaces of this very session; opt-in per deployment.
         return installSessionHandshake({
             enabled: PUBLIC_EMBED_SESSION_HANDSHAKE,
             fetchSessionId: sessionId,

@@ -52,7 +52,7 @@ export const TermType = {
  * A reference is either an IRI or an rdfa:uuid. Classes are resolved directly; an IRI that is not
  * a class is looked up as an attribute, association or enum entry, in which case the target is the
  * declaring class plus the property to focus. External tools (e.g. the CIMNotebook IDE extensions)
- * link into the editor this way without knowing which dataset a schema was imported into.
+ * link into the editor this way without knowing which workspace a schema was imported into.
  *
  * @param {{dataset: string | null, graph: string | null, ref: string}} params
  * @returns {Promise<DeepLinkTarget | null>}
@@ -78,7 +78,7 @@ export async function resolveTermTarget({ dataset, graph, ref }) {
  *
  * When `dataset` and `graph` are given, only that graph is consulted. Either on its own narrows the
  * search: `graph` alone is what an external tool can say when it knows which profile a class should
- * be opened in but not what the dataset is called in this session. Without both, every remaining
+ * be opened in but not what the workspace is called in this session. Without both, every remaining
  * graph is probed until the class is found.
  *
  * @param {{dataset: string | null, graph: string | null, classRef: string}} params

@@ -24,7 +24,7 @@ The authoritative configuration is `backend/src/main/resources/application.yml`.
 
 ## Embedding RDFArchitect in another application
 
-Datasets are scoped to the backend session, which the browser tracks with the
+Workspaces are scoped to the backend session, which the browser tracks with the
 `RDFA_SESSION_ID` cookie. With the default `same-site: lax`, a browser will **not** send that
 cookie when RDFArchitect runs inside a cross-site `<iframe>` — every API call then lands in a
 fresh session and the app reports that no schemas have been imported. This affects host
@@ -47,10 +47,10 @@ use — browsers treat `http://localhost` as a trustworthy origin and accept `Se
 from it. Only widen this where you need embedding: `none` removes the SameSite restriction
 that limits cross-site request forgery.
 
-### Letting the host read the session (live datasets)
+### Letting the host read the session (live workspaces)
 
-A host that embeds RDFArchitect may want to work with *the datasets you are editing* — the
-CIMNotebook IDE extensions validate SPARQL against them. Datasets belong to a session, so an
+A host that embeds RDFArchitect may want to work with *the workspaces you are editing* — the
+CIMNotebook IDE extensions validate SPARQL against them. Workspaces belong to a session, so an
 outside tool can only reach them by addressing that session, and for that it needs the session
 id. The embedded app hands it over on request:
 
@@ -88,4 +88,4 @@ The frontend is a static SPA whose runtime variables are rewritten at container 
 | Variable              | Default (Docker) | Description                                           |
 | --------------------- | ---------------- | ----------------------------------------------------- |
 | `PUBLIC_BACKEND_URL`  | `/api`           | Where the frontend expects to find the backend.       |
-| `PUBLIC_EMBED_SESSION_HANDSHAKE` | `false` | Answer an embedding host's request for the session id (see [above](#letting-the-host-read-the-session-live-datasets)). |
+| `PUBLIC_EMBED_SESSION_HANDSHAKE` | `false` | Answer an embedding host's request for the session id (see [above](#letting-the-host-read-the-session-live-workspaces)). |
