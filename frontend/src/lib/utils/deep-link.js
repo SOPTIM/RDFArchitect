@@ -225,11 +225,20 @@ async function tryResolveIri(datasetName, graphUri, iri) {
     return uuid.length > 0 ? uuid : null;
 }
 
+/**
+ * The class `classUUID` names, or null when it names something else.
+ *
+ * `resolveIri` resolves any resource, so an attribute's IRI yields that attribute's uuid — and the
+ * class endpoint answers a uuid that is not a class with `200` and an empty body rather than an
+ * error. That response carries no `Content-Type`, so the generated client falls back to `stream`
+ * and hands back the undrained body, which is truthy. Only a payload that identifies itself with a
+ * uuid is therefore a class; anything else lets the caller go on and look for a property.
+ */
 async function tryGetClassInfo(datasetName, graphUri, classUUID) {
     const { data, error } = await getClassInformation({
         path: { datasetName, graphURI: graphUri, classUUID },
     });
-    return error ? null : (data ?? null);
+    return error || !data?.uuid ? null : data;
 }
 
 async function trySearch(query, filter) {

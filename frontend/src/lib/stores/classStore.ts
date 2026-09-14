@@ -278,7 +278,7 @@ function createClassStore() {
                 return { ...s, pendingDetails };
             });
 
-            if (error || !data) {
+            if (error || !data?.uuid) {
                 if (error) {
                     console.error(
                         `${LOG_PREFIX} Failed to load class details for classUUID="${classUUID}"`,

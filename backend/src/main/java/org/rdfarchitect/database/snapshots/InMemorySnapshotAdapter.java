@@ -38,8 +38,8 @@ import java.util.concurrent.ConcurrentMap;
 
 /**
  * {@link SnapshotPort} adapter that keeps snapshots in process memory instead of a Fuseki server.
- * Snapshots are shared across sessions (the map is global, unlike the session-scoped workspaces) but
- * do not survive a backend restart.
+ * Snapshots are shared across sessions (the map is global, unlike the session-scoped workspaces)
+ * but do not survive a backend restart.
  */
 public class InMemorySnapshotAdapter implements SnapshotPort {
 

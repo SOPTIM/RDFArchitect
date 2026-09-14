@@ -49,10 +49,17 @@ const singleGraphModel = {
  * fixture.
  *
  * Classes are looked up by IRI (resolveIri) or by their fixture uuid (getClassInformation). A
- * class may declare `attributes`, which resolve like any other resource but are not classes — the
- * backend answers with an empty body for those, as it does for a deleted class; the generated
- * client surfaces that as `data: undefined` with no error.
+ * class may declare `attributes`, which resolve like any other resource but are not classes.
+ *
+ * The stubs mirror how the real endpoints answer, which is less convenient than it sounds:
+ * `getClassInformation` reports "not a class" — an attribute, a deleted class, an unknown uuid —
+ * with `200` and an empty body rather than an error, and that response carries no `Content-Type`,
+ * so the generated client falls back to `stream` and yields the undrained body. `data` is
+ * therefore *truthy* in every one of those cases, and only its shape distinguishes a class.
+ * `resolveIri` answers an unknown IRI with a `500`.
  */
+/** What the client yields for the empty `200` that means "no such class here". */
+const notAClass = () => ({ data: new ReadableStream() });
 function mockApiFor(model, { searchResults = [] } = {}) {
     const resourcesOf = graph =>
         Object.entries(graph ?? {}).flatMap(([iri, info]) => [
@@ -79,7 +86,7 @@ function mockApiFor(model, { searchResults = [] } = {}) {
             const hit = resourcesOf(model[datasetName]?.[graphURI]).find(
                 ([resourceIri]) => resourceIri === iriIdentifier,
             );
-            return { data: hit ? hit[1] : undefined };
+            return hit ? { data: hit[1] } : { error: { status: 500 } };
         },
     );
 
@@ -88,8 +95,9 @@ function mockApiFor(model, { searchResults = [] } = {}) {
             const hit = resourcesOf(model[datasetName]?.[graphURI]).find(
                 ([, resourceUuid]) => resourceUuid === classUUID,
             );
-            // Not found, or found but not a class (or a class that was deleted): no data.
-            return { data: hit?.[2] ?? undefined };
+            // Found but not a class (an attribute, or a deleted one), or not found at all: the
+            // endpoint answers all three the same way, and it is not an error.
+            return hit?.[2] ? { data: hit[2] } : notAClass();
         },
     );
 
@@ -241,6 +249,36 @@ describe("resolveClassTarget", () => {
         });
 
         expect(target?.packageUUID).toBeNull();
+    });
+
+    /**
+     * The bug this guards: the class endpoint answers a property's uuid with an empty `200`, not an
+     * error, so treating "the call succeeded" as "this is a class" made an attribute deep link open
+     * the attribute *as* a class — no package to put a diagram on, and a class editor left loading a
+     * uuid no class has.
+     */
+    test("does not mistake a property for a class", async () => {
+        mockApiFor({
+            profiles: {
+                "https://cim.example.org/EQ": {
+                    [CLASS_IRI]: {
+                        uuid: CLASS_UUID,
+                        package: { uuid: PACKAGE_UUID, label: "Wires" },
+                        attributes: [
+                            { iri: ATTRIBUTE_IRI, uuid: ATTRIBUTE_UUID },
+                        ],
+                    },
+                },
+            },
+        });
+
+        const target = await resolveClassTarget({
+            dataset: null,
+            graph: null,
+            classRef: ATTRIBUTE_IRI,
+        });
+
+        expect(target).toBeNull();
     });
 
     test("returns null for an unknown class", async () => {
