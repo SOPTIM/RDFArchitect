@@ -35,6 +35,7 @@
     } from "$lib/api/generated/index.ts";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { renderOptions } from "$lib/renderOptions.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -366,6 +367,7 @@
             currentEdges,
             labelOffsets,
             labelPlacementCache,
+            renderOptions.get("showAssociationLabels"),
         );
         if (!labelNodesChanged(currentNodes, nextLabelNodes)) {
             return;
