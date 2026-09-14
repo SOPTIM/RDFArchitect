@@ -905,6 +905,9 @@
           },
           "packageUUID" : {
             "type" : "string"
+          },
+          "showAssociationsInClass" : {
+            "type" : "boolean"
           }
         },
         "type" : "object"
