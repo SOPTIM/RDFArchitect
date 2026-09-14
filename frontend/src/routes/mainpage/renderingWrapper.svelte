@@ -135,6 +135,7 @@
                 filter.includeRelationsToExternalPackages,
             includePropertiesFromOtherProfiles:
                 filter.includePropertiesFromOtherProfiles,
+            showAssociationsInClass: filter.showAssociationsInClass,
         };
 
         try {
@@ -203,6 +204,7 @@
                     includeInheritance: filter.includeInheritance,
                     includePropertiesFromOtherProfiles:
                         filter.includePropertiesFromOtherProfiles,
+                    showAssociationsInClass: filter.showAssociationsInClass,
                 },
             });
 
