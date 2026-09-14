@@ -21,6 +21,7 @@ import de.soptim.opencgmes.cimxml.graph.CimProfile;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.graph.Node;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
@@ -89,24 +90,51 @@ public class QueryDatasetService
     public List<GraphDTO> listGraphs(String datasetName) {
         var result = new ArrayList<GraphDTO>();
 
-        var graphUriList = databasePort.listGraphUris(datasetName);
-        for (var graphUri : graphUriList) {
-            String keyword = null;
-            try (var ctx =
-                    databasePort
-                            .getGraphWithContext(new GraphIdentifier(datasetName, graphUri))
-                            .begin(ReadWrite.READ)) {
-                var graph = GraphUtils.deepCopy(ctx.getRdfGraph());
-                graph.getPrefixMapping().setNsPrefixes(databasePort.getPrefixMapping(datasetName));
-                keyword = CimProfile.wrap(graph).getDcatKeyword();
-            } catch (IllegalArgumentException e) {
-                keyword = null;
-            } finally {
-                result.add(new GraphDTO(new URI(graphUri), keyword));
-            }
+        for (var graphUri : databasePort.listGraphUris(datasetName)) {
+            result.add(readGraph(datasetName, graphUri));
         }
 
         return result;
+    }
+
+    /**
+     * A graph as the schema pickers name it: its URI, plus everything the CIM profile in it says
+     * about itself. A graph that is not a CIM profile is still listed, by its URI alone.
+     *
+     * <p>The profile is read in a single pass, since the graph has to be copied out of the store to
+     * be read at all and this runs once per graph of the dataset.
+     *
+     * <p>Which CIM version a profile is written in is decided by the namespace bound to its {@code
+     * cim} prefix, and a dataset holding both CGMES 2.4.15 and CGMES 3.0 schemas can only remember
+     * one of them. The graph's own prefixes therefore win, and the dataset's fill in only what the
+     * graph does not declare itself.
+     */
+    private GraphDTO readGraph(String datasetName, String graphUri) {
+        var dto = GraphDTO.builder().uri(new URI(graphUri)).build();
+        try (var ctx =
+                databasePort
+                        .getGraphWithContext(new GraphIdentifier(datasetName, graphUri))
+                        .begin(ReadWrite.READ)) {
+            var stored = ctx.getRdfGraph();
+            var graph = GraphUtils.deepCopy(stored);
+            graph.getPrefixMapping()
+                    .setNsPrefixes(stored.getPrefixMapping())
+                    .withDefaultMappings(databasePort.getPrefixMapping(datasetName));
+            var metadata = CimProfile.wrap(graph).getMetadata();
+            dto.setKeyword(metadata.keyword());
+            dto.setLabel(metadata.label());
+            dto.setDescription(metadata.description());
+            dto.setVersionInfo(metadata.versionInfo());
+            dto.setVersionIris(
+                    metadata.versionIris().stream()
+                            .filter(Node::isURI)
+                            .map(Node::getURI)
+                            .sorted()
+                            .toList());
+        } catch (IllegalArgumentException e) {
+            // Not a CIM profile, so there is no profile metadata to report.
+        }
+        return dto;
     }
 
     @Override

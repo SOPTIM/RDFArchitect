@@ -50,7 +50,7 @@
 
 ### OpenCGMES - IEC61970-552 CIMXML
 - **Package:** de.soptim.opencgmes
-- **Version:** 1.1.0
+- **Version:** 0.0.0-SNAPSHOT
 - **License:** Apache License 2.0
 - **URL:** [https://github.com/SOPTIM/OpenCGMES](https://github.com/SOPTIM/OpenCGMES)
 
