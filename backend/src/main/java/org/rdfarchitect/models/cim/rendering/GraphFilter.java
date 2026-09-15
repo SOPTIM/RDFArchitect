@@ -36,7 +36,6 @@ public class GraphFilter {
         this.includeInheritance = defaultValue;
         this.includeRelationsToExternalPackages = defaultValue;
         this.includePropertiesFromOtherProfiles = false;
-        this.showAssociationsInClass = false;
         this.allowedUUIDs = null;
     }
 
@@ -53,8 +52,6 @@ public class GraphFilter {
     private boolean includeRelationsToExternalPackages;
 
     private boolean includePropertiesFromOtherProfiles;
-
-    private boolean showAssociationsInClass;
 
     private List<String> allowedUUIDs;
 }
