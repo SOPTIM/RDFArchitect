@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.sub.AssociationDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.AttributeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeLabelDTO;
@@ -468,6 +469,80 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     }
 
     @Test
+    @DisplayName("renders the association ends of a class into its node")
+    void showsAssociationsInClass() {
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
+
+        assertThat(nodeByLabel(result, "Child").getData().getAssociations())
+                .extracting(
+                        AssociationDTO::getLabel,
+                        AssociationDTO::getType,
+                        AssociationDTO::getMultiplicity)
+                .containsExactly(tuple("Terminals", "Terminal", "0..n"));
+        assertThat(nodeByLabel(result, "Terminal").getData().getAssociations())
+                .extracting(AssociationDTO::getLabel, AssociationDTO::getType)
+                .containsExactly(tuple("Child", "Child"));
+    }
+
+    @Test
+    @DisplayName("renders association text in a class even when association edges are disabled")
+    void showsAssociationsInClassWithoutAssociationEdges() {
+        var filter = coreFilter();
+        filter.setIncludeAssociations(false);
+
+        var result =
+                (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null, null);
+
+        assertThat(result.getEdges()).noneMatch(edge -> edge.getType().equals("association"));
+        assertThat(nodeByLabel(result, "Child").getData().getAssociations())
+                .extracting(AssociationDTO::getLabel)
+                .containsExactly("Terminals");
+    }
+
+    @Test
+    @DisplayName("renders an association end without a label without one")
+    void showsAssociationInClassWithoutLabel() {
+        model.getResource(NS + "Child.Terminals").removeAll(RDFS.label);
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
+
+        assertThat(nodeByLabel(result, "Child").getData().getAssociations())
+                .singleElement()
+                .satisfies(
+                        association -> {
+                            assertThat(association.getLabel()).isNull();
+                            assertThat(association.getType()).isEqualTo("Terminal");
+                        });
+    }
+
+    @Test
+    @DisplayName("renders the association ends of a super class as inherited text")
+    void showsInheritedAssociationsInClass() {
+        var base = model.getResource(NS + "Base");
+        var terminal = model.getResource(NS + "Terminal");
+        var from =
+                addAssociation(base, terminal, "Base.Terminals", "baseTerminals", "M:0..n", "Yes");
+        var to = addAssociation(terminal, base, "Terminal.Base", "base", "M:1..1", "No");
+        from.addProperty(CIMS.inverseRoleName, to);
+        to.addProperty(CIMS.inverseRoleName, from);
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
+
+        assertThat(nodeByLabel(result, "Child").getData().getSuperClasses())
+                .filteredOn(superClass -> superClass.getLabel().equals("Base"))
+                .singleElement()
+                .satisfies(
+                        superClass ->
+                                assertThat(superClass.getAssociations())
+                                        .extracting(AssociationDTO::getLabel)
+                                        .containsExactly("baseTerminals"));
+    }
+
+    @Test
     @DisplayName("omits classes of other packages when external relations are disabled")
     void filterDisablesExternalRelations() {
         var filter = coreFilter();
@@ -669,7 +744,66 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         entry.addProperty(RDFS.label, otherModel.createLiteral("B", "en"));
         entry.addProperty(CIMS.stereotype, CIMStereotypes.enumLiteral);
 
+        var terminal = otherModel.createResource(NS + "Terminal");
+        terminal.addProperty(RDF.type, RDFS.Class);
+        terminal.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        terminal.addProperty(RDFS.label, otherModel.createLiteral("Terminal", "en"));
+
+        var from =
+                addOtherProfileAssociation(
+                        otherModel, child, terminal, "Child.OtherTerminals", "otherTerminals");
+        var to =
+                addOtherProfileAssociation(
+                        otherModel, terminal, child, "Terminal.OtherChild", "otherChild");
+        from.addProperty(CIMS.inverseRoleName, to);
+        to.addProperty(CIMS.inverseRoleName, from);
+
         return new CIMModelFacade(OTHER_GRAPH_URI, otherModel);
+    }
+
+    private Resource addOtherProfileAssociation(
+            Model otherModel, Resource domain, Resource range, String localName, String label) {
+        var association = otherModel.createResource(NS + localName);
+        association.addProperty(RDF.type, RDF.Property);
+        association.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        association.addProperty(RDFS.label, otherModel.createLiteral(label, "en"));
+        association.addProperty(RDFS.domain, domain);
+        association.addProperty(RDFS.range, range);
+        association.addProperty(
+                CIMS.multiplicity, otherModel.createResource(CIMS.namespace + "M:0..n"));
+        association.addProperty(CIMS.associationUsed, "Yes");
+        return association;
+    }
+
+    @Test
+    @DisplayName("merges associations from other profiles into the class")
+    void mergesOtherProfileAssociations() {
+        var filter = coreFilter();
+        filter.setIncludePropertiesFromOtherProfiles(true);
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(
+                                facade,
+                                filter,
+                                null,
+                                List.of(
+                                        new CIMProfileModel(
+                                                OTHER_GRAPH_URI,
+                                                OTHER_COLOR,
+                                                null,
+                                                buildOtherProfile())),
+                                null,
+                                null);
+
+        assertThat(nodeByLabel(result, "Child").getData().getAssociations())
+                .extracting(
+                        AssociationDTO::getLabel,
+                        AssociationDTO::getGraphUri,
+                        AssociationDTO::getColor)
+                .containsExactly(
+                        tuple("Terminals", GRAPH_URI, null),
+                        tuple("otherTerminals", OTHER_GRAPH_URI, OTHER_COLOR));
     }
 
     @Test

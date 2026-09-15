@@ -20,28 +20,22 @@ package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 import lombok.Builder;
 import lombok.Data;
 
-import java.util.List;
-
-/** DTO representing the specific data object in a SvelteFlow node. */
+/**
+ * DTO representing an association end rendered as text inside a SvelteFlow class node. The
+ * association is still drawn as an edge independently of this.
+ */
 @Data
 @Builder
-public class NodeDataDTO {
+public class AssociationDTO {
 
+    /** The role name of this association end, or null when the model holds none. */
     private String label;
+
+    /** The label of the class this association end points to. */
+    private String type;
+
+    private String multiplicity;
     private String graphUri;
-
-    /**
-     * Whether the class is only referenced by other resources instead of being defined in this
-     * graph. Such a node has no properties to render and cannot be edited until it is created.
-     */
-    private boolean external;
-
-    private boolean outsidePackage;
-
-    private String belongsToCategory;
-    private List<String> stereotypes;
-    private List<AttributeDTO> attributes;
-    private List<AssociationDTO> associations;
-    private List<EnumEntryDTO> enumEntries;
-    private List<SuperClassDTO> superClasses;
+    private String graphKeyword;
+    private String color;
 }
