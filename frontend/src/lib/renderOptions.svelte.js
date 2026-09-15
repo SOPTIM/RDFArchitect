@@ -37,7 +37,6 @@ export const GRAPH_FILTER_KEYS = [
     "includeInheritance",
     "includeRelationsToExternalPackages",
     "includePropertiesFromOtherProfiles",
-    "showAssociationsInClass",
 ];
 
 export const renderOptions = createRenderOptions();

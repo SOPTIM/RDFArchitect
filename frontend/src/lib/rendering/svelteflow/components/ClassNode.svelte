@@ -62,9 +62,22 @@
     const label = $derived(data.label);
     const stereotypes = $derived(data.stereotypes);
     const attributes = $derived(data.attributes);
-    const associations = $derived(data.associations ?? []);
+    const showAssociations = $derived(
+        renderOptions.get("showAssociationsInClass"),
+    );
+    const associations = $derived(
+        showAssociations ? (data.associations ?? []) : [],
+    );
     const enumEntries = $derived(data.enumEntries);
-    const inheritedGroups = $derived([...(data.superClasses ?? [])].reverse());
+    const inheritedGroups = $derived(
+        [...(data.superClasses ?? [])]
+            .reverse()
+            .map(superClass =>
+                showAssociations
+                    ? superClass
+                    : { ...superClass, associations: [] },
+            ),
+    );
 
     const hasProfileInfo = $derived(
         collectGraphUris().some(graph => graph.graphUri),

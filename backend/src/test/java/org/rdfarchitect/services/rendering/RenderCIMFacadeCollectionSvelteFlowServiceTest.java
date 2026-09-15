@@ -469,13 +469,11 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     }
 
     @Test
-    @DisplayName("renders the association ends of a class as text when enabled")
+    @DisplayName("renders the association ends of a class into its node")
     void showsAssociationsInClass() {
-        var filter = coreFilter();
-        filter.setShowAssociationsInClass(true);
-
         var result =
-                (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null, null);
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         assertThat(nodeByLabel(result, "Child").getData().getAssociations())
                 .extracting(
@@ -489,21 +487,10 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     }
 
     @Test
-    @DisplayName("renders no association text in a class by default")
-    void hidesAssociationsInClassByDefault() {
-        var result =
-                (SvelteFlowDTO)
-                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
-
-        assertThat(nodeByLabel(result, "Child").getData().getAssociations()).isEmpty();
-    }
-
-    @Test
     @DisplayName("renders association text in a class even when association edges are disabled")
     void showsAssociationsInClassWithoutAssociationEdges() {
         var filter = coreFilter();
         filter.setIncludeAssociations(false);
-        filter.setShowAssociationsInClass(true);
 
         var result =
                 (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null, null);
@@ -518,11 +505,9 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     @DisplayName("renders an association end without a label without one")
     void showsAssociationInClassWithoutLabel() {
         model.getResource(NS + "Child.Terminals").removeAll(RDFS.label);
-        var filter = coreFilter();
-        filter.setShowAssociationsInClass(true);
-
         var result =
-                (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null, null);
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         assertThat(nodeByLabel(result, "Child").getData().getAssociations())
                 .singleElement()
@@ -543,11 +528,9 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         var to = addAssociation(terminal, base, "Terminal.Base", "base", "M:1..1", "No");
         from.addProperty(CIMS.inverseRoleName, to);
         to.addProperty(CIMS.inverseRoleName, from);
-        var filter = coreFilter();
-        filter.setShowAssociationsInClass(true);
-
         var result =
-                (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null, null);
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         assertThat(nodeByLabel(result, "Child").getData().getSuperClasses())
                 .filteredOn(superClass -> superClass.getLabel().equals("Base"))
@@ -793,11 +776,10 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     }
 
     @Test
-    @DisplayName("merges associations from other profiles into the class when enabled")
+    @DisplayName("merges associations from other profiles into the class")
     void mergesOtherProfileAssociations() {
         var filter = coreFilter();
         filter.setIncludePropertiesFromOtherProfiles(true);
-        filter.setShowAssociationsInClass(true);
 
         var result =
                 (SvelteFlowDTO)

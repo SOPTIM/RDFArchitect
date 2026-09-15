@@ -614,9 +614,6 @@ public class RenderCIMFacadeCollectionSvelteFlowService
      */
     private List<AssociationDTO> getClassAssociations(
             RenderContext renderContext, ICIMClass cimClass) {
-        if (!renderContext.filter().isShowAssociationsInClass()) {
-            return List.of();
-        }
         return collectProperties(renderContext, cimClass, this::addAssociationDTOs);
     }
 
