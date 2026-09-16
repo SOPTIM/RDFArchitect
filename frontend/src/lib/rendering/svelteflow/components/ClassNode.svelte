@@ -16,11 +16,15 @@
   -->
 
 <script>
-    import { faLink } from "@fortawesome/free-solid-svg-icons";
+    import { faEllipsis, faLink } from "@fortawesome/free-solid-svg-icons";
     import { Handle, Position } from "@xyflow/svelte";
     import { Fa } from "svelte-fa";
 
     import { URI } from "$lib/models/dto/index.ts";
+    import {
+        propertyEditorRequest,
+        PropertyKind,
+    } from "$lib/propertyEditorRequest.svelte.js";
     import { renderOptions } from "$lib/renderOptions.svelte.js";
     import {
         editorState,
@@ -30,7 +34,16 @@
     } from "$lib/sharedState.svelte.js";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
-    let { id, data, dragging } = $props();
+    import {
+        bypassesProperties,
+        heldModifiers,
+    } from "../interaction/modifierKeys.svelte.js";
+    import {
+        propertyContextMenu,
+        propertySelection,
+    } from "../interaction/propertyInteraction.svelte.js";
+
+    let { id, data, dragging, draggable } = $props();
 
     const isMergedDiagram = $derived(
         isMergedDiagramType(editorState.selectedDiagram.getProperty("type")),
@@ -118,10 +131,17 @@
                   superClassItems(superClass, false),
               )
             : []),
-        ...propertyBlocks({ attributes, associations, enumEntries }, false),
+        ...propertyBlocks({ attributes, associations, enumEntries }, false, id),
     ]);
 
-    const cursorClass = $derived(dragging ? "cursor-move" : "cursor-pointer");
+    const cursorClass = $derived(
+        dragging
+            ? "cursor-grabbing"
+            : draggable
+              ? "cursor-grab"
+              : "cursor-pointer",
+    );
+    const propertiesClickable = $derived(!bypassesProperties(heldModifiers));
     const isExternal = $derived(data.external === true);
     const isOutsidePackage = $derived(data.outsidePackage === true);
 
@@ -181,6 +201,7 @@
         return inheritedGroups
             .map(superClass => ({
                 label: superClass.label,
+                uuid: superClass.uuid,
                 attributes: propsForGraph(superClass.attributes, graphUri),
                 associations: propsForGraph(superClass.associations, graphUri),
                 enumEntries: propsForGraph(superClass.enumEntries, graphUri),
@@ -225,18 +246,30 @@
             );
     }
 
-    function propertyBlocks(source, faded) {
+    function propertyBlocks(source, faded, ownerClassUuid) {
         return [
-            { icon: null, properties: source.attributes },
-            { icon: faLink, properties: source.associations },
-            { icon: null, properties: source.enumEntries },
+            {
+                icon: null,
+                propertyKind: PropertyKind.ATTRIBUTE,
+                properties: source.attributes,
+            },
+            {
+                icon: faLink,
+                propertyKind: PropertyKind.ASSOCIATION,
+                properties: source.associations,
+            },
+            {
+                icon: null,
+                propertyKind: PropertyKind.ENUM_ENTRY,
+                properties: source.enumEntries,
+            },
         ]
             .filter(block => (block.properties?.length ?? 0) > 0)
-            .map(block => ({ kind: "lines", faded, ...block }));
+            .map(block => ({ kind: "lines", faded, ownerClassUuid, ...block }));
     }
 
     function superClassItems(superClass, spaced) {
-        const blocks = propertyBlocks(superClass, true);
+        const blocks = propertyBlocks(superClass, true, superClass.uuid);
         return [
             { kind: "superClass", label: superClass.label, spaced },
             ...(blocks.length > 0 ? blocks : [{ kind: "emptySuperClass" }]),
@@ -257,8 +290,59 @@
                     enumEntries: section.ownEnumEntries,
                 },
                 false,
+                id,
             ),
         ];
+    }
+
+    function propertyTarget(item, property) {
+        if (!property.uuid || !item.ownerClassUuid) {
+            return null;
+        }
+        return {
+            classUuid: item.ownerClassUuid,
+            graphUri: property.graphUri || data.graphUri || null,
+            kind: item.propertyKind,
+            propertyUuid: property.uuid,
+        };
+    }
+
+    function markProperty(event, target) {
+        if (bypassesProperties(event)) {
+            return;
+        }
+        event.stopPropagation();
+        propertySelection.mark(target);
+    }
+
+    function openPropertyEditor(event, target) {
+        if (bypassesProperties(event)) {
+            return;
+        }
+        event.stopPropagation();
+        propertySelection.mark(target);
+        propertyEditorRequest.open(target);
+    }
+
+    // Raises the event the diagram already opens the class context menu for.
+    function openClassContextMenu(event) {
+        event.stopPropagation();
+        event.currentTarget.closest(".svelte-flow__node")?.dispatchEvent(
+            new MouseEvent("contextmenu", {
+                bubbles: true,
+                cancelable: true,
+                clientX: event.clientX,
+                clientY: event.clientY,
+                view: window,
+            }),
+        );
+    }
+
+    function handlePropertyKeyDown(event, target) {
+        if (event.key !== "Enter" && event.key !== " ") {
+            return;
+        }
+        openPropertyEditor(event, target);
     }
 
     function getGraphLabel(graphURI, keyword) {
@@ -294,10 +378,31 @@
             </div>
         {:else}
             {#each item.properties as property}
+                {@const target = propertyTarget(item, property)}
+                {@const marked = propertySelection.isMarked(target)}
                 <div
-                    class="text-default-text flex items-baseline gap-1.5 leading-6"
+                    class="text-default-text flex items-baseline gap-1.5 rounded-sm leading-6"
                     class:opacity-70={item.faded}
+                    class:cursor-pointer={!!target && propertiesClickable}
+                    class:select-none={!!target}
+                    class:hover:underline={!!target && propertiesClickable}
+                    class:ring-1={marked}
+                    class:ring-property-marked={marked}
                     style={propertyColor(property)}
+                    role={target ? "button" : undefined}
+                    tabindex={target ? -1 : undefined}
+                    onclick={target
+                        ? event => markProperty(event, target)
+                        : undefined}
+                    ondblclick={target
+                        ? event => openPropertyEditor(event, target)
+                        : undefined}
+                    oncontextmenu={target
+                        ? event => propertyContextMenu.open(event, target)
+                        : undefined}
+                    onkeydown={target
+                        ? event => handlePropertyKeyDown(event, target)
+                        : undefined}
                 >
                     {#if showsAssociationLines}
                         <span class="w-3 shrink-0 text-[0.7em] opacity-70">
@@ -314,7 +419,7 @@
 {/snippet}
 
 <div
-    class={`class-node-shell bg-class-node-upper-background relative isolate min-w-45 overflow-hidden rounded-md bg-clip-padding font-sans text-sm ${cursorClass} ${
+    class={`class-node-shell bg-class-node-upper-background group relative isolate min-w-45 overflow-hidden rounded-md bg-clip-padding font-sans text-sm ${cursorClass} ${
         isExternal
             ? "class-node-external"
             : isOutsidePackage
@@ -336,6 +441,15 @@
         style="z-index: 1;"
         isConnectableStart={false}
     />
+
+    <button
+        type="button"
+        class="text-default-text pointer-events-none absolute top-1 right-1 z-3 cursor-pointer rounded px-1 leading-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-60 hover:opacity-100"
+        title="Class menu"
+        onclick={openClassContextMenu}
+    >
+        <Fa icon={faEllipsis} />
+    </button>
 
     <div
         class="p-2 text-center"

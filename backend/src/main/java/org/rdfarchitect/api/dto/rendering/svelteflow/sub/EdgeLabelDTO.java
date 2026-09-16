@@ -44,6 +44,13 @@ public class EdgeLabelDTO {
     /** The label kind, e.g. {@code multiplicity}. Together with the UUID it identifies a label. */
     private String kind;
 
+    /**
+     * The UUID of the association end itself, which identifies it when its editor is opened. This
+     * differs from {@link #identifiedObjectUUID} in a merged diagram, where labels are stored under
+     * the UUID of the merged association end.
+     */
+    private UUID associationEndUUID;
+
     private String text;
 
     /**

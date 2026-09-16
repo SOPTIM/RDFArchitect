@@ -101,6 +101,43 @@
             ],
         },
         {
+            title: "Diagram",
+            shortcuts: [
+                { description: "Open Class", keys: ["Click"] },
+                { description: "Mark Property", keys: ["Click"] },
+                {
+                    description: "Open Property or Association Label",
+                    keys: ["Double-Click"],
+                },
+                {
+                    description: "Add Class to Selection",
+                    keys: ["Shift", "Click"],
+                },
+                {
+                    description: "Toggle Class in Selection",
+                    keys: ["Ctrl", "Click"],
+                },
+                {
+                    description: "Open Class instead of Property",
+                    keys: ["Alt", "Click"],
+                },
+                { description: "Select with Box", keys: ["Drag"] },
+                {
+                    description: "Add to Selection with Box",
+                    keys: ["Shift", "Drag"],
+                },
+                {
+                    description: "Toggle Selection with Box",
+                    keys: ["Ctrl", "Drag"],
+                },
+                { description: "Move View", keys: ["Right-Drag"] },
+                {
+                    description: "Clear Marking, then Selection",
+                    keys: ["Escape"],
+                },
+            ],
+        },
+        {
             title: "General",
             shortcuts: [
                 { description: "Focus Search", keys: ["Ctrl", "F"] },

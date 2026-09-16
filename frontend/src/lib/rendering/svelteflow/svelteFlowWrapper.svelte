@@ -24,7 +24,7 @@
         useNodesInitialized,
         useSvelteFlow,
     } from "@xyflow/svelte";
-    import { onDestroy, onMount, tick, untrack } from "svelte";
+    import { onDestroy, onMount, setContext, tick, untrack } from "svelte";
     import { SvelteMap } from "svelte/reactivity";
 
     import {
@@ -50,6 +50,7 @@
     import InheritanceEdge from "./components/InheritanceEdge.svelte";
     import SvelteFlowClassContextMenu from "./components/SvelteFlowClassContextMenu.svelte";
     import SvelteFlowPaneContextMenu from "./components/SvelteFlowPaneContextMenu.svelte";
+    import SvelteFlowPropertyContextMenu from "./components/SvelteFlowPropertyContextMenu.svelte";
     import {
         decorateEdges,
         hasDefaultNodeLayout,
@@ -65,10 +66,22 @@
         offsetFromClass,
     } from "./diagram/labelNodes.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
-    import { DiagramSelectionController } from "./interaction/diagramSelection.svelte.js";
+    import {
+        DIAGRAM_SELECTION_CONTEXT,
+        DiagramSelectionController,
+    } from "./interaction/diagramSelection.svelte.js";
     import { labelHighlight } from "./interaction/labelHighlight.svelte.js";
+    import {
+        clearHeldModifiers,
+        heldModifiers,
+        syncHeldModifiers,
+    } from "./interaction/modifierKeys.svelte.js";
     import { NodeOrderController } from "./interaction/nodeOrder.svelte.js";
     import { PanController } from "./interaction/panController.svelte.js";
+    import {
+        propertyContextMenu,
+        propertySelection,
+    } from "./interaction/propertyInteraction.svelte.js";
     import { getLayoutedNodes } from "./layout/elkLayout.js";
 
     let {
@@ -126,7 +139,7 @@
     let layouted = $state(false);
 
     let selectionZFrame = null;
-    let boxSelecting = false;
+    let boxSelecting = $state(false);
     // Offsets of labels moved in this session, so a drag takes effect without refetching the
     // diagram. An entry holding null resets that label to its default placement. A SvelteMap so
     // mutating it alone is enough to re-trigger syncLabelNodes below.
@@ -188,6 +201,7 @@
     $effect(() => {
         multiSelectState.subscribe();
         editorState.selectedClass.subscribe();
+        selection.hasClearableSelection();
         untrack(keepEscapeHandlerOnTop);
     });
 
@@ -256,6 +270,8 @@
         }
         lastSelectedDiagramId = diagramId;
         labelHighlight.clear();
+        propertySelection.clear();
+        contextMenus.close();
         pan.clearBoxMode();
         multiSelectState.clear();
     }
@@ -282,17 +298,24 @@
 
     function keepEscapeHandlerOnTop() {
         eventStack.removeEvent(selection.escapeClearSelection);
-        if (multiSelectState.getSelected().length === 0) {
+        if (!selection.hasClearableSelection()) {
             return;
         }
         eventStack.addEvent(selection.escapeClearSelection);
         tick().then(() => {
-            if (multiSelectState.getSelected().length === 0) {
+            if (!selection.hasClearableSelection()) {
                 return;
             }
             eventStack.removeEvent(selection.escapeClearSelection);
             eventStack.addEvent(selection.escapeClearSelection);
         });
+    }
+
+    function openClassFromMenu(classUuid) {
+        const node = classNodes.find(candidate => candidate.id === classUuid);
+        if (node) {
+            selection.openClass(node);
+        }
     }
 
     function syncDiagramElements() {
@@ -563,24 +586,31 @@
             isLoading = false;
         }
     }
+
+    setContext(DIAGRAM_SELECTION_CONTEXT, selection);
 </script>
 
 <svelte:window
-    onkeydown={e => pan.syncModifierKeys(e)}
-    onkeyup={e => pan.syncModifierKeys(e)}
-    onblur={() => pan.clearModifiers()}
+    onkeydown={syncHeldModifiers}
+    onkeyup={syncHeldModifiers}
+    onblur={clearHeldModifiers}
 />
 
 <div
     bind:this={containerEl}
-    class={`relative h-full w-full ${pan.panningActive ? "ctrl-panning" : ""}`}
+    class="diagram-canvas relative h-full w-full"
+    class:ctrl-panning={pan.panningActive}
+    class:box-selecting={boxSelecting}
 >
     <SvelteFlow
         bind:nodes
         bind:edges
         {nodeTypes}
         {edgeTypes}
-        nodesDraggable={!isWorkspaceReadOnly && !pan.shiftHeld && !pan.ctrlHeld}
+        nodesDraggable={!isWorkspaceReadOnly &&
+            !heldModifiers.shiftKey &&
+            !heldModifiers.ctrlKey &&
+            !heldModifiers.metaKey}
         fitView
         elementsSelectable={true}
         nodesFocusable={false}
@@ -598,6 +628,7 @@
         }}
         onpaneclick={() => {
             contextMenus.close();
+            propertySelection.clear();
         }}
         onpanecontextmenu={e => contextMenus.handlePaneContextMenu(e)}
         onedgecontextmenu={e => contextMenus.handleEdgeContextMenu(e)}
@@ -643,6 +674,7 @@
         connectionMode={"loose"}
         multiSelectionKey={"Shift"}
         deleteKeyCode={null}
+        zoomOnDoubleClick={false}
         minZoom={0.1}
         maxZoom={5}
     >
@@ -672,9 +704,15 @@
         nodeOrder={nodeOrderCtrl.nodeOrder}
         nodeCount={classNodes.length}
         onClose={() => contextMenus.close()}
+        onOpenClass={openClassFromMenu}
         onMoveClass={e => nodeOrderCtrl.moveClass(e)}
         onSetLayer={e => nodeOrderCtrl.setLayer(e)}
         onPersistLayer={e => nodeOrderCtrl.persistLayer(e)}
+    />
+    <SvelteFlowPropertyContextMenu
+        request={propertyContextMenu.request}
+        readOnly={isWorkspaceReadOnly}
+        onClose={() => propertyContextMenu.close()}
     />
 </div>
 
@@ -684,9 +722,20 @@
         display: none;
     }
 
-    .ctrl-panning :global(.svelte-flow__pane),
-    .ctrl-panning :global(.svelte-flow__node) {
+    .diagram-canvas :global(.svelte-flow__pane.selection) {
+        cursor: default;
+    }
+
+    .diagram-canvas.ctrl-panning :global(.svelte-flow__pane),
+    .diagram-canvas.ctrl-panning :global(.svelte-flow__node),
+    .diagram-canvas.ctrl-panning :global(.svelte-flow__node *) {
         cursor: grabbing;
+    }
+
+    .diagram-canvas.box-selecting :global(.svelte-flow__pane),
+    .diagram-canvas.box-selecting :global(.svelte-flow__node),
+    .diagram-canvas.box-selecting :global(.svelte-flow__node *) {
+        cursor: crosshair;
     }
 
     :global(.svelte-flow__selection) {

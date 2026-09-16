@@ -42,7 +42,7 @@ const SOURCE_ANCHOR = "SOURCE";
  * The kinds of label an association edge carries at each of its ends, named after the diagram
  * object styles they are stored under.
  */
-const MULTIPLICITY_KIND = "multiplicity";
+export const MULTIPLICITY_KIND = "multiplicity";
 const ASSOCIATION_LABEL_KIND = "associationLabel";
 
 export function labelNodeId(label) {
@@ -69,6 +69,8 @@ function anchorClassId(edge, label) {
  * stored offset relative to its class, so it follows the class but neither the edge routing nor
  * the anchor point wandering along the class border. Labels without a stored offset fall back to
  * their default placement next to the anchor point.
+ *
+ * A label belongs to the class at the other end of the edge than the one it is anchored to.
  *
  * @param nodes the current nodes, used for the class positions and the measured label sizes
  * @param edges the current edges, carrying the labels of both of their ends
@@ -117,9 +119,11 @@ export function buildLabelNodes(
                 buildLabelNode(
                     label,
                     atSource ? source : target,
+                    atSource ? target : source,
                     atSource ? placements.source : placements.target,
                     offsetOverrides,
                     labelSizes,
+                    edge.data?.graphUri ?? null,
                 ),
             );
         }
@@ -171,9 +175,11 @@ export function effectiveOffset(label, offsetOverrides) {
 function buildLabelNode(
     label,
     anchorClass,
+    ownerClass,
     placement,
     offsetOverrides,
     labelSizes,
+    graphUri,
 ) {
     const id = labelNodeId(label);
     const offset = effectiveOffset(label, offsetOverrides);
@@ -199,9 +205,12 @@ function buildLabelNode(
         data: {
             text: label.text,
             identifiedObjectUUID: label.identifiedObjectUUID,
+            associationEndUUID: label.associationEndUUID,
             kind: label.kind,
             anchorClassId: anchorClass.id,
+            ownerClassId: ownerClass.id,
             anchorPoint: placement.anchor,
+            graphUri,
         },
     };
 }
