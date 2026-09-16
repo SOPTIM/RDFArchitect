@@ -31,6 +31,10 @@ import {
     toggleSelections,
 } from "$lib/sharedState.svelte.js";
 
+import { propertySelection } from "./propertyInteraction.svelte.js";
+
+export const DIAGRAM_SELECTION_CONTEXT = "diagramSelection";
+
 export class DiagramSelectionController {
     #getNodes;
     #setNodes;
@@ -61,6 +65,18 @@ export class DiagramSelectionController {
 
     notifyPointerDown() {
         this.#suppressClickOpen = false;
+    }
+
+    // SvelteFlow drags every selected node along with a label and clears that selection too late,
+    // so it is taken off the nodes while a label is pressed and put back on release.
+    notifyLabelPress() {
+        this.#nodeDragActive = true;
+        this.#applyNodeSelection(() => false);
+    }
+
+    notifyLabelRelease() {
+        this.#nodeDragActive = false;
+        this.reflectSelectionToNodes();
     }
 
     #selectionGraphUri(node) {
@@ -151,6 +167,7 @@ export class DiagramSelectionController {
 
     handleNodeClick(nodeClickEvent) {
         this.#contextMenus.close();
+        propertySelection.clear();
         if (this.#suppressClickOpen) {
             this.#suppressClickOpen = false;
             return;
@@ -158,9 +175,7 @@ export class DiagramSelectionController {
         if (nodeClickEvent.node.type !== "class") {
             return;
         }
-        const id = nodeClickEvent.node.id;
         const event = nodeClickEvent.event;
-        const graphUri = this.#selectionGraphUri(nodeClickEvent.node);
 
         if (event?.ctrlKey || event?.metaKey) {
             const entry = this.buildEntry(nodeClickEvent.node);
@@ -174,15 +189,6 @@ export class DiagramSelectionController {
             return;
         }
 
-        const diagramType = editorState.selectedDiagram.getProperty("type");
-        const isMergedContext =
-            isMergedDiagramType(diagramType) ||
-            (SINGLE_SCHEMA_DIAGRAM_TYPES.includes(diagramType) &&
-                renderOptions.get("includePropertiesFromOtherProfiles"));
-        const classType = isMergedContext
-            ? ClassType.MERGED_CLASS
-            : ClassType.SINGLE_CLASS;
-
         if (event?.shiftKey) {
             const entry = this.buildEntry(nodeClickEvent.node);
             multiSelectState.setSelection(
@@ -194,7 +200,16 @@ export class DiagramSelectionController {
             return;
         }
 
-        multiSelectState.setSelection([this.buildEntry(nodeClickEvent.node)]);
+        this.openClass(nodeClickEvent.node);
+        event.stopPropagation();
+    }
+
+    openClass(node) {
+        const id = node.id;
+        const graphUri = this.#selectionGraphUri(node);
+        const classType = this.#classTypeForDiagram();
+
+        multiSelectState.setSelection([this.buildEntry(node)]);
         this.reflectSelectionToNodes();
 
         this.#nodeOrder.bringToFrontTemporarily(id);
@@ -212,21 +227,40 @@ export class DiagramSelectionController {
         } else {
             this.#routeClassEditor(graphUri, id, classType);
         }
+    }
 
-        event.stopPropagation();
+    #classTypeForDiagram() {
+        const diagramType = editorState.selectedDiagram.getProperty("type");
+        const isMergedContext =
+            isMergedDiagramType(diagramType) ||
+            (SINGLE_SCHEMA_DIAGRAM_TYPES.includes(diagramType) &&
+                renderOptions.get("includePropertiesFromOtherProfiles"));
+        return isMergedContext
+            ? ClassType.MERGED_CLASS
+            : ClassType.SINGLE_CLASS;
+    }
+
+    hasClearableSelection() {
+        return (
+            multiSelectState.getSelected().length > 0 ||
+            !!propertySelection.current
+        );
     }
 
     escapeClearSelection = (...args) => {
         if (args.length > 0) {
             eventStack.removeEvent(this.escapeClearSelection);
             eventStack.executeNewestEvent(...args);
-            if (multiSelectState.getSelected().length > 0) {
+            if (this.hasClearableSelection()) {
                 eventStack.addEvent(this.escapeClearSelection);
             }
             return;
         }
-        const hadOpenClass = !!editorState.selectedClass.getProperty("id");
         this.#contextMenus.close();
+        if (propertySelection.clear()) {
+            return;
+        }
+        const hadOpenClass = !!editorState.selectedClass.getProperty("id");
         this.#pan.resetBox();
         multiSelectState.clear();
         this.reflectSelectionToNodes();

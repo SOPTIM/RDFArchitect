@@ -41,6 +41,8 @@ Edit the ontology metadata block (title, version, conformsTo, keyword, license, 
 
 Diagrams render classes with full attribute and association detail, inheritance arrows, stereotypes, and cardinalities. SvelteFlow is the default renderer (pan/zoom/auto-layout); Mermaid is available as an alternative, for example for embedding in Markdown-based documentation.
 
+In the SvelteFlow diagram, classes, attributes, associations, enum entries, and the multiplicities and role names on association edges open their editors directly, without a detour through the class editor.
+
 ### Visualise SHACL constraints on the class you are looking at
 
 Every attribute and association row in the class editor has a SHACL icon that opens exactly the constraints that target that property on that class. No need to grep through a SHACL file.

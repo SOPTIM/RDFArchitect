@@ -34,7 +34,7 @@
     import ClassEntry from "./ClassEntry.svelte";
     import SchemaColorsDialog from "./SchemaColorsDialog.svelte";
 
-    let { workspaceNavEntry, crossProfileID } = $props();
+    let { workspaceNavEntry, crossProfileID, readonly = false } = $props();
 
     let showColorDialog = $state(false);
     let isOpen = $state(false);
@@ -122,7 +122,7 @@
                 }}
                 classType={ClassType.MERGED_CLASS}
                 diagramType={DiagramType.CROSS_PROFILE}
-                readonly={true}
+                {readonly}
                 level={2}
             />
         {/each}

@@ -597,6 +597,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             }
             target.add(
                     AttributeDTO.builder()
+                            .uuid(cimAttribute.getUuid())
                             .label(cimAttribute.getLabel().getValue())
                             .type(cimAttribute.getDataType().getLabel().getValue())
                             .multiplicity(extractMultiplicityString(cimAttribute.getMultiplicity()))
@@ -630,6 +631,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             var label = cimAssociation.getLabelOrNull();
             target.add(
                     AssociationDTO.builder()
+                            .uuid(cimAssociation.getUuid())
                             .label(label == null ? null : label.getValue())
                             .type(cimAssociation.getRange().getLabel().getValue())
                             .multiplicity(
@@ -685,6 +687,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         for (var cimEnumEntry : cimClass.getEnumEntries()) {
             target.add(
                     EnumEntryDTO.builder()
+                            .uuid(cimEnumEntry.getUuid())
                             .label(cimEnumEntry.getLabel().getValue())
                             .graphUri(graphUri)
                             .graphKeyword(keyword)
@@ -820,6 +823,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         var label = association.getLabelOrNull();
         return new SvelteFlowLabels.AssociationEnd(
                 uuid,
+                association.getUuid(),
                 extractMultiplicityString(association.getMultiplicity()),
                 label == null ? null : label.getValue());
     }
