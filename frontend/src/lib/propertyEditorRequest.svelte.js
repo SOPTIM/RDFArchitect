@@ -15,22 +15,33 @@
  *
  */
 
-package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
+export const PropertyKind = {
+    ATTRIBUTE: "attribute",
+    ASSOCIATION: "association",
+    ENUM_ENTRY: "enumEntry",
+};
 
-import lombok.Builder;
-import lombok.Data;
+export const FocusField = {
+    LABEL: "label",
+    MULTIPLICITY: "multiplicity",
+};
 
-import java.util.UUID;
+export const propertyEditorRequest = createPropertyEditorRequest();
 
-/** DTO representing an enum entry used in the SvelteFlow node data DTO. */
-@Data
-@Builder
-public class EnumEntryDTO {
+function createPropertyEditorRequest() {
+    let request = $state(null);
 
-    private UUID uuid;
+    return {
+        get current() {
+            return request;
+        },
 
-    private String label;
-    private String graphUri;
-    private String graphKeyword;
-    private String color;
+        open(target) {
+            request = { ...target };
+        },
+
+        close() {
+            request = null;
+        },
+    };
 }
