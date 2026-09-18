@@ -33,7 +33,7 @@ class UpdatePackageLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
     @BeforeAll
     static void setUpEnvironment() {
-        service = new UpdatePackageLayoutService(databasePort, packageMapper, converter);
+        service = new UpdatePackageLayoutService(databasePort, packageMapper);
     }
 
     @Test

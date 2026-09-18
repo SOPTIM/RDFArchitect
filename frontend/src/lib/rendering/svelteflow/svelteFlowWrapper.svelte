@@ -489,9 +489,48 @@
         if (movedLabels.length > 0) {
             handleLabelMove(movedLabels);
         }
-        updateNodePositions(
-            movedNodes.filter(node => node.type !== LABEL_NODE_TYPE),
+        const movedClasses = movedNodes.filter(
+            node => node.type !== LABEL_NODE_TYPE,
         );
+        updateNodePositions(movedClasses);
+        if (movedClasses.length > 0) {
+            persistManuallyPlacedLabelsOf(movedClasses);
+        }
+    }
+
+    function persistManuallyPlacedLabelsOf(movedClassNodes) {
+        const movedClassIds = new Set(movedClassNodes.map(node => node.id));
+        const rebuilt = buildLabelNodes(
+            nodes,
+            edges,
+            labelPositions,
+            labelPlacementCache,
+        );
+        const rebuiltById = new Map(rebuilt.map(node => [node.id, node]));
+
+        const affectedLabels = [];
+        for (const { label, anchorClassId } of collectLabels(edges)) {
+            if (
+                !movedClassIds.has(anchorClassId) ||
+                !hasManualPlacement(label, labelPositions)
+            ) {
+                continue;
+            }
+            const labelNode = rebuiltById.get(labelNodeId(label));
+            if (!labelNode) {
+                continue;
+            }
+            affectedLabels.push(
+                toLabelPositionDTO(
+                    label.identifiedObjectUUID,
+                    label.kind,
+                    labelNode.position,
+                ),
+            );
+        }
+        if (affectedLabels.length > 0) {
+            persistLabelPositions(affectedLabels);
+        }
     }
 
     function updateNodePositions(movedNodes) {
