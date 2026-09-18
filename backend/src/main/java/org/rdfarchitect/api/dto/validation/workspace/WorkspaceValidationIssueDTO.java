@@ -15,30 +15,30 @@
  *
  */
 
-package org.rdfarchitect.models.cim.data.dto.facade;
+package org.rdfarchitect.api.dto.validation.workspace;
 
-import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
-import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import lombok.Builder;
+import lombok.Data;
 
-import java.util.UUID;
+import java.util.List;
 
-public interface ICIMResource {
+@Data
+@Builder
+public class WorkspaceValidationIssueDTO {
 
-    UUID getUuid();
+    public enum Severity {
+        ERROR,
+        WARNING,
+        INFO
+    }
 
-    String getGraphUri();
+    private String ruleId;
 
-    URI getUri();
+    private Severity severity;
 
-    RDFSLabel getLabel();
+    private String resourceUri;
 
-    /**
-     * The label of this resource, unlike {@link #getLabel()} without failing when there is none.
-     *
-     * @return the label, or null when the model holds none
-     */
-    RDFSLabel getLabelOrNull();
+    private String message;
 
-    RDFSComment getComment();
+    private List<IssueOccurrenceDTO> occurrences;
 }

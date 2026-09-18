@@ -15,30 +15,18 @@
  *
  */
 
-package org.rdfarchitect.models.cim.data.dto.facade;
+package org.rdfarchitect.api.dto.validation.workspace;
 
-import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
-import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import lombok.Builder;
+import lombok.Data;
 
-import java.util.UUID;
+import java.util.List;
 
-public interface ICIMResource {
+@Data
+@Builder
+public class WorkspaceValidationReportDTO {
 
-    UUID getUuid();
+    private boolean valid;
 
-    String getGraphUri();
-
-    URI getUri();
-
-    RDFSLabel getLabel();
-
-    /**
-     * The label of this resource, unlike {@link #getLabel()} without failing when there is none.
-     *
-     * @return the label, or null when the model holds none
-     */
-    RDFSLabel getLabelOrNull();
-
-    RDFSComment getComment();
+    private List<WorkspaceValidationIssueDTO> issues;
 }

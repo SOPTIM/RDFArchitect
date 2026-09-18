@@ -319,8 +319,19 @@ export const copyState = {
  * Stores validation results to display on /validate.
  * @type {{ result: StateValuePair<any | null> }}
  */
+export const ValidationKind = Object.freeze({
+    SCHEMA: "schema",
+    WORKSPACE: "workspace",
+});
+
 export const validationState = {
     result: new StateValuePair(null),
+    context: new StateValuePair({
+        kind: ValidationKind.SCHEMA,
+        workspace: null,
+        graph: null,
+        schemaLabel: null,
+    }),
 };
 
 export const multiSelectState = new MultiSelectState();

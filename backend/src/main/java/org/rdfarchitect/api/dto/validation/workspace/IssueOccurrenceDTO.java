@@ -15,30 +15,26 @@
  *
  */
 
-package org.rdfarchitect.models.cim.data.dto.facade;
+package org.rdfarchitect.api.dto.validation.workspace;
 
-import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
-import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import lombok.Builder;
+import lombok.Data;
 
 import java.util.UUID;
 
-public interface ICIMResource {
+@Data
+@Builder
+public class IssueOccurrenceDTO {
 
-    UUID getUuid();
+    private String graphUri;
 
-    String getGraphUri();
+    private String keyword;
 
-    URI getUri();
+    private UUID uuid;
 
-    RDFSLabel getLabel();
+    private UUID classUUID;
 
-    /**
-     * The label of this resource, unlike {@link #getLabel()} without failing when there is none.
-     *
-     * @return the label, or null when the model holds none
-     */
-    RDFSLabel getLabelOrNull();
+    private UUID packageUUID;
 
-    RDFSComment getComment();
+    private String value;
 }

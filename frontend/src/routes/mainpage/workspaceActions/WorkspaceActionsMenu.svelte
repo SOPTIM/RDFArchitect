@@ -19,6 +19,7 @@
     import {
         faDiagramProject,
         faFileImport,
+        faListCheck,
         faLock,
         faPen,
         faPenToSquare,
@@ -28,6 +29,7 @@
         faTrash,
     } from "@fortawesome/free-solid-svg-icons";
 
+    import { validateWorkspaceAndShowResult } from "$lib/actions/validationActions.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
@@ -104,6 +106,12 @@
         altText="Ctrl+Shift+S"
     >
         Share Snapshot
+    </ContextMenu.Item.Button>
+    <ContextMenu.Item.Button
+        onSelect={() => validateWorkspaceAndShowResult(workspaceName)}
+        faIcon={faListCheck}
+    >
+        Validate Workspace
     </ContextMenu.Item.Button>
     {#if readonly}
         <ContextMenu.Item.Button

@@ -15,30 +15,17 @@
  *
  */
 
-package org.rdfarchitect.models.cim.data.dto.facade;
+package org.rdfarchitect.services.validation.workspace.index;
 
-import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
-import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.services.rendering.CIMProfileModel;
 
 import java.util.UUID;
 
-public interface ICIMResource {
-
-    UUID getUuid();
-
-    String getGraphUri();
-
-    URI getUri();
-
-    RDFSLabel getLabel();
-
-    /**
-     * The label of this resource, unlike {@link #getLabel()} without failing when there is none.
-     *
-     * @return the label, or null when the model holds none
-     */
-    RDFSLabel getLabelOrNull();
-
-    RDFSComment getComment();
-}
+/**
+ * A resource that could not be read while indexing a schema.
+ *
+ * @param profile the schema it was found in
+ * @param uuid the resource, or null when the whole schema could not be read
+ * @param message what went wrong
+ */
+public record ReadFailure(CIMProfileModel profile, UUID uuid, String message) {}
