@@ -24,7 +24,7 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationSeverity;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 
@@ -48,14 +48,14 @@ public class PropertyTest extends SchemaValidationTestBase {
         assertThat(
                         hasIssue(
                                 report,
-                                SchemaValidationIssueDTO.Severity.ERROR,
+                                ValidationSeverity.ERROR,
                                 NS + "ClassA.attr",
                                 "missing rdfs:domain"))
                 .isTrue();
         assertThat(
                         hasIssue(
                                 report,
-                                SchemaValidationIssueDTO.Severity.ERROR,
+                                ValidationSeverity.ERROR,
                                 NS + "ClassA.attr",
                                 "missing cims:multiplicity"))
                 .isTrue();
@@ -79,7 +79,7 @@ public class PropertyTest extends SchemaValidationTestBase {
         assertThat(
                         hasIssue(
                                 report,
-                                SchemaValidationIssueDTO.Severity.ERROR,
+                                ValidationSeverity.ERROR,
                                 NS + "ClassA.attr",
                                 "Property is missing rdfs:label"))
                 .isTrue();
@@ -103,7 +103,7 @@ public class PropertyTest extends SchemaValidationTestBase {
         assertThat(
                         hasIssue(
                                 report,
-                                SchemaValidationIssueDTO.Severity.WARNING,
+                                ValidationSeverity.WARNING,
                                 NS + "ClassA.orphan",
                                 "neither an attribute nor an association"))
                 .isTrue();

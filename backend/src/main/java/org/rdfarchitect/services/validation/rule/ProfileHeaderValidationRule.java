@@ -27,8 +27,8 @@ import org.rdfarchitect.api.dto.ontology.OntologyDTO;
 import org.rdfarchitect.api.dto.ontology.OntologyEntry;
 import org.rdfarchitect.api.dto.ontology.OntologyField;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO.Severity;
+import org.rdfarchitect.api.dto.validation.ValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationSeverity;
 import org.rdfarchitect.models.cim.ontology.KnownOntologyFields;
 import org.rdfarchitect.models.cim.ontology.OntologyFactory;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
@@ -52,8 +52,7 @@ public class ProfileHeaderValidationRule implements ValidationRule {
     private static final String VERSION_SUFFIX = "Version";
 
     @Override
-    public void validate(
-            Model model, List<SchemaValidationIssueDTO> issues, CGMESVersion cgmesVersion) {
+    public void validate(Model model, List<ValidationIssueDTO> issues, CGMESVersion cgmesVersion) {
         if (cgmesVersion == CGMESVersion.V3_0) {
             validate3_0ProfileHeader(model, issues);
         } else if (cgmesVersion == CGMESVersion.V2_4_15) {
@@ -61,7 +60,7 @@ public class ProfileHeaderValidationRule implements ValidationRule {
         }
     }
 
-    private void validate3_0ProfileHeader(Model model, List<SchemaValidationIssueDTO> issues) {
+    private void validate3_0ProfileHeader(Model model, List<ValidationIssueDTO> issues) {
         var ontologyDTO = OntologyFactory.createOntologyDTO(model);
 
         if (ontologyDoesNotExists(issues, ontologyDTO)) {
@@ -77,13 +76,12 @@ public class ProfileHeaderValidationRule implements ValidationRule {
         validateOptionalFields(issues, presentIris, ontologyDTO);
     }
 
-    private static void validate2_4_15ProfileHeader(
-            Model model, List<SchemaValidationIssueDTO> issues) {
+    private static void validate2_4_15ProfileHeader(Model model, List<ValidationIssueDTO> issues) {
         var graph = model.getGraph();
         if (!isCim16HeaderProfile(graph) && !hasCim16VersionHeader(graph)) {
             issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.WARNING)
+                    ValidationIssueDTO.builder()
+                            .severity(ValidationSeverity.WARNING)
                             .message(
                                     "Profile header is missing: no Package_FileHeaderProfile"
                                             + " or ENTSO-E profile version header found.")
@@ -92,11 +90,11 @@ public class ProfileHeaderValidationRule implements ValidationRule {
     }
 
     private boolean ontologyDoesNotExists(
-            List<SchemaValidationIssueDTO> issues, OntologyDTO ontologyDTO) {
+            List<ValidationIssueDTO> issues, OntologyDTO ontologyDTO) {
         if (ontologyDTO == null || ontologyDTO.getNamespace() == null) {
             issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.WARNING)
+                    ValidationIssueDTO.builder()
+                            .severity(ValidationSeverity.WARNING)
                             .message("Profile header is missing: no owl:Ontology entry found.")
                             .build());
             return true;
@@ -105,14 +103,12 @@ public class ProfileHeaderValidationRule implements ValidationRule {
     }
 
     private void validateRequiredFields(
-            List<SchemaValidationIssueDTO> issues,
-            Set<String> presentIris,
-            OntologyDTO ontologyDTO) {
+            List<ValidationIssueDTO> issues, Set<String> presentIris, OntologyDTO ontologyDTO) {
         for (var requiredField : REQUIRED_ONTOLOGY_FIELDS) {
             if (!presentIris.contains(requiredField.getIri())) {
                 issues.add(
-                        SchemaValidationIssueDTO.builder()
-                                .severity(Severity.WARNING)
+                        ValidationIssueDTO.builder()
+                                .severity(ValidationSeverity.WARNING)
                                 .resourceUri(ontologyDTO.getNamespace() + "Ontology")
                                 .message(
                                         "Required profile header field is missing: <"
@@ -124,9 +120,7 @@ public class ProfileHeaderValidationRule implements ValidationRule {
     }
 
     private void validateOptionalFields(
-            List<SchemaValidationIssueDTO> issues,
-            Set<String> presentIris,
-            OntologyDTO ontologyDTO) {
+            List<ValidationIssueDTO> issues, Set<String> presentIris, OntologyDTO ontologyDTO) {
         var allKnownIris =
                 KnownOntologyFields.getAllFields().stream()
                         .map(OntologyField::getIri)
@@ -136,8 +130,8 @@ public class ProfileHeaderValidationRule implements ValidationRule {
                     && REQUIRED_ONTOLOGY_FIELDS.stream()
                             .noneMatch(f -> f.getIri().equals(knownIri))) {
                 issues.add(
-                        SchemaValidationIssueDTO.builder()
-                                .severity(Severity.INFO)
+                        ValidationIssueDTO.builder()
+                                .severity(ValidationSeverity.INFO)
                                 .resourceUri(ontologyDTO.getNamespace() + "Ontology")
                                 .message(
                                         "Optional profile header field is not set: <"

@@ -17,22 +17,8 @@
 
 package org.rdfarchitect.api.dto.validation;
 
-import lombok.Builder;
-import lombok.Data;
-
-@Data
-@Builder
-public class SchemaValidationIssueDTO {
-
-    public enum Severity {
-        ERROR,
-        WARNING,
-        INFO
-    }
-
-    private String resourceUri;
-
-    private String message;
-
-    private Severity severity;
+public enum ValidationSeverity {
+    ERROR,
+    WARNING,
+    INFO
 }
