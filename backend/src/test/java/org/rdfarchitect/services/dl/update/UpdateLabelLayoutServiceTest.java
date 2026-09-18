@@ -150,9 +150,23 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
         service.updateLabelPositions(
                 graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-1F, -2F), second));
 
-        assertThat(storedPositions()).hasSize(2);
-        assertThat(model().listSubjectsWithProperty(RDF.type, DL.diagramObjectStyleType).toList())
-                .hasSize(1);
+        assertThat(
+                        model().containsResource(
+                                        ResourceFactory.createResource(
+                                                DiagramObjectStyle.MULTIPLICITY
+                                                        .getMRID()
+                                                        .getFullMRID())))
+                .isTrue();
+        assertThat(
+                        model().listStatements(
+                                        null,
+                                        DL.belongsToDiagramObjectStyle,
+                                        ResourceFactory.createResource(
+                                                DiagramObjectStyle.MULTIPLICITY
+                                                        .getMRID()
+                                                        .getFullMRID()))
+                                .toList())
+                .hasSize(2);
     }
 
     @Test
