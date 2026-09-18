@@ -988,19 +988,11 @@
           "kind" : {
             "type" : "string"
           },
-          "xOffset" : {
+           "x" : {
             "format" : "float",
             "type" : "number"
           },
-          "xoffset" : {
-            "format" : "float",
-            "type" : "number"
-          },
-          "yOffset" : {
-            "format" : "float",
-            "type" : "number"
-          },
-          "yoffset" : {
+           "y" : {
             "format" : "float",
             "type" : "number"
           }
@@ -5916,7 +5908,7 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}/labels" : {
       "put" : {
-        "description" : "Updates the offsets for all the labels provided in the request body. Labels without an offset are reset to their default placement.",
+        "description" : "Updates the positions for all the labels provided in the request body. Labels without a position are reset to their default placement.",
         "operationId" : "updateLabelPositions",
         "parameters" : [
           {
@@ -7856,7 +7848,7 @@
     },
     "/api/datasets/{datasetName}/layout/{diagramUUID}/labels" : {
       "put" : {
-        "description" : "Updates the offsets for all the labels provided in the request body. Labels without an offset are reset to their default placement.",
+        "description" : "Updates the positions for all the labels provided in the request body. Labels without a position are reset to their default placement.",
         "operationId" : "updateDatasetLabelPositions",
         "parameters" : [
           {

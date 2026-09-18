@@ -27,12 +27,9 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.dl.data.dto.Diagram;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
-import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
-import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.rdfarchitect.services.dl.update.ReplaceDiagramUseCase;
-import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -46,7 +43,6 @@ public class UpdatePackageLayoutService
 
     private final DatabasePort databasePort;
     private final PackageMapper packageMapper;
-    private final GraphToCIMCollectionConverterUseCase converter;
 
     @Override
     public void createPackageLayoutData(
@@ -64,29 +60,9 @@ public class UpdatePackageLayoutService
 
     @Override
     public void deletePackageLayoutData(GraphIdentifier graphIdentifier, UUID packageUUID) {
-        var packageGraphFilter = new GraphFilter(false);
-        packageGraphFilter.setIncludeInheritance(true);
-        packageGraphFilter.setIncludeAssociations(true);
-        packageGraphFilter.setIncludeRelationsToExternalPackages(true);
-        packageGraphFilter.setPackageUUID(packageUUID.toString());
-        var classesCIMCollection = converter.convert(graphIdentifier, packageGraphFilter);
-
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
-
-            for (var cimClassOrEnum : classesCIMCollection.getClassesAndEnums()) {
-                var diagramObject =
-                        DLObjectFetcher.fetchDiagramDOForClass(
-                                diagramLayoutModel, packageUUID, cimClassOrEnum.getUuid());
-                DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
-            }
-
-            for (var label :
-                    DLObjectFetcher.fetchDiagramLabelDOs(diagramLayoutModel, packageUUID)) {
-                DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, label.getMRID());
-            }
-
-            DLUpdates.deleteDiagram(diagramLayoutModel, new MRID(packageUUID));
+            DLUpdates.deleteDiagramCascade(diagramLayoutModel, new MRID(packageUUID));
             ctx.commit();
         }
     }

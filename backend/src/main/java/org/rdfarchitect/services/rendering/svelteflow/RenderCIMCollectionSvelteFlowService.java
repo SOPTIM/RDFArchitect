@@ -337,11 +337,16 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         var useToAssociation = getAssociationUsedValue(from.getAssociationUsed());
         var useFromAssociation = getAssociationUsedValue(to.getAssociationUsed());
 
+        var labels =
+                SvelteFlowLabels.forAssociation(
+                        associationEnd(to), associationEnd(from), layoutData);
+
         var edgeDataDTO =
                 EdgeDataDTO.builder()
-                        .labels(
-                                SvelteFlowLabels.forAssociation(
-                                        associationEnd(to), associationEnd(from), layoutData))
+                        .sourceMultiplicityLabel(labels.sourceMultiplicityLabel())
+                        .targetMultiplicityLabel(labels.targetMultiplicityLabel())
+                        .sourceAssociationLabel(labels.sourceAssociationLabel())
+                        .targetAssociationLabel(labels.targetAssociationLabel())
                         .useToAssociation(useToAssociation)
                         .useFromAssociation(useFromAssociation)
                         .build();

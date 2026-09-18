@@ -23,8 +23,6 @@ import static org.mockito.Mockito.*;
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
-import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeLabelDTO;
-import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeLabelDTO.Anchor;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EnumEntryDTO;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
@@ -191,16 +189,14 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
 
         // Assert
         var associationEdgeDTO = result.getEdges().getFirst();
+        var data = associationEdgeDTO.getData();
         assertThat(result.getEdges()).hasSize(1);
-        assertThat(associationEdgeDTO.getData().getLabels())
-                .extracting(EdgeLabelDTO::getAnchor, EdgeLabelDTO::getKind, EdgeLabelDTO::getText)
-                .containsExactly(
-                        tuple(Anchor.SOURCE, "multiplicity", "1...1"),
-                        tuple(Anchor.SOURCE, "associationLabel", "class2.class1"),
-                        tuple(Anchor.TARGET, "multiplicity", "0...n"),
-                        tuple(Anchor.TARGET, "associationLabel", "class1.class2"));
-        assertThat(associationEdgeDTO.getData().isUseFromAssociation()).isFalse();
-        assertThat(associationEdgeDTO.getData().isUseToAssociation()).isTrue();
+        assertThat(data.getSourceMultiplicityLabel().getText()).isEqualTo("1...1");
+        assertThat(data.getSourceAssociationLabel().getText()).isEqualTo("class2.class1");
+        assertThat(data.getTargetMultiplicityLabel().getText()).isEqualTo("0...n");
+        assertThat(data.getTargetAssociationLabel().getText()).isEqualTo("class1.class2");
+        assertThat(data.isUseFromAssociation()).isFalse();
+        assertThat(data.isUseToAssociation()).isTrue();
     }
 
     @Test
