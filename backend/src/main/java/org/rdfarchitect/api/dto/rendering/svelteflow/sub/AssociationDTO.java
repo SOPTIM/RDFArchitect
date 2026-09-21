@@ -37,7 +37,7 @@ public class AssociationDTO {
     private String label;
 
     /** The label of the class this association end points to. */
-    private String type;
+    private String rangeLabel;
 
     private String multiplicity;
     private String graphUri;

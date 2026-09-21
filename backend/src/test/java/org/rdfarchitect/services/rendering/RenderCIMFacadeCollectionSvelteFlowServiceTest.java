@@ -478,11 +478,11 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         assertThat(nodeByLabel(result, "Child").getData().getAssociations())
                 .extracting(
                         AssociationDTO::getLabel,
-                        AssociationDTO::getType,
+                        AssociationDTO::getRangeLabel,
                         AssociationDTO::getMultiplicity)
                 .containsExactly(tuple("Terminals", "Terminal", "0..n"));
         assertThat(nodeByLabel(result, "Terminal").getData().getAssociations())
-                .extracting(AssociationDTO::getLabel, AssociationDTO::getType)
+                .extracting(AssociationDTO::getLabel, AssociationDTO::getRangeLabel)
                 .containsExactly(tuple("Child", "Child"));
     }
 
@@ -514,7 +514,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                 .satisfies(
                         association -> {
                             assertThat(association.getLabel()).isNull();
-                            assertThat(association.getType()).isEqualTo("Terminal");
+                            assertThat(association.getRangeLabel()).isEqualTo("Terminal");
                         });
     }
 

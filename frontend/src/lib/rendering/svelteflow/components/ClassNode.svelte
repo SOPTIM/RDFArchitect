@@ -153,10 +153,11 @@
         if (typeof property === "string") {
             return property;
         }
-        if (!property.type) {
+        const type = property.type ?? property.rangeLabel;
+        if (!type) {
             return property.label;
         }
-        const typed = `${property.type} \u00a0[${property.multiplicity}]`;
+        const typed = `${type} \u00a0[${property.multiplicity}]`;
         return property.label ? `${property.label}: ${typed}` : typed;
     }
 

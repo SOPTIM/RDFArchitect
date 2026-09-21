@@ -633,7 +633,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     AssociationDTO.builder()
                             .uuid(cimAssociation.getUuid())
                             .label(label == null ? null : label.getValue())
-                            .type(cimAssociation.getRange().getLabel().getValue())
+                            .rangeLabel(cimAssociation.getRange().getLabel().getValue())
                             .multiplicity(
                                     extractMultiplicityString(cimAssociation.getMultiplicity()))
                             .graphUri(graphUri)
