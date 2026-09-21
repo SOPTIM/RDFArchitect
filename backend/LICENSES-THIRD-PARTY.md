@@ -50,7 +50,7 @@
 
 ### OpenCGMES - IEC61970-552 CIMXML
 - **Package:** de.soptim.opencgmes
-- **Version:** 1.1.0
+- **Version:** 1.3.0
 - **License:** Apache License 2.0
 - **URL:** [https://github.com/SOPTIM/OpenCGMES](https://github.com/SOPTIM/OpenCGMES)
 
@@ -92,7 +92,7 @@
 
 ### springdoc-openapi-starter-webmvc-ui
 - **Package:** org.springdoc
-- **Version:** 3.1.0
+- **Version:** 3.1.1
 - **License:** Apache License 2.0
 - **URL:** [https://springdoc.org/springdoc-openapi-starter-webmvc-ui/](https://springdoc.org/springdoc-openapi-starter-webmvc-ui/)
 
@@ -110,7 +110,7 @@
 
 ### Project Lombok
 - **Package:** org.projectlombok
-- **Version:** 1.18.46
+- **Version:** 1.18.48
 - **License:** MIT License
 - **URL:** [https://projectlombok.org](https://projectlombok.org)
 
