@@ -22,14 +22,24 @@ import lombok.Data;
 
 import java.util.UUID;
 
-/** DTO representing an enum entry used in the SvelteFlow node data DTO. */
+/**
+ * DTO representing an association end rendered as text inside a SvelteFlow class node. The
+ * association is still drawn as an edge independently of this.
+ */
 @Data
 @Builder
-public class EnumEntryDTO {
+public class AssociationDTO {
 
+    /** The UUID of the association end. */
     private UUID uuid;
 
+    /** The role name of this association end, or null when the model holds none. */
     private String label;
+
+    /** The label of the class this association end points to. */
+    private String rangeLabel;
+
+    private String multiplicity;
     private String graphUri;
     private String graphKeyword;
     private String color;

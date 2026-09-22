@@ -44,11 +44,13 @@ public class SvelteFlowLabels {
      * association end are drawn at the class its association points to, so the end at the source
      * class carries the association leaving the target class and vice versa.
      *
-     * @param association the UUID of the association end
+     * @param association the UUID the labels of this end are stored under
+     * @param endUuid the UUID of the association end itself
      * @param multiplicity the multiplicity text, may be null
      * @param label the label of the association end, may be null
      */
-    public record AssociationEnd(UUID association, String multiplicity, String label) {}
+    public record AssociationEnd(
+            UUID association, UUID endUuid, String multiplicity, String label) {}
 
     /**
      * Builds the labels of an association edge.
@@ -77,33 +79,30 @@ public class SvelteFlowLabels {
         addLabel(
                 labels,
                 anchor,
-                end.association(),
+                end,
                 DiagramObjectStyle.MULTIPLICITY,
                 end.multiplicity(),
                 layoutData);
         addLabel(
-                labels,
-                anchor,
-                end.association(),
-                DiagramObjectStyle.ASSOCIATION_LABEL,
-                end.label(),
-                layoutData);
+                labels, anchor, end, DiagramObjectStyle.ASSOCIATION_LABEL, end.label(), layoutData);
     }
 
     private void addLabel(
             List<EdgeLabelDTO> labels,
             Anchor anchor,
-            UUID association,
+            AssociationEnd end,
             DiagramObjectStyle style,
             String text,
             RenderingLayoutData layoutData) {
         if (text == null || text.isBlank()) {
             return;
         }
+        var association = end.association();
         labels.add(
                 EdgeLabelDTO.builder()
                         .anchor(anchor)
                         .identifiedObjectUUID(association)
+                        .associationEndUUID(end.endUuid())
                         .kind(style.getStyleName())
                         .text(text)
                         .offset(offsetFor(layoutData, new LabelKey(association, style)))

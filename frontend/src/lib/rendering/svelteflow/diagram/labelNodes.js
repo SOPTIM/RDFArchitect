@@ -42,7 +42,7 @@ const SOURCE_ANCHOR = "SOURCE";
  * The kinds of label an association edge carries at each of its ends, named after the diagram
  * object styles they are stored under.
  */
-const MULTIPLICITY_KIND = "multiplicity";
+export const MULTIPLICITY_KIND = "multiplicity";
 const ASSOCIATION_LABEL_KIND = "associationLabel";
 
 export function labelNodeId(label) {
@@ -70,18 +70,23 @@ function anchorClassId(edge, label) {
  * the anchor point wandering along the class border. Labels without a stored offset fall back to
  * their default placement next to the anchor point.
  *
+ * A label belongs to the class at the other end of the edge than the one it is anchored to.
+ *
  * @param nodes the current nodes, used for the class positions and the measured label sizes
  * @param edges the current edges, carrying the labels of both of their ends
  * @param offsetOverrides offsets of labels moved in this session, keyed by label node id; an entry
  *     holding null resets that label to its default placement
  * @param placementCache memoizes the edge-intersection geometry per class pair, keyed by node id,
  *     so dragging one class does not recompute the placement of every other edge in the diagram
+ * @param showAssociationLabels whether the role names of the association ends are drawn; their
+ *     multiplicities are drawn either way
  */
 export function buildLabelNodes(
     nodes,
     edges,
     offsetOverrides = new Map(),
     placementCache = new Map(),
+    showAssociationLabels = true,
 ) {
     const classNodes = new Map();
     const labelSizes = new Map();
@@ -103,14 +108,22 @@ export function buildLabelNodes(
 
         const placements = cachedEdgePlacements(source, target, placementCache);
         for (const label of edge.data?.labels ?? []) {
+            if (
+                !showAssociationLabels &&
+                label.kind === ASSOCIATION_LABEL_KIND
+            ) {
+                continue;
+            }
             const atSource = label.anchor === SOURCE_ANCHOR;
             labelNodes.push(
                 buildLabelNode(
                     label,
                     atSource ? source : target,
+                    atSource ? target : source,
                     atSource ? placements.source : placements.target,
                     offsetOverrides,
                     labelSizes,
+                    edge.data?.graphUri ?? null,
                 ),
             );
         }
@@ -162,9 +175,11 @@ export function effectiveOffset(label, offsetOverrides) {
 function buildLabelNode(
     label,
     anchorClass,
+    ownerClass,
     placement,
     offsetOverrides,
     labelSizes,
+    graphUri,
 ) {
     const id = labelNodeId(label);
     const offset = effectiveOffset(label, offsetOverrides);
@@ -190,9 +205,12 @@ function buildLabelNode(
         data: {
             text: label.text,
             identifiedObjectUUID: label.identifiedObjectUUID,
+            associationEndUUID: label.associationEndUUID,
             kind: label.kind,
             anchorClassId: anchorClass.id,
+            ownerClassId: ownerClass.id,
             anchorPoint: placement.anchor,
+            graphUri,
         },
     };
 }

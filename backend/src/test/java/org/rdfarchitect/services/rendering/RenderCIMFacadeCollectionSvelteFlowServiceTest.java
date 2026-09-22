@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.sub.AssociationDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.AttributeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeLabelDTO;
@@ -468,6 +469,80 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     }
 
     @Test
+    @DisplayName("renders the association ends of a class into its node")
+    void showsAssociationsInClass() {
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
+
+        assertThat(nodeByLabel(result, "Child").getData().getAssociations())
+                .extracting(
+                        AssociationDTO::getLabel,
+                        AssociationDTO::getRangeLabel,
+                        AssociationDTO::getMultiplicity)
+                .containsExactly(tuple("Terminals", "Terminal", "0..n"));
+        assertThat(nodeByLabel(result, "Terminal").getData().getAssociations())
+                .extracting(AssociationDTO::getLabel, AssociationDTO::getRangeLabel)
+                .containsExactly(tuple("Child", "Child"));
+    }
+
+    @Test
+    @DisplayName("renders association text in a class even when association edges are disabled")
+    void showsAssociationsInClassWithoutAssociationEdges() {
+        var filter = coreFilter();
+        filter.setIncludeAssociations(false);
+
+        var result =
+                (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null, null);
+
+        assertThat(result.getEdges()).noneMatch(edge -> edge.getType().equals("association"));
+        assertThat(nodeByLabel(result, "Child").getData().getAssociations())
+                .extracting(AssociationDTO::getLabel)
+                .containsExactly("Terminals");
+    }
+
+    @Test
+    @DisplayName("renders an association end without a label without one")
+    void showsAssociationInClassWithoutLabel() {
+        model.getResource(NS + "Child.Terminals").removeAll(RDFS.label);
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
+
+        assertThat(nodeByLabel(result, "Child").getData().getAssociations())
+                .singleElement()
+                .satisfies(
+                        association -> {
+                            assertThat(association.getLabel()).isNull();
+                            assertThat(association.getRangeLabel()).isEqualTo("Terminal");
+                        });
+    }
+
+    @Test
+    @DisplayName("renders the association ends of a super class as inherited text")
+    void showsInheritedAssociationsInClass() {
+        var base = model.getResource(NS + "Base");
+        var terminal = model.getResource(NS + "Terminal");
+        var from =
+                addAssociation(base, terminal, "Base.Terminals", "baseTerminals", "M:0..n", "Yes");
+        var to = addAssociation(terminal, base, "Terminal.Base", "base", "M:1..1", "No");
+        from.addProperty(CIMS.inverseRoleName, to);
+        to.addProperty(CIMS.inverseRoleName, from);
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
+
+        assertThat(nodeByLabel(result, "Child").getData().getSuperClasses())
+                .filteredOn(superClass -> superClass.getLabel().equals("Base"))
+                .singleElement()
+                .satisfies(
+                        superClass ->
+                                assertThat(superClass.getAssociations())
+                                        .extracting(AssociationDTO::getLabel)
+                                        .containsExactly("baseTerminals"));
+    }
+
+    @Test
     @DisplayName("omits classes of other packages when external relations are disabled")
     void filterDisablesExternalRelations() {
         var filter = coreFilter();
@@ -641,8 +716,10 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     private static final String OTHER_COLOR = "#ff0000";
 
     private CIMModelFacade buildOtherProfile() {
-        var otherModel = ModelFactory.createDefaultModel();
+        return buildOtherProfile(ModelFactory.createDefaultModel());
+    }
 
+    private CIMModelFacade buildOtherProfile(Model otherModel) {
         var child = otherModel.createResource(NS + "Child");
         child.addProperty(RDF.type, RDFS.Class);
         child.addProperty(RDFA.uuid, UUID.randomUUID().toString());
@@ -669,7 +746,66 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         entry.addProperty(RDFS.label, otherModel.createLiteral("B", "en"));
         entry.addProperty(CIMS.stereotype, CIMStereotypes.enumLiteral);
 
+        var terminal = otherModel.createResource(NS + "Terminal");
+        terminal.addProperty(RDF.type, RDFS.Class);
+        terminal.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        terminal.addProperty(RDFS.label, otherModel.createLiteral("Terminal", "en"));
+
+        var from =
+                addOtherProfileAssociation(
+                        otherModel, child, terminal, "Child.OtherTerminals", "otherTerminals");
+        var to =
+                addOtherProfileAssociation(
+                        otherModel, terminal, child, "Terminal.OtherChild", "otherChild");
+        from.addProperty(CIMS.inverseRoleName, to);
+        to.addProperty(CIMS.inverseRoleName, from);
+
         return new CIMModelFacade(OTHER_GRAPH_URI, otherModel);
+    }
+
+    private Resource addOtherProfileAssociation(
+            Model otherModel, Resource domain, Resource range, String localName, String label) {
+        var association = otherModel.createResource(NS + localName);
+        association.addProperty(RDF.type, RDF.Property);
+        association.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        association.addProperty(RDFS.label, otherModel.createLiteral(label, "en"));
+        association.addProperty(RDFS.domain, domain);
+        association.addProperty(RDFS.range, range);
+        association.addProperty(
+                CIMS.multiplicity, otherModel.createResource(CIMS.namespace + "M:0..n"));
+        association.addProperty(CIMS.associationUsed, "Yes");
+        return association;
+    }
+
+    @Test
+    @DisplayName("merges associations from other profiles into the class")
+    void mergesOtherProfileAssociations() {
+        var filter = coreFilter();
+        filter.setIncludePropertiesFromOtherProfiles(true);
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(
+                                facade,
+                                filter,
+                                null,
+                                List.of(
+                                        new CIMProfileModel(
+                                                OTHER_GRAPH_URI,
+                                                OTHER_COLOR,
+                                                null,
+                                                buildOtherProfile())),
+                                null,
+                                null);
+
+        assertThat(nodeByLabel(result, "Child").getData().getAssociations())
+                .extracting(
+                        AssociationDTO::getLabel,
+                        AssociationDTO::getGraphUri,
+                        AssociationDTO::getColor)
+                .containsExactly(
+                        tuple("Terminals", GRAPH_URI, null),
+                        tuple("otherTerminals", OTHER_GRAPH_URI, OTHER_COLOR));
     }
 
     @Test
@@ -1248,5 +1384,162 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                             assertThat(node.getId()).isEqualTo(mergedUuid("ACLS"));
                             assertThat(node.getId()).isNotEqualTo(mergedUuid("ACLineSegment"));
                         });
+    }
+
+    private static UUID uuidIn(Model source, String localName) {
+        return UUID.fromString(
+                source.getResource(NS + localName).getRequiredProperty(RDFA.uuid).getString());
+    }
+
+    private EdgeDTO associationEdge(SvelteFlowDTO diagram) {
+        return diagram.getEdges().stream()
+                .filter(edge -> edge.getType().equals("association"))
+                .findFirst()
+                .orElseThrow();
+    }
+
+    @Test
+    @DisplayName("renders the uuid of every property of a class")
+    void rendersPropertyUuids() {
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
+
+        var childData = nodeByLabel(result, "Child").getData();
+        assertThat(childData.getAttributes())
+                .extracting(AttributeDTO::getUuid)
+                .containsExactly(uuidIn(model, "Child.childAttr"));
+        assertThat(childData.getAssociations())
+                .extracting(AssociationDTO::getUuid)
+                .containsExactly(uuidIn(model, "Child.Terminals"));
+        assertThat(nodeByLabel(result, "PhaseCode").getData().getEnumEntries())
+                .extracting(EnumEntryDTO::getUuid)
+                .containsExactly(uuidIn(model, "PhaseCode.A"));
+    }
+
+    @Test
+    @DisplayName("renders the uuids of inherited properties as those of the super class")
+    void rendersInheritedPropertyUuids() {
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
+
+        assertThat(nodeByLabel(result, "Child").getData().getSuperClasses())
+                .filteredOn(superClass -> superClass.getLabel().equals("Base"))
+                .singleElement()
+                .satisfies(
+                        superClass ->
+                                assertThat(superClass.getAttributes())
+                                        .extracting(AttributeDTO::getUuid)
+                                        .containsExactly(uuidIn(model, "Base.baseAttr")));
+    }
+
+    @Test
+    @DisplayName("labels an edge end with the association end owned by the class at the other end")
+    void labelsCarryTheirAssociationEnd() {
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
+
+        var edge = associationEdge(result);
+        assertThat(edge.getSource()).isEqualTo(CHILD_UUID);
+        assertThat(edge.getTarget()).isEqualTo(TERMINAL_UUID);
+        var ownedByTarget = uuidIn(model, "Terminal.Child");
+        var ownedBySource = uuidIn(model, "Child.Terminals");
+        assertThat(edge.getData().getLabels())
+                .extracting(
+                        EdgeLabelDTO::getAnchor,
+                        EdgeLabelDTO::getKind,
+                        EdgeLabelDTO::getAssociationEndUUID,
+                        EdgeLabelDTO::getIdentifiedObjectUUID)
+                .containsExactly(
+                        tuple(Anchor.SOURCE, "multiplicity", ownedByTarget, ownedByTarget),
+                        tuple(Anchor.SOURCE, "associationLabel", ownedByTarget, ownedByTarget),
+                        tuple(Anchor.TARGET, "multiplicity", ownedBySource, ownedBySource),
+                        tuple(Anchor.TARGET, "associationLabel", ownedBySource, ownedBySource));
+    }
+
+    @Test
+    @DisplayName("merged diagram stores labels under the merged uuid but names the real end")
+    void mergedLabelsCarryTheRealAssociationEnd() {
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderMergedUML(
+                                List.of(new CIMProfileModel(GRAPH_URI, null, null, facade)), null);
+
+        var labels = associationEdge(result).getData().getLabels();
+        assertThat(labels)
+                .extracting(
+                        EdgeLabelDTO::getAssociationEndUUID, EdgeLabelDTO::getIdentifiedObjectUUID)
+                .containsExactlyInAnyOrder(
+                        tuple(uuidIn(model, "Terminal.Child"), mergedUuid("Terminal.Child")),
+                        tuple(uuidIn(model, "Terminal.Child"), mergedUuid("Terminal.Child")),
+                        tuple(uuidIn(model, "Child.Terminals"), mergedUuid("Child.Terminals")),
+                        tuple(uuidIn(model, "Child.Terminals"), mergedUuid("Child.Terminals")));
+    }
+
+    @Test
+    @DisplayName(
+            "renders properties of other profiles with the uuid they have in their own profile")
+    void rendersOtherProfilePropertyUuids() {
+        var otherModel = ModelFactory.createDefaultModel();
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderMergedUML(
+                                List.of(
+                                        new CIMProfileModel(GRAPH_URI, null, null, facade),
+                                        new CIMProfileModel(
+                                                OTHER_GRAPH_URI,
+                                                OTHER_COLOR,
+                                                null,
+                                                buildOtherProfile(otherModel))),
+                                null);
+
+        var childData = nodeByLabel(result, "Child").getData();
+        assertThat(childData.getAttributes())
+                .extracting(AttributeDTO::getLabel, AttributeDTO::getUuid)
+                .containsExactlyInAnyOrder(
+                        tuple("childAttr", uuidIn(model, "Child.childAttr")),
+                        tuple("otherChildAttr", uuidIn(otherModel, "Child.otherChildAttr")));
+        assertThat(nodeByLabel(result, "PhaseCode").getData().getEnumEntries())
+                .extracting(EnumEntryDTO::getLabel, EnumEntryDTO::getUuid)
+                .containsExactlyInAnyOrder(
+                        tuple("A", uuidIn(model, "PhaseCode.A")),
+                        tuple("B", uuidIn(otherModel, "PhaseCode.B")));
+    }
+
+    @Test
+    @DisplayName("renders associations merged in from other profiles with their own profile's uuid")
+    void rendersOtherProfileAssociationUuids() {
+        var filter = coreFilter();
+        filter.setIncludePropertiesFromOtherProfiles(true);
+        var otherModel = ModelFactory.createDefaultModel();
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(
+                                facade,
+                                filter,
+                                null,
+                                List.of(
+                                        new CIMProfileModel(
+                                                OTHER_GRAPH_URI,
+                                                OTHER_COLOR,
+                                                "other",
+                                                buildOtherProfile(otherModel))),
+                                null,
+                                "core");
+
+        assertThat(nodeByLabel(result, "Child").getData().getAssociations())
+                .extracting(
+                        AssociationDTO::getLabel,
+                        AssociationDTO::getGraphUri,
+                        AssociationDTO::getUuid)
+                .containsExactlyInAnyOrder(
+                        tuple("Terminals", GRAPH_URI, uuidIn(model, "Child.Terminals")),
+                        tuple(
+                                "otherTerminals",
+                                OTHER_GRAPH_URI,
+                                uuidIn(otherModel, "Child.OtherTerminals")));
     }
 }
