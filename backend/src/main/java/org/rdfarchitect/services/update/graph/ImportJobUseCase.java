@@ -18,7 +18,6 @@
 package org.rdfarchitect.services.update.graph;
 
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportWarning;
-import org.rdfarchitect.services.update.graph.ImportProgressListener.Stage;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -55,16 +54,10 @@ public interface ImportJobUseCase {
      * Progress of a single file.
      *
      * @param sizeBytes size of the file, or {@code -1} when a zip archive does not declare it
-     * @param stage the step the file is currently in, {@code null} unless it is running
      * @param graphUri the uri the file was imported as, {@code null} until it was imported
      */
     record ImportFileStatus(
-            int index,
-            String fileName,
-            long sizeBytes,
-            FileState state,
-            Stage stage,
-            String graphUri) {}
+            int index, String fileName, long sizeBytes, FileState state, String graphUri) {}
 
     /**
      * Progress of an import job.

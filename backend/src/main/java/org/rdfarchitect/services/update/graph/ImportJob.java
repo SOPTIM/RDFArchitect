@@ -74,13 +74,6 @@ class ImportJob implements ImportProgressListener {
     }
 
     @Override
-    public synchronized void stage(int index, Stage stage) {
-        var file = fileAt(index);
-        file.state = FileState.RUNNING;
-        file.stage = stage;
-    }
-
-    @Override
     public synchronized void finished(int index, Outcome outcome, String graphUri) {
         var file = fileAt(index);
         file.state =
@@ -89,7 +82,6 @@ class ImportJob implements ImportProgressListener {
                     case FAILED -> FileState.FAILED;
                     case SKIPPED -> FileState.SKIPPED;
                 };
-        file.stage = null;
         file.graphUri = graphUri;
     }
 
@@ -121,7 +113,6 @@ class ImportJob implements ImportProgressListener {
         for (var file : files) {
             if (file.state == FileState.RUNNING) {
                 file.state = FileState.FAILED;
-                file.stage = null;
             } else if (file.state == FileState.PENDING) {
                 file.state = FileState.SKIPPED;
             }
@@ -172,7 +163,6 @@ class ImportJob implements ImportProgressListener {
 
         private final PlannedImport plannedImport;
         private FileState state = FileState.PENDING;
-        private Stage stage;
         private String graphUri;
 
         private FileProgress(PlannedImport plannedImport) {
@@ -185,7 +175,6 @@ class ImportJob implements ImportProgressListener {
                     plannedImport.fileName(),
                     plannedImport.sizeBytes(),
                     state,
-                    stage,
                     graphUri);
         }
     }

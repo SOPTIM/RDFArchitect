@@ -57,7 +57,6 @@ function fileOf(index, fileName, state, extra = {}) {
         fileName,
         sizeBytes: 100,
         state,
-        stage: null,
         graphUri:
             state === FileState.IMPORTED ? `http://graph#${fileName}` : null,
         ...extra,
@@ -83,16 +82,14 @@ describe("ImportProgressPanel", () => {
         expect(panel.textContent).not.toContain("of 0 files");
     });
 
-    test("shows one row per file and what is happening to the current one", () => {
+    test("shows one row per file", () => {
         const progress = new ImportProgress();
         progress.uploaded();
         progress.apply(
             statusOf(
                 [
                     fileOf(0, "first.ttl", FileState.IMPORTED),
-                    fileOf(1, "second.ttl", FileState.RUNNING, {
-                        stage: "STORING",
-                    }),
+                    fileOf(1, "second.ttl", FileState.RUNNING),
                     fileOf(2, "third.ttl", FileState.PENDING),
                 ],
                 JobState.RUNNING,
@@ -103,8 +100,8 @@ describe("ImportProgressPanel", () => {
 
         expect(panel.textContent).toContain("1 of 3 files");
         expect(panel.textContent).toContain("first.ttl");
+        expect(panel.textContent).toContain("second.ttl");
         expect(panel.textContent).toContain("third.ttl");
-        expect(panel.textContent).toContain("storing");
     });
 
     test("names the files that could not be imported", () => {

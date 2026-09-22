@@ -43,12 +43,6 @@
         [FileState.SKIPPED]: "not imported",
     };
 
-    const stageNotes = {
-        PARSING: "reading",
-        ANALYZING: "checking",
-        STORING: "storing",
-    };
-
     let total = $derived(progress.files.length);
     let warnings = $derived(
         progress.warnings.filter(
@@ -98,11 +92,7 @@
                     >
                         {file.fileName}
                     </span>
-                    {#if file.state === FileState.RUNNING && stageNotes[file.stage]}
-                        <span class="text-text-subtle shrink-0 text-xs">
-                            {stageNotes[file.stage]}
-                        </span>
-                    {:else if rowNotes[file.state]}
+                    {#if rowNotes[file.state]}
                         <span class="text-text-subtle shrink-0 text-xs">
                             {rowNotes[file.state]}
                         </span>

@@ -28,7 +28,6 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
-import org.rdfarchitect.services.update.graph.ImportProgressListener.Stage;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -69,8 +68,7 @@ class ImportProgressReportingTest {
     }
 
     @Test
-    void importGraphs_zipArchive_plansOneEntryPerGraphFileAndReportsEveryStage()
-            throws IOException {
+    void importGraphs_zipArchive_plansOneEntryPerGraphFile() throws IOException {
         var archive =
                 zip(
                         Map.of(
@@ -85,10 +83,6 @@ class ImportProgressReportingTest {
                 .containsExactlyInAnyOrder("first.ttl", "second.ttl");
         assertThat(listener.planned).extracting(PlannedImport::index).containsExactly(0, 1);
         assertThat(listener.outcomes.values()).containsOnly(Outcome.IMPORTED);
-        assertThat(listener.stages.get(0))
-                .containsExactly(Stage.PARSING, Stage.ANALYZING, Stage.STORING);
-        assertThat(listener.stages.get(1))
-                .containsExactly(Stage.PARSING, Stage.ANALYZING, Stage.STORING);
         assertThat(result.importedGraphUris()).hasSize(2);
         assertThat(result.failedFileNames()).isEmpty();
     }
@@ -218,7 +212,6 @@ class ImportProgressReportingTest {
     private static final class RecordingListener implements ImportProgressListener {
 
         private final List<PlannedImport> planned = new ArrayList<>();
-        private final Map<Integer, List<Stage>> stages = new LinkedHashMap<>();
         private final Map<Integer, Outcome> outcomes = new LinkedHashMap<>();
         private boolean cancelAfterFirstFinish;
         private boolean cancelled;
@@ -226,11 +219,6 @@ class ImportProgressReportingTest {
         @Override
         public void planned(List<PlannedImport> plannedImports) {
             planned.addAll(plannedImports);
-        }
-
-        @Override
-        public void stage(int index, Stage stage) {
-            stages.computeIfAbsent(index, _ -> new ArrayList<>()).add(stage);
         }
 
         @Override

@@ -30,7 +30,6 @@ function file(overrides) {
         fileName: "graph.ttl",
         sizeBytes: 100,
         state: FileState.PENDING,
-        stage: null,
         graphUri: null,
         ...overrides,
     };
@@ -93,23 +92,22 @@ describe("ImportProgress", () => {
         expect(progress.finishedCount).toBe(1);
     });
 
-    test("moves on within a file that is still being imported", () => {
+    test("counts the file it is on as half done and names it", () => {
         const progress = new ImportProgress();
         progress.uploaded();
-        const parsing = running({
-            files: [file({ state: FileState.RUNNING, stage: "PARSING" })],
-        });
-        progress.apply(parsing);
-        const whileParsing = progress.percent;
 
         progress.apply(
             running({
-                files: [file({ state: FileState.RUNNING, stage: "STORING" })],
+                files: [
+                    file({ index: 0, state: FileState.IMPORTED }),
+                    file({ index: 1, state: FileState.RUNNING }),
+                ],
             }),
         );
 
-        expect(progress.percent).toBeGreaterThan(whileParsing);
-        expect(progress.statusText).toBe("Importing graph.ttl (storing)…");
+        // one file in, the second one halfway, of the 75 percent the import accounts for
+        expect(progress.percent).toBe(25 + 75 * 0.75);
+        expect(progress.statusText).toBe("Importing graph.ttl…");
     });
 
     test("counts a skipped or failed file as done", () => {

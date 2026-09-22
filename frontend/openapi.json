@@ -955,14 +955,6 @@
             "format" : "int64",
             "type" : "integer"
           },
-          "stage" : {
-            "enum" : [
-              "PARSING",
-              "ANALYZING",
-              "STORING"
-            ],
-            "type" : "string"
-          },
           "state" : {
             "enum" : [
               "PENDING",

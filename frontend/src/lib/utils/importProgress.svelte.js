@@ -45,20 +45,11 @@ export const JobState = {
  */
 const PHASE_SHARE = { upload: 25, import: 75 };
 
-/** How far into a file each step is, so that a large file does not look stuck. */
-const STAGE_PROGRESS = { PARSING: 0.4, ANALYZING: 0.7, STORING: 0.9 };
-
 const FINISHED_STATES = [
     FileState.IMPORTED,
     FileState.FAILED,
     FileState.SKIPPED,
 ];
-
-const STAGE_LABELS = {
-    PARSING: "reading",
-    ANALYZING: "checking",
-    STORING: "storing",
-};
 
 function clampPercent(value) {
     if (!Number.isFinite(value)) return 0;
@@ -70,7 +61,9 @@ function fileProgress(file) {
         return 1;
     }
     if (file.state === FileState.RUNNING) {
-        return STAGE_PROGRESS[file.stage] ?? 0.2;
+        // Halfway is as good a guess as any: a file reports that it is being imported, not how
+        // far into it the import is.
+        return 0.5;
     }
     return 0;
 }
@@ -84,7 +77,7 @@ function fileProgress(file) {
 export class ImportProgress {
     phase = $state(ImportPhase.UPLOADING);
     uploadPercent = $state(0);
-    /** @type {{index: number, fileName: string, sizeBytes: number, state: string, stage: string|null, graphUri: string|null}[]} */
+    /** @type {{index: number, fileName: string, sizeBytes: number, state: string, graphUri: string|null}[]} */
     files = $state([]);
     jobState = $state(JobState.RUNNING);
     importedGraphUris = $state([]);
@@ -141,13 +134,9 @@ export class ImportProgress {
                 const running = this.files.find(
                     file => file.state === FileState.RUNNING,
                 );
-                if (!running) {
-                    return "Preparing the import…";
-                }
-                const stage = STAGE_LABELS[running.stage];
-                return stage
-                    ? `Importing ${running.fileName} (${stage})…`
-                    : `Importing ${running.fileName}…`;
+                return running
+                    ? `Importing ${running.fileName}…`
+                    : "Preparing the import…";
             }
             default:
                 return this.#finishedText();
@@ -165,7 +154,6 @@ export class ImportProgress {
             fileName: file.fileName ?? "",
             sizeBytes: file.sizeBytes ?? -1,
             state: file.state ?? FileState.PENDING,
-            stage: file.stage ?? null,
             graphUri: file.graphUri ?? null,
         }));
         this.jobState = status.state ?? JobState.RUNNING;

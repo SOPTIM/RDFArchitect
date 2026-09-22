@@ -34,7 +34,6 @@ import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
-import org.rdfarchitect.services.update.graph.ImportProgressListener.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -277,13 +276,8 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                                     plannedFile.requestedGraphUri(), plannedFile.fileName()),
                             reservedGraphUris);
 
-            listener.stage(plannedFile.index(), Stage.PARSING);
             var graph = parseGraph(file, graphUri);
-
-            listener.stage(plannedFile.index(), Stage.ANALYZING);
             var undisplayableProperties = findUndisplayableProperties(graph);
-
-            listener.stage(plannedFile.index(), Stage.STORING);
             replaceGraph(datasetName, graphUri, graph);
 
             result.importedGraphUris().add(graphUri);

@@ -41,13 +41,6 @@ public interface ImportProgressListener {
      */
     record PlannedImport(int index, String fileName, long sizeBytes) {}
 
-    /** The steps a single file goes through, in order. */
-    enum Stage {
-        PARSING,
-        ANALYZING,
-        STORING
-    }
-
     /** How the import of a single file ended. */
     enum Outcome {
         IMPORTED,
@@ -60,8 +53,6 @@ public interface ImportProgressListener {
     default void planned(List<PlannedImport> plannedImports) {}
 
     default void started(int index) {}
-
-    default void stage(int index, Stage stage) {}
 
     default void finished(int index, Outcome outcome, String graphUri) {}
 
