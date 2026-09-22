@@ -82,7 +82,6 @@ public class SvelteFlowLabels {
                         layoutData));
     }
 
-    //TODO MAXIMAL WICHTIG! hier anpassen an das was durch main neu ist
     private EdgeLabelDTO labelFor(
             AssociationEnd end,
             DiagramObjectStyle style,
@@ -97,6 +96,8 @@ public class SvelteFlowLabels {
         }
         return EdgeLabelDTO.builder()
                 .identifiedObjectUUID(end.association())
+                .associationEndUUID(end.endUuid())
+                .kind(style.getStyleName())
                 .text(text)
                 .position(positionFor(layoutData, new LabelKey(end.association(), style)))
                 .build();

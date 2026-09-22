@@ -1445,17 +1445,32 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         assertThat(edge.getTarget()).isEqualTo(TERMINAL_UUID);
         var ownedByTarget = uuidIn(model, "Terminal.Child");
         var ownedBySource = uuidIn(model, "Child.Terminals");
-        assertThat(edge.getData().getLabels())
+        var data = edge.getData();
+
+        assertThat(data.getSourceMultiplicityLabel())
                 .extracting(
-                        EdgeLabelDTO::getAnchor,
                         EdgeLabelDTO::getKind,
                         EdgeLabelDTO::getAssociationEndUUID,
                         EdgeLabelDTO::getIdentifiedObjectUUID)
-                .containsExactly(
-                        tuple(Anchor.SOURCE, "multiplicity", ownedByTarget, ownedByTarget),
-                        tuple(Anchor.SOURCE, "associationLabel", ownedByTarget, ownedByTarget),
-                        tuple(Anchor.TARGET, "multiplicity", ownedBySource, ownedBySource),
-                        tuple(Anchor.TARGET, "associationLabel", ownedBySource, ownedBySource));
+                .containsExactly("multiplicity", ownedByTarget, ownedByTarget);
+        assertThat(data.getSourceAssociationLabel())
+                .extracting(
+                        EdgeLabelDTO::getKind,
+                        EdgeLabelDTO::getAssociationEndUUID,
+                        EdgeLabelDTO::getIdentifiedObjectUUID)
+                .containsExactly("associationLabel", ownedByTarget, ownedByTarget);
+        assertThat(data.getTargetMultiplicityLabel())
+                .extracting(
+                        EdgeLabelDTO::getKind,
+                        EdgeLabelDTO::getAssociationEndUUID,
+                        EdgeLabelDTO::getIdentifiedObjectUUID)
+                .containsExactly("multiplicity", ownedBySource, ownedBySource);
+        assertThat(data.getTargetAssociationLabel())
+                .extracting(
+                        EdgeLabelDTO::getKind,
+                        EdgeLabelDTO::getAssociationEndUUID,
+                        EdgeLabelDTO::getIdentifiedObjectUUID)
+                .containsExactly("associationLabel", ownedBySource, ownedBySource);
     }
 
     @Test
@@ -1466,8 +1481,13 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                         renderer.renderMergedUML(
                                 List.of(new CIMProfileModel(GRAPH_URI, null, null, facade)), null);
 
-        var labels = associationEdge(result).getData().getLabels();
-        assertThat(labels)
+        var data = associationEdge(result).getData();
+        assertThat(
+                        List.of(
+                                data.getSourceMultiplicityLabel(),
+                                data.getSourceAssociationLabel(),
+                                data.getTargetMultiplicityLabel(),
+                                data.getTargetAssociationLabel()))
                 .extracting(
                         EdgeLabelDTO::getAssociationEndUUID, EdgeLabelDTO::getIdentifiedObjectUUID)
                 .containsExactlyInAnyOrder(
