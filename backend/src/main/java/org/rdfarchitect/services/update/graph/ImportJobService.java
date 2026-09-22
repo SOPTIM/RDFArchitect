@@ -88,11 +88,6 @@ public class ImportJobService implements ImportJobUseCase {
             }
         }
 
-        logger.info(
-                "Started import job {} for dataset \"{}\" with {} file(s).",
-                job.getId(),
-                datasetName,
-                files.size());
         return job.getId();
     }
 

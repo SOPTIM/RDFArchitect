@@ -45,34 +45,12 @@ const LOG_PREFIX = "[graphStore]";
 
 export const graphStore = createGraphStore();
 
-/** Status codes the import endpoint answers with, mapped to what went wrong. */
-const IMPORT_START_MESSAGES: Record<number, string> = {
-    409: "Another import is still running. Wait for it to finish and try again.",
-};
-
 function createGraphStore() {
     const store = writable<WorkspaceState>({
         graphs: new Map(),
     });
 
     const { subscribe, update } = store;
-
-    function getWorkspaceState(
-        state: WorkspaceState,
-        workspaceName: string,
-    ): AsyncListSlot<GraphDto> {
-        return state.graphs.get(workspaceName) ?? createEmptyListSlot();
-    }
-
-    function setWorkspaceState(
-        state: WorkspaceState,
-        workspaceName: string,
-        next: AsyncListSlot<GraphDto>,
-    ): WorkspaceState {
-        const byWorkspace = new Map(state.graphs);
-        byWorkspace.set(workspaceName, next);
-        return { ...state, graphs: byWorkspace };
-    }
 
     async function getGraphs(
         workspaceName: string,
@@ -123,89 +101,6 @@ function createGraphStore() {
             "Schema created",
             `"${graphURI}" was added to "${workspaceName}".`,
         );
-        return { error: null };
-    }
-
-    /**
-     * Starts an import and returns the id of the job that runs it. The import itself happens in the
-     * background; follow it with {@link getImportStatus} and stop it with {@link cancelImport}.
-     *
-     * Uploading is done with an XMLHttpRequest rather than the generated client, because that is the
-     * only way to report how much of the upload has gone through.
-     */
-    async function startImport(
-        workspaceName: string,
-        files: File[],
-        graphUris: string[],
-        options: {
-            onUploadProgress?: (percent: number) => void;
-            signal?: AbortSignal;
-        } = {},
-    ): Promise<Result<{ jobId: string }>> {
-        console.log(
-            `${LOG_PREFIX} Starting import into workspace "${workspaceName}"`,
-        );
-
-        if (!files || files.length === 0) {
-            const error = new Error(
-                "At least one file is required for import.",
-            );
-            console.error(`${LOG_PREFIX} ${error.message}`);
-            return { error };
-        }
-
-        try {
-            const jobId = await uploadImport(
-                workspaceName,
-                files,
-                graphUris,
-                options,
-            );
-            console.log(`${LOG_PREFIX} Import job "${jobId}" started`);
-            return { error: null, data: { jobId } };
-        } catch (error) {
-            console.error(`${LOG_PREFIX} Failed to start the import`, error);
-            return { error };
-        }
-    }
-
-    async function getImportStatus(
-        workspaceName: string,
-        jobId: string,
-    ): Promise<Result<ImportJobStatus>> {
-        const { data, error } = await sdkGetImportStatus({
-            path: { datasetName: workspaceName, jobId },
-        });
-
-        if (error || !data) {
-            console.error(
-                `${LOG_PREFIX} Failed to read the status of import job "${jobId}"`,
-                await describeError(error),
-            );
-            return { error: error ?? new Error("Import job is unknown.") };
-        }
-
-        return { error: null, data };
-    }
-
-    async function cancelImport(
-        workspaceName: string,
-        jobId: string,
-    ): Promise<Result> {
-        console.log(`${LOG_PREFIX} Cancelling import job "${jobId}"`);
-
-        const { error } = await sdkCancelImport({
-            path: { datasetName: workspaceName, jobId },
-        });
-
-        if (error) {
-            console.error(
-                `${LOG_PREFIX} Failed to cancel import job "${jobId}"`,
-                await describeError(error),
-            );
-            return { error };
-        }
-
         return { error: null };
     }
 
@@ -322,8 +217,108 @@ function createGraphStore() {
     };
 }
 
+function getWorkspaceState(
+    state: WorkspaceState,
+    workspaceName: string,
+): AsyncListSlot<GraphDto> {
+    return state.graphs.get(workspaceName) ?? createEmptyListSlot();
+}
+
+function setWorkspaceState(
+    state: WorkspaceState,
+    workspaceName: string,
+    next: AsyncListSlot<GraphDto>,
+): WorkspaceState {
+    const byWorkspace = new Map(state.graphs);
+    byWorkspace.set(workspaceName, next);
+    return { ...state, graphs: byWorkspace };
+}
+
+/**
+ * Starts an import and returns the id of the job that runs it. The import itself happens in the
+ * background; follow it with {@link getImportStatus} and stop it with {@link cancelImport}.
+ */
+async function startImport(
+    workspaceName: string,
+    files: File[],
+    graphUris: string[],
+    options: {
+        onUploadProgress?: (percent: number) => void;
+        signal?: AbortSignal;
+    } = {},
+): Promise<Result<{ jobId: string }>> {
+    console.log(
+        `${LOG_PREFIX} Starting import into workspace "${workspaceName}"`,
+    );
+
+    if (!files || files.length === 0) {
+        const error = new Error("At least one file is required for import.");
+        console.error(`${LOG_PREFIX} ${error.message}`);
+        return { error };
+    }
+
+    try {
+        const jobId = await uploadImport(
+            workspaceName,
+            files,
+            graphUris,
+            options,
+        );
+        console.log(`${LOG_PREFIX} Import job "${jobId}" started`);
+        return { error: null, data: { jobId } };
+    } catch (error) {
+        console.error(`${LOG_PREFIX} Failed to start the import`, error);
+        return { error };
+    }
+}
+
+async function getImportStatus(
+    workspaceName: string,
+    jobId: string,
+): Promise<Result<ImportJobStatus>> {
+    const { data, error } = await sdkGetImportStatus({
+        path: { datasetName: workspaceName, jobId },
+    });
+
+    if (error || !data) {
+        console.error(
+            `${LOG_PREFIX} Failed to read the status of import job "${jobId}"`,
+            await describeError(error),
+        );
+        return { error: error ?? new Error("Import job is unknown.") };
+    }
+
+    return { error: null, data };
+}
+
+async function cancelImport(
+    workspaceName: string,
+    jobId: string,
+): Promise<Result> {
+    console.log(`${LOG_PREFIX} Cancelling import job "${jobId}"`);
+
+    const { error } = await sdkCancelImport({
+        path: { datasetName: workspaceName, jobId },
+    });
+
+    if (error) {
+        console.error(
+            `${LOG_PREFIX} Failed to cancel import job "${jobId}"`,
+            await describeError(error),
+        );
+        return { error };
+    }
+
+    return { error: null };
+}
+
 /**
  * Uploads the files of an import and resolves with the id of the job that was started.
+ *
+ * This is the one request that does not go through the generated client: it is built on fetch,
+ * which reports nothing until the response arrives, and an upload of tens of megabytes needs a
+ * progress bar. `XMLHttpRequest.upload` is still the only browser api that raises progress events
+ * while a body is going out.
  *
  * @throws Error carrying the http status of the failed request in `status`
  */
@@ -383,11 +378,11 @@ function importStartError(
     response: unknown,
 ): Error & { status: number } {
     const detail = (response as { detail?: string } | null)?.detail;
-    const error = new Error(
-        IMPORT_START_MESSAGES[status] ??
-            detail ??
-            "The import could not be started.",
-    ) as Error & { status: number };
+    const message =
+        status === 409
+            ? "Another import is still running. Wait for it to finish and try again."
+            : (detail ?? "The import could not be started.");
+    const error = new Error(message) as Error & { status: number };
     error.status = status;
     return error;
 }

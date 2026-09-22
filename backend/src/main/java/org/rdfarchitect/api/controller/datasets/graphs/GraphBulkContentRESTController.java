@@ -90,9 +90,10 @@ public class GraphBulkContentRESTController {
         var jobId = importJobUseCase.startImport(datasetName, files, graphUris);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/content/imports\" to \"{}\".",
+                "Sending response to POST request: \"/api/datasets/{{}}/graphs/content/imports\" to \"{}\": job {}.",
                 datasetName,
-                originURL);
+                originURL,
+                jobId);
         return ResponseEntity.accepted().body(new ImportJobCreatedResponse(jobId));
     }
 
