@@ -364,6 +364,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
     private SvelteFlowLabels.AssociationEnd associationEnd(CIMAssociation association) {
         return new SvelteFlowLabels.AssociationEnd(
                 association.getUuid(),
+                association.getUuid(),
                 extractMultiplicityString(association.getMultiplicity()),
                 association.getLabel() == null ? null : association.getLabel().getValue());
     }

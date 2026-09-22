@@ -71,6 +71,14 @@ The generated client and store methods that mutate objects return a `Response` o
 
 Use these instead of inventing per-component prop drilling for global selections.
 
+## Diagram interaction
+
+The SvelteFlow diagram lives in `lib/rendering/svelteflow/`. Its node and edge components are rendered by SvelteFlow and receive no props from the diagram, so state they share with it is kept in small modules under `interaction/` instead, for example `labelHighlight.svelte.js` or `propertyInteraction.svelte.js` (the marked property, the property context menu, and the modifier keys that make properties unclickable).
+
+A property opened from the diagram is requested through `lib/propertyEditorRequest.svelte.js` and answered by `routes/mainpage/classEditor/PropertyEditorHost.svelte`, which shows the attribute, association, or enum entry editor without the class editor. Those editors read everything through the `classEditor` context, which both the class editor and the host build with `class-editor-context.js`. When the class editor already holds the class, the host uses that class instead of loading a second copy, so the two editors share one unsaved state.
+
+To identify a property, the rendering DTOs carry the UUID of every attribute, association end, and enum entry, and every edge label carries `associationEndUUID`. That one differs from `identifiedObjectUUID`, the key label positions are stored under, in merged diagrams. The owning class is resolved to the schema a property lives in, so merged class UUIDs work as well.
+
 ## Svelte script ordering
 
 The repository enforces a specific script-block ordering (imports → props → constants → state → derived → effects → lifecycle → functions). The full rationale and ESLint rule are in [`frontend/docs/script-structure.md`](https://github.com/SOPTIM/RDFArchitect/blob/main/frontend/docs/script-structure.md). The custom rule lives at `frontend/eslint-rules/rules/svelte-script-order/`. When in doubt, run `npm run format` and follow whatever the auto-fixer produces.

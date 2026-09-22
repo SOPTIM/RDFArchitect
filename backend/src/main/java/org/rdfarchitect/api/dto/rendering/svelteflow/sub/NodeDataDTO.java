@@ -41,6 +41,7 @@ public class NodeDataDTO {
     private String belongsToCategory;
     private List<String> stereotypes;
     private List<AttributeDTO> attributes;
+    private List<AssociationDTO> associations;
     private List<EnumEntryDTO> enumEntries;
     private List<SuperClassDTO> superClasses;
 }

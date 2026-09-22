@@ -138,6 +138,7 @@
                                         <CrossProfileDiagramsSection
                                             {workspaceNavEntry}
                                             {crossProfileID}
+                                            {readonly}
                                         />
                                     {/if}
 
