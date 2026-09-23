@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.services.update.classes.associations;
 
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.arq.querybuilder.UpdateBuilder;
@@ -33,11 +35,9 @@ import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
-import org.rdfarchitect.services.ChangeDescriptions;
+import org.rdfarchitect.services.dl.update.edgelayout.RenameEdgeLayoutDataUseCase;
+import org.rdfarchitect.services.dl.update.edgelayout.SyncEdgeCreatedUseCase;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +45,8 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
 
     private final DatabasePort databasePort;
     private final AssociationPairMapper associationPairMapper;
+    private final SyncEdgeCreatedUseCase syncEdgeCreatedUseCase;
+    private final RenameEdgeLayoutDataUseCase renameEdgeLayoutDataUseCase;
 
     public record AssociationUUIDs(UUID fromUUID, UUID toUUID) {}
 
@@ -66,13 +68,29 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                         graphIdentifier.graphUri(),
                         cimAssociationPair);
 
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+        UUID fromClassUUID;
+        String edgeName;
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            //TODO wtf ist das und wo muss das hin
             executeOnGraph(ctx, graphIdentifier, update);
-            transaction.commit(
+            //UpdateAction.execute(new UpdateRequest().add(update.build()), ctx.getRdfGraph());
+
+            var fromClassResource =
+                    CIMResourceUtils.findResourceForUri(ctx.getRdfGraph(), associationPair.getFrom().getDomain());
+            fromClassUUID = CIMResourceUtils.findUuidForResource(fromClassResource);
+            var toClassResource =
+                    CIMResourceUtils.findResourceForUri(ctx.getRdfGraph(), associationPair.getTo().getDomain());
+            edgeName =
+                    CIMResourceUtils.findLabelForResource(fromClassResource)
+                            + " "
+                            + CIMResourceUtils.findLabelForResource(toClassResource);
+
+            ctx.commit(
                     buildAssociationMessage("Created", ctx, associationPair, cimAssociationPair));
         }
+
+        syncEdgeCreatedUseCase.syncEdgeCreated(graphIdentifier, fromClassUUID, from.getUuid(), edgeName);
+
         return new AssociationUUIDs(from.getUuid(), to.getUuid());
     }
 
@@ -85,14 +103,28 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                         databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                         graphIdentifier.graphUri(),
                         cimAssociationPair);
-
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+        String edgeName;
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             executeOnGraph(ctx, graphIdentifier, update);
-            transaction.commit(
+            //UpdateExecutionFactory.create(
+            //                update.buildRequest(),
+            //                SessionDataStore.wrapGraphInDataset(
+            //                        ctx.getRdfGraph(), graphIdentifier.graphUri()))
+            //        .execute();
+            var fromClassResource =
+                    CIMResourceUtils.findResourceForUri(ctx.getRdfGraph(), associationPair.getFrom().getDomain());
+            var toClassResource =
+                    CIMResourceUtils.findResourceForUri(ctx.getRdfGraph(), associationPair.getTo().getDomain());
+            edgeName =
+                    CIMResourceUtils.findLabelForResource(fromClassResource)
+                            + " "
+                            + CIMResourceUtils.findLabelForResource(toClassResource);
+            ctx.commit(
                     buildAssociationMessage("Replaced", ctx, associationPair, cimAssociationPair));
         }
+        renameEdgeLayoutDataUseCase.renameEdge(
+                graphIdentifier, cimAssociationPair.getFrom().getUuid(), edgeName);
+
         return new AssociationUUIDs(
                 cimAssociationPair.getFrom().getUuid(), cimAssociationPair.getTo().getUuid());
     }
