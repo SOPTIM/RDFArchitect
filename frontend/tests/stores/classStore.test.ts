@@ -20,6 +20,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import * as api from "../../src/lib/api/generated";
 import { toastStore } from "../../src/lib/eventhandling/toastStore.svelte.js";
 import { createClassStore } from "../../src/lib/stores/classStore";
+import { graphStore } from "../../src/lib/stores/graphStore";
 
 import type {
     AssociationPairDto,
@@ -86,6 +87,10 @@ vi.mock("$lib/api/generated", () => ({
     replaceAssociation: vi.fn(),
     createEnumEntry: vi.fn(),
     replaceEnumEntry: vi.fn(),
+}));
+
+vi.mock("$lib/stores/graphStore", () => ({
+    graphStore: { invalidateWorkspace: vi.fn() },
 }));
 
 vi.mock("$lib/eventhandling/toastStore.svelte.js", () => ({
@@ -346,6 +351,22 @@ describe("ClassStore", () => {
                 "Updated",
             );
             expect(all?.find(c => c.uuid === "uuid-1")?.label).toBe("Updated");
+        });
+
+        /** A CGMES 2.4.15 profile names itself on a class, so saving one can rename the schema. */
+        test("invalidates the schema list the navigation names schemas from", async () => {
+            vi.mocked(api.replaceClass).mockResolvedValue(ok(undefined));
+
+            await store.replaceClass(
+                WORKSPACE,
+                GRAPH,
+                "uuid-1",
+                makeClass("uuid-1", "Updated"),
+            );
+
+            expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
         });
 
         test("returns error and does not mutate the store on failure", async () => {

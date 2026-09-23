@@ -45,7 +45,6 @@
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { graphColors } from "$lib/graphColors.svelte.js";
     import {
-        ClassType,
         editorState,
         forceReloadTrigger,
         SelectionLevel,
@@ -203,21 +202,13 @@
             showEditOntologyDialog = true;
             return;
         }
-        if (target?.kind !== "class") {
-            return;
+        if (target?.kind === "class") {
+            editorState.editClass(
+                workspaceNavEntry.id,
+                graphNavEntry.id,
+                target.uuid,
+            );
         }
-        focusGraphContext();
-        editorState.classEditorSchema.updateValue({
-            classUuid: target.uuid,
-            graphUri: graphNavEntry.id,
-        });
-        editorState.selectedClassWorkspace.updateValue(workspaceNavEntry.id);
-        editorState.selectedClassGraph.updateValue(graphNavEntry.id);
-        editorState.selectedClass.updateValue({
-            type: ClassType.SINGLE_CLASS,
-            id: target.uuid,
-        });
-        editorState.focusedClassUUID.updateValue(target.uuid);
     }
 </script>
 
