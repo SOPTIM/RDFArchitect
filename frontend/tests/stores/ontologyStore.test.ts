@@ -19,6 +19,7 @@ import { get } from "svelte/store";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import * as api from "../../src/lib/api/generated";
+import { graphStore } from "../../src/lib/stores/graphStore";
 import { createOntologyStore } from "../../src/lib/stores/ontologyStore";
 import { makeGraphKey } from "../../src/lib/stores/storeHelpers";
 
@@ -66,6 +67,10 @@ vi.mock("$lib/api/generated", () => ({
 
 vi.mock("$lib/eventhandling/toastStore.svelte.js", () => ({
     toastStore: { success: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock("$lib/stores/graphStore", () => ({
+    graphStore: { invalidateWorkspace: vi.fn() },
 }));
 
 // ---------------------------------------------------------------------------
@@ -678,6 +683,54 @@ describe("ontologyStore", () => {
             expect(
                 state.byGraph.has(makeGraphKey(WORKSPACE_A, GRAPH_URI_1)),
             ).toBe(true);
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("keeping the navigation in step", () => {
+        test("replacing the ontology refetches the graph list the tree names schemas from", async () => {
+            vi.mocked(api.replaceOntology).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            } as never);
+
+            await store.replaceOntology(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+                MOCK_ONTOLOGY_WITH_ENTRIES,
+            );
+
+            expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE_A,
+            );
+        });
+
+        test("creating an ontology refetches it too", async () => {
+            vi.mocked(api.createOntology).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            } as never);
+
+            await store.createOntology(WORKSPACE_A, GRAPH_URI_1, MOCK_ONTOLOGY);
+
+            expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE_A,
+            );
+        });
+
+        test("a failed save leaves the graph list alone", async () => {
+            vi.mocked(api.replaceOntology).mockResolvedValue({
+                data: undefined,
+                error: { status: 500 },
+            } as never);
+
+            await store.replaceOntology(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+                MOCK_ONTOLOGY,
+            );
+
+            expect(graphStore.invalidateWorkspace).not.toHaveBeenCalled();
         });
     });
 });
