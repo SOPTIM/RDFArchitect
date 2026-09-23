@@ -83,7 +83,7 @@
 https://tailwindcss.com/docs/colors#using-a-custom-palette
 */
 @theme {
-    /*TODO WICHTIG: SPÄTER DIE RENDERING FARBEN FIXEN:
+    /*TODO REFACTOR: WICHTIG: SPÄTER DIE RENDERING FARBEN FIXEN:
        ich mag die variablen hier gerade nicht
        es sieht sehr chaotisch aus, manche variablen sind doppelt
        wenigstens für meine Rendering farben fix das mal
