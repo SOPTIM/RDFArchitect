@@ -274,7 +274,11 @@ describe("ontologyStore", () => {
             });
         });
 
-        test("patches only the entries field in the cached DTO, preserving other fields", async () => {
+        /**
+         * Generated entries are what the schema could state, not what it does. Caching them
+         * would show a proposal in the ontology editor as if it had been saved.
+         */
+        test("leaves the stored ontology as it is", async () => {
             vi.mocked(api.getOntology).mockResolvedValue({
                 data: MOCK_ONTOLOGY,
                 error: undefined,
@@ -291,13 +295,19 @@ describe("ontologyStore", () => {
             const cached = state.byGraph.get(
                 makeGraphKey(WORKSPACE_A, GRAPH_URI_1),
             )?.data;
-            expect(cached?.entries).toEqual(MOCK_ENTRIES);
-            // Other fields from the original fetch should still be present
-            expect(cached?.uuid).toBe(MOCK_ONTOLOGY.uuid);
-            expect(cached?.namespace).toBe(MOCK_ONTOLOGY.namespace);
+            expect(cached).toEqual(MOCK_ONTOLOGY);
         });
 
-        test("writes entries into cache even if there was no prior fetch", async () => {
+        /**
+         * Caching them here invented an ontology with no uuid and no namespace, which the export
+         * dialog then read back and saved — and the backend composes the ontology IRI from that
+         * namespace, so the save failed on a null it could do nothing with.
+         */
+        test("invents no ontology for a schema that has none", async () => {
+            vi.mocked(api.getOntology).mockResolvedValue({
+                data: null,
+                error: undefined,
+            } as never);
             vi.mocked(api.getOntologyEntries).mockResolvedValue({
                 data: MOCK_ENTRIES,
                 error: undefined,
@@ -305,11 +315,9 @@ describe("ontologyStore", () => {
 
             await store.generateOntologyEntries(WORKSPACE_A, GRAPH_URI_1);
 
-            const state = get(store);
-            const cached = state.byGraph.get(
-                makeGraphKey(WORKSPACE_A, GRAPH_URI_1),
-            )?.data;
-            expect(cached?.entries).toEqual(MOCK_ENTRIES);
+            expect(
+                await store.getOntologyForGraph(WORKSPACE_A, GRAPH_URI_1),
+            ).toBeNull();
         });
 
         test("treats an empty entries array from the API as a valid result", async () => {
@@ -340,12 +348,6 @@ describe("ontologyStore", () => {
 
             expect(result.error).toBeNull();
             expect(result.data).toEqual([]);
-
-            const state = get(store);
-            const cached = state.byGraph.get(
-                makeGraphKey(WORKSPACE_A, GRAPH_URI_1),
-            )?.data;
-            expect(cached?.entries).toEqual([]);
         });
 
         test("returns error and does not patch cache on API failure", async () => {

@@ -159,7 +159,10 @@ function createOntologyStore() {
 
         const entries = data ?? [];
 
-        patchOntology(workspaceName, graphURI, { entries });
+        // Deliberately not cached. These are entries the schema *could* state, for the caller to
+        // offer; the ontology is what it does state. Writing them into the cache invented one for
+        // a graph that has none — with no uuid and no namespace — and the next reader saved that
+        // back, which the backend rejects.
 
         console.log(
             `${LOG_PREFIX} Generated ${entries.length} ontology entries for workspace="${workspaceName}", graph="${graphURI}"`,
