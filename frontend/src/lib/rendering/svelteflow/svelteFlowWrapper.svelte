@@ -117,7 +117,7 @@
     let selectionZFrame = null;
     let boxSelecting = false;
     let labelPositions = new SvelteMap();
-    // Memoizes edge-intersection geometry per class pair, so dragging one class does not
+    // Memorizes edge-intersection geometry per class pair, so dragging one class does not
     // recompute the placement of every other edge in the diagram.
     let labelPlacementCache = new Map();
     let labelDragActive = false;
