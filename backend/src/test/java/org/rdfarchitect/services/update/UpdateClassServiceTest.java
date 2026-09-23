@@ -23,9 +23,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+
 import static utils.TestUtils.readMultipartFileFromFile;
 
-import java.util.UUID;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
@@ -56,6 +56,8 @@ import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutSyncService;
 import org.rdfarchitect.services.update.classes.UpdateClassService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.UUID;
 
 @SpringBootTest
 class UpdateClassServiceTest {
@@ -92,6 +94,7 @@ class UpdateClassServiceTest {
                         false,
                         mockUpdateClassLayoutService,
                         mockCustomDiagramService,
+                        mockEdgeLayoutSyncService,
                         mockEdgeLayoutSyncService,
                         mockEdgeLayoutSyncService,
                         mockEdgeLayoutSyncService);

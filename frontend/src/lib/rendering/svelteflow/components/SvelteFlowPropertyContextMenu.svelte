@@ -23,12 +23,11 @@
         propertyEditorRequest,
         PropertyKind,
     } from "$lib/propertyEditorRequest.svelte.js";
-
     import {
         getContextMenuTriggerStyle,
         handleContextMenuOpenChange,
         syncContextMenuTrigger,
-    } from "./contextMenuUtils.js";
+    } from "$lib/rendering/svelteflow/components/contextmenu/contextMenuUtils.js";
 
     let { request = null, readOnly = false, onClose = () => {} } = $props();
 

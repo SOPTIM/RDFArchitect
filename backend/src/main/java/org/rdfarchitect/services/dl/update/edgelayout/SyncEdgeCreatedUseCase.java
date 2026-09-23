@@ -17,8 +17,10 @@
 
 package org.rdfarchitect.services.dl.update.edgelayout;
 
-import java.util.UUID;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
+
+import java.util.UUID;
 
 public interface SyncEdgeCreatedUseCase {
 
@@ -33,10 +35,13 @@ public interface SyncEdgeCreatedUseCase {
      * @param identifiedObjectUUID the UUID of the identified object the edge references (the
      *     association for associations, the sub class for inheritances)
      * @param edgeName the name of the edge diagram object
+     * @param style the style of the edge, {@link DiagramObjectStyle#INHERITANCE} or {@link
+     *     DiagramObjectStyle#ASSOCIATION}
      */
     void syncEdgeCreated(
             GraphIdentifier graphIdentifier,
             UUID fromClassUUID,
             UUID identifiedObjectUUID,
-            String edgeName);
+            String edgeName,
+            DiagramObjectStyle style);
 }

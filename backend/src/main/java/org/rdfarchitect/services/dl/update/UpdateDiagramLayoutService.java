@@ -125,11 +125,11 @@ public class UpdateDiagramLayoutService implements CreateDiagramLayoutUseCase {
         for (var cimClassOrEnum : cimCollection.getClassesAndEnums()) {
             var superClass = cimClassOrEnum.getSuperClass();
             if (superClass != null) {
-                DiagramLayoutServiceUtils.insertDiagramObject(
+                DiagramLayoutServiceUtils.insertInheritanceLayoutData(
                         diagramLayoutModel,
                         diagramUUID,
                         cimClassOrEnum.getLabel().getValue()
-                                + " inheritance "
+                                + " "
                                 + superClass.getLabel().getValue(),
                         cimClassOrEnum.getUuid());
             }
@@ -140,11 +140,11 @@ public class UpdateDiagramLayoutService implements CreateDiagramLayoutUseCase {
             if (handledAssociationUris.contains(association.getUri().toString())) {
                 continue;
             }
-            DiagramLayoutServiceUtils.insertDiagramObject(
+            DiagramLayoutServiceUtils.insertAssociationLayoutData(
                     diagramLayoutModel,
                     diagramUUID,
                     association.getDomain().getLabel().getValue()
-                            + " association "
+                            + " "
                             + association.getRange().getLabel().getValue(),
                     association.getUuid());
             handledAssociationUris.add(association.getUri().toString());

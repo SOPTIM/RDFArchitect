@@ -34,6 +34,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
+import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
@@ -88,7 +89,7 @@ public class UpdateClassLayoutService
 
             var existingDiagramObject =
                     DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
-                            diagramLayoutModel, packageUUID, classUUID);
+                            diagramLayoutModel, packageUUID, classUUID, DiagramObjectStyle.CLASS);
             if (existingDiagramObject != null) {
                 // The class takes over an uri that already had layout data, for example because a
                 // class of that name was deleted while references to it remained. Keeping that
@@ -151,7 +152,10 @@ public class UpdateClassLayoutService
         for (var classPositionDTO : classPositionDTOList) {
             var diagramObject =
                     DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
-                            diagramLayoutModel, diagramUUID, classPositionDTO.getClassUUID());
+                            diagramLayoutModel,
+                            diagramUUID,
+                            classPositionDTO.getClassUUID(),
+                            DiagramObjectStyle.CLASS);
             if (diagramObject == null) {
                 if (DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null) {
                     DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, diagramUUID, "");
@@ -229,7 +233,9 @@ public class UpdateClassLayoutService
             GraphIdentifier graphIdentifier, UUID classUUID, String name) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
-            for (var diagramObject : DLObjectFetcher.fetchAllDOs(diagramLayoutModel, classUUID)) {
+            for (var diagramObject :
+                    DLObjectFetcher.fetchAllDOs(
+                            diagramLayoutModel, classUUID, DiagramObjectStyle.CLASS)) {
                 DLUpdates.updateDiagramObjectName(diagramLayoutModel, diagramObject, name);
             }
             ctx.commit();
@@ -240,7 +246,9 @@ public class UpdateClassLayoutService
     public void deleteClassLayoutData(GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
-            for (var diagramObject : DLObjectFetcher.fetchAllDOs(diagramLayoutModel, classUUID)) {
+            for (var diagramObject :
+                    DLObjectFetcher.fetchAllDOs(
+                            diagramLayoutModel, classUUID, DiagramObjectStyle.CLASS)) {
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
             }
             deleteOrphanedLabels(diagramLayoutModel, ctx.getRdfGraph(), classUUID);
@@ -256,15 +264,7 @@ public class UpdateClassLayoutService
      */
     private void deleteOrphanedLabels(Model diagramLayoutModel, Graph rdfGraph, UUID classUUID) {
         var danglingAssociationEndUuids = danglingAssociationEndUuids(rdfGraph, classUUID);
-        if (danglingAssociationEndUuids.isEmpty()) {
-            return;
-        }
-        for (var label : DLObjectFetcher.fetchAllLabelDOs(diagramLayoutModel)) {
-            if (danglingAssociationEndUuids.contains(
-                    label.getBelongsToIdentifiedObject().getUuid())) {
-                DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, label.getMRID());
-            }
-        }
+        DiagramLayoutServiceUtils.deleteLabelsFor(diagramLayoutModel, danglingAssociationEndUuids);
     }
 
     /**
@@ -346,15 +346,13 @@ public class UpdateClassLayoutService
             DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, diagramUUID, "");
         }
         for (var mergedUuid : mergedUuids) {
-            if (DLObjectFetcher.fetchDiagramDOForClass(diagramLayoutModel, diagramUUID, mergedUuid)
+            if (DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                            diagramLayoutModel, diagramUUID, mergedUuid, DiagramObjectStyle.CLASS)
                     != null) {
                 continue;
             }
-            for (var cls : classes) {
-                DiagramLayoutServiceUtils.insertClassLayoutData(
-                        diagramLayoutModel, diagramUUID, "", cls.getUuid(), 0, 0);
-            }
-            ctx.commit();
+            DiagramLayoutServiceUtils.insertClassLayoutData(
+                    diagramLayoutModel, diagramUUID, "", mergedUuid, 0, 0);
         }
     }
 
@@ -394,7 +392,7 @@ public class UpdateClassLayoutService
         for (var classUUID : classUUIDs) {
             var diagramObject =
                     DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
-                            diagramLayoutModel, diagramUUID, classUUID);
+                            diagramLayoutModel, diagramUUID, classUUID, DiagramObjectStyle.CLASS);
             if (diagramObject != null) {
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
             }
@@ -505,12 +503,16 @@ public class UpdateClassLayoutService
             return;
         }
 
-        var existingNew = DLObjectFetcher.fetchDiagramDOForIdentifiedObject(model, diagramUUID, newMergedUuid);
+        var existingNew =
+                DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                        model, diagramUUID, newMergedUuid, DiagramObjectStyle.CLASS);
         if (existingNew != null) {
             return;
         }
 
-        var oldDO = DLObjectFetcher.fetchDiagramDOForIdentifiedObject(model, diagramUUID, oldMergedUuid);
+        var oldDO =
+                DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                        model, diagramUUID, oldMergedUuid, DiagramObjectStyle.CLASS);
         if (oldDO == null) {
             return;
         }
@@ -521,7 +523,7 @@ public class UpdateClassLayoutService
         var gluePointMRID = DiagramLayoutServiceUtils.insertDiagramObjectGluePoint(model);
         var newDoMRID =
                 DiagramLayoutServiceUtils.insertDiagramObject(
-                        model, diagramUUID, newClassUri, newMergedUuid);
+                        model, diagramUUID, newClassUri, newMergedUuid, DiagramObjectStyle.CLASS);
 
         var newDiagramObjectPoint =
                 DiagramObjectPoint.builder()

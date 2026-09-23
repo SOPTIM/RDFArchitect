@@ -17,8 +17,8 @@
 
 package org.rdfarchitect.dl.queries.update;
 
-import java.util.List;
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
@@ -31,6 +31,8 @@ import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.rdf.resources.CIM;
 import org.rdfarchitect.dl.rdf.resources.DL;
+
+import java.util.List;
 
 @UtilityClass
 public class DLUpdates {
@@ -145,8 +147,7 @@ public class DLUpdates {
     public void deleteDiagramObjectCascade(Model model, MRID doMRID) {
         List<DiagramObjectPoint> dops = DLObjectFetcher.fetchDOPsForDO(model, doMRID);
         deleteDiagramObject(model, doMRID);
-        //TODO ist das so richtig?
-        if (dops != null) {
+        if (dops != null && !dops.isEmpty()) {
             dops.forEach(dop -> deleteDiagramObjectPointCascade(model, dop));
         }
     }

@@ -53,11 +53,10 @@ function getNodeIntersection(
     targetNode: InternalNode,
     offsetY: number = 0,
 ) {
-    const intersectionPos = intersectionNode.internals.positionAbsolute || {
-        x: 0,
-        y: 0,
-    };
-    const targetPos = targetNode.internals.positionAbsolute || { x: 0, y: 0 };
+    const intersectionPos = intersectionNode.internals?.positionAbsolute ??
+        intersectionNode.position ?? { x: 0, y: 0 };
+    const targetPos = targetNode.internals?.positionAbsolute ??
+        targetNode.position ?? { x: 0, y: 0 };
 
     const w = (intersectionNode.measured.width ?? 0) / 2;
     const h = (intersectionNode.measured.height ?? 0) / 2;

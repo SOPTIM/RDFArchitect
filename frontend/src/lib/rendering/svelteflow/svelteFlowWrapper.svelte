@@ -38,6 +38,8 @@
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import SvelteFlowEdgeContextMenu from "$lib/rendering/svelteflow/components/contextmenu/SvelteFlowEdgeContextMenu.svelte";
+    import InheritanceEdge from "$lib/rendering/svelteflow/components/edge/InheritanceEdge.svelte";
+    import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
     import { renderOptions } from "$lib/renderOptions.svelte.js";
     import {
         editorState,
@@ -57,7 +59,6 @@
         getClosestSegmentInsertionIndex,
         distanceToPolyline,
     } from "./components/edge/edgeUtils.ts";
-    import InheritanceEdge from "./components/InheritanceEdge.svelte";
     import SvelteFlowPropertyContextMenu from "./components/SvelteFlowPropertyContextMenu.svelte";
     import {
         decorateEdges,
@@ -102,7 +103,6 @@
         propertyContextMenu,
         propertySelection,
     } from "./interaction/propertyInteraction.svelte.js";
-    import { getLayoutedNodes } from "./layout/elkLayout.js";
     import { layoutDiagram } from "./layout/elkLayout.js";
 
     let {
@@ -165,7 +165,7 @@
     let layouted = $state(false);
 
     let selectionZFrame = null;
-    let boxSelecting = false;
+    let boxSelecting = $state(false);
     // Tracks the last seen position per dragged node id, to compute the delta
     // for moving attached end points live during a class drag.
     let lastDragPositions = new Map();
@@ -586,8 +586,6 @@
         });
     }
 
-    function handleNodeMove(nodeMoveEvent) {
-        updateNodePositions(nodeMoveEvent.nodes);
     /**
      * Rebuilds the label nodes whenever the classes they are anchored to move. Skipped while a
      * label itself is being dragged, which would otherwise pull it back to its stored offset.
@@ -1007,7 +1005,7 @@
             );
             nodes = [...layoutedNodes];
             applyLayoutedEdges(layoutedEdges);
-            updateNodePositions(nodes);
+            updateNodePositions(classNodes);
             resetLabelPositions();
             syncLabelNodes(nodes, edges);
             await tick();
@@ -1176,6 +1174,8 @@
         onnodedrag={e => {
             if (labelDragActive) {
                 clampDraggedLabels(e.nodes ?? []);
+            } else {
+                handleNodeDrag(e);
             }
         }}
         onnodedragstop={e => {
