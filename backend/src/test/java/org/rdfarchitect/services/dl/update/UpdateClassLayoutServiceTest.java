@@ -67,10 +67,12 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
         var model = workspaceLayoutModel();
         assertThat(
-                        DLObjectFetcher.fetchDiagramDOForClass(
+                        DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
                                 model, diagramUUID, CrossProfileUtils.mergedUuid(CLASS_A_URI)))
                 .isNotNull();
-        assertThat(DLObjectFetcher.fetchDiagramDOForClass(model, diagramUUID, CLASS_A_UUID))
+        assertThat(
+                        DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                                model, diagramUUID, CLASS_A_UUID))
                 .isNull();
     }
 
@@ -86,8 +88,10 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
         assertThat(workspaceDiagrams().get(diagramUUID).getClasses()).isEmpty();
         assertThat(
-                        DLObjectFetcher.fetchDiagramDOForClass(
-                                workspaceLayoutModel(),
+                        DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                                databasePort
+                                        .getDatasetDiagramLayout(datasetName)
+                                        .getDiagramLayoutModel(),
                                 diagramUUID,
                                 CrossProfileUtils.mergedUuid(CLASS_A_URI)))
                 .isNull();
@@ -107,8 +111,14 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
         service.addClassesToCustomDiagram(graphIdentifier, diagramUUID, List.of(classAInDiagram()));
 
-        var model = layoutModelOf(graphIdentifier);
-        assertThat(DLObjectFetcher.fetchDiagramDOForClass(model, diagramUUID, CLASS_A_UUID))
+        var model =
+                databasePort
+                        .getGraphWithContext(graphIdentifier)
+                        .getDiagramLayout()
+                        .getDiagramLayoutModelDirect();
+        assertThat(
+                        DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                                model, diagramUUID, CLASS_A_UUID))
                 .isNotNull();
     }
 
@@ -200,8 +210,10 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         // Assert
         assertDiagram(PACKAGE_A_UUID, "");
         assertThat(
-                        DLObjectFetcher.fetchDiagramDOForClass(
-                                layoutModelOf(graphIdentifier), PACKAGE_A_UUID, CLASS_A_UUID))
+                        DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                                diagramLayout.getDiagramLayoutModelDirect(),
+                                PACKAGE_A_UUID,
+                                CLASS_A_UUID))
                 .isNotNull();
         assertDiagramObjectCoordinates(CLASS_A_UUID, 123.0F, 456.0F);
     }

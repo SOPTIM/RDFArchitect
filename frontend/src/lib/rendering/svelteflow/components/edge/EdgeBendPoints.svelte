@@ -186,7 +186,7 @@
 <g>
     {#each inactiveBendPoints as inactivePoint (inactivePoint.insertionIndex)}
         <circle
-            class="bend-point-handle nodrag nopan fill-blue cursor-pointer opacity-50"
+            class="bend-point-handle nodrag nopan fill-bendpoint cursor-pointer opacity-50"
             role="button"
             aria-label="Add bend point"
             tabindex="-1"
@@ -202,7 +202,7 @@
 
     {#each inactiveEndPoints as inactiveEnd (inactiveEnd.side)}
         <circle
-            class="bend-point-handle nodrag nopan fill-green cursor-pointer opacity-50"
+            class="bend-point-handle nodrag nopan fill-endpoint cursor-pointer opacity-50"
             role="button"
             aria-label="Activate end point"
             tabindex="-1"
@@ -220,7 +220,7 @@
             class={`bend-point-handle nodrag nopan stroke-white stroke-[1.5] ${
                 readOnly
                     ? "fill-text-subtle cursor-default"
-                    : "fill-blue cursor-grab"
+                    : "fill-bendpoint cursor-grab"
             }`}
             role="button"
             aria-label="Move bend point"
@@ -241,7 +241,7 @@
             class={`bend-point-handle nodrag nopan stroke-white stroke-[1.5] ${
                 readOnly
                     ? "fill-text-subtle cursor-default"
-                    : "fill-green cursor-grab"
+                    : "fill-endpoint cursor-grab"
             }`}
             role="button"
             aria-label="Move source end point"
@@ -262,7 +262,7 @@
             class={`bend-point-handle nodrag nopan stroke-white stroke-[1.5] ${
                 readOnly
                     ? "fill-text-subtle cursor-default"
-                    : "fill-green cursor-grab"
+                    : "fill-endpoint cursor-grab"
             }`}
             role="button"
             aria-label="Move target end point"

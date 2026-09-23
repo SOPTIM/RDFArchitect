@@ -17,8 +17,8 @@
 
 package org.rdfarchitect.services.dl.update;
 
-import java.util.UUID;
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.dl.data.dto.Diagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
@@ -30,6 +30,9 @@ import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
+
+import java.util.Set;
+import java.util.UUID;
 
 /** Utility class with helper methods for the DiagramLayout update services */
 @UtilityClass
@@ -56,22 +59,27 @@ public class DiagramLayoutServiceUtils {
      * Helper method for creating and inserting a {@link DiagramObject} into a given model.
      *
      * @param diagramLayoutModel the model into which the diagram object is inserted
-     * @param packageUUID the UUID of the package whose diagram the object belongs to
-     * @param className the name of the class represented by the diagram object
-     * @param classUUID the UUID of the class represented by the diagram object
+     * @param diagramUUID the UUID of the diagram the object belongs to
+     * @param name the name of the diagram object
+     * @param identifiedObjectUUID the UUID of the CIM resource the diagram object represents
+     * @param style the style of the diagram object
      * @return the mRID of the created diagram object, used for creating diagram object points
      */
     public MRID insertDiagramObject(
-            Model diagramLayoutModel, UUID packageUUID, String className, UUID classUUID) {
+            Model diagramLayoutModel,
+            UUID diagramUUID,
+            String name,
+            UUID identifiedObjectUUID,
+            DiagramObjectStyle style) {
         var diagramObjectMRID = new MRID(UUID.randomUUID());
 
         var diagramObject =
                 DiagramObject.builder()
                         .mRID(diagramObjectMRID)
-                        .name(className)
-                        .belongsToDiagramObjectStyle(DiagramObjectStyle.CLASS)
-                        .belongsToDiagram(new MRID(packageUUID))
-                        .belongsToIdentifiedObject(new MRID(classUUID))
+                        .name(name)
+                        .belongsToDiagramObjectStyle(style)
+                        .belongsToDiagram(new MRID(diagramUUID))
+                        .belongsToIdentifiedObject(new MRID(identifiedObjectUUID))
                         .build();
         DLUpdates.insertDiagramObject(diagramLayoutModel, diagramObject);
 
@@ -195,10 +203,54 @@ public class DiagramLayoutServiceUtils {
             float xPosition,
             float yPosition) {
         var gluePointMRID = insertDiagramObjectGluePoint(diagramLayoutModel);
-        var doMRID = insertDiagramObject(diagramLayoutModel, diagramUUID, className, classUUID);
+        var doMRID =
+                insertDiagramObject(
+                        diagramLayoutModel,
+                        diagramUUID,
+                        className,
+                        classUUID,
+                        DiagramObjectStyle.CLASS);
         insertDiagramObjectPoint(
                 diagramLayoutModel, doMRID, diagramUUID, xPosition, yPosition, null, gluePointMRID);
         return doMRID;
+    }
+
+    /**
+     * Creates the edge diagram object for a new inheritance relationship.
+     *
+     * @param diagramLayoutModel the model into which the diagram object is inserted
+     * @param diagramUUID the UUID of the diagram the edge belongs to
+     * @param name the name of the edge diagram object
+     * @param subClassUUID the UUID of the sub class, used as the edge's identified object
+     * @return the mRID of the created diagram object
+     */
+    public MRID insertInheritanceLayoutData(
+            Model diagramLayoutModel, UUID diagramUUID, String name, UUID subClassUUID) {
+        return insertDiagramObject(
+                diagramLayoutModel,
+                diagramUUID,
+                name,
+                subClassUUID,
+                DiagramObjectStyle.INHERITANCE);
+    }
+
+    /**
+     * Creates the edge diagram object for a new association.
+     *
+     * @param diagramLayoutModel the model into which the diagram object is inserted
+     * @param diagramUUID the UUID of the diagram the edge belongs to
+     * @param name the name of the edge diagram object
+     * @param associationUUID the UUID of the association, used as the edge's identified object
+     * @return the mRID of the created diagram object
+     */
+    public MRID insertAssociationLayoutData(
+            Model diagramLayoutModel, UUID diagramUUID, String name, UUID associationUUID) {
+        return insertDiagramObject(
+                diagramLayoutModel,
+                diagramUUID,
+                name,
+                associationUUID,
+                DiagramObjectStyle.ASSOCIATION);
     }
 
     /**
@@ -246,8 +298,27 @@ public class DiagramLayoutServiceUtils {
                         .belongsToDiagram(new MRID(diagramUUID))
                         .belongsToIdentifiedObject(new MRID(identifiedObjectUUID))
                         .build());
-        insertDiagramObjectPoint(diagramLayoutModel, labelMRID, diagramUUID, x, y);
+        insertDiagramObjectPoint(diagramLayoutModel, labelMRID, diagramUUID, x, y, null, null);
         return labelMRID;
+    }
+
+    /**
+     * Deletes every label {@link DiagramObject} anchored to any of the given identified object
+     * UUIDs, across all diagrams. Used to drop multiplicity/role name labels that become orphaned
+     * when the CIM resource they describe (e.g. an association end) is deleted.
+     *
+     * @param diagramLayoutModel the model from which the labels are deleted
+     * @param identifiedObjectUUIDs the UUIDs of the CIM resources whose labels are dropped
+     */
+    public void deleteLabelsFor(Model diagramLayoutModel, Set<UUID> identifiedObjectUUIDs) {
+        if (identifiedObjectUUIDs.isEmpty()) {
+            return;
+        }
+        for (var label : DLObjectFetcher.fetchAllLabelDOs(diagramLayoutModel)) {
+            if (identifiedObjectUUIDs.contains(label.getBelongsToIdentifiedObject().getUuid())) {
+                DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, label.getMRID());
+            }
+        }
     }
 
     /**
