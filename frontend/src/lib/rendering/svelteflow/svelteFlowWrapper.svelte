@@ -17,9 +17,15 @@
 
 <script>
     import "@xyflow/svelte/dist/style.css";
-    import {Background, SvelteFlow, useNodes, useNodesInitialized, useSvelteFlow,} from "@xyflow/svelte";
-    import {onDestroy, onMount, setContext, tick, untrack} from "svelte";
-    import {SvelteMap} from "svelte/reactivity";
+    import {
+        Background,
+        SvelteFlow,
+        useNodes,
+        useNodesInitialized,
+        useSvelteFlow,
+    } from "@xyflow/svelte";
+    import { onDestroy, onMount, setContext, tick, untrack } from "svelte";
+    import { SvelteMap } from "svelte/reactivity";
 
     import {
         updateClassPositions,
@@ -27,11 +33,15 @@
         updateDatasetLabelPositions,
         updateLabelPositions,
     } from "$lib/api/generated/index.ts";
-    import {eventStack} from "$lib/eventhandling/closeEventManager.svelte.js";
-    import {toastStore} from "$lib/eventhandling/toastStore.svelte.js";
-    import {renderOptions} from "$lib/renderOptions.svelte.js";
-    import {editorState, forceReloadTrigger, multiSelectState,} from "$lib/sharedState.svelte.js";
-    import {workspaceStore} from "$lib/stores/workspaceStore.ts";
+    import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { renderOptions } from "$lib/renderOptions.svelte.js";
+    import {
+        editorState,
+        forceReloadTrigger,
+        multiSelectState,
+    } from "$lib/sharedState.svelte.js";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import AssociationEdge from "./components/AssociationEdge.svelte";
     import ClassNode from "./components/ClassNode.svelte";
@@ -41,7 +51,10 @@
     import SvelteFlowClassContextMenu from "./components/SvelteFlowClassContextMenu.svelte";
     import SvelteFlowPaneContextMenu from "./components/SvelteFlowPaneContextMenu.svelte";
     import SvelteFlowPropertyContextMenu from "./components/SvelteFlowPropertyContextMenu.svelte";
-    import {decorateEdges, hasDefaultNodeLayout,} from "./diagram/diagramElements.js";
+    import {
+        decorateEdges,
+        hasDefaultNodeLayout,
+    } from "./diagram/diagramElements.js";
     import {
         buildLabelNodes,
         clampToAnchor,
@@ -51,14 +64,24 @@
         labelNodeId,
         labelNodesChanged,
     } from "./diagram/labelNodes.js";
-    import {ContextMenuController} from "./interaction/contextMenus.svelte.js";
-    import {DIAGRAM_SELECTION_CONTEXT, DiagramSelectionController,} from "./interaction/diagramSelection.svelte.js";
-    import {labelHighlight} from "./interaction/labelHighlight.svelte.js";
-    import {clearHeldModifiers, heldModifiers, syncHeldModifiers,} from "./interaction/modifierKeys.svelte.js";
-    import {NodeOrderController} from "./interaction/nodeOrder.svelte.js";
-    import {PanController} from "./interaction/panController.svelte.js";
-    import {propertyContextMenu, propertySelection,} from "./interaction/propertyInteraction.svelte.js";
-    import {getLayoutedNodes} from "./layout/elkLayout.js";
+    import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
+    import {
+        DIAGRAM_SELECTION_CONTEXT,
+        DiagramSelectionController,
+    } from "./interaction/diagramSelection.svelte.js";
+    import { labelHighlight } from "./interaction/labelHighlight.svelte.js";
+    import {
+        clearHeldModifiers,
+        heldModifiers,
+        syncHeldModifiers,
+    } from "./interaction/modifierKeys.svelte.js";
+    import { NodeOrderController } from "./interaction/nodeOrder.svelte.js";
+    import { PanController } from "./interaction/panController.svelte.js";
+    import {
+        propertyContextMenu,
+        propertySelection,
+    } from "./interaction/propertyInteraction.svelte.js";
+    import { getLayoutedNodes } from "./layout/elkLayout.js";
 
     let {
         nodes: inputNodes,
