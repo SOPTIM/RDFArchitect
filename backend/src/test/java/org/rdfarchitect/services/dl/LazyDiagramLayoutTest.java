@@ -34,6 +34,7 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.services.GetRenderingDataService;
+import org.rdfarchitect.services.dl.select.QueryDiagramLayoutService;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterService;
 import org.rdfarchitect.services.rendering.svelteflow.RenderCIMFacadeCollectionSvelteFlowService;
@@ -84,7 +85,8 @@ class LazyDiagramLayoutTest {
                 new GetRenderingDataService(
                         databasePort,
                         new RenderCIMFacadeCollectionSvelteFlowService(),
-                        datasetName -> List.of());
+                        datasetName -> List.of(),
+                        new QueryDiagramLayoutService(databasePort));
         classLayoutService =
                 new UpdateClassLayoutService(databasePort, Mappers.getMapper(PackageMapper.class));
 
