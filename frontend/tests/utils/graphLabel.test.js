@@ -19,7 +19,6 @@ import { describe, expect, test } from "vitest";
 
 import {
     graphLabel,
-    graphLabelOf,
     graphLabeller,
     graphTooltip,
     graphUri,
@@ -132,22 +131,5 @@ describe("graphTooltip", () => {
 
     test("holds just the graph for one that says nothing else", () => {
         expect(graphTooltip(PLAIN)).toBe("http://example.org/graphs/Notes");
-    });
-});
-
-describe("graphLabelOf", () => {
-    test("names the graph with the given URI", () => {
-        expect(
-            graphLabelOf(
-                [CURRENT, LEGACY],
-                "http://example.org/graphs/Equipment",
-            ),
-        ).toBe("Core Equipment Vocabulary");
-    });
-
-    test("falls back to the URI suffix while the list is still loading", () => {
-        expect(graphLabelOf([], "http://example.org/graphs/Equipment")).toBe(
-            "Equipment",
-        );
     });
 });
