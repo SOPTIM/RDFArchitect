@@ -103,11 +103,22 @@ describe("getWorkspaceNavEntry", () => {
         expect(legacy.data).toEqual({ keyword: "EQ" });
     });
 
+    /** The badge adds the keyword to the name; with no title the name already is the keyword. */
+    test("drops the badge where the name is the keyword", async () => {
+        graphStore.getGraphs.mockResolvedValue([{ ...CURRENT, label: null }]);
+
+        const [entry] = await schemaEntries();
+
+        expect(entry.label).toBe("EQ");
+        expect(entry.data).toEqual({ keyword: "" });
+    });
+
     test("hovering a schema names its version IRIs and what it is for", async () => {
         const [current] = await schemaEntries();
 
         expect(current.tooltip).toBe(
             [
+                "Version 3.0.0",
                 "http://iec.ch/TC57/ns/CIM/CoreEquipment-EU/3.0",
                 "The core equipment profile.",
             ].join("\n"),
@@ -119,14 +130,14 @@ describe("getWorkspaceNavEntry", () => {
         const [before] = workspace.children;
 
         graphStore.getGraphs.mockResolvedValue([
-            { ...CURRENT, keyword: "EQX", label: null },
+            { ...CURRENT, keyword: "EQX", label: "Renamed Vocabulary" },
         ]);
         const rebuilt = await getWorkspaceNavEntry("cgmes", workspace);
         const [after] = rebuilt.children;
 
         // The entry is reused, so a stale badge would survive the rebuild.
         expect(after).toBe(before);
-        expect(after.label).toBe("EQX");
+        expect(after.label).toBe("Renamed Vocabulary");
         expect(after.data).toEqual({ keyword: "EQX" });
     });
 });

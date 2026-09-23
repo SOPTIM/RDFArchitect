@@ -25,7 +25,10 @@
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
-    import { graphLabel, graphUri as uriOf } from "$lib/utils/graph-label.js";
+    import {
+        graphLabeller,
+        graphUri as uriOf,
+    } from "$lib/utils/graph-label.js";
     import { toLocalName, uriSuffix } from "$lib/utils/iri.js";
 
     let {
@@ -50,8 +53,13 @@
     let otherGraphUris = $state([]);
     /** What the profile calls itself, if it does. Empty for a graph with no header to read. */
     let profileName = $state("");
-    /** For a CGMES 2.4.15 profile, the class its keyword and version IRIs are fixed on. */
-    let profileClass = $state(null);
+    /**
+     * Where the name the profile gives itself is edited, or null when the profile offers nowhere.
+     * A CGMES 3.0 profile keeps it on an ontology object; a CGMES 2.4.15 profile has no such
+     * object and fixes it on a class instead. A profile with neither must be left alone: an
+     * ontology object written into a CIM16 graph is a header that profile never reads back.
+     */
+    let headerTarget = $state(null);
 
     const trimmedName = $derived(nameUserInput.trim());
     const localName = $derived(toLocalName(trimmedName));
@@ -59,10 +67,19 @@
     const graphExists = $derived(
         !!resolvedGraphUri && otherGraphUris.includes(resolvedGraphUri),
     );
-    const nameChanged = $derived(trimmedName !== initialName);
-    const disableSubmit = $derived(
-        !resolvedGraphUri || graphExists || !nameChanged,
+    /**
+     * A rename is a change of the graph URI, and the URI is built from the name rather than being
+     * it: "My Notes" and "MyNotes" are the same graph, and renaming one to the other would report
+     * success for a request the backend turns into nothing.
+     */
+    const uriChanged = $derived(
+        !!resolvedGraphUri && resolvedGraphUri !== graphUri,
     );
+    const disableSubmit = $derived(
+        !resolvedGraphUri || graphExists || !uriChanged,
+    );
+    /** Shown where the typed name cannot stand in a URI as written. */
+    const spelledAs = $derived(localName !== trimmedName ? localName : "");
 
     async function onOpen() {
         const uri = graphUri ? new URI(graphUri) : null;
@@ -71,16 +88,27 @@
         nameUserInput = initialName;
 
         const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
+        const nameOf = graphLabeller(graphs);
         const current = graphs.find(graph => uriOf(graph) === graphUri);
-        profileName =
-            current?.label || current?.keyword ? graphLabel(current) : "";
-        profileClass = current?.profileClassUuid
-            ? {
-                  uuid: current.profileClassUuid,
-                  label: uriSuffix(current.profileClassIri),
-              }
-            : null;
+        // Named among the other schemas, not on its own: the schemas this dialog has to tell
+        // apart are exactly the ones whose profiles name themselves alike.
+        profileName = current?.label || current?.keyword ? nameOf(current) : "";
+        headerTarget = headerTargetOf(current);
         otherGraphUris = graphs.map(uriOf).filter(uri => uri !== graphUri);
+    }
+
+    function headerTargetOf(graph) {
+        if (graph?.ontologyHeader) {
+            return { kind: "ontology" };
+        }
+        if (graph?.profileClassUuid) {
+            return {
+                kind: "class",
+                uuid: graph.profileClassUuid,
+                label: uriSuffix(graph.profileClassIri),
+            };
+        }
+        return null;
     }
 
     function onClose() {
@@ -89,12 +117,12 @@
         namespace = defaultNamespace;
         otherGraphUris = [];
         profileName = "";
-        profileClass = null;
+        headerTarget = null;
     }
 
     function editHeader() {
         // Read before closing: onClose resets the state this hands over.
-        const target = profileClass;
+        const target = headerTarget;
         showDialog = false;
         onClose();
         onEditHeader?.(target);
@@ -138,6 +166,14 @@
 
         {#if graphExists}
             <div class="mt-1 mb-1 h-6 text-sm">Schema already exists</div>
+        {:else if spelledAs}
+            <!--
+              The graph URI is built from the name, so a name an IRI cannot carry as written is
+              spelled differently in it - and without saying so, Rename simply stays greyed out.
+            -->
+            <div class="mt-1 mb-1 h-6 text-sm">
+                Stored as {spelledAs}
+            </div>
         {/if}
 
         {#if profileName}
@@ -149,15 +185,17 @@
             <!-- prettier-ignore -->
             <div class="text-nav-text mt-2 text-sm">
                 Shown as <span class="font-semibold">{profileName}</span>, from the profile header.
-                <button
-                    type="button"
-                    class="text-blue cursor-pointer underline"
-                    onclick={editHeader}
-                >
-                    {profileClass
-                        ? `Edit on ${profileClass.label}`
-                        : "Edit profile header"}
-                </button>
+                {#if headerTarget}
+                    <button
+                        type="button"
+                        class="text-blue cursor-pointer underline"
+                        onclick={editHeader}
+                    >
+                        {headerTarget.kind === "class"
+                            ? `Edit on ${headerTarget.label}`
+                            : "Edit profile header"}
+                    </button>
+                {/if}
             </div>
         {/if}
     </div>

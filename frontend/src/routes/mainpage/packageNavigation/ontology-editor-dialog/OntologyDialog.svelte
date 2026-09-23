@@ -137,11 +137,11 @@
                 );
             }
             ontologyObject.save();
-            if (onSubmit) {
-                onSubmit();
-            } else {
-                forceReloadTrigger.trigger();
-            }
+            // The header names the schema in the navigation, and the tree reads that name from
+            // the graph list rather than from here — so the tree has to be rebuilt whoever
+            // opened this dialog. onSubmit is the caller's own refresh on top of that.
+            onSubmit?.();
+            forceReloadTrigger.trigger();
         } finally {
             loadingOntology = false;
         }

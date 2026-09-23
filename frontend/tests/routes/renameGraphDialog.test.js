@@ -27,6 +27,7 @@ const CURRENT = {
     uri: { prefix: "http://graph#", suffix: "Equipment" },
     keyword: "EQ",
     label: "Core Equipment Vocabulary",
+    ontologyHeader: true,
 };
 
 /** A CGMES 2.4.15 profile: no ontology object, its metadata is fixed on a class. */
@@ -37,6 +38,26 @@ const LEGACY = {
     profileClassIri:
         "http://entsoe.eu/CIM/SchemaExtension/3/1#EquipmentVersion",
     profileClassUuid: "uuid-equipment-version",
+};
+
+/**
+ * The same legacy profile again, reading exactly alike: only the graph they were imported into
+ * tells the two apart, which is how the official equipment profiles come.
+ */
+const LEGACY_TWIN = {
+    ...LEGACY,
+    uri: { prefix: "http://graph#", suffix: "EquipmentCoreOperation" },
+};
+
+/**
+ * A legacy profile whose version class has no uuid yet. It states a name and has nowhere to
+ * edit it: no ontology object, and no class the class editor could open.
+ */
+const LEGACY_WITHOUT_TARGET = {
+    uri: { prefix: "http://graph#", suffix: "EquipmentShortCircuit" },
+    keyword: "SC",
+    label: "ShortCircuitProfile",
+    profileClassIri: "http://entsoe.eu/CIM/SchemaExtension/3/1#SCVersion",
 };
 
 /** A schema made in the app: no profile header, so its graph URI is its only name. */
@@ -93,7 +114,12 @@ vi.mock("$lib/stores/graphStore.ts", () => ({
 
 beforeEach(() => {
     editHeaderCalls = [];
-    graphStore.getGraphs.mockResolvedValue([CURRENT, LEGACY, PLAIN]);
+    graphStore.getGraphs.mockResolvedValue([
+        CURRENT,
+        LEGACY,
+        LEGACY_WITHOUT_TARGET,
+        PLAIN,
+    ]);
     graphStore.renameGraph.mockResolvedValue({ error: null });
 });
 
@@ -161,7 +187,20 @@ describe("RenameGraphDialog", () => {
 
         headerHintButton().click();
 
-        expect(editHeaderCalls).toEqual([null]);
+        expect(editHeaderCalls).toEqual([{ kind: "ontology" }]);
+    });
+
+    /**
+     * Writing an ontology object into a CGMES 2.4.15 graph adds a header that profile never
+     * reads back, so a profile with no place to edit its name offers no way in.
+     */
+    test("offers nowhere to edit a legacy profile whose class it cannot open", async () => {
+        await open("http://graph#EquipmentShortCircuit");
+
+        expect(document.body.textContent.replace(/\s+/g, " ")).toContain(
+            "Shown as ShortCircuitProfile, from the profile header.",
+        );
+        expect(headerHintButton()).toBeUndefined();
     });
 
     test("reads as something to click", async () => {
@@ -180,8 +219,26 @@ describe("RenameGraphDialog", () => {
         headerHintButton().click();
 
         expect(editHeaderCalls).toEqual([
-            { uuid: "uuid-equipment-version", label: "EquipmentVersion" },
+            {
+                kind: "class",
+                uuid: "uuid-equipment-version",
+                label: "EquipmentVersion",
+            },
         ]);
+    });
+
+    /**
+     * The schemas this dialog has to tell apart are exactly the ones whose profiles name
+     * themselves alike, so it names them the way the tree does rather than on their own.
+     */
+    test("tells apart the schemas that read alike", async () => {
+        graphStore.getGraphs.mockResolvedValue([LEGACY, LEGACY_TWIN]);
+
+        await open("http://graph#EquipmentCore");
+
+        expect(document.body.textContent.replace(/\s+/g, " ")).toContain(
+            "Shown as EquipmentProfile (EquipmentCore), from the profile header.",
+        );
     });
 
     test("says nothing about a header for a schema that has none", async () => {
@@ -203,5 +260,42 @@ describe("RenameGraphDialog", () => {
         await open("http://graph#MyNotes");
 
         expect(button("Rename Schema").disabled).toBe(true);
+    });
+
+    /**
+     * The graph URI is built from the name rather than being it, so a change the URI does not
+     * survive is no rename: the backend would do nothing and the dialog would report success.
+     */
+    test("refuses a name that resolves to the graph it already has", async () => {
+        await open("http://graph#MyNotes");
+
+        await type(nameInput(), "My Notes");
+
+        expect(button("Rename Schema").disabled).toBe(true);
+        expect(graphStore.renameGraph).not.toHaveBeenCalled();
+    });
+
+    test("says how a name that an IRI cannot carry is spelled instead", async () => {
+        await open("http://graph#MyNotes");
+
+        await type(nameInput(), "C# Notes");
+
+        expect(document.body.textContent).toContain("Stored as CNotes");
+    });
+
+    /** A second "#" makes the whole graph URI unparseable, not just the name odd. */
+    test("keeps a typed name from making a second URI fragment", async () => {
+        await open("http://graph#MyNotes");
+
+        await type(nameInput(), "C#Notes");
+        button("Rename Schema").click();
+
+        await vi.waitFor(() =>
+            expect(graphStore.renameGraph).toHaveBeenCalledWith(
+                "cgmes",
+                "http://graph#MyNotes",
+                "http://graph#CNotes",
+            ),
+        );
     });
 });

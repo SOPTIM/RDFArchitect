@@ -195,25 +195,29 @@
     /**
      * Opens whatever edits the name a schema is shown under. A CGMES 3.0 profile keeps it on an
      * ontology object, which the ontology editor owns; a CGMES 2.4.15 profile has no such object
-     * and states it on a class instead, so there the class editor is the answer.
+     * and states it on a class instead, so there the class editor is the answer. The dialog
+     * decides which of the two it is, because only the graph list knows.
      */
-    function editProfileHeader(profileClass) {
-        if (!profileClass) {
+    function editProfileHeader(target) {
+        if (target?.kind === "ontology") {
             showEditOntologyDialog = true;
+            return;
+        }
+        if (target?.kind !== "class") {
             return;
         }
         focusGraphContext();
         editorState.classEditorSchema.updateValue({
-            classUuid: profileClass.uuid,
+            classUuid: target.uuid,
             graphUri: graphNavEntry.id,
         });
         editorState.selectedClassWorkspace.updateValue(workspaceNavEntry.id);
         editorState.selectedClassGraph.updateValue(graphNavEntry.id);
         editorState.selectedClass.updateValue({
             type: ClassType.SINGLE_CLASS,
-            id: profileClass.uuid,
+            id: target.uuid,
         });
-        editorState.focusedClassUUID.updateValue(profileClass.uuid);
+        editorState.focusedClassUUID.updateValue(target.uuid);
     }
 </script>
 

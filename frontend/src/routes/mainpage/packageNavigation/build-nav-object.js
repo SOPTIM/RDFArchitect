@@ -94,7 +94,9 @@ async function populateWorkspace(workspaceNavEntry) {
             label: nameOf(graph),
             fullUri: graphUri(graph),
             tooltip: graphTooltip(graph),
-            data: { keyword: graph.keyword ?? "" },
+            // The badge adds the keyword to the name. With no title of its own the name already
+            // is the keyword, and the entry would read "EQ EQ".
+            data: { keyword: graph.label ? (graph.keyword ?? "") : "" },
         }))
         .sort((a, b) =>
             compareGraphs(

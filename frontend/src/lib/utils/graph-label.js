@@ -18,14 +18,20 @@
 /**
  * What a schema is called on screen.
  *
- * The navigation tree, the changelog and every schema picker name a graph the same way, so the
- * rule lives here rather than in each of them: a profile's own name first, its keyword when it
- * has no name, and the tail of its URI when it is not a CIM profile at all.
+ * The navigation tree, the changelog, the schema colors, the schema lists of a class and every
+ * schema picker name a graph the same way, so the rule lives here rather than in each of them: a
+ * profile's own name first, its keyword when it has no name, and the tail of its URI when it is
+ * not a CIM profile at all.
  */
 
 import { uriSuffix } from "./iri.js";
 
-/** The full URI of a graph as the backend sends it: a `GraphDto` split into prefix and suffix. */
+/**
+ * The full URI of a resource as the backend sends it: a `GraphDto` holding a URI split into
+ * prefix and suffix, a bare split URI, or a string that already is the URI.
+ *
+ * The navigation reaches this as `getUri`, which `packageNavigationUtils` re-exports.
+ */
 export function graphUri(graph) {
     const uri = graph?.uri ?? graph;
     if (typeof uri === "string") {
@@ -77,8 +83,12 @@ export function graphLabeller(graphs) {
 export function graphTooltip(graph) {
     const versionIris = graph?.versionIris ?? [];
     const lines = [];
-    if (!versionIris.length && !graph?.description) {
+    if (!versionIris.length && !graph?.versionInfo && !graph?.description) {
         lines.push(graphUri(graph));
+    }
+    // The version a profile states in words, which CGMES 2.4.15 has nowhere to write.
+    if (graph?.versionInfo) {
+        lines.push(`Version ${graph.versionInfo}`);
     }
     lines.push(...versionIris);
     if (graph?.description) {

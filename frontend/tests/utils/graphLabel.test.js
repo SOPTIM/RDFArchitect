@@ -111,9 +111,16 @@ describe("graphTooltip", () => {
     test("names the profile version and what the schema is for", () => {
         expect(graphTooltip(CURRENT)).toBe(
             [
+                "Version 3.0.0",
                 "http://iec.ch/TC57/ns/CIM/CoreEquipment-EU/3.0",
                 "The core equipment profile.",
             ].join("\n"),
+        );
+    });
+
+    test("says nothing about a version a profile has nowhere to write", () => {
+        expect(graphTooltip(LEGACY)).toBe(
+            "http://entsoe.eu/CIM/EquipmentCore/3/1",
         );
     });
 
