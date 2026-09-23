@@ -18,9 +18,11 @@
 package org.rdfarchitect.services.dl.update.edgelayout;
 
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 
 import java.util.UUID;
 
+// CreateEdgeLayoutDataUseCase.java
 public interface CreateEdgeLayoutDataUseCase {
 
     /**
@@ -32,10 +34,13 @@ public interface CreateEdgeLayoutDataUseCase {
      * @param diagramUUID the UUID of the diagram the edge belongs to
      * @param identifiedObjectUUID the UUID of the identified object the edge references
      * @param edgeName the name of the edge diagram object
+     * @param style the style of the edge, {@link DiagramObjectStyle#INHERITANCE} or {@link
+     *     DiagramObjectStyle#ASSOCIATION}
      */
     void createEdgeLayoutData(
             GraphIdentifier graphIdentifier,
             UUID diagramUUID,
             UUID identifiedObjectUUID,
-            String edgeName);
+            String edgeName,
+            DiagramObjectStyle style);
 }

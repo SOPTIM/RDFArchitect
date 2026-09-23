@@ -17,7 +17,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { getEdgeParams } from "$lib/rendering/svelteflow/components/edgeUtils.ts";
+import { getEdgeParams } from "$lib/rendering/svelteflow/components/edge/edgeUtils.ts";
 import {
     buildLabelNodes,
     labelNodesChanged,

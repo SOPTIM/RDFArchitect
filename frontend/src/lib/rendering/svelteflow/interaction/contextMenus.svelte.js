@@ -26,9 +26,6 @@ import {
 import { EDGE_INTERACTION_CONFIG } from "./edgeInteractionConfig.js";
 import { propertyContextMenu } from "./propertyInteraction.svelte.js";
 
-/** Base hit radius (in screen pixels) for detecting a bend point under the cursor. */
-const BEND_POINT_HIT_RADIUS_PX = 10;
-
 export class ContextMenuController {
     #paneRequest = $state(null);
     #classRequest = $state(null);
