@@ -31,8 +31,8 @@
         faGear,
     } from "@fortawesome/free-solid-svg-icons";
 
-    import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import ContextMenuSeparator from "$lib/components/bitsui/contextmenu/ContextMenuSeparator.svelte";
+    import { ContextMenu } from "$lib/components/bitsui/contextmenu/index.js";
     import {
         copyState,
         editorState,
@@ -46,12 +46,12 @@
         handleContextMenuOpenChange,
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
-    import DeleteDependenciesDialog from "../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
-    import AddToGraphDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
-    import AddToWorkspaceDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
-    import RemoveFromDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
-    import ExtendSchemaSubMenu from "../../../../routes/mainpage/packageNavigation/ExtendSchemaSubMenu.svelte";
-    import SHACLClassSpecificPopUp from "../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
+    import DeleteDependenciesDialog from "../../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
+    import AddToGraphDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import AddToWorkspaceDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
+    import RemoveFromDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
+    import ExtendSchemaSubMenu from "../../../../../routes/mainpage/packageNavigation/ExtendSchemaSubMenu.svelte";
+    import SHACLClassSpecificPopUp from "../../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
 
     let {
         request = null,

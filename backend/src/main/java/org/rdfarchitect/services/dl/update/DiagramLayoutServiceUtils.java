@@ -22,6 +22,7 @@ import lombok.experimental.UtilityClass;
 import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.dl.data.dto.Diagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
+import org.rdfarchitect.dl.data.dto.DiagramObjectGluePoint;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
@@ -30,6 +31,7 @@ import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 
+import java.util.Set;
 import java.util.UUID;
 
 /** Utility class with helper methods for the DiagramLayout update services */
@@ -57,22 +59,27 @@ public class DiagramLayoutServiceUtils {
      * Helper method for creating and inserting a {@link DiagramObject} into a given model.
      *
      * @param diagramLayoutModel the model into which the diagram object is inserted
-     * @param packageUUID the UUID of the package whose diagram the object belongs to
-     * @param className the name of the class represented by the diagram object
-     * @param classUUID the UUID of the class represented by the diagram object
+     * @param diagramUUID the UUID of the diagram the object belongs to
+     * @param name the name of the diagram object
+     * @param identifiedObjectUUID the UUID of the CIM resource the diagram object represents
+     * @param style the style of the diagram object
      * @return the mRID of the created diagram object, used for creating diagram object points
      */
     public MRID insertDiagramObject(
-            Model diagramLayoutModel, UUID packageUUID, String className, UUID classUUID) {
+            Model diagramLayoutModel,
+            UUID diagramUUID,
+            String name,
+            UUID identifiedObjectUUID,
+            DiagramObjectStyle style) {
         var diagramObjectMRID = new MRID(UUID.randomUUID());
 
         var diagramObject =
                 DiagramObject.builder()
                         .mRID(diagramObjectMRID)
-                        .name(className)
-                        .belongsToDiagramObjectStyle(DiagramObjectStyle.CLASS)
-                        .belongsToDiagram(new MRID(packageUUID))
-                        .belongsToIdentifiedObject(new MRID(classUUID))
+                        .name(name)
+                        .belongsToDiagramObjectStyle(style)
+                        .belongsToDiagram(new MRID(diagramUUID))
+                        .belongsToIdentifiedObject(new MRID(identifiedObjectUUID))
                         .build();
         DLUpdates.insertDiagramObject(diagramLayoutModel, diagramObject);
 
@@ -88,7 +95,8 @@ public class DiagramLayoutServiceUtils {
      */
     public void insertDiagramObjectPoint(
             Model diagramLayoutModel, UUID diagrammUUID, MRID diagramObjectMRID) {
-        insertDiagramObjectPoint(diagramLayoutModel, diagramObjectMRID, diagrammUUID, 0, 0);
+        insertDiagramObjectPoint(
+                diagramLayoutModel, diagramObjectMRID, diagrammUUID, 0, 0, null, null);
     }
 
     /**
@@ -105,7 +113,9 @@ public class DiagramLayoutServiceUtils {
             MRID diagramObjectMRID,
             UUID diagrammUUID,
             float xPosition,
-            float yPosition) {
+            float yPosition,
+            Integer sequenceNumber,
+            MRID gluePointMRID) {
 
         var existingPoints =
                 DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, diagrammUUID);
@@ -121,8 +131,142 @@ public class DiagramLayoutServiceUtils {
                         .mRID(new MRID(UUID.randomUUID()))
                         .position(new XYZPosition(xPosition, yPosition, maxZPosition + 1))
                         .belongsToDiagramObject(diagramObjectMRID)
+                        .sequenceNumber(sequenceNumber)
+                        .belongsToGluePoint(gluePointMRID)
                         .build();
         DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);
+    }
+
+    /**
+     * Helper method for creating and inserting a {@link DiagramObjectGluePoint} into a given model.
+     * The glue point is an attributeless URI marker; its mRID is returned so callers can reference
+     * it from the class diagram object point that it belongs to.
+     *
+     * @param diagramLayoutModel the model into which the glue point is inserted
+     * @return the mRID of the created glue point
+     */
+    public MRID insertDiagramObjectGluePoint(Model diagramLayoutModel) {
+        var gluePointMRID = new MRID(UUID.randomUUID());
+
+        var gluePoint = DiagramObjectGluePoint.builder().mRID(gluePointMRID).build();
+        DLUpdates.insertDiagramObjectGluePoint(diagramLayoutModel, gluePoint);
+
+        return gluePointMRID;
+    }
+
+    /**
+     * Helper method for creating and inserting a bend point {@link DiagramObjectPoint} for an edge.
+     * Bend points carry a sequence number instead of a z position and, unless they are end points,
+     * no glue point reference.
+     *
+     * @param diagramLayoutModel the model into which the diagram object point is inserted
+     * @param edgeDoMRID the mRID of the edge diagram object the bend point belongs to
+     * @param xPosition the x position of the bend point
+     * @param yPosition the y position of the bend point
+     * @param sequenceNumber the position of the bend point within the edge's point chain
+     */
+    public void insertBendPoint(
+            Model diagramLayoutModel,
+            MRID edgeDoMRID,
+            float xPosition,
+            float yPosition,
+            int sequenceNumber) {
+        var bendPoint =
+                DiagramObjectPoint.builder()
+                        .mRID(new MRID(UUID.randomUUID()))
+                        .position(new XYZPosition(xPosition, yPosition, null))
+                        .belongsToDiagramObject(edgeDoMRID)
+                        .sequenceNumber(sequenceNumber)
+                        .build();
+        DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, bendPoint);
+    }
+
+    /**
+     * Helper method that creates a class {@link DiagramObject} together with its {@link
+     * DiagramObjectGluePoint} and a {@link DiagramObjectPoint} referencing that glue point. This
+     * bundles the three objects that always belong together for a class in a diagram, ensuring the
+     * invariant that every class diagram object owns a point glued to a glue point.
+     *
+     * @param diagramLayoutModel the model into which the objects are inserted
+     * @param diagramUUID the UUID of the diagram the class belongs to
+     * @param className the name of the class represented by the diagram object
+     * @param classUUID the UUID of the class represented by the diagram object
+     * @param xPosition the x position of the class diagram object point
+     * @param yPosition the y position of the class diagram object point
+     * @return the mRID of the created diagram object
+     */
+    public MRID insertClassLayoutData(
+            Model diagramLayoutModel,
+            UUID diagramUUID,
+            String className,
+            UUID classUUID,
+            float xPosition,
+            float yPosition) {
+        var gluePointMRID = insertDiagramObjectGluePoint(diagramLayoutModel);
+        var doMRID =
+                insertDiagramObject(
+                        diagramLayoutModel,
+                        diagramUUID,
+                        className,
+                        classUUID,
+                        DiagramObjectStyle.CLASS);
+        insertDiagramObjectPoint(
+                diagramLayoutModel, doMRID, diagramUUID, xPosition, yPosition, null, gluePointMRID);
+        return doMRID;
+    }
+
+    /**
+     * Creates the edge diagram object for a new inheritance relationship.
+     *
+     * @param diagramLayoutModel the model into which the diagram object is inserted
+     * @param diagramUUID the UUID of the diagram the edge belongs to
+     * @param name the name of the edge diagram object
+     * @param subClassUUID the UUID of the sub class, used as the edge's identified object
+     * @return the mRID of the created diagram object
+     */
+    public MRID insertInheritanceLayoutData(
+            Model diagramLayoutModel, UUID diagramUUID, String name, UUID subClassUUID) {
+        return insertDiagramObject(
+                diagramLayoutModel,
+                diagramUUID,
+                name,
+                subClassUUID,
+                DiagramObjectStyle.INHERITANCE);
+    }
+
+    /**
+     * Creates the edge diagram object for a new association.
+     *
+     * @param diagramLayoutModel the model into which the diagram object is inserted
+     * @param diagramUUID the UUID of the diagram the edge belongs to
+     * @param name the name of the edge diagram object
+     * @param associationUUID the UUID of the association, used as the edge's identified object
+     * @return the mRID of the created diagram object
+     */
+    public MRID insertAssociationLayoutData(
+            Model diagramLayoutModel, UUID diagramUUID, String name, UUID associationUUID) {
+        return insertDiagramObject(
+                diagramLayoutModel,
+                diagramUUID,
+                name,
+                associationUUID,
+                DiagramObjectStyle.ASSOCIATION);
+    }
+
+    /**
+     * Helper method that deletes an edge {@link DiagramObject} together with its {@link
+     * DiagramObjectPoint DiagramObjectPoints}, but deliberately leaves any referenced {@link
+     * DiagramObjectGluePoint DiagramObjectGluePoints} untouched. This is the counterpart to the
+     * class cascade delete: an edge only references glue points (via its end points) that are owned
+     * by classes, so deleting an edge must never remove them.
+     *
+     * @param diagramLayoutModel the model from which the objects are deleted
+     * @param doMRID the mRID of the edge diagram object to delete
+     */
+    public void deleteEdgeLayoutData(Model diagramLayoutModel, MRID doMRID) {
+        var dops = DLObjectFetcher.fetchDOPsForDO(diagramLayoutModel, doMRID);
+        DLUpdates.deleteDiagramObject(diagramLayoutModel, doMRID);
+        dops.forEach(dop -> DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, dop.getMRID()));
     }
 
     /**
@@ -154,8 +298,27 @@ public class DiagramLayoutServiceUtils {
                         .belongsToDiagram(new MRID(diagramUUID))
                         .belongsToIdentifiedObject(new MRID(identifiedObjectUUID))
                         .build());
-        insertDiagramObjectPoint(diagramLayoutModel, labelMRID, diagramUUID, x, y);
+        insertDiagramObjectPoint(diagramLayoutModel, labelMRID, diagramUUID, x, y, null, null);
         return labelMRID;
+    }
+
+    /**
+     * Deletes every label {@link DiagramObject} anchored to any of the given identified object
+     * UUIDs, across all diagrams. Used to drop multiplicity/role name labels that become orphaned
+     * when the CIM resource they describe (e.g. an association end) is deleted.
+     *
+     * @param diagramLayoutModel the model from which the labels are deleted
+     * @param identifiedObjectUUIDs the UUIDs of the CIM resources whose labels are dropped
+     */
+    public void deleteLabelsFor(Model diagramLayoutModel, Set<UUID> identifiedObjectUUIDs) {
+        if (identifiedObjectUUIDs.isEmpty()) {
+            return;
+        }
+        for (var label : DLObjectFetcher.fetchAllLabelDOs(diagramLayoutModel)) {
+            if (identifiedObjectUUIDs.contains(label.getBelongsToIdentifiedObject().getUuid())) {
+                DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, label.getMRID());
+            }
+        }
     }
 
     /**

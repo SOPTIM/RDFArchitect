@@ -162,4 +162,6 @@ https://tailwindcss.com/docs/colors#using-a-custom-palette
     --color-class-node-highlighted-secondary: rgba(31, 117, 203, 0.45);
     --color-property-marked: #8d8d8d;
     --color-inheritance-edge: var(--color-soptim-dunkelgrau);
+    --color-bendpoint: var(--color-blue);
+    --color-endpoint: #22a35a;
 }

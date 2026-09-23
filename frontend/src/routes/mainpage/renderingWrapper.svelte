@@ -258,7 +258,7 @@
         if (renderingFormat === MERMAID_FORMAT) {
             mermaidWrapper.resetTransform();
         } else if (renderingFormat === SVELTEFLOW_FORMAT) {
-            svelteFlowAPI.svelteFlow.fitView();
+            svelteFlowWrapper.fitViewIncludingBendPoints();
         }
     }
 </script>

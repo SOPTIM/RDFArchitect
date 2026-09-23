@@ -15,16 +15,23 @@
  *
  */
 
-package org.rdfarchitect.services.dl.update.packagelayout;
+package org.rdfarchitect.api.dto.dl;
 
-import org.rdfarchitect.database.GraphIdentifier;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public interface CreateDiagramLayoutUseCase {
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-    /**
-     * Creates the initial diagram layout structure for a newly imported graph
-     *
-     * @param graphIdentifier the identifier of the graph
-     */
-    void createDiagramLayout(GraphIdentifier graphIdentifier);
+@Data
+@NoArgsConstructor
+public class BendPointDTO {
+
+    @JsonProperty("xPosition")
+    private float xPosition;
+
+    @JsonProperty("yPosition")
+    private float yPosition;
+
+    @JsonProperty("sequenceNumber")
+    private int sequenceNumber;
 }

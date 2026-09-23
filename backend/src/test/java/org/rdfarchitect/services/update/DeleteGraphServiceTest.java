@@ -24,7 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
+import org.rdfarchitect.services.dl.update.CreateDiagramLayoutUseCase;
 import org.rdfarchitect.services.update.graph.DeleteGraphService;
 import org.springframework.mock.web.MockMultipartFile;
 

@@ -15,20 +15,21 @@
  *
  */
 
-package org.rdfarchitect.services.dl.update;
+package org.rdfarchitect.services.dl.update.edgelayout;
 
 import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.UUID;
 
-public interface ReplaceDiagramUseCase {
+public interface RenameEdgeLayoutDataUseCase {
 
     /**
-     * Replaces the diagram with a new diagram created using the values in the parameters
+     * Renames an existing edge diagram object across all diagrams it appears in within the graph.
      *
-     * @param graphIdentifier the identifier of the graph
-     * @param packageUUID the UUID of the package identifying the diagram
-     * @param packageName the name of the new diagram
+     * @param graphIdentifier the identifier of the graph the edge belongs to
+     * @param identifiedObjectUUID the UUID of the identified object the edge references (the
+     *     association for associations, the sub class for inheritances)
+     * @param newName the new name to set on the edge diagram object
      */
-    void replaceDiagram(GraphIdentifier graphIdentifier, UUID packageUUID, String packageName);
+    void renameEdge(GraphIdentifier graphIdentifier, UUID identifiedObjectUUID, String newName);
 }

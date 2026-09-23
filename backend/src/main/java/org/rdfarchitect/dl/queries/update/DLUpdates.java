@@ -24,12 +24,15 @@ import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
 import org.rdfarchitect.dl.data.dto.Diagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
+import org.rdfarchitect.dl.data.dto.DiagramObjectGluePoint;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.rdf.resources.CIM;
 import org.rdfarchitect.dl.rdf.resources.DL;
+
+import java.util.List;
 
 @UtilityClass
 public class DLUpdates {
@@ -142,10 +145,10 @@ public class DLUpdates {
      * @param doMRID the mRID of the diagram object to remove
      */
     public void deleteDiagramObjectCascade(Model model, MRID doMRID) {
-        DiagramObjectPoint dop = DLObjectFetcher.fetchDOPForDO(model, doMRID);
+        List<DiagramObjectPoint> dops = DLObjectFetcher.fetchDOPsForDO(model, doMRID);
         deleteDiagramObject(model, doMRID);
-        if (dop != null) {
-            deleteDiagramObjectPoint(model, dop.getMRID());
+        if (dops != null && !dops.isEmpty()) {
+            dops.forEach(dop -> deleteDiagramObjectPointCascade(model, dop));
         }
     }
 
@@ -167,19 +170,61 @@ public class DLUpdates {
                 ResourceFactory.createPlainLiteral(
                         String.valueOf(diagramObjectPoint.getPosition().getY())));
         newDiagramObjectPoint.addProperty(
-                DL.zPosition,
-                ResourceFactory.createPlainLiteral(
-                        String.valueOf(diagramObjectPoint.getPosition().getZ())));
-        newDiagramObjectPoint.addProperty(
                 DL.belongsToDiagramObject,
                 ResourceFactory.createResource(
                         diagramObjectPoint.getBelongsToDiagramObject().getFullMRID()));
+
+        if (diagramObjectPoint.getPosition().getZ() != null) {
+            newDiagramObjectPoint.addProperty(
+                    DL.zPosition,
+                    ResourceFactory.createPlainLiteral(
+                            String.valueOf(diagramObjectPoint.getPosition().getZ())));
+        }
+        if (diagramObjectPoint.getSequenceNumber() != null) {
+            newDiagramObjectPoint.addProperty(
+                    DL.sequenceNumber,
+                    ResourceFactory.createPlainLiteral(
+                            String.valueOf(diagramObjectPoint.getSequenceNumber())));
+        }
+        if (diagramObjectPoint.getBelongsToGluePoint() != null) {
+            newDiagramObjectPoint.addProperty(
+                    DL.belongsToGluePoint,
+                    ResourceFactory.createResource(
+                            diagramObjectPoint.getBelongsToGluePoint().getFullMRID()));
+        }
 
         model.add(newDiagramObjectPoint.listProperties());
     }
 
     public void deleteDiagramObjectPoint(Model model, MRID dopMRID) {
         deleteBase(model, dopMRID);
+    }
+
+    private void deleteDiagramObjectPointCascade(Model model, DiagramObjectPoint dop) {
+        if (dop.getBelongsToGluePoint() != null) {
+            deleteDiagramObjectGluePointWithReferences(model, dop.getBelongsToGluePoint());
+        }
+        deleteDiagramObjectPoint(model, dop.getMRID());
+    }
+
+    public void insertDiagramObjectGluePoint(
+            Model model, DiagramObjectGluePoint diagramObjectGluePoint) {
+        var newDiagramObjectGluePoint =
+                model.createResource(diagramObjectGluePoint.getMRID().getFullMRID());
+
+        newDiagramObjectGluePoint.addProperty(RDF.type, DL.diagramObjectGluePointType);
+
+        model.add(newDiagramObjectGluePoint.listProperties());
+    }
+
+    public void deleteDiagramObjectGluePoint(Model model, MRID gluePointMRID) {
+        deleteBase(model, gluePointMRID);
+    }
+
+    public void deleteDiagramObjectGluePointWithReferences(Model model, MRID gluePointMRID) {
+        var gluePointResource = model.getResource(gluePointMRID.getFullMRID());
+        model.removeAll(null, DL.belongsToGluePoint, gluePointResource);
+        deleteDiagramObjectGluePoint(model, gluePointMRID);
     }
 
     /**

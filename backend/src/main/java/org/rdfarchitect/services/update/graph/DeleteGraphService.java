@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
+import org.rdfarchitect.services.dl.update.CreateDiagramLayoutUseCase;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
