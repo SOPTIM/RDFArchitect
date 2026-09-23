@@ -28,6 +28,7 @@
     } from "$lib/sharedState.svelte.js";
     import { customDiagramStore } from "$lib/stores/diagramStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
+    import { graphLabeller } from "$lib/utils/graph-label.js";
 
     import { getUri } from "../packageNavigationUtils.svelte.js";
     import {
@@ -51,6 +52,8 @@
     let classesByPackageAndGraph = $state({});
     let packagesByGraph = $state({});
     let otherDiagrams = $state([]);
+    /** Names the schemas the way the navigation tree does, collisions and all. */
+    const graphName = $derived(graphLabeller(graphs));
 
     let violations = $derived(
         isValidDiagramName(localDiagramName, otherDiagrams),
@@ -252,6 +255,7 @@
             {#each graphs as graph, index (getUri(graph))}
                 <GraphSelectSection
                     bind:graph={graphs[index]}
+                    label={graphName(graph)}
                     bind:packages={packagesByGraph[getUri(graph)]}
                     classesByPackage={classesByPackageAndGraph[getUri(graph)] ??
                         []}
