@@ -66,11 +66,6 @@ export function graphLabeller(graphs) {
     };
 }
 
-/** The version a schema states, or "" for one that states none. CGMES 2.4.15 never does. */
-export function graphVersion(graph) {
-    return graph?.versionInfo || "";
-}
-
 /**
  * What hovering a schema tells you that its name does not: which profile version it claims to
  * be, and what it is for.

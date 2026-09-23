@@ -22,7 +22,6 @@ import {
     graphLabeller,
     graphTooltip,
     graphUri,
-    graphVersion,
 } from "$lib/utils/graph-label.js";
 
 /** A CGMES 3.0 profile, which names and versions itself. */
@@ -105,16 +104,6 @@ describe("graphLabeller", () => {
         const two = { uri: { prefix: "http://b.example/", suffix: "Notes" } };
 
         expect(graphLabeller([one, two])(one)).toBe("Notes");
-    });
-});
-
-describe("graphVersion", () => {
-    test("reports the version a profile states", () => {
-        expect(graphVersion(CURRENT)).toBe("3.0.0");
-    });
-
-    test("is empty for a profile that states none", () => {
-        expect(graphVersion(LEGACY)).toBe("");
     });
 });
 

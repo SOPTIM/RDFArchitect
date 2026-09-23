@@ -137,11 +137,22 @@ describe("RenameGraphDialog", () => {
     test("says where the name on screen comes from for a profile", async () => {
         await open("http://graph#Equipment");
 
-        expect(document.body.textContent).toContain(
-            "Core Equipment Vocabulary",
+        // A line break before the comma would render as "Vocabulary , from".
+        expect(document.body.textContent.replace(/\s+/g, " ")).toContain(
+            "Shown as Core Equipment Vocabulary, from the profile header.",
         );
         expect(headerHintButton().textContent.trim()).toBe(
             "Edit profile header",
+        );
+    });
+
+    test("shows the name alone, without the graph URI it resolves to", async () => {
+        await open("http://graph#MyNotes");
+
+        await type(nameInput(), "Our Notes");
+
+        expect(document.body.textContent).not.toContain(
+            "http://graph#OurNotes",
         );
     });
 
@@ -151,6 +162,13 @@ describe("RenameGraphDialog", () => {
         headerHintButton().click();
 
         expect(editHeaderCalls).toEqual([null]);
+    });
+
+    test("reads as something to click", async () => {
+        await open("http://graph#Equipment");
+
+        // Tailwind 4 leaves a button at cursor:default, so it has to be asked for.
+        expect(headerHintButton().className).toContain("cursor-pointer");
     });
 
     test("sends a CGMES 2.4.15 profile to the class that states its metadata", async () => {

@@ -25,7 +25,6 @@ import {
     graphLabeller,
     graphTooltip,
     graphUri,
-    graphVersion,
 } from "$lib/utils/graph-label.js";
 import { compareGraphs } from "$lib/utils/graph-order.js";
 import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
@@ -95,10 +94,7 @@ async function populateWorkspace(workspaceNavEntry) {
             label: nameOf(graph),
             fullUri: graphUri(graph),
             tooltip: graphTooltip(graph),
-            data: {
-                keyword: graph.keyword ?? "",
-                version: graphVersion(graph),
-            },
+            data: { keyword: graph.keyword ?? "" },
         }))
         .sort((a, b) =>
             compareGraphs(

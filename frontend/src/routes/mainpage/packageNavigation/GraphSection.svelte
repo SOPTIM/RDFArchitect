@@ -223,7 +223,6 @@
             <NavigationEntry
                 level={1}
                 label={graphNavEntry.label}
-                secondaryLabel={graphNavEntry.data?.version ?? ""}
                 badgeText={graphNavEntry.data?.keyword ?? ""}
                 icon={faDiagramProject}
                 iconColor={graphColor}

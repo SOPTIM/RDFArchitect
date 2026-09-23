@@ -138,10 +138,6 @@
 
         {#if graphExists}
             <div class="mt-1 mb-1 h-6 text-sm">Schema already exists</div>
-        {:else if resolvedGraphUri}
-            <div class="text-nav-text mt-1 mb-1 h-6 truncate text-sm">
-                {resolvedGraphUri}
-            </div>
         {/if}
 
         {#if profileName}
@@ -150,12 +146,12 @@
               graph here changes nothing the reader can see unless they are told where the
               name actually comes from.
             -->
+            <!-- prettier-ignore -->
             <div class="text-nav-text mt-2 text-sm">
-                Shown as <span class="font-semibold">{profileName}</span>
-                , from the profile header.
+                Shown as <span class="font-semibold">{profileName}</span>, from the profile header.
                 <button
                     type="button"
-                    class="text-blue underline"
+                    class="text-blue cursor-pointer underline"
                     onclick={editHeader}
                 >
                     {profileClass

@@ -96,12 +96,11 @@ describe("getWorkspaceNavEntry", () => {
         ]);
     });
 
-    test("carries the keyword and the version the entry shows beside the name", async () => {
+    test("carries the keyword the entry shows as a badge", async () => {
         const [current, legacy] = await schemaEntries();
 
-        expect(current.data).toEqual({ keyword: "EQ", version: "3.0.0" });
-        // CGMES 2.4.15 has nowhere to write a version.
-        expect(legacy.data).toEqual({ keyword: "EQ", version: "" });
+        expect(current.data).toEqual({ keyword: "EQ" });
+        expect(legacy.data).toEqual({ keyword: "EQ" });
     });
 
     test("hovering a schema names its version IRIs and what it is for", async () => {
@@ -115,12 +114,12 @@ describe("getWorkspaceNavEntry", () => {
         );
     });
 
-    test("refreshes name, badge and version on a rebuilt workspace", async () => {
+    test("refreshes the name and the badge on a rebuilt workspace", async () => {
         const workspace = await getWorkspaceNavEntry("cgmes");
         const [before] = workspace.children;
 
         graphStore.getGraphs.mockResolvedValue([
-            { ...CURRENT, keyword: "EQX", label: null, versionInfo: "3.1.0" },
+            { ...CURRENT, keyword: "EQX", label: null },
         ]);
         const rebuilt = await getWorkspaceNavEntry("cgmes", workspace);
         const [after] = rebuilt.children;
@@ -128,6 +127,6 @@ describe("getWorkspaceNavEntry", () => {
         // The entry is reused, so a stale badge would survive the rebuild.
         expect(after).toBe(before);
         expect(after.label).toBe("EQX");
-        expect(after.data).toEqual({ keyword: "EQX", version: "3.1.0" });
+        expect(after.data).toEqual({ keyword: "EQX" });
     });
 });

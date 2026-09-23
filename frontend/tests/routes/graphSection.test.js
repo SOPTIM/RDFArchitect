@@ -30,7 +30,7 @@ const GRAPH_NAV_ENTRY = {
     ].join("\n"),
     children: [],
     isOpen: false,
-    data: { keyword: "EQ", version: "3.0.0" },
+    data: { keyword: "EQ" },
 };
 
 /**
@@ -83,11 +83,11 @@ afterEach(() => {
 });
 
 describe("GraphSection", () => {
-    test("shows the profile's name, its version and its keyword badge", () => {
+    test("shows the profile's name and its keyword badge", () => {
         const entry = render();
 
         expect(entry.textContent.replace(/\s+/g, " ").trim()).toBe(
-            "Core Equipment Vocabulary 3.0.0 EQ",
+            "Core Equipment Vocabulary EQ",
         );
     });
 
@@ -102,7 +102,7 @@ describe("GraphSection", () => {
             ...GRAPH_NAV_ENTRY,
             label: "Notes",
             tooltip: "http://example.org/graphs/Notes",
-            data: { keyword: "", version: "" },
+            data: { keyword: "" },
         });
 
         expect(entry.textContent.replace(/\s+/g, " ").trim()).toBe("Notes");
