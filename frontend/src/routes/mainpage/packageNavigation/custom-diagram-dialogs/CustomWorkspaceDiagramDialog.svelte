@@ -28,9 +28,11 @@
     } from "$lib/sharedState.svelte.js";
     import { customDiagramStore } from "$lib/stores/diagramStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
-    import { graphLabeller } from "$lib/utils/graph-label.js";
+    import {
+        graphLabeller,
+        graphUri as getUri,
+    } from "$lib/utils/graph-label.js";
 
-    import { getUri } from "../packageNavigationUtils.svelte.js";
     import {
         createClassListForGraph,
         createPackageListForGraph,

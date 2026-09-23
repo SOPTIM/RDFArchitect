@@ -56,7 +56,9 @@
             const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
             newWorkspaceList.push({
                 label: workspaceName,
-                graphs,
+                // Copied: this list becomes a $state proxy, and the one graphStore handed over
+                // is its own cache.
+                graphs: [...graphs],
                 labelOf: graphLabeller(graphs),
                 showContents: showWorkspaceContents,
             });
