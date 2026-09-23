@@ -17,15 +17,9 @@
 
 <script>
     import "@xyflow/svelte/dist/style.css";
-    import {
-        Background,
-        SvelteFlow,
-        useNodes,
-        useNodesInitialized,
-        useSvelteFlow,
-    } from "@xyflow/svelte";
-    import { onDestroy, onMount, setContext, tick, untrack } from "svelte";
-    import { SvelteMap } from "svelte/reactivity";
+    import {Background, SvelteFlow, useNodes, useNodesInitialized, useSvelteFlow,} from "@xyflow/svelte";
+    import {onDestroy, onMount, setContext, tick, untrack} from "svelte";
+    import {SvelteMap} from "svelte/reactivity";
 
     import {
         updateClassPositions,
@@ -33,15 +27,11 @@
         updateDatasetLabelPositions,
         updateLabelPositions,
     } from "$lib/api/generated/index.ts";
-    import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { renderOptions } from "$lib/renderOptions.svelte.js";
-    import {
-        editorState,
-        forceReloadTrigger,
-        multiSelectState,
-    } from "$lib/sharedState.svelte.js";
-    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
+    import {eventStack} from "$lib/eventhandling/closeEventManager.svelte.js";
+    import {toastStore} from "$lib/eventhandling/toastStore.svelte.js";
+    import {renderOptions} from "$lib/renderOptions.svelte.js";
+    import {editorState, forceReloadTrigger, multiSelectState,} from "$lib/sharedState.svelte.js";
+    import {workspaceStore} from "$lib/stores/workspaceStore.ts";
 
     import AssociationEdge from "./components/AssociationEdge.svelte";
     import ClassNode from "./components/ClassNode.svelte";
@@ -51,10 +41,7 @@
     import SvelteFlowClassContextMenu from "./components/SvelteFlowClassContextMenu.svelte";
     import SvelteFlowPaneContextMenu from "./components/SvelteFlowPaneContextMenu.svelte";
     import SvelteFlowPropertyContextMenu from "./components/SvelteFlowPropertyContextMenu.svelte";
-    import {
-        decorateEdges,
-        hasDefaultNodeLayout,
-    } from "./diagram/diagramElements.js";
+    import {decorateEdges, hasDefaultNodeLayout,} from "./diagram/diagramElements.js";
     import {
         buildLabelNodes,
         clampToAnchor,
@@ -64,24 +51,14 @@
         labelNodeId,
         labelNodesChanged,
     } from "./diagram/labelNodes.js";
-    import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
-    import {
-        DIAGRAM_SELECTION_CONTEXT,
-        DiagramSelectionController,
-    } from "./interaction/diagramSelection.svelte.js";
-    import { labelHighlight } from "./interaction/labelHighlight.svelte.js";
-    import {
-        clearHeldModifiers,
-        heldModifiers,
-        syncHeldModifiers,
-    } from "./interaction/modifierKeys.svelte.js";
-    import { NodeOrderController } from "./interaction/nodeOrder.svelte.js";
-    import { PanController } from "./interaction/panController.svelte.js";
-    import {
-        propertyContextMenu,
-        propertySelection,
-    } from "./interaction/propertyInteraction.svelte.js";
-    import { getLayoutedNodes } from "./layout/elkLayout.js";
+    import {ContextMenuController} from "./interaction/contextMenus.svelte.js";
+    import {DIAGRAM_SELECTION_CONTEXT, DiagramSelectionController,} from "./interaction/diagramSelection.svelte.js";
+    import {labelHighlight} from "./interaction/labelHighlight.svelte.js";
+    import {clearHeldModifiers, heldModifiers, syncHeldModifiers,} from "./interaction/modifierKeys.svelte.js";
+    import {NodeOrderController} from "./interaction/nodeOrder.svelte.js";
+    import {PanController} from "./interaction/panController.svelte.js";
+    import {propertyContextMenu, propertySelection,} from "./interaction/propertyInteraction.svelte.js";
+    import {getLayoutedNodes} from "./layout/elkLayout.js";
 
     let {
         nodes: inputNodes,
@@ -506,21 +483,25 @@
         }
     }
 
-    function handleNodeMove(nodeMoveEvent) {
+    function handleNodeMove(nodeMoveEvent, isLabelDrag) {
         const movedNodes = nodeMoveEvent.nodes ?? [];
-        const movedLabels = movedNodes.filter(
-            node => node.type === LABEL_NODE_TYPE,
-        );
-        if (movedLabels.length > 0) {
-            handleLabelMove(movedLabels);
+        if (isLabelDrag) {
+            const movedLabels = movedNodes.filter(
+                node => node.type === LABEL_NODE_TYPE,
+            );
+            if (movedLabels.length > 0) {
+                handleLabelMove(movedLabels);
+            }
+            return;
         }
         const movedClasses = movedNodes.filter(
             node => node.type !== LABEL_NODE_TYPE,
         );
-        updateNodePositions(movedClasses);
-        if (movedClasses.length > 0) {
-            persistManuallyPlacedLabelsOf(movedClasses);
+        if (movedClasses.length === 0) {
+            return;
         }
+        updateNodePositions(movedClasses);
+        persistManuallyPlacedLabelsOf(movedClasses);
     }
 
     function persistManuallyPlacedLabelsOf(movedClassNodes) {
@@ -534,11 +515,10 @@
         const rebuiltById = new Map(rebuilt.map(node => [node.id, node]));
 
         const affectedLabels = [];
-        for (const { label, anchorClassId } of collectLabels(edges)) {
-            if (
-                !movedClassIds.has(anchorClassId) ||
-                !hasManualPlacement(label, labelPositions)
-            ) {
+        for (const { label, sourceId, targetId } of collectLabels(edges)) {
+            const edgeAffected =
+                movedClassIds.has(sourceId) || movedClassIds.has(targetId);
+            if (!edgeAffected || !hasManualPlacement(label, labelPositions)) {
                 continue;
             }
             const labelNode = rebuiltById.get(labelNodeId(label));
@@ -686,15 +666,13 @@
             }
         }}
         onnodedragstop={e => {
-            if (labelDragActive) {
-                labelDragActive = false;
-                selection.notifyNodeDragStop();
-                handleNodeMove(e);
-                syncLabelNodes(nodes, edges);
-                return;
-            }
+            const wasLabelDrag = labelDragActive;
+            labelDragActive = false;
             selection.notifyNodeDragStop();
-            handleNodeMove(e);
+            handleNodeMove(e, wasLabelDrag);
+            if (wasLabelDrag) {
+                syncLabelNodes(nodes, edges);
+            }
         }}
         selectionMode={"partial"}
         selectionOnDrag={true}

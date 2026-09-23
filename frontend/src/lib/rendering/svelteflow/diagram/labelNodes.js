@@ -98,7 +98,12 @@ export function collectLabels(edges) {
     const labels = [];
     for (const edge of edges) {
         for (const label of labelsOf(edge.data)) {
-            labels.push({ label, anchorClassId: anchorClassId(edge, label) });
+            labels.push({
+                label,
+                anchorClassId: anchorClassId(edge, label),
+                sourceId: edge.source,
+                targetId: edge.target,
+            });
         }
     }
     return labels;
