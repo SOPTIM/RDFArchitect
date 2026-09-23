@@ -72,12 +72,20 @@ export function graphVersion(graph) {
 }
 
 /**
- * What hovering a schema tells you that its name does not: which graph it is, which profile
- * version it claims to be, and what it is for.
+ * What hovering a schema tells you that its name does not: which profile version it claims to
+ * be, and what it is for.
+ *
+ * A graph URI names the graph and nothing else — it is generated, and the reader never chose it
+ * — so it appears only for a schema that states nothing about itself, where it is the one thing
+ * left to say.
  */
 export function graphTooltip(graph) {
-    const lines = [graphUri(graph)];
-    lines.push(...(graph?.versionIris ?? []));
+    const versionIris = graph?.versionIris ?? [];
+    const lines = [];
+    if (!versionIris.length && !graph?.description) {
+        lines.push(graphUri(graph));
+    }
+    lines.push(...versionIris);
     if (graph?.description) {
         lines.push(graph.description);
     }

@@ -45,6 +45,7 @@
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { graphColors } from "$lib/graphColors.svelte.js";
     import {
+        ClassType,
         editorState,
         forceReloadTrigger,
         SelectionLevel,
@@ -189,6 +190,30 @@
 
     function focusGraphContext() {
         editorState.selectGraph(workspaceNavEntry.label, graphNavEntry.id);
+    }
+
+    /**
+     * Opens whatever edits the name a schema is shown under. A CGMES 3.0 profile keeps it on an
+     * ontology object, which the ontology editor owns; a CGMES 2.4.15 profile has no such object
+     * and states it on a class instead, so there the class editor is the answer.
+     */
+    function editProfileHeader(profileClass) {
+        if (!profileClass) {
+            showEditOntologyDialog = true;
+            return;
+        }
+        focusGraphContext();
+        editorState.classEditorSchema.updateValue({
+            classUuid: profileClass.uuid,
+            graphUri: graphNavEntry.id,
+        });
+        editorState.selectedClassWorkspace.updateValue(workspaceNavEntry.id);
+        editorState.selectedClassGraph.updateValue(graphNavEntry.id);
+        editorState.selectedClass.updateValue({
+            type: ClassType.SINGLE_CLASS,
+            id: profileClass.uuid,
+        });
+        editorState.focusedClassUUID.updateValue(profileClass.uuid);
     }
 </script>
 
@@ -475,6 +500,7 @@
     bind:showDialog={showRenameDialog}
     workspaceName={workspaceNavEntry.id}
     graphUri={graphNavEntry.id}
+    onEditHeader={editProfileHeader}
 />
 <NewPackageDialog
     bind:showDialog={showNewPackageDialog}

@@ -42,4 +42,15 @@ public class GraphDTO {
     private String description;
     private List<String> versionIris;
     private String versionInfo;
+
+    /**
+     * The class a CGMES 2.4.15 profile states its keyword and version IRIs on, for a reader who
+     * wants to change them: such a profile has no ontology object, so the ontology editor has
+     * nothing to offer and the class editor is where those values live. Null for a CGMES 3.0
+     * profile, which is edited through its ontology object, and for a graph that is no profile.
+     */
+    private String profileClassIri;
+
+    /** The same class as {@link #profileClassIri}, by the uuid the class editor navigates by. */
+    private String profileClassUuid;
 }

@@ -21,7 +21,9 @@ import de.soptim.opencgmes.cimxml.graph.CimProfile;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
+import org.apache.jena.graph.Triple;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
@@ -29,12 +31,14 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFFormat;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.DatasetDTO;
 import org.rdfarchitect.api.dto.GraphDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.springframework.stereotype.Service;
 
@@ -50,6 +54,9 @@ public class QueryDatasetService
                 ListGraphsUseCase,
                 ListPrefixesUseCase,
                 ListDatasetsUseCase {
+
+    /** How a CGMES 2.4.15 profile names the class its fixed profile properties hang off. */
+    private static final String PROFILE_VERSION_SUFFIX = "Version";
 
     private final DatabasePort databasePort;
 
@@ -120,7 +127,8 @@ public class QueryDatasetService
             graph.getPrefixMapping()
                     .setNsPrefixes(stored.getPrefixMapping())
                     .withDefaultMappings(databasePort.getPrefixMapping(datasetName));
-            var metadata = CimProfile.wrap(graph).getMetadata();
+            var profile = CimProfile.wrap(graph);
+            var metadata = profile.getMetadata();
             dto.setKeyword(metadata.keyword());
             dto.setLabel(metadata.label());
             dto.setDescription(metadata.description());
@@ -131,10 +139,45 @@ public class QueryDatasetService
                             .map(Node::getURI)
                             .sorted()
                             .toList());
+            if (profile.getOntologyNode() == null) {
+                var versionClass = versionClassOf(graph);
+                dto.setProfileClassIri(versionClass == null ? null : versionClass.getURI());
+                dto.setProfileClassUuid(uuidOf(graph, versionClass));
+            }
         } catch (IllegalArgumentException e) {
             // Not a CIM profile, so there is no profile metadata to report.
         }
         return dto;
+    }
+
+    /**
+     * The class a CGMES 2.4.15 profile keeps its keyword and version IRIs on, as fixed values of
+     * its properties. There is no ontology object to edit in such a profile, so this class is where
+     * a reader has to be sent instead.
+     *
+     * <p>Found the way cimxml finds it — the {@code rdfs:domain} whose name ends in "Version" —
+     * because cimxml keeps that lookup package-private.
+     */
+    private static Node versionClassOf(Graph graph) {
+        return graph.stream(Node.ANY, RDFS.domain.asNode(), Node.ANY)
+                .map(Triple::getObject)
+                .filter(Node::isURI)
+                .filter(node -> node.getURI().endsWith(PROFILE_VERSION_SUFFIX))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /** The identity the class editor navigates by, which is the uuid rather than the IRI. */
+    private static String uuidOf(Graph graph, Node resource) {
+        if (resource == null) {
+            return null;
+        }
+        return graph.stream(resource, RDFA.uuid.asNode(), Node.ANY)
+                .map(Triple::getObject)
+                .filter(Node::isLiteral)
+                .map(Node::getLiteralLexicalForm)
+                .findFirst()
+                .orElse(null);
     }
 
     @Override

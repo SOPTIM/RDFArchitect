@@ -119,17 +119,22 @@ describe("graphVersion", () => {
 });
 
 describe("graphTooltip", () => {
-    test("names the graph, the profile version and what it is for", () => {
+    test("names the profile version and what the schema is for", () => {
         expect(graphTooltip(CURRENT)).toBe(
             [
-                "http://example.org/graphs/Equipment",
                 "http://iec.ch/TC57/ns/CIM/CoreEquipment-EU/3.0",
                 "The core equipment profile.",
             ].join("\n"),
         );
     });
 
-    test("holds just the graph for one that says nothing else", () => {
+    test("leaves out the graph URI, which the reader never chose", () => {
+        expect(graphTooltip(CURRENT)).not.toContain(
+            "http://example.org/graphs/Equipment",
+        );
+    });
+
+    test("falls back to the graph for one that says nothing about itself", () => {
         expect(graphTooltip(PLAIN)).toBe("http://example.org/graphs/Notes");
     });
 });

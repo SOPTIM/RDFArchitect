@@ -19,6 +19,7 @@ package org.rdfarchitect.services.select;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -79,6 +80,8 @@ class QueryDatasetServiceTest {
                 rdfs:comment "A profile that names itself on its package." .
 
             <http://example.org/legacy#LegacyVersion>
+                a                      rdfs:Class ;
+                rdfs:label             "LegacyVersion"@en ;
                 cims:belongsToCategory <http://example.org/legacy#Package_LegacyProfile> .
 
             <http://example.org/legacy#LegacyVersion.shortName>
@@ -140,6 +143,32 @@ class QueryDatasetServiceTest {
         assertThat(graph.getVersionInfo()).isNull();
     }
 
+    /**
+     * A CGMES 2.4.15 profile has no ontology object, so the ontology editor cannot reach its
+     * keyword or version IRIs. They are fixed values on the profile's "...Version" class, and a
+     * reader has to be sent there instead.
+     */
+    @Test
+    void listGraphs_pointsALegacyProfileAtTheClassThatHoldsItsMetadata() {
+        createGraph("http://example.org/graphs/legacy", CIM_16_PROFILE);
+
+        var graph = onlyGraph();
+
+        assertThat(graph.getProfileClassIri()).isEqualTo("http://example.org/legacy#LegacyVersion");
+        // The class editor navigates by uuid, so a link needs that rather than the IRI.
+        assertThat(graph.getProfileClassUuid()).isNotBlank();
+    }
+
+    @Test
+    void listGraphs_pointsACurrentProfileAtNoClass() {
+        createGraph("http://example.org/graphs/current", CIM_17_PROFILE);
+
+        var graph = onlyGraph();
+
+        assertThat(graph.getProfileClassIri()).isNull();
+        assertThat(graph.getProfileClassUuid()).isNull();
+    }
+
     @Test
     void listGraphs_reportsAGraphThatIsNoProfileByItsUriAlone() {
         createGraph("http://example.org/graphs/plain", NOT_A_PROFILE);
@@ -152,6 +181,7 @@ class QueryDatasetServiceTest {
         assertThat(graph.getDescription()).isNull();
         assertThat(graph.getVersionIris()).isNull();
         assertThat(graph.getVersionInfo()).isNull();
+        assertThat(graph.getProfileClassIri()).isNull();
     }
 
     /**
@@ -186,9 +216,18 @@ class QueryDatasetServiceTest {
                 .getLabel();
     }
 
+    /**
+     * Imports a schema the way the app does, through a committed transaction — which is what
+     * assigns the {@code rdfa:uuid} the class editor navigates by. Creating the graph without one
+     * leaves every resource without an id.
+     */
     private void createGraph(String graphUri, String turtle) {
         var graph = GraphFactory.createDefaultGraph();
         RDFParser.create().source(new StringReader(turtle)).lang(Lang.TURTLE).parse(graph);
-        databasePort.createGraph(new GraphIdentifier(DATASET, graphUri), graph);
+        var identifier = new GraphIdentifier(DATASET, graphUri);
+        databasePort.createGraph(identifier, graph);
+        try (var ctx = databasePort.getGraphWithContext(identifier).begin(ReadWrite.WRITE)) {
+            ctx.commit("import");
+        }
     }
 }

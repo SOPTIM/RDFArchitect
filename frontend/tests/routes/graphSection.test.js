@@ -25,7 +25,6 @@ const GRAPH_NAV_ENTRY = {
     id: "http://example.org/graphs/Equipment",
     label: "Core Equipment Vocabulary",
     tooltip: [
-        "http://example.org/graphs/Equipment",
         "http://iec.ch/TC57/ns/CIM/CoreEquipment-EU/3.0",
         "The core equipment profile.",
     ].join("\n"),

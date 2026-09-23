@@ -104,12 +104,11 @@ describe("getWorkspaceNavEntry", () => {
         expect(legacy.data).toEqual({ keyword: "EQ", version: "" });
     });
 
-    test("hovering a schema names the graph, its version IRIs and what it is for", async () => {
+    test("hovering a schema names its version IRIs and what it is for", async () => {
         const [current] = await schemaEntries();
 
         expect(current.tooltip).toBe(
             [
-                "http://example.org/graphs/Equipment",
                 "http://iec.ch/TC57/ns/CIM/CoreEquipment-EU/3.0",
                 "The core equipment profile.",
             ].join("\n"),
