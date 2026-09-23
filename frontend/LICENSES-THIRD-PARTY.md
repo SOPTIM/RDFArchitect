@@ -2,7 +2,7 @@
 
 ### @eslint/compat
 - **Package:** @eslint/compat
-- **Version:** 2.1.1
+- **Version:** 2.1.0
 - **License:** Apache-2.0
 - **URL:** [https://github.com/eslint/rewrite/tree/main/packages/compat#readme](https://github.com/eslint/rewrite/tree/main/packages/compat#readme)
 
@@ -44,9 +44,9 @@
 
 ### @hey-api/openapi-ts
 - **Package:** @hey-api/openapi-ts
-- **Version:** 0.99.0
+- **Version:** 0.97.3
 - **License:** MIT
-- **URL:** [https://heyapi.dev/docs/openapi/typescript/get-started](https://heyapi.dev/docs/openapi/typescript/get-started)
+- **URL:** [https://heyapi.dev/](https://heyapi.dev/)
 
 ### @sveltejs/adapter-auto
 - **Package:** @sveltejs/adapter-auto
@@ -86,13 +86,13 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.70.0
+- **Version:** 8.67.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
 ### @xyflow/svelte
 - **Package:** @xyflow/svelte
-- **Version:** 1.6.6
+- **Version:** 1.6.3
 - **License:** MIT
 - **URL:** [https://svelteflow.dev](https://svelteflow.dev)
 
@@ -104,12 +104,12 @@
 
 ### autoprefixer
 - **Package:** autoprefixer
-- **Version:** 10.6.0
+- **Version:** 10.5.4
 - **License:** MIT
 
 ### bits-ui
 - **Package:** bits-ui
-- **Version:** 2.19.2
+- **Version:** 2.19.0
 - **License:** MIT
 
 ### codemirror
@@ -132,7 +132,7 @@
 
 ### eslint
 - **Package:** eslint
-- **Version:** 10.10.0
+- **Version:** 10.8.1
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -162,7 +162,7 @@
 
 ### globals
 - **Package:** globals
-- **Version:** 17.12.0
+- **Version:** 17.11.0
 - **License:** MIT
 
 ### html-to-image
@@ -179,19 +179,19 @@
 
 ### jszip
 - **Package:** jszip
-- **Version:** 3.10.2
+- **Version:** 3.10.1
 - **License:** (MIT OR GPL-3.0-or-later)
 - **URL:** [https://github.com/Stuk/jszip](https://github.com/Stuk/jszip)
 
 ### mermaid
 - **Package:** mermaid
-- **Version:** 11.17.2
+- **Version:** 11.17.0
 - **License:** MIT
 - **URL:** [https://github.com/mermaid-js/mermaid](https://github.com/mermaid-js/mermaid)
 
 ### postcss
 - **Package:** postcss
-- **Version:** 8.5.28
+- **Version:** 8.5.26
 - **License:** MIT
 - **URL:** [https://postcss.org/](https://postcss.org/)
 
@@ -215,7 +215,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.57.0
+- **Version:** 5.56.9
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -257,7 +257,7 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.70.0
+- **Version:** 8.67.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
@@ -275,13 +275,13 @@
 
 ### vite
 - **Package:** vite
-- **Version:** 8.3.0
+- **Version:** 8.2.2
 - **License:** MIT
 - **URL:** [https://vite.dev](https://vite.dev)
 
 ### vitest
 - **Package:** vitest
-- **Version:** 5.0.0
+- **Version:** 4.1.11
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 
