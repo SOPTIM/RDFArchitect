@@ -105,6 +105,62 @@ class QueryDatasetServiceTest {
             <http://example.org/plain#Thing> a rdfs:Class ; rdfs:label "Thing"@en .
             """;
 
+    /**
+     * The same legacy profile, but spelling the CIM namespace {@code cim16} rather than {@code
+     * cim}. Nothing in a profile requires the prefix to be called {@code cim}, and a CIM profile is
+     * recognised by what that prefix is bound to.
+     */
+    private static final String CIM_16_PROFILE_UNDER_ANOTHER_PREFIX =
+            CIM_16_PROFILE
+                    .replace("@prefix cim:  <", "@prefix cim16: <")
+                    .replace("legacy#", "other#");
+
+    /**
+     * A legacy profile whose version class is not typed. Uuids are assigned to typed resources
+     * only, so this profile names a class the class editor has no id to navigate to.
+     */
+    private static final String CIM_16_PROFILE_WITH_UNTYPED_VERSION_CLASS =
+            """
+            @prefix cim:  <http://iec.ch/TC57/2013/CIM-schema-cim16#> .
+            @prefix cims: <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+            @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+            <http://example.org/legacy#Package_LegacyProfile>
+                a          cims:ClassCategory ;
+                rdfs:label "LegacyProfile"@en .
+
+            <http://example.org/legacy#LegacyVersion>
+                rdfs:label             "LegacyVersion"@en ;
+                cims:belongsToCategory <http://example.org/legacy#Package_LegacyProfile> .
+
+            <http://example.org/legacy#LegacyVersion.shortName>
+                rdfs:domain  <http://example.org/legacy#LegacyVersion> ;
+                cims:isFixed "LGC"^^xsd:string .
+
+            <http://example.org/legacy#LegacyVersion.entsoeURI>
+                rdfs:domain  <http://example.org/legacy#LegacyVersion> ;
+                cims:isFixed "http://example.org/LegacyProfile/1"^^xsd:string .
+            """;
+
+    /** A legacy profile holding two "...Version" classes, as a merged or extended one can. */
+    private static final String CIM_16_PROFILE_WITH_TWO_VERSION_CLASSES =
+            CIM_16_PROFILE
+                    + """
+            <http://example.org/legacy#ZetaVersion>
+                a                      rdfs:Class ;
+                rdfs:label             "ZetaVersion"@en ;
+                cims:belongsToCategory <http://example.org/legacy#Package_LegacyProfile> .
+
+            <http://example.org/legacy#ZetaVersion.shortName>
+                rdfs:domain    <http://example.org/legacy#ZetaVersion> ;
+                cims:isFixed   "ZTA"^^xsd:string .
+
+            <http://example.org/legacy#ZetaVersion.entsoeURI>
+                rdfs:domain    <http://example.org/legacy#ZetaVersion> ;
+                cims:isFixed   "http://example.org/ZetaProfile/1"^^xsd:string .
+            """;
+
     private QueryDatasetService service;
     private DatabasePort databasePort;
 
@@ -202,6 +258,74 @@ class QueryDatasetServiceTest {
         assertThat(labelOf(graphs, "http://example.org/graphs/legacy")).isEqualTo("LegacyProfile");
     }
 
+    /**
+     * Which of the two places a schema is renamed in is decided by whether it has an ontology
+     * object, and that is not the same question as it having no version class: a profile that has
+     * neither must not be handed an ontology object it would never read back.
+     */
+    @Test
+    void listGraphs_saysWhetherAProfileNamesItselfOnAnOntologyObject() {
+        createGraph("http://example.org/graphs/current", CIM_17_PROFILE);
+        createGraph("http://example.org/graphs/legacy", CIM_16_PROFILE);
+        createGraph("http://example.org/graphs/plain", NOT_A_PROFILE);
+
+        var graphs = service.listGraphs(DATASET);
+
+        assertThat(graphOf(graphs, "http://example.org/graphs/current").isOntologyHeader())
+                .isTrue();
+        assertThat(graphOf(graphs, "http://example.org/graphs/legacy").isOntologyHeader())
+                .isFalse();
+        assertThat(graphOf(graphs, "http://example.org/graphs/plain").isOntologyHeader()).isFalse();
+    }
+
+    /**
+     * The uuid is assigned on commit, so a profile can well name a class the class editor cannot
+     * yet navigate to. Reporting the IRI regardless is what keeps such a profile distinguishable
+     * from one that is edited through its ontology object.
+     */
+    @Test
+    void listGraphs_reportsTheProfileClassEvenWhereItHasNoUuidYet() {
+        createGraph("http://example.org/graphs/legacy", CIM_16_PROFILE_WITH_UNTYPED_VERSION_CLASS);
+
+        var graph = onlyGraph();
+
+        assertThat(graph.getProfileClassIri()).isEqualTo("http://example.org/legacy#LegacyVersion");
+        assertThat(graph.getProfileClassUuid()).isNull();
+        assertThat(graph.isOntologyHeader()).isFalse();
+    }
+
+    /**
+     * The dataset's prefixes fill in what a graph does not declare itself, prefix by prefix. A
+     * graph that spells the CIM namespace under some other prefix still has no {@code cim} of its
+     * own, and without one it would not be read as a CIM profile at all.
+     */
+    @Test
+    void listGraphs_readsAProfileThatSpellsTheCimNamespaceUnderAnotherPrefix() {
+        // Teaches the dataset a "cim" prefix for the namespace the second graph calls "cim16".
+        createGraph("http://example.org/graphs/legacy", CIM_16_PROFILE);
+        createGraph("http://example.org/graphs/other", CIM_16_PROFILE_UNDER_ANOTHER_PREFIX);
+
+        var graphs = service.listGraphs(DATASET);
+
+        assertThat(graphOf(graphs, "http://example.org/graphs/other").getKeyword())
+                .isEqualTo("LGC");
+        assertThat(graphOf(graphs, "http://example.org/graphs/other").getProfileClassIri())
+                .isEqualTo("http://example.org/other#LegacyVersion");
+    }
+
+    /**
+     * A graph is an unordered set of triples, so picking the first match would send the class
+     * editor to whichever class the iterator happened to yield first.
+     */
+    @Test
+    void listGraphs_picksTheSameVersionClassWhereAProfileHasSeveral() {
+        createGraph("http://example.org/graphs/legacy", CIM_16_PROFILE_WITH_TWO_VERSION_CLASSES);
+
+        var graph = onlyGraph();
+
+        assertThat(graph.getProfileClassIri()).isEqualTo("http://example.org/legacy#LegacyVersion");
+    }
+
     private GraphDTO onlyGraph() {
         var graphs = service.listGraphs(DATASET);
         assertThat(graphs).hasSize(1);
@@ -209,11 +333,14 @@ class QueryDatasetServiceTest {
     }
 
     private static String labelOf(List<GraphDTO> graphs, String graphUri) {
+        return graphOf(graphs, graphUri).getLabel();
+    }
+
+    private static GraphDTO graphOf(List<GraphDTO> graphs, String graphUri) {
         return graphs.stream()
                 .filter(graph -> graph.getUri().toString().equals(graphUri))
                 .findFirst()
-                .orElseThrow()
-                .getLabel();
+                .orElseThrow();
     }
 
     /**

@@ -530,6 +530,9 @@
           "keyword" : {
             "type" : "string"
           },
+          "label" : {
+            "type" : "string"
+          },
           "present" : {
             "type" : "boolean"
           },
@@ -876,6 +879,9 @@
           },
           "label" : {
             "type" : "string"
+          },
+          "ontologyHeader" : {
+            "type" : "boolean"
           },
           "profileClassIri" : {
             "type" : "string"

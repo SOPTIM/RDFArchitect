@@ -44,6 +44,17 @@ public class GraphDTO {
     private String versionInfo;
 
     /**
+     * Whether the profile states what it is called on an {@code owl:Ontology} object, as CGMES 3.0
+     * does and CGMES 2.4.15 does not.
+     *
+     * <p>This is what decides where a reader is sent to change that name, and it is not the same
+     * question as {@link #profileClassIri} being null: a legacy profile whose version class cannot
+     * be found has neither place, and must not be given an ontology object that the profile would
+     * never read back.
+     */
+    private boolean ontologyHeader;
+
+    /**
      * The class a CGMES 2.4.15 profile states its keyword and version IRIs on, for a reader who
      * wants to change them: such a profile has no ontology object, so the ontology editor has
      * nothing to offer and the class editor is where those values live. Null for a CGMES 3.0

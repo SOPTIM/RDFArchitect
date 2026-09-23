@@ -31,6 +31,7 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFFormat;
+import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.DatasetDTO;
 import org.rdfarchitect.api.dto.GraphDTO;
@@ -45,6 +46,7 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -97,8 +99,11 @@ public class QueryDatasetService
     public List<GraphDTO> listGraphs(String datasetName) {
         var result = new ArrayList<GraphDTO>();
 
+        // Read once for the whole listing: it cannot change while it is running, and asking the
+        // store per graph takes its lock once per profile of the workspace.
+        var datasetPrefixes = databasePort.getPrefixMapping(datasetName);
         for (var graphUri : databasePort.listGraphUris(datasetName)) {
-            result.add(readGraph(datasetName, graphUri));
+            result.add(readGraph(datasetName, graphUri, datasetPrefixes));
         }
 
         return result;
@@ -116,7 +121,7 @@ public class QueryDatasetService
      * one of them. The graph's own prefixes therefore win, and the dataset's fill in only what the
      * graph does not declare itself.
      */
-    private GraphDTO readGraph(String datasetName, String graphUri) {
+    private GraphDTO readGraph(String datasetName, String graphUri, PrefixMapping datasetPrefixes) {
         var dto = GraphDTO.builder().uri(new URI(graphUri)).build();
         try (var ctx =
                 databasePort
@@ -124,9 +129,8 @@ public class QueryDatasetService
                         .begin(ReadWrite.READ)) {
             var stored = ctx.getRdfGraph();
             var graph = GraphUtils.deepCopy(stored);
-            graph.getPrefixMapping()
-                    .setNsPrefixes(stored.getPrefixMapping())
-                    .withDefaultMappings(databasePort.getPrefixMapping(datasetName));
+            var prefixes = graph.getPrefixMapping().setNsPrefixes(stored.getPrefixMapping());
+            fillInMissingPrefixes(prefixes, datasetPrefixes);
             var profile = CimProfile.wrap(graph);
             var metadata = profile.getMetadata();
             dto.setKeyword(metadata.keyword());
@@ -139,6 +143,7 @@ public class QueryDatasetService
                             .map(Node::getURI)
                             .sorted()
                             .toList());
+            dto.setOntologyHeader(profile.getOntologyNode() != null);
             if (profile.getOntologyNode() == null) {
                 var versionClass = versionClassOf(graph);
                 dto.setProfileClassIri(versionClass == null ? null : versionClass.getURI());
@@ -151,19 +156,42 @@ public class QueryDatasetService
     }
 
     /**
+     * Adds the dataset's bindings for the prefixes the graph does not spell out itself.
+     *
+     * <p>Only the prefix decides, which Jena's {@code withDefaultMappings} does not do: it also
+     * withholds a binding whose namespace is already bound under some other prefix. For {@code cim}
+     * that is the one binding a profile is read by, so a graph spelling the CIM namespace {@code
+     * cim16} would be left without a {@code cim} prefix and stop being a CIM profile at all.
+     */
+    private static void fillInMissingPrefixes(
+            PrefixMapping prefixes, PrefixMapping datasetPrefixes) {
+        datasetPrefixes
+                .getNsPrefixMap()
+                .forEach(
+                        (prefix, namespace) -> {
+                            if (prefixes.getNsPrefixURI(prefix) == null) {
+                                prefixes.setNsPrefix(prefix, namespace);
+                            }
+                        });
+    }
+
+    /**
      * The class a CGMES 2.4.15 profile keeps its keyword and version IRIs on, as fixed values of
      * its properties. There is no ontology object to edit in such a profile, so this class is where
      * a reader has to be sent instead.
      *
      * <p>Found the way cimxml finds it — the {@code rdfs:domain} whose name ends in "Version" —
-     * because cimxml keeps that lookup package-private.
+     * because cimxml keeps that lookup package-private. Unlike cimxml this takes the lowest URI
+     * rather than the first match: a graph is an unordered set of triples, and a merged or
+     * hand-extended profile can hold more than one such class, so the class editor would otherwise
+     * open whichever one the iterator happened to yield.
      */
     private static Node versionClassOf(Graph graph) {
         return graph.stream(Node.ANY, RDFS.domain.asNode(), Node.ANY)
                 .map(Triple::getObject)
                 .filter(Node::isURI)
                 .filter(node -> node.getURI().endsWith(PROFILE_VERSION_SUFFIX))
-                .findFirst()
+                .min(Comparator.comparing(Node::getURI))
                 .orElse(null);
     }
 
