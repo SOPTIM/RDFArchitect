@@ -17,8 +17,12 @@
 
 package org.rdfarchitect.dl.queries.select;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import lombok.experimental.UtilityClass;
-
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.dl.data.DLObjectFactory;
@@ -30,12 +34,6 @@ import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.DLQuerySolutionParser;
 import org.rdfarchitect.dl.queries.DLQueryVars;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 /** Utility class for fetching diagram layout objects from a provided model */
 @UtilityClass
@@ -57,8 +55,8 @@ public class DLObjectFetcher {
     public Diagram fetchDiagram(Model diagramLayout, UUID packageUUID) {
         var diagramMRID = new MRID(packageUUID);
         var query =
-                QUERY_PREFIXES +
-                  """
+                QUERY_PREFIXES
+                        + """
                   SELECT ?diagramName
                   WHERE {
                       ?diagramMRID rdf:type cim:Diagram ;
@@ -67,7 +65,7 @@ public class DLObjectFetcher {
                       FILTER(STR(?diagramMRID) = "DIAGRAM_MRID")
                   }
                   """
-                        .replace("DIAGRAM_MRID", diagramMRID.getFullMRID());
+                                .replace("DIAGRAM_MRID", diagramMRID.getFullMRID());
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
@@ -99,8 +97,8 @@ public class DLObjectFetcher {
         Map<UUID, DiagramObjectPoint> resultMap = new HashMap<>();
 
         var query =
-                QUERY_PREFIXES +
-                        """
+                QUERY_PREFIXES
+                        + """
                         SELECT ?ioMRID ?dopMRID ?doMRID ?xPosition ?yPosition ?zPosition
                         WHERE {
                             ?diagramMRID rdf:type cim:Diagram .
@@ -144,14 +142,14 @@ public class DLObjectFetcher {
         }
     }
 
-    /*TODO DIESE METHODE ENTFERNEN?
-    *  ich hab copilot dazu schon gefragt, aber der kern ist folgender:
-    *  ich hab diese methode ja früher nur erstellt, weil aus unserer implementation DOs nur für klassen mit immer nur einem DOP erstellt wurden
-    *  nun gibts aber DOs ja auch für edges und diese können mehrere DOPs haben
-    *  diese methode hier ist also nur noch im kontext von klassen relevant, sie ist also speziell an unsere implementation
-    *  es wäre aber ein argument zu sagen, dass die DL schicht hier UNABHÄNGIG von der implementation/benutzung sein soll
-    *  und dann sollte man diese methode entfernen, denn ein DO kann N DOPs haben
-    *  => nimm dir das mal für später mit, sollte diese gesamte datei dafür anpassen, das erfordert refactors */
+    /*TODO REFACTOR: DIESE METHODE ENTFERNEN?
+     *  ich hab copilot dazu schon gefragt, aber der kern ist folgender:
+     *  ich hab diese methode ja früher nur erstellt, weil aus unserer implementation DOs nur für klassen mit immer nur einem DOP erstellt wurden
+     *  nun gibts aber DOs ja auch für edges und diese können mehrere DOPs haben
+     *  diese methode hier ist also nur noch im kontext von klassen relevant, sie ist also speziell an unsere implementation
+     *  es wäre aber ein argument zu sagen, dass die DL schicht hier UNABHÄNGIG von der implementation/benutzung sein soll
+     *  und dann sollte man diese methode entfernen, denn ein DO kann N DOPs haben
+     *  => nimm dir das mal für später mit, sollte diese gesamte datei dafür anpassen, das erfordert refactors */
     /**
      * Fetches the {@link DiagramObjectPoint} for a given diagram object MRID
      *
@@ -166,8 +164,8 @@ public class DLObjectFetcher {
 
     /**
      * Fetches all {@link DiagramObjectPoint DiagramObjectPoints} belonging to a given diagram
-     * object, ordered by their sequence number. This is used for edge diagram objects which,
-     * unlike class diagram objects, own multiple points (the bend and end points of the edge).
+     * object, ordered by their sequence number. This is used for edge diagram objects which, unlike
+     * class diagram objects, own multiple points (the bend and end points of the edge).
      *
      * @param diagramLayout the model from where the object(s) will be fetched
      * @param doMRID the diagram object MRID used for fetching
@@ -175,8 +173,8 @@ public class DLObjectFetcher {
      */
     public List<DiagramObjectPoint> fetchDOPsForDO(Model diagramLayout, MRID doMRID) {
         var query =
-                QUERY_PREFIXES +
-                        """
+                QUERY_PREFIXES
+                        + """
                         SELECT ?dopMRID ?xPosition ?yPosition ?zPosition ?sequenceNumber ?gluePointMRID
                         WHERE {
                             ?dopMRID rdf:type cim:DiagramObjectPoint ;
@@ -197,7 +195,7 @@ public class DLObjectFetcher {
                         }
                         ORDER BY ?sequenceNumber
                         """
-                        .replace("DO_MRID", doMRID.getFullMRID());
+                                .replace("DO_MRID", doMRID.getFullMRID());
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
@@ -358,7 +356,8 @@ public class DLObjectFetcher {
      *
      * @param diagramLayout the model from where the object(s) will be fetched
      * @param packageUUID the package UUID identifying the diagram
-     * @param identifiedObjectUUID the UUID of the identified object for which the diagram object will be fetched
+     * @param identifiedObjectUUID the UUID of the identified object for which the diagram object
+     *     will be fetched
      * @return {@link DiagramObject}
      */
     public DiagramObject fetchDiagramDOForIdentifiedObject(
@@ -407,8 +406,9 @@ public class DLObjectFetcher {
     }
 
     /**
-     * Fetches the {@link DiagramObjectGluePoint} referenced by a given diagram object point. Returns
-     * {@code null} if the point does not reference a glue point (for example an inner bend point).
+     * Fetches the {@link DiagramObjectGluePoint} referenced by a given diagram object point.
+     * Returns {@code null} if the point does not reference a glue point (for example an inner bend
+     * point).
      *
      * @param diagramLayout the model from where the object(s) will be fetched
      * @param dopMRID the diagram object point mRID whose glue point is fetched
@@ -416,8 +416,8 @@ public class DLObjectFetcher {
      */
     public DiagramObjectGluePoint fetchGluePointForDOP(Model diagramLayout, MRID dopMRID) {
         var query =
-                QUERY_PREFIXES +
-                        """
+                QUERY_PREFIXES
+                        + """
                         SELECT ?gluePointMRID
                         WHERE {
                             ?dopMRID rdf:type cim:DiagramObjectPoint ;
@@ -426,7 +426,7 @@ public class DLObjectFetcher {
                             FILTER(STR(?dopMRID) = "DOP_MRID")
                         }
                         """
-                        .replace("DOP_MRID", dopMRID.getFullMRID());
+                                .replace("DOP_MRID", dopMRID.getFullMRID());
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
@@ -449,8 +449,8 @@ public class DLObjectFetcher {
      */
     public DiagramObjectGluePoint fetchGluePointForDO(Model diagramLayout, MRID doMRID) {
         var query =
-                QUERY_PREFIXES +
-                        """
+                QUERY_PREFIXES
+                        + """
                         SELECT ?gluePointMRID
                         WHERE {
                             ?dopMRID rdf:type cim:DiagramObjectPoint ;
@@ -460,7 +460,7 @@ public class DLObjectFetcher {
                             FILTER(STR(?doMRID) = "DO_MRID")
                         }
                         """
-                        .replace("DO_MRID", doMRID.getFullMRID());
+                                .replace("DO_MRID", doMRID.getFullMRID());
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();

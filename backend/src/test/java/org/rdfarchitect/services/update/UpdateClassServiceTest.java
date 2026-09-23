@@ -23,9 +23,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-
 import static utils.TestUtils.readMultipartFileFromFile;
 
+import java.util.UUID;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
@@ -52,11 +52,10 @@ import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.diagrams.CustomDiagramService;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutSyncService;
 import org.rdfarchitect.services.update.classes.UpdateClassService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-
-import java.util.UUID;
 
 @SpringBootTest
 class UpdateClassServiceTest {
@@ -65,6 +64,7 @@ class UpdateClassServiceTest {
     private DatabasePort databasePort;
     private UpdateClassLayoutService mockUpdateClassLayoutService;
     private CustomDiagramService mockCustomDiagramService;
+    private EdgeLayoutSyncService mockEdgeLayoutSyncService;
     private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
 
     @Autowired private ClassUMLAdaptedMapper classMapper;
@@ -80,6 +80,7 @@ class UpdateClassServiceTest {
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         mockUpdateClassLayoutService = mock(UpdateClassLayoutService.class);
         mockCustomDiagramService = mock(CustomDiagramService.class);
+        mockEdgeLayoutSyncService = mock(EdgeLayoutSyncService.class);
         updateClassService =
                 new UpdateClassService(
                         databasePort,
@@ -90,7 +91,10 @@ class UpdateClassServiceTest {
                         mockUpdateClassLayoutService,
                         false,
                         mockUpdateClassLayoutService,
-                        mockCustomDiagramService);
+                        mockCustomDiagramService,
+                        mockEdgeLayoutSyncService,
+                        mockEdgeLayoutSyncService,
+                        mockEdgeLayoutSyncService);
         var file = readMultipartFileFromFile(PATH, "class.ttl");
         var graphSource =
                 new GraphFileSourceBuilderImpl()
