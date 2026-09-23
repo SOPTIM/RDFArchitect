@@ -294,7 +294,7 @@
         }
     });
 
-    /*TODO SEHR WICHTIG: AM ENDE AUFRÄUMEN
+    /*TODO REFACTOR: SEHR WICHTIG: AM ENDE AUFRÄUMEN
         bend point code vllt auslagern, andere sachen, etc
         es muss ja nicht alles hier im svelteFlowWrapper liegen*/
 

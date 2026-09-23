@@ -17,9 +17,13 @@
 
 package org.rdfarchitect.services.update.classes;
 
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
 import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
@@ -42,6 +46,9 @@ import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseC
 import org.rdfarchitect.services.dl.update.classlayout.CrossProfileDiagramLayoutUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUseCase;
+import org.rdfarchitect.services.dl.update.edgelayout.RenameEdgeLayoutDataUseCase;
+import org.rdfarchitect.services.dl.update.edgelayout.SyncEdgeCreatedUseCase;
+import org.rdfarchitect.services.dl.update.edgelayout.SyncEdgeDeletedUseCase;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -61,6 +68,9 @@ public class UpdateClassService
     private final DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase;
     private final RemoveFromCustomDiagramUseCase removeFromCustomDiagramUseCase;
     private final CrossProfileDiagramLayoutUseCase crossProfileDiagramLayoutUseCase;
+    private final SyncEdgeCreatedUseCase syncEdgeCreatedUseCase;
+    private final SyncEdgeDeletedUseCase syncEdgeDeletedUseCase;
+    private final RenameEdgeLayoutDataUseCase renameEdgeLayoutDataUseCase;
 
     public UpdateClassService(
             DatabasePort databasePort,
@@ -71,7 +81,10 @@ public class UpdateClassService
             DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase,
             @Value("${attributes.newValuesBlankNode:false}") boolean newValuesAsBlankNode,
             CrossProfileDiagramLayoutUseCase crossProfileDiagramLayoutUseCase,
-            RemoveFromCustomDiagramUseCase removeFromCustomDiagramUseCase) {
+            RemoveFromCustomDiagramUseCase removeFromCustomDiagramUseCase,
+            SyncEdgeCreatedUseCase syncEdgeCreatedUseCase,
+            SyncEdgeDeletedUseCase syncEdgeDeletedUseCase,
+            RenameEdgeLayoutDataUseCase renameEdgeLayoutDataUseCase) {
         this.databasePort = databasePort;
         this.classMapper = classMapper;
         this.packageMapper = packageMapper;
@@ -81,15 +94,24 @@ public class UpdateClassService
         this.newValuesAsBlankNode = newValuesAsBlankNode;
         this.crossProfileDiagramLayoutUseCase = crossProfileDiagramLayoutUseCase;
         this.removeFromCustomDiagramUseCase = removeFromCustomDiagramUseCase;
+        this.syncEdgeCreatedUseCase = syncEdgeCreatedUseCase;
+        this.syncEdgeDeletedUseCase = syncEdgeDeletedUseCase;
+        this.renameEdgeLayoutDataUseCase = renameEdgeLayoutDataUseCase;
     }
 
     @Override
     public void replaceClass(GraphIdentifier graphIdentifier, ClassUMLAdaptedDTO newClass) {
         String oldClassUri;
+        UUID oldSuperClassUUID = null;
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             var resource =
                     CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), newClass.getUuid());
             oldClassUri = resource.getURI();
+            var superClassStmt = resource.getProperty(RDFS.subClassOf);
+            if (superClassStmt != null) {
+                oldSuperClassUUID =
+                        CIMResourceUtils.findUuidForResource((Resource) superClassStmt.getObject());
+            }
         }
 
         UUID releasedUuid;
@@ -121,6 +143,24 @@ public class UpdateClassService
             var newMergedUuid = CrossProfileUtils.mergedUuid(newClassUri);
             crossProfileDiagramLayoutUseCase.migrateLayoutToNewClassUri(
                     graphIdentifier.datasetName(), oldMergedUuid, newMergedUuid, newClassUri);
+        }
+
+        var newSuperClass = newClass.getSuperClass();
+        var newSuperClassUUID = newSuperClass != null ? newSuperClass.getUuid() : null;
+
+        if (oldSuperClassUUID == null && newSuperClassUUID != null) {
+            syncEdgeCreatedUseCase.syncEdgeCreated(
+                    graphIdentifier,
+                    newClass.getUuid(),
+                    newClass.getUuid(),
+                    newClass.getLabel() + " " + newSuperClass.getLabel());
+        } else if (oldSuperClassUUID != null && newSuperClassUUID == null) {
+            syncEdgeDeletedUseCase.syncEdgeDeleted(graphIdentifier, newClass.getUuid());
+        } else if (oldSuperClassUUID != null && !oldSuperClassUUID.equals(newSuperClassUUID)) {
+            renameEdgeLayoutDataUseCase.renameEdge(
+                    graphIdentifier,
+                    newClass.getUuid(),
+                    newClass.getLabel() + " " + newSuperClass.getLabel());
         }
     }
 

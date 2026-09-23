@@ -17,8 +17,8 @@
 
 package org.rdfarchitect.services.dl.update;
 
+import java.util.UUID;
 import lombok.experimental.UtilityClass;
-
 import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.dl.data.dto.Diagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
@@ -30,8 +30,6 @@ import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
-
-import java.util.UUID;
 
 /** Utility class with helper methods for the DiagramLayout update services */
 @UtilityClass
@@ -89,7 +87,8 @@ public class DiagramLayoutServiceUtils {
      */
     public void insertDiagramObjectPoint(
             Model diagramLayoutModel, UUID diagrammUUID, MRID diagramObjectMRID) {
-        insertDiagramObjectPoint(diagramLayoutModel, diagramObjectMRID, diagrammUUID, 0, 0, null, null);
+        insertDiagramObjectPoint(
+                diagramLayoutModel, diagramObjectMRID, diagrammUUID, 0, 0, null, null);
     }
 
     /**
@@ -175,10 +174,10 @@ public class DiagramLayoutServiceUtils {
     }
 
     /**
-     * Helper method that creates a class {@link DiagramObject} together with its
-     * {@link DiagramObjectGluePoint} and a {@link DiagramObjectPoint} referencing that glue point.
-     * This bundles the three objects that always belong together for a class in a diagram, ensuring
-     * the invariant that every class diagram object owns a point glued to a glue point.
+     * Helper method that creates a class {@link DiagramObject} together with its {@link
+     * DiagramObjectGluePoint} and a {@link DiagramObjectPoint} referencing that glue point. This
+     * bundles the three objects that always belong together for a class in a diagram, ensuring the
+     * invariant that every class diagram object owns a point glued to a glue point.
      *
      * @param diagramLayoutModel the model into which the objects are inserted
      * @param diagramUUID the UUID of the diagram the class belongs to
@@ -196,25 +195,18 @@ public class DiagramLayoutServiceUtils {
             float xPosition,
             float yPosition) {
         var gluePointMRID = insertDiagramObjectGluePoint(diagramLayoutModel);
-        var doMRID =
-                insertDiagramObject(diagramLayoutModel, diagramUUID, className, classUUID);
+        var doMRID = insertDiagramObject(diagramLayoutModel, diagramUUID, className, classUUID);
         insertDiagramObjectPoint(
-                diagramLayoutModel,
-                doMRID,
-                diagramUUID,
-                xPosition,
-                yPosition,
-                null,
-                gluePointMRID);
+                diagramLayoutModel, doMRID, diagramUUID, xPosition, yPosition, null, gluePointMRID);
         return doMRID;
     }
 
     /**
-     * Helper method that deletes an edge {@link DiagramObject} together with its
-     * {@link DiagramObjectPoint DiagramObjectPoints}, but deliberately leaves any referenced
-     * {@link DiagramObjectGluePoint DiagramObjectGluePoints} untouched. This is the counterpart to
-     * the class cascade delete: an edge only references glue points (via its end points) that are
-     * owned by classes, so deleting an edge must never remove them.
+     * Helper method that deletes an edge {@link DiagramObject} together with its {@link
+     * DiagramObjectPoint DiagramObjectPoints}, but deliberately leaves any referenced {@link
+     * DiagramObjectGluePoint DiagramObjectGluePoints} untouched. This is the counterpart to the
+     * class cascade delete: an edge only references glue points (via its end points) that are owned
+     * by classes, so deleting an edge must never remove them.
      *
      * @param diagramLayoutModel the model from which the objects are deleted
      * @param doMRID the mRID of the edge diagram object to delete

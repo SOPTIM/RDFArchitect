@@ -19,8 +19,8 @@ package org.rdfarchitect.services.update.packages;
 
 import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.REQUIRED;
 
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
@@ -38,12 +38,10 @@ import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
-import org.rdfarchitect.services.dl.update.packagelayout.ReplaceDiagramUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.CreatePackageLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.DeletePackageLayoutDataUseCase;
+import org.rdfarchitect.services.dl.update.packagelayout.ReplaceDiagramUseCase;
 import org.springframework.stereotype.Service;
-
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
