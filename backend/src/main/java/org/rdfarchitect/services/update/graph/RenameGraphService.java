@@ -17,68 +17,129 @@
 
 package org.rdfarchitect.services.update.graph;
 
+import de.soptim.opencgmes.cimxml.graph.CimProfile;
+
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.graph.Graph;
+import org.apache.jena.graph.Node;
+import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.vocabulary.DCAT;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.ontology.OntologyDTO;
 import org.rdfarchitect.api.dto.ontology.OntologyEntry;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.ontology.OntologyFacade;
+import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class RenameGraphService implements RenameGraphUseCase {
 
+    private static final String DCTERMS_TITLE = "http://purl.org/dc/terms/title";
+
     private final DatabasePort databasePort;
 
     @Override
-    public void renameGraph(
-            GraphIdentifier graphIdentifier, String newGraphUri, String newKeyword) {
+    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri, String newName) {
         databasePort.renameGraph(graphIdentifier, newGraphUri);
         var renamedIdentifier = new GraphIdentifier(graphIdentifier.datasetName(), newGraphUri);
-        var keywordUpdated = false;
+        var nameUpdated = false;
         try {
-            updateKeyword(renamedIdentifier, newKeyword);
-            keywordUpdated = true;
+            updateName(renamedIdentifier, newName);
+            nameUpdated = true;
         } finally {
-            if (!keywordUpdated) {
+            if (!nameUpdated) {
                 databasePort.renameGraph(renamedIdentifier, graphIdentifier.graphUri());
             }
         }
     }
 
-    private void updateKeyword(GraphIdentifier graphIdentifier, String newKeyword) {
-        if (newKeyword == null) {
+    /**
+     * Writes the name where the schema is read from, which differs by CIM version: a profile with
+     * an ontology object keeps it in {@code dcterms:title}, a CGMES 2.4.15 profile on the package
+     * that stands for the profile itself. A graph that is neither is left untouched — nothing in it
+     * would be read back, and the tail of its URI is what names it.
+     */
+    private void updateName(GraphIdentifier graphIdentifier, String newName) {
+        if (newName == null) {
             return;
         }
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
+            var graph = ctx.getRdfGraph();
+            var model = ModelFactory.createModelForGraph(graph);
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             var ontologyFacade = new OntologyFacade(model);
             var ontology = ontologyFacade.getOntology();
-            if (ontology == null) {
+            if (ontology != null) {
+                applyTitle(ontology, newName);
+                ontologyFacade.replaceOntology(ontology);
+            } else if (!applyPackageLabel(graph, newName)) {
                 return;
             }
-            applyKeyword(ontology, newKeyword);
-            ontologyFacade.replaceOntology(ontology);
-            ctx.commit("Renamed schema to " + graphIdentifier.graphUri());
+            ctx.commit("Renamed schema to " + newName);
         }
     }
 
-    private void applyKeyword(OntologyDTO ontology, String newKeyword) {
+    private void applyTitle(OntologyDTO ontology, String newName) {
         var existingEntry =
                 ontology.getEntries().stream()
-                        .filter(entry -> DCAT.keyword.getURI().equals(entry.getIri()))
+                        .filter(entry -> DCTERMS_TITLE.equals(entry.getIri()))
                         .findFirst();
         if (existingEntry.isPresent()) {
-            existingEntry.get().setValue(newKeyword);
+            existingEntry.get().setValue(newName);
             return;
         }
-        ontology.getEntries()
-                .add(new OntologyEntry().setIri(DCAT.keyword.getURI()).setValue(newKeyword));
+        ontology.getEntries().add(new OntologyEntry().setIri(DCTERMS_TITLE).setValue(newName));
+    }
+
+    /**
+     * Names a CGMES 2.4.15 profile on the package that stands for the profile itself, which is
+     * where {@code CimProfile.getLabel} reads it back from.
+     *
+     * <p>The graph has to be read through cimxml to find that package, and cimxml rejects anything
+     * that is not a profile — that rejection is the "no name to write" case, not a failure.
+     *
+     * @return whether a name was written
+     */
+    private boolean applyPackageLabel(Graph graph, String newName) {
+        var profilePackage = profilePackageOf(graph);
+        if (profilePackage == null) {
+            return false;
+        }
+        // The official profiles tag their labels "@en"; keep whatever tag the one being
+        // replaced carried rather than dropping it on a rename.
+        var languageTag =
+                graph.stream(profilePackage, RDFS.label.asNode(), Node.ANY)
+                        .map(Triple::getObject)
+                        .filter(Node::isLiteral)
+                        .map(Node::getLiteralLanguage)
+                        .filter(tag -> !tag.isEmpty())
+                        .findFirst()
+                        .orElse(null);
+        graph.remove(profilePackage, RDFS.label.asNode(), Node.ANY);
+        graph.add(profilePackage, RDFS.label.asNode(), label(newName, languageTag));
+        return true;
+    }
+
+    private static Node label(String newName, String languageTag) {
+        return languageTag == null
+                ? NodeFactory.createLiteralString(newName)
+                : NodeFactory.createLiteralLang(newName, languageTag);
+    }
+
+    private Node profilePackageOf(Graph graph) {
+        // cimxml decides the CIM version from the graph's own prefixes, which deepCopy drops.
+        var readable = GraphUtils.deepCopy(graph);
+        readable.getPrefixMapping().setNsPrefixes(graph.getPrefixMapping());
+        try {
+            return CimProfile.wrap(readable).getProfilePackage();
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

@@ -29,6 +29,20 @@ export function uriSuffix(iri) {
     }
 }
 
+/**
+ * A name spelled so it can stand as the local part of an IRI.
+ *
+ * Only for a schema whose graph URI is generated rather than chosen — there the URI is internal
+ * plumbing and follows the name, so the name has to lose the characters an IRI cannot carry.
+ */
+export function toLocalName(name) {
+    return (name ?? "")
+        .trim()
+        .split(/\s+/)
+        .join("")
+        .replace(/[<>"{}|\\^`]/g, "");
+}
+
 export function shortenIri(prefixes, iri) {
     if (!iri) {
         return iri ?? "";

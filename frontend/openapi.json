@@ -6695,7 +6695,7 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/rename" : {
       "post" : {
-        "description" : "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. If a new keyword is given, it replaces the dcat:keyword of the profile header.",
+        "description" : "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. If a new name is given, it is written where the profile keeps the name it is listed under: dcterms:title on the ontology object, or rdfs:label on the profile package of a CGMES 2.4.15 profile.",
         "operationId" : "renameGraph",
         "parameters" : [
           {
@@ -6736,9 +6736,9 @@
             }
           },
           {
-            "description" : "The display name to store as dcat:keyword in the profile header.",
+            "description" : "The name to show the schema under, stored in the profile header.",
             "in" : "query",
-            "name" : "newKeyword",
+            "name" : "newName",
             "required" : false,
             "schema" : {
               "type" : "string"
