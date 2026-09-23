@@ -26,47 +26,28 @@
     } from "$lib/sharedState.svelte.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
-    import { graphLabel, graphUri as uriOf } from "$lib/utils/graph-label.js";
-    import { toLocalName } from "$lib/utils/iri.js";
+
+    import { getUri } from "./mainpage/packageNavigation/packageNavigationUtils.svelte.js";
 
     let { showDialog = $bindable(), workspaceName, graphUri } = $props();
 
     const uniqueId = uuidv4();
     const defaultNamespace = "http://graph#";
     const uriSchemePattern = /^[a-zA-Z][a-zA-Z\d+.-]*:/;
-    const nameInputId = `renameGraphName-${uniqueId}`;
     const namespaceInputId = `renameGraphNamespace-${uniqueId}`;
     const namespaceListId = `renameGraphNamespaces-${uniqueId}`;
-    const localNameInputId = `renameGraphLocalName-${uniqueId}`;
+    const labelInputId = `renameGraphLabel-${uniqueId}`;
 
-    let nameUserInput = $state("");
-    let initialName = $state("");
     let namespaceUserInput = $state("");
-    let localNameUserInput = $state("");
-    let initialLocalName = $state("");
-    let localNameTouched = $state(false);
-    let showAdvanced = $state(false);
+    let labelUserInput = $state("");
+    let initialLabel = $state("");
     let namespaceOptions = $state([]);
     let otherGraphUris = $state([]);
-    /**
-     * Whether the schema carries a name of its own. A profile does, in its header, and that is
-     * what the tree shows it under — so renaming it rewrites the header and leaves the graph URI
-     * alone. A graph that is no profile has nowhere to keep a name, and the tail of its URI is
-     * the name, so there the rename has to move the URI.
-     */
-    let namesItself = $state(false);
 
-    const trimmedName = $derived(nameUserInput.trim());
     const trimmedNamespace = $derived(namespaceUserInput.trim());
-    const resolvedLocalName = $derived(
-        localNameTouched || namesItself
-            ? localNameUserInput.trim()
-            : toLocalName(trimmedName),
-    );
+    const trimmedLabel = $derived(labelUserInput.trim());
     const resolvedGraphUri = $derived(
-        trimmedNamespace && resolvedLocalName
-            ? trimmedNamespace + resolvedLocalName
-            : "",
+        trimmedNamespace && trimmedLabel ? trimmedNamespace + trimmedLabel : "",
     );
     const namespaceIsInvalid = $derived(
         !!trimmedNamespace && !uriSchemePattern.test(trimmedNamespace),
@@ -75,44 +56,30 @@
         !!resolvedGraphUri && otherGraphUris.includes(resolvedGraphUri),
     );
     const uriChanged = $derived(resolvedGraphUri !== graphUri);
-    const nameChanged = $derived(trimmedName !== initialName);
+    // A rename still writes the new label to dcat:keyword: the tree shows the
+    // keyword as a badge, and names a schema by it when the profile carries no
+    // dcterms:title of its own. A profile that does keeps the name it states.
+    const labelChanged = $derived(trimmedLabel !== initialLabel);
     const disableSubmit = $derived(
-        !trimmedName ||
-            !resolvedGraphUri ||
-            namespaceIsInvalid ||
-            graphExists ||
-            (!uriChanged && !nameChanged),
+        !resolvedGraphUri || namespaceIsInvalid || graphExists || !uriChanged,
     );
 
     async function onOpen() {
         const uri = graphUri ? new URI(graphUri) : null;
         namespaceUserInput = uri?.prefix || defaultNamespace;
-        initialLocalName = uri?.suffix ?? "";
-        localNameUserInput = initialLocalName;
-        localNameTouched = false;
-        showAdvanced = false;
-
-        const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
-        const current = graphs.find(graph => uriOf(graph) === graphUri);
-        namesItself = !!(current?.label || current?.keyword);
-        initialName = current ? graphLabel(current) : initialLocalName;
-        nameUserInput = initialName;
+        initialLabel = uri?.suffix ?? "";
+        labelUserInput = initialLabel;
 
         namespaceOptions = await loadNamespaceOptions();
-        otherGraphUris = graphs.map(uriOf).filter(uri => uri !== graphUri);
+        otherGraphUris = await loadOtherGraphUris();
     }
 
     function onClose() {
-        nameUserInput = "";
-        initialName = "";
         namespaceUserInput = "";
-        localNameUserInput = "";
-        initialLocalName = "";
-        localNameTouched = false;
-        showAdvanced = false;
+        labelUserInput = "";
+        initialLabel = "";
         namespaceOptions = [];
         otherGraphUris = [];
-        namesItself = false;
     }
 
     async function loadNamespaceOptions() {
@@ -126,16 +93,25 @@
         ].sort((a, b) => a.localeCompare(b));
     }
 
+    async function loadOtherGraphUris() {
+        if (!workspaceName) {
+            return [];
+        }
+
+        const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
+        return graphs.map(getUri).filter(uri => uri !== graphUri);
+    }
+
     async function renameGraph() {
         const oldGraphUri = graphUri;
         const newGraphUri = resolvedGraphUri;
-        const newName = nameChanged ? trimmedName : null;
+        const newKeyword = labelChanged ? trimmedLabel : null;
 
         const { error } = await graphStore.renameGraph(
             workspaceName,
             oldGraphUri,
             newGraphUri,
-            newName,
+            newKeyword,
         );
         if (error) return;
 
@@ -154,55 +130,31 @@
     disablePrimary={disableSubmit}
 >
     <div class="mx-2 flex h-full flex-col">
-        <label for={nameInputId} class="mb-1">Name</label>
+        <label for={namespaceInputId} class="mb-1">Namespace</label>
         <input
             class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
             type="text"
-            id={nameInputId}
-            placeholder="Schema name"
+            id={namespaceInputId}
+            list={namespaceListId}
+            placeholder={defaultNamespace}
             autocomplete="off"
-            bind:value={nameUserInput}
+            bind:value={namespaceUserInput}
         />
+        <datalist id={namespaceListId}>
+            {#each namespaceOptions as namespaceOption}
+                <option value={namespaceOption}>{namespaceOption}</option>
+            {/each}
+        </datalist>
 
-        <button
-            type="button"
-            class="text-nav-text mt-3 mb-1 self-start text-sm underline"
-            onclick={() => (showAdvanced = !showAdvanced)}
-        >
-            {showAdvanced ? "Hide" : "Show"} graph URI
-        </button>
-
-        {#if showAdvanced}
-            <label for={namespaceInputId} class="mt-1 mb-1">Namespace</label>
-            <input
-                class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
-                type="text"
-                id={namespaceInputId}
-                list={namespaceListId}
-                placeholder={defaultNamespace}
-                autocomplete="off"
-                bind:value={namespaceUserInput}
-            />
-            <datalist id={namespaceListId}>
-                {#each namespaceOptions as namespaceOption}
-                    <option value={namespaceOption}>{namespaceOption}</option>
-                {/each}
-            </datalist>
-
-            <label for={localNameInputId} class="mt-2 mb-1">Local name</label>
-            <input
-                class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
-                type="text"
-                id={localNameInputId}
-                placeholder="Local name"
-                autocomplete="off"
-                value={resolvedLocalName}
-                oninput={event => {
-                    localNameTouched = true;
-                    localNameUserInput = event.currentTarget.value;
-                }}
-            />
-        {/if}
+        <label for={labelInputId} class="mt-2 mb-1">Label</label>
+        <input
+            class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
+            type="text"
+            id={labelInputId}
+            placeholder="Schema label"
+            autocomplete="off"
+            bind:value={labelUserInput}
+        />
 
         {#if namespaceIsInvalid}
             <div class="mt-1 mb-1 h-6 text-sm">

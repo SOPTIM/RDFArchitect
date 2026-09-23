@@ -50,7 +50,7 @@ public class GraphRenameRESTController {
     @Operation(
             summary = "Rename graph",
             description =
-                    "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. If a new name is given, it is written where the profile keeps the name it is listed under: dcterms:title on the ontology object, or rdfs:label on the profile package of a CGMES 2.4.15 profile.",
+                    "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. If a new keyword is given, it replaces the dcat:keyword of the profile header.",
             tags = {"graph"},
             responses = {
                 @ApiResponse(responseCode = "200"),
@@ -72,9 +72,9 @@ public class GraphRenameRESTController {
                     String newGraphURI,
             @Parameter(
                             description =
-                                    "The name to show the schema under, stored in the profile header.")
+                                    "The display name to store as dcat:keyword in the profile header.")
                     @RequestParam(required = false)
-                    String newName) {
+                    String newKeyword) {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/rename\" from \"{}\".",
                 datasetName,
@@ -85,7 +85,9 @@ public class GraphRenameRESTController {
         var extendedNewGraphURI = expandURIUseCase.expandUri(datasetName, newGraphURI);
 
         renameGraphUseCase.renameGraph(
-                new GraphIdentifier(datasetName, extendedGraphURI), extendedNewGraphURI, newName);
+                new GraphIdentifier(datasetName, extendedGraphURI),
+                extendedNewGraphURI,
+                newKeyword);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/rename\" to \"{}\".",

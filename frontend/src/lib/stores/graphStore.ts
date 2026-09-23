@@ -195,7 +195,7 @@ function createGraphStore() {
         workspaceName: string,
         oldGraphURI: string,
         newGraphURI: string,
-        newName: string | null = null,
+        newKeyword: string | null = null,
     ): Promise<Result> {
         console.log(
             `${LOG_PREFIX} Renaming graph "${oldGraphURI}" to "${newGraphURI}" in workspace "${workspaceName}"`,
@@ -205,7 +205,7 @@ function createGraphStore() {
             path: { datasetName: workspaceName, graphURI: oldGraphURI },
             query: {
                 newGraphURI,
-                ...(newName !== null ? { newName } : {}),
+                ...(newKeyword !== null ? { newKeyword } : {}),
             },
         });
 

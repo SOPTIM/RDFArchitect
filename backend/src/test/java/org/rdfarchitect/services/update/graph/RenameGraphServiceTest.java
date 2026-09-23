@@ -25,27 +25,18 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import de.soptim.opencgmes.cimxml.graph.CimProfile;
-
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFParser;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.apache.jena.vocabulary.DCAT;
 import org.apache.jena.vocabulary.OWL2;
-import org.apache.jena.vocabulary.RDF;
-import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.rdf.graph.GraphUtils;
-
-import java.io.StringReader;
 
 class RenameGraphServiceTest {
 
@@ -53,35 +44,6 @@ class RenameGraphServiceTest {
     private static final String OLD_URI = "http://graph#old";
     private static final String NEW_URI = "http://graph#new";
     private static final String ONTOLOGY_IRI = "http://graph#old-ontology";
-    private static final String DCTERMS_TITLE = "http://purl.org/dc/terms/title";
-
-    /**
-     * A CGMES 2.4.15 profile, which has no ontology object: it names itself on the package reached
-     * through {@code cims:belongsToCategory}. The fixed version properties are what make cimxml
-     * accept the graph as a profile at all.
-     */
-    private static final String LEGACY_PROFILE =
-            """
-            @prefix cim:  <http://iec.ch/TC57/2013/CIM-schema-cim16#> .
-            @prefix cims: <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#> .
-            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-            @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
-
-            <http://example.org/legacy#Package_LegacyProfile>
-                a          cims:ClassCategory ;
-                rdfs:label "LegacyProfile"@en .
-
-            <http://example.org/legacy#LegacyVersion>
-                cims:belongsToCategory <http://example.org/legacy#Package_LegacyProfile> .
-
-            <http://example.org/legacy#LegacyVersion.shortName>
-                rdfs:domain  <http://example.org/legacy#LegacyVersion> ;
-                cims:isFixed "LGC"^^xsd:string .
-
-            <http://example.org/legacy#LegacyVersion.entsoeURI>
-                rdfs:domain  <http://example.org/legacy#LegacyVersion> ;
-                cims:isFixed "http://example.org/LegacyProfile/1"^^xsd:string .
-            """;
 
     private DatabasePort databasePort;
     private GraphContext graphContext;
@@ -103,116 +65,73 @@ class RenameGraphServiceTest {
         renameGraphService = new RenameGraphService(databasePort);
     }
 
-    private void givenOntologyHeader(String title) {
+    private void givenProfileHeader(String keyword) {
         var ontology = model.createResource(ONTOLOGY_IRI);
         ontology.addProperty(
-                model.createProperty(RDF.type.getURI()),
+                model.createProperty(org.apache.jena.vocabulary.RDF.type.getURI()),
                 model.createResource(OWL2.Ontology.getURI()));
-        ontology.addProperty(model.createProperty(DCAT.keyword.getURI()), "EQ");
-        if (title != null) {
-            ontology.addProperty(model.createProperty(DCTERMS_TITLE), title);
+        if (keyword != null) {
+            ontology.addProperty(model.createProperty(DCAT.keyword.getURI()), keyword);
         }
     }
 
-    private void givenLegacyProfile() {
-        RDFParser.create()
-                .source(new StringReader(LEGACY_PROFILE))
-                .lang(Lang.TURTLE)
-                .parse(model.getGraph());
-    }
-
-    private String literalOf(String propertyIri) {
-        var it = model.listObjectsOfProperty(model.createProperty(propertyIri));
+    private String keywordInModel() {
+        var it = model.listObjectsOfProperty(model.createProperty(DCAT.keyword.getURI()));
         return it.hasNext() ? it.next().asLiteral().getString() : null;
     }
 
-    /** The name as the schema list reads it back, which is the only thing the user sees. */
-    private String nameAsListed() {
-        var readable = GraphUtils.deepCopy(model.getGraph());
-        readable.getPrefixMapping().setNsPrefixes(model.getGraph().getPrefixMapping());
-        return CimProfile.wrap(readable).getLabel();
-    }
-
     @Test
-    void renameGraph_withoutName_leavesTheProfileUntouched() {
-        givenOntologyHeader("Core Equipment Vocabulary");
+    void renameGraph_withoutKeyword_leavesProfileHeaderUntouched() {
+        givenProfileHeader("old label");
 
         renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, null);
 
         verify(databasePort).renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
         verify(databasePort, never()).getGraphWithContext(any());
-        assertThat(literalOf(DCTERMS_TITLE)).isEqualTo("Core Equipment Vocabulary");
+        assertThat(keywordInModel()).isEqualTo("old label");
     }
 
     @Test
-    void renameGraph_writesTheNameToTheOntologyTitle() {
-        givenOntologyHeader("Core Equipment Vocabulary");
+    void renameGraph_withKeyword_replacesExistingKeyword() {
+        givenProfileHeader("old label");
 
-        renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, "Our Grid");
+        renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, "new label");
 
+        verify(databasePort).renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
         verify(databasePort).getGraphWithContext(new GraphIdentifier(DATASET, NEW_URI));
-        verify(graphContext).commit("Renamed schema to Our Grid");
-        assertThat(literalOf(DCTERMS_TITLE)).isEqualTo("Our Grid");
+        verify(graphContext).commit("Renamed schema to " + NEW_URI);
+        assertThat(keywordInModel()).isEqualTo("new label");
     }
 
     @Test
-    void renameGraph_leavesTheKeywordAloneSoTheBadgeStaysShort() {
-        givenOntologyHeader("Core Equipment Vocabulary");
+    void renameGraph_withKeywordAndNoKeywordEntry_addsKeyword() {
+        givenProfileHeader(null);
 
-        renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, "Our Grid");
+        renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, "new label");
 
-        assertThat(literalOf(DCAT.keyword.getURI())).isEqualTo("EQ");
+        assertThat(keywordInModel()).isEqualTo("new label");
     }
 
     @Test
-    void renameGraph_addsATitleToAProfileThatHasNone() {
-        givenOntologyHeader(null);
-
-        renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, "Our Grid");
-
-        assertThat(literalOf(DCTERMS_TITLE)).isEqualTo("Our Grid");
-    }
-
-    @Test
-    void renameGraph_namesALegacyProfileOnItsPackage() {
-        givenLegacyProfile();
-
-        renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, "Our Grid");
-
-        verify(graphContext).commit("Renamed schema to Our Grid");
-        assertThat(nameAsListed()).isEqualTo("Our Grid");
-    }
-
-    @Test
-    void renameGraph_keepsTheLanguageTagALegacyLabelCarried() {
-        givenLegacyProfile();
-
-        renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, "Our Grid");
-
-        var labels =
-                model.listObjectsOfProperty(model.createProperty(RDFS.label.getURI())).toList();
-        assertThat(labels).hasSize(1);
-        assertThat(labels.getFirst().asLiteral().getLanguage()).isEqualTo("en");
-    }
-
-    @Test
-    void renameGraph_withNameAndNoProfile_doesNotCommit() {
-        renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, "Our Grid");
+    void renameGraph_withKeywordAndNoProfileHeader_doesNotCommit() {
+        renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, "new label");
 
         verify(databasePort).renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
         verify(graphContext, never()).commit(any(String.class));
-        assertThat(literalOf(DCTERMS_TITLE)).isNull();
+        assertThat(keywordInModel()).isNull();
     }
 
     @Test
-    void renameGraph_nameUpdateFails_rollsBackRename() {
-        givenOntologyHeader("Core Equipment Vocabulary");
+    void renameGraph_keywordUpdateFails_rollsBackRename() {
+        givenProfileHeader("old label");
         when(graphContext.begin(ReadWrite.WRITE)).thenThrow(new IllegalStateException("boom"));
 
         assertThatThrownBy(
                         () ->
                                 renameGraphService.renameGraph(
-                                        new GraphIdentifier(DATASET, OLD_URI), NEW_URI, "Our Grid"))
+                                        new GraphIdentifier(DATASET, OLD_URI),
+                                        NEW_URI,
+                                        "new label"))
                 .isInstanceOf(IllegalStateException.class);
 
         verify(databasePort).renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
