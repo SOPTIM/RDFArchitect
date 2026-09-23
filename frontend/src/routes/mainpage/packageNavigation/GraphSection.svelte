@@ -51,7 +51,6 @@
     } from "$lib/sharedState.svelte.js";
     import { ontologyStore } from "$lib/stores/ontologyStore.ts";
     import { versionControlStore } from "$lib/stores/versionControlStore.ts";
-    import { shortenIri } from "$lib/utils/iri.js";
 
     import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
@@ -104,10 +103,6 @@
     let showDocumentationExportDialog = $state(false);
 
     let wasGraphSelected = false;
-
-    let graphHighlightLabel = $derived(
-        shortenIri(namespaces, graphNavEntry.id),
-    );
 
     const graphColor = $derived(
         graphColors.get(workspaceNavEntry.id, graphNavEntry.id),
@@ -212,7 +207,6 @@
                 isSelected={graphSelectionState === "active"}
                 ancestorSelected={graphSelectionState === "ancestor"}
                 title={graphNavEntry.tooltip}
-                highlightLabel={graphHighlightLabel}
                 onclick={focusGraphContext}
                 onToggle={handleToggleGraph}
             />

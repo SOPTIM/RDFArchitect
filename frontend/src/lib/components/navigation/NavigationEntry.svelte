@@ -118,6 +118,8 @@
     }
 </script>
 
+<!-- highlightLabel shadows title rather than joining it, so an entry with
+     something to say on hover must not pass both. -->
 <button
     type="button"
     class={`nav-entry nav-entry--level-${level} ${isSelected ? "is-selected" : ""} ${ancestorSelected ? "is-ancestor-selected" : ""} ${classOpen ? "is-class-open" : ""} ${disabled ? "is-disabled" : ""}`}
