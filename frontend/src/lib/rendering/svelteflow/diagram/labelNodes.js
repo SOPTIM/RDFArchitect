@@ -15,7 +15,12 @@
  *
  */
 
-import { getEdgeParams } from "../components/edgeUtils.ts";
+import { getEdgeParams } from "../components/edge/edgeUtils.ts";
+import {
+    getInnerBendPoints,
+    getSourceEndPoint,
+    getTargetEndPoint,
+} from "../interaction/bendPointOperations.js";
 
 export const LABEL_NODE_TYPE = "label";
 
@@ -157,7 +162,12 @@ export function buildLabelNodes(
             continue;
         }
 
-        const placements = cachedEdgePlacements(source, target, placementCache);
+        const placements = cachedEdgePlacements(
+            source,
+            target,
+            edge.data,
+            placementCache,
+        );
         for (const label of labelsOf(edge.data)) {
             if (
                 !showAssociationLabels &&
@@ -275,21 +285,46 @@ export function clampToAnchor(position, anchorPoint) {
  * Reuses the previous placement of a class pair when neither class has moved or resized, so
  * dragging one class does not recompute the edge-intersection geometry of every other edge.
  */
-function cachedEdgePlacements(source, target, cache) {
+function cachedEdgePlacements(source, target, edgeData, cache) {
     const key = `${source.id}|${target.id}`;
+    const bendPoints = getInnerBendPoints(edgeData?.bendPoints ?? []);
+    const activeEndPoints = {
+        source: getSourceEndPoint(edgeData?.bendPoints ?? []),
+        target: getTargetEndPoint(edgeData?.bendPoints ?? []),
+    };
     const cached = cache.get(key);
-    if (cached && samePlacementInputs(cached, source, target)) {
+    if (
+        cached &&
+        samePlacementInputs(cached, source, target) &&
+        sameBendPointInputs(cached, bendPoints, activeEndPoints)
+    ) {
         return cached.placements;
     }
-    const placements = edgePlacements(source, target);
+    const placements = edgePlacements(
+        source,
+        target,
+        bendPoints,
+        activeEndPoints,
+    );
     cache.set(key, {
         placements,
         sourcePosition: source.position,
         sourceMeasured: source.measured,
         targetPosition: target.position,
         targetMeasured: target.measured,
+        bendPoints,
+        activeEndPoints,
     });
     return placements;
+}
+
+// simpler, "muss nicht perfekt sein"-Vergleich:
+function sameBendPointInputs(cached, bendPoints, activeEndPoints) {
+    return (
+        JSON.stringify(cached.bendPoints) === JSON.stringify(bendPoints) &&
+        JSON.stringify(cached.activeEndPoints) ===
+            JSON.stringify(activeEndPoints)
+    );
 }
 
 function samePlacementInputs(cached, source, target) {
@@ -310,7 +345,7 @@ function samePlacementInputs(cached, source, target) {
  * edge meets the class; the default placement of the multiplicity is the one it had before an
  * edge end carried more than one label.
  */
-function edgePlacements(source, target) {
+function edgePlacements(source, target, bendPoints = [], activeEndPoints = {}) {
     if (source.id === target.id) {
         const position = source.position;
         const width = source.measured.width ?? 100;
@@ -333,7 +368,13 @@ function edgePlacements(source, target) {
         };
     }
 
-    const edgeParams = getEdgeParams(source, target);
+    const edgeParams = getEdgeParams(
+        source,
+        target,
+        0,
+        bendPoints,
+        activeEndPoints,
+    );
     const stacked = { x: 0, y: LABEL_STACK_SPACING };
     return {
         source: placement(

@@ -17,8 +17,9 @@
 
 package org.rdfarchitect.services.dl.update.edgelayout;
 
-import java.util.UUID;
 import org.rdfarchitect.database.GraphIdentifier;
+
+import java.util.UUID;
 
 public interface RenameEdgeLayoutDataUseCase {
 

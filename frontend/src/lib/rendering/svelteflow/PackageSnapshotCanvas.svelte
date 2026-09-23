@@ -24,11 +24,12 @@
     } from "@xyflow/svelte";
     import { tick } from "svelte";
 
+    import EdgeMarkers from "$lib/rendering/svelteflow/components/edge/EdgeMarkers.svelte";
+
     import ClassNode from "./components/ClassNode.svelte";
     import DiagramLabelNode from "./components/DiagramLabelNode.svelte";
     import AssociationEdge from "./components/edge/AssociationEdge.svelte";
     import InheritanceEdge from "./components/edge/InheritanceEdge.svelte";
-    import EdgeMarkers from "./components/EdgeMarkers.svelte";
     import {
         decorateEdges,
         hasDefaultNodeLayout,
@@ -64,8 +65,8 @@
     async function layoutOnce() {
         laidOut = true;
         if (hasDefaultNodeLayout(nodes)) {
-            const layouted = await layoutDiagram(nodes, edges);
-            nodes = [...layouted];
+            const { nodes: layoutedNodes } = await layoutDiagram(nodes, edges);
+            nodes = [...layoutedNodes];
         }
 
         nodes = [...nodes, ...buildLabelNodes(nodes, edges)];

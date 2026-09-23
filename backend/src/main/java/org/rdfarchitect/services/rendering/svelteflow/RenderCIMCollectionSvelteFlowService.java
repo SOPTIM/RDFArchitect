@@ -17,12 +17,8 @@
 
 package org.rdfarchitect.services.rendering.svelteflow;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
@@ -49,6 +45,12 @@ import org.rdfarchitect.services.rendering.RenderCIMCollectionUseCase;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Converts a {@link CIMCollection} to a DTO Record that contains two JSON arrays with nodes and
@@ -86,7 +88,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         return SvelteFlowDTO.builder().nodes(nodes).edges(edges).build();
     }
 
-    /*TODO SEHR WICHTIG: BEND POINTS AUCH IN RENDERING VON MERGED VIEW UND CO EINBAUEN
+    /*TODO RENDERING: SEHR WICHTIG: BEND POINTS AUCH IN RENDERING VON MERGED VIEW UND CO EINBAUEN
     merged view benutzt iwie extra rendering, muss das separat beachten*/
 
     @Override
@@ -340,8 +342,8 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         var layoutData = renderContext.layoutingData();
         var useToAssociation = getAssociationUsedValue(from.getAssociationUsed());
         var useFromAssociation = getAssociationUsedValue(to.getAssociationUsed());
-        // TODO hier später anpassen iwie dass er die layoutdaten mitbekommt, und iwie für beide
-        // inheritance und assoc edges vereinheitlichen idfk
+        // TODO RENDERING: hier später anpassen iwie dass er die layoutdaten mitbekommt, und iwie
+        // für beide inheritance und assoc edges vereinheitlichen idfk
         var bendPoints = assembleBendPointsDTOList();
 
         var labels =
@@ -368,7 +370,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                 .build();
     }
 
-    // TODO SEHR WICHTIG: später an DL bringen, dummy daten entfernen, javadoc anpassen
+    // TODO RENDERING: SEHR WICHTIG: später an DL bringen, dummy daten entfernen, javadoc anpassen
     /**
      * Builds placeholder bend points for prototyping the rendering pipeline. The first and last
      * element are end points (isEndPoint = true), any elements in between are regular bend points.

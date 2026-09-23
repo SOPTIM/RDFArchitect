@@ -30,7 +30,9 @@ import java.util.UUID;
 public enum DiagramObjectStyle {
     CLASS("class"),
     MULTIPLICITY("multiplicity"),
-    ASSOCIATION_LABEL("associationLabel");
+    ASSOCIATION_LABEL("associationLabel"),
+    ASSOCIATION("association"),
+    INHERITANCE("inheritance");
 
     private final String styleName;
     private final MRID mRID;
