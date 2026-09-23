@@ -60,7 +60,7 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
                         DLObjectFetcher.fetchDiagramDOPPerClass(
                                 diagramLayoutModel, resolvedDiagramId))
                 .labelLayoutingData(
-                        DLObjectFetcher.fetchLabelOffsets(diagramLayoutModel, resolvedDiagramId))
+                        DLObjectFetcher.fetchLabelPositions(diagramLayoutModel, resolvedDiagramId))
                 .build();
     }
 }

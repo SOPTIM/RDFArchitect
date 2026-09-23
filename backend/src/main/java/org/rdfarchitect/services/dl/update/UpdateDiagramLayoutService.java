@@ -69,6 +69,8 @@ public class UpdateDiagramLayoutService implements CreateDiagramLayoutUseCase {
             var diagramLayout = ctx.getDiagramLayout();
             var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
 
+            DiagramLayoutServiceUtils.insertAllDiagramObjectStyles(diagramLayoutModel);
+
             DLUpdates.insertDiagram(
                     diagramLayoutModel,
                     Diagram.builder()

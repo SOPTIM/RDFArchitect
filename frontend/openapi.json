@@ -988,19 +988,11 @@
           "kind" : {
             "type" : "string"
           },
-          "xOffset" : {
+          "x" : {
             "format" : "float",
             "type" : "number"
           },
-          "xoffset" : {
-            "format" : "float",
-            "type" : "number"
-          },
-          "yOffset" : {
-            "format" : "float",
-            "type" : "number"
-          },
-          "yoffset" : {
+          "y" : {
             "format" : "float",
             "type" : "number"
           }
