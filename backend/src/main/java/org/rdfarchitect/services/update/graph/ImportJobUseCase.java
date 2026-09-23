@@ -34,6 +34,15 @@ public interface ImportJobUseCase {
     /** State of the job as a whole. */
     enum JobState {
         RUNNING,
+        /** Reading the namespace prefixes of the files to find out whether any of them collide. */
+        SCANNING_PREFIXES,
+        /**
+         * Waiting for the caller to decide what to do with the contested namespace prefixes in
+         * {@link ImportJobStatus#prefixComparison()}. Nothing has been imported at this point, and
+         * nothing will be until the decisions arrive through {@link #resolvePrefixConflicts(String,
+         * UUID, List)} or the job is cancelled.
+         */
+        AWAITING_PREFIX_RESOLUTION,
         COMPLETED,
         /** Stopped on request; the graphs imported up to that point are kept. */
         CANCELLED,
@@ -63,6 +72,8 @@ public interface ImportJobUseCase {
      * Progress of an import job.
      *
      * @param files one entry per graph file, in the order the import processes them
+     * @param prefixComparison the prefixes waiting to be decided on, empty unless the state is
+     *     {@code AWAITING_PREFIX_RESOLUTION}
      * @param errorMessage why the job failed, {@code null} unless its state is {@code FAILED}
      */
     record ImportJobStatus(
@@ -73,6 +84,7 @@ public interface ImportJobUseCase {
             List<String> importedGraphUris,
             List<String> failedImports,
             List<ImportWarning> warnings,
+            List<PrefixComparison> prefixComparison,
             String errorMessage) {}
 
     /**
@@ -86,7 +98,20 @@ public interface ImportJobUseCase {
     Optional<ImportJobStatus> getStatus(String datasetName, UUID jobId);
 
     /**
-     * Asks the job to stop after the file it is currently importing.
+     * Hands the job the decisions it is waiting for and lets it go on importing.
+     *
+     * @param resolutions one answer per contested binding; bindings left out keep the prefixes of
+     *     the dataset as they are
+     * @return {@code false} if the session has no such job for the dataset
+     * @throws org.rdfarchitect.exception.database.ResourceConflictException if the job is not
+     *     waiting for a decision
+     */
+    boolean resolvePrefixConflicts(
+            String datasetName, UUID jobId, List<PrefixResolution> resolutions);
+
+    /**
+     * Asks the job to stop after the file it is currently importing. A job waiting for prefix
+     * decisions stops right away, without having imported anything.
      *
      * @return {@code false} if the session has no such job for the dataset
      */

@@ -48,12 +48,17 @@ class ImportJob implements ImportProgressListener {
     private List<ImportGraphsUseCase.ImportWarning> warnings = List.of();
     private String errorMessage;
     private boolean cancelRequested;
+    private boolean startedAFile;
     private Instant finishedAt;
+    private List<PrefixComparison> prefixComparison = List.of();
+    private PrefixResolutions prefixResolutions;
+    private Instant lastPolledAt;
 
-    ImportJob(UUID id, String sessionId, String datasetName) {
+    ImportJob(UUID id, String sessionId, String datasetName, Instant startedAt) {
         this.id = id;
         this.sessionId = sessionId;
         this.datasetName = datasetName;
+        this.lastPolledAt = startedAt;
     }
 
     // -------------------------------------------------------------------------
@@ -69,7 +74,35 @@ class ImportJob implements ImportProgressListener {
     }
 
     @Override
+    public synchronized void scanningPrefixes() {
+        state = JobState.SCANNING_PREFIXES;
+    }
+
+    @Override
+    public synchronized PrefixResolutions awaitPrefixResolutions(
+            List<PrefixComparison> comparison) {
+        if (comparison.isEmpty()) {
+            return PrefixResolutions.none();
+        }
+        prefixComparison = List.copyOf(comparison);
+        state = JobState.AWAITING_PREFIX_RESOLUTION;
+        while (prefixResolutions == null && !cancelRequested) {
+            try {
+                wait();
+            } catch (InterruptedException _) {
+                Thread.currentThread().interrupt();
+                cancelRequested = true;
+            }
+        }
+        prefixComparison = List.of();
+        state = JobState.RUNNING;
+        return cancelRequested ? PrefixResolutions.none() : prefixResolutions;
+    }
+
+    @Override
     public synchronized void started(int index) {
+        state = JobState.RUNNING;
+        startedAFile = true;
         fileAt(index).state = FileState.RUNNING;
     }
 
@@ -94,8 +127,56 @@ class ImportJob implements ImportProgressListener {
     // Job lifecycle
     // -------------------------------------------------------------------------
 
+    /** Asks the job to stop, and wakes it if it is waiting on a prefix decision to do so. */
     synchronized void requestCancel() {
         cancelRequested = true;
+        notifyAll();
+    }
+
+    /**
+     * Whether an import of the same session would have to wait for this one. A cancellation only
+     * takes effect between files, so a job that has begun on one may still be writing; one that
+     * never got that far writes nothing from here on.
+     */
+    synchronized boolean blocksFurtherImports() {
+        return finishedAt == null && (!cancelRequested || startedAFile);
+    }
+
+    /**
+     * Hands over the decisions the import is waiting for.
+     *
+     * @return {@code false} if the job is not waiting for any
+     */
+    synchronized boolean applyPrefixResolutions(PrefixResolutions resolutions) {
+        if (state != JobState.AWAITING_PREFIX_RESOLUTION) {
+            return false;
+        }
+        prefixResolutions = resolutions;
+        notifyAll();
+        return true;
+    }
+
+    /** Records that someone is still following this job; see {@link #isAbandoned(Instant)}. */
+    synchronized void markPolled(Instant polledAt) {
+        lastPolledAt = polledAt;
+    }
+
+    /**
+     * Whether the job waits for decisions that nobody is going to make any more, because the caller
+     * stopped following it. Such a job would otherwise hold its files and its session for good.
+     */
+    synchronized boolean isAbandoned(Instant abandonedBefore) {
+        return isAwaitingPrefixResolution() && lastPolledAt.isBefore(abandonedBefore);
+    }
+
+    /** Whether the job is waiting for decisions, and has therefore imported nothing so far. */
+    synchronized boolean isAwaitingPrefixResolution() {
+        return state == JobState.AWAITING_PREFIX_RESOLUTION;
+    }
+
+    /** The comparison the job wants decided, or empty when it is waiting for none. */
+    synchronized List<PrefixComparison> pendingPrefixComparison() {
+        return prefixComparison;
     }
 
     synchronized void complete(ImportResult result) {
@@ -148,6 +229,7 @@ class ImportJob implements ImportProgressListener {
                 importedGraphUris,
                 failedImports,
                 warnings,
+                prefixComparison,
                 errorMessage);
     }
 

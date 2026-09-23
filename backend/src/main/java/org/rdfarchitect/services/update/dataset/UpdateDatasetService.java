@@ -22,10 +22,10 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
+import org.rdfarchitect.rdf.RDFUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -56,11 +56,7 @@ public class UpdateDatasetService
     public void replaceNamespaces(String datasetName, List<CIMPrefixPair> namespaces) {
         var prefixMapping = new PrefixMappingImpl();
         for (var namespace : namespaces) {
-            var substitutedPrefix =
-                    Objects.requireNonNullElse(namespace.getSubstitutedPrefix(), "");
-            if (substitutedPrefix.endsWith(":")) {
-                substitutedPrefix = substitutedPrefix.substring(0, substitutedPrefix.length() - 1);
-            }
+            var substitutedPrefix = RDFUtils.withoutColon(namespace.getSubstitutedPrefix());
             if (prefixMapping.getNsPrefixURI(substitutedPrefix) != null) {
                 throw new IllegalArgumentException(
                         "Duplicate namespace prefix detected: " + substitutedPrefix);

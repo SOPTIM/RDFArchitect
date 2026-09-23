@@ -77,6 +77,7 @@ vi.mock("$lib/api/generated", () => ({
     renameGraph: vi.fn(),
     cancelImport: vi.fn(),
     getImportStatus: vi.fn(),
+    resolvePrefixConflicts: vi.fn(),
 }));
 
 vi.mock("$lib/config/runtime", () => ({ PUBLIC_BACKEND_URL: "" }));
@@ -364,6 +365,54 @@ describe("graphStore", () => {
             const result = await store.getImportStatus(WORKSPACE_A, JOB_ID);
 
             expect(result.error).toBeInstanceOf(Error);
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("resolvePrefixConflicts", () => {
+        const RESOLUTIONS = [
+            {
+                prefix: "cim:",
+                iri: "http://cim18#",
+                action: "RENAME" as const,
+                newPrefix: "cim2:",
+            },
+        ];
+
+        test("sends the decisions to the waiting job", async () => {
+            vi.mocked(api.resolvePrefixConflicts).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            } as never);
+
+            const result = await store.resolvePrefixConflicts(
+                WORKSPACE_A,
+                JOB_ID,
+                RESOLUTIONS,
+            );
+
+            expect(api.resolvePrefixConflicts).toHaveBeenCalledWith({
+                path: { datasetName: WORKSPACE_A, jobId: JOB_ID },
+                body: RESOLUTIONS,
+            });
+            expect(result.error).toBeNull();
+        });
+
+        test("reports a rejected decision instead of swallowing it", async () => {
+            const error = new Error("invalid prefix");
+            vi.mocked(api.resolvePrefixConflicts).mockResolvedValue({
+                data: undefined,
+                error,
+            } as never);
+
+            const result = await store.resolvePrefixConflicts(
+                WORKSPACE_A,
+                JOB_ID,
+                RESOLUTIONS,
+            );
+
+            expect(result.error).toBe(error);
+            expect(toastStore.error).toHaveBeenCalled();
         });
     });
 

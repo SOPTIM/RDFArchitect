@@ -31,8 +31,10 @@ import {
     renameGraph as sdkRenameGraph,
     cancelImport as sdkCancelImport,
     getImportStatus as sdkGetImportStatus,
+    resolvePrefixConflicts as sdkResolvePrefixConflicts,
     type GraphDto,
     type ImportJobStatus,
+    type PrefixResolution,
 } from "../api/generated";
 import { PUBLIC_BACKEND_URL } from "../config/runtime";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
@@ -211,6 +213,7 @@ function createGraphStore() {
         renameGraph,
         startImport,
         getImportStatus,
+        resolvePrefixConflicts,
         cancelImport,
         remove: removeGraph,
         invalidateWorkspace,
@@ -289,6 +292,39 @@ async function getImportStatus(
     }
 
     return { error: null, data };
+}
+
+/**
+ * Answers the namespace prefix conflicts an import is waiting for and lets it go on. Contested
+ * namespaces left out of the answer are imported without a prefix.
+ */
+async function resolvePrefixConflicts(
+    workspaceName: string,
+    jobId: string,
+    resolutions: PrefixResolution[],
+): Promise<Result> {
+    console.log(
+        `${LOG_PREFIX} Resolving ${resolutions.length} namespace prefix conflict(s) of import job "${jobId}"`,
+    );
+
+    const { error } = await sdkResolvePrefixConflicts({
+        path: { datasetName: workspaceName, jobId },
+        body: resolutions,
+    });
+
+    if (error) {
+        console.error(
+            `${LOG_PREFIX} Failed to resolve the namespace prefix conflicts of import job "${jobId}"`,
+            await describeError(error),
+        );
+        toastStore.error(
+            "Import failed",
+            "The namespace prefix decisions could not be applied.",
+        );
+        return { error };
+    }
+
+    return { error: null };
 }
 
 async function cancelImport(

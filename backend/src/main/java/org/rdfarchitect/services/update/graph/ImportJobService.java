@@ -42,6 +42,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Predicate;
 
 @Service
 @RequiredArgsConstructor
@@ -52,6 +53,12 @@ public class ImportJobService implements ImportJobUseCase {
     /** How long a finished job stays readable before it is dropped. */
     private static final Duration RETENTION = Duration.ofMinutes(10);
 
+    /**
+     * How long a job waiting for prefix decisions may go unpolled before it is taken as abandoned.
+     * The dialog polls several times a second.
+     */
+    private static final Duration ABANDONED_AFTER = Duration.ofSeconds(60);
+
     private final ImportGraphsUseCase importGraphsUseCase;
     private final Map<UUID, ImportJob> jobs = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
@@ -61,7 +68,11 @@ public class ImportJobService implements ImportJobUseCase {
         dropExpiredJobs();
 
         var sessionId = SessionContext.getSessionId();
-        var job = new ImportJob(UUID.randomUUID(), sessionId, datasetName);
+        cancelJobs(
+                job -> job.getSessionId().equals(sessionId) && job.isAwaitingPrefixResolution(),
+                "superseded by a new import of the same session");
+
+        var job = new ImportJob(UUID.randomUUID(), sessionId, datasetName, Instant.now());
         // Claiming the session and registering the job has to be one step, otherwise two parallel
         // starts both pass the guard and import into the same store with their own reservations.
         synchronized (jobs) {
@@ -94,7 +105,31 @@ public class ImportJobService implements ImportJobUseCase {
     @Override
     public Optional<ImportJobStatus> getStatus(String datasetName, UUID jobId) {
         dropExpiredJobs();
-        return findJob(datasetName, jobId).map(ImportJob::status);
+        return findJob(datasetName, jobId)
+                .map(
+                        job -> {
+                            job.markPolled(Instant.now());
+                            return job.status();
+                        });
+    }
+
+    @Override
+    public boolean resolvePrefixConflicts(
+            String datasetName, UUID jobId, List<PrefixResolution> resolutions) {
+        var job = findJob(datasetName, jobId).orElse(null);
+        if (job == null) {
+            return false;
+        }
+        var folded = PrefixResolutions.of(job.pendingPrefixComparison(), resolutions);
+        if (!job.applyPrefixResolutions(folded)) {
+            throw new ResourceConflictException(
+                    "The import is not waiting for namespace prefix decisions.");
+        }
+        logger.info(
+                "Import job {} continues with {} namespace prefix decision(s).",
+                jobId,
+                resolutions.size());
+        return true;
     }
 
     @Override
@@ -108,6 +143,10 @@ public class ImportJobService implements ImportJobUseCase {
         return job.isPresent();
     }
 
+    /**
+     * Runs the import on its own thread. Every throwable ends the job: one left unfinished is never
+     * reaped and holds the session's only import slot for as long as the session lives.
+     */
     private void runImport(
             ImportJob job,
             List<MultipartFile> files,
@@ -126,9 +165,12 @@ public class ImportJobService implements ImportJobUseCase {
                     job.getId(),
                     result.importedGraphUris().size(),
                     result.failedFileNames().size());
-        } catch (RuntimeException exception) {
-            logger.error("Import job {} failed.", job.getId(), exception);
-            job.fail(exception.getMessage());
+        } catch (Throwable throwable) {
+            logger.error("Import job {} failed.", job.getId(), throwable);
+            job.fail(throwable.getMessage());
+            if (throwable instanceof Error error) {
+                throw error;
+            }
         } finally {
             SessionContext.clear();
             UserSettingsContext.clear();
@@ -137,7 +179,8 @@ public class ImportJobService implements ImportJobUseCase {
 
     private boolean hasRunningJob(String sessionId) {
         return jobs.values().stream()
-                .anyMatch(job -> job.getSessionId().equals(sessionId) && job.finishedAt() == null);
+                .anyMatch(
+                        job -> job.getSessionId().equals(sessionId) && job.blocksFurtherImports());
     }
 
     /**
@@ -168,13 +211,27 @@ public class ImportJobService implements ImportJobUseCase {
     }
 
     private void dropExpiredJobs() {
-        var expiredBefore = Instant.now().minus(RETENTION);
+        var now = Instant.now();
+        cancelJobs(
+                job -> job.isAbandoned(now.minus(ABANDONED_AFTER)),
+                "nobody is following the namespace prefix question any more");
+
+        var expiredBefore = now.minus(RETENTION);
         jobs.values()
                 .removeIf(
                         job -> {
                             var finishedAt = job.finishedAt();
                             return finishedAt != null && finishedAt.isBefore(expiredBefore);
                         });
+    }
+
+    private void cancelJobs(Predicate<ImportJob> shouldCancel, String reason) {
+        for (var job : jobs.values()) {
+            if (shouldCancel.test(job)) {
+                logger.info("Cancelling import job {}: {}.", job.getId(), reason);
+                job.requestCancel();
+            }
+        }
     }
 
     @PreDestroy

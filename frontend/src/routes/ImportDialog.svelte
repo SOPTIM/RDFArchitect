@@ -22,15 +22,13 @@
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ImportProgressPanel from "$lib/components/ImportProgressPanel.svelte";
+    import NamespacePrefixComparison from "$lib/components/NamespacePrefixComparison.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils";
-    import {
-        ImportProgress,
-        JobState,
-    } from "$lib/utils/importProgress.svelte.js";
+    import { ImportProgress } from "$lib/utils/importProgress.svelte.js";
 
     import {
         editorState,
@@ -68,8 +66,35 @@
     /** The workspace the running import writes into, applied to the editor once it is done. */
     let importWorkspaceName = null;
     let importJobId = null;
+    /** What the comparison decided, and whether those decisions can be sent as they are. */
+    let prefixResolutions = $state([]);
+    let prefixResolutionsValid = $state(true);
+    let submittingResolutions = $state(false);
 
     let importing = $derived(progress !== null && !progress.finished);
+    let resolvingPrefixes = $derived(
+        progress?.awaitingPrefixResolution ?? false,
+    );
+    let unreadableFiles = $derived(progress?.failed ?? []);
+    let primaryLabel = $derived(
+        resolvingPrefixes
+            ? "Continue import"
+            : progress?.finished
+              ? "Close"
+              : "Import",
+    );
+    let primaryAction = $derived(
+        resolvingPrefixes
+            ? submitPrefixResolutions
+            : progress?.finished
+              ? closeAfterImport
+              : importGraphs,
+    );
+    let primaryDisabled = $derived(
+        resolvingPrefixes
+            ? !prefixResolutionsValid || submittingResolutions
+            : !progress?.finished && !enableSubmit,
+    );
     let enableSubmit = $derived(
         files.length > 0 &&
             !isWorkspaceReadOnly(workspaceNameUserInput) &&
@@ -106,6 +131,9 @@
         rejectedFiles = [];
         modifiableWorkspaces = [];
         readOnlyWorkspaces = [];
+        prefixResolutions = [];
+        prefixResolutionsValid = true;
+        submittingResolutions = false;
     }
 
     function isWorkspaceReadOnly(workspaceName) {
@@ -254,8 +282,9 @@
     }
 
     /**
-     * Polls the backend until the job is done. A single timeout is kept in flight, so closing the
-     * dialog or finishing the import ends the polling.
+     * Polls the backend until the job is done, the prefix question included: polling is what tells
+     * the backend somebody is still there to answer it. A single timeout is kept in flight, so
+     * closing the dialog or finishing the import ends the polling.
      */
     function pollImportStatus() {
         stopPolling();
@@ -289,7 +318,10 @@
 
             failedPolls = 0;
             currentProgress.apply(data);
-            if (data.state === JobState.RUNNING) {
+            if (!currentProgress.awaitingPrefixResolution) {
+                submittingResolutions = false;
+            }
+            if (!currentProgress.finished) {
                 pollImportStatus();
             }
         }, POLL_INTERVAL_MS);
@@ -299,6 +331,22 @@
         if (pollTimeout !== null) {
             clearTimeout(pollTimeout);
             pollTimeout = null;
+        }
+    }
+
+    /** Hands the decisions to the import; a rejected answer leaves it waiting for a new one. */
+    async function submitPrefixResolutions() {
+        if (!importJobId || submittingResolutions || !prefixResolutionsValid) {
+            return;
+        }
+        submittingResolutions = true;
+        const { error } = await graphStore.resolvePrefixConflicts(
+            importWorkspaceName,
+            importJobId,
+            prefixResolutions,
+        );
+        if (error) {
+            submittingResolutions = false;
         }
     }
 
@@ -377,17 +425,37 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    primaryLabel={progress?.finished ? "Close" : "Import"}
-    onPrimary={progress?.finished ? closeAfterImport : importGraphs}
-    disablePrimary={!progress?.finished && !enableSubmit}
+    {primaryLabel}
+    onPrimary={primaryAction}
+    disablePrimary={primaryDisabled}
     secondaryLabel={importing ? "Cancel" : undefined}
     onSecondary={requestCancel}
     disableSecondary={progress?.cancelling}
     closeOnPrimary={false}
     title="Import Schema (RDFS)"
-    size="w-1/3"
+    size={resolvingPrefixes ? "w-1/2" : "w-1/3"}
 >
-    {#if progress}
+    {#if resolvingPrefixes}
+        {#if unreadableFiles.length > 0}
+            <div
+                class="bg-red-background text-red-text border-red-border mx-2 mt-2 rounded border px-3 py-2 text-xs"
+            >
+                <p class="font-semibold">
+                    These files could not be read and will not be imported:
+                </p>
+                <ul class="list-disc pl-5">
+                    {#each unreadableFiles as file (file.index)}
+                        <li>{file.fileName}</li>
+                    {/each}
+                </ul>
+            </div>
+        {/if}
+        <NamespacePrefixComparison
+            comparison={progress.prefixComparison}
+            bind:resolutions={prefixResolutions}
+            bind:isValid={prefixResolutionsValid}
+        />
+    {:else if progress}
         <ImportProgressPanel {progress} />
     {:else}
         <div class="mx-2 flex h-full max-h-[80vh] flex-col">
