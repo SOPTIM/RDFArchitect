@@ -17,8 +17,9 @@
 
 package org.rdfarchitect.services.dl.update.edgelayout;
 
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-
 import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.api.dto.dl.BendPointDTO;
 import org.rdfarchitect.database.DatabasePort;
@@ -28,19 +29,18 @@ import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.UUID;
-
 @Service
 @RequiredArgsConstructor
 public class UpdateEdgeLayoutDataService
         implements CreateEdgeLayoutDataUseCase,
-        DeleteEdgeLayoutDataUseCase,
-        UpdateBendPointsUseCase {
+                DeleteEdgeLayoutDataUseCase,
+                UpdateBendPointsUseCase {
 
     private final DatabasePort databasePort;
 
-    //TODO SEHR WICHTIG: END POINTS SIND NOCH AUßEN VOR: also im updateBendPoints unten hab ich die noch nicht eingebaut, weil hier das API design noch sehr offen war. also ob ich end points über diese methode mache oder iwie anders
+    // TODO SEHR WICHTIG: END POINTS SIND NOCH AUßEN VOR: also im updateBendPoints unten hab ich die
+    // noch nicht eingebaut, weil hier das API design noch sehr offen war. also ob ich end points
+    // über diese methode mache oder iwie anders
 
     @Override
     public void createEdgeLayoutData(
@@ -90,9 +90,7 @@ public class UpdateEdgeLayoutDataService
             var existingPoints =
                     DLObjectFetcher.fetchDOPsForDO(diagramLayoutModel, edgeDO.getMRID());
             existingPoints.forEach(
-                    dop ->
-                            DLUpdates.deleteDiagramObjectPoint(
-                                    diagramLayoutModel, dop.getMRID()));
+                    dop -> DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, dop.getMRID()));
 
             for (var bendPoint : bendPoints) {
                 DiagramLayoutServiceUtils.insertBendPoint(

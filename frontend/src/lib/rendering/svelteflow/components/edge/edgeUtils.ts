@@ -17,7 +17,7 @@
 
 import { type InternalNode } from "@xyflow/svelte";
 
-//TODO WICHTIG: AM ENDE HIER AUFRÄUMEN! einmal über alle funktionen gehen, zusammenfassen, aufräumen
+//TODO REFACTOR: WICHTIG: AM ENDE HIER AUFRÄUMEN! einmal über alle funktionen gehen, zusammenfassen, aufräumen
 
 export interface InactiveBendPoint {
     x: number;
