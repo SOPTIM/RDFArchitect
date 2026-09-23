@@ -17,12 +17,8 @@
 
 package org.rdfarchitect.dl.queries.select;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.dl.data.DLObjectFactory;
@@ -34,6 +30,14 @@ import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.DLQuerySolutionParser;
 import org.rdfarchitect.dl.queries.DLQueryVars;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 /** Utility class for fetching diagram layout objects from a provided model */
 @UtilityClass
@@ -120,8 +124,10 @@ public class DLObjectFetcher {
                       STYLE_FILTER
                   }
                   """
-                        .replace("DIAGRAM_MRID", diagramMRID)
-                        .replace("STYLE_FILTER", styleFilter(DiagramObjectStyle.CLASS, true));
+                                .replace("DIAGRAM_MRID", diagramMRID)
+                                .replace(
+                                        "STYLE_FILTER",
+                                        styleFilter(true, DiagramObjectStyle.CLASS));
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
@@ -221,8 +227,8 @@ public class DLObjectFetcher {
      */
     public List<DiagramObject> fetchDiagramDOs(Model diagramLayout, MRID diagramMRID) {
         var query =
-                QUERY_PREFIXES +
-                  """
+                QUERY_PREFIXES
+                        + """
                   SELECT ?doMRID ?doName ?ioMRID ?styleName
                   WHERE {
                       ?diagramMRID rdf:type cim:Diagram .
@@ -237,8 +243,8 @@ public class DLObjectFetcher {
                       FILTER(STR(?diagramMRID) = "DIAGRAM_MRID")
                   }
                   """
-                        .replace("DIAGRAM_MRID", diagramMRID.getFullMRID())
-                        .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
+                                .replace("DIAGRAM_MRID", diagramMRID.getFullMRID())
+                                .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
@@ -282,7 +288,7 @@ public class DLObjectFetcher {
                   }
                   """
                         .replace("DIAGRAM_MRID", diagramMRID.getFullMRID())
-                        .replace("STYLE_FILTER", styleFilter(DiagramObjectStyle.CLASS, true))
+                        .replace("STYLE_FILTER", styleFilter(true, DiagramObjectStyle.CLASS))
                         .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
@@ -304,34 +310,38 @@ public class DLObjectFetcher {
     }
 
     /**
-     * Fetches a list of all {@link DiagramObject DiagramObjects} for a given class UUID
+     * Fetches a list of all {@link DiagramObject DiagramObjects} for a given identified object
+     * UUID.
      *
      * @param diagramLayout the model from where the object(s) will be fetched
-     * @param classUUID the UUID of the class for which the diagram objects will be fetched
+     * @param identifiedObjectUUID the UUID of the identified object for which the diagram objects
+     *     will be fetched
+     * @param styles the styles to restrict the result to, or none to match any style
      * @return a list of {@link DiagramObject DiagramObjects}
      */
-    public List<DiagramObject> fetchAllDOs(Model diagramLayout, UUID classUUID) {
-        var ioMRID = new MRID(classUUID).getFullMRID();
+    public List<DiagramObject> fetchAllDOs(
+            Model diagramLayout, UUID identifiedObjectUUID, DiagramObjectStyle... styles) {
+        var ioMRID = new MRID(identifiedObjectUUID).getFullMRID();
 
         var query =
-                QUERY_PREFIXES +
-                  """
-                  SELECT ?doMRID ?doName ?diagramMRID ?styleName
-                  WHERE {
-                      ?doMRID rdf:type cim:DiagramObject ;
-                            cim:DiagramObject.DiagramObjectStyle ?styleMRID ;
-                            cim:IdentifiedObject.name ?doName ;
-                            cim:DiagramObject.Diagram ?diagramMRID ;
-                            cim:DiagramObject.IdentifiedObject ?ioMRID .
-                      STYLE_NAME_JOIN
+                QUERY_PREFIXES
+                        + """
+              SELECT ?doMRID ?doName ?diagramMRID ?styleName
+              WHERE {
+                  ?doMRID rdf:type cim:DiagramObject ;
+                        cim:DiagramObject.DiagramObjectStyle ?styleMRID ;
+                        cim:IdentifiedObject.name ?doName ;
+                        cim:DiagramObject.Diagram ?diagramMRID ;
+                        cim:DiagramObject.IdentifiedObject ?ioMRID .
+                  STYLE_NAME_JOIN
 
-                      FILTER(STR(?ioMRID) = "IO_MRID")
-                      STYLE_FILTER
-                  }
-                  """
-                        .replace("IO_MRID", ioMRID)
-                        .replace("STYLE_FILTER", styleFilter(DiagramObjectStyle.CLASS, true))
-                        .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
+                  FILTER(STR(?ioMRID) = "IO_MRID")
+                  STYLE_FILTER
+              }
+              """
+                                .replace("IO_MRID", ioMRID)
+                                .replace("STYLE_FILTER", styleFilter(true, styles))
+                                .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
@@ -340,11 +350,8 @@ public class DLObjectFetcher {
 
             while (results.hasNext()) {
                 var querySolution = results.next();
-
                 var diagramObject = DLObjectFactory.createDiagramObject(querySolution);
-
-                diagramObject.setBelongsToIdentifiedObject(new MRID(classUUID));
-
+                diagramObject.setBelongsToIdentifiedObject(new MRID(identifiedObjectUUID));
                 diagramObjects.add(diagramObject);
             }
             return diagramObjects;
@@ -352,53 +359,55 @@ public class DLObjectFetcher {
     }
 
     /**
-     * Fetches the {@link DiagramObject} in a specific diagram for a specific identified object UUID
+     * Fetches the {@link DiagramObject} in a specific diagram for a specific identified object
+     * UUID.
      *
      * @param diagramLayout the model from where the object(s) will be fetched
      * @param packageUUID the package UUID identifying the diagram
      * @param identifiedObjectUUID the UUID of the identified object for which the diagram object
      *     will be fetched
+     * @param styles the styles to restrict the result to, or none to match any style
      * @return {@link DiagramObject}
      */
     public DiagramObject fetchDiagramDOForIdentifiedObject(
-            Model diagramLayout, UUID packageUUID, UUID identifiedObjectUUID) {
+            Model diagramLayout,
+            UUID packageUUID,
+            UUID identifiedObjectUUID,
+            DiagramObjectStyle... styles) {
         var diagramMRID = new MRID(packageUUID).getFullMRID();
         var ioMRID = new MRID(identifiedObjectUUID).getFullMRID();
         var query =
-                QUERY_PREFIXES +
-                  """
-                  SELECT ?doMRID ?doName ?styleName
-                  WHERE {
-                      ?diagramMRID rdf:type cim:Diagram .
+                QUERY_PREFIXES
+                        + """
+              SELECT ?doMRID ?doName ?styleName
+              WHERE {
+                  ?diagramMRID rdf:type cim:Diagram .
 
-                      ?doMRID rdf:type cim:DiagramObject ;
-                            cim:DiagramObject.DiagramObjectStyle ?styleMRID ;
-                            cim:IdentifiedObject.name ?doName ;
-                            cim:DiagramObject.Diagram ?diagramMRID ;
-                            cim:DiagramObject.IdentifiedObject ?ioMRID .
-                      STYLE_NAME_JOIN
+                  ?doMRID rdf:type cim:DiagramObject ;
+                        cim:DiagramObject.DiagramObjectStyle ?styleMRID ;
+                        cim:IdentifiedObject.name ?doName ;
+                        cim:DiagramObject.Diagram ?diagramMRID ;
+                        cim:DiagramObject.IdentifiedObject ?ioMRID .
+                  STYLE_NAME_JOIN
 
-                      FILTER(STR(?diagramMRID) = "DIAGRAM_MRID")
-                      FILTER(STR(?ioMRID) = "IO_MRID")
-                      STYLE_FILTER
-                  }
-                  """
-                        .replace("IO_MRID", ioMRID)
-                        .replace("DIAGRAM_MRID", diagramMRID)
-                        .replace("STYLE_FILTER", styleFilter(DiagramObjectStyle.CLASS, true))
-                        .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
+                  FILTER(STR(?diagramMRID) = "DIAGRAM_MRID")
+                  FILTER(STR(?ioMRID) = "IO_MRID")
+                  STYLE_FILTER
+              }
+              """
+                                .replace("IO_MRID", ioMRID)
+                                .replace("DIAGRAM_MRID", diagramMRID)
+                                .replace("STYLE_FILTER", styleFilter(true, styles))
+                                .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
 
             if (results.hasNext()) {
                 var querySolution = results.next();
-
                 var diagramObject = DLObjectFactory.createDiagramObject(querySolution);
-
                 diagramObject.setBelongsToDiagram(new MRID(packageUUID));
                 diagramObject.setBelongsToIdentifiedObject(new MRID(identifiedObjectUUID));
-
                 return diagramObject;
             }
             return null;
@@ -517,7 +526,7 @@ public class DLObjectFetcher {
                   }
                   """
                         .replace("DIAGRAM_MRID", new MRID(diagramUUID).getFullMRID())
-                        .replace("STYLE_FILTER", styleFilter(DiagramObjectStyle.CLASS, false));
+                        .replace("STYLE_FILTER", styleFilter(false, DiagramObjectStyle.CLASS));
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
@@ -617,7 +626,7 @@ public class DLObjectFetcher {
                       STYLE_FILTER
                   }
                   """
-                        .replace("STYLE_FILTER", styleFilter(DiagramObjectStyle.CLASS, false))
+                        .replace("STYLE_FILTER", styleFilter(false, DiagramObjectStyle.CLASS))
                         .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
@@ -640,9 +649,19 @@ public class DLObjectFetcher {
     private static final String STYLE_NAME_JOIN =
             "OPTIONAL { ?styleMRID cim:IdentifiedObject.name ?styleName . }";
 
-    /** A filter restricting {@code ?styleMRID} to (or, negated, away from) the given style. */
-    private static String styleFilter(DiagramObjectStyle style, boolean equals) {
-        return "FILTER(STR(?styleMRID) %s \"%s\")"
-                .formatted(equals ? "=" : "!=", style.getMRID().getFullMRID());
+    /**
+     * * A filter restricting {@code ?styleMRID} to (or, negated, away from) one of the given
+     * styles. * With no styles given, no filter is applied at all — the SPARQL query then matches
+     * diagram * objects of any style.
+     */
+    private static String styleFilter(boolean equals, DiagramObjectStyle... styles) {
+        if (styles == null || styles.length == 0) {
+            return "";
+        }
+        var literals =
+                Arrays.stream(styles)
+                        .map(style -> "\"" + style.getMRID().getFullMRID() + "\"")
+                        .collect(Collectors.joining(", "));
+        return "FILTER(STR(?styleMRID) %s (%s))".formatted(equals ? "IN" : "NOT IN", literals);
     }
 }

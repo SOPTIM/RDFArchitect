@@ -19,13 +19,16 @@ package org.rdfarchitect.models.cim.relations.model.properties;
 
 import lombok.experimental.UtilityClass;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @UtilityClass
@@ -91,5 +94,32 @@ public class CIMAssociationUtils {
                             + " has a literal as range, which is not supported.");
         }
         return rangeStatement.getObject().asResource();
+    }
+
+    /**
+     * * The UUIDs of both ends of an association: its own UUID and the UUID of its inverse role.
+     * Used * to know which resources a label may be anchored to for this association. * * @param
+     * uuid the UUID of the association itself * @param inverseUuid the UUID of its inverse role
+     */
+    public record AssociationEndUuids(UUID uuid, UUID inverseUuid) {}
+
+    /**
+     * * Finds the {@link AssociationEndUuids} of every association whose domain is the given class.
+     * * Used to diff a class's associations before and after a save, to detect added/removed *
+     * associations. * * @param rdfGraph the graph to search in * @param classUUID the UUID of the
+     * class whose outgoing associations are collected * @return the end UUIDs of every association
+     * referencing the class as its domain
+     */
+    public Set<AssociationEndUuids> associationEndUuidsForClass(Graph rdfGraph, UUID classUUID) {
+        var classResource = CIMResourceUtils.findResourceForUuid(rdfGraph, classUUID);
+        return listAssociationsReferencingClass(classResource).stream()
+                .map(
+                        association ->
+                                new AssociationEndUuids(
+                                        CIMResourceUtils.findUuidForResource(association),
+                                        CIMResourceUtils.findUuidForResource(
+                                                association.getPropertyResourceValue(
+                                                        CIMS.inverseRoleName))))
+                .collect(Collectors.toSet());
     }
 }

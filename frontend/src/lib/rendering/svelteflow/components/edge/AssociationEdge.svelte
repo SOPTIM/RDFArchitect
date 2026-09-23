@@ -16,55 +16,42 @@
   -->
 
 <script>
-    import {
-        BaseEdge,
-        EdgeLabel,
-        useInternalNode,
-    } from "@xyflow/svelte";
+    import { BaseEdge, EdgeLabel, useInternalNode } from "@xyflow/svelte";
 
     import { renderOptions } from "$lib/renderOptions.svelte.js";
 
     import PolylineEdge from "./PolylineEdge.svelte";
-    import { labelsOf } from "../diagram/labelNodes.js";
-    import { labelHighlight } from "../interaction/labelHighlight.svelte.js";
+    //import { labelsOf } from "../diagram/labelNodes.js";
+    //import { labelHighlight } from "../interaction/labelHighlight.svelte.js";
 
+    //TODO FRAGE: STYLE VON SELECTED EDGE??
 
     let { id, source, target, data, selected } = $props();
-
-    /**
-     * The highlight rises quickly and decays slowly, which is what makes a short press read as a
-     * pulse rather than as a state the edge sits in. The transition of the state being entered is
-     * the one that runs, so these are not interchangeable.
-     */
-    const HIGHLIGHT_IN_TRANSITION =
-        "transition: stroke 120ms ease-out, stroke-width 120ms ease-out;";
-    const HIGHLIGHT_OUT_TRANSITION =
-        "transition: stroke 450ms ease-out, stroke-width 450ms ease-out;";
-
-    /** The widths an edge swells between while one of its labels is pressed. */
-    const BASE_STROKE_WIDTH = "2px";
-    const HIGHLIGHT_STROKE_WIDTH = "3.2px";
-
-    let markerEnd = data.useToAssociation ? "url(#associationTo)" : "";
-    let markerStart = data.useFromAssociation ? "url(#associationFrom)" : "";
 
     let sourceNode = useInternalNode(source);
     let targetNode = useInternalNode(target);
 
-    let held = $derived(labelHighlight.isHeld(labelsOf(data)));
+    ///**
+    // * The highlight rises quickly and decays slowly, which is what makes a short press read as a
+    // * pulse rather than as a state the edge sits in. The transition of the state being entered is
+    // * the one that runs, so these are not interchangeable.
+    // */
+    //const HIGHLIGHT_IN_TRANSITION =
+    //    "transition: stroke 120ms ease-out, stroke-width 120ms ease-out;";
+    //const HIGHLIGHT_OUT_TRANSITION =
+    //    "transition: stroke 450ms ease-out, stroke-width 450ms ease-out;";
+    ///** The widths an edge swells between while one of its labels is pressed. */
+    //const BASE_STROKE_WIDTH = "2px";
+    //const HIGHLIGHT_STROKE_WIDTH = "3.2px";
 
-    //TODO HIER MAXS EDGE SELECTION ANSCHWELLEN
-    /*
-    *     let style = $derived.by(() => {
-        const stroke =
-            renderOptions.get("useColoredPropertiesInMergedView") && data.color
-                ? data.color
-                : "#000";
-        return held
-            ? `${HIGHLIGHT_IN_TRANSITION} stroke-width: ${HIGHLIGHT_STROKE_WIDTH};` +
-                  " stroke: var(--color-class-node-highlighted);"
-            : `${HIGHLIGHT_OUT_TRANSITION} stroke-width: ${BASE_STROKE_WIDTH}; stroke: ${stroke};`;
-    });*/
+    let markerEnd = $derived(
+        data.useToAssociation ? "url(#associationTo)" : "",
+    );
+    let markerStart = $derived(
+        data.useFromAssociation ? "url(#associationFrom)" : "",
+    );
+
+    //let held = $derived(labelHighlight.isHeld(labelsOf(data)));
 
     let style = $derived(
         renderOptions.get("useColoredPropertiesInMergedView") && data.color

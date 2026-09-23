@@ -17,17 +17,20 @@
 
 package org.rdfarchitect.services.dl.update.edgelayout;
 
-import java.util.List;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.api.dto.dl.BendPointDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -38,7 +41,8 @@ public class UpdateEdgeLayoutDataService
 
     private final DatabasePort databasePort;
 
-    // TODO SEHR WICHTIG: END POINTS SIND NOCH AUßEN VOR: also im updateBendPoints unten hab ich die
+    // TODO RENDERING: SEHR WICHTIG: END POINTS SIND NOCH AUßEN VOR: also im updateBendPoints unten
+    // hab ich die
     // noch nicht eingebaut, weil hier das API design noch sehr offen war. also ob ich end points
     // über diese methode mache oder iwie anders
 
@@ -47,11 +51,12 @@ public class UpdateEdgeLayoutDataService
             GraphIdentifier graphIdentifier,
             UUID diagramUUID,
             UUID identifiedObjectUUID,
-            String edgeName) {
+            String edgeName,
+            DiagramObjectStyle style) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             DiagramLayoutServiceUtils.insertDiagramObject(
-                    diagramLayoutModel, diagramUUID, edgeName, identifiedObjectUUID);
+                    diagramLayoutModel, diagramUUID, edgeName, identifiedObjectUUID, style);
             ctx.commit();
         }
     }
@@ -63,7 +68,11 @@ public class UpdateEdgeLayoutDataService
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             var edgeDO =
                     DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
-                            diagramLayoutModel, diagramUUID, identifiedObjectUUID);
+                            diagramLayoutModel,
+                            diagramUUID,
+                            identifiedObjectUUID,
+                            DiagramObjectStyle.INHERITANCE,
+                            DiagramObjectStyle.ASSOCIATION);
             if (edgeDO != null) {
                 DiagramLayoutServiceUtils.deleteEdgeLayoutData(
                         diagramLayoutModel, edgeDO.getMRID());
@@ -82,7 +91,11 @@ public class UpdateEdgeLayoutDataService
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             var edgeDO =
                     DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
-                            diagramLayoutModel, diagramUUID, identifiedObjectUUID);
+                            diagramLayoutModel,
+                            diagramUUID,
+                            identifiedObjectUUID,
+                            DiagramObjectStyle.INHERITANCE,
+                            DiagramObjectStyle.ASSOCIATION);
             if (edgeDO == null) {
                 return;
             }

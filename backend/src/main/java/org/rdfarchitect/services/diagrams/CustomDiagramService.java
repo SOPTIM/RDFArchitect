@@ -29,6 +29,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
+import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
@@ -164,7 +165,8 @@ public class CustomDiagramService
                                 model,
                                 crossProfileDiagramUUID,
                                 merged.getClassUri(),
-                                merged.getUuid());
+                                merged.getUuid(),
+                                DiagramObjectStyle.CLASS);
                 DiagramLayoutServiceUtils.insertDiagramObjectPoint(
                         model, crossProfileDiagramUUID, doMRID);
             }

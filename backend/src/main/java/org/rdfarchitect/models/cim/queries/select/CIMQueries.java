@@ -217,7 +217,8 @@ public class CIMQueries {
 
         var builder = new CIMQueryBuilder(baseQuery);
 
-        return builder.appendLabelQuery(REQUIRED)
+        return builder.appendUUIDQuery(REQUIRED)
+                .appendLabelQuery(REQUIRED)
                 .appendRangeQuery(REQUIRED)
                 .appendAssociationUsedQuery(REQUIRED)
                 .appendInverseRoleNameQuery(REQUIRED)

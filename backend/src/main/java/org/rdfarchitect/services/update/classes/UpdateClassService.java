@@ -17,8 +17,6 @@
 
 package org.rdfarchitect.services.update.classes;
 
-import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Resource;
@@ -31,6 +29,7 @@ import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
@@ -40,6 +39,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMAssociationUtils;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.diagrams.RemoveFromCustomDiagramUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
@@ -47,11 +47,13 @@ import org.rdfarchitect.services.dl.update.classlayout.CrossProfileDiagramLayout
 import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUseCase;
 import org.rdfarchitect.services.dl.update.edgelayout.RenameEdgeLayoutDataUseCase;
+import org.rdfarchitect.services.dl.update.edgelayout.SyncAssociationEdgesUseCase;
 import org.rdfarchitect.services.dl.update.edgelayout.SyncEdgeCreatedUseCase;
 import org.rdfarchitect.services.dl.update.edgelayout.SyncEdgeDeletedUseCase;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -71,6 +73,7 @@ public class UpdateClassService
     private final SyncEdgeCreatedUseCase syncEdgeCreatedUseCase;
     private final SyncEdgeDeletedUseCase syncEdgeDeletedUseCase;
     private final RenameEdgeLayoutDataUseCase renameEdgeLayoutDataUseCase;
+    private final SyncAssociationEdgesUseCase syncAssociationEdgesUseCase;
 
     public UpdateClassService(
             DatabasePort databasePort,
@@ -84,7 +87,8 @@ public class UpdateClassService
             RemoveFromCustomDiagramUseCase removeFromCustomDiagramUseCase,
             SyncEdgeCreatedUseCase syncEdgeCreatedUseCase,
             SyncEdgeDeletedUseCase syncEdgeDeletedUseCase,
-            RenameEdgeLayoutDataUseCase renameEdgeLayoutDataUseCase) {
+            RenameEdgeLayoutDataUseCase renameEdgeLayoutDataUseCase,
+            SyncAssociationEdgesUseCase syncAssociationEdgesUseCase) {
         this.databasePort = databasePort;
         this.classMapper = classMapper;
         this.packageMapper = packageMapper;
@@ -97,12 +101,14 @@ public class UpdateClassService
         this.syncEdgeCreatedUseCase = syncEdgeCreatedUseCase;
         this.syncEdgeDeletedUseCase = syncEdgeDeletedUseCase;
         this.renameEdgeLayoutDataUseCase = renameEdgeLayoutDataUseCase;
+        this.syncAssociationEdgesUseCase = syncAssociationEdgesUseCase;
     }
 
     @Override
     public void replaceClass(GraphIdentifier graphIdentifier, ClassUMLAdaptedDTO newClass) {
         String oldClassUri;
         UUID oldSuperClassUUID = null;
+        Set<CIMAssociationUtils.AssociationEndUuids> associationsBefore;
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             var resource =
                     CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), newClass.getUuid());
@@ -112,6 +118,9 @@ public class UpdateClassService
                 oldSuperClassUUID =
                         CIMResourceUtils.findUuidForResource((Resource) superClassStmt.getObject());
             }
+            associationsBefore =
+                    CIMAssociationUtils.associationEndUuidsForClass(
+                            ctx.getRdfGraph(), newClass.getUuid());
         }
 
         UUID releasedUuid;
@@ -145,23 +154,9 @@ public class UpdateClassService
                     graphIdentifier.datasetName(), oldMergedUuid, newMergedUuid, newClassUri);
         }
 
-        var newSuperClass = newClass.getSuperClass();
-        var newSuperClassUUID = newSuperClass != null ? newSuperClass.getUuid() : null;
-
-        if (oldSuperClassUUID == null && newSuperClassUUID != null) {
-            syncEdgeCreatedUseCase.syncEdgeCreated(
-                    graphIdentifier,
-                    newClass.getUuid(),
-                    newClass.getUuid(),
-                    newClass.getLabel() + " " + newSuperClass.getLabel());
-        } else if (oldSuperClassUUID != null && newSuperClassUUID == null) {
-            syncEdgeDeletedUseCase.syncEdgeDeleted(graphIdentifier, newClass.getUuid());
-        } else if (oldSuperClassUUID != null && !oldSuperClassUUID.equals(newSuperClassUUID)) {
-            renameEdgeLayoutDataUseCase.renameEdge(
-                    graphIdentifier,
-                    newClass.getUuid(),
-                    newClass.getLabel() + " " + newSuperClass.getLabel());
-        }
+        syncInheritanceEdge(graphIdentifier, newClass, oldSuperClassUUID);
+        syncAssociationEdgesUseCase.syncAssociationEdges(
+                graphIdentifier, newClass.getUuid(), associationsBefore);
     }
 
     @Override
@@ -189,6 +184,34 @@ public class UpdateClassService
                 graphIdentifier, packageDTO, className, newClassUUID, classLayoutPosition);
 
         return newClassUUID;
+    }
+
+    /**
+     * Diffs a class's super class before and after a {@link #replaceClass} save, and keeps the
+     * inheritance edge in sync: gaining a super class creates the edge, losing one deletes it,
+     * switching to a different one just renames it in place since the edge's identifying UUID (the
+     * sub class's own UUID) never changes.
+     */
+    private void syncInheritanceEdge(
+            GraphIdentifier graphIdentifier, ClassUMLAdaptedDTO newClass, UUID oldSuperClassUUID) {
+        var newSuperClass = newClass.getSuperClass();
+        var newSuperClassUUID = newSuperClass != null ? newSuperClass.getUuid() : null;
+
+        if (oldSuperClassUUID == null && newSuperClassUUID != null) {
+            syncEdgeCreatedUseCase.syncEdgeCreated(
+                    graphIdentifier,
+                    newClass.getUuid(),
+                    newClass.getUuid(),
+                    newClass.getLabel() + " " + newSuperClass.getLabel(),
+                    DiagramObjectStyle.INHERITANCE);
+        } else if (oldSuperClassUUID != null && newSuperClassUUID == null) {
+            syncEdgeDeletedUseCase.syncEdgeDeleted(graphIdentifier, newClass.getUuid(), Set.of());
+        } else if (oldSuperClassUUID != null && !oldSuperClassUUID.equals(newSuperClassUUID)) {
+            renameEdgeLayoutDataUseCase.renameEdge(
+                    graphIdentifier,
+                    newClass.getUuid(),
+                    newClass.getLabel() + " " + newSuperClass.getLabel());
+        }
     }
 
     private CIMClass constructClass(
