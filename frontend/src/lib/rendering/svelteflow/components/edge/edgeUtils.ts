@@ -69,7 +69,13 @@ function getNodeIntersection(
     const xx1 = (x1 - x2) / (2 * w) - (y1 - y2) / (2 * h);
     const yy1 = (x1 - x2) / (2 * w) + (y1 - y2) / (2 * h);
 
-    const a = 1 / (Math.abs(xx1) + Math.abs(yy1));
+    const denominator = Math.abs(xx1) + Math.abs(yy1);
+    if (denominator === 0) {
+        // Both node centres coincide, so there is no unique border intersection.
+        // Fall back to the shared centre, which is what the edge visibly collapses to.
+        return { x: x2, y: y2 };
+    }
+    const a = 1 / denominator;
     const xx3 = a * xx1;
     const yy3 = a * yy1;
 
