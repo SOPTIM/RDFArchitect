@@ -24,9 +24,9 @@ import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO.Severity;
-import org.rdfarchitect.api.dto.validation.SchemaValidationReportDTO;
+import org.rdfarchitect.api.dto.validation.ValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationReportDTO;
+import org.rdfarchitect.api.dto.validation.ValidationSeverity;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.validation.rule.ValidationRule;
@@ -43,9 +43,9 @@ public class SchemaValidationService implements SchemaValidationUseCase {
     private final List<ValidationRule> validationRules;
 
     @Override
-    public SchemaValidationReportDTO validateSchema(
+    public ValidationReportDTO validateSchema(
             GraphIdentifier graphIdentifier, CGMESVersion cgmesVersion) {
-        SchemaValidationReportDTO report;
+        ValidationReportDTO report;
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
@@ -56,17 +56,17 @@ public class SchemaValidationService implements SchemaValidationUseCase {
     }
 
     @Override
-    public SchemaValidationReportDTO validateSchema(Graph graph, CGMESVersion cgmesVersion) {
+    public ValidationReportDTO validateSchema(Graph graph, CGMESVersion cgmesVersion) {
         return validateModel(ModelFactory.createModelForGraph(graph), cgmesVersion);
     }
 
-    private SchemaValidationReportDTO validateModel(Model model, CGMESVersion cgmesVersion) {
-        var issues = new ArrayList<SchemaValidationIssueDTO>();
+    private ValidationReportDTO validateModel(Model model, CGMESVersion cgmesVersion) {
+        var issues = new ArrayList<ValidationIssueDTO>();
 
         validationRules.forEach(rule -> rule.validate(model, issues, cgmesVersion));
 
-        var hasErrors = issues.stream().anyMatch(i -> i.getSeverity() == Severity.ERROR);
+        var hasErrors = issues.stream().anyMatch(i -> i.getSeverity() == ValidationSeverity.ERROR);
 
-        return SchemaValidationReportDTO.builder().valid(!hasErrors).issues(issues).build();
+        return ValidationReportDTO.builder().valid(!hasErrors).issues(issues).build();
     }
 }

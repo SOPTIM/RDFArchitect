@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationSeverity;
 
 public class ValidSchemaTest extends SchemaValidationTestBase {
 
@@ -39,7 +39,7 @@ public class ValidSchemaTest extends SchemaValidationTestBase {
 
         // Everything that is not an ERROR here must be an INFO about optional header fields.
         assertThat(report.getIssues())
-                .allMatch(i -> i.getSeverity() == SchemaValidationIssueDTO.Severity.INFO)
+                .allMatch(i -> i.getSeverity() == ValidationSeverity.INFO)
                 .allMatch(i -> i.getMessage().contains("Optional profile header field is not set"));
     }
 }

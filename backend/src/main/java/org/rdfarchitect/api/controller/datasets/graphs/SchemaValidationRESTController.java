@@ -26,7 +26,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationReportDTO;
+import org.rdfarchitect.api.dto.validation.ValidationReportDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.validation.SchemaValidationUseCase;
@@ -64,10 +64,10 @@ public class SchemaValidationRESTController {
                                         schema =
                                                 @Schema(
                                                         implementation =
-                                                                SchemaValidationReportDTO.class)))
+                                                                ValidationReportDTO.class)))
             })
     @GetMapping
-    public SchemaValidationReportDTO validateSchema(
+    public ValidationReportDTO validateSchema(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
