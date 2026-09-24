@@ -18,16 +18,24 @@
 <script>
     import { BaseEdge } from "@xyflow/svelte";
 
+    import { edgeHighlightStyle } from "./edgeHighlightStyle.js";
     import PolylineEdge from "./PolylineEdge.svelte";
 
     let { id, source, target, data, selected } = $props();
 
-    const style = "stroke-width: 2px; stroke: var(--color-inheritance-edge);";
     const markerEnd = "url(#inheritance)";
 </script>
 
 <PolylineEdge {id} {source} {target} {data} {selected}>
-    {#snippet children(path)}
-        <BaseEdge {id} {path} {markerEnd} {style} />
+    {#snippet children(path, _edgeParams, highlighted)}
+        <BaseEdge
+            {id}
+            {path}
+            {markerEnd}
+            style={edgeHighlightStyle(
+                "var(--color-inheritance-edge)",
+                highlighted,
+            )}
+        />
     {/snippet}
 </PolylineEdge>
