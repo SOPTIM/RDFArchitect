@@ -25,6 +25,7 @@
         dissolveCollinearBendPoints,
     } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
     import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
+    import { labelHighlight } from "$lib/rendering/svelteflow/interaction/labelHighlight.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
 
     import EdgeBendPoints from "./EdgeBendPoints.svelte";
@@ -33,6 +34,7 @@
         getPolylinePath,
         getRoundedCornerPolylinePath,
     } from "./edgeUtils.ts";
+    import { labelsOf } from "../../diagram/labelNodes.js";
 
     let {
         id,
@@ -54,6 +56,15 @@
     let sourceEndPoint = $derived(getSourceEndPoint(allPoints));
     let targetEndPoint = $derived(getTargetEndPoint(allPoints));
     let readOnly = $derived(data?.readOnly ?? false);
+
+    /**
+     * Whether one of this edge's own labels is currently being dragged. Inheritance edges never
+     * carry labels, so this is always false for them without any extra branching.
+     */
+    let held = $derived(labelHighlight.isHeld(labelsOf(data)));
+
+    /** Whether the edge should swell: on selection, or while one of its labels is held. */
+    let highlighted = $derived(selected || held);
 
     let useRoundedCorners = $derived(
         userSettings.get("useRoundedEdges", false),
@@ -150,16 +161,7 @@
     }
 </script>
 
-{@render children(path, edgeParams)}
-
-{#if selected && target !== source}
-    <path
-        d={path}
-        fill="none"
-        class="pointer-events-none"
-        style="stroke: var(--color-blue); stroke-width: 3.5px; stroke-dasharray: 10 6; opacity: 0.9;"
-    />
-{/if}
+{@render children(path, edgeParams, highlighted)}
 
 {#if selected && edgeParams && target !== source}
     <EdgeBendPoints
