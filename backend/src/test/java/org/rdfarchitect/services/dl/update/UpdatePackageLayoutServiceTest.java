@@ -58,7 +58,7 @@ class UpdatePackageLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void deletePackageLayoutData_fullGraph_deletesSpecificPackageLayoutData() {
         // Arrange
         addGraphFromFile("association.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
         var diagramAobjectsList =
                 diagramLayout
                         .getDiagramLayoutModelDirect()
@@ -111,10 +111,23 @@ class UpdatePackageLayoutServiceTest extends DiagramLayoutServicesTestBase {
     }
 
     @Test
+    void deletePackageLayoutData_withoutLayoutData_deletesNothingAndDoesNotFail() {
+        // Arrange: a package whose classes never got layout data, as long as it was never opened
+        addGraphFromFile("association.ttl");
+
+        // Act
+        service.deletePackageLayoutData(graphIdentifier, PACKAGE_A_UUID);
+
+        // Assert
+        assertDiagramDoesNotExist(PACKAGE_A_UUID);
+        assertClassDiagramObjectsDoNotExist(CLASS_A_UUID);
+    }
+
+    @Test
     void replaceDiagram_diagramExists_replacesDiagram() {
         // Arrange
         addGraphFromFile("package.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
 
         // Act
         service.replaceDiagram(graphIdentifier, PACKAGE_A_UUID, "newDiagramLabel");

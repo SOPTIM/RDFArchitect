@@ -27,13 +27,14 @@ import {
 import {
     listGraphs,
     deleteGraph,
-    replaceGraphs,
     replaceGraph,
     renameGraph as sdkRenameGraph,
-    type GraphBulkImportResponse,
-    type ImportWarning,
+    cancelImport as sdkCancelImport,
+    getImportStatus as sdkGetImportStatus,
     type GraphDto,
+    type ImportJobStatus,
 } from "../api/generated";
+import { PUBLIC_BACKEND_URL } from "../config/runtime";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
 type WorkspaceState = {
@@ -50,23 +51,6 @@ function createGraphStore() {
     });
 
     const { subscribe, update } = store;
-
-    function getWorkspaceState(
-        state: WorkspaceState,
-        workspaceName: string,
-    ): AsyncListSlot<GraphDto> {
-        return state.graphs.get(workspaceName) ?? createEmptyListSlot();
-    }
-
-    function setWorkspaceState(
-        state: WorkspaceState,
-        workspaceName: string,
-        next: AsyncListSlot<GraphDto>,
-    ): WorkspaceState {
-        const byWorkspace = new Map(state.graphs);
-        byWorkspace.set(workspaceName, next);
-        return { ...state, graphs: byWorkspace };
-    }
 
     async function getGraphs(
         workspaceName: string,
@@ -118,77 +102,6 @@ function createGraphStore() {
             `"${graphURI}" was added to "${workspaceName}".`,
         );
         return { error: null };
-    }
-
-    async function importGraphs(
-        workspaceName: string,
-        files: File[],
-        graphUris: string[],
-    ): Promise<Result<GraphBulkImportResponse>> {
-        console.log(
-            `${LOG_PREFIX} Importing graphs into workspace "${workspaceName}"`,
-        );
-
-        if (!files || files.length === 0) {
-            const error = new Error(
-                "At least one file is required for import.",
-            );
-            console.error(`${LOG_PREFIX} ${error.message}`);
-            toastStore.error("Import failed", "No files were selected.");
-            return { error };
-        }
-
-        const { data, error } = await replaceGraphs({
-            path: { datasetName: workspaceName },
-            body: {
-                files: files,
-            },
-            query: { graphUris },
-        });
-
-        if (error) {
-            console.error(
-                `${LOG_PREFIX} Failed to import graphs`,
-                await describeError(error),
-            );
-            toastStore.error(
-                "Import failed",
-                `Could not import into "${workspaceName}".`,
-            );
-            return { error };
-        }
-
-        invalidateWorkspace(workspaceName);
-
-        const importedGraphUris = data?.importedGraphUris ?? [];
-        const failedImports = data?.failedImports ?? [];
-        const importedCount = importedGraphUris.length;
-
-        if (importedCount === 0) {
-            toastStore.error(
-                "Import failed",
-                failedImports.length > 0
-                    ? `${failedImports.length} file(s) could not be imported.`
-                    : "No schemas were imported.",
-            );
-            return { error: null, data };
-        }
-
-        if (failedImports.length > 0) {
-            toastStore.warning(
-                "Import partially succeeded",
-                `${importedCount} graph(s) imported, ${failedImports.length} file(s) skipped.`,
-            );
-        } else {
-            toastStore.success(
-                "Import complete",
-                `${importedCount} graph${importedCount === 1 ? "" : "s"} imported.`,
-            );
-        }
-
-        notifyUndisplayableProperties(data?.warnings ?? []);
-
-        return { error: null, data };
     }
 
     async function renameGraph(
@@ -296,35 +209,182 @@ function createGraphStore() {
         getGraphs,
         addEmptyGraph,
         renameGraph,
-        importGraphs,
+        startImport,
+        getImportStatus,
+        cancelImport,
         remove: removeGraph,
         invalidateWorkspace,
     };
 }
 
-function notifyUndisplayableProperties(warnings: ImportWarning[]) {
-    if (warnings.length === 0) return;
-
-    const total = warnings.reduce(
-        (sum, w) => sum + (w.undisplayableProperties?.length ?? 0),
-        0,
-    );
-    if (total === 0) return;
-
-    const details = warnings
-        .map(
-            w =>
-                `${w.fileName}: ${(w.undisplayableProperties ?? []).join(", ")}`,
-        )
-        .join("; ");
-
-    toastStore.warning(
-        "Some properties could not be displayed",
-        `${total} propert${total === 1 ? "y" : "ies"} ${
-            total === 1 ? "is" : "are"
-        } missing the CIM stereotype or association metadata RDFArchitect needs to show ${
-            total === 1 ? "it" : "them"
-        } (${details}).`,
-    );
+function getWorkspaceState(
+    state: WorkspaceState,
+    workspaceName: string,
+): AsyncListSlot<GraphDto> {
+    return state.graphs.get(workspaceName) ?? createEmptyListSlot();
 }
+
+function setWorkspaceState(
+    state: WorkspaceState,
+    workspaceName: string,
+    next: AsyncListSlot<GraphDto>,
+): WorkspaceState {
+    const byWorkspace = new Map(state.graphs);
+    byWorkspace.set(workspaceName, next);
+    return { ...state, graphs: byWorkspace };
+}
+
+/**
+ * Starts an import and returns the id of the job that runs it. The import itself happens in the
+ * background; follow it with {@link getImportStatus} and stop it with {@link cancelImport}.
+ */
+async function startImport(
+    workspaceName: string,
+    files: File[],
+    graphUris: string[],
+    options: {
+        onUploadProgress?: (percent: number) => void;
+        signal?: AbortSignal;
+    } = {},
+): Promise<Result<{ jobId: string }>> {
+    console.log(
+        `${LOG_PREFIX} Starting import into workspace "${workspaceName}"`,
+    );
+
+    if (!files || files.length === 0) {
+        const error = new Error("At least one file is required for import.");
+        console.error(`${LOG_PREFIX} ${error.message}`);
+        return { error };
+    }
+
+    try {
+        const jobId = await uploadImport(
+            workspaceName,
+            files,
+            graphUris,
+            options,
+        );
+        console.log(`${LOG_PREFIX} Import job "${jobId}" started`);
+        return { error: null, data: { jobId } };
+    } catch (error) {
+        console.error(`${LOG_PREFIX} Failed to start the import`, error);
+        return { error };
+    }
+}
+
+async function getImportStatus(
+    workspaceName: string,
+    jobId: string,
+): Promise<Result<ImportJobStatus>> {
+    const { data, error } = await sdkGetImportStatus({
+        path: { datasetName: workspaceName, jobId },
+    });
+
+    if (error || !data) {
+        console.error(
+            `${LOG_PREFIX} Failed to read the status of import job "${jobId}"`,
+            await describeError(error),
+        );
+        return { error: error ?? new Error("Import job is unknown.") };
+    }
+
+    return { error: null, data };
+}
+
+async function cancelImport(
+    workspaceName: string,
+    jobId: string,
+): Promise<Result> {
+    console.log(`${LOG_PREFIX} Cancelling import job "${jobId}"`);
+
+    const { error } = await sdkCancelImport({
+        path: { datasetName: workspaceName, jobId },
+    });
+
+    if (error) {
+        console.error(
+            `${LOG_PREFIX} Failed to cancel import job "${jobId}"`,
+            await describeError(error),
+        );
+        return { error };
+    }
+
+    return { error: null };
+}
+
+/**
+ * Uploads the files of an import and resolves with the id of the job that was started.
+ *
+ * This is the one request that does not go through the generated client: it is built on fetch,
+ * which reports nothing until the response arrives, and an upload of tens of megabytes needs a
+ * progress bar. `XMLHttpRequest.upload` is still the only browser api that raises progress events
+ * while a body is going out.
+ *
+ * @throws Error carrying the http status of the failed request in `status`
+ */
+function uploadImport(
+    workspaceName: string,
+    files: File[],
+    graphUris: string[],
+    options: {
+        onUploadProgress?: (percent: number) => void;
+        signal?: AbortSignal;
+    },
+): Promise<string> {
+    const query = graphUris
+        .map(graphUri => `graphUris=${encodeURIComponent(graphUri ?? "")}`)
+        .join("&");
+    const url =
+        `${PUBLIC_BACKEND_URL}/api/datasets/${encodeURIComponent(workspaceName)}` +
+        `/graphs/content/imports${query ? `?${query}` : ""}`;
+
+    const formData = new FormData();
+    for (const file of files) {
+        formData.append("files", file);
+    }
+
+    return new Promise((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        request.open("POST", url);
+        request.withCredentials = true;
+        request.responseType = "json";
+
+        request.upload.onprogress = event => {
+            if (event.lengthComputable) {
+                options.onUploadProgress?.((event.loaded / event.total) * 100);
+            }
+        };
+        request.onload = () => {
+            const jobId = request.response?.jobId;
+            if (request.status === 202 && jobId) {
+                resolve(jobId);
+                return;
+            }
+            reject(importStartError(request.status, request.response));
+        };
+        request.onerror = () =>
+            reject(new Error("The import could not be reached."));
+        request.onabort = () => reject(new Error("The upload was cancelled."));
+
+        options.signal?.addEventListener("abort", () => request.abort(), {
+            once: true,
+        });
+        request.send(formData);
+    });
+}
+
+function importStartError(
+    status: number,
+    response: unknown,
+): Error & { status: number } {
+    const detail = (response as { detail?: string } | null)?.detail;
+    const message =
+        status === 409
+            ? "Another import is still running. Wait for it to finish and try again."
+            : (detail ?? "The import could not be started.");
+    const error = new Error(message) as Error & { status: number };
+    error.status = status;
+    return error;
+}
+
 export { createGraphStore };

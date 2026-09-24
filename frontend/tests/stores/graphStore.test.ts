@@ -38,7 +38,13 @@ const MOCK_GRAPHS: api.GraphDto[] = [
 
 const MOCK_FILE = new File(["content"], "graph.ttl", { type: "text/turtle" });
 
-const MOCK_BULK_RESPONSE: api.GraphBulkImportResponse = {
+const JOB_ID = "11111111-2222-3333-4444-555555555555";
+
+const MOCK_JOB_STATUS: api.ImportJobStatus = {
+    jobId: JOB_ID,
+    datasetName: WORKSPACE_A,
+    state: "COMPLETED",
+    files: [],
     importedGraphUris: [GRAPH_URI],
     failedImports: [],
     warnings: [],
@@ -51,6 +57,15 @@ function makeGraphDto(uri: string): api.GraphDto {
     } as api.GraphDto;
 }
 
+/** Waits for the store to have sent its upload and returns that request. */
+async function sentRequest(): Promise<FakeXMLHttpRequest> {
+    await vi.waitFor(() => {
+        expect(FakeXMLHttpRequest.instances).toHaveLength(1);
+        expect(FakeXMLHttpRequest.instances[0].body).not.toBeNull();
+    });
+    return FakeXMLHttpRequest.instances[0];
+}
+
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
@@ -58,13 +73,57 @@ function makeGraphDto(uri: string): api.GraphDto {
 vi.mock("$lib/api/generated", () => ({
     listGraphs: vi.fn(),
     deleteGraph: vi.fn(),
-    replaceGraphs: vi.fn(),
     replaceGraph: vi.fn(),
+    renameGraph: vi.fn(),
+    cancelImport: vi.fn(),
+    getImportStatus: vi.fn(),
 }));
+
+vi.mock("$lib/config/runtime", () => ({ PUBLIC_BACKEND_URL: "" }));
 
 vi.mock("$lib/eventhandling/toastStore.svelte.js", () => ({
     toastStore: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
 }));
+
+/** Stands in for the upload of an import, which the store runs through XMLHttpRequest. */
+class FakeXMLHttpRequest {
+    static instances: FakeXMLHttpRequest[] = [];
+
+    upload: { onprogress?: (event: unknown) => void } = {};
+    withCredentials = false;
+    responseType = "";
+    status = 0;
+    response: unknown = null;
+    method: string | null = null;
+    url: string | null = null;
+    body: FormData | null = null;
+    onload?: () => void;
+    onerror?: () => void;
+    onabort?: () => void;
+
+    constructor() {
+        FakeXMLHttpRequest.instances.push(this);
+    }
+
+    open(method: string, url: string) {
+        this.method = method;
+        this.url = url;
+    }
+
+    send(body: FormData) {
+        this.body = body;
+    }
+
+    abort() {
+        this.onabort?.();
+    }
+
+    respond(status: number, response: unknown) {
+        this.status = status;
+        this.response = response;
+        this.onload?.();
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -75,6 +134,8 @@ describe("graphStore", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        FakeXMLHttpRequest.instances = [];
+        vi.stubGlobal("XMLHttpRequest", FakeXMLHttpRequest);
         store = createGraphStore();
     });
 
@@ -204,76 +265,122 @@ describe("graphStore", () => {
     });
 
     // -------------------------------------------------------------------------
-    describe("importGraphs", () => {
+    describe("startImport", () => {
         test("returns an error immediately if no files are provided", async () => {
-            const result = await store.importGraphs(
+            const result = await store.startImport(
                 WORKSPACE_A,
                 [],
                 [GRAPH_URI],
             );
 
             expect(result.error).toBeInstanceOf(Error);
-            expect(api.replaceGraphs).not.toHaveBeenCalled();
+            expect(FakeXMLHttpRequest.instances).toHaveLength(0);
         });
 
-        test("calls API with correct arguments on valid input", async () => {
-            vi.mocked(api.replaceGraphs).mockResolvedValue({
-                data: MOCK_BULK_RESPONSE,
-                error: undefined,
-            });
-
-            await store.importGraphs(WORKSPACE_A, [MOCK_FILE], [GRAPH_URI]);
-
-            expect(api.replaceGraphs).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A },
-                body: { files: [MOCK_FILE] },
-                query: { graphUris: [GRAPH_URI] },
-            });
-        });
-
-        test("returns error and preserves cache on API failure", async () => {
-            const error = new Error("Server error");
-            vi.mocked(api.replaceGraphs).mockResolvedValue({
-                data: undefined,
-                error,
-            });
-            vi.mocked(api.listGraphs).mockResolvedValue({
-                data: MOCK_GRAPHS,
-                error: undefined,
-            });
-            await store.getGraphs(WORKSPACE_A);
-
-            const result = await store.importGraphs(
+        test("uploads the files and resolves with the id of the started job", async () => {
+            const pending = store.startImport(
                 WORKSPACE_A,
                 [MOCK_FILE],
                 [GRAPH_URI],
             );
+            const request = await sentRequest();
 
-            expect(result.error).toBe(error);
-            expect(toastStore.error).toHaveBeenCalledWith(
-                "Import failed",
-                `Could not import into "${WORKSPACE_A}".`,
+            expect(request.method).toBe("POST");
+            expect(request.url).toBe(
+                `/api/datasets/${WORKSPACE_A}/graphs/content/imports` +
+                    `?graphUris=${encodeURIComponent(GRAPH_URI)}`,
             );
+            expect(request.withCredentials).toBe(true);
+            expect(request.body.getAll("files")).toEqual([MOCK_FILE]);
 
-            const state = get(store);
-            expect(state.graphs.has(WORKSPACE_A)).toBe(true);
+            request.respond(202, { jobId: JOB_ID });
+
+            expect(await pending).toEqual({
+                error: null,
+                data: { jobId: JOB_ID },
+            });
         });
 
-        test("invalidates workspace cache on successful import", async () => {
-            vi.mocked(api.replaceGraphs).mockResolvedValue({
-                data: MOCK_BULK_RESPONSE,
+        test("reports how much of the upload has gone through", async () => {
+            const reported: number[] = [];
+            const pending = store.startImport(
+                WORKSPACE_A,
+                [MOCK_FILE],
+                [GRAPH_URI],
+                { onUploadProgress: percent => reported.push(percent) },
+            );
+            const request = await sentRequest();
+
+            request.upload.onprogress({
+                lengthComputable: true,
+                loaded: 25,
+                total: 100,
+            });
+            request.respond(202, { jobId: JOB_ID });
+            await pending;
+
+            expect(reported).toEqual([25]);
+        });
+
+        test("explains a rejected import instead of failing silently", async () => {
+            const pending = store.startImport(
+                WORKSPACE_A,
+                [MOCK_FILE],
+                [GRAPH_URI],
+            );
+            const request = await sentRequest();
+
+            request.respond(409, {});
+
+            const result = await pending;
+            expect((result.error as Error).message).toContain(
+                "Another import is still running",
+            );
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("getImportStatus", () => {
+        test("returns the status the backend reports", async () => {
+            vi.mocked(api.getImportStatus).mockResolvedValue({
+                data: MOCK_JOB_STATUS,
                 error: undefined,
             });
-            vi.mocked(api.listGraphs).mockResolvedValue({
-                data: MOCK_GRAPHS,
+
+            const result = await store.getImportStatus(WORKSPACE_A, JOB_ID);
+
+            expect(api.getImportStatus).toHaveBeenCalledWith({
+                path: { datasetName: WORKSPACE_A, jobId: JOB_ID },
+            });
+            expect(result.data).toBe(MOCK_JOB_STATUS);
+        });
+
+        test("returns an error for a job the backend does not know", async () => {
+            vi.mocked(api.getImportStatus).mockResolvedValue({
+                data: undefined,
+                error: new Error("not found"),
+            });
+
+            const result = await store.getImportStatus(WORKSPACE_A, JOB_ID);
+
+            expect(result.error).toBeInstanceOf(Error);
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("cancelImport", () => {
+        test("asks the backend to stop the job", async () => {
+            vi.mocked(api.cancelImport).mockResolvedValue({
+                data: undefined,
                 error: undefined,
             });
-            await store.getGraphs(WORKSPACE_A);
 
-            await store.importGraphs(WORKSPACE_A, [MOCK_FILE], [GRAPH_URI]);
+            const result = await store.cancelImport(WORKSPACE_A, JOB_ID);
 
-            const state = get(store);
-            expect(state.graphs.has(WORKSPACE_A)).toBe(false);
+            expect(api.cancelImport).toHaveBeenCalledWith({
+                path: { datasetName: WORKSPACE_A, jobId: JOB_ID },
+            });
+            expect(result.error).toBeNull();
         });
     });
 
