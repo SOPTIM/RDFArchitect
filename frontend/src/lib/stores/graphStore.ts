@@ -108,7 +108,6 @@ function createGraphStore() {
         workspaceName: string,
         oldGraphURI: string,
         newGraphURI: string,
-        newKeyword: string | null = null,
     ): Promise<Result> {
         console.log(
             `${LOG_PREFIX} Renaming graph "${oldGraphURI}" to "${newGraphURI}" in workspace "${workspaceName}"`,
@@ -116,10 +115,7 @@ function createGraphStore() {
 
         const { error } = await sdkRenameGraph({
             path: { datasetName: workspaceName, graphURI: oldGraphURI },
-            query: {
-                newGraphURI,
-                ...(newKeyword !== null ? { newKeyword } : {}),
-            },
+            query: { newGraphURI },
         });
 
         if (error) {

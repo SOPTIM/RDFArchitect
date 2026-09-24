@@ -18,13 +18,50 @@
 package org.rdfarchitect.api.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
+import java.util.List;
+
+/**
+ * A graph of a dataset, together with what the CIM profile inside it says about itself.
+ *
+ * <p>Every field but the URI is absent for a graph that is not a CIM profile, and the CIM version
+ * decides which of them a profile fills in: CGMES 2.4.15 has no version info, and a graph that
+ * predates the profile metadata may have neither label nor description.
+ */
 @Data
+@Builder
 @AllArgsConstructor
 public class GraphDTO {
     private URI uri;
     private String keyword;
+    private String label;
+    private String description;
+    private List<String> versionIris;
+    private String versionInfo;
+
+    /**
+     * Whether the profile states what it is called on an {@code owl:Ontology} object, as CGMES 3.0
+     * does and CGMES 2.4.15 does not.
+     *
+     * <p>This is what decides where a reader is sent to change that name, and it is not the same
+     * question as {@link #profileClassIri} being null: a legacy profile whose version class cannot
+     * be found has neither place, and must not be given an ontology object that the profile would
+     * never read back.
+     */
+    private boolean ontologyHeader;
+
+    /**
+     * The class a CGMES 2.4.15 profile states its keyword and version IRIs on, for a reader who
+     * wants to change them: such a profile has no ontology object, so the ontology editor has
+     * nothing to offer and the class editor is where those values live. Null for a CGMES 3.0
+     * profile, which is edited through its ontology object, and for a graph that is no profile.
+     */
+    private String profileClassIri;
+
+    /** The same class as {@link #profileClassIri}, by the uuid the class editor navigates by. */
+    private String profileClassUuid;
 }

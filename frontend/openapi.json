@@ -530,6 +530,9 @@
           "keyword" : {
             "type" : "string"
           },
+          "label" : {
+            "type" : "string"
+          },
           "present" : {
             "type" : "boolean"
           },
@@ -842,11 +845,35 @@
       },
       "GraphDTO" : {
         "properties" : {
+          "description" : {
+            "type" : "string"
+          },
           "keyword" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "ontologyHeader" : {
+            "type" : "boolean"
+          },
+          "profileClassIri" : {
+            "type" : "string"
+          },
+          "profileClassUuid" : {
             "type" : "string"
           },
           "uri" : {
             "$ref" : "#/components/schemas/URI"
+          },
+          "versionInfo" : {
+            "type" : "string"
+          },
+          "versionIris" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -6850,7 +6877,7 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/rename" : {
       "post" : {
-        "description" : "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. If a new keyword is given, it replaces the dcat:keyword of the profile header.",
+        "description" : "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. The profile header is left untouched: what a schema is called on screen is read from there and is edited in the ontology editor.",
         "operationId" : "renameGraph",
         "parameters" : [
           {
@@ -6886,15 +6913,6 @@
             "in" : "query",
             "name" : "newGraphURI",
             "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The display name to store as dcat:keyword in the profile header.",
-            "in" : "query",
-            "name" : "newKeyword",
-            "required" : false,
             "schema" : {
               "type" : "string"
             }

@@ -45,13 +45,13 @@
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { graphColors } from "$lib/graphColors.svelte.js";
     import {
+        ClassType,
         editorState,
         forceReloadTrigger,
         SelectionLevel,
     } from "$lib/sharedState.svelte.js";
     import { ontologyStore } from "$lib/stores/ontologyStore.ts";
     import { versionControlStore } from "$lib/stores/versionControlStore.ts";
-    import { shortenIri } from "$lib/utils/iri.js";
 
     import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
@@ -104,10 +104,6 @@
     let showDocumentationExportDialog = $state(false);
 
     let wasGraphSelected = false;
-
-    let graphHighlightLabel = $derived(
-        shortenIri(namespaces, graphNavEntry.id),
-    );
 
     const graphColor = $derived(
         graphColors.get(workspaceNavEntry.id, graphNavEntry.id),
@@ -195,6 +191,34 @@
     function focusGraphContext() {
         editorState.selectGraph(workspaceNavEntry.label, graphNavEntry.id);
     }
+
+    /**
+     * Opens whatever edits the name a schema is shown under. A CGMES 3.0 profile keeps it on an
+     * ontology object, which the ontology editor owns; a CGMES 2.4.15 profile has no such object
+     * and states it on a class instead, so there the class editor is the answer. The dialog
+     * decides which of the two it is, because only the graph list knows.
+     */
+    function editProfileHeader(target) {
+        if (target?.kind === "ontology") {
+            showEditOntologyDialog = true;
+            return;
+        }
+        if (target?.kind !== "class") {
+            return;
+        }
+        focusGraphContext();
+        editorState.classEditorSchema.updateValue({
+            classUuid: target.uuid,
+            graphUri: graphNavEntry.id,
+        });
+        editorState.selectedClassWorkspace.updateValue(workspaceNavEntry.id);
+        editorState.selectedClassGraph.updateValue(graphNavEntry.id);
+        editorState.selectedClass.updateValue({
+            type: ClassType.SINGLE_CLASS,
+            id: target.uuid,
+        });
+        editorState.focusedClassUUID.updateValue(target.uuid);
+    }
 </script>
 
 <div class={`flex w-full flex-col items-stretch gap-[0.1rem]`}>
@@ -203,6 +227,7 @@
             <NavigationEntry
                 level={1}
                 label={graphNavEntry.label}
+                badgeText={graphNavEntry.data?.keyword ?? ""}
                 icon={faDiagramProject}
                 iconColor={graphColor}
                 hasChildren={graphNavEntry.children.length > 0}
@@ -210,7 +235,6 @@
                 isSelected={graphSelectionState === "active"}
                 ancestorSelected={graphSelectionState === "ancestor"}
                 title={graphNavEntry.tooltip}
-                highlightLabel={graphHighlightLabel}
                 onclick={focusGraphContext}
                 onToggle={handleToggleGraph}
             />
@@ -479,6 +503,7 @@
     bind:showDialog={showRenameDialog}
     workspaceName={workspaceNavEntry.id}
     graphUri={graphNavEntry.id}
+    onEditHeader={editProfileHeader}
 />
 <NewPackageDialog
     bind:showDialog={showNewPackageDialog}
