@@ -29,6 +29,11 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { editorState } from "$lib/sharedState.svelte.js";
+    import {
+        claimPropertyFocus,
+        PROPERTY_HIGHLIGHT_MS,
+        scrollRowIntoView,
+    } from "$lib/utils/property-focus.js";
 
     let {
         attributes,
@@ -40,11 +45,30 @@
     } = $props();
 
     const classEditorContext = getContext("classEditor");
+
+    let row = $state(null);
+    let revealed = $state(false);
     let readonly = $derived(classEditorContext.readOnly);
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
         readonly = classEditorContext.readOnly;
+    });
+
+    // A deep link or search hit on this attribute reveals the declaring class, never the inheriting
+    // one, so an inherited row never claims the request (its section may even be collapsed).
+    $effect(() => {
+        editorState.focusedPropertyUUID.subscribe();
+        if (inherited || !claimPropertyFocus(attribute?.uuid?.value)) {
+            return;
+        }
+        revealed = true;
+        scrollRowIntoView(row);
+        const timeout = setTimeout(
+            () => (revealed = false),
+            PROPERTY_HIGHLIGHT_MS,
+        );
+        return () => clearTimeout(timeout);
     });
 
     onMount(() => (readonly = classEditorContext.readOnly));
@@ -58,7 +82,10 @@
     }
 </script>
 
-<tr>
+<tr
+    bind:this={row}
+    class={revealed ? "bg-background-select ring-border-select ring-2" : ""}
+>
     <td class="w-1/3">
         <TextEditControl
             placeholder="attribute label..."

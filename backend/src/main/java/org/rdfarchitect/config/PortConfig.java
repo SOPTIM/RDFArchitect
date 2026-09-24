@@ -22,7 +22,9 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.SnapshotPort;
 import org.rdfarchitect.database.inmemory.InMemoryDatabase;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
+import org.rdfarchitect.database.snapshots.FallbackSnapshotAdapter;
 import org.rdfarchitect.database.snapshots.FusekiSnapshotAdapter;
+import org.rdfarchitect.database.snapshots.InMemorySnapshotAdapter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -39,6 +41,8 @@ public class PortConfig {
             DatabasePort databasePort,
             DatabaseConnection databaseConnection,
             DatabaseConfig databaseConfig) {
-        return new FusekiSnapshotAdapter(databasePort, databaseConnection, databaseConfig);
+        return new FallbackSnapshotAdapter(
+                new FusekiSnapshotAdapter(databasePort, databaseConnection, databaseConfig),
+                new InMemorySnapshotAdapter(databasePort));
     }
 }
