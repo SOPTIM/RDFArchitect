@@ -15,6 +15,8 @@
   -
   -->
 
+<!--TODO DIE INHERITANCE PFEILSPITZE SPITZER MACHEN! gleiches problem wie bei der assoc edge früher, die ist vorne iwie stumpf. fix das svg da iwie-->
+
 <svg class="pointer-events-none absolute h-0 w-0 overflow-hidden">
     <defs>
         <marker
@@ -29,7 +31,7 @@
             <path
                 d="M0,0 L20,6 L0,12 Z"
                 fill="white"
-                style="stroke: var(--color-inheritance-edge); stroke-width: 1"
+                style="stroke: context-stroke; stroke-width: 1"
             />
         </marker>
         <marker
