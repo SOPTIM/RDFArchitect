@@ -30,9 +30,14 @@ function classNode(
     size = { width: 180, height: 88 },
     position = { x: 0, y: 0 },
 ) {
-    return { id, type: "class", position, measured: size };
+    return {
+        id,
+        type: "class",
+        position,
+        measured: size,
+        internals: { positionAbsolute: position },
+    };
 }
-
 function associationEdge(source, target) {
     return {
         id: `${source}->${target}`,
