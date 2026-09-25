@@ -29,6 +29,9 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { graphStore } from "$lib/stores/graphStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
+    import { graphLabelOf } from "$lib/utils/graph-label.js";
 
     let {
         showDialog = $bindable(),
@@ -62,10 +65,20 @@
      * noticed: the file's name, since everything landed in "custom.ttl", and the file itself,
      * since that path stored a parsed graph and threw the text away. Official constraints files
      * carry comments and a deliberate ordering that have to come back unchanged.
+     *
+     * The server does not enforce read-only, so this has to: a workspace locked by the caller
+     * never went through the picker, and an unknown answer is treated as read-only.
      */
     async function importGraph() {
         const path = { datasetName: workspaceName, graphURI: graphURI };
         const fileName = file.name;
+        if ((await workspaceStore.isReadOnly(workspaceName)) !== false) {
+            toastStore.error(
+                "Import refused",
+                `"${workspaceName}" is read-only. Enable editing to add constraints to it.`,
+            );
+            return;
+        }
         try {
             const { data: documents } = await listShapesDocuments({ path });
             const { error } = await createShapesDocumentFromFile({
@@ -85,9 +98,10 @@
                 );
                 return;
             }
+            const graphs = await graphStore.getGraphs(workspaceName);
             toastStore.success(
                 "Constraints imported",
-                `"${fileName}" was added to "${graphURI}".`,
+                `"${fileName}" was added to "${graphLabelOf(graphs, graphURI)}".`,
             );
         } catch (e) {
             console.warn("failed to import the SHACL file:", e);
@@ -115,6 +129,7 @@
             bind:graph={graphURI}
             {lockedWorkspaceName}
             {lockedGraphUri}
+            allowSelectionOfReadonlyWorkspaces={false}
             displayAsCard={false}
         />
         <input
