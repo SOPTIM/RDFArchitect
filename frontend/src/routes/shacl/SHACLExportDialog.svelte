@@ -31,12 +31,23 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import GraphExport from "$lib/GraphExport.svelte";
+    import { supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
 
     let {
         showDialog = $bindable(),
         lockedWorkspaceName,
         lockedGraphUri,
     } = $props();
+
+    /** Turtle first: it is what constraints are written and read in, including every official file. */
+    const mediaTypes = [
+        ...supportedRDFMediaTypes.filter(
+            type => type.mimeType === "text/turtle",
+        ),
+        ...supportedRDFMediaTypes.filter(
+            type => type.mimeType !== "text/turtle",
+        ),
+    ];
 
     let disablePrimary = $state(false);
     let shaclExportDialog = $state(null);
@@ -60,8 +71,10 @@
     /**
      * Loads the graph's documents whenever the selection changes.
      *
-     * Everything is ticked to begin with, so exporting without reading the list gives the whole
-     * set rather than an empty file.
+     * What is ticked to begin with is what validation uses: the documents that are switched on.
+     * The generated shapes are only ticked when there are no documents — next to an official
+     * constraints file they restate most of it in other words, which doubles every rule in the
+     * export.
      */
     async function loadDocuments(workspaceName, graphUri) {
         // The selection can change again while a listing is in flight, and the older request may
@@ -72,6 +85,7 @@
         if (!workspaceName || !graphUri) {
             documents = [];
             selected = new Set();
+            includeGenerated = true;
             return;
         }
         const { data, error } = await listShapesDocuments({
@@ -84,7 +98,12 @@
         documents = error
             ? []
             : [...(data ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-        selected = new Set(documents.map(document => document.id));
+        selected = new Set(
+            documents
+                .filter(document => document.enabled)
+                .map(document => document.id),
+        );
+        includeGenerated = documents.length === 0;
     }
 
     function toggle(documentId, include) {
@@ -128,6 +147,7 @@
             bind:disablePrimary
             {lockedWorkspaceName}
             {lockedGraphUri}
+            supportedMediaTypes={mediaTypes}
             onselection={loadDocuments}
         />
     {/key}
@@ -166,11 +186,10 @@
                         </span>
                         {#if !document.enabled}
                             <!--
-                              Disabled means "takes no part in validation", not "cannot be
-                              exported" — so it can still be ticked, and the badge says why it
-                              looks different from the others.
+                              Switched off means "takes no part in validation", not "cannot be
+                              exported" — so it can still be ticked, it just is not by default.
                             -->
-                            <Badge text="Disabled" variant="muted" />
+                            <Badge text="Switched off" variant="muted" />
                         {/if}
                         {#if document.origin === "IMPORTED"}
                             <Badge text="Imported" variant="external" />
@@ -179,6 +198,14 @@
                 {/each}
             {/if}
         </div>
+        {#if documents.length > 0}
+            <p class="text-text-subtle mt-1 text-sm">
+                Ticked to begin with: the documents that are switched on. The
+                generated shapes restate the schema and would repeat most of
+                what the documents say, so they are left out unless you tick
+                them.
+            </p>
+        {/if}
         {#if nothingChosen}
             <p class="text-text-subtle mt-1 text-sm">
                 Pick at least one thing to export.
