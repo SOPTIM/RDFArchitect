@@ -198,6 +198,44 @@ class ClassConstraintsProvenanceTest {
                                         .containsExactly("simple.ttl"));
     }
 
+    @Test
+    void anInlineRuleIsShownOnThePropertyItConstrains() {
+        // The form writes a new rule as a blank node without "a sh:PropertyShape"; being the value
+        // of sh:property is what makes it one.
+        service.createShapesDocument(
+                GRAPH,
+                "inline.ttl",
+                null,
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://example.org/> .
+
+                ex:MyDiagramShape a sh:NodeShape ;
+                    sh:targetClass cim:Diagram ;
+                    sh:property [
+                        sh:path cim:Diagram.orientation ;
+                        sh:minCount 1
+                    ] .
+                """,
+                Lang.TURTLE);
+
+        var inline =
+                custom().getPropertyShapes().stream()
+                        .filter(wrapper -> "Diagram.orientation".equals(wrapper.getLabel()))
+                        .flatMap(wrapper -> wrapper.getPropertyShapes().stream())
+                        .filter(shape -> namesDocument(shape, "inline.ttl"))
+                        .toList();
+
+        assertThat(inline).hasSize(1);
+        assertThat(inline.getFirst().getTriples()).contains("minCount");
+    }
+
+    private static boolean namesDocument(PropertyShape shape, String documentName) {
+        return shape.getOrigins().stream()
+                .anyMatch(origin -> documentName.equals(origin.getDocumentName()));
+    }
+
     private SHACLToClassRelations custom() {
         return service.getSHACLToClassRelations(GRAPH, diagramUUID).getCustom();
     }

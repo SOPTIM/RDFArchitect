@@ -32,8 +32,10 @@ import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.RiotException;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.apache.jena.shacl.vocabulary.SHACL;
+import org.apache.jena.shacl.vocabulary.SHACLM;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
+import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
@@ -727,7 +729,8 @@ public class SHACLStoringService
     }
 
     private SHACLToClassRelations getSHACLToClassRelations(
-            Model ontologyModel, Model shaclModel, UUID classUUID) {
+            Model ontologyModel, Model statedShapes, UUID classUUID) {
+        var shaclModel = withImpliedPropertyShapeTypes(statedShapes);
         var classUri =
                 ontologyModel
                         .listSubjectsWithProperty(
@@ -748,6 +751,30 @@ public class SHACLStoringService
                         .build();
         summarise(relations, shaclModel, prefixMapping);
         return relations;
+    }
+
+    /**
+     * The shapes, plus {@code a sh:PropertyShape} on every value of {@code sh:property} that does
+     * not say so itself.
+     *
+     * <p>Being the value of {@code sh:property} is what makes a node a property shape; the type is
+     * optional, and the form leaves it off the inline rules it writes. The lookups that sort rules
+     * onto the class's properties match on the type, so without it an inline rule appeared only in
+     * its node shape's Turtle and never on the property it constrains.
+     */
+    private static Model withImpliedPropertyShapeTypes(Model shapes) {
+        var implied = ModelFactory.createDefaultModel();
+        shapes.listObjectsOfProperty(SHACLM.property)
+                .filterKeep(RDFNode::isResource)
+                .mapWith(RDFNode::asResource)
+                .filterDrop(shape -> shapes.contains(shape, RDF.type, SHACLM.PropertyShape))
+                .forEachRemaining(shape -> implied.add(shape, RDF.type, SHACLM.PropertyShape));
+        if (implied.isEmpty()) {
+            return shapes;
+        }
+        var union = ModelFactory.createUnion(shapes, implied);
+        union.setNsPrefixes(shapes.getNsPrefixMap());
+        return union;
     }
 
     /**
