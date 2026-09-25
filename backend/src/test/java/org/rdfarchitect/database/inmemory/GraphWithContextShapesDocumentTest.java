@@ -20,6 +20,7 @@ package org.rdfarchitect.database.inmemory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.rdf.TestRDFUtils;
+import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
 import java.util.UUID;
 
@@ -314,5 +316,43 @@ class GraphWithContextShapesDocumentTest {
 
         assertThat(schemaHasTriple).isFalse();
         assertThat(shapesHaveTriple).isFalse();
+    }
+
+    @Test
+    void schemaEditsDoNotDeepenAnUntouchedDocument() {
+        var id = new UUID[1];
+        inWriteTransaction(
+                () -> {
+                    var document =
+                            ctx.createShapesDocument("eq.ttl", ShapesDocument.Origin.IMPORTED);
+                    document.getGraph().add(shape);
+                    id[0] = document.getId();
+                },
+                "import constraints");
+        var depthAfterImport = readDepth(id[0]);
+
+        for (int i = 0; i < 30; i++) {
+            var triple = TestRDFUtils.triple("Class" + i + " type Class");
+            inWriteTransaction(() -> ctx.getRdfGraph().add(triple), "add class");
+        }
+
+        assertThat(readDepth(id[0])).isLessThanOrEqualTo(depthAfterImport + 1);
+        assertThat(documentContains(id[0], shape)).isTrue();
+    }
+
+    /** How many deltas a read of the document's committed shapes passes through. */
+    private int readDepth(UUID id) {
+        ctx.begin(ReadWrite.READ);
+        try {
+            int depth = 0;
+            Graph layer = ctx.getShapesDocuments().get(id).getGraph().getLastDelta();
+            while (layer instanceof DeltaCompressible delta) {
+                depth++;
+                layer = delta.getBase();
+            }
+            return depth;
+        } finally {
+            ctx.end();
+        }
     }
 }

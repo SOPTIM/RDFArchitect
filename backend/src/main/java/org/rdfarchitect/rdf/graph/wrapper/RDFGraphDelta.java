@@ -58,17 +58,36 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
     private final int maxVersions;
     private final int compressCount;
 
+    /** See {@link #layerBase()}. */
+    private final boolean collapsesUnchangedVersions;
+
     public RDFGraphDelta(
             @NotNull Graph base,
             int maxVersions,
             int compressCount,
             TransactionContext txnContext) {
+        this(base, maxVersions, compressCount, txnContext, true);
+    }
+
+    /**
+     * @param collapsesUnchangedVersions whether a new delta may skip committed versions that
+     *     changed nothing — see {@link #layerBase()}. Pass {@code false} when something writes into
+     *     {@link #getLastDelta()} directly, because a delta built past it would not see those
+     *     writes.
+     */
+    public RDFGraphDelta(
+            @NotNull Graph base,
+            int maxVersions,
+            int compressCount,
+            TransactionContext txnContext,
+            boolean collapsesUnchangedVersions) {
         this.txnContext = txnContext;
         this.maxVersions = maxVersions;
         this.compressCount = compressCount;
+        this.collapsesUnchangedVersions = collapsesUnchangedVersions;
         pastDeltas = new ArrayDeque<>();
         pastDeltas.push(new DeltaCompressible(base));
-        currentDelta = new DeltaCompressible(head());
+        currentDelta = new DeltaCompressible(layerBase());
         futureDeltas = new ArrayDeque<>();
     }
 
@@ -184,7 +203,7 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
     @Override
     public void commit() {
         pastDeltas.push(currentDelta);
-        currentDelta = new DeltaCompressible(head());
+        currentDelta = new DeltaCompressible(layerBase());
         futureDeltas.clear();
         if (countVersions() > maxVersions) {
             compressBase();
@@ -198,7 +217,7 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
             logger.debug("Aborting a transaction with no changes.");
             return;
         }
-        currentDelta = new DeltaCompressible(head());
+        currentDelta = new DeltaCompressible(layerBase());
         logger.debug("Aborted transaction.");
     }
 
@@ -208,7 +227,7 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
             throw new GraphVersionControlException("Cannot undo: already at the oldest version.");
         }
         futureDeltas.push(pastDeltas.pop());
-        currentDelta = new DeltaCompressible(head());
+        currentDelta = new DeltaCompressible(layerBase());
     }
 
     @Override
@@ -217,7 +236,7 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
             throw new GraphVersionControlException("Cannot redo: already at the newest version.");
         }
         pastDeltas.push(futureDeltas.pop());
-        currentDelta = new DeltaCompressible(head());
+        currentDelta = new DeltaCompressible(layerBase());
     }
 
     @Override
@@ -239,7 +258,7 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
         while (!pastDeltas.isEmpty() && !pastDeltas.peek().getVersionId().equals(versionId)) {
             pastDeltas.pop();
         }
-        currentDelta = new DeltaCompressible(head());
+        currentDelta = new DeltaCompressible(layerBase());
     }
 
     @Override
@@ -280,6 +299,36 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
     }
 
     /**
+     * The delta a new one is layered over: the head, or — when versions at the top changed nothing
+     * — the nearest one below them that did.
+     *
+     * <p>Every participant of a context commits on every commit so their version counters stay in
+     * step, so a graph nobody edits still gains a version per commit. Each version is a delta over
+     * the previous one, and a read walks the whole chain, so without this a document untouched
+     * through a few hundred schema edits was read through a few hundred empty layers. An unchanged
+     * version reads exactly like its base, so skipping it changes nothing but the depth.
+     */
+    private DeltaCompressible layerBase() {
+        return collapsesUnchangedVersions ? contentOf(head()) : head();
+    }
+
+    private static DeltaCompressible contentOf(DeltaCompressible delta) {
+        var content = delta;
+        while (content.isUnchanged() && content.getBase() instanceof DeltaCompressible below) {
+            content = below;
+        }
+        return content;
+    }
+
+    /**
+     * Identifies the committed content rather than the committed version: a commit that changed
+     * nothing in this graph keeps the id, and returning to earlier content returns its id.
+     */
+    public UUID contentVersionId() {
+        return layerBase().getVersionId();
+    }
+
+    /**
      * Returns how many committed versions deep this graph's history is.
      *
      * <p>Exposed so a graph created part-way through a session can be brought in step with the
@@ -303,7 +352,7 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
     public void padHistory(int targetVersion) {
         while (currentVersion() < targetVersion) {
             pastDeltas.push(currentDelta);
-            currentDelta = new DeltaCompressible(head());
+            currentDelta = new DeltaCompressible(layerBase());
         }
     }
 
@@ -320,6 +369,9 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
         for (int i = 0; i < deleteCount; i++) {
             pastDeltas.removeLast();
         }
-        pastDeltas.getLast().compress();
+        // When the oldest remaining version changed nothing it reads through a version that was
+        // just dropped; compressing that one is what actually frees the dropped history.
+        var oldest = pastDeltas.getLast();
+        (collapsesUnchangedVersions ? contentOf(oldest) : oldest).compress();
     }
 }

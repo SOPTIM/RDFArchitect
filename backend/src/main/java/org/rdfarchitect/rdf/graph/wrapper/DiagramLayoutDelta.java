@@ -47,7 +47,9 @@ public class DiagramLayoutDelta implements TransactionParticipant, Rewindable {
         prefixModel.setNsPrefix("rdf", RDF.uri);
         int maxVersions = GraphCompressionConfig.getMaxVersions();
         int compressCount = GraphCompressionConfig.getCompressCount();
-        this.inner = new RDFGraphDelta(emptyBase, maxVersions, compressCount, txnContext);
+        // Not collapsed: getDiagramLayoutModelDirect writes into the head, which a delta layered
+        // past an unchanged head would not see.
+        this.inner = new RDFGraphDelta(emptyBase, maxVersions, compressCount, txnContext, false);
     }
 
     /**
