@@ -27,7 +27,7 @@ Switching a document **off** means it takes no part in validation or in a combin
 
 **View → Constraints (SHACL)** (`Ctrl+Shift+L`) opens the workbench for the selected schema. It is also reachable from a schema's context menu and from the constraints popup in the class editor.
 
-- **Documents** (left) lists the graph's constraints documents: add an empty one, import a file, rename, reorder, delete, and switch one off. Deleting is the one action that cannot be undone — everything else a document can have done to it, including being emptied, rewinds with the schema's history. Each row carries a badge summarising what validation found in it, so a file with problems is visible without opening it. The first row is not a document but the **generated rules** — what RDFArchitect derives from the schema itself, shown read-only so you can read it beside whatever you imported.
+- **Documents** (left) lists the graph's constraints documents: add a new one, import a file, rename, reorder, delete, switch one off, and **download** one — which saves that document's text exactly as it is stored. A new document is not empty: it starts with the prefixes a constraints file needs (`sh:`, `rdf:`, `rdfs:`, `xsd:`, the schema's CIM namespace) and a namespace for its own shapes, so both the form and completion can write short names from the first line. Deleting is the one action that cannot be undone — everything else a document can have done to it, including being emptied, rewinds with the schema's history. Each row carries a badge summarising what validation found in it, so a file with problems is visible without opening it. The first row is not a document but the **generated rules** — what RDFArchitect derives from the schema itself, shown read-only so you can read it beside whatever you imported.
 - **Editor** (middle) shows the open document in one of three views — see below.
 - **Inspector** (right) shows what the document is, the shapes it declares — click one to jump to it — and which profiles the constraints are being checked against.
 - **Problems** (bottom) collects everything found across *all* of the documents. Clicking an entry opens the document it belongs to and puts the cursor on it.
@@ -51,18 +51,36 @@ Typing gets you more than highlighting:
 
 ### Form view
 
-The same document, shown as shapes rather than as text, for people who would rather not read Turtle. Each shape says which class it applies to; under it, one card per rule — which property, how many values, of what type, what message to show when it is broken. Classes and properties are picked from the live schema.
+The same document, shown as shapes rather than as text, for people who would rather not read Turtle. Shapes are listed in the order the document writes them. Each one opens into a card that says what it applies to — one or more classes, or the subjects or objects of a property, or named nodes — along with its own name, description, message, severity and whether it is closed. Under it, one card per rule, grouped by the question it answers:
 
-An edit here rewrites exactly the shape you changed and copies the rest of the file through untouched, so using the form on an imported official file does not reformat it. The one thing that cannot survive is a comment written *inside* the shape you edited, and you are told when that happens.
+- **How many** — minimum and maximum values.
+- **What kind of value** — value type (datatype), value class, value form (`sh:nodeKind`).
+- **Between which values** — `sh:minInclusive`, `sh:maxExclusive` and the rest of the ranges.
+- **What the text must look like** — shortest and longest length, a pattern (`sh:pattern`) with its match flags.
+- **What it is called and reports** — name, description, order, group, the message shown when the rule is broken, and its severity. This group and the ranges start shut, because most rules say nothing there.
 
-Some shapes are shown **read-only** with a "Turtle only" marker, and the marker says why. A shape is read-only when it holds something the form cannot write back unchanged:
+**One of** (`sh:in`) is a list you add values to and remove them from; **Must be exactly** is `sh:hasValue`. Classes and properties are picked from the live schema. A range keeps the way the document writes it: `"0.0"^^xsd:float` stays a quoted float when you change the digits, rather than becoming a bare decimal. Only a range the document did not have yet is written as a plain number.
 
-- something the form does not model at all — an embedded SPARQL query, or a path expression rather than a plain property;
-- a rule stated **twice**, such as two `sh:targetClass`, where the form has one field and would keep only one of them;
-- a value the form cannot spell — a message with a language tag (`"…"@en`), a number that is not a plain integer, a `sh:closed` that is neither `true` nor `false`;
-- a shape SHACL *infers* rather than one the document declares, with no `a sh:NodeShape` of its own — writing it back would add the `rdf:type` its author left out.
+An edit changes exactly the clause you changed — one value replaced, one line added or removed — and copies the rest of the file through untouched, comments inside the shape included. Using the form on an imported official file therefore does not reformat it.
 
-They are displayed rather than hidden, but only the Turtle view will edit them, because writing them back from a form would drop the part it cannot represent. Official ENTSO-E constraints files are largely of this kind; the form is at its best on constraints you write yourself.
+**What the form does not write, it keeps.** A clause the form has no field for — an embedded SPARQL query, `sh:qualifiedValueShape`, a property of your own — no longer makes the shape read-only. The card lists it under *Kept as written*, and it is still there after your edit. A field whose value the form cannot spell again — a message with a language tag (`"…"@en`), a `sh:closed` that is neither `true` nor `false` — shows that value with a lock and the reason, instead of an empty box that would claim the document says nothing.
+
+**Locking is per rule, not per shape.** A rule the form cannot tell apart from another, because both are written exactly alike, locks itself and leaves the rest of the shape editable. The only thing that still locks a whole shape is a subject written as more than one statement: an edit could not know which of them to change. A locked shape or rule is marked **Turtle only**, with the reason.
+
+**Shared rules.** Official `-Con-Simple-` profiles write their rules as shapes of their own and let many node shapes point at them. Those rules are listed once under **Shared rules**, can be edited on their own card, and each says which shapes use it. A shape can be given a reference to a rule the document already has, and have one taken away without the rule going with it.
+
+Changing a shared rule from under one shape asks first, because it is not a change to that shape — it is a change to every shape that uses it. The dialog offers two things:
+
+- **Give this shape its own copy** (the default). The rule is copied under a new name you can correct, the copy starts out saying exactly what the original says — comments included — and only this shape's reference is moved to it before the change is applied.
+- **Change it for all *n* shapes**, as a deliberate second choice.
+
+Closing the dialog without choosing puts the field back to what the document says.
+
+**Finding your way in a big file.** The filter above the list matches a shape's name and IRI, its target classes, and every rule's property, name and message, whether you type `cim:ACLineSegment` or paste the full IRI. **Locked only** narrows the list to what the form will not write. Any number of cards can be open at once, and the filter, the toggle and which cards are open survive switching to the Turtle view and back.
+
+**Between the two views.** Each shape and each rule has a **show in Turtle** button that opens the Turtle view on the line it is written on. The way back is **Show in the Form view** in the Turtle editor's context menu, which opens the card holding the line under the cursor. Clicking a finding in the Problems panel while the form is showing does the same.
+
+A document that does not parse cannot be shown as a form; the view says where the parser stopped and sends you to the Turtle view to fix it.
 
 ### Schema check
 
@@ -93,22 +111,28 @@ A document with problems still saves. Validation is a report, not a gate — you
 
 ## Viewing SHACL at class level
 
-In the class editor, every attribute and association row has a SHACL icon. Clicking it opens the **property-specific constraints (SHACL) dialog** — the subset of both generated and custom shapes that target that exact property on that exact class. This is by far the fastest way to answer *"what constraint is enforced on this attribute?"* without leaving the class you are looking at.
+In the class editor, every attribute and association row has a SHACL icon. Clicking it opens the **property-specific constraints (SHACL) dialog** — the subset of both generated and custom shapes that target that exact property on that exact class. This is by far the fastest way to answer *"what constraint is enforced on this attribute?"* without leaving the class you are looking at. Each custom rule names the document it is written in, and clicking the name opens that document in the workbench at the rule.
 
 A similar dialog at class level answers the same question for a whole class, and is worth knowing properly:
 
-- **One row per property**, showing what the rule requires in words — `0..1, xsd:float` — so you do not have to read Turtle to learn a cardinality. Expanding a row shows the shapes it is made of.
+- **One row per property**, showing what the rule requires in words — `0..1, xsd:float` — so you do not have to read Turtle to learn a cardinality. Expanding a row shows the shapes it is made of, including rules written inline in a node shape (`sh:property [ … ]`, which is how the form writes a new rule). Class-level rules such as `sh:closed` are listed apart, under *On the class*.
 - **Generated and custom rules are merged**, because "what is enforced on this property?" is the question, and which half a rule came from is an answer to a different one. The **Generated / Custom** buttons narrow it when you do want one half. Where the two disagree, both readings are shown side by side.
 - **Every row names its sources** — `generated`, or the constraints document. Clicking a document opens it in the workbench with the cursor on the rule.
 - **A filter** matches property names and rules alike, so `xsd:float` finds every float-valued property.
-- **Referenced by** lists the classes that point at this one. Relations that reference nothing are left out.
+- **Referenced by** lists the classes that point at this one, in the class's own schema. Relations that reference nothing are left out.
 
-**Both dialogs read; the workbench writes.** They show constraints merged from every enabled document, and merged shapes cannot be written back — there is no way to tell which document a rule came from once they are combined, and the endpoints that used to try wrote every edit into the graph's default document instead. **Edit in workbench** takes you to the document the rule really lives in.
+**Both dialogs read; the workbench writes.** They show constraints merged from every enabled document, and a merged shape cannot be written back as it is shown — the endpoints that used to try wrote every edit into the graph's default document, whichever document the rule came from. The way to change a rule is the document name next to it, which opens the workbench on that document at that rule. **Edit in workbench** in the dialog's header opens the first document the class's (or property's) custom rules name, or the workbench on its own when every rule is generated. Either way the workbench opens on the class's schema, even when that is not the one selected in the navigation.
 
 ## Importing custom SHACL
 
-**File → Import → Constraints (SHACL)** uploads a SHACL file into the currently selected graph, as a new document named after the file. The workbench's import button does the same thing without leaving it. Importing a file whose name is already taken adds a `(2)` rather than replacing anything. Supported formats are the same as for schema import (TTL, RDF/XML, N-Triples); TTL is the default and recommended, and is the only one that preserves the file's text exactly.
+**File → Import → Constraints (SHACL)** (`Ctrl+Shift+I`) uploads a SHACL file into a schema of your choice — the selected one to begin with — as a new document named after the file. The workbench's import button does the same thing without leaving it. Importing a file whose name is already taken adds a `(2)` rather than replacing anything. Supported formats are TTL, RDF/XML and N-Triples; TTL is recommended, and is the only one that preserves the file's text exactly.
+
+A **read-only** workspace cannot take an import: the menu entry and its shortcut are disabled while one is selected, the dialog does not offer read-only workspaces, and an import aimed at one is refused.
 
 ## Exporting SHACL
 
-**File → Export → Constraints (SHACL)** downloads the constraints as one file. The dialog asks which workspace and schema, then **which parts to include**: the generated shapes, and any of the graph's constraints documents. A document that is switched off can still be ticked — off means "takes no part in validation", not "cannot be exported". TTL is the default format.
+**File → Export → Constraints (SHACL)** (`Ctrl+Shift+E`) downloads the constraints as one file. The dialog asks which workspace and schema, then **which parts to include**: the generated shapes, and any of the graph's constraints documents. TTL is the default format.
+
+What is ticked to begin with is what validation uses: the documents that are switched on. A document that is switched off is labelled so and can still be ticked — off means "takes no part in validation", not "cannot be exported". The generated shapes are only ticked when the schema has no constraints documents; next to an official constraints file they restate most of it in other words, so ticking both repeats most rules in the file.
+
+Exporting **one document on its own, as TTL**, gives back its text exactly as it is stored — comments and ordering included — the same file the workbench's **download** saves. Any other combination is merged and written out afresh, which keeps what the shapes say but not how the files spelled it.

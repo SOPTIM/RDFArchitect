@@ -76,7 +76,7 @@ A snapshot stores each document as its own named graph, and a document holding n
 
 ### Comparing schema with document
 
-`services/shacl/conformance/EffectiveConstraints` collapses a shapes graph into one statement per `(sh:targetClass, sh:path)` before anything is compared, because generated and official shapes share no naming convention and both spread a single property's rules over separate cardinality, datatype and value-type shapes. Collapsing is conjunction — the effective lower bound is the largest `sh:minCount` anyone asks for. Datatypes are *collected* rather than merged: two different ones is not a stricter rule but a contradiction, and the comparison has to see it as one.
+`services/shacl/effective/EffectiveConstraints` collapses a shapes graph into one statement per `(sh:targetClass, sh:path)` before anything is compared, because generated and official shapes share no naming convention and both spread a single property's rules over separate cardinality, datatype and value-type shapes. Collapsing is conjunction — the effective lower bound is the largest `sh:minCount` anyone asks for. Datatypes are *collected* rather than merged: two different ones is not a stricter rule but a contradiction, and the comparison has to see it as one.
 
 Two things about the comparison are load-bearing, and both were got wrong first:
 
@@ -89,6 +89,7 @@ Two things about the comparison are load-bearing, and both were got wrong first:
 
 - **Provenance.** Shapes are read from the union of the enabled documents, and merging is what throws away the file a reader needs in order to change a rule. `ShapeOrigin` puts it back: the document, and the line the shape starts on in that document's own text (via `ShapeBlockLocator`). Shapes are matched to documents by the id the fetchers already produce — `RDFNode.toString()` — which is the IRI for a named shape and the label for a blank node. Blank node identity survives the merge because adding a model copies triples rather than rewriting them, so an inlined property shape is attributed as reliably as a named one.
 - **A summary in words.** `PropertyShapesWrapper.summary` is the conjunction of the wrapper's shapes, rendered by `services/shacl/effective/EffectiveConstraints`. That class is shared with the conformance check on purpose, so `0..1, xsd:float` means the same thing in both places.
+- **Inline rules.** The lookups that sort shapes onto a class's properties match on `a sh:PropertyShape`, which the form leaves off the `sh:property [ … ]` rules it writes. The class-shapes method therefore reads the shapes with that type implied for every value of `sh:property` — which SHACL says it is anyway — so an inline rule lands on its property's row instead of only inside its node shape.
 
 Neither dialog writes. See the deprecation note on `updateClassSHACL` for why.
 
