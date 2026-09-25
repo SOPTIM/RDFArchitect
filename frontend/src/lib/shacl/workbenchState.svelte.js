@@ -118,9 +118,25 @@ export class ShapesWorkbench {
     validating = $state(false);
     /** Last failure, shown in place of the editor rather than swallowed. */
     error = $state(null);
+    /**
+     * Changes whenever the buffer is replaced by something other than an edit — another document
+     * opened, or the same one read again. The editor starts a fresh history on each change, so
+     * undo cannot step from one document into another.
+     */
+    bufferKey = $state(0);
 
     /** The text and document the buffer report describes, so a stale one is not displayed. */
     #validated = $state({ id: null, text: null });
+    /**
+     * Whether the buffer holds the selected document's text. False while it is being read and
+     * after a read failed, when the buffer describes nothing and must neither be edited nor saved.
+     */
+    #textReady = $state(true);
+    /** Bumped by every `select`, so an answer for a document no longer selected is dropped. */
+    #selection = 0;
+    #validations = 0;
+    #saveInFlight = null;
+    #unwatchReadOnly = null;
 
     #datasetName;
     #graphUri;
@@ -171,13 +187,19 @@ export class ShapesWorkbench {
      * and the generated rules are derived from the schema — editing them would mean editing a view.
      */
     get editorReadOnly() {
-        return this.readOnly || this.showingGenerated;
+        return this.readOnly || this.showingGenerated || !this.#textReady;
+    }
+
+    /** Whether the buffer is the selected document's text, rather than loading or failed. */
+    get textReady() {
+        return this.#textReady;
     }
 
     get dirty() {
         return (
             this.selectedId !== null &&
             !this.showingGenerated &&
+            this.#textReady &&
             this.text !== this.savedText
         );
     }
@@ -245,8 +267,7 @@ export class ShapesWorkbench {
     async load() {
         this.loading = true;
         try {
-            this.readOnly =
-                (await workspaceStore.isReadOnly(this.#datasetName)) !== false;
+            await this.refreshReadOnly();
             await this.#refreshDocuments();
             // Validating on top of a failed listing would replace the message that says what
             // actually went wrong with a vaguer one about validation.
@@ -260,30 +281,126 @@ export class ShapesWorkbench {
         }
     }
 
+    /**
+     * Reads everything again after something outside the workbench changed the schema — an undo,
+     * an import, the workspace becoming read-only.
+     *
+     * An unsaved buffer is kept: the caller has either asked about it already, or changed nothing
+     * the buffer depends on. A clean buffer is re-read, and only replaced when the stored text
+     * actually differs, so the editor keeps its place otherwise.
+     */
+    async reload() {
+        await this.refreshReadOnly();
+        this.#generated = null;
+        await this.#refreshDocuments();
+        if (this.error) {
+            return;
+        }
+        if (!this.dirty) {
+            await this.#reread();
+        }
+        await this.validateAll();
+    }
+
+    /** Re-reads the workspace's read-only flag. An unknown answer counts as read-only. */
+    async refreshReadOnly() {
+        this.readOnly =
+            (await workspaceStore.isReadOnly(this.#datasetName)) !== false;
+        return this.readOnly;
+    }
+
+    /**
+     * Follows the workspace's read-only flag while the workbench is open.
+     *
+     * The flag can be flipped from the menu bar at any time, and only the workspace list knows;
+     * reading it once on load left a workspace made read-only with an editable workbench.
+     */
+    watchReadOnly() {
+        this.#unwatchReadOnly?.();
+        this.#unwatchReadOnly =
+            workspaceStore.subscribe?.(state => {
+                if (!state?.data) {
+                    return;
+                }
+                const workspace = state.data.find(
+                    candidate => candidate.label === this.#datasetName,
+                );
+                this.readOnly = workspace?.readOnly !== false;
+            }) ?? null;
+    }
+
+    /** Stops everything that would otherwise outlive the workbench. */
+    dispose() {
+        this.cancelPendingValidation();
+        this.#unwatchReadOnly?.();
+        this.#unwatchReadOnly = null;
+    }
+
     async select(documentId) {
+        const selection = ++this.#selection;
         this.cancelPendingValidation();
         this.selectedId = documentId;
         this.bufferReport = null;
         this.#validated = { id: null, text: null };
         if (documentId === null) {
-            this.text = "";
-            this.savedText = "";
+            this.#replaceBuffer("");
+            this.#textReady = true;
             return;
         }
         if (documentId === GENERATED_ID) {
-            await this.#showGenerated();
+            await this.#showGenerated(selection);
             return;
         }
+        this.#textReady = false;
+        this.#replaceBuffer("");
+        const text = await this.#readText(documentId);
+        if (selection !== this.#selection) {
+            return;
+        }
+        if (text === null) {
+            // The buffer stays empty and locked: showing the previous document's text under this
+            // one's name would let the next save write it here.
+            this.error = "The document could not be loaded.";
+            return;
+        }
+        this.#replaceBuffer(text);
+        this.#textReady = true;
+    }
+
+    /** The stored text of any of the graph's documents, or null when it could not be read. */
+    async textOf(documentId) {
+        return this.#readText(documentId);
+    }
+
+    async #readText(documentId) {
         const { data, error } = await getShapesDocumentText({
             ...this.#requestOptions,
             path: { ...this.path, documentId },
         });
-        if (error) {
-            this.error = "The document could not be loaded.";
+        return error ? null : (data ?? "");
+    }
+
+    async #reread() {
+        const documentId = this.selectedId;
+        if (documentId === null || documentId === GENERATED_ID) {
+            await this.select(documentId);
             return;
         }
-        this.text = data ?? "";
-        this.savedText = this.text;
+        const selection = this.#selection;
+        const text = await this.#readText(documentId);
+        if (selection !== this.#selection || this.dirty || text === null) {
+            return;
+        }
+        if (text !== this.text || !this.#textReady) {
+            this.#replaceBuffer(text);
+        }
+        this.#textReady = true;
+    }
+
+    #replaceBuffer(text) {
+        this.text = text;
+        this.savedText = text;
+        this.bufferKey += 1;
     }
 
     /**
@@ -302,24 +419,54 @@ export class ShapesWorkbench {
                     " copy what you need into a document of your own.",
             };
         }
-        if (!this.selectedId || this.saving || this.readOnly) {
-            return { saved: false, reason: this.readOnly ? READ_ONLY : null };
+        // A second Save while the first is on its way is not a failure: it waits, and only writes
+        // again if something was typed in the meantime.
+        if (this.#saveInFlight) {
+            while (this.#saveInFlight) {
+                await this.#saveInFlight;
+            }
+            if (!this.dirty) {
+                return { saved: true, reason: null };
+            }
+        }
+        const run = this.#write();
+        this.#saveInFlight = run;
+        try {
+            return await run;
+        } finally {
+            this.#saveInFlight = null;
+        }
+    }
+
+    async #write() {
+        if (!this.selectedId || !this.#textReady) {
+            return { saved: false, reason: null };
+        }
+        if (await this.refreshReadOnly()) {
+            return { saved: false, reason: READ_ONLY };
         }
         this.saving = true;
         try {
+            const documentId = this.selectedId;
+            const bufferKey = this.bufferKey;
+            // What is sent is what becomes saved. Reading the buffer again after the request would
+            // mark whatever was typed while it was on its way as saved, though it never was.
+            const sent = this.text;
             // A document that has been emptied still has to be sent as something, or the
             // endpoint's plain-string body arrives absent and Spring rejects the request.
             const { error } = await replaceShapesDocumentText({
                 ...this.#requestOptions,
-                path: { ...this.path, documentId: this.selectedId },
-                body: this.text === "" ? " " : this.text,
+                path: { ...this.path, documentId },
+                body: sent === "" ? " " : sent,
                 bodySerializer: null,
                 headers: { "Content-Type": "text/plain" },
             });
             if (error) {
                 return { saved: false, reason: reasonFrom(error) };
             }
-            this.savedText = this.text;
+            if (this.bufferKey === bufferKey) {
+                this.savedText = sent;
+            }
             // The schema's version moves with a shapes save, so anything derived from it is stale.
             this.#generated = null;
             await this.#refreshDocuments();
@@ -334,15 +481,21 @@ export class ShapesWorkbench {
     // The document list
     // -------------------------------------------------------------------------
 
-    async create(name) {
-        if (this.readOnly) {
+    /**
+     * Adds a document and opens it.
+     *
+     * @param text what the new document starts with — normally its prefixes, so the first thing
+     *     written into it is a shape rather than boilerplate
+     */
+    async create(name, text = "") {
+        if (await this.refreshReadOnly()) {
             return null;
         }
         const { data, error } = await createShapesDocument({
             ...this.#requestOptions,
             path: this.path,
             query: { name },
-            body: " ",
+            body: text === "" ? " " : text,
             bodySerializer: null,
             headers: { "Content-Type": "text/plain" },
         });
@@ -356,7 +509,7 @@ export class ShapesWorkbench {
     }
 
     async importFile(file, name) {
-        if (this.readOnly) {
+        if (await this.refreshReadOnly()) {
             return null;
         }
         const { data, error } = await createShapesDocumentFromFile({
@@ -400,7 +553,7 @@ export class ShapesWorkbench {
     }
 
     async remove(documentId) {
-        if (this.readOnly) {
+        if (await this.refreshReadOnly()) {
             return false;
         }
         const { error } = await deleteShapesDocument({
@@ -423,7 +576,7 @@ export class ShapesWorkbench {
     }
 
     async #update(documentId, query) {
-        if (this.readOnly) {
+        if (await this.refreshReadOnly()) {
             return false;
         }
         const { error } = await updateShapesDocument({
@@ -466,10 +619,10 @@ export class ShapesWorkbench {
      * Fetched rather than derived here: the same generator answers the export and the conformance
      * check, and a second implementation in the browser would be a second thing to keep true.
      */
-    async #showGenerated() {
+    async #showGenerated(selection) {
+        this.#textReady = true;
         if (this.#generated !== null) {
-            this.text = this.#generated;
-            this.savedText = this.#generated;
+            this.#replaceBuffer(this.#generated);
             return;
         }
         this.generating = true;
@@ -478,15 +631,16 @@ export class ShapesWorkbench {
                 ...this.#requestOptions,
                 path: this.path,
             });
+            if (selection !== this.#selection) {
+                return;
+            }
             if (error) {
                 this.error = "The generated rules could not be read.";
-                this.text = "";
-                this.savedText = "";
+                this.#replaceBuffer("");
                 return;
             }
             this.#generated = data ?? "";
-            this.text = this.#generated;
-            this.savedText = this.#generated;
+            this.#replaceBuffer(this.#generated);
             this.error = null;
         } finally {
             this.generating = false;
@@ -523,6 +677,7 @@ export class ShapesWorkbench {
         }
         const documentId = this.selectedId;
         const text = this.text;
+        this.#validations += 1;
         this.validating = true;
         try {
             const { data, error } = await validateShapesText({
@@ -544,7 +699,10 @@ export class ShapesWorkbench {
             }
             return data;
         } finally {
-            this.validating = false;
+            // Cleared by the last run to finish, not the first: an older answer arriving must
+            // not announce that a newer run is done.
+            this.#validations -= 1;
+            this.validating = this.#validations > 0;
         }
     }
 

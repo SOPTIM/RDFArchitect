@@ -34,6 +34,8 @@ ex:Shape a sh:NodeShape .
 // Read-only is a property of the workspace, fetched separately from everything the fake server
 // below answers. Writable unless a test says otherwise.
 const readOnly = vi.fn().mockResolvedValue(false);
+/** Whoever follows the workspace list, so a test can announce a change to it. */
+const workspaceListeners = new Set();
 
 let server;
 let workbench;
@@ -161,6 +163,30 @@ function workbenchFor(server) {
     });
 }
 
+function announceWorkspaces(data) {
+    workspaceListeners.forEach(listener => listener({ data }));
+}
+
+/** A promise a test resolves by hand, to hold a response until it chooses. */
+function held() {
+    let release;
+    const promise = new Promise(resolve => (release = resolve));
+    return { promise, release };
+}
+
+/** Holds every request `matches` accepts until the returned gate is released. */
+function holdRequests(matches) {
+    const gate = held();
+    const answer = server.respond;
+    server.respond = async (entry, url) => {
+        if (matches(entry)) {
+            await gate.promise;
+        }
+        return answer(entry, url);
+    };
+    return gate;
+}
+
 // $env/dynamic/public has no SvelteKit runtime under vitest, and the generated client reaches it
 // while resolving the backend base url. It has to be absolute, because the client builds a
 // Request and a relative url has no base to resolve against.
@@ -168,11 +194,18 @@ vi.mock("$lib/config/runtime", () => ({
     PUBLIC_BACKEND_URL: "http://backend.test",
 }));
 vi.mock("$lib/stores/workspaceStore.ts", () => ({
-    workspaceStore: { isReadOnly: (...args) => readOnly(...args) },
+    workspaceStore: {
+        isReadOnly: (...args) => readOnly(...args),
+        subscribe: listener => {
+            workspaceListeners.add(listener);
+            return () => workspaceListeners.delete(listener);
+        },
+    },
 }));
 
 beforeEach(async () => {
     vi.useRealTimers();
+    workspaceListeners.clear();
     readOnly.mockResolvedValue(false);
     server = fakeServer();
     workbench = workbenchFor(server);
@@ -588,4 +621,239 @@ describe("the generated rules", () => {
 
         expect(workbench.selectedId).toBe(GENERATED_ID);
     });
+});
+
+describe("switching documents", () => {
+    test("a slow answer for a document no longer selected is dropped", async () => {
+        await workbench.load();
+        server.texts[CUSTOM] = "ex:Custom a sh:NodeShape .\n";
+        const gate = holdRequests(
+            entry => entry.method === "GET" && entry.path.endsWith(EQ),
+        );
+
+        const slow = workbench.select(EQ);
+        await workbench.select(CUSTOM);
+        gate.release();
+        await slow;
+
+        expect(workbench.selectedId).toBe(CUSTOM);
+        expect(workbench.text).toBe(server.texts[CUSTOM]);
+    });
+
+    test("a document that cannot be read leaves an empty, locked buffer", async () => {
+        await workbench.load();
+        const answer = server.respond;
+        server.respond = (entry, url) =>
+            entry.method === "GET" && entry.path.endsWith(CUSTOM)
+                ? new Response("boom", { status: 500 })
+                : answer(entry, url);
+
+        await workbench.select(CUSTOM);
+
+        expect(workbench.error).toBe("The document could not be loaded.");
+        expect(workbench.text).toBe("");
+        expect(workbench.editorReadOnly).toBe(true);
+        workbench.text = SHAPES;
+        server.requests.length = 0;
+        expect((await workbench.save()).saved).toBe(false);
+        expect(server.requests.filter(entry => entry.method === "PUT")).toEqual(
+            [],
+        );
+    });
+
+    test("is locked while the text is on its way", async () => {
+        await workbench.load();
+        const gate = holdRequests(
+            entry => entry.method === "GET" && entry.path.endsWith(CUSTOM),
+        );
+
+        const opening = workbench.select(CUSTOM);
+        expect(workbench.editorReadOnly).toBe(true);
+        expect(workbench.dirty).toBe(false);
+        gate.release();
+        await opening;
+
+        expect(workbench.editorReadOnly).toBe(false);
+    });
+
+    test("starts a new buffer for each document, but not for an edit", async () => {
+        await workbench.load();
+        const opened = workbench.bufferKey;
+
+        workbench.text = `${SHAPES}# typed\n`;
+        expect(workbench.bufferKey).toBe(opened);
+
+        await workbench.select(CUSTOM);
+        expect(workbench.bufferKey).not.toBe(opened);
+    });
+});
+
+describe("saving while a save is on its way", () => {
+    test("what is typed meanwhile stays unsaved", async () => {
+        await workbench.load();
+        const gate = holdRequests(entry => entry.method === "PUT");
+        workbench.text = `${SHAPES}# first\n`;
+
+        const saving = workbench.save();
+        await vi.waitFor(() =>
+            expect(server.requests.some(entry => entry.method === "PUT")).toBe(
+                true,
+            ),
+        );
+        workbench.text = `${SHAPES}# first\n# typed meanwhile\n`;
+        gate.release();
+        await saving;
+
+        const put = server.requests.find(entry => entry.method === "PUT");
+        expect(put.body).not.toContain("typed meanwhile");
+        expect(workbench.savedText).toBe(`${SHAPES}# first\n`);
+        expect(workbench.dirty).toBe(true);
+    });
+
+    test("a second Save waits for the first rather than failing", async () => {
+        await workbench.load();
+        const gate = holdRequests(entry => entry.method === "PUT");
+        workbench.text = `${SHAPES}# edited\n`;
+
+        const first = workbench.save();
+        const second = workbench.save();
+        gate.release();
+
+        expect(await first).toEqual({ saved: true, reason: null });
+        expect(await second).toEqual({ saved: true, reason: null });
+        expect(
+            server.requests.filter(entry => entry.method === "PUT"),
+        ).toHaveLength(1);
+    });
+});
+
+describe("validation in flight", () => {
+    test("stays marked as running until the last run is back", async () => {
+        await workbench.load();
+        const gates = [held(), held()];
+        let run = 0;
+        const answer = server.respond;
+        server.respond = async (entry, url) => {
+            if (entry.path.endsWith("/validate/text")) {
+                await gates[run++].promise;
+            }
+            return answer(entry, url);
+        };
+
+        workbench.text = "first";
+        const first = workbench.validateBuffer();
+        workbench.text = "second";
+        const second = workbench.validateBuffer();
+        await vi.waitFor(() => expect(run).toBe(2));
+        gates[0].release();
+        await first;
+
+        expect(workbench.validating).toBe(true);
+        gates[1].release();
+        await second;
+        expect(workbench.validating).toBe(false);
+    });
+});
+
+describe("a workspace whose read-only flag changes", () => {
+    test("is followed while the workbench is open", async () => {
+        await workbench.load();
+        workbench.watchReadOnly();
+
+        announceWorkspaces([{ label: "cgmes", readOnly: true }]);
+        expect(workbench.readOnly).toBe(true);
+        expect(workbench.editorReadOnly).toBe(true);
+
+        announceWorkspaces([{ label: "cgmes", readOnly: false }]);
+        expect(workbench.readOnly).toBe(false);
+
+        // A workspace the list no longer knows is not one that may be written to.
+        announceWorkspaces([{ label: "other", readOnly: false }]);
+        expect(workbench.readOnly).toBe(true);
+
+        workbench.dispose();
+        announceWorkspaces([{ label: "cgmes", readOnly: false }]);
+        expect(workbench.readOnly).toBe(true);
+    });
+
+    test("is asked again before every write", async () => {
+        await workbench.load();
+        workbench.text = `${SHAPES}# edited\n`;
+        readOnly.mockResolvedValue(true);
+        server.requests.length = 0;
+
+        const { saved, reason } = await workbench.save();
+
+        expect(saved).toBe(false);
+        expect(reason).toContain("read-only");
+        expect(await workbench.create("new.ttl")).toBeNull();
+        expect(server.requests).toHaveLength(0);
+    });
+});
+
+describe("reloading after the schema changed elsewhere", () => {
+    test("re-reads a clean buffer", async () => {
+        await workbench.load();
+        server.texts[EQ] = `${SHAPES}# changed by an undo\n`;
+
+        await workbench.reload();
+
+        expect(workbench.text).toBe(server.texts[EQ]);
+        expect(workbench.dirty).toBe(false);
+    });
+
+    test("keeps an unsaved buffer", async () => {
+        await workbench.load();
+        const typed = `${SHAPES}# typed\n`;
+        workbench.text = typed;
+        server.texts[EQ] = `${SHAPES}# changed elsewhere\n`;
+
+        await workbench.reload();
+
+        expect(workbench.text).toBe(typed);
+        expect(workbench.dirty).toBe(true);
+    });
+
+    test("keeps the editor's history when nothing changed", async () => {
+        await workbench.load();
+        const opened = workbench.bufferKey;
+
+        await workbench.reload();
+
+        expect(workbench.bufferKey).toBe(opened);
+    });
+
+    test("picks up a document added elsewhere", async () => {
+        await workbench.load();
+        server.documents = [
+            ...server.documents,
+            { id: "added", name: "added.ttl", order: 2, enabled: true },
+        ];
+
+        await workbench.reload();
+
+        expect(workbench.documents.map(document => document.id)).toContain(
+            "added",
+        );
+    });
+});
+
+describe("a new document", () => {
+    test("starts with the text it is given", async () => {
+        await workbench.load();
+        server.requests.length = 0;
+        const seed = "@prefix sh: <http://www.w3.org/ns/shacl#> .\n";
+
+        await workbench.create("new.ttl", seed);
+
+        const post = server.requests.find(entry => entry.method === "POST");
+        expect(post.body).toBe(seed);
+        expect(post.contentType).toBe("text/plain");
+    });
+});
+
+test("reads any document's stored text, for a download", async () => {
+    await workbench.load();
+
+    expect(await workbench.textOf(EQ)).toBe(SHAPES);
 });
