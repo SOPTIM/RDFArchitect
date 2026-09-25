@@ -24,7 +24,8 @@
  * The workspace and schema are deliberately not in the link: the workbench opens whichever schema
  * is selected, and a link carrying its own would have to either override that selection or disagree
  * with it. A consequence worth knowing is that the link is only meaningful within a session that
- * has the same schema selected — it is a jump, not a shareable address.
+ * has the same schema selected — it is a jump, not a shareable address — so a caller that knows
+ * which schema the document belongs to selects it first, with {@link selectSchemaOf}.
  */
 
 export const WORKBENCH_PATH = "/shacl";
@@ -40,6 +41,26 @@ export function workbenchHref(documentId = null, line = null) {
     }
     const search = query.toString();
     return search === "" ? WORKBENCH_PATH : `${WORKBENCH_PATH}?${search}`;
+}
+
+/**
+ * Makes `graphUri` of `workspaceName` the selected schema, so a link into the workbench opens there.
+ *
+ * A dialog about a class can be open for a schema other than the selected one — the class editor,
+ * the navigation tree and a merged diagram all reach classes of other graphs — and the workbench
+ * would otherwise load the selected schema and fail to find the document. Nothing is touched when
+ * the schema is already selected, so following a link does not reset the rest of the selection.
+ */
+export function selectSchemaOf(editorState, workspaceName, graphUri) {
+    if (!workspaceName || !graphUri) {
+        return;
+    }
+    if (
+        editorState.selectedWorkspace.getValue() !== workspaceName ||
+        editorState.selectedGraph.getValue() !== graphUri
+    ) {
+        editorState.selectGraph(workspaceName, graphUri);
+    }
 }
 
 /**

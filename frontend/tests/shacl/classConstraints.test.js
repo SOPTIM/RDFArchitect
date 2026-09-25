@@ -15,16 +15,21 @@
  *
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import {
     classRules,
     constraintRows,
+    firstDocumentOf,
     originsOf,
     ruleCount,
     summaryOf,
 } from "$lib/shacl/classConstraints.js";
-import { workbenchHref, workbenchTarget } from "$lib/shacl/workbenchLink.js";
+import {
+    selectSchemaOf,
+    workbenchHref,
+    workbenchTarget,
+} from "$lib/shacl/workbenchLink.js";
 
 const DOCUMENT_ID = "11111111-2222-3333-4444-555555555555";
 
@@ -195,6 +200,65 @@ describe("ruleCount and classRules", () => {
         expect(classRules({ custom: CUSTOM, generated: GENERATED })).toEqual([
             { id: "custom-node", triples: "", origins: [], side: "custom" },
         ]);
+    });
+});
+
+describe("firstDocumentOf", () => {
+    test("is the first document a custom rule names", () => {
+        expect(firstDocumentOf({ custom: CUSTOM })).toEqual({
+            documentId: DOCUMENT_ID,
+            line: 7,
+        });
+    });
+
+    test("prefers the class's own node shape", () => {
+        const custom = {
+            ...CUSTOM,
+            nodeShapes: [
+                {
+                    id: "custom-node",
+                    origins: [
+                        { documentId: "node-doc", documentName: "n.ttl" },
+                    ],
+                },
+            ],
+        };
+
+        expect(firstDocumentOf({ custom })).toEqual({
+            documentId: "node-doc",
+            line: null,
+        });
+    });
+
+    test("is nothing when every rule is generated", () => {
+        expect(firstDocumentOf({ custom: undefined })).toBeNull();
+    });
+});
+
+describe("selectSchemaOf", () => {
+    function state(workspace, graph) {
+        return {
+            selectedWorkspace: { getValue: () => workspace },
+            selectedGraph: { getValue: () => graph },
+            selectGraph: vi.fn(),
+        };
+    }
+
+    test("selects the schema a link belongs to", () => {
+        const editorState = state("a", "http://a/G");
+
+        selectSchemaOf(editorState, "b", "http://b/G");
+
+        expect(editorState.selectGraph).toHaveBeenCalledWith("b", "http://b/G");
+    });
+
+    test("leaves an already selected schema alone", () => {
+        // Re-selecting would reset the diagram and the multi-selection for nothing.
+        const editorState = state("a", "http://a/G");
+
+        selectSchemaOf(editorState, "a", "http://a/G");
+
+        expect(editorState.selectGraph).not.toHaveBeenCalled();
     });
 });
 

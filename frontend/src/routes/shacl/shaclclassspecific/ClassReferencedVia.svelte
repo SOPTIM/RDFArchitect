@@ -19,20 +19,11 @@
     import { onMount } from "svelte";
 
     import { getClassesReferencingThisClass } from "$lib/api/generated/index.ts";
-    import { editorState } from "$lib/sharedState.svelte.js";
 
-    let { classUUID, onClickOnClass } = $props();
+    let { workspaceName, graphUri, classUUID, onClickOnClass } = $props();
 
     let classesReferencingThisClass = $state({});
-
-    let classWorkspaceName = $derived(
-        editorState.selectedClassWorkspace.getValue() ??
-            editorState.selectedWorkspace.getValue(),
-    );
-    let classGraphUri = $derived(
-        editorState.selectedClassGraph.getValue() ??
-            editorState.selectedGraph.getValue(),
-    );
+    let failed = $state(false);
 
     /** Only the relations that actually reference something; the rest are noise. */
     const groups = $derived(
@@ -43,20 +34,23 @@
 
     onMount(() => fetchClassesReferencingThisClass(classUUID));
 
+    /** A failure is said as one: "nothing references this class" would be a wrong answer. */
     function fetchClassesReferencingThisClass(classUUID) {
         getClassesReferencingThisClass({
             path: {
-                datasetName: classWorkspaceName,
-                graphURI: classGraphUri,
+                datasetName: workspaceName,
+                graphURI: graphUri,
                 classUUID: classUUID,
             },
         })
-            .then(res => res.data)
-            .then(data => {
-                classesReferencingThisClass =
-                    data?.classesReferencingThisClass ?? {};
+            .then(({ data, error }) => {
+                failed = !!error;
+                classesReferencingThisClass = error
+                    ? {}
+                    : (data?.classesReferencingThisClass ?? {});
             })
             .catch(() => {
+                failed = true;
                 classesReferencingThisClass = {};
             });
     }
@@ -75,7 +69,11 @@
         Referenced by
     </h3>
     <div class="min-h-0 flex-1 overflow-y-auto">
-        {#if groups.length === 0}
+        {#if failed}
+            <p class="text-red-text text-xs">
+                The classes referencing this one could not be read.
+            </p>
+        {:else if groups.length === 0}
             <p class="text-text-subtle text-xs italic">
                 Nothing references this class.
             </p>

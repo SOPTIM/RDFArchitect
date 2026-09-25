@@ -24,8 +24,11 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { emptyRelations } from "$lib/shacl/classConstraints.js";
-    import { workbenchHref } from "$lib/shacl/workbenchLink.js";
+    import {
+        emptyRelations,
+        firstDocumentOf,
+    } from "$lib/shacl/classConstraints.js";
+    import { selectSchemaOf, workbenchHref } from "$lib/shacl/workbenchLink.js";
     import { ClassType, editorState } from "$lib/sharedState.svelte.js";
 
     import ClassConstraintsView from "./ClassConstraintsView.svelte";
@@ -88,11 +91,19 @@
      * Follows a provenance chip into the workbench, at the document and line the rule lives in.
      *
      * Without the document the workbench opens on whatever it opened last, which for a graph with
-     * a dozen constraints files is rarely the one being asked about.
+     * a dozen constraints files is rarely the one being asked about. The class's schema is
+     * selected first, because the workbench opens the selected one.
      */
     function openInWorkbench(documentId = null, line = null) {
         showDialog = false;
+        selectSchemaOf(editorState, workspaceName, graphUri);
         goto(workbenchHref(documentId, line));
+    }
+
+    /** The header button: the document the class's own rules are in, when there is one. */
+    function openClassInWorkbench() {
+        const first = firstDocumentOf({ custom: customShacl });
+        openInWorkbench(first?.documentId ?? null, first?.line ?? null);
     }
 
     function goToClass(classUUID) {
@@ -117,7 +128,7 @@
     <div class="flex h-full min-h-0 flex-col gap-2">
         <div class="flex shrink-0 items-center gap-2">
             <div class="ml-auto w-48 text-nowrap">
-                <ButtonControl callOnClick={() => openInWorkbench()}>
+                <ButtonControl callOnClick={openClassInWorkbench}>
                     <span class="flex items-center gap-2">
                         <Fa icon={faFileShield} />
                         Edit in workbench
@@ -152,6 +163,8 @@
                 <Pane size={25} minSize={15} maxSize={45}>
                     <div class="h-full min-h-0 pl-2">
                         <ClassReferencedVia
+                            {workspaceName}
+                            {graphUri}
                             classUUID={reactiveClass.uuid.value}
                             onClickOnClass={goToClass}
                         />

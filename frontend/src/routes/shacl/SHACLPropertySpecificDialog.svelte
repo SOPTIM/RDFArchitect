@@ -30,6 +30,7 @@
     import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
     import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
+    import { selectSchemaOf, workbenchHref } from "$lib/shacl/workbenchLink.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import { goto } from "$app/navigation";
@@ -175,9 +176,35 @@
         }
     }
 
-    function openWorkbench() {
+    /**
+     * Opens the workbench on the property's schema, at a document and line when one is given.
+     *
+     * The header button has no rule of its own to follow, so it takes the first document a custom
+     * rule names; with none it opens the workbench plainly.
+     */
+    function openWorkbench(documentId = null, line = null) {
+        if (!documentId) {
+            const first = customShacl.propertyShapes
+                .flatMap(shape => shape.origins ?? [])
+                .find(origin => origin.documentId);
+            documentId = first?.documentId ?? null;
+            line = first?.line ?? null;
+        }
         showDialog = false;
-        goto("/shacl");
+        selectSchemaOf(editorState, classWorkspaceName, classGraphUri);
+        goto(workbenchHref(documentId, line));
+    }
+
+    /** One chip per document a rule is stated in; an old backend that names none gets no chips. */
+    function documentsOf(propertyShape) {
+        const origins = propertyShape.origins ?? [];
+        return origins.filter(
+            (origin, index) =>
+                origin.documentId &&
+                origins.findIndex(
+                    other => other.documentId === origin.documentId,
+                ) === index,
+        );
     }
 </script>
 
@@ -214,7 +241,7 @@
                       graph's default document, whichever document the rule actually came from.
                     -->
                     <div class="ml-auto w-48 text-nowrap">
-                        <ButtonControl callOnClick={openWorkbench}>
+                        <ButtonControl callOnClick={() => openWorkbench()}>
                             <span class="flex items-center gap-2">
                                 <Fa icon={faFileShield} />
                                 Edit in workbench
@@ -297,6 +324,25 @@
                             {/if}
                             {#each customShacl.propertyShapes as propertyShape}
                                 <div>
+                                    {#if documentsOf(propertyShape).length > 0}
+                                        <div class="mb-1 flex flex-wrap gap-1">
+                                            {#each documentsOf(propertyShape) as origin (origin.documentId)}
+                                                <button
+                                                    class="text-blue border-border hover:bg-nav-hover-background cursor-pointer rounded border px-1.5 py-0.5 text-xs"
+                                                    title="Open {origin.documentName} in the workbench"
+                                                    onclick={() =>
+                                                        openWorkbench(
+                                                            origin.documentId,
+                                                            origin.line,
+                                                        )}
+                                                >
+                                                    {origin.documentName}{origin.line
+                                                        ? ` · line ${origin.line}`
+                                                        : ""}
+                                                </button>
+                                            {/each}
+                                        </div>
+                                    {/if}
                                     <TurtleEditor
                                         autoGrow
                                         value={propertyShape.triples.trim()}

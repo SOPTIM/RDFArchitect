@@ -137,6 +137,28 @@ export function originsOf(row) {
     );
 }
 
+/**
+ * The document a class's own rules start in, as `{ documentId, line }`, or null when every rule
+ * is generated.
+ *
+ * The class's node shapes come first: that is where a constraints file says "this is about the
+ * class", and the property rules usually follow it.
+ */
+export function firstDocumentOf({ custom } = {}) {
+    const origins = [
+        ...(custom?.nodeShapes ?? []).flatMap(shape => shape.origins ?? []),
+        ...constraintRows({ custom, scope: CUSTOM }).flatMap(row =>
+            row.sources.flatMap(source =>
+                source.shapes.flatMap(shape => shape.origins ?? []),
+            ),
+        ),
+    ];
+    const first = origins.find(origin => origin.documentId);
+    return first
+        ? { documentId: first.documentId, line: first.line ?? null }
+        : null;
+}
+
 /** How many rules a row holds, across every source. */
 export function ruleCount(row) {
     return row.sources.reduce(
