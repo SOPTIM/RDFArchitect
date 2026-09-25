@@ -101,24 +101,13 @@ class ConformanceAgainstEntsoeProfilesTest {
     }
 
     @Test
-    void theOnlyDisagreementIsTheKnownDatatypeMapping() {
+    void theGeneratedAndTheOfficialConstraintsAgreeCompletely() {
         var report = service.compare(GRAPH, documentId);
 
-        // RDFArchitect maps the CIM primitive "MonthDay" to a made-up xsd:MonthDay, where the
-        // official file uses xsd:gMonthDay. A real generator bug, and exactly what this feature is
-        // meant to surface — see XSDDatatypeMapper.
-        assertThat(report.getFindings())
-                .allSatisfy(
-                        finding ->
-                                assertThat(finding.getKind())
-                                        .isEqualTo(ConformanceFinding.Kind.CONTRADICTED))
-                .allSatisfy(finding -> assertThat(finding.getPath()).contains("Season."))
-                .anySatisfy(
-                        finding -> {
-                            assertThat(finding.getSchemaSays()).contains("MonthDay");
-                            assertThat(finding.getDocumentSays()).contains("gMonthDay");
-                            assertThat(finding.getMessage()).contains("cannot be both");
-                        });
+        // Season.startDate/endDate used to disagree here: the CIM primitive "MonthDay" was mapped
+        // to a made-up xsd:MonthDay where the official file uses xsd:gMonthDay.
+        assertThat(report.getFindings()).isEmpty();
+        assertThat(report.isConforms()).isTrue();
     }
 
     @Test
