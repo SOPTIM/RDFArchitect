@@ -29,9 +29,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.ShapesDocument;
+import org.rdfarchitect.models.changelog.ContextDelta;
 import org.rdfarchitect.rdf.TestRDFUtils;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -79,6 +81,44 @@ class GraphWithContextShapesDocumentTest {
         ctx.begin(ReadWrite.READ);
         try {
             return ctx.canUndo();
+        } finally {
+            ctx.end();
+        }
+    }
+
+    private boolean documentExists(UUID id) {
+        ctx.begin(ReadWrite.READ);
+        try {
+            return ctx.getShapesDocuments().containsKey(id);
+        } finally {
+            ctx.end();
+        }
+    }
+
+    private ShapesDocument document(UUID id) {
+        return ctx.getShapesDocuments().get(id);
+    }
+
+    /** Creates a document holding {@code shape}, committed as one change. */
+    private UUID importDocument(String name) {
+        var id = new UUID[1];
+        inWriteTransaction(
+                () -> {
+                    var created = ctx.createShapesDocument(name, ShapesDocument.Origin.IMPORTED);
+                    created.getGraph().add(shape);
+                    created.setRawText("# " + name);
+                    id[0] = created.getId();
+                },
+                "import constraints");
+        return id[0];
+    }
+
+    private List<String> contextNamesOfLastEntry() {
+        ctx.begin(ReadWrite.READ);
+        try {
+            return ctx.getChangeLog().peekUndo().getContextDeltas().stream()
+                    .map(ContextDelta::contextName)
+                    .toList();
         } finally {
             ctx.end();
         }
@@ -262,7 +302,7 @@ class GraphWithContextShapesDocumentTest {
                         })
                 .doesNotThrowAnyException();
 
-        assertThat(documentContains(id[0], shape)).isFalse();
+        assertThat(documentExists(id[0])).isFalse();
         ctx.begin(ReadWrite.READ);
         var schemaEmpty = ctx.getRdfGraph().isEmpty();
         ctx.end();
@@ -270,7 +310,7 @@ class GraphWithContextShapesDocumentTest {
     }
 
     @Test
-    void undoingPastCreationLeavesTheDocumentEmptyThenRedoRestoresIt() {
+    void undoingCreationRemovesTheDocumentAndRedoRestoresIt() {
         inWriteTransaction(() -> ctx.getRdfGraph().add(schemaTriple), "add class");
 
         var id = new UUID[1];
@@ -284,7 +324,7 @@ class GraphWithContextShapesDocumentTest {
                 "import constraints");
 
         ctx.undo();
-        assertThat(documentContains(id[0], shape)).isFalse();
+        assertThat(documentExists(id[0])).isFalse();
 
         ctx.redo();
         assertThat(documentContains(id[0], shape)).isTrue();
@@ -354,5 +394,147 @@ class GraphWithContextShapesDocumentTest {
         } finally {
             ctx.end();
         }
+    }
+
+    @Test
+    void textAndMetadataRewindWithTheShapes() {
+        var id = importDocument("eq.ttl");
+        inWriteTransaction(
+                () -> {
+                    var edited = document(id);
+                    edited.getGraph().add(otherShape);
+                    edited.setRawText("# edited");
+                    edited.setName("renamed.ttl");
+                    edited.setEnabled(false);
+                    edited.setOrder(7);
+                },
+                "edit constraints");
+
+        ctx.undo();
+
+        assertThat(documentContains(id, otherShape)).isFalse();
+        assertThat(document(id).getRawText()).isEqualTo("# eq.ttl");
+        assertThat(document(id).getName()).isEqualTo("eq.ttl");
+        assertThat(document(id).isEnabled()).isTrue();
+        assertThat(document(id).getOrder()).isEqualTo(1);
+
+        ctx.redo();
+
+        assertThat(documentContains(id, otherShape)).isTrue();
+        assertThat(document(id).getRawText()).isEqualTo("# edited");
+        assertThat(document(id).getName()).isEqualTo("renamed.ttl");
+        assertThat(document(id).isEnabled()).isFalse();
+        assertThat(document(id).getOrder()).isEqualTo(7);
+    }
+
+    @Test
+    void aMetadataOnlyChangeIsItsOwnUndoStep() {
+        var id = importDocument("eq.ttl");
+        inWriteTransaction(() -> document(id).setEnabled(false), "disable constraints");
+        inWriteTransaction(() -> ctx.getRdfGraph().add(schemaTriple), "add class");
+
+        ctx.undo();
+        assertThat(document(id).isEnabled()).isFalse();
+
+        ctx.undo();
+        assertThat(document(id).isEnabled()).isTrue();
+        assertThat(documentContains(id, shape)).isTrue();
+    }
+
+    @Test
+    void removalIsUndoable() {
+        var id = importDocument("gone.ttl");
+        inWriteTransaction(() -> ctx.removeShapesDocument(id), "delete constraints");
+        assertThat(documentExists(id)).isFalse();
+
+        ctx.undo();
+
+        assertThat(documentContains(id, shape)).isTrue();
+        assertThat(document(id).getRawText()).isEqualTo("# gone.ttl");
+        assertThat(document(id).getName()).isEqualTo("gone.ttl");
+
+        ctx.redo();
+
+        assertThat(documentExists(id)).isFalse();
+    }
+
+    @Test
+    void anAbortedRemovalKeepsTheDocument() {
+        var id = importDocument("kept.ttl");
+
+        ctx.begin(ReadWrite.WRITE);
+        ctx.removeShapesDocument(id);
+        ctx.abort();
+        ctx.end();
+
+        assertThat(documentContains(id, shape)).isTrue();
+    }
+
+    @Test
+    void anAbortedCreationLeavesNothingBehindForRedo() {
+        // The regression this guards: a document created in a transaction that never committed
+        // stayed a participant with no redo history, so the next redo ran it off the end of its
+        // history and threw.
+        importDocument("eq.ttl");
+        inWriteTransaction(() -> ctx.getRdfGraph().add(schemaTriple), "add class");
+        ctx.undo();
+
+        var orphan = new UUID[1];
+        ctx.begin(ReadWrite.WRITE);
+        orphan[0] = ctx.createShapesDocument("orphan.ttl", ShapesDocument.Origin.AUTHORED).getId();
+        ctx.end();
+
+        assertThat(documentExists(orphan[0])).isFalse();
+        assertThatCode(ctx::redo).doesNotThrowAnyException();
+        ctx.begin(ReadWrite.READ);
+        var schemaHasTriple = ctx.getRdfGraph().contains(schemaTriple);
+        ctx.end();
+        assertThat(schemaHasTriple).isTrue();
+    }
+
+    @Test
+    void aDocumentNoVersionCanReachStopsTakingPart() {
+        var id = importDocument("discarded.ttl");
+        ctx.undo();
+        // A new commit discards the redo that could have brought the document back.
+        inWriteTransaction(() -> ctx.getRdfGraph().add(schemaTriple), "add class");
+
+        assertThat(contextNamesOfLastEntry()).doesNotContain("shacl:discarded.ttl");
+        assertThat(documentExists(id)).isFalse();
+    }
+
+    @Test
+    void theChangelogNamesADocumentByItsCurrentName() {
+        var id = importDocument("before.ttl");
+        inWriteTransaction(
+                () -> {
+                    document(id).setName("after.ttl");
+                    document(id).getGraph().add(otherShape);
+                },
+                "edit constraints");
+
+        assertThat(contextNamesOfLastEntry()).contains("shacl:after.ttl");
+    }
+
+    @Test
+    void theDocumentsVersionFollowsDocumentChangesAndTheSchemaVersionDoesNot() {
+        var id = importDocument("eq.ttl");
+        ctx.begin(ReadWrite.READ);
+        var schemaVersion = ctx.getRdfGraphVersion();
+        var shapesVersion = ctx.getShapesDocumentsVersion();
+        ctx.end();
+
+        inWriteTransaction(() -> document(id).setEnabled(false), "disable constraints");
+
+        ctx.begin(ReadWrite.READ);
+        assertThat(ctx.getRdfGraphVersion()).isEqualTo(schemaVersion);
+        assertThat(ctx.getShapesDocumentsVersion()).isNotEqualTo(shapesVersion);
+        ctx.end();
+
+        ctx.undo();
+
+        ctx.begin(ReadWrite.READ);
+        assertThat(ctx.getShapesDocumentsVersion()).isEqualTo(shapesVersion);
+        ctx.end();
     }
 }

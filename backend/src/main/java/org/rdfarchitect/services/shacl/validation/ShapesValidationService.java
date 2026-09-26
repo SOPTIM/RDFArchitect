@@ -72,7 +72,7 @@ public class ShapesValidationService implements ShapesValidationUseCase {
 
     private final SchemaIndexCache schemaIndexCache;
 
-    /** Identifies a graph's committed content, within the session whose database holds it. */
+    /** Identifies a graph's committed documents, within the session whose database holds it. */
     private record ComparisonKey(String sessionId, GraphIdentifier graph, UUID version) {}
 
     private record Comparison(ComparisonKey key, List<ShapesConflictAnalyzer.Document> documents) {}
@@ -82,9 +82,10 @@ public class ShapesValidationService implements ShapesValidationUseCase {
      *
      * <p>The editor asks for this on every debounced keystroke, and answering it copies every
      * shapes document of the graph — tens of thousands of triples for a full ENTSO-E set — to
-     * compare them against a buffer that is the only thing that moved. A commit, an undo or a redo
-     * mints a new version id for the whole context, so keying on that id is enough to notice a
-     * change without the write path having to know this exists.
+     * compare them against a buffer that is the only thing that moved. Every commit, undo or redo
+     * that touches a document moves the context's documents version, so keying on it is enough to
+     * notice a change — renaming or switching a document off included — without the write path
+     * having to know this exists.
      *
      * <p>One entry, because typing happens in one document of one graph at a time and a second
      * would only pin copies nothing is going to ask for again.
@@ -188,7 +189,7 @@ public class ShapesValidationService implements ShapesValidationUseCase {
         return ShapesConflictAnalyzer.analyze(documents).getOrDefault(documentId, List.of());
     }
 
-    /** The graph's enabled documents, from {@link #comparison} unless the graph has changed. */
+    /** The graph's enabled documents, from {@link #comparison} unless a document has changed. */
     private List<ShapesConflictAnalyzer.Document> storedForComparison(
             GraphIdentifier graphIdentifier) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
@@ -196,7 +197,7 @@ public class ShapesValidationService implements ShapesValidationUseCase {
                     new ComparisonKey(
                             SessionContext.getSessionId(),
                             graphIdentifier,
-                            ctx.getRdfGraphVersion());
+                            ctx.getShapesDocumentsVersion());
             var cached = comparison.get();
             if (cached != null && cached.key().equals(key)) {
                 return cached.documents();

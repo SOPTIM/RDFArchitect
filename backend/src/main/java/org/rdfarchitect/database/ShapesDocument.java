@@ -18,9 +18,10 @@
 package org.rdfarchitect.database;
 
 import lombok.Getter;
-import lombok.Setter;
 
+import org.rdfarchitect.config.GraphCompressionConfig;
 import org.rdfarchitect.rdf.graph.wrapper.RDFGraphDelta;
+import org.rdfarchitect.rdf.graph.wrapper.VersionedValue;
 
 import java.util.UUID;
 
@@ -40,13 +41,13 @@ import java.util.UUID;
  * ordering that users expect to get back byte-for-byte, and reporting a validation finding at a
  * line and column is only possible against the original text — a Jena round-trip destroys both.
  *
- * <p>The graph is the undoable half: it takes part in the context's transactions and history like
- * any other participant. The raw text is not independently versioned, so an undo re-derives it from
- * the graph rather than leaving the two disagreeing. Comments and formatting are therefore lost
- * across an undo, which is a narrower loss than letting the text drift out of sync with the shapes
- * actually stored.
+ * <h2>History</h2>
+ *
+ * <p>Both halves are versioned by the owning context: the graph as a participant of its own, and
+ * the text together with the name, position and enabled flag as one {@link State} value. An undo
+ * therefore brings back the text that belonged to the triples it restores, comments and all, and
+ * renaming or switching a document off is undone like any other change.
  */
-@Getter
 public class ShapesDocument {
 
     /** Where a document came from, which decides how carefully its formatting is preserved. */
@@ -57,32 +58,94 @@ public class ShapesDocument {
         AUTHORED
     }
 
-    private final UUID id;
+    /**
+     * Everything about a document that is not its triples, versioned as one value.
+     *
+     * @param name display name, unique within a graph
+     * @param sourceFileName file the document was uploaded from, or {@code null}
+     * @param enabled whether the shapes take part in validation and combined export
+     * @param order position in the graph's document list, and the merge order for export
+     * @param rawText verbatim source text, or {@code null} when only the triples are known
+     */
+    public record State(
+            String name, String sourceFileName, boolean enabled, int order, String rawText) {}
 
-    private final Origin origin;
+    @Getter private final UUID id;
 
-    /** Parsed shapes; the undoable half of the document. */
-    private final RDFGraphDelta graph;
+    @Getter private final Origin origin;
 
-    /** Display name, unique within a graph. */
-    @Setter private String name;
+    /** Parsed shapes. */
+    @Getter private final RDFGraphDelta graph;
 
-    /** File the document was uploaded from, or {@code null} when it was authored here. */
-    @Setter private String sourceFileName;
+    private final VersionedValue<State> state;
 
-    /** Whether the shapes take part in validation and combined export. */
-    @Setter private boolean enabled = true;
-
-    /** Position in the graph's document list, and the order shapes are merged for export. */
-    @Setter private int order;
-
-    /** Verbatim source text; see the class comment on why this is authoritative. */
-    @Setter private String rawText;
-
+    /** A document outside any context, whose metadata is not versioned. */
     public ShapesDocument(UUID id, String name, Origin origin, RDFGraphDelta graph) {
+        this(
+                id,
+                origin,
+                graph,
+                new VersionedValue<>(
+                        new State(name, null, true, 0, null),
+                        GraphCompressionConfig.getMaxVersions(),
+                        GraphCompressionConfig.getCompressCount()));
+    }
+
+    /**
+     * A document whose metadata is kept in {@code state}, which the owning context commits and
+     * rewinds alongside {@code graph}.
+     */
+    public ShapesDocument(
+            UUID id, Origin origin, RDFGraphDelta graph, VersionedValue<State> state) {
         this.id = id;
-        this.name = name;
         this.origin = origin;
         this.graph = graph;
+        this.state = state;
+    }
+
+    public String getName() {
+        return state.get().name();
+    }
+
+    public String getSourceFileName() {
+        return state.get().sourceFileName();
+    }
+
+    public boolean isEnabled() {
+        return state.get().enabled();
+    }
+
+    public int getOrder() {
+        return state.get().order();
+    }
+
+    /** Verbatim source text; see the class comment on why this is authoritative. */
+    public String getRawText() {
+        return state.get().rawText();
+    }
+
+    public void setName(String name) {
+        var s = state.get();
+        state.set(new State(name, s.sourceFileName(), s.enabled(), s.order(), s.rawText()));
+    }
+
+    public void setSourceFileName(String sourceFileName) {
+        var s = state.get();
+        state.set(new State(s.name(), sourceFileName, s.enabled(), s.order(), s.rawText()));
+    }
+
+    public void setEnabled(boolean enabled) {
+        var s = state.get();
+        state.set(new State(s.name(), s.sourceFileName(), enabled, s.order(), s.rawText()));
+    }
+
+    public void setOrder(int order) {
+        var s = state.get();
+        state.set(new State(s.name(), s.sourceFileName(), s.enabled(), order, s.rawText()));
+    }
+
+    public void setRawText(String rawText) {
+        var s = state.get();
+        state.set(new State(s.name(), s.sourceFileName(), s.enabled(), s.order(), rawText));
     }
 }

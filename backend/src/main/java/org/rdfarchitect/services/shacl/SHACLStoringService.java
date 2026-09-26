@@ -139,20 +139,14 @@ public class SHACLStoringService
             Lang lang) {
         var parsed = parse(content, lang);
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            assertNameIsFree(ctx, name, null);
-            var document = ctx.createShapesDocument(name, resolveOrigin(sourceFileName));
-            // Creating a document changes the context itself — its document list, its transaction
-            // participants, its undo history — and none of that is part of the transaction the
-            // try-with-resources aborts. Without undoing it here, a failure below would leave an
-            // empty document that nothing committed and no undo can remove.
-            try {
-                document.setSourceFileName(sourceFileName);
-                writeContent(document, parsed, content, lang);
-                ctx.commit("Add constraints \"%s\"".formatted(name));
-            } catch (RuntimeException e) {
-                ctx.removeShapesDocument(document.getId());
-                throw e;
-            }
+            var documentName = name;
+            assertNameIsFree(ctx, documentName, null);
+            // A failure before the commit needs no cleanup: the new document is part of the
+            // transaction, and the abort on leaving the block discards it.
+            var document = ctx.createShapesDocument(documentName, resolveOrigin(sourceFileName));
+            document.setSourceFileName(sourceFileName);
+            writeContent(document, parsed, content, lang);
+            ctx.commit("Add constraints \"%s\"".formatted(documentName));
             return toInfo(document);
         }
     }
@@ -161,8 +155,8 @@ public class SHACLStoringService
     public String getShapesDocumentText(GraphIdentifier graphIdentifier, UUID documentId) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             var document = requireDocument(ctx, documentId);
-            // Authoritative text, unless the document has none yet (a snapshot carries only the
-            // triples, and an undo drops the text) — then it is re-derived from the shapes.
+            // Authoritative text, unless the document has none (a snapshot written before texts
+            // were stored carries only the triples) — then it is re-derived from the shapes.
             return document.getRawText() != null
                     ? document.getRawText()
                     : serialiseToTurtle(ModelFactory.createModelForGraph(document.getGraph()));
@@ -172,10 +166,14 @@ public class SHACLStoringService
     @Override
     public void replaceShapesDocumentText(
             GraphIdentifier graphIdentifier, UUID documentId, String turtle) {
-        var parsed = parse(turtle, Lang.TURTLE);
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var document = requireDocument(ctx, documentId);
-            writeContent(document, parsed, turtle, Lang.TURTLE);
+            // Saving what is already stored changes nothing, and an entry for it in the history
+            // would be an undo step that does nothing.
+            if (storedTurtle(turtle).equals(document.getRawText())) {
+                return;
+            }
+            writeContent(document, parse(turtle, Lang.TURTLE), turtle, Lang.TURTLE);
             ctx.commit("Edit constraints \"%s\"".formatted(document.getName()));
         }
     }
@@ -187,11 +185,13 @@ public class SHACLStoringService
             String name,
             Boolean enabled,
             Integer order) {
+        var newName = name;
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var document = requireDocument(ctx, documentId);
-            if (name != null) {
-                assertNameIsFree(ctx, name, documentId);
-                document.setName(name);
+            var before = listState(ctx);
+            if (newName != null) {
+                assertNameIsFree(ctx, newName, documentId);
+                document.setName(newName);
             }
             if (enabled != null) {
                 document.setEnabled(enabled);
@@ -199,17 +199,27 @@ public class SHACLStoringService
             if (order != null) {
                 reorder(ctx, document, order);
             }
-            ctx.commit("Update constraints \"%s\"".formatted(document.getName()));
+            if (!listState(ctx).equals(before)) {
+                ctx.commit("Update constraints \"%s\"".formatted(document.getName()));
+            }
             return toInfo(document);
         }
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>Destructive: see {@link GraphContext#removeShapesDocument} for why an undo does not bring
-     * the document back. The UI confirms before calling this and says so.
-     */
+    /** Everything an update can change, across the list, since a move renumbers the others. */
+    private static List<ShapesDocument.State> listState(GraphContext ctx) {
+        return ctx.getShapesDocuments().values().stream()
+                .map(
+                        document ->
+                                new ShapesDocument.State(
+                                        document.getName(),
+                                        document.getSourceFileName(),
+                                        document.isEnabled(),
+                                        document.getOrder(),
+                                        null))
+                .toList();
+    }
+
     @Override
     public void deleteShapesDocument(GraphIdentifier graphIdentifier, UUID documentId) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
@@ -221,13 +231,8 @@ public class SHACLStoringService
                         "The graph's default constraints document cannot be deleted. "
                                 + "Replace its content with an empty document instead.");
             }
-            var name = document.getName();
-            // Committed before the document leaves the context, not after. Removal is a change to
-            // the context that no abort undoes, so a commit that failed afterwards would have
-            // destroyed the document without recording anything — the one order in which the
-            // failure is unrecoverable.
-            ctx.commit("Delete constraints \"%s\"".formatted(name));
             ctx.removeShapesDocument(documentId);
+            ctx.commit("Delete constraints \"%s\"".formatted(document.getName()));
         }
     }
 
@@ -291,14 +296,22 @@ public class SHACLStoringService
         storedModel.clearNsPrefixMap();
         storedModel.add(parsed);
         storedModel.setNsPrefixes(parsed);
-        // A document emptied in the editor still has to be sent as something — Spring rejects an
-        // absent plain-string body — so whitespace-only content is stored as the empty document it
-        // means. Keeping the sent " " would make the text read back differ from the text sent, and
-        // the editor would call a freshly saved document unsaved.
         document.setRawText(
                 Lang.TURTLE.equals(lang) && content != null
-                        ? (content.isBlank() ? "" : content)
+                        ? storedTurtle(content)
                         : serialiseToTurtle(storedModel));
+    }
+
+    /**
+     * Turtle as it is recorded.
+     *
+     * <p>A document emptied in the editor still has to be sent as something — Spring rejects an
+     * absent plain-string body — so whitespace-only content is stored as the empty document it
+     * means. Keeping the sent " " would make the text read back differ from the text sent, and the
+     * editor would call a freshly saved document unsaved.
+     */
+    private static String storedTurtle(String content) {
+        return content == null || content.isBlank() ? "" : content;
     }
 
     /**

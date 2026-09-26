@@ -39,15 +39,21 @@ public interface GraphContext extends Transactional, VersionControl {
     Graph getRdfGraph();
 
     /**
-     * Identifies the graph's current committed content. A fresh id is minted by every commit, and
-     * an undo or redo returns the id of the version it moves to, so two reads seeing the same id
-     * are looking at the same triples.
+     * Identifies the graph's current committed content. A commit that changes the graph mints a
+     * fresh id, one that leaves it alone keeps it, and an undo or redo returns the id of the
+     * content it moves to, so two reads seeing the same id are looking at the same triples.
      *
      * <p>Exposed so that work derived from a graph — indexing its schema for term lookups, say —
      * can be kept until the graph actually changes, without the commit path having to notify
      * anyone.
      */
     UUID getRdfGraphVersion();
+
+    /**
+     * Identifies the committed state of the graph's shapes documents — which exist, their triples,
+     * their text and their metadata — the way {@link #getRdfGraphVersion()} does for the schema.
+     */
+    UUID getShapesDocumentsVersion();
 
     DiagramLayoutDelta getDiagramLayout();
 
@@ -73,22 +79,16 @@ public interface GraphContext extends Transactional, VersionControl {
     /**
      * Adds a shapes document to this graph.
      *
-     * <p>Must be called in a write transaction. The new document's graph joins the context's
-     * transactions and history, so shapes added now can be undone like any other change.
+     * <p>Must be called in a write transaction. The new document joins the context's transactions
+     * and history: an abort discards it, and undoing the commit that created it removes it again.
      */
     ShapesDocument createShapesDocument(String name, ShapesDocument.Origin origin);
 
     /**
-     * Removes a shapes document and stops its graph taking part in transactions.
+     * Removes a shapes document.
      *
-     * <p><strong>Not undoable.</strong> Every other change to a document — its text, its name,
-     * emptying it entirely — is a write to a participant of this context and rewinds with it. Which
-     * documents <em>exist</em> is not versioned: the removed graph leaves the participant list
-     * before the commit, so there is nothing for an undo to restore it from, and the commit that
-     * records the deletion rewinds only the documents that remain.
-     *
-     * <p>Callers must therefore treat this as destructive and confirm it. Making it undoable means
-     * versioning the document list itself, not patching this method.
+     * <p>Must be called in a write transaction. Which documents exist is versioned like their
+     * content, so undoing the commit brings the document back with its shapes, text and metadata.
      */
     void removeShapesDocument(UUID documentId);
 

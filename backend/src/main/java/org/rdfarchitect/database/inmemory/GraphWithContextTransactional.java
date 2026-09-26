@@ -39,6 +39,7 @@ import org.rdfarchitect.rdf.graph.wrapper.RDFGraphDelta;
 import org.rdfarchitect.rdf.graph.wrapper.Rewindable;
 import org.rdfarchitect.rdf.graph.wrapper.TransactionContext;
 import org.rdfarchitect.rdf.graph.wrapper.TransactionParticipant;
+import org.rdfarchitect.rdf.graph.wrapper.VersionedValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +56,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * Top-level context object that holds an {@link RDFGraphDelta} and a {@link DiagramLayoutDelta}
@@ -78,15 +81,24 @@ public class GraphWithContextTransactional implements GraphContext {
     private final ConcurrentHashMap<UUID, CustomDiagram> customDiagrams = new ConcurrentHashMap<>();
 
     /**
-     * Shapes documents of this graph, in insertion order so the document list and the merge order
-     * for export are stable.
+     * Every document this context keeps a history for: the ones that exist now, and the ones an
+     * undo or redo can bring back. Which of them exist is {@link #documentIds}.
      */
-    private final Map<UUID, ShapesDocument> shapesDocuments = new LinkedHashMap<>();
+    private final Map<UUID, RegisteredDocument> shapesDocuments = new LinkedHashMap<>();
 
     /**
-     * Guards {@link #shapesDocuments}. A dedicated object rather than the map itself, which is
-     * handed out — as a copy — by {@link #getShapesDocuments()}.
+     * The ids of the documents that exist, in list order.
+     *
+     * <p>Versioned like any participant, so creating and deleting a document is undone and redone
+     * with everything else. A removed document therefore keeps its participants until no reachable
+     * version lists it any more — see {@link #pruneUnreachableDocuments()}.
      */
+    private final VersionedValue<List<UUID>> documentIds;
+
+    /** Minted by every commit that changes a document; see {@link #getShapesDocumentsVersion()}. */
+    private final VersionedValue<UUID> shapesVersion;
+
+    /** Guards {@link #shapesDocuments}. */
     private final Object shapesDocumentsLock = new Object();
 
     /**
@@ -97,10 +109,20 @@ public class GraphWithContextTransactional implements GraphContext {
      */
     private final List<RDFGraphDelta> graphParticipants = new CopyOnWriteArrayList<>();
 
+    /**
+     * Values committed and rewound alongside {@link #graphParticipants}: which documents exist, and
+     * each document's text and metadata.
+     */
+    private final List<VersionedValue<?>> valueParticipants = new CopyOnWriteArrayList<>();
+
     private final List<NamedRewindable> coreRewindables = new CopyOnWriteArrayList<>();
     private final AtomicInteger stepsSinceNamedCommit = new AtomicInteger(0);
 
-    private record NamedRewindable(String name, Rewindable rewindable) {}
+    /** The name is read at commit time, so a renamed document is labelled by its new name. */
+    private record NamedRewindable(Supplier<String> name, Rewindable rewindable) {}
+
+    private record RegisteredDocument(
+            ShapesDocument document, VersionedValue<ShapesDocument.State> state) {}
 
     public GraphWithContextTransactional(Graph base) {
         this(base, List.of());
@@ -129,8 +151,12 @@ public class GraphWithContextTransactional implements GraphContext {
         rdfModel.setNsPrefixes(base.getPrefixMapping());
         rdfModel.add(ModelFactory.createModelForGraph(base));
         this.diagramLayout = new DiagramLayoutDelta(txnContext);
+        this.documentIds = new VersionedValue<>(List.of(), maxVersions, compressCount);
+        this.shapesVersion = new VersionedValue<>(UUID.randomUUID(), maxVersions, compressCount);
         this.graphParticipants.add(rdfGraph);
-        this.coreRewindables.add(new NamedRewindable("rdf", rdfGraph));
+        this.valueParticipants.add(documentIds);
+        this.valueParticipants.add(shapesVersion);
+        this.coreRewindables.add(new NamedRewindable(() -> "rdf", rdfGraph));
         // Created up front, exactly as the single shapes graph used to be, so that reading a
         // graph's SHACL never has the side effect of adding a transaction participant.
         addShapesDocument(
@@ -150,6 +176,7 @@ public class GraphWithContextTransactional implements GraphContext {
 
     private List<TransactionParticipant> allParticipants() {
         var all = new ArrayList<TransactionParticipant>(graphParticipants);
+        all.addAll(valueParticipants);
         all.add(diagramLayout);
         all.add(changeLog);
         return all;
@@ -174,7 +201,12 @@ public class GraphWithContextTransactional implements GraphContext {
 
     @Override
     public UUID getRdfGraphVersion() {
-        return rdfGraph.getLastDelta().getVersionId();
+        return rdfGraph.contentVersionId();
+    }
+
+    @Override
+    public UUID getShapesDocumentsVersion() {
+        return shapesVersion.get();
     }
 
     @Override
@@ -185,14 +217,18 @@ public class GraphWithContextTransactional implements GraphContext {
     @Override
     public Map<UUID, ShapesDocument> getShapesDocuments() {
         synchronized (shapesDocumentsLock) {
-            return Collections.unmodifiableMap(new LinkedHashMap<>(shapesDocuments));
+            var existing = new LinkedHashMap<UUID, ShapesDocument>();
+            for (var id : documentIds.get()) {
+                existing.put(id, shapesDocuments.get(id).document());
+            }
+            return Collections.unmodifiableMap(existing);
         }
     }
 
     @Override
     public RDFGraphDelta getCustomSHACL() {
         synchronized (shapesDocumentsLock) {
-            return shapesDocuments.get(DEFAULT_SHAPES_DOCUMENT_ID).getGraph();
+            return shapesDocuments.get(DEFAULT_SHAPES_DOCUMENT_ID).document().getGraph();
         }
     }
 
@@ -205,7 +241,7 @@ public class GraphWithContextTransactional implements GraphContext {
     private void restoreShapesDocument(ShapesDocumentSeed seed) {
         var document =
                 DEFAULT_SHAPES_DOCUMENT_ID.equals(seed.id())
-                        ? shapesDocuments.get(DEFAULT_SHAPES_DOCUMENT_ID)
+                        ? shapesDocuments.get(DEFAULT_SHAPES_DOCUMENT_ID).document()
                         : addShapesDocument(seed.id(), seed.name(), seed.origin());
         document.setName(seed.name());
         document.setSourceFileName(seed.sourceFileName());
@@ -224,64 +260,113 @@ public class GraphWithContextTransactional implements GraphContext {
     }
 
     private ShapesDocument addShapesDocument(UUID id, String name, ShapesDocument.Origin origin) {
+        int maxVersions = GraphCompressionConfig.getMaxVersions();
+        int compressCount = GraphCompressionConfig.getCompressCount();
         var graph =
                 new RDFGraphDelta(
-                        GraphFactory.createDefaultGraph(),
-                        GraphCompressionConfig.getMaxVersions(),
-                        GraphCompressionConfig.getCompressCount(),
-                        txnContext);
+                        GraphFactory.createDefaultGraph(), maxVersions, compressCount, txnContext);
+        var state =
+                new VersionedValue<>(
+                        new ShapesDocument.State(name, null, true, 0, null),
+                        maxVersions,
+                        compressCount);
         // A document created part-way through a session starts with no history, but the context
         // undoes every participant the same number of times. Align it with the schema graph so an
         // undo reaching past its creation does not run it off the end of its history.
         graph.padHistory(rdfGraph.currentVersion());
+        state.padHistory(rdfGraph.currentVersion());
 
-        var document = new ShapesDocument(id, name, origin, graph);
+        var document = new ShapesDocument(id, origin, graph, state);
         synchronized (shapesDocumentsLock) {
             // One past the highest position held, rather than the count: removing a document
             // leaves a gap in the numbering, so counting would hand the new document a position an
             // existing one already holds — and every reader that sorts by it would fall back to
             // the map's insertion order for the tie, ignoring the arrangement the user chose.
             document.setOrder(nextOrder());
-            shapesDocuments.put(id, document);
+            shapesDocuments.put(id, new RegisteredDocument(document, state));
+            var ids = new ArrayList<>(documentIds.get());
+            ids.add(id);
+            documentIds.set(List.copyOf(ids));
         }
         graphParticipants.add(graph);
+        valueParticipants.add(state);
         // The changelog surfaces this name to the user, so it stays "shacl" for the default
         // document — the label the changelog has always shown — and is qualified only when there is
         // more than one document to tell apart.
-        var contextName =
-                DEFAULT_SHAPES_DOCUMENT_ID.equals(id) ? "shacl" : "shacl:" + document.getName();
+        Supplier<String> contextName =
+                DEFAULT_SHAPES_DOCUMENT_ID.equals(id)
+                        ? () -> "shacl"
+                        : () -> "shacl:" + document.getName();
         coreRewindables.add(new NamedRewindable(contextName, graph));
         return document;
     }
 
     /** The position that puts a document last. Callers hold {@link #shapesDocumentsLock}. */
     private int nextOrder() {
-        return shapesDocuments.values().stream().mapToInt(ShapesDocument::getOrder).max().orElse(-1)
+        return documentIds.get().stream()
+                        .map(shapesDocuments::get)
+                        .mapToInt(registered -> registered.document().getOrder())
+                        .max()
+                        .orElse(-1)
                 + 1;
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>The graph is dropped rather than emptied: clearing it inside the caller's transaction
-     * would record deletions on a participant that is about to stop committing, so the work would
-     * be thrown away with the object anyway.
-     */
     @Override
     public void removeShapesDocument(UUID documentId) {
         if (DEFAULT_SHAPES_DOCUMENT_ID.equals(documentId)) {
             throw new IllegalArgumentException(
                     "The default shapes document cannot be removed; clear its content instead.");
         }
-        ShapesDocument removed;
         synchronized (shapesDocumentsLock) {
-            removed = shapesDocuments.remove(documentId);
+            var ids = new ArrayList<>(documentIds.get());
+            if (ids.remove(documentId)) {
+                documentIds.set(List.copyOf(ids));
+            }
         }
-        if (removed == null) {
-            return;
+    }
+
+    /**
+     * Stops documents that no reachable version lists from taking part in transactions.
+     *
+     * <p>A removed document has to keep committing while an undo can still bring it back, and a
+     * document created in a transaction that was then aborted has to go at once — it never existed
+     * in any committed version, and it has no redo history to keep in step with the others.
+     */
+    private void pruneUnreachableDocuments() {
+        synchronized (shapesDocumentsLock) {
+            var reachable =
+                    documentIds.reachableValues().flatMap(List::stream).collect(Collectors.toSet());
+            var iterator = shapesDocuments.values().iterator();
+            while (iterator.hasNext()) {
+                var registered = iterator.next();
+                if (reachable.contains(registered.document().getId())) {
+                    continue;
+                }
+                iterator.remove();
+                var graph = registered.document().getGraph();
+                graphParticipants.remove(graph);
+                valueParticipants.remove(registered.state());
+                coreRewindables.removeIf(nr -> nr.rewindable() == graph);
+            }
         }
-        graphParticipants.remove(removed.getGraph());
-        coreRewindables.removeIf(nr -> nr.rewindable() == removed.getGraph());
+    }
+
+    /** Whether the running transaction changed any document — its triples, text, or existence. */
+    private boolean shapesDocumentsChanged() {
+        synchronized (shapesDocumentsLock) {
+            return documentIds.hasChanges()
+                    || shapesDocuments.values().stream()
+                            .anyMatch(
+                                    registered ->
+                                            registered.document().getGraph().hasChanges()
+                                                    || registered.state().hasChanges());
+        }
+    }
+
+    private void markShapesDocumentsChange() {
+        if (shapesDocumentsChanged()) {
+            shapesVersion.set(UUID.randomUUID());
+        }
     }
 
     @Override
@@ -334,13 +419,17 @@ public class GraphWithContextTransactional implements GraphContext {
         }
         GraphUtils.enhanceWithUUIDs(rdfGraph);
         changeLog.clearRedo();
-        if (graphParticipants.stream().anyMatch(TransactionParticipant::hasChanges)) {
+        markShapesDocumentsChange();
+        if (graphParticipants.stream().anyMatch(TransactionParticipant::hasChanges)
+                || valueParticipants.stream().anyMatch(TransactionParticipant::hasChanges)) {
             graphParticipants.forEach(TransactionParticipant::commit);
+            valueParticipants.forEach(TransactionParticipant::commit);
             stepsSinceNamedCommit.incrementAndGet();
         }
         diagramLayout.commit();
         changeLog.commit();
         customDiagrams.values().forEach(CustomDiagram::commit);
+        pruneUnreachableDocuments();
         logger.debug("Context committed.");
     }
 
@@ -355,9 +444,13 @@ public class GraphWithContextTransactional implements GraphContext {
         GraphUtils.enhanceWithUUIDs(rdfGraph);
         changeLog.clearRedo();
 
+        markShapesDocumentsChange();
         // Commit graph participants to capture their deltas. Every participant commits, whether or
         // not it changed, so their version counters stay aligned for undo.
         graphParticipants.forEach(RDFGraphDelta::commit);
+        valueParticipants.forEach(TransactionParticipant::commit);
+        // Before the entry is written, so it does not name documents the commit just discarded.
+        pruneUnreachableDocuments();
         diagramLayout.commit();
         customDiagrams.values().forEach(CustomDiagram::commit);
         stepsSinceNamedCommit.incrementAndGet();
@@ -369,7 +462,7 @@ public class GraphWithContextTransactional implements GraphContext {
                                 nr -> {
                                     var delta = nr.rewindable().getLastDelta();
                                     return new ContextDelta(
-                                            nr.name(),
+                                            nr.name().get(),
                                             new WeakReference<>(delta.getAdditions()),
                                             new WeakReference<>(delta.getDeletions()));
                                 })
@@ -385,7 +478,7 @@ public class GraphWithContextTransactional implements GraphContext {
             java.util.function.BooleanSupplier canApply,
             java.util.function.Supplier<ChangeLogEntry> peekEntry,
             Runnable bufferMove,
-            java.util.function.Consumer<Rewindable> action) {
+            Runnable step) {
         if (isInTransaction()) {
             throw new GraphTransactionException(inTransactionMessage);
         }
@@ -400,7 +493,7 @@ public class GraphWithContextTransactional implements GraphContext {
                 bufferMove.run();
                 changeLog.commit();
                 for (int i = 0; i < entry.getSteps(); i++) {
-                    allRewindables().forEach(nr -> action.accept(nr.rewindable()));
+                    step.run();
                 }
                 stepsSinceNamedCommit.set(0);
                 return entry;
@@ -421,7 +514,7 @@ public class GraphWithContextTransactional implements GraphContext {
                         this::canUndoUnchecked,
                         changeLog::peekUndo,
                         changeLog::moveToRedo,
-                        Rewindable::undo);
+                        this::undoStep);
         logger.debug("Context undone.");
         return entry;
     }
@@ -435,9 +528,20 @@ public class GraphWithContextTransactional implements GraphContext {
                         this::canRedoUnchecked,
                         changeLog::peekRedo,
                         changeLog::moveToUndo,
-                        Rewindable::redo);
+                        this::redoStep);
         logger.debug("Context redone.");
         return entry;
+    }
+
+    /** Moves every versioned participant one version back, keeping them in step. */
+    private void undoStep() {
+        allRewindables().forEach(nr -> nr.rewindable().undo());
+        valueParticipants.forEach(VersionedValue::undo);
+    }
+
+    private void redoStep() {
+        allRewindables().forEach(nr -> nr.rewindable().redo());
+        valueParticipants.forEach(VersionedValue::redo);
     }
 
     @Override
@@ -484,7 +588,7 @@ public class GraphWithContextTransactional implements GraphContext {
                     changeLog.moveToRedo();
                     changeLog.commit();
                     for (int i = 0; i < top.getSteps(); i++) {
-                        allRewindables().forEach(nr -> nr.rewindable().undo());
+                        undoStep();
                     }
                 }
                 stepsSinceNamedCommit.set(0);
@@ -507,6 +611,7 @@ public class GraphWithContextTransactional implements GraphContext {
         }
         allParticipants().forEach(TransactionParticipant::abort);
         customDiagrams.values().forEach(CustomDiagram::abort);
+        pruneUnreachableDocuments();
         logger.debug("Context aborted.");
     }
 
@@ -521,6 +626,7 @@ public class GraphWithContextTransactional implements GraphContext {
             logger.warn("Ending write transaction with uncommitted changes — aborting.");
             allParticipants().forEach(TransactionParticipant::abort);
             customDiagrams.values().forEach(CustomDiagram::abort);
+            pruneUnreachableDocuments();
         }
         var lock =
                 txnContext.transactionMode() == ReadWrite.READ
