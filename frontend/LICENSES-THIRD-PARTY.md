@@ -104,7 +104,7 @@
 
 ### autoprefixer
 - **Package:** autoprefixer
-- **Version:** 10.6.0
+- **Version:** 10.6.1
 - **License:** MIT
 
 ### bits-ui
@@ -132,7 +132,7 @@
 
 ### eslint
 - **Package:** eslint
-- **Version:** 10.10.0
+- **Version:** 10.11.0
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -173,7 +173,7 @@
 
 ### jsdom
 - **Package:** jsdom
-- **Version:** 30.0.1
+- **Version:** 30.1.0
 - **License:** MIT
 - **URL:** [https://github.com/jsdom/jsdom](https://github.com/jsdom/jsdom)
 
@@ -197,7 +197,7 @@
 
 ### prettier
 - **Package:** prettier
-- **Version:** 3.9.6
+- **Version:** 3.9.8
 - **License:** MIT
 - **URL:** [https://prettier.io](https://prettier.io)
 
@@ -215,7 +215,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.57.0
+- **Version:** 5.57.1
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -281,7 +281,7 @@
 
 ### vitest
 - **Package:** vitest
-- **Version:** 5.0.0
+- **Version:** 5.0.1
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 
