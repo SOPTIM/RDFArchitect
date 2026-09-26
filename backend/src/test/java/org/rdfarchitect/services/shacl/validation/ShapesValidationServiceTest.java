@@ -173,6 +173,65 @@ class ShapesValidationServiceTest {
                         });
     }
 
+    @Test
+    void anUnknownTermThatIsOnlyAPermittedValueIsAWarning() {
+        // Reference data and older-namespace types are listed in sh:in on purpose; a value a
+        // constraint permits is not a reference into the schema.
+        var shapes =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://ex.org/shapes#> .
+
+                ex:ACLineSegmentShape
+                    a sh:NodeShape ;
+                    sh:targetClass cim:ACLineSegment ;
+                    sh:property [
+                        sh:path cim:ACLineSegment.length ;
+                        sh:in ( cim:ReferenceValue ) ;
+                    ] .
+                """;
+
+        var report = service.validateTurtle(GRAPH, "values.ttl", shapes, null);
+
+        assertThat(findings(report.getDocuments()))
+                .filteredOn(finding -> CIM_REFERENCE_VALUE.equals(finding.getTerm()))
+                .isNotEmpty()
+                .allSatisfy(
+                        finding ->
+                                assertThat(finding.getSeverity())
+                                        .isEqualTo(ShapesValidationFinding.Severity.WARNING));
+    }
+
+    @Test
+    void anUnknownTermUsedElsewhereTooStaysAnError() {
+        var shapes =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://ex.org/shapes#> .
+
+                ex:Shape
+                    a sh:NodeShape ;
+                    sh:targetClass cim:ReferenceValue ;
+                    sh:property [
+                        sh:path cim:ACLineSegment.length ;
+                        sh:in ( cim:ReferenceValue ) ;
+                    ] .
+                """;
+
+        var report = service.validateTurtle(GRAPH, "values.ttl", shapes, null);
+
+        assertThat(findings(report.getDocuments()))
+                .filteredOn(finding -> CIM_REFERENCE_VALUE.equals(finding.getTerm()))
+                .anySatisfy(
+                        finding ->
+                                assertThat(finding.getSeverity())
+                                        .isEqualTo(ShapesValidationFinding.Severity.ERROR));
+    }
+
+    private static final String CIM_REFERENCE_VALUE = "http://iec.ch/TC57/CIM100#ReferenceValue";
+
     // -------------------------------------------------------------------------
     // Which documents are validated
     // -------------------------------------------------------------------------
@@ -308,7 +367,15 @@ class ShapesValidationServiceTest {
         assertThat(report.getDocuments())
                 .extracting(ShapesDocumentValidationResult::getDocumentId)
                 .contains(second.getId());
-        assertThat(report.isValid()).isFalse();
+        // Both definitions apply, which is legal SHACL and how official releases share shapes;
+        // worth knowing, not an error.
+        assertThat(findings(report.getDocuments()))
+                .filteredOn(finding -> "DUPLICATE_SHAPE_IRI".equals(finding.getCode()))
+                .allSatisfy(
+                        finding ->
+                                assertThat(finding.getSeverity())
+                                        .isEqualTo(ShapesValidationFinding.Severity.WARNING));
+        assertThat(report.isValid()).isTrue();
     }
 
     @Test

@@ -21,17 +21,20 @@ import de.soptim.opencgmes.cimvocabcheck.core.SparqlValidationAnnotation;
 import de.soptim.opencgmes.cimvocabcheck.core.SparqlValidationApi;
 import de.soptim.opencgmes.cimvocabcheck.core.SparqlValidationSeverity;
 import de.soptim.opencgmes.cimvocabcheck.core.VersionIri;
+import de.soptim.opencgmes.cimvocabcheck.core.shacl.Shacl;
 
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.GraphUtil;
+import org.apache.jena.graph.Node;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.RDFWriter;
 import org.apache.jena.sparql.graph.GraphFactory;
+import org.apache.jena.vocabulary.RDF;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -44,6 +47,7 @@ import org.rdfarchitect.shacl.dto.ShapesValidationReport;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -286,14 +290,18 @@ public class ShapesValidationService implements ShapesValidationUseCase {
         var findings = new LinkedHashSet<ShapesValidationFinding>();
         result.shapeAnnotations()
                 .forEach(
-                        annotation ->
-                                findings.add(
-                                        toFinding(
-                                                annotation,
-                                                ShapesValidationFinding.Source.SHAPE,
-                                                positions.locate(
-                                                        annotation.term(),
-                                                        annotation.locationHint()))));
+                        annotation -> {
+                            var finding =
+                                    toFinding(
+                                            annotation,
+                                            ShapesValidationFinding.Source.SHAPE,
+                                            positions.locate(
+                                                    annotation.term(), annotation.locationHint()));
+                            findings.add(
+                                    isUnknownPermittedValue(shapes, annotation)
+                                            ? asPermittedValue(finding)
+                                            : finding);
+                        });
         result.embeddedResults()
                 .forEach(
                         embedded ->
@@ -311,6 +319,92 @@ public class ShapesValidationService implements ShapesValidationUseCase {
                                                                                 embedded
                                                                                         .embedded())))));
         return List.copyOf(findings);
+    }
+
+    /**
+     * Whether the finding is about a term the schema does not know that the document only lists as
+     * a value {@code sh:in} permits.
+     *
+     * <p>Such a term is data, not a reference into the schema: official files list reference-data
+     * IRIs there (564 of them in the RemedialAction Complex constraints alone). As an error, each
+     * one buried the findings that matter. A value-type list — {@code sh:in} on the path {@code (p
+     * rdf:type)} — is the exception: it names schema classes, and a misspelt one is an error.
+     */
+    private static boolean isUnknownPermittedValue(
+            Graph shapes, SparqlValidationAnnotation annotation) {
+        var term = annotation.term();
+        return annotation.code().name().startsWith("UNKNOWN_")
+                && annotation.severity() == SparqlValidationSeverity.ERROR
+                && term != null
+                && term.isURI()
+                && onlyListedInShIn(shapes, term);
+    }
+
+    private static boolean onlyListedInShIn(Graph shapes, Node term) {
+        if (shapes.contains(term, Node.ANY, Node.ANY)
+                || shapes.contains(Node.ANY, term, Node.ANY)) {
+            return false;
+        }
+        var uses = shapes.find(Node.ANY, Node.ANY, term).toList();
+        return !uses.isEmpty()
+                && uses.stream()
+                        .allMatch(
+                                use ->
+                                        RDF.first.asNode().equals(use.getPredicate())
+                                                && isValueList(
+                                                        shapes,
+                                                        listHead(shapes, use.getSubject())));
+    }
+
+    /**
+     * Whether {@code head} is an {@code sh:in} list of permitted values, not of permitted types.
+     */
+    private static boolean isValueList(Graph shapes, Node head) {
+        var owners = shapes.find(Node.ANY, Shacl.IN, head).toList();
+        return !owners.isEmpty()
+                && owners.stream().noneMatch(owner -> hasTypePath(shapes, owner.getSubject()));
+    }
+
+    private static boolean hasTypePath(Graph shapes, Node shape) {
+        return shapes.find(shape, Shacl.PATH, Node.ANY).toList().stream()
+                .map(path -> path.getObject())
+                .filter(path -> !path.isURI())
+                .anyMatch(
+                        path -> {
+                            var rest = shapes.find(path, RDF.rest.asNode(), Node.ANY);
+                            if (!rest.hasNext()) {
+                                return false;
+                            }
+                            var second =
+                                    shapes.find(
+                                            rest.next().getObject(), RDF.first.asNode(), Node.ANY);
+                            return second.hasNext()
+                                    && RDF.type.asNode().equals(second.next().getObject());
+                        });
+    }
+
+    /** The first cell of the RDF list {@code cell} belongs to. */
+    private static Node listHead(Graph shapes, Node cell) {
+        var head = cell;
+        var visited = new HashSet<Node>();
+        while (visited.add(head)) {
+            var previous = shapes.find(Node.ANY, RDF.rest.asNode(), head);
+            if (!previous.hasNext()) {
+                break;
+            }
+            head = previous.next().getSubject();
+        }
+        return head;
+    }
+
+    private static ShapesValidationFinding asPermittedValue(ShapesValidationFinding finding) {
+        return finding.toBuilder()
+                .severity(ShapesValidationFinding.Severity.WARNING)
+                .message(
+                        finding.getMessage()
+                                + " It is only listed as a value sh:in permits, so data may still"
+                                + " use it.")
+                .build();
     }
 
     private static ShapesValidationFinding toFinding(

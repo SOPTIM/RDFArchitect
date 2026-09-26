@@ -50,8 +50,9 @@ import java.util.function.Supplier;
  *
  * <p>Most overlaps between documents are not contradictions at all: {@code minCount 1} in one file
  * and {@code datatype xsd:string} in another are complementary, and a repeated constraint is merely
- * redundant. Only two situations are genuinely wrong, and only those are reported: a combination no
- * data can satisfy, and one shape IRI defined in two documents.
+ * redundant. Only two situations are reported: a combination no data can satisfy, which is an
+ * error, and one shape IRI defined in two documents — a warning, because both definitions simply
+ * apply and official releases define shared shapes in more than one file.
  *
  * <h2>What is deliberately not looked at</h2>
  *
@@ -154,6 +155,7 @@ final class ShapesConflictAnalyzer {
                                         .add(
                                                 finding(
                                                         DUPLICATE_SHAPE_CODE,
+                                                        ShapesValidationFinding.Severity.WARNING,
                                                         message,
                                                         shape,
                                                         document,
@@ -388,6 +390,7 @@ final class ShapesConflictAnalyzer {
         var candidate =
                 finding(
                         code,
+                        ShapesValidationFinding.Severity.ERROR,
                         message,
                         constraint.path(),
                         constraint.document(),
@@ -402,10 +405,15 @@ final class ShapesConflictAnalyzer {
     }
 
     private static ShapesValidationFinding finding(
-            String code, String message, Node term, Document document, Node hint) {
+            String code,
+            ShapesValidationFinding.Severity severity,
+            String message,
+            Node term,
+            Document document,
+            Node hint) {
         var location = document.positions().get().locate(term, hint);
         return ShapesValidationFinding.builder()
-                .severity(ShapesValidationFinding.Severity.ERROR)
+                .severity(severity)
                 .source(ShapesValidationFinding.Source.CONFLICT)
                 .code(code)
                 .message(message)

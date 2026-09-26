@@ -30,7 +30,7 @@ import java.util.List;
  * whole has nowhere to point.
  */
 @Data
-@Builder
+@Builder(toBuilder = true)
 public class ShapesValidationFinding {
 
     /** How much the finding matters. Only {@link #ERROR} makes a document invalid. */
