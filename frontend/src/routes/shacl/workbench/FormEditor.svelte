@@ -287,6 +287,23 @@
         );
     }
 
+    // `shapes` and `sharedRules` are filtered copies, so a card writes back into the form's own list.
+    function replaceShape(next) {
+        const index = form.shapes.findIndex(shape => shape.iri === next.iri);
+        if (index >= 0) {
+            form.shapes[index] = next;
+        }
+    }
+
+    function replaceSharedRule(next) {
+        const index = form.propertyShapes.findIndex(
+            rule => rule.iri === next.iri,
+        );
+        if (index >= 0) {
+            form.propertyShapes[index] = next;
+        }
+    }
+
     /** Every IRI the document names a shape or rule with, which a new one must not reuse. */
     function takenIris() {
         return new Set(
@@ -497,9 +514,9 @@
             </div>
         {:else}
             <div class="flex flex-col gap-2">
-                {#each shapes as shape, index (shape.iri)}
+                {#each shapes as shape (shape.iri)}
                     <NodeShapeCard
-                        bind:shape={shapes[index]}
+                        bind:shape={() => shape, next => replaceShape(next)}
                         {terms}
                         {prefixes}
                         sharedRules={form.propertyShapes ?? []}
@@ -537,9 +554,11 @@
                 </div>
                 {#if showingSharedRules}
                     <div class="flex flex-col gap-2">
-                        {#each sharedRules as rule, index (rule.iri)}
+                        {#each sharedRules as rule (rule.iri)}
                             <PropertyShapeCard
-                                bind:property={sharedRules[index]}
+                                bind:property={
+                                    () => rule, next => replaceSharedRule(next)
+                                }
                                 {terms}
                                 {prefixes}
                                 {readOnly}
