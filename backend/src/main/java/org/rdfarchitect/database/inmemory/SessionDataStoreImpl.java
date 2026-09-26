@@ -34,6 +34,7 @@ import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.database.snapshots.ShapesDocumentGraphs;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
@@ -265,10 +266,39 @@ public class SessionDataStoreImpl implements SessionDataStore {
                                 .setGraphName(graphUri)
                                 .build();
                 databaseConnection.insertGraph(graphSource, datasetName);
+                writeShapesDocuments(databaseConnection, datasetName, graphUri, ctx);
             }
         } finally {
             lock.unlock();
         }
+    }
+
+    /**
+     * Replaces the graph's shapes documents in the database with the ones the context holds, in the
+     * layout {@link GraphWithContextCollection} reads back on fetch.
+     *
+     * <p>Replaced rather than added: an insert appends, so writing metadata twice would leave two
+     * names for one document, and a document deleted since the last write would come back.
+     */
+    private void writeShapesDocuments(
+            DatabaseConnection databaseConnection,
+            String datasetName,
+            String graphUri,
+            GraphContext ctx) {
+        for (var stored : listGraphNames(databaseConnection, datasetName)) {
+            if (ShapesDocumentGraphs.belongsTo(stored, graphUri)) {
+                databaseConnection.deleteGraph(datasetName, stored);
+            }
+        }
+        ShapesDocumentGraphs.of(graphUri, ctx.getShapesDocuments().values())
+                .forEach(
+                        (name, graph) ->
+                                databaseConnection.insertGraph(
+                                        new GraphSourceBuilderImpl()
+                                                .setGraph(graph)
+                                                .setGraphName(name)
+                                                .build(),
+                                        datasetName));
     }
 
     private void clearGraphCollections() {
@@ -320,17 +350,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
      * @return fetched {@link Graph}
      */
     private Dataset fetchDataset(DatabaseConnection databaseConnection, String datasetName) {
-        // build query
-        var graphVar = "?graph";
-        var graphQuery =
-                new SelectBuilder()
-                        .addVar(graphVar)
-                        .setDistinct(true)
-                        .addGraph(graphVar, "?s", "?p", "?o")
-                        .build();
-
-        // fetch data
-        var queryResultSet = databaseConnection.sendSelect(graphQuery, datasetName).asResultSet();
+        var graphNames = listGraphNames(databaseConnection, datasetName);
         var prefixMapping = databaseConnection.getPrefixMapping(datasetName);
 
         // insert prefixes
@@ -342,12 +362,29 @@ public class SessionDataStoreImpl implements SessionDataStore {
         var graph = fetchGraph(databaseConnection, datasetName, "default");
         dataset.setDefaultModel(ModelFactory.createModelForGraph(graph));
         // named
-        while (queryResultSet.hasNext()) {
-            var graphURI = queryResultSet.next().get(graphVar).asNode();
-            graph = fetchGraph(databaseConnection, datasetName, graphURI.getURI());
-            dataset.addNamedModel(graphURI.getURI(), ModelFactory.createModelForGraph(graph));
+        for (var graphUri : graphNames) {
+            graph = fetchGraph(databaseConnection, datasetName, graphUri);
+            dataset.addNamedModel(graphUri, ModelFactory.createModelForGraph(graph));
         }
         return dataset;
+    }
+
+    /** The names of the dataset's non-empty named graphs. */
+    private static List<String> listGraphNames(
+            DatabaseConnection databaseConnection, String datasetName) {
+        var graphVar = "?graph";
+        var graphQuery =
+                new SelectBuilder()
+                        .addVar(graphVar)
+                        .setDistinct(true)
+                        .addGraph(graphVar, "?s", "?p", "?o")
+                        .build();
+        var resultSet = databaseConnection.sendSelect(graphQuery, datasetName).asResultSet();
+        var names = new ArrayList<String>();
+        while (resultSet.hasNext()) {
+            names.add(resultSet.next().get(graphVar).asNode().getURI());
+        }
+        return names;
     }
 
     /**
