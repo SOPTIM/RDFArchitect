@@ -148,6 +148,18 @@ class GraphWithContextCollectionSnapshotTest {
         return model;
     }
 
+    /** The text a document holding {@link #namedShapeModel} would have been saved with. */
+    private static String shapeText(String localName) {
+        return """
+                @prefix sh: <%s> .
+                @prefix eq: <%s#> .
+
+                # the %s
+                eq:%s sh:targetClass eq:ACLineSegment .
+                """
+                .formatted(SHACL_NS, GRAPH_URI, localName, localName);
+    }
+
     @Test
     void everyDocumentInTheSnapshotIsRestoredWithItsMetadata() {
         var eqId = UUID.randomUUID();
@@ -161,7 +173,7 @@ class GraphWithContextCollectionSnapshotTest {
                 ShapesGraphNaming.encode(GRAPH_URI, tpId.toString()), namedShapeModel("TpShape"));
 
         var metadata = ShapesDocumentMetadata.emptyModel();
-        metadata.add(documentMetadata(eqId, "eq.ttl", "EQ.ttl", 1, true, "# eq source"));
+        metadata.add(documentMetadata(eqId, "eq.ttl", "EQ.ttl", 1, true, shapeText("EqShape")));
         metadata.add(documentMetadata(tpId, "tp.ttl", null, 2, false, null));
         dataset.addNamedModel(ShapesGraphNaming.encodeMetadata(GRAPH_URI), metadata);
 
@@ -179,7 +191,7 @@ class GraphWithContextCollectionSnapshotTest {
             assertThat(eq.getSourceFileName()).isEqualTo("EQ.ttl");
             assertThat(eq.getOrder()).isEqualTo(1);
             assertThat(eq.isEnabled()).isTrue();
-            assertThat(eq.getRawText()).isEqualTo("# eq source");
+            assertThat(eq.getRawText()).isEqualTo(shapeText("EqShape"));
             assertThat(eq.getGraph().isEmpty()).isFalse();
 
             var tp = documents.get(tpId);
@@ -255,7 +267,7 @@ class GraphWithContextCollectionSnapshotTest {
                 namedShapeModel("EqShape"));
         var metadata = ShapesDocumentMetadata.emptyModel();
         metadata.add(documentMetadata(emptyId, "empty.ttl", null, 1, true, null));
-        metadata.add(documentMetadata(shapesId, "eq.ttl", "EQ.ttl", 2, true, "# eq"));
+        metadata.add(documentMetadata(shapesId, "eq.ttl", "EQ.ttl", 2, true, shapeText("EqShape")));
         dataset.addNamedModel(ShapesGraphNaming.encodeMetadata(GRAPH_URI), metadata);
 
         var collection = new GraphWithContextCollection(dataset);
@@ -265,6 +277,46 @@ class GraphWithContextCollectionSnapshotTest {
             assertThat(documents).containsKeys(emptyId, shapesId);
             assertThat(documents.get(shapesId).getGraph().isEmpty()).isFalse();
             assertThat(documents.get(emptyId).getGraph().isEmpty()).isTrue();
+        }
+    }
+
+    @Test
+    void aDocumentWithRecordedTextGetsThePrefixesTheTextDeclares() {
+        // A snapshot keeps prefixes per dataset, so the stored shapes graph carries none of its
+        // own; without the text's, nothing could map a prefixed subject in the text to its shape.
+        var id = UUID.randomUUID();
+        var dataset = DatasetFactory.createGeneral();
+        dataset.addNamedModel(GRAPH_URI, schemaModel());
+        dataset.addNamedModel(
+                ShapesGraphNaming.encode(GRAPH_URI, id.toString()), namedShapeModel("EqShape"));
+        var metadata = ShapesDocumentMetadata.emptyModel();
+        metadata.add(documentMetadata(id, "eq.ttl", null, 1, true, shapeText("EqShape")));
+        dataset.addNamedModel(ShapesGraphNaming.encodeMetadata(GRAPH_URI), metadata);
+
+        var collection = new GraphWithContextCollection(dataset);
+
+        try (var ctx = collection.getGraphWithContext(GRAPH_URI).begin(ReadWrite.READ)) {
+            var graph = ctx.getShapesDocuments().get(id).getGraph();
+            assertThat(graph.getPrefixMapping().getNsPrefixURI("eq")).isEqualTo(GRAPH_URI + "#");
+            assertThat(graph.isIsomorphicWith(namedShapeModel("EqShape").getGraph())).isTrue();
+        }
+    }
+
+    @Test
+    void recordedTextThatNoLongerParsesKeepsTheStoredShapes() {
+        var id = UUID.randomUUID();
+        var dataset = DatasetFactory.createGeneral();
+        dataset.addNamedModel(GRAPH_URI, schemaModel());
+        dataset.addNamedModel(
+                ShapesGraphNaming.encode(GRAPH_URI, id.toString()), namedShapeModel("EqShape"));
+        var metadata = ShapesDocumentMetadata.emptyModel();
+        metadata.add(documentMetadata(id, "eq.ttl", null, 1, true, "eq:Broken sh:targetClass"));
+        dataset.addNamedModel(ShapesGraphNaming.encodeMetadata(GRAPH_URI), metadata);
+
+        var collection = new GraphWithContextCollection(dataset);
+
+        try (var ctx = collection.getGraphWithContext(GRAPH_URI).begin(ReadWrite.READ)) {
+            assertThat(ctx.getShapesDocuments().get(id).getGraph().isEmpty()).isFalse();
         }
     }
 

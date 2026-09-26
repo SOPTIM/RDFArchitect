@@ -26,6 +26,9 @@ import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFParser;
+import org.apache.jena.riot.RiotException;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -41,6 +44,7 @@ import org.rdfarchitect.database.snapshots.ShapesGraphNaming;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.RDFUtils;
+import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 
 import java.util.ArrayList;
@@ -188,8 +192,10 @@ public class GraphWithContextCollection {
      * graph used to live. Fields fall back where the metadata predates them, so such a snapshot
      * still loads.
      */
-    private static ShapesDocumentSeed seed(UUID documentId, Model metadata, Graph graph) {
+    private static ShapesDocumentSeed seed(UUID documentId, Model metadata, Graph stored) {
         var entry = ShapesDocumentMetadata.read(metadata, documentId);
+        var rawText = entry.map(ShapesDocumentMetadata.Entry::rawText).orElse(null);
+        var graph = rawText == null ? stored : parsedOrStored(rawText, stored);
         return new ShapesDocumentSeed(
                 documentId,
                 entry.map(ShapesDocumentMetadata.Entry::name)
@@ -199,8 +205,26 @@ public class GraphWithContextCollection {
                         .orElse(ShapesDocument.Origin.IMPORTED),
                 entry.map(ShapesDocumentMetadata.Entry::enabled).orElse(true),
                 entry.map(ShapesDocumentMetadata.Entry::order).orElse(0),
-                entry.map(ShapesDocumentMetadata.Entry::rawText).orElse(null),
+                rawText,
                 graph);
+    }
+
+    /**
+     * The shapes as the recorded text states them.
+     *
+     * <p>A snapshot keeps prefixes per dataset, so a stored shapes graph comes back with none of
+     * its own, and a store hands blank nodes back relabelled. Everything that maps the text to its
+     * shapes — line numbers, prefixed names on export — needs the text's own prefixes, and the text
+     * is authoritative anyway. Text that no longer parses keeps the stored triples.
+     */
+    private static Graph parsedOrStored(String rawText, Graph stored) {
+        try {
+            var parsed = GraphFactory.createDefaultGraph();
+            RDFParser.fromString(rawText, Lang.TURTLE).parse(parsed);
+            return GraphUtils.normalizeBlankNodes(parsed);
+        } catch (RiotException _) {
+            return stored;
+        }
     }
 
     private static Model metadataOf(Dataset dataset, String ownerGraphUri) {
