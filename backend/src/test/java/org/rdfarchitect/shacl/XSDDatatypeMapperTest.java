@@ -38,7 +38,8 @@ class XSDDatatypeMapperTest {
         "MonthDay, gMonthDay",
         "URI, anyURI",
         "IRI, anyURI",
-        "StringIRI, anyURI"
+        "StringIRI, anyURI",
+        "StringFixedLanguage, string"
     })
     void mapsCimPrimitivesToTheXsdDatatypeTheOfficialConstraintsUse(String label, String local) {
         var datatype = XSDDatatypeMapper.classLabelToDatatype(label);

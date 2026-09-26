@@ -39,7 +39,8 @@ public class XSDDatatypeMapper {
                     "MonthDay", "gMonthDay",
                     "URI", "anyURI",
                     "IRI", "anyURI",
-                    "StringIRI", "anyURI");
+                    "StringIRI", "anyURI",
+                    "StringFixedLanguage", "string");
 
     public RDFDatatype classLabelToDatatype(String primitiveDatatypeClassLabel) {
         var localName =
