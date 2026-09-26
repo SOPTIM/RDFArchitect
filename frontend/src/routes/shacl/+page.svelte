@@ -20,6 +20,7 @@
         faFileShield,
         faFloppyDisk,
     } from "@fortawesome/free-solid-svg-icons";
+    import { untrack } from "svelte";
     import { Fa } from "svelte-fa";
     import { Pane, Splitpanes } from "svelte-splitpanes";
 
@@ -28,10 +29,12 @@
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { guardUnsavedChanges } from "$lib/eventhandling/unsavedChanges.js";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
     import { onOpenClass } from "$lib/monaco/turtleLanguageFeatures.js";
     import { ConformanceView } from "$lib/shacl/conformanceState.svelte.js";
     import { ShapesFormView } from "$lib/shacl/formState.svelte.js";
+    import { newDocumentText } from "$lib/shacl/newDocument.js";
     import { SchemaTermSource } from "$lib/shacl/schemaTermSource.svelte.js";
     import { parsePrefixes } from "$lib/shacl/turtleTerms.js";
     import {
@@ -46,7 +49,8 @@
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
-    import { graphLabelOf } from "$lib/utils/graph-label.js";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
+    import { graphLabelOf, graphUri as uriOf } from "$lib/utils/graph-label.js";
     import { uriSuffix } from "$lib/utils/iri.js";
 
     import ConformanceReportView from "./workbench/ConformanceReportView.svelte";
@@ -54,6 +58,7 @@
     import DocumentList from "./workbench/DocumentList.svelte";
     import FormEditor from "./workbench/FormEditor.svelte";
     import ProblemsPanel from "./workbench/ProblemsPanel.svelte";
+    import SchemaPicker from "./workbench/SchemaPicker.svelte";
 
     import { beforeNavigate, goto } from "$app/navigation";
     import { page } from "$app/state";
@@ -85,6 +90,19 @@
      * below lets it through instead of asking the same question twice.
      */
     let leaveConfirmed = false;
+
+    /**
+     * Set when the workbench itself fires the app-wide reload after a save, so the workbench does
+     * not answer its own signal by reading everything it has just written back in.
+     */
+    let reloadIsOurs = false;
+
+    /**
+     * Follows changes made elsewhere in the app: an undo or redo, an import from the File menu,
+     * editing enabled or disabled. All of them fire the app-wide reload; the first run is only the
+     * subscription, which the load above already covers.
+     */
+    let reloadSubscribed = false;
 
     let selectedWorkspace = $derived(editorState.selectedWorkspace.getValue());
     let selectedGraph = $derived(editorState.selectedGraph.getValue());
@@ -177,10 +195,34 @@
         }
     });
 
+    // The cleanup holds on to the workbench it started: read at cleanup time, `workbench` is
+    // already the next one.
     $effect(() => {
-        workbench?.load();
-        return () => workbench?.cancelPendingValidation();
+        const current = workbench;
+        if (!current) {
+            return;
+        }
+        current.load();
+        current.watchReadOnly();
+        return () => current.dispose();
     });
+    $effect(() => {
+        forceReloadTrigger.subscribe();
+        untrack(() => {
+            const ours = reloadIsOurs;
+            reloadIsOurs = false;
+            if (!reloadSubscribed) {
+                reloadSubscribed = true;
+                return;
+            }
+            if (!ours && workbench && !workbench.loading) {
+                workbench.reload();
+            }
+        });
+    });
+
+    // Everything that replaces what this page shows without navigating asks here first.
+    $effect(() => guardUnsavedChanges(confirmDiscard));
 
     /**
      * Opens the document a link asked for, once the workbench has finished loading.
@@ -215,7 +257,12 @@
      * component only knows it was asked to follow something.
      */
     $effect(() => {
-        onOpenClass((graphUri, classUUID, packageUUID) => {
+        onOpenClass(async (graphUri, classUUID, packageUUID) => {
+            // Asked before the selection moves: once it has, the workbench is rebuilt for the new
+            // schema and the edits are gone before any navigation guard could see them.
+            if (!(await confirmDiscard())) {
+                return;
+            }
             editorState.selectPackage(
                 selectedWorkspace,
                 graphUri,
@@ -237,6 +284,25 @@
         return () => onOpenClass(null);
     });
 
+    /** Ctrl+S saves wherever the focus is on this page, not only inside the editor. */
+    function onKeydown(event) {
+        const key = event.key?.toLowerCase();
+        if (
+            key !== "s" ||
+            !(event.ctrlKey || event.metaKey) ||
+            event.altKey ||
+            event.shiftKey ||
+            event.defaultPrevented
+        ) {
+            return;
+        }
+        // The browser's own Save-page dialog would otherwise open over the workbench.
+        event.preventDefault();
+        if (workbench && !showUnsavedDialog) {
+            save();
+        }
+    }
+
     /** Saves the open document. Returns whether it was written, which the switch dialog needs. */
     async function save() {
         // A field typed in and saved straight away — with Ctrl+S, or by clicking Save — still has
@@ -246,9 +312,13 @@
         const { saved, reason } = await workbench.save();
         if (saved) {
             // A save moves the schema graph's version, so the terms and hovers cached against the
-            // old one are describing a schema that no longer exists.
+            // old one are describing a schema that no longer exists — and so does a comparison.
             termSource?.invalidate();
             termSource?.load();
+            conformance?.forget();
+            // The save is also a step the menu bar can undo; it only rereads that on a reload.
+            reloadIsOurs = true;
+            forceReloadTrigger.trigger();
             toastStore.success("Constraints saved");
             return true;
         }
@@ -281,6 +351,51 @@
         });
     }
 
+    /**
+     * `confirmSwitch` for anything that replaces the buffer from outside: a discarded answer
+     * reverts it, so what follows — a reload after an undo, say — is free to replace it.
+     */
+    async function confirmDiscard() {
+        const agreed = await confirmSwitch();
+        if (agreed) {
+            workbench?.revert();
+        }
+        return agreed;
+    }
+
+    /** What a new document starts with: the prefixes its schema is written in. */
+    async function seedText() {
+        const [namespaces, graphs] = await Promise.all([
+            workspaceStore.getNamespaces(selectedWorkspace),
+            graphStore.getGraphs(selectedWorkspace),
+        ]);
+        return newDocumentText({
+            graphUri: selectedGraph,
+            namespaces,
+            keyword: (graphs ?? []).find(
+                graph => uriOf(graph) === selectedGraph,
+            )?.keyword,
+        });
+    }
+
+    /**
+     * Takes the form's rewrite of the buffer — unless the buffer moved on while the form was
+     * working. The rewrite is of the text it was given, and applied over a newer one it would
+     * silently undo whatever was typed since. Returns false then, which has the form read the
+     * buffer again.
+     */
+    function applyFormText(next, base) {
+        if (base !== undefined && base !== workbench.text) {
+            toastStore.info(
+                "Form edit discarded",
+                "The text changed while the form was applying the edit. Make it again if it is still wanted.",
+            );
+            return false;
+        }
+        workbench.text = next;
+        return true;
+    }
+
     function answerSwitch(answer) {
         const resolve = pendingSwitch;
         pendingSwitch = null;
@@ -296,6 +411,8 @@
         }
         view = "ttl";
         if (target.line) {
+            // Held by the editor until it exists and holds the document, so a link followed on
+            // the first load, while Monaco is still arriving, still lands on its line.
             reveal(target.line);
         }
         goto(WORKBENCH_PATH, { replaceState: true, noScroll: true });
@@ -307,6 +424,20 @@
 
     function reveal(line, column = 1) {
         editor?.reveal(line, column);
+    }
+
+    /**
+     * Shows a line in whichever view can show it: the form when that is where the reader is, and
+     * otherwise the Turtle — a click in the outline or the problems panel from the schema check
+     * would move a cursor nobody can see.
+     */
+    function showLine(line, column = 1) {
+        reveal(line, column);
+        if (view === "form" && formView) {
+            formView.focusLine = line;
+        } else {
+            view = "ttl";
+        }
     }
 
     /**
@@ -354,12 +485,7 @@
             await workbench.select(problem.documentId);
         }
         if (problem.line) {
-            reveal(problem.line, problem.column ?? 1);
-            // The form is the view the reader is in; sending them to a line of Turtle they cannot
-            // see would be answering a question they did not ask.
-            if (view === "form" && formView) {
-                formView.focusLine = problem.line;
-            }
+            showLine(problem.line, problem.column ?? 1);
         }
     }
 
@@ -408,6 +534,8 @@
   one applies and none overrides another, so the list is about participation and reading order.
 -->
 
+<svelte:window onkeydown={onKeydown} />
+
 <div class="bg-window-background flex h-full min-h-0 flex-col">
     {#if !workbench}
         <div class="flex h-full items-center justify-center p-6">
@@ -415,7 +543,9 @@
                 icon={faFileShield}
                 title="No schema selected"
                 description="Pick a workspace and a schema to edit its constraints."
-            />
+            >
+                <SchemaPicker />
+            </EmptyStateCard>
         </div>
     {:else}
         <div
@@ -469,7 +599,11 @@
         <div class="flex min-h-0 flex-1 flex-col">
             <Splitpanes theme="opencgmes-theme" class="flex min-h-0 flex-1">
                 <Pane size={20} minSize={12} maxSize={35}>
-                    <DocumentList {workbench} onbeforeswitch={confirmSwitch} />
+                    <DocumentList
+                        {workbench}
+                        onbeforeswitch={confirmSwitch}
+                        newDocumentText={seedText}
+                    />
                 </Pane>
                 <Pane size={57} minSize={30}>
                     {#if workbench.loading}
@@ -490,17 +624,25 @@
                             <div
                                 class="border-border flex h-9 shrink-0 items-center gap-2 border-b px-2"
                             >
-                                {#each views as option (option.id)}
-                                    <button
-                                        class="cursor-pointer rounded px-3 py-1 text-sm {view ===
-                                        option.id
-                                            ? 'bg-background-select text-nav-active-text font-semibold'
-                                            : 'text-text-subtle hover:text-default-text'}"
-                                        onclick={() => (view = option.id)}
-                                    >
-                                        {option.label}
-                                    </button>
-                                {/each}
+                                <div
+                                    class="flex items-center gap-2"
+                                    role="tablist"
+                                    aria-label="View of the document"
+                                >
+                                    {#each views as option (option.id)}
+                                        <button
+                                            class="cursor-pointer rounded px-3 py-1 text-sm {view ===
+                                            option.id
+                                                ? 'bg-background-select text-nav-active-text font-semibold'
+                                                : 'text-text-subtle hover:text-default-text'}"
+                                            role="tab"
+                                            aria-selected={view === option.id}
+                                            onclick={() => (view = option.id)}
+                                        >
+                                            {option.label}
+                                        </button>
+                                    {/each}
+                                </div>
                                 {#if view === "form" && formView?.applying}
                                     <span class="text-text-subtle text-xs">
                                         applying…
@@ -526,6 +668,7 @@
                                     <TurtleEditor
                                         bind:this={editor}
                                         bind:value={workbench.text}
+                                        documentKey={workbench.bufferKey}
                                         findings={workbench.findings}
                                         {termSource}
                                         readOnly={workbench.editorReadOnly}
@@ -537,11 +680,11 @@
                                 {#if view === "form" && formView}
                                     <FormEditor
                                         form={formView}
+                                        documentId={workbench.selectedId}
                                         turtle={workbench.text}
                                         terms={termSource?.terms ?? []}
                                         readOnly={workbench.readOnly}
-                                        onturtle={next =>
-                                            (workbench.text = next)}
+                                        onturtle={applyFormText}
                                         onvalidate={onTextChanged}
                                         onreveal={showInTurtle}
                                     />
@@ -549,6 +692,7 @@
                                     <ConformanceReportView
                                         {conformance}
                                         documentId={workbench.selectedId}
+                                        dirty={workbench.dirty}
                                         prefixes={parsePrefixes(workbench.text)}
                                         onopen={openDocument}
                                     />
@@ -558,7 +702,7 @@
                     {/if}
                 </Pane>
                 <Pane size={23} minSize={15} maxSize={40}>
-                    <DocumentInspector {workbench} onreveal={reveal} />
+                    <DocumentInspector {workbench} onreveal={showLine} />
                 </Pane>
             </Splitpanes>
 

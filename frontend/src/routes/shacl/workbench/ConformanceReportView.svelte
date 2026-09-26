@@ -49,6 +49,8 @@
     let {
         conformance,
         documentId = null,
+        /** Whether the open document has unsaved edits, which the comparison cannot see. */
+        dirty = false,
         prefixes = {},
         onopen = undefined,
     } = $props();
@@ -172,6 +174,19 @@
     </div>
 
     <div class="min-h-0 flex-1 overflow-y-auto p-3">
+        {#if dirty}
+            <!--
+              The comparison reads what is stored, so with unsaved edits it answers for a version
+              of the document that is not the one on screen.
+            -->
+            <p
+                class="border-orange text-default-text mb-3 rounded border bg-transparent p-2 text-sm"
+                role="note"
+            >
+                Compared against the saved version — your unsaved changes are
+                not included. Save to compare them.
+            </p>
+        {/if}
         {#if conformance.running}
             <div class="flex h-full items-center justify-center">
                 <LoadingSpinner />

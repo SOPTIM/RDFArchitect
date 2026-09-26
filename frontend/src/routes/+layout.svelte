@@ -33,6 +33,7 @@
     import { ownsKeyboardInput } from "$lib/eventhandling/keyboardTargets.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { confirmUnsavedChanges } from "$lib/eventhandling/unsavedChanges.js";
     import { versionControlStore } from "$lib/stores/versionControlStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
@@ -138,7 +139,12 @@
         forceReloadTrigger.trigger();
     }
 
-    function navigateHome() {
+    // Asked before the reset: once the selection is cleared, a page built from it has already
+    // dropped whatever was unsaved on it.
+    async function navigateHome() {
+        if (!(await confirmUnsavedChanges())) {
+            return;
+        }
         editorState.reset();
         goto("/mainpage");
     }
@@ -154,6 +160,11 @@
         if (!isRedo && !canUndo) return;
 
         await eventStack.guardAction(async () => {
+            // An undo rewrites the schema under whatever page is open; the page gets to keep its
+            // unsaved work first, and reloads from the result afterwards.
+            if (!(await confirmUnsavedChanges())) {
+                return;
+            }
             const { error } = isRedo
                 ? await versionControlStore.redo()
                 : await versionControlStore.undo();

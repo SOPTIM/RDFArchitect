@@ -814,6 +814,18 @@ describe("reloading after the schema changed elsewhere", () => {
         expect(workbench.dirty).toBe(true);
     });
 
+    test("re-reads a buffer whose edits were discarded first", async () => {
+        await workbench.load();
+        workbench.text = `${SHAPES}# typed, then discarded\n`;
+        server.texts[EQ] = `${SHAPES}# changed by an undo\n`;
+
+        workbench.revert();
+        await workbench.reload();
+
+        expect(workbench.text).toBe(server.texts[EQ]);
+        expect(workbench.dirty).toBe(false);
+    });
+
     test("keeps the editor's history when nothing changed", async () => {
         await workbench.load();
         const opened = workbench.bufferKey;

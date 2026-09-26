@@ -367,6 +367,13 @@ export class ShapesWorkbench {
         this.#textReady = true;
     }
 
+    /** Throws the unsaved edits away, as an undoable edit back to what was last saved. */
+    revert() {
+        if (this.dirty) {
+            this.text = this.savedText;
+        }
+    }
+
     /** The stored text of any of the graph's documents, or null when it could not be read. */
     async textOf(documentId) {
         return this.#readText(documentId);
