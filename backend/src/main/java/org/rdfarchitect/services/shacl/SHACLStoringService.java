@@ -397,6 +397,10 @@ public class SHACLStoringService
      *
      * <p>Enabled state is ignored: a document is included because the user ticked it. Switching one
      * off takes it out of validation, not out of the user's reach.
+     *
+     * <p>A single document asked for as Turtle, on its own, is handed back as the text it holds —
+     * an imported file comes back byte for byte, comments and ordering included, instead of as a
+     * re-serialisation of its triples.
      */
     @Override
     public ByteArrayOutputStream exportSelectedSHACLGraph(
@@ -405,7 +409,17 @@ public class SHACLStoringService
             Collection<UUID> documentIds,
             boolean includeGenerated) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var selected = readShapesOf(ctx, documentIds);
+            var ids = Set.copyOf(documentIds == null ? List.<UUID>of() : documentIds);
+            ids.forEach(id -> requireDocument(ctx, id));
+            if (ids.size() == 1 && !includeGenerated && Lang.TURTLE.equals(format.getLang())) {
+                var rawText = requireDocument(ctx, ids.iterator().next()).getRawText();
+                if (rawText != null) {
+                    var out = new ByteArrayOutputStream();
+                    out.writeBytes(rawText.getBytes(StandardCharsets.UTF_8));
+                    return out;
+                }
+            }
+            var selected = readShapesOf(ctx, ids);
             var model = selected;
             if (includeGenerated) {
                 var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
@@ -430,15 +444,12 @@ public class SHACLStoringService
     /**
      * The named documents merged, in the graph's own order.
      *
-     * <p>Enabled state is ignored on purpose — see {@code exportSelectedSHACLGraph}. An id that
-     * names no document is skipped rather than refused, so a stale selection still exports what
-     * remains.
+     * <p>Enabled state is ignored on purpose — see {@code exportSelectedSHACLGraph}.
      */
-    private static Model readShapesOf(GraphContext ctx, Collection<UUID> documentIds) {
-        var wanted = Set.copyOf(documentIds == null ? List.<UUID>of() : documentIds);
+    private static Model readShapesOf(GraphContext ctx, Set<UUID> documentIds) {
         var union = ModelFactory.createDefaultModel();
         ctx.getShapesDocuments().values().stream()
-                .filter(document -> wanted.contains(document.getId()))
+                .filter(document -> documentIds.contains(document.getId()))
                 .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
                 .forEach(document -> addWithPrefixes(union, document));
         return union;
@@ -498,11 +509,18 @@ public class SHACLStoringService
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Deprecated: answers with the default document alone, because that is the one {@link
+     * #replaceCustomSHACLGraph} writes. Answering with every enabled document made a read, edit and
+     * write back copy the other documents' shapes into the default one.
+     */
     @Override
     public ByteArrayOutputStream exportCustomSHACLGraph(
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = readEnabledShapes(ctx);
+            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
             try (var outStream = new ByteArrayOutputStream()) {
                 customSHACL.write(outStream, format.getLang().getName());
                 return outStream;
@@ -637,12 +655,7 @@ public class SHACLStoringService
      * them, so an inlined property shape is attributed as reliably as a named one.
      */
     private static void attributeToDocuments(SHACLToClassRelations relations, GraphContext ctx) {
-        var byId = new LinkedHashMap<String, List<ShapeOrigin>>();
-        ctx.getShapesDocuments().values().stream()
-                .filter(ShapesDocument::isEnabled)
-                .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
-                .forEach(document -> indexSubjects(byId, document));
-
+        var byId = originsById(ctx);
         for (NodeShape shape : orEmpty(relations.getNodeShapes())) {
             shape.setOrigins(byId.getOrDefault(shape.getId(), List.of()));
         }
@@ -652,6 +665,16 @@ public class SHACLStoringService
                 shape.setOrigins(byId.getOrDefault(shape.getId(), List.of()));
             }
         }
+    }
+
+    /** Where every subject of the enabled documents is stated, by shape id. */
+    private static Map<String, List<ShapeOrigin>> originsById(GraphContext ctx) {
+        var byId = new LinkedHashMap<String, List<ShapeOrigin>>();
+        ctx.getShapesDocuments().values().stream()
+                .filter(ShapesDocument::isEnabled)
+                .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
+                .forEach(document -> indexSubjects(byId, document));
+        return byId;
     }
 
     /**
@@ -796,6 +819,9 @@ public class SHACLStoringService
 
             List<PropertyShape> customPropertyShapes =
                     getCustomPropertyShapesOfProperty(ontologyModel, customSHACL, propertyUUID);
+            var origins = originsById(ctx);
+            customPropertyShapes.forEach(
+                    shape -> shape.setOrigins(origins.getOrDefault(shape.getId(), List.of())));
             var generatedPropertyShapes =
                     new SHACLShapesFetcher(generatedShacl)
                             .getPropertyShapesOfProperty(ontologyModel, property.getURI());
@@ -875,6 +901,12 @@ public class SHACLStoringService
             var deleteModel = ModelFactory.createDefaultModel();
             copySHACLShapeToNewModel(
                     customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
+            if (deleteModel.isEmpty()) {
+                throw new ResourceNotFoundException(
+                        "The graph's default constraints document has no shape "
+                                + shaclShapeURI
+                                + ". Shapes in other documents are edited in those documents.");
+            }
             customSHACL.remove(deleteModel);
             recordDefaultDocumentText(ctx);
             ctx.commit("Delete SHACL shape");

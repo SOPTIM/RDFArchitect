@@ -291,18 +291,18 @@ class SHACLDocumentServiceTest {
     }
 
     @Test
-    void anIdThatNamesNoDocumentIsSkippedSoAStaleSelectionStillWorks() {
+    void anIdThatNamesNoDocumentIsNotFoundRatherThanSilentlyLeftOut() {
+        // An export missing a file the user ticked looks complete; saying so is the only warning.
         var eq = service.createShapesDocument(GRAPH, "eq.ttl", null, TURTLE, Lang.TURTLE);
 
-        var exported =
-                service.exportSelectedSHACLGraph(
-                                GRAPH,
-                                RDFFormat.TURTLE,
-                                List.of(eq.getId(), UUID.randomUUID()),
-                                false)
-                        .toString(StandardCharsets.UTF_8);
-
-        assertThat(exported).contains("ACLineSegmentShape");
+        assertThatExceptionOfType(ResourceNotFoundException.class)
+                .isThrownBy(
+                        () ->
+                                service.exportSelectedSHACLGraph(
+                                        GRAPH,
+                                        RDFFormat.TURTLE,
+                                        List.of(eq.getId(), UUID.randomUUID()),
+                                        false));
     }
 
     @Test

@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.riot.RDFFormat;
+import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,6 +56,7 @@ class SHACLStoringServiceDocumentsTest {
         context = new GraphWithContextTransactional(GraphFactory.createDefaultGraph());
         var databasePort = mock(DatabasePort.class);
         when(databasePort.getGraphWithContext(any(GraphIdentifier.class))).thenReturn(context);
+        when(databasePort.getPrefixMapping(any())).thenReturn(PrefixMapping.Factory.create());
         service = new SHACLStoringService(databasePort);
     }
 
@@ -72,8 +74,9 @@ class SHACLStoringServiceDocumentsTest {
         }
     }
 
+    /** Every enabled document, as the combined export reads them. */
     private String exportedCustomShapes() {
-        return service.exportCustomSHACLGraph(GRAPH_IDENTIFIER, RDFFormat.TURTLE)
+        return service.exportCombinedSHACLGraph(GRAPH_IDENTIFIER, RDFFormat.TURTLE)
                 .toString(StandardCharsets.UTF_8);
     }
 
@@ -124,5 +127,21 @@ class SHACLStoringServiceDocumentsTest {
     void graphWithoutAnyImportedDocumentExportsNoShapes() {
         // Only the default document exists, and it is empty.
         assertThat(exportedCustomShapes()).doesNotContain("targetClass");
+    }
+
+    @Test
+    void theDeprecatedCustomExportReadsBackWhatItsReplaceWrites() {
+        // PUT /shacl/custom replaces the default document alone. Answering the GET with every
+        // enabled document made read, edit, write back copy the other documents into it.
+        givenDocument("eq.ttl", "EqShape targetClass ACLineSegment", true);
+        var mine = GraphFactory.createDefaultGraph();
+        mine.add(TestRDFUtils.triple("MineShape targetClass Terminal"));
+        service.replaceCustomSHACLGraph(GRAPH_IDENTIFIER, mine);
+
+        var exported =
+                service.exportCustomSHACLGraph(GRAPH_IDENTIFIER, RDFFormat.TURTLE)
+                        .toString(StandardCharsets.UTF_8);
+
+        assertThat(exported).contains("MineShape").doesNotContain("EqShape");
     }
 }

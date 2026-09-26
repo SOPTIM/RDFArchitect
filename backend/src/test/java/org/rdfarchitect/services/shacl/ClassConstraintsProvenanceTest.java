@@ -182,6 +182,22 @@ class ClassConstraintsProvenanceTest {
         assertThat(byDocument).containsExactlyInAnyOrder("simple.ttl", "mine.ttl");
     }
 
+    @Test
+    void aPropertysOwnShapesNameTheirDocumentToo() {
+        // What the attribute and association dialogs read; they deep-link into the workbench.
+        var property = uuidOf(DIAGRAM + ".x1InitialView");
+
+        var shapes = service.getPropertyShapesForAttribute(GRAPH, property).getCustom();
+
+        assertThat(shapes).isNotEmpty();
+        assertThat(shapes)
+                .allSatisfy(
+                        shape ->
+                                assertThat(shape.getOrigins())
+                                        .extracting(ShapeOrigin::getDocumentName)
+                                        .containsExactly("simple.ttl"));
+    }
+
     private SHACLToClassRelations custom() {
         return service.getSHACLToClassRelations(GRAPH, diagramUUID).getCustom();
     }
