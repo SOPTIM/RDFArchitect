@@ -20,16 +20,13 @@
      * A field that holds a list rather than one value: `sh:in`, `sh:ignoredProperties`.
      *
      * Two shapes of list, one editor. `sh:ignoredProperties` holds terms and nothing else, so its
-     * rows are term pickers. `sh:in` holds terms *or* plain strings — an enumeration of classes in
-     * one profile, a list of literals in the next — so its rows are text, and a value that reads as
-     * a term is written as one. That is the writer's own rule, deliberately: the box shows what
+     * rows only take terms. `sh:in` holds terms *or* plain strings — an enumeration's values in one
+     * profile, a list of literals in the next — so its rows offer the schema's terms and take
+     * anything else as a string. That is the writer's own rule, deliberately: the box shows what
      * will end up in the document.
      */
     import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
-
-    import TextEditControl from "$lib/components/TextEditControl.svelte";
-    import { abbreviate, resolveTerm } from "$lib/shacl/turtleTerms.js";
 
     import TermPicker from "./TermPicker.svelte";
 
@@ -38,9 +35,14 @@
         values = [],
         /** "term" for a list of IRIs, "value" for one that may hold plain strings too. */
         mode = "term",
+        /** The kind of term each row offers, or a list of kinds. */
         kind = "PROPERTY",
         terms = [],
         prefixes = {},
+        /** Which terms each row offers first. */
+        prefer = null,
+        /** Said under a row holding a plain string. */
+        note = null,
         disabled = false,
         onchange = () => {},
     } = $props();
@@ -65,7 +67,7 @@
         if (index >= values.length) {
             blanks = Math.max(0, blanks - 1);
             if (written !== "") {
-                onchange([...values, resolved(written)]);
+                onchange([...values, written]);
             }
             return;
         }
@@ -73,7 +75,7 @@
         if (written === "") {
             next.splice(index, 1);
         } else {
-            next[index] = resolved(written);
+            next[index] = written;
         }
         onchange(next);
     }
@@ -87,54 +89,29 @@
         next.splice(index, 1);
         onchange(next);
     }
-
-    /**
-     * What was typed, as the value the document will hold.
-     *
-     * A prefixed name is resolved so that reading a value and leaving the box alone gives back the
-     * same value — the box shows `cim:Kind.a`, and without this, blurring it would turn the IRI
-     * into the plain string "cim:Kind.a".
-     */
-    function resolved(typed) {
-        return mode === "term"
-            ? typed
-            : (resolveTerm(typed, prefixes) ?? typed);
-    }
-
-    /** A term is shown through the document's prefixes; a plain string is shown as it is. */
-    function shown(value) {
-        return value?.startsWith("http") || value?.startsWith("urn:")
-            ? abbreviate(value, prefixes)
-            : (value ?? "");
-    }
 </script>
 
 <div>
     <span class="text-default-text text-sm">{label}</span>
     <div class="mt-1 space-y-1">
         {#each rows as value, index (index)}
-            <div class="flex items-end gap-1">
+            <div class="flex items-start gap-1">
                 <div class="min-w-0 flex-1">
-                    {#if mode === "term"}
-                        <TermPicker
-                            {kind}
-                            {terms}
-                            {prefixes}
-                            {disabled}
-                            value={value || null}
-                            onpick={picked => set(index, picked)}
-                        />
-                    {:else}
-                        <TextEditControl
-                            value={shown(value)}
-                            readonly={disabled}
-                            callOnChange={text => set(index, text)}
-                        />
-                    {/if}
+                    <TermPicker
+                        {kind}
+                        {terms}
+                        {prefixes}
+                        {disabled}
+                        {prefer}
+                        {note}
+                        literals={mode === "value"}
+                        value={value || null}
+                        onpick={picked => set(index, picked)}
+                    />
                 </div>
                 {#if !disabled}
                     <button
-                        class="text-text-subtle hover:text-red mb-1 shrink-0 cursor-pointer p-1 text-xs"
+                        class="text-text-subtle hover:text-red mt-1 shrink-0 cursor-pointer p-1 text-xs"
                         title="Remove this value"
                         aria-label="Remove this value"
                         onclick={() => remove(index)}

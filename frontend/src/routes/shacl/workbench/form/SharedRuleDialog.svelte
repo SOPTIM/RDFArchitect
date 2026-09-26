@@ -47,8 +47,12 @@
          */
         shapeIri = null,
         prefixes = {},
-        /** Called with the name for the copy, to split. */
-        onsplit = () => {},
+        /**
+         * Called with the name for the copy, to split. Resolves to why the copy was refused, or
+         * to nothing once it is made — a name the document already uses is refused, and the
+         * dialog stays open for another one rather than dropping what was typed.
+         */
+        onsplit = async () => null,
         /** Called to change the rule where it stands, for every shape using it. */
         onall = () => {},
         /** Called when neither was chosen, so the typed change can be put back. */
@@ -56,6 +60,9 @@
     } = $props();
 
     let newIri = $state("");
+    /** Why the last name for a copy was refused. */
+    let refusal = $state(null);
+    let splitting = $state(false);
     /** Whether a choice was made, so closing the dialog any other way counts as a cancel. */
     let decided = false;
 
@@ -73,13 +80,14 @@
      *
      * `ex:ACLineSegmentShape` + `ex:NameCardinality` reads as `ex:ACLineSegmentNameCardinality`,
      * which says both what it constrains and what it came from. The trailing "Shape" is dropped so
-     * the copy does not end up called `…ShapeNameCardinality`.
+     * the copy does not end up called `…ShapeNameCardinality`. Offered the way the document writes
+     * names — the server expands a prefixed name — so it can be read and corrected.
      */
     function suggest() {
         const namespace = localPart(rule?.iri ?? "").namespace;
         const owner = localPart(shapeIri ?? "").local.replace(/Shape$/, "");
         const original = localPart(rule?.iri ?? "").local;
-        return `${namespace}${owner}${original}`;
+        return abbreviate(`${namespace}${owner}${original}`, prefixes);
     }
 
     function localPart(iri) {
@@ -91,16 +99,39 @@
 
     function open() {
         decided = false;
+        refusal = null;
+        splitting = false;
         newIri = splittable ? suggest() : "";
     }
 
-    function split() {
-        decided = true;
-        onsplit(newIri.trim());
+    /** The name as typed, without the angle brackets someone pasting an IRI may bring along. */
+    function typedName() {
+        const typed = newIri.trim();
+        return typed.startsWith("<") && typed.endsWith(">")
+            ? typed.slice(1, -1)
+            : typed;
+    }
+
+    async function split() {
+        if (splitting) {
+            return;
+        }
+        splitting = true;
+        refusal = null;
+        try {
+            refusal = (await onsplit(typedName())) ?? null;
+        } finally {
+            splitting = false;
+        }
+        if (refusal === null) {
+            decided = true;
+            showDialog = false;
+        }
     }
 
     function all() {
         decided = true;
+        showDialog = false;
         onall();
     }
 
@@ -120,7 +151,9 @@
         ? "Give this shape its own copy"
         : `Change it for all ${shares} shapes`}
     onPrimary={splittable ? split : all}
-    disablePrimary={splittable && newIri.trim() === ""}
+    closeOnPrimary={false}
+    disablePrimary={splitting || (splittable && newIri.trim() === "")}
+    disableSecondary={splitting}
     secondaryLabel={splittable ? `Change it for all ${shares} shapes` : null}
     onSecondary={all}
     onOpen={open}
@@ -149,11 +182,20 @@
         {/if}
 
         {#if splittable}
-            <TextEditControl
-                label="Name for this shape's own copy"
-                bind:value={newIri}
-                placeholder="a name the document does not use yet"
-            />
+            <div>
+                <TextEditControl
+                    label="Name for this shape's own copy"
+                    bind:value={newIri}
+                    warn={refusal !== null}
+                    placeholder="a name the document does not use yet"
+                    callOnInput={() => (refusal = null)}
+                />
+                {#if refusal}
+                    <p class="text-red-text mt-1 text-xs" role="alert">
+                        {refusal}
+                    </p>
+                {/if}
+            </div>
             <p class="text-text-subtle text-xs">
                 The copy is taken from the rule as the document writes it, so it
                 starts out saying exactly the same thing. Only

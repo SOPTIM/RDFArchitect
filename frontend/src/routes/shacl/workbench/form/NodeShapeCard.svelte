@@ -49,13 +49,15 @@
     import ValueListEditor from "./ValueListEditor.svelte";
 
     let {
-        shape,
+        shape = $bindable(),
         terms = [],
         prefixes = {},
         /** The rules the document writes as shapes of their own, to reference one of them. */
         sharedRules = [],
         readOnly = false,
         expanded = false,
+        /** Why the server refused a change, by what it was made to: `shape:<iri>`, `rule:<iri>`. */
+        failureOf = () => null,
         ontoggle = () => {},
         onchange = () => {},
         /** A field still being typed in: the same edit, to be sent once typing pauses. */
@@ -120,6 +122,14 @@
         { value: "http://www.w3.org/ns/shacl#Info", label: "Info" },
     ];
 
+    const severityId = crypto.randomUUID();
+
+    /**
+     * A key for each draft, and each rule not yet read back, that stays with it — so dropping one
+     * does not hand its typed-in state to the card after it.
+     */
+    const newKeys = new WeakMap();
+
     /**
      * Rules added here but not yet written to the document, because they name no property.
      *
@@ -128,9 +138,7 @@
      * next read — the button looked broken. A draft therefore stays on this card until a property
      * is picked, and only then joins the shape and is applied.
      *
-     * Held raw rather than deeply reactive: the rule card writes the fields of the draft it was
-     * given, and a proxied draft would make that a child mutating this component's state, which
-     * Svelte reports as an ownership violation. Nothing needs to re-render while a draft is being
+     * Held raw rather than deeply reactive: nothing needs to re-render while a draft is being
      * filled in — the inputs hold what was typed — and adding or dropping one is a reassignment,
      * which is reactive either way.
      */
@@ -141,6 +149,37 @@
 
     /** The picker is an action rather than a field, so it goes back to its placeholder. */
     let picked = $state(null);
+
+    /** Whether the delete button has been pressed once and is asking to be sure. */
+    let confirmingDelete = $state(false);
+    let keyed = 0;
+
+    /**
+     * A key for each rule that survives a re-read, which hands back new objects every time.
+     *
+     * By position, a removed rule's card went to the rule after it along with whatever that card
+     * held; by object, every read would redraw every card and take the focus from the field being
+     * typed in. A named rule is its IRI and an inline one where the document writes it; a rule
+     * just added has neither yet and is told apart by its object until a read gives it one.
+     */
+    const ruleKeys = $derived.by(() => {
+        const seen = new Set();
+        return (shape.properties ?? []).map((rule, index) => {
+            let key;
+            if (rule.iri) {
+                key = `iri:${rule.iri}`;
+            } else if (rule.sourceIndex != null) {
+                key = `at:${rule.sourceIndex}`;
+            } else {
+                key = `new:${newKey(rule)}`;
+            }
+            if (seen.has(key)) {
+                key = `${key}#${index}`;
+            }
+            seen.add(key);
+            return key;
+        });
+    });
 
     /** Either the workspace forbids changes, or the shape is not one the form can write back. */
     const locked = $derived(readOnly || shape.editable === false);
@@ -203,6 +242,14 @@
         );
         return sharedRules.filter(rule => !used.has(rule.iri));
     });
+
+    function newKey(rule) {
+        if (!newKeys.has(rule)) {
+            keyed += 1;
+            newKeys.set(rule, keyed);
+        }
+        return newKeys.get(rule);
+    }
 
     /** Replaces one target's value, or drops the target when the picker was cleared. */
     function setTarget(entry, iri) {
@@ -288,6 +335,11 @@
         }
     }
 
+    function remove() {
+        confirmingDelete = false;
+        onremove();
+    }
+
     function removeRule(index) {
         shape.properties = shape.properties.filter((_, at) => at !== index);
         onchange();
@@ -311,13 +363,22 @@
 
 <div class="border-border rounded border" data-shape={shape.iri}>
     <div class="flex items-center gap-2 px-3 py-2">
+        <!--
+          Styled inline, because app.css centres every button, and every icon in one, with
+          `!important` in the base layer — and an important declaration in a layer outranks any
+          utility class, so the chevron sat in the middle of the card. Only the element's own
+          style comes before that.
+        -->
         <button
             class="text-default-text flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
+            style="justify-content: flex-start !important;"
+            aria-expanded={expanded}
             onclick={ontoggle}
         >
             <Fa
                 icon={expanded ? faChevronDown : faChevronRight}
-                class="text-text-subtle"
+                class="text-text-subtle shrink-0"
+                style="margin: 0 !important;"
             />
             <span class="min-w-0">
                 <span class="block truncate font-mono text-sm">{title}</span>
@@ -348,17 +409,44 @@
                 <Fa icon={faLock} />
                 Turtle only
             </span>
+        {:else if !locked && confirmingDelete}
+            <span class="flex shrink-0 items-center gap-2 text-xs">
+                <span class="text-default-text">
+                    Delete this shape and its rules?
+                </span>
+                <button
+                    class="text-red cursor-pointer px-1 font-semibold"
+                    onclick={remove}
+                >
+                    Delete
+                </button>
+                <button
+                    class="text-text-subtle hover:text-default-text cursor-pointer px-1"
+                    onclick={() => (confirmingDelete = false)}
+                >
+                    Keep
+                </button>
+            </span>
         {:else if !locked}
             <button
                 class="text-text-subtle hover:text-red shrink-0 cursor-pointer p-1 text-xs"
                 title="Delete this shape"
                 aria-label="Delete this shape"
-                onclick={onremove}
+                onclick={() => (confirmingDelete = true)}
             >
                 <Fa icon={faTrash} />
             </button>
         {/if}
     </div>
+
+    {#if failureOf(`shape:${shape.iri}`)}
+        <p
+            class="bg-red-background border-red-border text-red-text mx-3 mb-2 rounded border p-2 text-sm"
+            role="alert"
+        >
+            Not applied: {failureOf(`shape:${shape.iri}`)}
+        </p>
+    {/if}
 
     {#if expanded}
         <div class="border-border space-y-3 border-t px-3 py-3">
@@ -437,13 +525,16 @@
                 {/if}
             </div>
 
-            {#each shape.properties ?? [] as property, index (index)}
+            {#each shape.properties ?? [] as property, index (ruleKeys[index])}
                 <PropertyShapeCard
-                    {property}
+                    bind:property={shape.properties[index]}
                     {terms}
                     {prefixes}
                     targetClass={classes[0] ?? null}
                     readOnly={locked}
+                    failure={property.iri
+                        ? failureOf(`rule:${property.iri}`)
+                        : null}
                     onchange={() => changeRule(property)}
                     onedit={() => editRule(property)}
                     onremove={() => removeRule(index)}
@@ -451,9 +542,9 @@
                 />
             {/each}
 
-            {#each drafts as draft, index (index)}
+            {#each drafts as draft, index (newKey(draft))}
                 <PropertyShapeCard
-                    property={draft}
+                    bind:property={drafts[index]}
                     {terms}
                     {prefixes}
                     targetClass={classes[0] ?? null}
@@ -520,8 +611,14 @@
                     />
                 {:else}
                     <div>
-                        <span class="text-default-text text-sm">Severity</span>
+                        <label
+                            class="text-default-text text-sm"
+                            for={severityId}
+                        >
+                            Severity
+                        </label>
                         <SelectEditControl
+                            id={severityId}
                             value={shape.severity}
                             options={SEVERITIES}
                             getOptionValue={option => option.value}

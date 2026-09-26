@@ -39,9 +39,19 @@
         readonly = false,
         tooltip = "",
         buttons = [],
+        /**
+         * Renders the suggestions only while the box has focus.
+         *
+         * For long lists shown many times over: a schema offers thousands of terms, and a native
+         * datalist puts every one of them into the DOM for every box on the page, whether anyone
+         * is looking at it or not.
+         */
+        optionsOnFocus = false,
     } = $props();
 
     let datalistID = crypto.randomUUID();
+
+    let focused = $state(false);
 
     function verifyInput() {
         if (!value) {
@@ -60,7 +70,11 @@
     }
 </script>
 
-<div class="text-default-text h-full w-full flex-col">
+<div
+    class="text-default-text h-full w-full flex-col"
+    onfocusin={() => (focused = true)}
+    onfocusout={() => (focused = false)}
+>
     <label for={id}>
         {#if label}
             {label}
@@ -82,11 +96,13 @@
     />
 
     <datalist id={datalistID}>
-        {#each optionObjectList as optionValue}
-            <option
-                class="tooltip-arrow"
-                value={accessIdentifier(optionValue)}
-            ></option>
-        {/each}
+        {#if focused || !optionsOnFocus}
+            {#each optionObjectList as optionValue}
+                <option
+                    class="tooltip-arrow"
+                    value={accessIdentifier(optionValue)}
+                ></option>
+            {/each}
+        {/if}
     </datalist>
 </div>

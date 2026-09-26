@@ -30,15 +30,19 @@ import { abbreviate } from "$lib/shacl/turtleTerms.js";
  *
  * Matched against everything a person might remember about a shape: what it is called, what it
  * applies to, and what its rules are about — a shape is usually looked for by the property that
- * went wrong, which lives on a rule rather than on the shape.
+ * went wrong, which lives on a rule rather than on the shape. The `pinned` shapes — the ones just
+ * added — are kept whatever the filter says, or adding one under a filter looked like it failed.
  */
 export function matchingShapes(
     shapes,
-    { filter = "", lockedOnly = false } = {},
+    { filter = "", lockedOnly = false, pinned = null } = {},
     prefixes = {},
 ) {
     const needle = filter.trim().toLowerCase();
     return (shapes ?? []).filter(shape => {
+        if (pinned?.has(shape.iri)) {
+            return true;
+        }
         if (lockedOnly && shape.editable !== false && !hasLockedRule(shape)) {
             return false;
         }

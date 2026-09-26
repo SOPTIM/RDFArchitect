@@ -97,6 +97,11 @@ function fakeForm(overrides = {}) {
             .fn()
             .mockResolvedValue({ turtle: "new turtle", warnings: [] }),
         describes: () => true,
+        reload: vi.fn(),
+        failureOf: () => null,
+        showDocument: vi.fn(),
+        flush: vi.fn(),
+        added: new Set(),
         ...overrides,
     };
 }
@@ -209,11 +214,15 @@ describe("FormEditor", () => {
         [...view.querySelectorAll("button")]
             .find(button => button.textContent.includes("Add shape"))
             .click();
+        flushSync();
+        [...view.querySelectorAll("button")]
+            .find(button => button.textContent.trim() === "Add")
+            .click();
         await Promise.resolve();
         await Promise.resolve();
 
         expect(form.applyShape).toHaveBeenCalled();
-        expect(onturtle).toHaveBeenCalledWith("new turtle");
+        expect(onturtle).toHaveBeenCalledWith("new turtle", undefined);
     });
 });
 

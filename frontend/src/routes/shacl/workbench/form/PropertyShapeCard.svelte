@@ -33,24 +33,27 @@
     import { Fa } from "svelte-fa";
 
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
-    import NumberInputControl from "$lib/components/NumberInputControl.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import { keptClauses, keptFields } from "$lib/shacl/retained.js";
+    import { ruleProblems } from "$lib/shacl/ruleValidation.js";
     import { abbreviate } from "$lib/shacl/turtleTerms.js";
 
     import CardSection from "./CardSection.svelte";
     import KeptClause from "./KeptClause.svelte";
     import KeptClauseList from "./KeptClauseList.svelte";
+    import NumberField from "./NumberField.svelte";
     import TermPicker from "./TermPicker.svelte";
     import ValueListEditor from "./ValueListEditor.svelte";
 
     let {
-        property,
+        property = $bindable(),
         terms = [],
         prefixes = {},
         targetClass = null,
         readOnly = false,
+        /** Why the server refused the last change made on this card, if it did. */
+        failure = null,
         onchange = () => {},
         /** A field still being typed in: the same edit, to be sent once typing pauses. */
         onedit = () => {},
@@ -78,16 +81,67 @@
         { value: `${SHACL}Info`, label: "Info" },
     ];
 
+    const RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+
+    /**
+     * The datatypes offered, most used first.
+     *
+     * Everything the official ENTSO-E library states is here — `xsd:duration` alone is on some 140
+     * rules, and `xsd:anyURI`, `xsd:gMonthDay`, `xsd:dateTimeStamp`, `xsd:time` and
+     * `rdf:langString` were missing, so a rule stating one showed an empty box and could not be
+     * set to it.
+     */
     const DATATYPES = [
-        "string",
-        "boolean",
-        "integer",
-        "float",
-        "double",
-        "decimal",
-        "dateTime",
-        "date",
-    ].map(name => ({ iri: `${XSD}${name}`, label: name }));
+        ...[
+            "string",
+            "boolean",
+            "integer",
+            "float",
+            "double",
+            "decimal",
+            "dateTime",
+            "dateTimeStamp",
+            "date",
+            "time",
+            "duration",
+            "gYear",
+            "gYearMonth",
+            "gMonthDay",
+            "gMonth",
+            "gDay",
+            "anyURI",
+            "long",
+            "int",
+            "short",
+            "byte",
+            "nonNegativeInteger",
+            "positiveInteger",
+            "nonPositiveInteger",
+            "negativeInteger",
+            "unsignedLong",
+            "unsignedInt",
+            "normalizedString",
+            "token",
+            "language",
+            "base64Binary",
+            "hexBinary",
+        ].map(name => ({ iri: `${XSD}${name}`, label: name })),
+        { iri: `${RDF}langString`, label: "langString (text with a language)" },
+        { iri: `${RDF}HTML`, label: "HTML" },
+    ];
+
+    /**
+     * What a value of `sh:in` or `sh:hasValue` is picked from: an enumeration's values, and the
+     * classes the NC profiles list there (`sh:in ( nc:SchedulingArea nc:SubSchedulingArea )`).
+     */
+    const VALUE_KINDS = ["ENUM_MEMBER", "CLASS"];
+
+    /** Ids for the selects, which are labelled by `<label for>` like every other field. */
+    const ids = {
+        dataType: crypto.randomUUID(),
+        nodeKind: crypto.randomUUID(),
+        severity: crypto.randomUUID(),
+    };
 
     /** The fields this card puts on screen. Anything else kept as written is listed instead. */
     const SHOWN = [
@@ -123,6 +177,14 @@
         { field: "minExclusive", label: "More than" },
         { field: "maxExclusive", label: "Less than" },
     ];
+
+    /**
+     * Bumped whenever the card writes a field.
+     *
+     * The rule may be a plain object rather than state — as on a draft — and then nothing else
+     * would tell `problems` that it changed.
+     */
+    let written = $state(0);
 
     /** Which groups already say something, and so open themselves. */
     const filled = $derived({
@@ -161,6 +223,63 @@
             : (kept.get("path")?.[0]?.value ?? "no property chosen"),
     );
 
+    /**
+     * The datatypes on offer, with the rule's own among them even when it is none of the above.
+     *
+     * A select whose value is not one of its options shows the first option instead, so a rule
+     * stating a datatype the list lacks read as "any".
+     */
+    const datatypeOptions = $derived([
+        { iri: null, label: "any" },
+        ...DATATYPES,
+        ...(property.dataType &&
+        !DATATYPES.some(option => option.iri === property.dataType)
+            ? [
+                  {
+                      iri: property.dataType,
+                      label: abbreviate(property.dataType, prefixes),
+                  },
+              ]
+            : []),
+    ]);
+
+    /** What is wrong with the rule as it stands, which keeps it from being sent. */
+    const problems = $derived.by(() => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions -- a dependency, read to be tracked
+        written;
+        return ruleProblems(property);
+    });
+
+    /**
+     * The enumerations whose values belong first in the value pickers.
+     *
+     * The one the rule names as its `sh:class`, and those of the values it already lists: an enum
+     * value is written `cim:WindingConnection.D`, so what it belongs to is its IRI up to the last
+     * dot. The schema's terms do not say which enumeration a property ranges over, so this is as
+     * close as the list can get without asking.
+     */
+    const enumerations = $derived.by(() => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions -- a dependency, read to be tracked
+        written;
+        return new Set(
+            [
+                property.classIri,
+                enumerationOf(property.hasValue),
+                ...(property.allowedValues ?? []).map(enumerationOf),
+            ].filter(Boolean),
+        );
+    });
+
+    /**
+     * What a plain string in a value picker is written as, when the rule says its values are of
+     * some other type: a string never equals a typed value, so the rule would never be met.
+     */
+    const literalNote = $derived(
+        property.dataType && property.dataType !== `${XSD}string`
+            ? `Written as a plain string, which never equals a ${abbreviate(property.dataType, prefixes)} value.`
+            : null,
+    );
+
     /** Whether the rule states any of these fields, or the document does where the form cannot. */
     function says(fields) {
         return fields.some(field => {
@@ -172,32 +291,20 @@
         });
     }
 
-    /**
-     * A cleared number field means "no bound stated", which is not the same as zero.
-     *
-     * The controls hand their callbacks the input's **value**, not the event — reading
-     * `event.target.value` here is what made the number fields write `null` for everything typed
-     * into them, and the message field throw on every keystroke.
-     */
-    function numberOf(raw) {
-        if (raw === "" || raw === undefined || raw === null) {
+    function enumerationOf(iri) {
+        if (!iri) {
             return null;
         }
-        const value = Number(raw);
-        return Number.isFinite(value) ? value : null;
+        const cut = Math.max(iri.lastIndexOf("#"), iri.lastIndexOf("/"));
+        const dot = iri.lastIndexOf(".");
+        return dot > cut ? iri.slice(0, dot) : null;
     }
 
-    /**
-     * A value range is the number the document writes, not a number the form computes.
-     *
-     * Kept as the text it was typed as, so `0.0` stays `0.0` rather than becoming `0`: the writer
-     * puts these digits back inside the literal the document already holds, and respelling them on
-     * the way through would change a value nobody edited.
-     */
-    function lexicalOf(raw) {
-        const typed =
-            raw === undefined || raw === null ? "" : String(raw).trim();
-        return typed === "" ? null : typed;
+    function inEnumeration(term) {
+        return (
+            term.kind === "ENUM_MEMBER" &&
+            enumerations.has(enumerationOf(term.iri))
+        );
     }
 
     /**
@@ -205,10 +312,15 @@
      *
      * `soon` is for a field that changes while it is being typed in: the model is updated at once,
      * so the form never shows something the user did not type, but the document is rewritten once
-     * the typing stops.
+     * the typing stops. A rule that has something wrong with it is held back until it is put
+     * right, with the reason on the field.
      */
     function set(field, value, { soon = false } = {}) {
         property[field] = value === "" ? null : value;
+        written += 1;
+        if (Object.keys(problems).length) {
+            return;
+        }
         if (soon) {
             onedit();
         } else {
@@ -285,6 +397,15 @@
         </p>
     {/if}
 
+    {#if failure}
+        <p
+            class="bg-red-background border-red-border text-red-text mb-2 rounded border p-2 text-sm"
+            role="alert"
+        >
+            Not applied: {failure}
+        </p>
+    {/if}
+
     <div class="space-y-3">
         <div>
             {#if kept.has("path")}
@@ -310,13 +431,13 @@
                     clauses={kept.get("minCount")}
                 />
             {:else}
-                <NumberInputControl
+                <NumberField
                     label="Minimum values"
+                    kind="count"
                     value={property.minCount}
                     readonly={locked}
-                    callOnInput={raw =>
-                        set("minCount", numberOf(raw), { soon: true })}
-                    callOnChange={raw => set("minCount", numberOf(raw))}
+                    problem={problems.minCount}
+                    onvalue={(value, soon) => set("minCount", value, { soon })}
                 />
             {/if}
             {#if kept.has("maxCount")}
@@ -325,13 +446,13 @@
                     clauses={kept.get("maxCount")}
                 />
             {:else}
-                <NumberInputControl
+                <NumberField
                     label="Maximum values"
+                    kind="count"
                     value={property.maxCount}
                     readonly={locked}
-                    callOnInput={raw =>
-                        set("maxCount", numberOf(raw), { soon: true })}
-                    callOnChange={raw => set("maxCount", numberOf(raw))}
+                    problem={problems.maxCount}
+                    onvalue={(value, soon) => set("maxCount", value, { soon })}
                 />
             {/if}
         </CardSection>
@@ -341,10 +462,13 @@
                 <KeptClause label="Value type" clauses={kept.get("dataType")} />
             {:else}
                 <div>
-                    <span class="text-default-text text-sm">Value type</span>
+                    <label class="text-default-text text-sm" for={ids.dataType}>
+                        Value type
+                    </label>
                     <SelectEditControl
+                        id={ids.dataType}
                         value={property.dataType}
-                        options={[{ iri: null, label: "any" }, ...DATATYPES]}
+                        options={datatypeOptions}
                         getOptionValue={option => option.iri}
                         getOptionLabel={option => option.label}
                         disabled={locked}
@@ -374,8 +498,11 @@
                 <KeptClause label="Value form" clauses={kept.get("nodeKind")} />
             {:else}
                 <div>
-                    <span class="text-default-text text-sm">Value form</span>
+                    <label class="text-default-text text-sm" for={ids.nodeKind}>
+                        Value form
+                    </label>
                     <SelectEditControl
+                        id={ids.nodeKind}
                         value={property.nodeKind}
                         options={NODE_KINDS}
                         getOptionValue={option => option.value}
@@ -391,12 +518,20 @@
                     clauses={kept.get("hasValue")}
                 />
             {:else}
-                <TextEditControl
-                    label="Must be exactly"
-                    value={property.hasValue ?? ""}
-                    readonly={locked}
-                    callOnChange={text => set("hasValue", text)}
-                />
+                <div>
+                    <TermPicker
+                        label="Must be exactly"
+                        kind={VALUE_KINDS}
+                        literals
+                        value={property.hasValue}
+                        {terms}
+                        {prefixes}
+                        prefer={inEnumeration}
+                        note={literalNote}
+                        disabled={locked}
+                        onpick={value => set("hasValue", value)}
+                    />
+                </div>
             {/if}
             <div class="col-span-2">
                 {#if kept.has("allowedValues")}
@@ -408,9 +543,12 @@
                     <ValueListEditor
                         label="One of"
                         mode="value"
+                        kind={VALUE_KINDS}
                         values={property.allowedValues ?? []}
                         {terms}
                         {prefixes}
+                        prefer={inEnumeration}
+                        note={literalNote}
                         disabled={locked}
                         onchange={values => set("allowedValues", values)}
                     />
@@ -426,13 +564,13 @@
                         clauses={kept.get(range.field)}
                     />
                 {:else}
-                    <NumberInputControl
+                    <NumberField
                         label={range.label}
                         value={property[range.field]}
                         readonly={locked}
-                        callOnInput={raw =>
-                            set(range.field, lexicalOf(raw), { soon: true })}
-                        callOnChange={raw => set(range.field, lexicalOf(raw))}
+                        problem={problems[range.field]}
+                        onvalue={(value, soon) =>
+                            set(range.field, value, { soon })}
                     />
                 {/if}
             {/each}
@@ -442,48 +580,65 @@
             {#if kept.has("minLength")}
                 <KeptClause label="Shortest" clauses={kept.get("minLength")} />
             {:else}
-                <NumberInputControl
+                <NumberField
                     label="Shortest"
+                    kind="count"
                     value={property.minLength}
                     readonly={locked}
-                    callOnInput={raw =>
-                        set("minLength", numberOf(raw), { soon: true })}
-                    callOnChange={raw => set("minLength", numberOf(raw))}
+                    problem={problems.minLength}
+                    onvalue={(value, soon) => set("minLength", value, { soon })}
                 />
             {/if}
             {#if kept.has("maxLength")}
                 <KeptClause label="Longest" clauses={kept.get("maxLength")} />
             {:else}
-                <NumberInputControl
+                <NumberField
                     label="Longest"
+                    kind="count"
                     value={property.maxLength}
                     readonly={locked}
-                    callOnInput={raw =>
-                        set("maxLength", numberOf(raw), { soon: true })}
-                    callOnChange={raw => set("maxLength", numberOf(raw))}
+                    problem={problems.maxLength}
+                    onvalue={(value, soon) => set("maxLength", value, { soon })}
                 />
             {/if}
             {#if kept.has("pattern")}
                 <KeptClause label="Matching" clauses={kept.get("pattern")} />
             {:else}
-                <TextEditControl
-                    label="Matching"
-                    value={property.pattern ?? ""}
-                    readonly={locked}
-                    callOnInput={text => set("pattern", text, { soon: true })}
-                    callOnChange={text => set("pattern", text)}
-                />
+                <div>
+                    <TextEditControl
+                        label="Matching"
+                        value={property.pattern ?? ""}
+                        readonly={locked}
+                        warn={problems.pattern !== undefined}
+                        callOnInput={text =>
+                            set("pattern", text, { soon: true })}
+                        callOnChange={text => set("pattern", text)}
+                    />
+                    {#if problems.pattern}
+                        <p class="text-red-text mt-0.5 text-xs">
+                            {problems.pattern}
+                        </p>
+                    {/if}
+                </div>
             {/if}
             {#if kept.has("flags")}
                 <KeptClause label="Match flags" clauses={kept.get("flags")} />
             {:else}
-                <TextEditControl
-                    label="Match flags"
-                    value={property.flags ?? ""}
-                    readonly={locked}
-                    callOnInput={text => set("flags", text, { soon: true })}
-                    callOnChange={text => set("flags", text)}
-                />
+                <div>
+                    <TextEditControl
+                        label="Match flags"
+                        value={property.flags ?? ""}
+                        readonly={locked}
+                        warn={problems.flags !== undefined}
+                        callOnInput={text => set("flags", text, { soon: true })}
+                        callOnChange={text => set("flags", text)}
+                    />
+                    {#if problems.flags}
+                        <p class="text-red-text mt-0.5 text-xs">
+                            {problems.flags}
+                        </p>
+                    {/if}
+                </div>
             {/if}
         </CardSection>
 
@@ -544,8 +699,11 @@
                 <KeptClause label="Severity" clauses={kept.get("severity")} />
             {:else}
                 <div>
-                    <span class="text-default-text text-sm">Severity</span>
+                    <label class="text-default-text text-sm" for={ids.severity}>
+                        Severity
+                    </label>
                     <SelectEditControl
+                        id={ids.severity}
                         value={property.severity}
                         options={SEVERITIES}
                         getOptionValue={option => option.value}
@@ -558,11 +716,15 @@
             {#if kept.has("order")}
                 <KeptClause label="Shown at" clauses={kept.get("order")} />
             {:else}
-                <NumberInputControl
+                <NumberField
                     label="Shown at"
                     value={property.order}
                     readonly={locked}
-                    callOnChange={raw => set("order", lexicalOf(raw))}
+                    onvalue={(value, soon) => {
+                        if (!soon) {
+                            set("order", value);
+                        }
+                    }}
                 />
             {/if}
             <div class="col-span-2">

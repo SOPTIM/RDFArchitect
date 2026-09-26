@@ -21,6 +21,12 @@
      *
      * The whole point of the form view is that nobody has to type an IRI, so the options are the
      * terms the schema actually declares, shown the way the open document would write them.
+     *
+     * With `literals` the box holds a value rather than a term — `sh:in`, `sh:hasValue` — and text
+     * that is not a term is taken as a plain string instead of being refused. It still says so
+     * when that text looks like a term the document cannot resolve: `cim:Kind.b` with `cim:`
+     * unbound is written as the string "cim:Kind.b", which never equals the enum value it was
+     * meant to be.
      */
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -33,11 +39,18 @@
     let {
         label,
         value = null,
+        /** The kind of term offered, or a list of kinds. */
         kind = "CLASS",
         terms = [],
         prefixes = {},
         /** Properties of this class are offered first. */
         preferredDomain = null,
+        /** Which terms are offered first, where a domain cannot say. */
+        prefer = null,
+        /** Whether a plain string is something this box may hold. */
+        literals = false,
+        /** Said under the box about a plain string in it, such as how it will be written. */
+        note = null,
         disabled = false,
         onpick = () => {},
     } = $props();
@@ -52,20 +65,36 @@
     const PLACEHOLDERS = {
         CLASS: "pick a class",
         PROPERTY: "pick a property",
+        ENUM_MEMBER: "pick a value or type one",
     };
 
     /** Bumped to put the box back to the term it holds after something unusable was typed in. */
     let reverts = $state(0);
 
+    const kinds = $derived(new Set(Array.isArray(kind) ? kind : [kind]));
+
+    const placeholder = $derived(
+        PLACEHOLDERS[Array.isArray(kind) ? kind[0] : kind] ?? "write a term",
+    );
+
+    /**
+     * The suggestions, in the order they are offered.
+     *
+     * Only worked out once the list is rendered, which is while the box has focus: every box on
+     * an open card used to write out every term of the schema — some five thousand for CGMES —
+     * the moment it was drawn.
+     */
     const options = $derived.by(() => {
-        const matching = terms.filter(term => term.kind === kind);
         const preferred = [];
         const rest = [];
-        for (const term of matching) {
-            (preferredDomain && term.domain === preferredDomain
-                ? preferred
-                : rest
-            ).push(term);
+        for (const term of terms) {
+            if (!kinds.has(term.kind)) {
+                continue;
+            }
+            const first =
+                (preferredDomain && term.domain === preferredDomain) ||
+                prefer?.(term);
+            (first ? preferred : rest).push(term);
         }
         const written = term => ({
             ...term,
@@ -85,9 +114,17 @@
         if (!value) {
             return "";
         }
-        const known = options.find(option => option.iri === value);
-        return known ? known.written : abbreviate(value, prefixes);
+        if (literals && !absoluteIri(value)) {
+            return value;
+        }
+        const known = terms.find(
+            term => term.iri === value && kinds.has(term.kind),
+        );
+        return known ? writeTerm(known, prefixes) : abbreviate(value, prefixes);
     });
+
+    /** What is worth saying about the value in the box, and whether it is a warning. */
+    const remark = $derived(literals ? remarkOn(value) : null);
 
     /**
      * What the box was left holding, as an IRI.
@@ -97,7 +134,8 @@
      * and that text used to go straight into `sh:path` — where a phrase with a space in it was
      * written as `<a phrase>` and the document stopped parsing. So a typed term is accepted only
      * when the document could actually write it: a prefixed name whose prefix the document binds,
-     * or an absolute IRI. Anything else puts the previous term back.
+     * or an absolute IRI. Anything else puts the previous term back — unless the box takes plain
+     * strings, where that is what it is.
      */
     function picked(option) {
         if (option && typeof option === "object") {
@@ -109,16 +147,51 @@
             onpick(null);
             return;
         }
-        const iri = resolveTerm(typed, prefixes) ?? absoluteIri(typed);
-        if (!iri) {
-            reverts += 1;
-            toastStore.warning(
-                "Not a term",
-                `"${typed}" is not a term this document can write. Pick one from the list, or write it as cim:Name or <http://…>.`,
-            );
+        const iri =
+            resolveTerm(typed, prefixes) ??
+            absoluteIri(typed) ??
+            (literals ? onlyTermNamed(typed) : null);
+        if (iri) {
+            onpick(iri);
             return;
         }
-        onpick(iri);
+        if (literals) {
+            onpick(typed);
+            return;
+        }
+        reverts += 1;
+        toastStore.warning(
+            "Not a term",
+            `"${typed}" is not a term this document can write. Pick one from the list, or write it as cim:Name or <http://…>.`,
+        );
+    }
+
+    /**
+     * The one offered term with this local name, for a value typed without its prefix.
+     *
+     * `WindingConnection.D` is how people write an enum value, and the document needs the term.
+     * Only taken when exactly one term is called that, so a string that merely resembles one is
+     * left a string.
+     */
+    function onlyTermNamed(typed) {
+        const named = terms.filter(
+            term => kinds.has(term.kind) && term.localName === typed,
+        );
+        return named.length === 1 ? named[0].iri : null;
+    }
+
+    function remarkOn(current) {
+        if (!current || absoluteIri(current)) {
+            return null;
+        }
+        const prefix = /^([A-Za-z][\w.-]*):\S/.exec(current)?.[1];
+        if (prefix !== undefined && prefixes[prefix] === undefined) {
+            return {
+                warning: true,
+                text: `"${prefix}:" is not a prefix this document binds, so this is written as the text "${current}" rather than as a term.`,
+            };
+        }
+        return note ? { warning: false, text: note } : null;
     }
 
     /**
@@ -148,9 +221,20 @@
         {disabled}
         value={shown}
         optionObjectList={options}
+        optionsOnFocus
         accessDisplayData={option => option.written}
         accessIdentifier={option => option.written}
-        placeholder={PLACEHOLDERS[kind] ?? "write a term"}
+        {placeholder}
+        warn={remark?.warning === true}
         callOnChange={picked}
     />
 {/key}
+{#if remark}
+    <p
+        class="mt-0.5 text-xs {remark.warning
+            ? 'text-red-text'
+            : 'text-text-subtle'}"
+    >
+        {remark.text}
+    </p>
+{/if}

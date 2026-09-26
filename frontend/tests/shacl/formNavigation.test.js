@@ -106,6 +106,10 @@ function fakeForm(overrides = {}) {
         scheduleRule: vi.fn(),
         removeShape: vi.fn(),
         describes: () => true,
+        failureOf: () => null,
+        showDocument: vi.fn(),
+        flush: vi.fn(),
+        added: new Set(),
         ...overrides,
     };
 }

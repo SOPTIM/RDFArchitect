@@ -42,18 +42,34 @@
         matchingRules,
         matchingShapes,
     } from "$lib/shacl/formNavigation.js";
-    import { newShape, shapeNamespaceOf } from "$lib/shacl/formState.svelte.js";
-    import { parsePrefixes } from "$lib/shacl/turtleTerms.js";
+    import {
+        newShape,
+        newShapeIri,
+        shapeNamespaceOf,
+    } from "$lib/shacl/formState.svelte.js";
+    import {
+        abbreviate,
+        parsePrefixes,
+        resolveTerm,
+    } from "$lib/shacl/turtleTerms.js";
 
     import NodeShapeCard from "./form/NodeShapeCard.svelte";
     import PropertyShapeCard from "./form/PropertyShapeCard.svelte";
     import SharedRuleDialog from "./form/SharedRuleDialog.svelte";
+    import TermPicker from "./form/TermPicker.svelte";
 
     let {
         form,
         turtle = "",
         terms = [],
         readOnly = false,
+        /** Which document the buffer holds, so the form can tell another one from an edit. */
+        documentId = undefined,
+        /**
+         * Called with the new text and the text the edit was made to. May answer `false` when
+         * the buffer no longer holds that text and the result was dropped; the form then reads
+         * the buffer again rather than go on describing text that is not there.
+         */
         onturtle = () => {},
         onvalidate = () => {},
         /** Shows a line of the document in the Turtle view. */
@@ -76,6 +92,9 @@
 
     let list = $state(null);
 
+    /** The row asking what a new shape is for, while it is open. */
+    let adding = $state(null);
+
     const prefixes = $derived(parsePrefixes(turtle));
 
     const sharedRules = $derived(
@@ -85,6 +104,7 @@
     const filters = $derived({
         filter: form.filter,
         lockedOnly: form.lockedOnly,
+        pinned: form.added,
     });
 
     /** The shapes the filter leaves, in the order the document writes them. */
@@ -123,7 +143,24 @@
     });
 
     $effect(() => {
+        if (documentId !== undefined) {
+            form?.showDocument(documentId);
+        }
+    });
+
+    $effect(() => {
         form?.read(turtle);
+    });
+
+    /**
+     * Sends what is still waiting for a pause when the form goes, rather than a moment later.
+     *
+     * The form is unmounted whenever the Turtle view is shown, and an edit held back for a pause
+     * would otherwise arrive after the user had started typing there.
+     */
+    $effect(() => {
+        const current = form;
+        return () => current?.flush();
     });
 
     /** Brings a card into view once it has been rendered. */
@@ -187,15 +224,26 @@
         form.scheduleRule(turtle, rule, handle);
     }
 
+    /**
+     * Gives one shape its own copy of a shared rule. Answers why, when the copy was refused.
+     *
+     * A refusal is almost always the name — one the document already uses — so it is left to the
+     * dialog, which stays open to take another, instead of being reported and put back here.
+     */
     async function splitSharedRule(newIri) {
         const { rule, shapeIri } = sharedEdit;
-        handle(
-            await form.applyRule(turtle, rule, {
-                newIri,
-                nodeShapeIri: shapeIri,
-                sourceIndex: rule.sourceIndex,
-            }),
-        );
+        const result = await form.applyRule(turtle, rule, {
+            newIri,
+            nodeShapeIri: shapeIri,
+            sourceIndex: rule.sourceIndex,
+        });
+        if (!result) {
+            const reason = form.error ?? "The copy could not be made.";
+            form.failure = null;
+            return reason;
+        }
+        handle(result);
+        return null;
     }
 
     async function changeSharedRuleForAll() {
@@ -213,33 +261,100 @@
         form.reload(turtle);
     }
 
+    /**
+     * Puts an edit's text into the buffer, or the card back to what the document says.
+     *
+     * A refused edit leaves the card holding the value the server would not write; showing it as
+     * though it had been written is how the form came to disagree with its own document. So the
+     * document is read again, and the reason stays on the card.
+     */
     function handle(result) {
         if (!result) {
             toastStore.error(
                 "Not applied",
                 form.error ?? "The change could not be applied.",
             );
+            form.reload(turtle);
             return;
         }
-        onturtle(result.turtle);
+        if (onturtle(result.turtle, result.base) === false) {
+            form.reload(turtle);
+            return;
+        }
         onvalidate();
         result.warnings.forEach(warning =>
             toastStore.warning("Shape rewritten", warning),
         );
     }
 
-    async function addShape() {
-        const namespace = shapeNamespaceOf(form.shapes, prefixes);
-        const existing = new Set(form.shapes.map(shape => shape.iri));
-        let name = "New";
-        let suffix = 1;
-        while (existing.has(`${namespace}${name}Shape`)) {
-            suffix += 1;
-            name = `New${suffix}`;
+    /** Every IRI the document names a shape or rule with, which a new one must not reuse. */
+    function takenIris() {
+        return new Set(
+            [...form.shapes, ...form.propertyShapes].map(entry => entry.iri),
+        );
+    }
+
+    function suggestedName(targetClass) {
+        const schemaNamespaces = [
+            ...new Set(terms.map(term => term.namespace)),
+        ];
+        const namespace = shapeNamespaceOf(
+            form.shapes,
+            prefixes,
+            schemaNamespaces,
+        );
+        return abbreviate(
+            newShapeIri(namespace, targetClass, takenIris()),
+            prefixes,
+        );
+    }
+
+    function startAdding() {
+        adding = {
+            targetClass: null,
+            name: suggestedName(null),
+            named: false,
+            problem: null,
+        };
+    }
+
+    /** A class picked for the new shape names it too, unless a name was typed already. */
+    function pickClass(iri) {
+        adding.targetClass = iri;
+        if (!adding.named) {
+            adding.name = suggestedName(iri);
         }
-        const shape = newShape(namespace, null, name);
-        form.expanded.add(shape.iri);
+    }
+
+    function nameShape(text) {
+        adding.name = text;
+        adding.named = true;
+        adding.problem = null;
+    }
+
+    async function addShape() {
+        const typed = adding.name.trim();
+        const iri =
+            resolveTerm(typed, prefixes) ??
+            (/^(?:[A-Za-z][A-Za-z0-9+.-]*:\/\/|urn:)\S+$/.test(typed)
+                ? typed
+                : null);
+        if (!iri) {
+            adding.problem =
+                "Write the name as a prefixed name the document binds, such as ex:BreakerShape, or as a full IRI.";
+            return;
+        }
+        if (takenIris().has(iri)) {
+            adding.problem =
+                "The document already has a shape or rule of that name.";
+            return;
+        }
+        const shape = newShape(iri, adding.targetClass);
+        adding = null;
+        form.added.add(iri);
+        form.expanded.add(iri);
         await apply(shape);
+        scrollTo(iri);
     }
 </script>
 
@@ -271,9 +386,10 @@
                 <ButtonControl
                     height={7}
                     variant="inline"
-                    callOnClick={addShape}
+                    callOnClick={startAdding}
                     disabled={form.applying ||
                         form.parseError !== null ||
+                        adding !== null ||
                         readOnly}
                 >
                     <span class="flex items-center gap-2 text-sm">
@@ -284,6 +400,60 @@
             </div>
         {/if}
     </div>
+
+    {#if adding && !readOnly}
+        <!--
+          A shape is asked what it is for before it is written, because that is also what it is
+          called: `<Class>Shape`, in the namespace the document's shapes already use.
+        -->
+        <div
+            class="border-border bg-background-subtle flex shrink-0 flex-wrap items-start gap-2 border-b px-3 py-2"
+            data-adding-shape
+        >
+            <div class="min-w-48 flex-1">
+                <TermPicker
+                    label="For every instance of"
+                    kind="CLASS"
+                    value={adding.targetClass}
+                    {terms}
+                    {prefixes}
+                    onpick={pickClass}
+                />
+            </div>
+            <div class="min-w-48 flex-1">
+                <TextEditControl
+                    label="Called"
+                    value={adding.name}
+                    warn={adding.problem !== null}
+                    callOnInput={nameShape}
+                />
+                {#if adding.problem}
+                    <p class="text-red-text mt-0.5 text-xs" role="alert">
+                        {adding.problem}
+                    </p>
+                {/if}
+            </div>
+            <div class="mt-6 flex shrink-0 gap-2">
+                <div class="h-8 w-20">
+                    <ButtonControl
+                        variant="inline"
+                        callOnClick={addShape}
+                        disabled={form.applying || adding.name.trim() === ""}
+                    >
+                        <span class="text-sm">Add</span>
+                    </ButtonControl>
+                </div>
+                <div class="h-8 w-20">
+                    <ButtonControl
+                        variant="inline"
+                        callOnClick={() => (adding = null)}
+                    >
+                        <span class="text-sm">Cancel</span>
+                    </ButtonControl>
+                </div>
+            </div>
+        </div>
+    {/if}
 
     <div class="min-h-0 flex-1 overflow-y-auto p-3" bind:this={list}>
         {#if form.loading && form.shapes.length === 0}
@@ -327,14 +497,15 @@
             </div>
         {:else}
             <div class="flex flex-col gap-2">
-                {#each shapes as shape (shape.iri)}
+                {#each shapes as shape, index (shape.iri)}
                     <NodeShapeCard
-                        {shape}
+                        bind:shape={shapes[index]}
                         {terms}
                         {prefixes}
                         sharedRules={form.propertyShapes ?? []}
                         readOnly={readOnly || shape.editable === false}
                         expanded={form.expanded.has(shape.iri)}
+                        failureOf={key => form.failureOf(key)}
                         ontoggle={() => form.toggle(shape.iri)}
                         onchange={() => apply(shape)}
                         onedit={() => applySoon(shape)}
@@ -366,12 +537,13 @@
                 </div>
                 {#if showingSharedRules}
                     <div class="flex flex-col gap-2">
-                        {#each sharedRules as rule (rule.iri)}
+                        {#each sharedRules as rule, index (rule.iri)}
                             <PropertyShapeCard
-                                property={rule}
+                                bind:property={sharedRules[index]}
                                 {terms}
                                 {prefixes}
                                 {readOnly}
+                                failure={form.failureOf(`rule:${rule.iri}`)}
                                 onchange={() => applyRule(rule)}
                                 onedit={() => applyRuleSoon(rule)}
                                 {onreveal}

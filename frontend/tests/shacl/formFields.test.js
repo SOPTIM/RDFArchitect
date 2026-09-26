@@ -160,7 +160,7 @@ describe("the counts on a rule", () => {
     test("a typed minimum is written as a number", () => {
         const { property, onedit, onchange } = card();
 
-        type(target.querySelectorAll("input[type=number]")[0], "3");
+        type(field(target, "Minimum values"), "3");
 
         expect(property.minCount).toBe(3);
         // Still being typed in, so it is sent once the typing stops rather than per keystroke.
@@ -171,7 +171,7 @@ describe("the counts on a rule", () => {
     test("leaving the field applies the edit at once", () => {
         const { property, onchange } = card();
 
-        commit(target.querySelectorAll("input[type=number]")[1], "1");
+        commit(field(target, "Maximum values"), "1");
 
         expect(property.maxCount).toBe(1);
         expect(onchange).toHaveBeenCalled();
@@ -180,7 +180,7 @@ describe("the counts on a rule", () => {
     test("clearing it says no bound, which is not the same as zero", () => {
         const { property } = card({ minCount: 2 });
 
-        commit(target.querySelectorAll("input[type=number]")[0], "");
+        commit(field(target, "Minimum values"), "");
 
         expect(property.minCount).toBeNull();
     });

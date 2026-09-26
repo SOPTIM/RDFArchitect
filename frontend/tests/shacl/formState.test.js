@@ -19,6 +19,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
     newShape,
+    newShapeIri,
     shapeNamespaceOf,
     ShapesFormView,
 } from "$lib/shacl/formState.svelte.js";
@@ -401,12 +402,31 @@ describe("naming a new shape", () => {
         expect(shapeNamespaceOf([], {})).toBe("urn:rdfa:shapes#");
     });
 
+    test("does not put a shape into a W3C vocabulary or the schema's own namespace", () => {
+        const prefixes = {
+            sh: "http://www.w3.org/ns/shacl#",
+            cim: "http://iec.ch/TC57/CIM100#",
+            eu: "http://iec.ch/TC57/CIM100-European#",
+        };
+
+        expect(
+            shapeNamespaceOf([], prefixes, [
+                "http://iec.ch/TC57/CIM100#",
+                "http://iec.ch/TC57/CIM100-European#",
+            ]),
+        ).toBe("urn:rdfa:shapes#");
+        expect(shapeNamespaceOf([], prefixes)).toBe(
+            "http://iec.ch/TC57/CIM100#",
+        );
+    });
+
     test("names a shape after the class it targets", () => {
-        const shape = newShape(
+        const iri = newShapeIri(
             "http://example.org/shapes#",
             "http://ex.org/Breaker",
-            "Breaker",
+            new Set(),
         );
+        const shape = newShape(iri, "http://ex.org/Breaker");
 
         expect(shape.iri).toBe("http://example.org/shapes#BreakerShape");
         expect(shape.editable).toBe(true);
@@ -414,8 +434,24 @@ describe("naming a new shape", () => {
         // A list, because a shape may target several classes; a shape added with no class yet
         // targets none rather than targeting null.
         expect(shape.targetClasses).toEqual(["http://ex.org/Breaker"]);
+        expect(newShape(iri, null).targetClasses).toEqual([]);
+    });
+
+    test("numbers the name when the document already uses it", () => {
+        const taken = new Set([
+            "http://example.org/shapes#BreakerShape",
+            "http://example.org/shapes#BreakerShape2",
+        ]);
+
         expect(
-            newShape("http://example.org/shapes#", null, "New").targetClasses,
-        ).toEqual([]);
+            newShapeIri(
+                "http://example.org/shapes#",
+                "http://ex.org/Breaker",
+                taken,
+            ),
+        ).toBe("http://example.org/shapes#BreakerShape3");
+        expect(newShapeIri("http://example.org/shapes#", null, taken)).toBe(
+            "http://example.org/shapes#NewShape",
+        );
     });
 });

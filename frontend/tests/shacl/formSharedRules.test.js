@@ -108,6 +108,10 @@ function fakeForm(overrides = {}) {
             .fn()
             .mockResolvedValue({ turtle: "new turtle", warnings: [] }),
         describes: () => true,
+        failureOf: () => null,
+        showDocument: vi.fn(),
+        flush: vi.fn(),
+        added: new Set(),
         ...overrides,
     };
 }
