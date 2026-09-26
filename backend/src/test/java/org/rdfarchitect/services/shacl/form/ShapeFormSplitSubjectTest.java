@@ -141,8 +141,8 @@ class ShapeFormSplitSubjectTest {
 
     @Test
     void aShapeThatIsNotItsOwnStatementIsNeitherEditableNorAppended() {
-        // Written against a base, which the scanner cannot resolve, so it cannot find the
-        // statement to replace. Appending the rewrite would define the shape a second time.
+        // Written against one of two bases, which the scanner does not resolve, so it cannot find
+        // the statement to replace. Appending the rewrite would define the shape a second time.
         var relative =
                 """
                 @base <http://example.org/shapes/> .
@@ -150,6 +150,9 @@ class ShapeFormSplitSubjectTest {
                 @prefix cim: <http://iec.ch/TC57/CIM100#> .
 
                 <ACLineSegmentShape> a sh:NodeShape ; sh:targetClass cim:ACLineSegment .
+
+                @base <http://example.org/other/> .
+                <TerminalShape> a sh:NodeShape ; sh:targetClass cim:Terminal .
                 """;
         var shape = shapeNamed(relative, "http://example.org/shapes/ACLineSegmentShape");
 

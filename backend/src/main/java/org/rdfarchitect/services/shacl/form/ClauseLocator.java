@@ -165,7 +165,8 @@ public final class ClauseLocator {
         }
         int index = from;
         while (index < limit && !isSeparator(text.charAt(index))) {
-            index++;
+            // An escaped character belongs to the name, whatever it is: `ex:A\,b` is one name.
+            index += text.charAt(index) == '\\' ? 2 : 1;
         }
         return Math.min(index, limit);
     }
@@ -197,6 +198,10 @@ public final class ClauseLocator {
                 while (index < limit && text.charAt(index) != '\n') {
                     index++;
                 }
+                continue;
+            }
+            if (c == '\\') {
+                index += 2;
                 continue;
             }
             if (c == '"' || c == '\'') {

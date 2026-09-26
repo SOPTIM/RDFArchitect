@@ -23,6 +23,8 @@ import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 /**
  * Splitting a Turtle document into the statements a form edit can replace.
  *
@@ -284,5 +286,65 @@ class ShapeBlockLocatorTest {
         assertThat(source.forSubject(EX + "Other").statements()).hasSize(1);
         assertThat(source.forSubject(EX + "Missing")).isNull();
         assertThat(ShapeSource.of("", prefixes()).forSubject(EX + "Shape")).isNull();
+    }
+
+    @Test
+    void aLongStringEndingInAnEscapedQuoteDoesNotEndBeforeItsDelimiter() {
+        // `\"` right before the closing `"""` is part of the string, so the delimiter is the three
+        // quotes after it. Taking the first three quotes as the end reads the rest as Turtle.
+        for (var quote : List.of("\"", "'")) {
+            var delimiter = quote.repeat(3);
+            var turtle =
+                    "ex:Shape sh:description "
+                            + delimiter
+                            + "said \\"
+                            + quote
+                            + "no\\"
+                            + quote
+                            + delimiter
+                            + " ; sh:name \"n\" .\nex:Other a sh:NodeShape .\n";
+
+            var statements = ShapeBlockLocator.statements(turtle);
+
+            assertThat(statements)
+                    .extracting(ShapeBlockLocator.Statement::subjectToken)
+                    .containsExactly("ex:Shape", "ex:Other");
+            assertThat(textOf(turtle, statements.get(0))).endsWith("sh:name \"n\" .");
+        }
+    }
+
+    @Test
+    void anEscapedCharacterInALocalNameIsPartOfTheName() {
+        // `\.` does not end the statement and `\#` does not start a comment: both are characters
+        // of the name, and the name means the unescaped IRI.
+        var turtle =
+                """
+                ex:Shape sh:targetClass ex:A\\. ;
+                    sh:name ex:B\\#c .
+                ex:Other a sh:NodeShape .
+                """;
+
+        var statements = ShapeBlockLocator.statements(turtle);
+
+        assertThat(statements)
+                .extracting(ShapeBlockLocator.Statement::subjectToken)
+                .containsExactly("ex:Shape", "ex:Other");
+        assertThat(ShapeBlockLocator.expand("ex:A\\.", prefixes())).isEqualTo(EX + "A.");
+        assertThat(ShapeBlockLocator.containsComment("ex:B\\#c")).isFalse();
+    }
+
+    @Test
+    void aRelativeIriResolvesAgainstTheDocumentsBase() {
+        var turtle =
+                """
+                @base <http://example.org/base/> .
+                <Shape> a <http://www.w3.org/ns/shacl#NodeShape> .
+                """;
+
+        var names = ShapeBlockLocator.documentPrefixes(turtle, prefixes());
+
+        assertThat(ShapeBlockLocator.locate(turtle, EX + "base/Shape", names)).isPresent();
+        assertThat(ShapeBlockLocator.expand("<http://absolute.org/x>", names))
+                .isEqualTo("http://absolute.org/x");
     }
 }

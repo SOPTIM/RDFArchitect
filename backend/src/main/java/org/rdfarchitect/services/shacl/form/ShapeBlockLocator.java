@@ -17,13 +17,18 @@
 
 package org.rdfarchitect.services.shacl.form;
 
+import org.apache.jena.irix.IRIs;
 import org.apache.jena.shared.PrefixMapping;
+import org.apache.jena.shared.impl.PrefixMappingImpl;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 /**
  * Finds the span of text a single Turtle statement occupies.
@@ -106,6 +111,13 @@ public final class ShapeBlockLocator {
 
     /** Every top-level statement in reading order, directives excluded. */
     static List<Statement> statements(String turtle) {
+        return scan(turtle).stream()
+                .filter(statement -> !isDirective(statement.subjectToken()))
+                .toList();
+    }
+
+    /** Every top-level statement in reading order, directives included. */
+    private static List<Statement> scan(String turtle) {
         var statements = new ArrayList<Statement>();
         var text = turtle == null ? "" : turtle;
         int index = 0;
@@ -117,13 +129,91 @@ public final class ShapeBlockLocator {
             int start = index;
             var subject = tokenAt(text, start);
             int end = endOfStatement(text, start, subject);
-            if (!isDirective(subject)) {
-                statements.add(new Statement(subject, start, end));
-            }
+            statements.add(new Statement(subject, start, end));
             index = end;
         }
         return statements;
     }
+
+    /**
+     * The prefixes in effect at {@code offset}: those declared in front of it, as last declared.
+     *
+     * <p>What text inserted at that offset may use. The graph's prefix mapping is the document's
+     * final one, and a name abbreviated with a prefix declared further down does not parse — Turtle
+     * binds a prefix from its declaration onwards, not for the whole document.
+     */
+    static PrefixMapping prefixesBefore(String turtle, int offset) {
+        var mapping = new PrefixMappingImpl();
+        String base = null;
+        for (Statement directive : scan(turtle)) {
+            if (directive.start() >= offset) {
+                break;
+            }
+            var token = directive.subjectToken().toLowerCase(Locale.ROOT);
+            if (!isDirective(token)) {
+                continue;
+            }
+            var text = turtle.substring(directive.start(), directive.end());
+            if (token.endsWith("base")) {
+                var iri = IRIREF.matcher(text);
+                if (iri.find()) {
+                    base = resolve(base, iri.group(1));
+                }
+                continue;
+            }
+            var declared = PREFIX.matcher(text);
+            if (declared.find()) {
+                var namespace = resolve(base, declared.group(2));
+                if (namespace != null) {
+                    mapping.setNsPrefix(declared.group(1), namespace);
+                }
+            }
+        }
+        return mapping;
+    }
+
+    /**
+     * The document's prefixes, able to resolve the relative IRIs it writes as well.
+     *
+     * <p>Only for a document that declares one base: with several, which one a relative IRI means
+     * depends on where it is written, and a name the form cannot be sure of is better left
+     * unresolved — its subject is then reported as one the form cannot write — than guessed.
+     */
+    static PrefixMapping documentPrefixes(String turtle, PrefixMapping prefixes) {
+        var bases = new LinkedHashSet<String>();
+        for (Statement directive : scan(turtle)) {
+            var token = directive.subjectToken().toLowerCase(Locale.ROOT);
+            if (isDirective(token) && token.endsWith("base")) {
+                var iri = IRIREF.matcher(turtle.substring(directive.start(), directive.end()));
+                if (iri.find()) {
+                    bases.add(iri.group(1));
+                }
+            }
+        }
+        if (bases.size() != 1) {
+            return prefixes;
+        }
+        var base = resolve(null, bases.iterator().next());
+        if (base == null || !isAbsolute(base)) {
+            return prefixes;
+        }
+        var based = new Based(base);
+        based.setNsPrefixes(prefixes);
+        return based;
+    }
+
+    /** A prefix mapping that also knows the base the document resolves relative IRIs against. */
+    private static final class Based extends PrefixMappingImpl {
+        private final String base;
+
+        private Based(String base) {
+            this.base = base;
+        }
+    }
+
+    private static final Pattern IRIREF = Pattern.compile("<([^>]*)>");
+
+    private static final Pattern PREFIX = Pattern.compile("(?i)prefix\\s+([^\\s:]*):\\s*<([^>]*)>");
 
     /**
      * Replaces a statement's text, keeping the newline that followed it.
@@ -154,6 +244,10 @@ public final class ShapeBlockLocator {
             char c = turtle.charAt(index);
             if (c == '#') {
                 return true;
+            }
+            if (c == '\\') {
+                index += 2;
+                continue;
             }
             if (c == '"' || c == '\'') {
                 index = endOfLiteral(turtle, index);
@@ -199,7 +293,7 @@ public final class ShapeBlockLocator {
     }
 
     private static boolean isDirective(String token) {
-        var lower = token.toLowerCase(java.util.Locale.ROOT);
+        var lower = token.toLowerCase(Locale.ROOT);
         return lower.equals("@prefix")
                 || lower.equals("@base")
                 || lower.equals("prefix")
@@ -225,6 +319,12 @@ public final class ShapeBlockLocator {
                 while (index < text.length() && text.charAt(index) != '\n') {
                     index++;
                 }
+                continue;
+            }
+            if (c == '\\') {
+                // Outside a literal only a local name escapes a character, and `ex:A\.` does not
+                // end the statement.
+                index += 2;
                 continue;
             }
             if (c == '"' || c == '\'') {
@@ -267,8 +367,22 @@ public final class ShapeBlockLocator {
         char quote = text.charAt(start);
         var triple = "" + quote + quote + quote;
         if (text.startsWith(triple, start)) {
-            int close = text.indexOf(triple, start + 3);
-            return close < 0 ? text.length() : close + 3;
+            int index = start + 3;
+            while (index < text.length()) {
+                if (text.charAt(index) == '\\') {
+                    index += 2;
+                } else if (text.startsWith(triple, index)) {
+                    // A long string may end in quotes of its own — `"""say "hi""""` — so the
+                    // delimiter is the last three of the run.
+                    while (index + 3 < text.length() && text.charAt(index + 3) == quote) {
+                        index++;
+                    }
+                    return index + 3;
+                } else {
+                    index++;
+                }
+            }
+            return text.length();
         }
         int index = start + 1;
         while (index < text.length()) {
@@ -288,9 +402,84 @@ public final class ShapeBlockLocator {
     /** The IRI a subject or predicate token stands for, or {@code null} when none does. */
     static String expand(String token, PrefixMapping prefixes) {
         if (token.startsWith("<") && token.endsWith(">")) {
-            return token.substring(1, token.length() - 1);
+            var iri = unescapeIri(token.substring(1, token.length() - 1));
+            if (!isAbsolute(iri) && prefixes instanceof Based based) {
+                return resolve(based.base, iri);
+            }
+            return iri;
         }
-        var expanded = prefixes.expandPrefix(token);
-        return expanded.equals(token) ? null : expanded;
+        int colon = token.indexOf(':');
+        if (colon < 0 || token.startsWith("_:")) {
+            return null;
+        }
+        var namespace = prefixes.getNsPrefixURI(token.substring(0, colon));
+        return namespace == null ? null : namespace + unescapeLocal(token.substring(colon + 1));
+    }
+
+    private static boolean isAbsolute(String iri) {
+        return iri.matches("[A-Za-z][A-Za-z0-9+.\\-]*:.*");
+    }
+
+    /** {@code iri} resolved against {@code base}; {@code null} when it cannot be. */
+    private static String resolve(String base, String iri) {
+        var unescaped = unescapeIri(iri);
+        if (base == null) {
+            return unescaped;
+        }
+        try {
+            return IRIs.resolve(base, unescaped);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** A local name as it is meant: {@code ex:A\.} names {@code A.}. */
+    private static String unescapeLocal(String local) {
+        if (local.indexOf('\\') < 0) {
+            return local;
+        }
+        var unescaped = new StringBuilder(local.length());
+        for (int index = 0; index < local.length(); index++) {
+            char c = local.charAt(index);
+            if (c == '\\' && index + 1 < local.length()) {
+                c = local.charAt(++index);
+            }
+            unescaped.append(c);
+        }
+        return unescaped.toString();
+    }
+
+    /** An {@code IRIREF} with its numeric escapes, {@code UCHAR} in the grammar, decoded. */
+    private static String unescapeIri(String iri) {
+        if (iri.indexOf('\\') < 0) {
+            return iri;
+        }
+        var unescaped = new StringBuilder(iri.length());
+        int index = 0;
+        while (index < iri.length()) {
+            char c = iri.charAt(index);
+            int digits = c == '\\' && index + 1 < iri.length() ? escapeLength(iri, index + 1) : 0;
+            if (digits > 0 && index + 2 + digits <= iri.length()) {
+                try {
+                    unescaped.appendCodePoint(
+                            Integer.parseInt(iri.substring(index + 2, index + 2 + digits), 16));
+                    index += 2 + digits;
+                    continue;
+                } catch (IllegalArgumentException e) {
+                    // Not an escape after all, so it is kept as written.
+                }
+            }
+            unescaped.append(c);
+            index++;
+        }
+        return unescaped.toString();
+    }
+
+    private static int escapeLength(String iri, int marker) {
+        return switch (iri.charAt(marker)) {
+            case 'u' -> 4;
+            case 'U' -> 8;
+            default -> 0;
+        };
     }
 }

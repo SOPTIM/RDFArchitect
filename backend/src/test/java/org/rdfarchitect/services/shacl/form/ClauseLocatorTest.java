@@ -189,4 +189,28 @@ class ClauseLocatorTest {
 
         assertThat(clausesOf(turtle)).containsExactly("sh:order -> 0.1", "sh:minCount -> 1");
     }
+
+    @Test
+    void anEscapedSeparatorInALocalNameIsPartOfTheName() {
+        var turtle = "ex:S sh:in ( ex:a\\,b ex:c\\;d ) ; sh:class ex:e\\#f ; sh:minCount 1 .";
+
+        assertThat(clausesOf(turtle))
+                .containsExactly(
+                        "sh:in -> ( ex:a\\,b ex:c\\;d )",
+                        "sh:class -> ex:e\\#f",
+                        "sh:minCount -> 1");
+    }
+
+    @Test
+    void aLongStringEndingInAnEscapedQuoteIsOneObject() {
+        var turtle =
+                "ex:S sh:description \"\"\"say \\\"no\\\"\"\"\" ; sh:severity sh:Warning ;"
+                        + " sh:message '''it's \\'x\\'''' .";
+
+        assertThat(clausesOf(turtle))
+                .containsExactly(
+                        "sh:description -> \"\"\"say \\\"no\\\"\"\"\"",
+                        "sh:severity -> sh:Warning",
+                        "sh:message -> '''it's \\'x\\''''");
+    }
 }
