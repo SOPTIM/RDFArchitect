@@ -230,6 +230,60 @@ class ShapesValidationServiceTest {
                                         .isEqualTo(ShapesValidationFinding.Severity.ERROR));
     }
 
+    @Test
+    void aQueryFindingWithoutAPositionIsPlacedAtTheQuery() {
+        var shapes =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://ex.org/shapes#> .
+
+                ex:QueryShape
+                    a sh:NodeShape ;
+                    sh:targetClass cim:ACLineSegment ;
+                    sh:sparql [
+                        sh:select '''
+                            SELECT $this WHERE {
+                                $this cim:ACLineSegment.length ?length .
+                                BIND (1 AS ?length)
+                            }''' ;
+                    ] .
+                """;
+
+        var report = service.validateTurtle(GRAPH, "query.ttl", shapes, null);
+
+        assertThat(findings(report.getDocuments()))
+                .filteredOn(finding -> finding.getSource() == ShapesValidationFinding.Source.SPARQL)
+                .isNotEmpty()
+                .allSatisfy(
+                        finding -> {
+                            assertThat(finding.getLine()).isNotNull();
+                            assertThat(finding.getLine())
+                                    .isBetween(lineOf(shapes, "sh:select"), lineOf(shapes, "BIND"));
+                        });
+    }
+
+    @Test
+    void aGraphWithoutAVersionIriIsNamedByItsUri() {
+        var draft = new GraphIdentifier(DATASET, "http://ex.org/draft");
+        var schema = GraphFactory.createDefaultGraph();
+        RDFParser.fromString(
+                        "<http://ex.org/Draft> a <http://www.w3.org/2000/01/rdf-schema#Class> .",
+                        Lang.TURTLE)
+                .parse(schema);
+        databasePort.createGraph(draft, schema);
+        var shapes = VALID_SHAPES.replace("cim:ACLineSegment ;", "cim:Nonsense ;");
+
+        var report = service.validateTurtle(GRAPH, "draft.ttl", shapes, null);
+
+        assertThat(report.getProfiles()).contains("http://ex.org/draft");
+        assertThat(report.getProfiles()).noneMatch(profile -> profile.startsWith("urn:rdfa:"));
+        assertThat(findings(report.getDocuments()))
+                .isNotEmpty()
+                .allSatisfy(
+                        finding -> assertThat(finding.getMessage()).doesNotContain("urn:rdfa:"));
+    }
+
     private static final String CIM_REFERENCE_VALUE = "http://iec.ch/TC57/CIM100#ReferenceValue";
 
     // -------------------------------------------------------------------------

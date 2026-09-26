@@ -415,7 +415,7 @@ public class ShapesValidationService implements ShapesValidationUseCase {
                 .severity(severityOf(annotation.severity()))
                 .source(source)
                 .code(annotation.code().name())
-                .message(annotation.message())
+                .message(ProfileVersionIris.withDisplayNames(annotation.message()))
                 .line(position.line())
                 .column(position.column())
                 .term(
@@ -423,7 +423,10 @@ public class ShapesValidationService implements ShapesValidationUseCase {
                                 ? annotation.term().getURI()
                                 : null)
                 .foundInProfiles(
-                        annotation.foundInOtherProfiles().stream().map(VersionIri::iri).toList())
+                        annotation.foundInOtherProfiles().stream()
+                                .map(VersionIri::iri)
+                                .map(ProfileVersionIris::displayName)
+                                .toList())
                 .build();
     }
 
@@ -483,7 +486,12 @@ public class ShapesValidationService implements ShapesValidationUseCase {
                         results.stream()
                                 .mapToInt(ShapesDocumentValidationResult::getInfoCount)
                                 .sum())
-                .profiles(api.schemaIndex().getAllProfiles().stream().map(VersionIri::iri).toList())
+                .profiles(
+                        api.schemaIndex().getAllProfiles().stream()
+                                .map(VersionIri::iri)
+                                .map(ProfileVersionIris::displayName)
+                                .distinct()
+                                .toList())
                 .documents(results)
                 .build();
     }

@@ -31,6 +31,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.services.shacl.validation.ProfileVersionIris;
 import org.rdfarchitect.services.shacl.validation.SchemaIndexCache;
 import org.rdfarchitect.shacl.dto.SchemaTerm;
 import org.rdfarchitect.shacl.dto.SchemaTermDetail;
@@ -264,7 +265,11 @@ public class SchemaTermsService implements SchemaTermsUseCase {
     }
 
     private static List<String> iris(Collection<VersionIri> profiles) {
-        return profiles.stream().map(VersionIri::iri).toList();
+        return profiles.stream()
+                .map(VersionIri::iri)
+                .map(ProfileVersionIris::displayName)
+                .distinct()
+                .toList();
     }
 
     private static String firstUri(Set<Node> nodes) {

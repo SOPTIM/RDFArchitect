@@ -143,8 +143,11 @@ class ShapesValidationAgainstEntsoeProfilesTest {
                         "the header profile: it declares a version IRI but is not addressable as a"
                                 + " CIM profile, so it is indexed generically under that IRI")
                 .contains("http://iec.ch/TC57/61970-552/ModelDescription/1")
-                .as("one graph in this release declares no owl:versionIRI, so it gets a stand-in")
-                .anyMatch(profile -> profile.startsWith("urn:rdfa:profile:"));
+                .as(
+                        "one graph in this release declares no owl:versionIRI; it is indexed under"
+                                + " a stand-in and named by its graph URI")
+                .anyMatch(profile -> databasePort.listGraphUris(DATASET).contains(profile))
+                .noneMatch(profile -> profile.startsWith("urn:rdfa:profile:"));
         assertThat(report.getProfiles()).hasSize(databasePort.listGraphUris(DATASET).size());
     }
 

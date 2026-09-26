@@ -77,19 +77,37 @@ final class SourcePositions {
      *
      * <p>The query the validator saw has the shape's prefix declarations prepended, so its line
      * numbers do not match the Turtle source; {@link EmbeddedSourceMapper} undoes that shift and
-     * finds the query text within the document.
+     * finds the query text within the document. A finding that says nothing about where in the
+     * query it belongs is placed on its term, and failing that at the start of the query — some
+     * checks, such as Jena's "variable used when already in-scope", report no position at all, and
+     * the editor would otherwise have nowhere to put them.
      */
     Position locateEmbedded(SparqlValidationAnnotation annotation, EmbeddedSparql embedded) {
         if (rawText == null) {
             return UNKNOWN;
         }
         if (!hasQueryPosition(annotation)) {
-            // Nothing to shift. Some checks report no position at all; the term itself is still
-            // findable in the Turtle, since the query text is part of the document.
-            return locate(annotation.term(), annotation.locationHint());
+            var onTerm = locate(annotation.term(), annotation.locationHint());
+            return onTerm.line() != null ? onTerm : queryStart(embedded);
         }
         var position = EmbeddedSourceMapper.toTurtlePosition(annotation, embedded, rawText);
         return new Position(position[0] + 1, position[1] + 1);
+    }
+
+    /** Where the query text begins in the document. */
+    private Position queryStart(EmbeddedSparql embedded) {
+        var query = embedded.rawQuery();
+        int offset = query.isEmpty() ? -1 : rawText.indexOf(query);
+        if (offset >= 0) {
+            var located = index().toLocation(offset);
+            return new Position(located.line(), located.column());
+        }
+        // The literal escapes the query differently from how it reads; its first line is still
+        // somewhere to look.
+        var line =
+                EmbeddedSourceMapper.toTurtlePosition(
+                        1 + embedded.prefixes().size(), 1, embedded, rawText);
+        return new Position(line[0] + 1, 1);
     }
 
     private SourceIndex index() {
