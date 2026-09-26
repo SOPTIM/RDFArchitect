@@ -2453,6 +2453,9 @@
       },
       "ShapeEditRequest" : {
         "properties" : {
+          "baseTurtle" : {
+            "type" : "string"
+          },
           "propertyShape" : {
             "$ref" : "#/components/schemas/PropertyShapeModel"
           },
@@ -4647,7 +4650,7 @@
       },
       "put" : {
         "deprecated" : true,
-        "description" : "Replace the SHACL rules of an association. Superseded by PUT /shacl/documents/{documentId}. Writes land in the graph's *default* shapes document whichever document the rule came from, and do not update that document's text — so an edit made here is invisible to, and overwritten by, the constraints workbench.",
+        "description" : "Replace the SHACL rules of an association. Superseded by PUT /shacl/documents/{documentId}. Writes land in the graph's *default* shapes document whichever document the rule came from, and rewrite that document's text from its triples — so its comments and ordering are lost.",
         "operationId" : "replaceAssociationSHACL",
         "parameters" : [
           {
@@ -4700,6 +4703,12 @@
         "requestBody" : {
           "content" : {
             "text/plain" : {
+              "schema" : {
+                "description" : "The SHACL shapes to be inserted.",
+                "type" : "string"
+              }
+            },
+            "text/turtle" : {
               "schema" : {
                 "description" : "The SHACL shapes to be inserted.",
                 "type" : "string"
@@ -5025,7 +5034,7 @@
       },
       "put" : {
         "deprecated" : true,
-        "description" : "Replace the SHACL rules of an attribute. Superseded by PUT /shacl/documents/{documentId}. Writes land in the graph's *default* shapes document whichever document the rule came from, and do not update that document's text — so an edit made here is invisible to, and overwritten by, the constraints workbench.",
+        "description" : "Replace the SHACL rules of an attribute. Superseded by PUT /shacl/documents/{documentId}. Writes land in the graph's *default* shapes document whichever document the rule came from, and rewrite that document's text from its triples — so its comments and ordering are lost.",
         "operationId" : "replaceAttributeSHACL",
         "parameters" : [
           {
@@ -5078,6 +5087,12 @@
         "requestBody" : {
           "content" : {
             "text/plain" : {
+              "schema" : {
+                "description" : "The SHACL shapes to be inserted.",
+                "type" : "string"
+              }
+            },
+            "text/turtle" : {
               "schema" : {
                 "description" : "The SHACL shapes to be inserted.",
                 "type" : "string"
@@ -5384,7 +5399,7 @@
     "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/shacl/custom" : {
       "put" : {
         "deprecated" : true,
-        "description" : "Replace or insert SHACL rules related to a class. Superseded by PUT /shacl/documents/{documentId}. Writes land in the graph's *default* shapes document whichever document the rule came from, and do not update that document's text — so an edit made here is invisible to, and overwritten by, the constraints workbench.",
+        "description" : "Replace or insert SHACL rules related to a class. Superseded by PUT /shacl/documents/{documentId}. Writes land in the graph's *default* shapes document whichever document the rule came from, and rewrite that document's text from its triples — so its comments and ordering are lost.",
         "operationId" : "putSHACL",
         "parameters" : [
           {
@@ -5428,6 +5443,12 @@
         "requestBody" : {
           "content" : {
             "text/plain" : {
+              "schema" : {
+                "description" : "The SHACL shapes to be inserted.",
+                "type" : "string"
+              }
+            },
+            "text/turtle" : {
               "schema" : {
                 "description" : "The SHACL shapes to be inserted.",
                 "type" : "string"
@@ -7635,7 +7656,8 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom/file" : {
       "get" : {
-        "description" : "Export the rdf-shacl graph",
+        "deprecated" : true,
+        "description" : "Export the graph's default constraints document, the one PUT /shacl/custom writes. Superseded by GET /shacl/documents/{documentId} and /shacl/export/file.",
         "operationId" : "getCustomSHACLAsFile",
         "parameters" : [
           {
@@ -7804,7 +7826,8 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom/string" : {
       "get" : {
-        "description" : "Export the rdf-shacl graph as String",
+        "deprecated" : true,
+        "description" : "Export the graph's default constraints document as Turtle, the one PUT /shacl/custom writes. Superseded by GET /shacl/documents/{documentId}.",
         "operationId" : "getCustomSHACLAsString",
         "parameters" : [
           {
@@ -7890,6 +7913,12 @@
                 "description" : "The entire SHACL graph as a string",
                 "type" : "string"
               }
+            },
+            "text/turtle" : {
+              "schema" : {
+                "description" : "The entire SHACL graph as a string",
+                "type" : "string"
+              }
             }
           },
           "required" : true
@@ -7914,7 +7943,7 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom/{shaclShapeURI}" : {
       "delete" : {
-        "description" : "Delete a shacl shape form a shacl graph",
+        "description" : "Delete a shacl shape from the graph's default constraints document. Shapes in other documents are edited through /shacl/documents/{documentId}.",
         "operationId" : "deleteShape",
         "parameters" : [
           {
@@ -7965,6 +7994,16 @@
               }
             },
             "description" : "OK"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The default document has no shape with this IRI."
           }
         },
         "summary" : "delete a shacl shape",
@@ -8017,6 +8056,12 @@
         "requestBody" : {
           "content" : {
             "text/plain" : {
+              "schema" : {
+                "description" : "the triples to replace, requires valid turtle syntax.",
+                "type" : "string"
+              }
+            },
+            "text/turtle" : {
               "schema" : {
                 "description" : "the triples to replace, requires valid turtle syntax.",
                 "type" : "string"
@@ -8146,6 +8191,12 @@
                 "description" : "The SHACL shapes in Turtle syntax.",
                 "type" : "string"
               }
+            },
+            "text/turtle" : {
+              "schema" : {
+                "description" : "The SHACL shapes in Turtle syntax.",
+                "type" : "string"
+              }
             }
           },
           "required" : true
@@ -8160,6 +8211,26 @@
               }
             },
             "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "The content is not valid Turtle."
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "Another document in this graph already has that name."
           }
         },
         "summary" : "add a constraints document from Turtle",
@@ -8240,6 +8311,36 @@
               }
             },
             "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "The content is not valid Turtle."
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "Another document in this graph already has that name."
+          },
+          "415" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "The file is not Turtle, RDF/XML or N-Triples."
           }
         },
         "summary" : "add a constraints document from a file",
@@ -8302,6 +8403,26 @@
               }
             },
             "description" : "OK"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "No constraints document with this id in the graph."
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The default document cannot be deleted."
           }
         },
         "summary" : "delete a constraints document",
@@ -8362,6 +8483,16 @@
               }
             },
             "description" : "OK"
+          },
+          "404" : {
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "No constraints document with this id in the graph."
           }
         },
         "summary" : "get constraints document content",
@@ -8450,6 +8581,26 @@
               }
             },
             "description" : "OK"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "No constraints document with this id in the graph."
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "Another document in this graph already has that name."
           }
         },
         "summary" : "update constraints document metadata",
@@ -8507,6 +8658,12 @@
                 "description" : "The SHACL shapes in Turtle syntax.",
                 "type" : "string"
               }
+            },
+            "text/turtle" : {
+              "schema" : {
+                "description" : "The SHACL shapes in Turtle syntax.",
+                "type" : "string"
+              }
             }
           },
           "required" : true
@@ -8521,6 +8678,26 @@
               }
             },
             "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The content is not valid Turtle."
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "No constraints document with this id in the graph."
           }
         },
         "summary" : "replace constraints document content",
@@ -8531,7 +8708,7 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/export/file" : {
       "get" : {
-        "description" : "Exports the named constraints documents as one file, optionally merged with the shapes generated from the schema. A document is included because it was asked for, whether or not it is enabled for validation.",
+        "description" : "Exports the named constraints documents as one file, optionally merged with the shapes generated from the schema. A document is included because it was asked for, whether or not it is enabled for validation. A single document exported as Turtle on its own is returned as its stored text.",
         "operationId" : "exportSelection",
         "parameters" : [
           {
@@ -8592,6 +8769,28 @@
               "text/turtle" : { }
             },
             "description" : "OK"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "A requested document does not exist in this graph."
+          },
+          "406" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The Accept header names no supported RDF syntax."
           }
         },
         "summary" : "export chosen constraints",
@@ -8637,6 +8836,12 @@
         "requestBody" : {
           "content" : {
             "text/plain" : {
+              "schema" : {
+                "description" : "The SHACL shapes in Turtle syntax.",
+                "type" : "string"
+              }
+            },
+            "text/turtle" : {
               "schema" : {
                 "description" : "The SHACL shapes in Turtle syntax.",
                 "type" : "string"
@@ -8981,6 +9186,16 @@
               }
             },
             "description" : "OK"
+          },
+          "204" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchemaTermDetail"
+                }
+              }
+            },
+            "description" : "No profile in this workspace declares the term."
           }
         },
         "summary" : "describe one schema term",
@@ -9108,6 +9323,12 @@
         "requestBody" : {
           "content" : {
             "text/plain" : {
+              "schema" : {
+                "description" : "The SHACL shapes in Turtle syntax.",
+                "type" : "string"
+              }
+            },
+            "text/turtle" : {
               "schema" : {
                 "description" : "The SHACL shapes in Turtle syntax.",
                 "type" : "string"
