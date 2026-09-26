@@ -103,6 +103,14 @@ class SHACLCustomContentRestControllerTest {
     }
 
     @Test
+    void replaceGraphWithGraphString_turtleBody_isAcceptedLikePlainText() throws Exception {
+        mockMvc.perform(put(URL).contentType("text/turtle").content(TTL))
+                .andExpect(result -> assertThat(result.getResponse().getStatus()).isEqualTo(200));
+
+        verify(shaclInsertUseCase).replaceCustomSHACLGraph(any(), any());
+    }
+
+    @Test
     void replaceGraphWithGraphString_jsonBody_isRejectedInsteadOfReachingTheParser()
             throws Exception {
         // What the generated client used to send: the same Turtle, JSON-quoted.

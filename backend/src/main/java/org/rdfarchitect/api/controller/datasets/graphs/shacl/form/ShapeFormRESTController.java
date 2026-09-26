@@ -74,7 +74,7 @@ public class ShapeFormRESTController {
             })
     // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted body
     // would reach Jena with its surrounding quotes and fail to parse.
-    @PostMapping(consumes = MediaType.TEXT_PLAIN_VALUE)
+    @PostMapping(consumes = {MediaType.TEXT_PLAIN_VALUE, "text/turtle"})
     public ShapesForm readForm(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(

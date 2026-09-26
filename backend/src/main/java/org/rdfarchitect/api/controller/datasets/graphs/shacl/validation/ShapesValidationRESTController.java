@@ -130,7 +130,9 @@ public class ShapesValidationRESTController {
             })
     // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
     // body would reach Jena with its surrounding quotes and fail to parse.
-    @PostMapping(path = "/text", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @PostMapping(
+            path = "/text",
+            consumes = {MediaType.TEXT_PLAIN_VALUE, "text/turtle"})
     public ShapesValidationReport validateShapesText(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(

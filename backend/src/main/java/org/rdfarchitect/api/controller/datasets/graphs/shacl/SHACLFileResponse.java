@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller.datasets.graphs.shacl;
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.ByteArrayOutputStream;
 import java.util.List;
@@ -52,14 +54,31 @@ public final class SHACLFileResponse {
 
     private SHACLFileResponse() {}
 
-    /** The first supported type the header names, preferring the earliest listed above. */
+    /**
+     * The first supported type the header names, preferring the earliest listed above.
+     *
+     * <p>No header, or one accepting anything, gets Turtle.
+     *
+     * @throws ResponseStatusException 406 when the header names none of the supported types
+     */
     public static RDFFormat rdfFormat(String acceptHeader) {
+        if (acceptHeader == null || acceptHeader.isBlank()) {
+            return RDFFormat.TURTLE;
+        }
         for (var entry : SUPPORTED_FORMATS) {
             if (acceptHeader.contains(entry.getKey())) {
                 return entry.getValue();
             }
         }
-        throw new IllegalArgumentException("unsupported Media Type");
+        if (acceptHeader.contains("*/*")) {
+            return RDFFormat.TURTLE;
+        }
+        throw new ResponseStatusException(
+                HttpStatus.NOT_ACCEPTABLE,
+                "Constraints can be exported as "
+                        + String.join(
+                                ", ", SUPPORTED_FORMATS.stream().map(Map.Entry::getKey).toList())
+                        + ".");
     }
 
     /**

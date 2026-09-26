@@ -121,7 +121,9 @@ public class SHACLCustomContentRestController {
             responses = {@ApiResponse(responseCode = "200")})
     // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
     // body would reach Jena with its surrounding quotes and fail to parse.
-    @PutMapping(path = "/string", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @PutMapping(
+            path = "/string",
+            consumes = {MediaType.TEXT_PLAIN_VALUE, "text/turtle"})
     public String replaceGraphWithGraphString(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
@@ -160,7 +162,11 @@ public class SHACLCustomContentRestController {
 
     @Operation(
             summary = "export shacl",
-            description = "Export the rdf-shacl graph",
+            description =
+                    "Export the graph's default constraints document, the one PUT /shacl/custom "
+                            + "writes. Superseded by GET /shacl/documents/{documentId} and "
+                            + "/shacl/export/file.",
+            deprecated = true,
             tags = {"shacl"},
             responses = {
                 @ApiResponse(
@@ -175,7 +181,7 @@ public class SHACLCustomContentRestController {
     @GetMapping("/file")
     public ResponseEntity<byte[]> getCustomSHACLAsFile(
             @Parameter(description = "The requested Datatype.", hidden = true)
-                    @RequestHeader("Accept")
+                    @RequestHeader(value = HttpHeaders.ACCEPT, required = false)
                     String acceptHeader,
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
@@ -215,7 +221,10 @@ public class SHACLCustomContentRestController {
 
     @Operation(
             summary = "export shacl",
-            description = "Export the rdf-shacl graph as String",
+            description =
+                    "Export the graph's default constraints document as Turtle, the one PUT "
+                            + "/shacl/custom writes. Superseded by GET /shacl/documents/{documentId}.",
+            deprecated = true,
             tags = {"shacl"},
             responses = {
                 @ApiResponse(

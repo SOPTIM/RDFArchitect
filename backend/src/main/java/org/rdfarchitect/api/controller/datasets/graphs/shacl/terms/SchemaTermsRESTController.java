@@ -26,7 +26,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.terms.SchemaTermsUseCase;
 import org.rdfarchitect.shacl.dto.SchemaTermDetail;
@@ -34,6 +33,7 @@ import org.rdfarchitect.shacl.dto.SchemaTerms;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -111,10 +111,13 @@ public class SchemaTermsRESTController {
                         content =
                                 @Content(
                                         mediaType = "application/json",
-                                        schema = @Schema(implementation = SchemaTermDetail.class)))
+                                        schema = @Schema(implementation = SchemaTermDetail.class))),
+                @ApiResponse(
+                        responseCode = "204",
+                        description = "No profile in this workspace declares the term.")
             })
     @GetMapping("/detail")
-    public SchemaTermDetail describeTerm(
+    public ResponseEntity<SchemaTermDetail> describeTerm(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -136,12 +139,10 @@ public class SchemaTermsRESTController {
                 iri,
                 originURL);
 
+        // Most of what an editor hovers over is not a schema term, so "unknown" is an ordinary
+        // answer rather than an error the browser would log for every one of them.
         var detail = schemaTermsUseCase.detailOf(graphIdentifier(datasetName, graphURI), iri);
-        if (detail == null) {
-            throw new ResourceNotFoundException(
-                    "No profile in this workspace declares the term " + iri + ".");
-        }
-        return detail;
+        return detail == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(detail);
     }
 
     private GraphIdentifier graphIdentifier(String datasetName, String graphURI) {

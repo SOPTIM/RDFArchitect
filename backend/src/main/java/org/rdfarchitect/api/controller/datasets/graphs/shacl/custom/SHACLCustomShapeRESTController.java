@@ -62,7 +62,7 @@ public class SHACLCustomShapeRESTController {
             responses = {@ApiResponse(responseCode = "200")})
     // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
     // body would reach Jena with its surrounding quotes and fail to parse.
-    @PutMapping(consumes = MediaType.TEXT_PLAIN_VALUE)
+    @PutMapping(consumes = {MediaType.TEXT_PLAIN_VALUE, "text/turtle"})
     public String replaceShape(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
@@ -106,9 +106,16 @@ public class SHACLCustomShapeRESTController {
 
     @Operation(
             summary = "delete a shacl shape",
-            description = "Delete a shacl shape form a shacl graph",
+            description =
+                    "Delete a shacl shape from the graph's default constraints document. Shapes in "
+                            + "other documents are edited through /shacl/documents/{documentId}.",
             tags = {"shacl"},
-            responses = {@ApiResponse(responseCode = "200")})
+            responses = {
+                @ApiResponse(responseCode = "200"),
+                @ApiResponse(
+                        responseCode = "404",
+                        description = "The default document has no shape with this IRI.")
+            })
     @DeleteMapping
     public String deleteShape(
             @Parameter(description = "The name/url of the inquirer.")

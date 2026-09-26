@@ -106,15 +106,17 @@ public class ClassSHACLRESTController {
                     "Replace or insert SHACL rules related to a class. "
                             + "Superseded by PUT /shacl/documents/{documentId}. Writes land in "
                             + "the graph's *default* shapes document whichever "
-                            + "document the rule came from, and do not update that "
-                            + "document's text — so an edit made here is invisible "
-                            + "to, and overwritten by, the constraints workbench.",
+                            + "document the rule came from, and rewrite that "
+                            + "document's text from its triples — so its comments "
+                            + "and ordering are lost.",
             tags = {"shacl"},
             deprecated = true,
             responses = {@ApiResponse(responseCode = "200")})
     // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
     // body would reach Jena with its surrounding quotes and fail to parse.
-    @PutMapping(path = "/custom", consumes = MediaType.TEXT_PLAIN_VALUE)
+    @PutMapping(
+            path = "/custom",
+            consumes = {MediaType.TEXT_PLAIN_VALUE, "text/turtle"})
     public String putSHACL(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(

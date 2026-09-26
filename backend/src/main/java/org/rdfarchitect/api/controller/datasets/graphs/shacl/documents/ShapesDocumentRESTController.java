@@ -63,7 +63,12 @@ public class ShapesDocumentRESTController {
             description =
                     "Returns the document's Turtle source, as the user last saved it where that text is known.",
             tags = {"shacl"},
-            responses = {@ApiResponse(responseCode = "200")})
+            responses = {
+                @ApiResponse(responseCode = "200"),
+                @ApiResponse(
+                        responseCode = "404",
+                        description = "No constraints document with this id in the graph.")
+            })
     @GetMapping(produces = MediaType.TEXT_PLAIN_VALUE)
     public String getShapesDocumentText(
             @Parameter(description = "The name/url of the inquirer.")
@@ -96,10 +101,18 @@ public class ShapesDocumentRESTController {
             summary = "replace constraints document content",
             description = "Replaces the document's shapes with the given Turtle.",
             tags = {"shacl"},
-            responses = {@ApiResponse(responseCode = "200")})
+            responses = {
+                @ApiResponse(responseCode = "200"),
+                @ApiResponse(
+                        responseCode = "400",
+                        description = "The content is not valid Turtle."),
+                @ApiResponse(
+                        responseCode = "404",
+                        description = "No constraints document with this id in the graph.")
+            })
     // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
     // body would reach Jena with its surrounding quotes and fail to parse.
-    @PutMapping(consumes = MediaType.TEXT_PLAIN_VALUE)
+    @PutMapping(consumes = {MediaType.TEXT_PLAIN_VALUE, "text/turtle"})
     public String replaceShapesDocumentText(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
@@ -137,7 +150,15 @@ public class ShapesDocumentRESTController {
                             + "parameters are left unchanged. Order affects list position and "
                             + "serialisation order only — SHACL has no precedence between documents.",
             tags = {"shacl"},
-            responses = {@ApiResponse(responseCode = "200")})
+            responses = {
+                @ApiResponse(responseCode = "200"),
+                @ApiResponse(
+                        responseCode = "404",
+                        description = "No constraints document with this id in the graph."),
+                @ApiResponse(
+                        responseCode = "409",
+                        description = "Another document in this graph already has that name.")
+            })
     @PatchMapping
     public ShapesDocumentInfo updateShapesDocument(
             @Parameter(description = "The name/url of the inquirer.")
@@ -182,7 +203,15 @@ public class ShapesDocumentRESTController {
                     "Deletes a set of SHACL shapes. The graph's default document cannot be deleted, "
                             + "only emptied.",
             tags = {"shacl"},
-            responses = {@ApiResponse(responseCode = "200")})
+            responses = {
+                @ApiResponse(responseCode = "200"),
+                @ApiResponse(
+                        responseCode = "404",
+                        description = "No constraints document with this id in the graph."),
+                @ApiResponse(
+                        responseCode = "409",
+                        description = "The default document cannot be deleted.")
+            })
     @DeleteMapping
     public String deleteShapesDocument(
             @Parameter(description = "The name/url of the inquirer.")

@@ -110,13 +110,17 @@ class SchemaTermsRESTControllerTest {
     }
 
     @Test
-    void anUndeclaredTermIsNotFoundRatherThanAnEmptyBody() throws Exception {
-        // An editor asks about whatever is under the cursor, so "no such term" is a normal answer
-        // and has to be distinguishable from a term that exists but says nothing.
+    void anUndeclaredTermIsNoContentRatherThanAnError() throws Exception {
+        // An editor asks about whatever is under the cursor, so "no such term" is a normal answer:
+        // distinguishable from a term that says nothing, but not an error the browser logs.
         when(schemaTermsUseCase.detailOf(any(), any())).thenReturn(null);
 
         mockMvc.perform(get(URL + "/detail").param("iri", "http://example.org/Nonsense"))
-                .andExpect(result -> assertThat(result.getResolvedException()).isNotNull());
+                .andExpect(
+                        result -> {
+                            assertThat(result.getResponse().getStatus()).isEqualTo(204);
+                            assertThat(result.getResolvedException()).isNull();
+                        });
     }
 
     @Test

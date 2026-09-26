@@ -67,17 +67,24 @@ public class SHACLSelectionExportRESTController {
             description =
                     "Exports the named constraints documents as one file, optionally merged with the "
                             + "shapes generated from the schema. A document is included because it "
-                            + "was asked for, whether or not it is enabled for validation.",
+                            + "was asked for, whether or not it is enabled for validation. A single "
+                            + "document exported as Turtle on its own is returned as its stored text.",
             tags = {"shacl"},
             responses = {
                 @ApiResponse(
                         responseCode = "200",
-                        content = {@Content(mediaType = "text/turtle")})
+                        content = {@Content(mediaType = "text/turtle")}),
+                @ApiResponse(
+                        responseCode = "404",
+                        description = "A requested document does not exist in this graph."),
+                @ApiResponse(
+                        responseCode = "406",
+                        description = "The Accept header names no supported RDF syntax.")
             })
     @GetMapping("/file")
     public ResponseEntity<byte[]> exportSelection(
             @Parameter(description = "The requested Datatype.", hidden = true)
-                    @RequestHeader("Accept")
+                    @RequestHeader(value = HttpHeaders.ACCEPT, required = false)
                     String acceptHeader,
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(

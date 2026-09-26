@@ -66,7 +66,7 @@ public class SHACLContentRestController {
     @GetMapping("/file")
     public ResponseEntity<byte[]> getCombinedSHACLAsFile(
             @Parameter(description = "The requested Datatype.", hidden = true)
-                    @RequestHeader("Accept")
+                    @RequestHeader(value = HttpHeaders.ACCEPT, required = false)
                     String acceptHeader,
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(

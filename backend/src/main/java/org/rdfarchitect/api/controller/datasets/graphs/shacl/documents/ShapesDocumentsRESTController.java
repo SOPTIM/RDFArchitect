@@ -24,7 +24,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFLanguages;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -45,7 +44,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -103,7 +101,18 @@ public class ShapesDocumentsRESTController {
                     "Uploads a set of SHACL shapes. TTL, RDF/XML and N-Triples are accepted; anything "
                             + "other than Turtle is converted to Turtle on import.",
             tags = {"shacl"},
-            responses = {@ApiResponse(responseCode = "200")})
+            responses = {
+                @ApiResponse(responseCode = "200"),
+                @ApiResponse(
+                        responseCode = "400",
+                        description = "The content is not valid Turtle."),
+                @ApiResponse(
+                        responseCode = "409",
+                        description = "Another document in this graph already has that name."),
+                @ApiResponse(
+                        responseCode = "415",
+                        description = "The file is not Turtle, RDF/XML or N-Triples.")
+            })
     @PostMapping(path = "/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ShapesDocumentInfo createShapesDocumentFromFile(
             @Parameter(description = "The name/url of the inquirer.")
@@ -131,23 +140,31 @@ public class ShapesDocumentsRESTController {
                 originURL);
 
         var fileName = file.getOriginalFilename();
-        var lang = RDFLanguages.filenameToLang(fileName, Lang.TURTLE);
+        var lang = ShapesUpload.languageOf(fileName, file.getContentType());
         return shaclDocumentUseCase.createShapesDocument(
                 graphIdentifier(datasetName, graphURI),
                 name != null && !name.isBlank() ? name : fileName,
                 fileName,
-                readFile(file),
-                lang);
+                ShapesUpload.toTurtle(readFile(file), lang),
+                Lang.TURTLE);
     }
 
     @Operation(
             summary = "add a constraints document from Turtle",
             description = "Creates a set of SHACL shapes from a Turtle string.",
             tags = {"shacl"},
-            responses = {@ApiResponse(responseCode = "200")})
+            responses = {
+                @ApiResponse(responseCode = "200"),
+                @ApiResponse(
+                        responseCode = "400",
+                        description = "The content is not valid Turtle."),
+                @ApiResponse(
+                        responseCode = "409",
+                        description = "Another document in this graph already has that name.")
+            })
     // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
     // body would reach Jena with its surrounding quotes and fail to parse.
-    @PostMapping(consumes = MediaType.TEXT_PLAIN_VALUE)
+    @PostMapping(consumes = {MediaType.TEXT_PLAIN_VALUE, "text/turtle"})
     public ShapesDocumentInfo createShapesDocument(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
@@ -180,9 +197,9 @@ public class ShapesDocumentsRESTController {
         return new GraphIdentifier(datasetName, expandURIUseCase.expandUri(datasetName, graphURI));
     }
 
-    private static String readFile(MultipartFile file) {
+    private static byte[] readFile(MultipartFile file) {
         try {
-            return new String(file.getBytes(), StandardCharsets.UTF_8);
+            return file.getBytes();
         } catch (IOException e) {
             throw new DataAccessException(
                     "Unable to read constraints file " + file.getOriginalFilename(), e);
