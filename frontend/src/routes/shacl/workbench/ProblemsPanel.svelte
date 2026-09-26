@@ -162,6 +162,8 @@
     <div class="flex shrink-0 items-center gap-4 px-3 py-1.5">
         <button
             class="text-default-text flex cursor-pointer items-center gap-2 text-sm font-semibold"
+            aria-expanded={expanded}
+            aria-controls="problems-list"
             onclick={() => (expanded = !expanded)}
         >
             <Fa icon={expanded ? faChevronDown : faChevronUp} />
@@ -216,7 +218,10 @@
     </div>
 
     {#if expanded}
-        <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+        <div
+            id="problems-list"
+            class="min-h-0 flex-1 overflow-y-auto px-3 pb-3"
+        >
             {#if problems.length === 0}
                 <p class="text-text-subtle text-sm italic">
                     Nothing to report for this schema's constraints.
@@ -243,7 +248,10 @@
                                         </span>
                                         {#if problem.line}
                                             <span>
-                                                line {problem.line}, column {problem.column}
+                                                line {problem.line}{typeof problem.column ===
+                                                "number"
+                                                    ? `, column ${problem.column}`
+                                                    : ""}
                                             </span>
                                         {/if}
                                         <span>

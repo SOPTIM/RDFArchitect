@@ -104,11 +104,33 @@ describe("toMarkers", () => {
         expect(markers[0].endColumn).toBe(5);
     });
 
-    test("hasPosition needs both coordinates", () => {
+    test("hasPosition needs a line", () => {
         expect(hasPosition({ line: 1, column: 1 })).toBe(true);
-        expect(hasPosition({ line: 1 })).toBe(false);
+        expect(hasPosition({ line: 1, column: null })).toBe(true);
         expect(hasPosition({ column: 1 })).toBe(false);
         expect(hasPosition(null)).toBe(false);
+    });
+
+    test("puts a finding with a line but no column at the start of that line", () => {
+        const markers = toMarkers(
+            [
+                {
+                    severity: "ERROR",
+                    message: "parse error",
+                    line: 7,
+                    column: null,
+                },
+            ],
+            SEVERITIES,
+            extentOf,
+        );
+
+        expect(markers).toHaveLength(1);
+        expect(markers[0]).toMatchObject({
+            startLineNumber: 7,
+            startColumn: 1,
+            endColumn: 6,
+        });
     });
 });
 

@@ -40,7 +40,8 @@ const SOURCE_LABELS = {
 export function toMarkers(findings, severities, extentOf) {
     return findings.filter(hasPosition).map(finding => {
         const line = finding.line;
-        const column = finding.column;
+        // A finding that knows its line but not its column is about the line as a whole.
+        const column = typeof finding.column === "number" ? finding.column : 1;
         return {
             severity: severities[finding.severity] ?? severities.INFO,
             message: finding.message ?? "",
@@ -59,10 +60,9 @@ export function toMarkers(findings, severities, extentOf) {
  *
  * Not every one does: a conflict between two documents, or a shape the locator could not find in
  * the source, has a message but no position. Those belong in the problems panel only — a marker
- * without a range would be dropped by Monaco or, worse, land on line 1.
+ * without a range would be dropped by Monaco or, worse, land on line 1. A line is enough; the
+ * column only narrows it down.
  */
 export function hasPosition(finding) {
-    return (
-        typeof finding?.line === "number" && typeof finding?.column === "number"
-    );
+    return typeof finding?.line === "number";
 }

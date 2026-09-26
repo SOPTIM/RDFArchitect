@@ -17,7 +17,10 @@
 
 import { describe, expect, test, vi } from "vitest";
 
-import { pushExternalText } from "../../src/lib/monaco/externalText.js";
+import {
+    openText,
+    pushExternalText,
+} from "../../src/lib/monaco/externalText.js";
 
 /**
  * Text written into the editor from outside it — a form edit, above all.
@@ -36,6 +39,10 @@ function fakeEditor(text) {
             calls.push("edit");
             value = edits[0].text;
         },
+        setValue: next => {
+            calls.push("setValue");
+            value = next;
+        },
     };
     return {
         calls,
@@ -45,6 +52,8 @@ function fakeEditor(text) {
         saveViewState: vi.fn(() => "view state"),
         restoreViewState: vi.fn(() => calls.push("restore")),
         setValue: vi.fn(),
+        setScrollPosition: vi.fn(),
+        setPosition: vi.fn(),
     };
 }
 
@@ -86,5 +95,37 @@ describe("pushing external text into the editor", () => {
         expect(pushExternalText({ getModel: () => null }, "anything")).toBe(
             false,
         );
+    });
+});
+
+describe("opening another document in the editor", () => {
+    test("starts a history of its own instead of an undoable edit", () => {
+        const editor = fakeEditor("the previous document");
+
+        expect(openText(editor, "the next document")).toBe(true);
+
+        expect(editor.getValue()).toBe("the next document");
+        // Undo after opening must not bring the previous document's text back.
+        expect(editor.calls).toEqual(["setValue"]);
+        expect(editor.restoreViewState).not.toHaveBeenCalled();
+    });
+
+    test("starts at the top rather than where the previous one was scrolled to", () => {
+        const editor = fakeEditor("before");
+
+        openText(editor, "after");
+
+        expect(editor.setScrollPosition).toHaveBeenCalledWith({
+            scrollTop: 0,
+            scrollLeft: 0,
+        });
+        expect(editor.setPosition).toHaveBeenCalledWith({
+            lineNumber: 1,
+            column: 1,
+        });
+    });
+
+    test("does nothing before the editor exists", () => {
+        expect(openText(null, "anything")).toBe(false);
     });
 });

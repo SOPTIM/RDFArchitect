@@ -58,3 +58,24 @@ export function pushExternalText(editor, next) {
     }
     return true;
 }
+
+/**
+ * Puts another document into the editor: its text, a history of its own, and the view at its top.
+ *
+ * The opposite of `pushExternalText`, on purpose. Opening a document is not an edit to the one
+ * before it, so undo must not step back into that one's text, and its scroll position means
+ * nothing here.
+ *
+ * @returns whether there was an editor to put it in
+ */
+export function openText(editor, next) {
+    const model = editor?.getModel?.();
+    if (!editor || !model) {
+        return false;
+    }
+    // A model's setValue starts a fresh undo stack, which an edit operation never does.
+    model.setValue(next);
+    editor.setScrollPosition({ scrollTop: 0, scrollLeft: 0 });
+    editor.setPosition({ lineNumber: 1, column: 1 });
+    return true;
+}

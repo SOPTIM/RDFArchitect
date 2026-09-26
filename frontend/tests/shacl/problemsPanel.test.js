@@ -129,6 +129,45 @@ describe("ProblemsPanel", () => {
         expect(conflict.textContent).not.toMatch(/line \d/);
     });
 
+    test("a finding with a line but no column names only the line", () => {
+        const panel = render(ProblemsPanel, {
+            workbench: fakeWorkbench({
+                totals: { errorCount: 1, warningCount: 0, infoCount: 0 },
+                results: [
+                    {
+                        documentId: "eq",
+                        documentName: "eq.ttl",
+                        findings: [
+                            {
+                                severity: "ERROR",
+                                source: "SYNTAX",
+                                message: "does not parse",
+                                line: 5,
+                                column: null,
+                            },
+                        ],
+                    },
+                ],
+            }),
+        });
+
+        const text = panel.querySelector("li").textContent;
+        expect(text).toContain("line 5");
+        expect(text).not.toContain("column");
+    });
+
+    test("the toggle says whether the list is open", () => {
+        const panel = render(ProblemsPanel, { workbench: fakeWorkbench() });
+        const toggle = [...panel.querySelectorAll("button")].find(button =>
+            button.textContent.includes("Problems"),
+        );
+
+        expect(toggle.getAttribute("aria-expanded")).toBe("true");
+        toggle.click();
+        flushSync();
+        expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    });
+
     test("clicking a finding hands it to the caller to jump to", () => {
         const onselect = vi.fn();
         const panel = render(ProblemsPanel, {

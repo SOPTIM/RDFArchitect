@@ -16,7 +16,9 @@
   -->
 
 <script>
-    import { pushExternalText } from "./externalText.js";
+    import { untrack } from "svelte";
+
+    import { openText, pushExternalText } from "./externalText.js";
     import { MARKER_OWNER, toMarkers } from "./markers.js";
     import { loadMonaco, TURTLE_LANGUAGE_ID } from "./monaco.js";
     import { resolveThemeName } from "./theme.js";
@@ -39,6 +41,11 @@
         termSource = undefined,
         /** Called with the cursor's line when the reader asks to see it in the form view. */
         onshowinform = undefined,
+        /**
+         * Which document `value` belongs to. A change opens the new text with a history of its
+         * own; without one, every new value is an undoable edit to the text before it.
+         */
+        documentKey = undefined,
     } = $props();
 
     // All four are $state because the effects below key off them: the editor is created when
@@ -64,6 +71,15 @@
 
     /** Set while a new document is being pushed in, to tell that apart from a keystroke. */
     let applyingExternalChange = false;
+
+    /** The `documentKey` whose text the editor holds. */
+    let shownKey = undefined;
+
+    /**
+     * Where to put the cursor once the editor exists and holds the text being revealed in — a link
+     * can ask for a line before Monaco has finished loading.
+     */
+    let pendingReveal = $state(null);
 
     $effect(() => {
         if (!browser || !container) {
@@ -128,9 +144,16 @@
                         );
                     });
                 }
-                created.addCommand(api.KeyMod.CtrlCmd | api.KeyCode.KeyS, () =>
-                    onSave?.(),
-                );
+                // An action rather than addCommand: a command's keybinding is global and outlives
+                // the editor, so every remount added another one still calling into the old page.
+                if (onSave) {
+                    created.addAction({
+                        id: "rdfa.shacl.save",
+                        label: "Save",
+                        keybindings: [api.KeyMod.CtrlCmd | api.KeyCode.KeyS],
+                        run: () => onSave?.(),
+                    });
+                }
             })
             .catch(error => {
                 console.warn("Failed to load the editor:", error);
@@ -143,6 +166,7 @@
             created?.dispose();
             if (created === editor) {
                 editor = null;
+                shownKey = undefined;
             }
         };
     });
@@ -150,17 +174,48 @@
     /**
      * Pushes an external change into the editor.
      *
-     * Kept as an edit on the model rather than a `setValue`, so a form edit stays undoable and the
-     * view does not jump — see `pushExternalText`.
+     * Within one document it is an edit on the model rather than a `setValue`, so a form edit stays
+     * undoable and the view does not jump — see `pushExternalText`. Another document replaces the
+     * model's text and history outright — see `openText`.
      */
     $effect(() => {
         const next = value ?? "";
+        const key = documentKey;
+        if (!editor) {
+            return;
+        }
         applyingExternalChange = true;
         try {
-            pushExternalText(editor, next);
+            if (key !== shownKey) {
+                openText(editor, next);
+                shownKey = key;
+            } else {
+                pushExternalText(editor, next);
+            }
         } finally {
             applyingExternalChange = false;
         }
+    });
+
+    // Declared after the text effect so that, when both are due, the text is in first.
+    $effect(() => {
+        const target = pendingReveal;
+        const current = editor;
+        void value;
+        void documentKey;
+        if (!target || !current) {
+            return;
+        }
+        untrack(() => {
+            pendingReveal = null;
+            // The editor may have been hidden until a moment ago, and a hidden editor has no size
+            // to centre anything in.
+            current.layout();
+            const position = { lineNumber: target.line, column: target.column };
+            current.revealPositionInCenterIfOutsideViewport(position);
+            current.setPosition(position);
+            current.focus();
+        });
     });
 
     $effect(() => {
@@ -228,15 +283,14 @@
         };
     }
 
-    /** Scrolls to a position and puts the cursor on it. Used by the problems panel. */
+    /**
+     * Scrolls to a position and puts the cursor on it. Used by the problems panel.
+     *
+     * Applied once the editor exists and has taken in the current text, so a reveal asked for
+     * while Monaco is still loading, or in the same moment a document is opened, is not lost.
+     */
     export function reveal(line, column = 1) {
-        if (!editor) {
-            return;
-        }
-        const position = { lineNumber: line, column };
-        editor.revealPositionInCenterIfOutsideViewport(position);
-        editor.setPosition(position);
-        editor.focus();
+        pendingReveal = { line, column };
     }
 
     export function focusEditor() {

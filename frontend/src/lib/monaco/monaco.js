@@ -43,10 +43,14 @@ let monacoPromise;
  * The Monaco namespace, with the Turtle language and this app's themes registered.
  *
  * Safe to call from anywhere and as often as convenient: the work happens once and every caller
- * awaits the same promise.
+ * awaits the same promise. A failed load is not remembered — a chunk that did not arrive over a
+ * flaky connection would otherwise leave every editor broken until the page is reloaded.
  */
 export function loadMonaco() {
-    monacoPromise ??= initialise();
+    monacoPromise ??= initialise().catch(error => {
+        monacoPromise = undefined;
+        throw error;
+    });
     return monacoPromise;
 }
 
