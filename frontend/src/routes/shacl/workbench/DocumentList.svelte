@@ -484,7 +484,7 @@
         <p class="text-default-text text-sm leading-relaxed">
             Every constraint the document holds is removed from this schema.
             <br />
-            This action is not reversible.
+            Edit › Undo brings it back.
         </p>
     </div>
 </ActionDialog>
