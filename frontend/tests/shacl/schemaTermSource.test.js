@@ -147,6 +147,29 @@ describe("term details", () => {
         ).toHaveLength(1);
     });
 
+    test("a term answered with no content has no detail", async () => {
+        const answer = server.fetch;
+        server.fetch = async request => {
+            if (!new URL(request.url).pathname.endsWith("/detail")) {
+                return answer(request);
+            }
+            server.requests.push({ path: "/detail" });
+            // With a JSON content type, as a gateway may add, the client reads the body as `{}`.
+            return new Response(null, {
+                status: 204,
+                headers: { "content-type": "application/json" },
+            });
+        };
+        const quiet = sourceFor(server);
+
+        expect(await quiet.detailOf("http://ex.org/Nonsense")).toBeNull();
+        expect(await quiet.detailOf("http://ex.org/Nonsense")).toBeNull();
+
+        expect(
+            server.requests.filter(r => r.path.endsWith("/detail")),
+        ).toHaveLength(1);
+    });
+
     test("passes the IRI as a query parameter", async () => {
         await source.detailOf(`${CIM}ACLineSegment`);
 

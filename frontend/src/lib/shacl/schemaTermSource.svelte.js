@@ -116,8 +116,10 @@ export class SchemaTermSource {
             path: this.#path,
             query: { iri },
         })
-            .then(({ data, error }) => {
-                const detail = error ? null : (data ?? null);
+            .then(({ data, error, response }) => {
+                // 204 is the server's "no profile declares this"; the client reads it as `{}`.
+                const detail =
+                    error || response?.status === 204 ? null : (data ?? null);
                 this.#details.set(iri, detail);
                 return detail;
             })
