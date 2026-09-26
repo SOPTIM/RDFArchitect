@@ -19,6 +19,8 @@ package org.rdfarchitect.services.shacl.validation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.soptim.opencgmes.cimvocabcheck.core.VersionIri;
+
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
@@ -223,5 +225,58 @@ class SchemaIndexCacheTest {
 
     private void undo() {
         databasePort.getGraphWithContext(GRAPH).undo();
+    }
+
+    // -------------------------------------------------------------------------
+    // Which graphs a profile comes from
+    // -------------------------------------------------------------------------
+
+    private static final String LIBRARY = "../external/entsoe-application-profiles-library/";
+
+    private void loadFile(String graphUri, String file, String extraClass) {
+        var graph = GraphFactory.createDefaultGraph();
+        RDFParser.source(java.nio.file.Path.of(LIBRARY + file).toUri().toString()).parse(graph);
+        if (extraClass != null) {
+            graph.add(
+                    Triple.create(
+                            NodeFactory.createURI(extraClass),
+                            org.apache.jena.vocabulary.RDF.type.asNode(),
+                            org.apache.jena.vocabulary.RDFS.Class.asNode()));
+        }
+        databasePort.createGraph(new GraphIdentifier(DATASET, graphUri), graph);
+    }
+
+    @Test
+    void aCopyOfAProfileUnderTheSameVersionIriStillHasItsOwnTermsIndexed() {
+        var equipment = "CGMES/CurrentRelease/RDFS/61970-600-2_Equipment-AP-Voc-RDFS2020.rdf";
+        var added = "http://iec.ch/TC57/CIM100#SomethingOnlyTheCopyDeclares";
+        loadFile("http://ex.org/EQ-official", equipment, null);
+        loadFile("http://ex.org/EQ-edited", equipment, added);
+
+        var index = cache.apiFor(DATASET).schemaIndex();
+
+        assertThat(index.findClass(NodeFactory.createURI(added))).isNotEmpty();
+    }
+
+    @Test
+    void aCgmes2ProfileIsIndexedOnceAndNotAlsoUnderASyntheticIri() {
+        // CGMES 2.4.15 states its version on a {Profile}Version class, not as owl:versionIRI.
+        loadFile(
+                "http://ex.org/SV",
+                "CGMES/PastReleases/v2-4/Original/RDFS/"
+                        + "StateVariableProfileRDFSAugmented-v2_4_15-4Sep2020.rdf",
+                null);
+
+        var profiles = cache.apiFor(DATASET).schemaIndex().getAllProfiles();
+
+        // The schema graph from setUp is not a profile and keeps its synthetic IRI; the 2.4.15
+        // profile must not get one next to its real version IRI.
+        assertThat(profiles)
+                .filteredOn(ProfileVersionIris::isSynthetic)
+                .extracting(VersionIri::iri)
+                .noneMatch(iri -> iri.contains("SV"));
+        assertThat(profiles)
+                .filteredOn(profile -> !ProfileVersionIris.isSynthetic(profile))
+                .isNotEmpty();
     }
 }

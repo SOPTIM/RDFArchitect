@@ -21,9 +21,11 @@ import de.soptim.opencgmes.cimvocabcheck.core.CgmesSchemaLoader;
 import de.soptim.opencgmes.cimvocabcheck.core.SparqlValidationApi;
 import de.soptim.opencgmes.cimvocabcheck.core.VersionIri;
 import de.soptim.opencgmes.cimvocabcheck.core.schema.RdfsSchemaIndex;
+import de.soptim.opencgmes.cimxml.graph.CimProfile;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.GraphUtil;
+import org.apache.jena.graph.Node;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.rdfarchitect.context.SessionContext;
@@ -33,10 +35,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.LongSupplier;
 
@@ -270,10 +275,14 @@ public class SchemaIndexCache {
 
         var cimIndex = indexCimProfiles(copies.values());
         var covered = new LinkedHashSet<>(cimIndex.getAllProfiles());
+        var registered = registeredProfiles(copies.values());
 
         var builder = RdfsSchemaIndex.builder();
         cimIndex.profiles().values().forEach(builder::addProfile);
         for (var entry : copies.entrySet()) {
+            if (registered.contains(entry.getValue())) {
+                continue;
+            }
             var fallback = fallbackProfile(entry.getKey(), entry.getValue(), covered);
             if (fallback != null) {
                 builder.addProfile(fallback, entry.getValue());
@@ -312,23 +321,65 @@ public class SchemaIndexCache {
     }
 
     /**
-     * The version IRI under which a graph is indexed generically, or {@code null} when it already
-     * contributed a CIM profile.
+     * The graphs the CIM loader actually registered, replaying its rules over the same graphs in
+     * the same order: a graph it can wrap as a non-header profile, whose version IRIs no earlier
+     * graph claimed.
      *
-     * <p>A graph reaches this either because it declares no {@code owl:versionIRI} (a profile still
-     * being authored here), or because it declares one but is not a CIM profile the loader
-     * recognises — a header profile, or a plain RDFS vocabulary. Both are indexed from their
-     * triples alone, which finds their classes and properties but not the CIM datatypes. Leaving
-     * them out instead would report every term they declare as unknown.
+     * <p>Whether a graph contributed a profile cannot be read off the IRIs it declares. An edited
+     * copy of an official profile declares the same {@code owl:versionIRI} as the original, and the
+     * loader keeps the first and drops the copy — so the copy's new terms were indexed nowhere. And
+     * a CGMES 2.4.15 profile declares no {@code owl:versionIRI} at all (its version lives on the
+     * {@code {Profile}Version} class), yet registers fine — so it was indexed a second time, under
+     * a synthetic IRI that then appeared next to the real one in every message.
+     *
+     * <p>Runs after {@link #indexCimProfiles}, which has given each graph the {@code cim} prefix
+     * that wrapping keys off.
+     */
+    private static Set<Graph> registeredProfiles(Iterable<Graph> graphs) {
+        var registered = Collections.<Graph>newSetFromMap(new IdentityHashMap<>());
+        // The registry keys a profile by its set of version IRIs, so one set clashes only with
+        // the same set.
+        var claimed = new HashSet<Set<Node>>();
+        for (Graph graph : graphs) {
+            try {
+                var profile = CimProfile.wrap(graph);
+                if (profile.isHeaderProfile()) {
+                    // Registered, but not addressable by version IRI: the index leaves it out.
+                    continue;
+                }
+                var versionIris = profile.getOwlVersionIris();
+                if (versionIris != null
+                        && !versionIris.isEmpty()
+                        && !claimed.contains(versionIris)) {
+                    claimed.add(versionIris);
+                    registered.add(graph);
+                }
+            } catch (RuntimeException notAProfile) {
+                // Not a CIM profile; indexed generically below.
+            }
+        }
+        return registered;
+    }
+
+    /**
+     * The version IRI under which a graph the loader did not register is indexed generically.
+     *
+     * <p>A graph reaches this because it is not a CIM profile the loader recognises — a header
+     * profile, a plain RDFS vocabulary, a profile still being authored here without the version
+     * statements a profile needs — or because another graph already registered its version IRI. It
+     * is indexed from its triples alone, which finds its classes and properties but not the CIM
+     * datatypes. Leaving it out instead would report every term it declares as unknown.
+     *
+     * <p>A declared IRI is used when no other profile has it; otherwise the graph gets a synthetic
+     * one, since two profiles under one IRI would be merged into one scope entry.
      */
     private static VersionIri fallbackProfile(
             String graphUri, Graph graph, LinkedHashSet<VersionIri> covered) {
-        var declared = new ArrayList<>(ProfileVersionIris.declaredIn(graph));
-        if (declared.stream().anyMatch(covered::contains)) {
-            return null;
-        }
         var fallback =
-                declared.isEmpty() ? ProfileVersionIris.syntheticFor(graphUri) : declared.get(0);
+                ProfileVersionIris.declaredIn(graph).stream()
+                        .filter(declared -> !covered.contains(declared))
+                        .findFirst()
+                        .orElseGet(() -> ProfileVersionIris.syntheticFor(graphUri));
         return covered.add(fallback) ? fallback : null;
     }
 
