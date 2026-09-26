@@ -282,6 +282,7 @@ public class ShapesValidationService implements ShapesValidationUseCase {
         var scope = api.schemaIndex().getAllProfiles();
         var result = api.validateShacl(shapes, scope);
 
+        var positions = new SourcePositions(rawText, shapes.getPrefixMapping());
         var findings = new LinkedHashSet<ShapesValidationFinding>();
         result.shapeAnnotations()
                 .forEach(
@@ -290,9 +291,7 @@ public class ShapesValidationService implements ShapesValidationUseCase {
                                         toFinding(
                                                 annotation,
                                                 ShapesValidationFinding.Source.SHAPE,
-                                                SourcePositions.locate(
-                                                        rawText,
-                                                        shapes,
+                                                positions.locate(
                                                         annotation.term(),
                                                         annotation.locationHint()))));
         result.embeddedResults()
@@ -307,13 +306,10 @@ public class ShapesValidationService implements ShapesValidationUseCase {
                                                                         annotation,
                                                                         ShapesValidationFinding
                                                                                 .Source.SPARQL,
-                                                                        SourcePositions
-                                                                                .locateEmbedded(
-                                                                                        rawText,
-                                                                                        shapes,
-                                                                                        annotation,
-                                                                                        embedded
-                                                                                                .embedded())))));
+                                                                        positions.locateEmbedded(
+                                                                                annotation,
+                                                                                embedded
+                                                                                        .embedded())))));
         return List.copyOf(findings);
     }
 

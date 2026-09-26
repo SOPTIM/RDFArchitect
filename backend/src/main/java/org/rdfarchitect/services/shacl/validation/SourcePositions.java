@@ -17,13 +17,12 @@
 
 package org.rdfarchitect.services.shacl.validation;
 
-import de.soptim.opencgmes.cimvocabcheck.core.SourceLocator;
 import de.soptim.opencgmes.cimvocabcheck.core.SparqlValidationAnnotation;
 import de.soptim.opencgmes.cimvocabcheck.core.shacl.EmbeddedSourceMapper;
 import de.soptim.opencgmes.cimvocabcheck.core.shacl.EmbeddedSparql;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
+import org.apache.jena.shared.PrefixMapping;
 
 import java.util.regex.Pattern;
 
@@ -35,28 +34,42 @@ import java.util.regex.Pattern;
  * only its triples. Positions produced here are 1-based, as an editor numbers lines; note that
  * CIMVocabCheck reports shape positions 1-based and embedded-SPARQL positions 0-based, so only the
  * latter are shifted.
+ *
+ * <p>One instance per document and validation run: the text is indexed on first use and every later
+ * lookup reuses it, so resolving a finding costs a lookup rather than a scan of the document.
  */
 final class SourcePositions {
 
     /** A 1-based position, with {@code null} fields where the text gave no answer. */
     record Position(Integer line, Integer column) {}
 
-    private static final Position UNKNOWN = new Position(null, null);
+    static final Position UNKNOWN = new Position(null, null);
 
-    private SourcePositions() {}
+    private static final Pattern QUERY_POSITION = Pattern.compile("line \\d+, column \\d+");
+
+    private final String rawText;
+
+    private final PrefixMapping prefixes;
+
+    private volatile SourceIndex index;
+
+    SourcePositions(String rawText, PrefixMapping prefixes) {
+        this.rawText = rawText;
+        this.prefixes = prefixes;
+    }
 
     /**
-     * Locates {@code term} in {@code rawText}.
+     * Locates {@code term} in the text.
      *
      * @param hint a node from the same statement — typically the enclosing shape — used to pick
      *     between several occurrences of the same term; may be {@code null}
      */
-    static Position locate(String rawText, Graph graph, Node term, Node hint) {
+    Position locate(Node term, Node hint) {
         if (rawText == null || term == null || !term.isURI()) {
             return UNKNOWN;
         }
-        var located = SourceLocator.locateWithHint(rawText, term, graph.getPrefixMapping(), hint);
-        return new Position(located.line(), located.column());
+        var located = index().locate(term, hint);
+        return located == null ? UNKNOWN : new Position(located.line(), located.column());
     }
 
     /**
@@ -66,21 +79,26 @@ final class SourcePositions {
      * numbers do not match the Turtle source; {@link EmbeddedSourceMapper} undoes that shift and
      * finds the query text within the document.
      */
-    static Position locateEmbedded(
-            String rawText,
-            Graph graph,
-            SparqlValidationAnnotation annotation,
-            EmbeddedSparql embedded) {
+    Position locateEmbedded(SparqlValidationAnnotation annotation, EmbeddedSparql embedded) {
         if (rawText == null) {
             return UNKNOWN;
         }
         if (!hasQueryPosition(annotation)) {
             // Nothing to shift. Some checks report no position at all; the term itself is still
             // findable in the Turtle, since the query text is part of the document.
-            return locate(rawText, graph, annotation.term(), annotation.locationHint());
+            return locate(annotation.term(), annotation.locationHint());
         }
         var position = EmbeddedSourceMapper.toTurtlePosition(annotation, embedded, rawText);
         return new Position(position[0] + 1, position[1] + 1);
+    }
+
+    private SourceIndex index() {
+        var built = index;
+        if (built == null) {
+            built = new SourceIndex(rawText, prefixes);
+            index = built;
+        }
+        return built;
     }
 
     /**
@@ -92,6 +110,4 @@ final class SourcePositions {
                 || (annotation.message() != null
                         && QUERY_POSITION.matcher(annotation.message()).find());
     }
-
-    private static final Pattern QUERY_POSITION = Pattern.compile("line \\d+, column \\d+");
 }

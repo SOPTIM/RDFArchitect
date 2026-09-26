@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 /**
@@ -79,7 +80,32 @@ final class ShapesConflictAnalyzer {
      * triples before a position can be resolved against it. Passing it eagerly made every keystroke
      * in the editor pay that for every other document in the graph.
      */
-    record Document(UUID id, String name, Graph graph, Supplier<String> rawText) {}
+    record Document(
+            UUID id,
+            String name,
+            Graph graph,
+            Supplier<String> rawText,
+            Supplier<SourcePositions> positions) {
+
+        /**
+         * The document's positions are indexed on first use and kept with it, so a document held
+         * for comparison across keystrokes is indexed once.
+         */
+        Document(UUID id, String name, Graph graph, Supplier<String> rawText) {
+            this(id, name, graph, rawText, memoised(rawText, graph));
+        }
+
+        private static Supplier<SourcePositions> memoised(Supplier<String> rawText, Graph graph) {
+            var built = new AtomicReference<SourcePositions>();
+            return () ->
+                    built.updateAndGet(
+                            existing ->
+                                    existing != null
+                                            ? existing
+                                            : new SourcePositions(
+                                                    rawText.get(), graph.getPrefixMapping()));
+        }
+    }
 
     private ShapesConflictAnalyzer() {}
 
@@ -377,8 +403,7 @@ final class ShapesConflictAnalyzer {
 
     private static ShapesValidationFinding finding(
             String code, String message, Node term, Document document, Node hint) {
-        var location =
-                SourcePositions.locate(document.rawText().get(), document.graph(), term, hint);
+        var location = document.positions().get().locate(term, hint);
         return ShapesValidationFinding.builder()
                 .severity(ShapesValidationFinding.Severity.ERROR)
                 .source(ShapesValidationFinding.Source.CONFLICT)
