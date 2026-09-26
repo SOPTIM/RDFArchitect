@@ -28,22 +28,40 @@
  * document the grammar allows. A subject that does not start a line is simply not listed.
  */
 
-/** A term in subject position: a prefixed name, an absolute IRI, or a blank node label. */
-const SUBJECT = /^(<[^>\s]*>|_:[^\s;,.]+|[A-Za-z_][\w.-]*:[^\s;,.]*)/;
+/**
+ * The part of a name after its first character: dots are allowed inside it but not at its end,
+ * where a dot is the statement's full stop. `eq:GeneratingUnit.ratedGrossMaxP-datatype` is one
+ * name — which is how the official files name every rule — not `eq:GeneratingUnit` and noise.
+ */
+const NAME_TAIL = String.raw`(?:[^\s;,.]+(?:\.+[^\s;,.]+)*)?`;
 
-const TARGET_CLASS =
-    /\bsh:targetClass\s+(<[^>\s]*>|[A-Za-z_][\w.-]*:[^\s;,.]+)/;
+/** A term: an absolute IRI, a blank node label, or a prefixed name (possibly with no prefix). */
+const TERM = String.raw`(<[^>\s]*>|_:${NAME_TAIL}|(?:[A-Za-z_][\w.-]*)?:${NAME_TAIL})`;
 
-const SHAPE_KIND = /\ba\s+sh:(NodeShape|PropertyShape)\b/;
+const SUBJECT = new RegExp(`^${TERM}`);
+
+const TARGET_CLASS = new RegExp(String.raw`\bsh:targetClass\s+${TERM}`);
+
+/** `a`, `rdf:type` or its full IRI, then one of the two shape classes among the objects. */
+const SHAPE_KIND = new RegExp(
+    String.raw`(?:^|[\s;])(?:a|rdf:type|<http://www\.w3\.org/1999/02/22-rdf-syntax-ns#type>)\s+` +
+        String.raw`(?:[^;]*?[\s,])?(?:sh:|<http://www\.w3\.org/ns/shacl#)(NodeShape|PropertyShape)\b`,
+);
+
+/** What makes a subject a shape when it does not say so with a type. */
+const PROPERTY_SHAPE_HINT = /\bsh:path\b/;
+const NODE_SHAPE_HINT =
+    /\bsh:(?:targetClass|targetNode|targetSubjectsOf|targetObjectsOf|property)\b/;
 
 /**
- * @param turtle the document's text
- * @returns `{ name, line, targetClass, kind }` per shape, in the order they appear. `line` is
- *     1-based, so it can be handed straight to the editor.
+ * Every subject that starts a line, with the line it starts on.
+ *
+ * The outline's reading without deciding which subjects are shapes, for questions about any
+ * subject — "where in this document is it defined?" above all.
  */
-export function extractOutline(turtle) {
+export function extractSubjects(turtle) {
     const lines = (turtle ?? "").split("\n");
-    const shapes = [];
+    const subjects = [];
     let inLongString = false;
 
     lines.forEach((line, index) => {
@@ -53,26 +71,45 @@ export function extractOutline(turtle) {
             return;
         }
         const subject = SUBJECT.exec(line);
-        if (!subject) {
-            return;
+        if (subject) {
+            subjects.push({ name: subject[1], line: index + 1 });
         }
-        shapes.push({
-            name: subject[1],
-            line: index + 1,
-            targetClass: null,
-            kind: null,
-        });
     });
+    return subjects;
+}
 
-    return shapes.map((shape, index) => {
-        const until = shapes[index + 1]?.line ?? lines.length + 1;
-        const block = lines.slice(shape.line - 1, until - 1).join("\n");
-        return {
-            ...shape,
-            targetClass: TARGET_CLASS.exec(block)?.[1] ?? null,
-            kind: SHAPE_KIND.exec(block)?.[1] ?? null,
-        };
-    });
+/**
+ * @param turtle the document's text
+ * @returns `{ name, line, targetClass, kind }` per shape, in the order they appear. `line` is
+ *     1-based, so it can be handed straight to the editor. Subjects that are not shapes — the
+ *     ontology header, a property group — are left out.
+ */
+export function extractOutline(turtle) {
+    const lines = (turtle ?? "").split("\n");
+    const subjects = extractSubjects(turtle);
+
+    return subjects
+        .map((subject, index) => {
+            const until = subjects[index + 1]?.line ?? lines.length + 1;
+            const block = lines.slice(subject.line - 1, until - 1).join("\n");
+            return {
+                ...subject,
+                targetClass: TARGET_CLASS.exec(block)?.[1] ?? null,
+                kind: SHAPE_KIND.exec(block)?.[1] ?? inferredKind(block),
+            };
+        })
+        .filter(shape => shape.kind !== null);
+}
+
+/** SHACL recognises an untyped shape by what it says, so the outline does too. */
+function inferredKind(block) {
+    if (PROPERTY_SHAPE_HINT.test(block)) {
+        return "PropertyShape";
+    }
+    if (NODE_SHAPE_HINT.test(block)) {
+        return "NodeShape";
+    }
+    return null;
 }
 
 /**

@@ -27,6 +27,7 @@
  * read-only editors in the class-editor dialogs stay quiet.
  */
 
+import { extractSubjects } from "$lib/shacl/outline.js";
 import {
     completionEntries,
     hoverMarkdown,
@@ -55,6 +56,9 @@ const sources = new WeakMap();
 
 /** Model → its prefixes, remembered per content version rather than re-scanned per keystroke. */
 const prefixCache = new WeakMap();
+
+/** A directive line, where a `:` belongs to a prefix being declared rather than to a term. */
+const DIRECTIVE = /^\s*(?:@prefix|@base|prefix|base)\b/i;
 
 /** Where following a term should go. Set by the workbench; without it, definitions do nothing. */
 let openClass = null;
@@ -101,6 +105,102 @@ function prefixesOf(model) {
     return prefixes;
 }
 
+/**
+ * The line this document defines `iri` on, or null when it does not.
+ *
+ * Checked before the schema is asked: a constraints file refers to its own shapes and rules far
+ * more often than to anything the schema could explain, and the schema has never heard of them.
+ */
+export function localDefinitionLine(text, iri, prefixes) {
+    const lines = (text ?? "").split("\n");
+    for (const subject of extractSubjects(text)) {
+        if (termAt(lines[subject.line - 1], 1, prefixes)?.iri === iri) {
+            return subject.line;
+        }
+    }
+    return null;
+}
+
+/**
+ * Where the text just before the cursor stands: in `code`, a `comment`, a short `string`, a
+ * triple-quoted `longString` or an `iri`.
+ *
+ * Only in code does a `:` start a term. The SPARQL of a `sh:select` is a long string that uses
+ * the document's prefixes, so it counts as a place to complete in as well.
+ */
+export function lexicalContext(textBefore) {
+    const text = textBefore ?? "";
+    let state = "code";
+    let quote = "";
+    let index = 0;
+    while (index < text.length) {
+        const char = text[index];
+        if (state === "code") {
+            const triple = text.slice(index, index + 3);
+            if (char === "#") {
+                state = "comment";
+            } else if (triple === '"""' || triple === "'''") {
+                quote = triple;
+                state = "longString";
+                index += 3;
+                continue;
+            } else if (char === '"' || char === "'") {
+                quote = char;
+                state = "string";
+            } else if (char === "<") {
+                state = "iri";
+            }
+        } else if (state === "comment") {
+            if (char === "\n") {
+                state = "code";
+            }
+        } else if (state === "iri") {
+            if (char === ">" || /\s/.test(char)) {
+                state = "code";
+            }
+        } else if (char === "\\") {
+            index += 2;
+            continue;
+        } else if (state === "string") {
+            if (char === quote || char === "\n") {
+                state = "code";
+            }
+        } else if (text.startsWith(quote, index)) {
+            state = "code";
+            index += 3;
+            continue;
+        }
+        index += 1;
+    }
+    return state;
+}
+
+/** Whether a `:` typed at this position is part of a term being written. */
+function writesTermAt(model, position) {
+    if (DIRECTIVE.test(model.getLineContent(position.lineNumber))) {
+        return false;
+    }
+    const context = lexicalContext(
+        model.getValueInRange({
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: position.lineNumber,
+            endColumn: position.column,
+        }),
+    );
+    return context === "code" || context === "longString";
+}
+
+/**
+ * A term's detail, or null when the answer describes nothing.
+ *
+ * "Not a schema term" arrives as an empty body (204) or as an error (404). Either way there is
+ * nothing to show, and an empty object would otherwise be rendered as a hover about `undefined`.
+ */
+function describedTerm(detail) {
+    return detail?.iri ? detail : null;
+}
+
 export function registerTurtleLanguageFeatures(monaco, languageId) {
     const kinds = {
         CLASS: monaco.languages.CompletionItemKind.Class,
@@ -111,9 +211,18 @@ export function registerTurtleLanguageFeatures(monaco, languageId) {
     monaco.languages.registerCompletionItemProvider(languageId, {
         // ":" is what turns "cim" into a term being written; the rest is Monaco's own filtering.
         triggerCharacters: [":"],
-        async provideCompletionItems(model, position) {
+        async provideCompletionItems(model, position, context) {
             const source = sourceFor(model);
             if (!source) {
+                return { suggestions: [] };
+            }
+            // Asked for explicitly, completion answers anywhere; but a `:` typed into a comment,
+            // a string, an IRI or a prefix declaration is not a term being written.
+            if (
+                context?.triggerKind ===
+                    monaco.languages.CompletionTriggerKind?.TriggerCharacter &&
+                !writesTermAt(model, position)
+            ) {
                 return { suggestions: [] };
             }
             await source.load();
@@ -160,7 +269,7 @@ export function registerTurtleLanguageFeatures(monaco, languageId) {
                 return null;
             }
             const markdown = hoverMarkdown(
-                await source.detailOf(term.iri),
+                describedTerm(await source.detailOf(term.iri)),
                 prefixes,
             );
             if (!markdown) {
@@ -181,18 +290,40 @@ export function registerTurtleLanguageFeatures(monaco, languageId) {
     monaco.languages.registerDefinitionProvider(languageId, {
         async provideDefinition(model, position) {
             const source = sourceFor(model);
-            if (!source || !openClass) {
+            if (!source) {
                 return null;
             }
+            const prefixes = prefixesOf(model);
             const term = termAt(
                 model.getLineContent(position.lineNumber),
                 position.column,
-                prefixesOf(model),
+                prefixes,
             );
             if (!term) {
                 return null;
             }
-            const detail = await source.detailOf(term.iri);
+            const local = localDefinitionLine(
+                model.getValue(),
+                term.iri,
+                prefixes,
+            );
+            // On the definition itself there is nowhere to go in the document; the schema may
+            // still know the term, as it does when a class is described where it is declared.
+            if (local !== null && local !== position.lineNumber) {
+                return {
+                    uri: model.uri,
+                    range: {
+                        startLineNumber: local,
+                        endLineNumber: local,
+                        startColumn: 1,
+                        endColumn: 1,
+                    },
+                };
+            }
+            if (!openClass) {
+                return null;
+            }
+            const detail = describedTerm(await source.detailOf(term.iri));
             if (!detail?.classUUID) {
                 return null;
             }

@@ -15,9 +15,10 @@
  *
  */
 
+import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 
-import { extractOutline } from "$lib/shacl/outline.js";
+import { extractOutline, extractSubjects } from "$lib/shacl/outline.js";
 
 describe("extractOutline", () => {
     test("lists each shape with the line it starts on", () => {
@@ -118,5 +119,101 @@ ex:Other a sh:NodeShape .`;
     test("returns nothing for empty or missing text", () => {
         expect(extractOutline("")).toEqual([]);
         expect(extractOutline(undefined)).toEqual([]);
+    });
+
+    test("keeps dots inside a name and drops the statement's full stop", () => {
+        const turtle = `ex:Line.length-cardinality a sh:PropertyShape ;
+    sh:path ex:Line.length .
+
+ex:Line a sh:NodeShape ;
+    sh:targetClass ex:Line.Kind.`;
+
+        expect(extractOutline(turtle)).toEqual([
+            {
+                name: "ex:Line.length-cardinality",
+                line: 1,
+                kind: "PropertyShape",
+                targetClass: null,
+            },
+            {
+                name: "ex:Line",
+                line: 4,
+                kind: "NodeShape",
+                targetClass: "ex:Line.Kind",
+            },
+        ]);
+    });
+
+    test("reads the type however it is written", () => {
+        const turtle = `ex:A rdf:type sh:NodeShape .
+ex:B <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/ns/shacl#PropertyShape> .
+ex:C a owl:Class, sh:NodeShape .`;
+
+        expect(extractOutline(turtle).map(shape => shape.kind)).toEqual([
+            "NodeShape",
+            "PropertyShape",
+            "NodeShape",
+        ]);
+    });
+
+    test("lists only shapes, recognising the untyped ones by what they say", () => {
+        const turtle = `ex:Ontology a owl:Ontology ;
+    rdfs:label "not a shape" .
+
+ex:Group a sh:PropertyGroup .
+
+ex:Untyped sh:targetClass ex:Thing .
+
+ex:UntypedRule sh:path ex:name ;
+    sh:minCount 1 .`;
+
+        expect(
+            extractOutline(turtle).map(shape => [shape.name, shape.kind]),
+        ).toEqual([
+            ["ex:Untyped", "NodeShape"],
+            ["ex:UntypedRule", "PropertyShape"],
+        ]);
+    });
+
+    test("counts the shapes an official constraints file declares", () => {
+        // Written with rdf:type and dotted rule names, the way every official file is.
+        const text = readFileSync(
+            "../external/entsoe-application-profiles-library/CGMES/CurrentRelease/SHACL/TTL/61970-301_ShortCircuit-AP-Con-Complex-SHACL.ttl",
+            "utf8",
+        );
+        const typed = kind =>
+            (
+                text.match(
+                    new RegExp(
+                        `^[^#\\n]*\\s(?:a|rdf:type)\\s+sh:${kind}\\b`,
+                        "gm",
+                    ),
+                ) ?? []
+            ).length;
+        const shapes = extractOutline(text);
+
+        expect(shapes.filter(shape => shape.kind === "NodeShape")).toHaveLength(
+            typed("NodeShape"),
+        );
+        expect(
+            shapes.filter(shape => shape.kind === "PropertyShape"),
+        ).toHaveLength(typed("PropertyShape"));
+        expect(new Set(shapes.map(shape => shape.name)).size).toBe(
+            shapes.length,
+        );
+    });
+});
+
+describe("extractSubjects", () => {
+    test("lists every subject, shape or not", () => {
+        const turtle = `ex:Ontology a owl:Ontology .
+ex:Group a sh:PropertyGroup .
+<http://example.org/Shape> a sh:NodeShape .`;
+
+        expect(extractSubjects(turtle)).toEqual([
+            { name: "ex:Ontology", line: 1 },
+            { name: "ex:Group", line: 2 },
+            { name: "<http://example.org/Shape>", line: 3 },
+        ]);
     });
 });

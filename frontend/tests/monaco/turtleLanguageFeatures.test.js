@@ -19,6 +19,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
     attachTermSource,
+    lexicalContext,
+    localDefinitionLine,
     onOpenClass,
     registerTurtleLanguageFeatures,
 } from "$lib/monaco/turtleLanguageFeatures.js";
@@ -42,6 +44,7 @@ function fakeMonaco() {
     registered = { models: new Map() };
     return {
         languages: {
+            CompletionTriggerKind: { Invoke: 0, TriggerCharacter: 1 },
             CompletionItemKind: {
                 Class: 1,
                 Property: 2,
@@ -80,7 +83,16 @@ function fakeMonaco() {
 function fakeModel(text = TURTLE) {
     const lines = text.split("\n");
     return {
+        uri: { path: "/document.ttl" },
         getValue: () => text,
+        getValueInRange: range =>
+            [
+                ...lines.slice(
+                    range.startLineNumber - 1,
+                    range.endLineNumber - 1,
+                ),
+                lines[range.endLineNumber - 1].slice(0, range.endColumn - 1),
+            ].join("\n"),
         getVersionId: () => 1,
         getLineContent: lineNumber => lines[lineNumber - 1] ?? "",
     };
@@ -231,5 +243,155 @@ describe("completion", () => {
             );
 
         expect(suggestions).toEqual([]);
+    });
+});
+
+describe("following a shape the document defines itself", () => {
+    const RULES = `@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.org/shapes#> .
+
+ex:Line a sh:NodeShape ;
+    sh:property ex:Line.length-cardinality .
+
+ex:Line.length-cardinality a sh:PropertyShape ;
+    sh:minCount 1 .
+`;
+
+    test("jumps to it without asking the schema", async () => {
+        const model = fakeModel(RULES);
+        const source = fakeSource(null);
+        attachTermSource(model, source);
+
+        const definition = await registered.definition.provideDefinition(
+            model,
+            { lineNumber: 5, column: 22 },
+        );
+
+        expect(definition.uri).toBe(model.uri);
+        expect(definition.range.startLineNumber).toBe(7);
+        expect(source.detailOf).not.toHaveBeenCalled();
+    });
+
+    test("finds the line whichever way the name is written", () => {
+        const prefixes = { ex: "http://example.org/shapes#" };
+        const text = `<http://example.org/shapes#A> a sh:NodeShape .
+ex:B a sh:NodeShape .`;
+
+        expect(
+            localDefinitionLine(text, "http://example.org/shapes#A", prefixes),
+        ).toBe(1);
+        expect(
+            localDefinitionLine(text, "http://example.org/shapes#B", prefixes),
+        ).toBe(2);
+        expect(
+            localDefinitionLine(text, "http://example.org/shapes#C", prefixes),
+        ).toBeNull();
+    });
+});
+
+describe("a term the schema has nothing to say about", () => {
+    // The backend answers 204 with no body, which the client turns into an empty object.
+    test("has no hover", async () => {
+        const model = fakeModel();
+        attachTermSource(model, fakeSource({}));
+
+        expect(
+            await registered.hover.provideHover(model, ON_THE_CLASS),
+        ).toBeNull();
+    });
+
+    test("is not followable", async () => {
+        const model = fakeModel();
+        attachTermSource(model, fakeSource({}));
+        onOpenClass(vi.fn());
+
+        expect(
+            await registered.definition.provideDefinition(model, ON_THE_CLASS),
+        ).toBeNull();
+    });
+});
+
+describe("completion on a typed colon", () => {
+    const TYPED = { triggerKind: 1, triggerCharacter: ":" };
+
+    async function suggestionsAt(text, position, context = TYPED) {
+        const model = fakeModel(text);
+        attachTermSource(
+            model,
+            fakeSource(null, [
+                {
+                    kind: "CLASS",
+                    iri: `${CIM}ACLineSegment`,
+                    namespace: CIM,
+                    localName: "ACLineSegment",
+                },
+            ]),
+        );
+        const { suggestions } =
+            await registered.completion.provideCompletionItems(
+                model,
+                position,
+                context,
+            );
+        return suggestions;
+    }
+
+    test("completes a term being written", async () => {
+        const text = `@prefix cim: <${CIM}> .\nex:S sh:targetClass cim:`;
+
+        expect(
+            await suggestionsAt(text, { lineNumber: 2, column: 25 }),
+        ).not.toEqual([]);
+    });
+
+    test("stays quiet in a comment, a string, an IRI or a prefix declaration", async () => {
+        const cases = [
+            ["# see cim:", 11],
+            ['ex:S sh:message "use cim:', 26],
+            ["ex:S sh:path <http:", 20],
+            ["@prefix cim:", 13],
+        ];
+        for (const [line, column] of cases) {
+            expect(
+                await suggestionsAt(`@prefix cim: <${CIM}> .\n${line}`, {
+                    lineNumber: 2,
+                    column,
+                }),
+            ).toEqual([]);
+        }
+    });
+
+    test("still answers when asked explicitly", async () => {
+        expect(
+            await suggestionsAt(
+                `@prefix cim: <${CIM}> .\n# cim:`,
+                { lineNumber: 2, column: 7 },
+                { triggerKind: 0 },
+            ),
+        ).not.toEqual([]);
+    });
+});
+
+describe("lexicalContext", () => {
+    test("tells code from comments, strings and IRIs", () => {
+        expect(lexicalContext("ex:S sh:path ex:")).toBe("code");
+        expect(lexicalContext("ex:S # a comment")).toBe("comment");
+        expect(lexicalContext("# a comment\nex:S ")).toBe("code");
+        expect(lexicalContext('ex:S sh:name "open')).toBe("string");
+        expect(lexicalContext('ex:S sh:name "with \\" inside')).toBe("string");
+        expect(lexicalContext('ex:S sh:name "closed" ; ')).toBe("code");
+        expect(lexicalContext("ex:S sh:path <http:")).toBe("iri");
+        expect(lexicalContext("ex:S sh:path <http://x> ")).toBe("code");
+    });
+
+    test("follows a triple-quoted string across lines", () => {
+        expect(
+            lexicalContext(
+                'ex:S sh:select """\nSELECT # not a comment\n?x cim:',
+            ),
+        ).toBe("longString");
+        expect(lexicalContext('ex:S sh:select """\nSELECT\n""" ;\n  ')).toBe(
+            "code",
+        );
     });
 });
