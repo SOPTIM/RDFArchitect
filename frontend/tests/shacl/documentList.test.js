@@ -274,8 +274,68 @@ describe("DocumentList", () => {
                     candidate.getAttribute("aria-label") === "New document",
             )
             .click();
+
+        await vi.waitFor(() =>
+            expect(workbench.create).toHaveBeenCalledWith(
+                "constraints.ttl (2)",
+                "",
+            ),
+        );
+    });
+
+    test("a new document starts with the text the page provides", async () => {
+        const workbench = fakeWorkbench();
+        const seed = "@prefix sh: <http://www.w3.org/ns/shacl#> .\n";
+        const list = render({
+            workbench,
+            newDocumentText: () => Promise.resolve(seed),
+        });
+
+        button(list, "New document").click();
+
+        await vi.waitFor(() =>
+            expect(workbench.create).toHaveBeenCalledWith(
+                "constraints.ttl",
+                seed,
+            ),
+        );
+    });
+
+    test("creating a document asks about the open one first", async () => {
+        const workbench = fakeWorkbench();
+        const onbeforeswitch = vi.fn().mockResolvedValue(false);
+        const list = render({ workbench, onbeforeswitch });
+
+        button(list, "New document").click();
+        await vi.waitFor(() => expect(onbeforeswitch).toHaveBeenCalled());
         await Promise.resolve();
 
-        expect(workbench.create).toHaveBeenCalledWith("constraints.ttl (2)");
+        expect(workbench.create).not.toHaveBeenCalled();
+    });
+
+    test("importing a file asks about the open one first", async () => {
+        const workbench = fakeWorkbench();
+        const onbeforeswitch = vi.fn().mockResolvedValue(false);
+        const list = render({ workbench, onbeforeswitch });
+        const input = list.querySelector('input[type="file"]');
+        Object.defineProperty(input, "files", {
+            value: [new File(["x"], "shapes.ttl")],
+        });
+
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+        await vi.waitFor(() => expect(onbeforeswitch).toHaveBeenCalled());
+        await Promise.resolve();
+
+        expect(workbench.importFile).not.toHaveBeenCalled();
+    });
+
+    test("marks the open document for assistive technology", () => {
+        const list = render({ workbench: fakeWorkbench() });
+        const [eq, custom] = documentRows(list).map(row =>
+            row.querySelector("button[aria-current]"),
+        );
+
+        expect(eq?.getAttribute("aria-current")).toBe("true");
+        expect(custom).toBeNull();
     });
 });

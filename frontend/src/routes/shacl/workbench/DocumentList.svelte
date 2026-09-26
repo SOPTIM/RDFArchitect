@@ -21,6 +21,7 @@
         faArrowUp,
         faBan,
         faCheck,
+        faDownload,
         faExclamation,
         faFileCirclePlus,
         faFileImport,
@@ -41,8 +42,18 @@
         summarise,
         VALID_ICON,
     } from "$lib/shacl/severity.js";
+    import { saveFile, supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
 
-    let { workbench, onbeforeswitch = async () => true } = $props();
+    let {
+        workbench,
+        onbeforeswitch = async () => true,
+        /** What a new document starts with; asked for when one is created. */
+        newDocumentText = async () => "",
+    } = $props();
+
+    const TURTLE = supportedRDFMediaTypes.find(
+        type => type.mimeType === "text/turtle",
+    );
 
     let renamingId = $state(null);
     let renameValue = $state("");
@@ -66,9 +77,15 @@
         }
     }
 
+    // Creating and importing both open the new document, so they ask about the open one first,
+    // exactly as opening another one does.
     async function addDocument() {
+        if (!(await onbeforeswitch())) {
+            return;
+        }
         const name = uniqueName("constraints.ttl");
-        if ((await workbench.create(name)) === null) {
+        const text = await newDocumentText();
+        if ((await workbench.create(name, text)) === null) {
             toastStore.error(
                 "Not created",
                 "The document could not be created.",
@@ -80,7 +97,7 @@
         const file = event.target.files?.[0];
         // Clearing the input means picking the same file twice in a row still fires a change.
         event.target.value = "";
-        if (!file) {
+        if (!file || !(await onbeforeswitch())) {
             return;
         }
         if (
@@ -119,6 +136,22 @@
         if (!(await workbench.rename(documentId, name))) {
             toastStore.error("Not renamed", `"${name}" is already taken.`);
         }
+    }
+
+    /** Saves what is stored under the document's name — not the unsaved buffer, if it is open. */
+    async function download(document) {
+        const text = await workbench.textOf(document.id);
+        if (text === null) {
+            toastStore.error(
+                "Not downloaded",
+                `"${document.name}" could not be read.`,
+            );
+            return;
+        }
+        const name = /\.(ttl|shacl|n3)$/i.test(document.name)
+            ? document.name
+            : `${document.name}${TURTLE.fileExtension}`;
+        saveFile(new Blob([text], { type: TURTLE.mimeType }), name, TURTLE);
     }
 
     function askDelete(document) {
@@ -265,6 +298,7 @@
                             {:else}
                                 <button
                                     class="flex min-w-0 flex-1 cursor-pointer flex-col items-start text-left"
+                                    aria-current={selected ? "true" : undefined}
                                     ondblclick={() => {
                                         if (editable) {
                                             startRename(document);
@@ -373,6 +407,14 @@
                         >
                             Open
                         </ContextMenu.Item.Button>
+                        {#if !document.generated}
+                            <ContextMenu.Item.Button
+                                onSelect={() => download(document)}
+                                faIcon={faDownload}
+                            >
+                                Download
+                            </ContextMenu.Item.Button>
+                        {/if}
                         {#if editable}
                             <ContextMenu.Item.Button
                                 onSelect={() =>
