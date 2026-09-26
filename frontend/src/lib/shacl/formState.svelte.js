@@ -79,10 +79,12 @@ export function newShape(iri, targetClass) {
 /**
  * The namespace a document's existing shapes live in, for naming a new one.
  *
- * Falls back to the document's default prefix, then to one of its own prefixes that is neither a
- * W3C vocabulary nor one of the schema's (`avoid`) — a shape called `sh:BreakerShape` or
- * `cim:BreakerShape` claims to be part of a vocabulary it is not — and finally to a generic
- * namespace: a new shape has to be called something, and the name can still be corrected.
+ * Falls back to the document's default prefix, then to a `…/Constraints#` namespace (what a new
+ * document is seeded with, and what the official releases use), then to any of its own prefixes
+ * that is neither a W3C vocabulary nor one of the schema's (`avoid`) — a shape called
+ * `sh:BreakerShape` or `cim:BreakerShape` claims to be part of a vocabulary it is not — and
+ * finally to a generic namespace: a new shape has to be called something, and the name can still
+ * be corrected.
  */
 export function shapeNamespaceOf(shapes, prefixes, avoid = []) {
     const existing = shapes.find(shape => shape.iri);
@@ -96,9 +98,13 @@ export function shapeNamespaceOf(shapes, prefixes, avoid = []) {
         }
     }
     const taken = new Set([...STANDARD_NAMESPACES, ...avoid]);
+    const candidates = Object.values(prefixes).filter(
+        namespace => !taken.has(namespace),
+    );
     return (
         prefixes[""] ??
-        Object.values(prefixes).find(namespace => !taken.has(namespace)) ??
+        candidates.find(namespace => namespace.endsWith("/Constraints#")) ??
+        candidates[0] ??
         "urn:rdfa:shapes#"
     );
 }

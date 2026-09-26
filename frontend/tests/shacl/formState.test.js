@@ -431,6 +431,18 @@ describe("naming a new shape", () => {
         expect(shapeNamespaceOf([], {})).toBe("urn:rdfa:shapes#");
     });
 
+    test("prefers a constraints namespace over other namespaces the document binds", () => {
+        const prefixes = {
+            sh: "http://www.w3.org/ns/shacl#",
+            profcim: "http://iec.ch/TC57/ns/CIM/prof-cim#",
+            eq: "http://example.org/EQ/Constraints#",
+        };
+
+        expect(shapeNamespaceOf([], prefixes)).toBe(
+            "http://example.org/EQ/Constraints#",
+        );
+    });
+
     test("does not put a shape into a W3C vocabulary or the schema's own namespace", () => {
         const prefixes = {
             sh: "http://www.w3.org/ns/shacl#",
