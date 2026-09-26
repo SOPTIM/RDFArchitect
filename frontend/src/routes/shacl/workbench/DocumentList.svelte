@@ -88,7 +88,7 @@
         if ((await workbench.create(name, text)) === null) {
             toastStore.error(
                 "Not created",
-                "The document could not be created.",
+                workbench.lastError ?? "The document could not be created.",
             );
         }
     }
@@ -105,7 +105,7 @@
         ) {
             toastStore.error(
                 "Not imported",
-                `"${file.name}" could not be imported.`,
+                workbench.lastError ?? `"${file.name}" could not be imported.`,
             );
         }
     }
@@ -134,7 +134,10 @@
             return;
         }
         if (!(await workbench.rename(documentId, name))) {
-            toastStore.error("Not renamed", `"${name}" is already taken.`);
+            toastStore.error(
+                "Not renamed",
+                workbench.lastError ?? `"${name}" could not be renamed.`,
+            );
         }
     }
 
@@ -225,7 +228,7 @@
             bind:this={fileInput}
             class="hidden"
             type="file"
-            accept=".ttl,.shacl,.n3,text/turtle"
+            accept=".ttl,.shacl,.n3,.rdf,.xml,.owl,.nt,text/turtle,application/rdf+xml,application/n-triples"
             onchange={importSelected}
         />
     </div>

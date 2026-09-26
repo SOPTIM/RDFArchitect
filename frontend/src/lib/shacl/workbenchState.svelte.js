@@ -111,6 +111,8 @@ export class ShapesWorkbench {
      * workbench that has not finished loading cannot be used to change anything.
      */
     readOnly = $state(true);
+    /** Why the last create, import or update was refused, as the server put it. */
+    lastError = $state(null);
     loading = $state(false);
     saving = $state(false);
     /** True while the generated rules are being fetched for the first time. */
@@ -506,6 +508,7 @@ export class ShapesWorkbench {
             bodySerializer: null,
             headers: { "Content-Type": "text/plain" },
         });
+        this.lastError = error ? (error.detail ?? null) : null;
         if (error) {
             return null;
         }
@@ -525,6 +528,7 @@ export class ShapesWorkbench {
             query: name ? { name } : undefined,
             body: { file },
         });
+        this.lastError = error ? (error.detail ?? null) : null;
         if (error) {
             return null;
         }
@@ -591,6 +595,7 @@ export class ShapesWorkbench {
             path: { ...this.path, documentId },
             query,
         });
+        this.lastError = error ? (error.detail ?? null) : null;
         if (error) {
             return false;
         }

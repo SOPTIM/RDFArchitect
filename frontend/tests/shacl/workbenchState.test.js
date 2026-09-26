@@ -279,6 +279,27 @@ describe("editing and saving", () => {
         ]);
     });
 
+    test("keeps the server's reason when an import is refused", async () => {
+        await workbench.load();
+        const answer = server.respond;
+        server.respond = (entry, url) =>
+            entry.method === "POST" && entry.path.endsWith("/documents/file")
+                ? new Response(
+                      JSON.stringify({
+                          status: 400,
+                          detail: "[line: 7, col: 3 ] Undefined prefix: ex",
+                      }),
+                      {
+                          status: 400,
+                          headers: { "content-type": "application/json" },
+                      },
+                  )
+                : answer(entry, url);
+
+        expect(await workbench.importFile(new Blob(["x"]), "f.ttl")).toBeNull();
+        expect(workbench.lastError).toContain("Undefined prefix");
+    });
+
     test("keeps the buffer when the save fails", async () => {
         await workbench.load();
         const edited = "ex:X a sh:NodeShape .";
