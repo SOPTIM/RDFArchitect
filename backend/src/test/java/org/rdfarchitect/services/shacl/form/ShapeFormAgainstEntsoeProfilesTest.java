@@ -19,11 +19,17 @@ package org.rdfarchitect.services.shacl.form;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import de.soptim.opencgmes.cimvocabcheck.core.shacl.Shacl;
+
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
+import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.services.shacl.ShapesTurtleParser;
 import org.rdfarchitect.shacl.dto.NodeShapeModel;
 import org.rdfarchitect.shacl.dto.PropertyShapeModel;
 import org.rdfarchitect.shacl.dto.RetainedClause;
@@ -492,6 +498,121 @@ class ShapeFormAgainstEntsoeProfilesTest {
             var twice = service.apply(request(once, reread)).getTurtle();
             assertThat(twice).describedAs("%s", file.getFileName()).isEqualTo(once);
         }
+    }
+
+    /** How many edits of each kind are tried per file, spread evenly over it. */
+    private static final int SAMPLES_PER_FILE = 12;
+
+    @Test
+    void aSampleOfEditsAcrossTheLibraryChangesOnlyTheEditedPredicate() throws IOException {
+        // One field per edit, so the only triples allowed to differ are that predicate's. Every
+        // other triple of the file has to come back, blank nodes included, which is the check the
+        // service makes for itself narrowed to what a test can know the edit meant.
+        var maxCount = Shacl.MAX_COUNT.getURI();
+        var message = ShapeModelReader.MESSAGE.getURI();
+        int edits = 0;
+        for (Path file : constraintsFiles()) {
+            var turtle = Files.readString(file);
+            var form = service.parse(turtle);
+            var before = ShapesTurtleParser.parse(turtle).graph();
+
+            var rules = new ArrayList<Integer[]>();
+            for (int shape = 0; shape < form.getShapes().size(); shape++) {
+                var candidate = form.getShapes().get(shape);
+                if (!Boolean.TRUE.equals(candidate.getEditable())) {
+                    continue;
+                }
+                for (PropertyShapeModel rule : candidate.getProperties()) {
+                    if (Boolean.TRUE.equals(rule.getEditable())
+                            && rule.getIri() == null
+                            && !locks(rule.getRetained(), "maxCount")) {
+                        rules.add(new Integer[] {shape, rule.getSourceIndex()});
+                    }
+                }
+            }
+            for (Integer[] at : sample(rules)) {
+                var shape = service.parse(turtle).getShapes().get(at[0]);
+                var rule =
+                        shape.getProperties().stream()
+                                .filter(candidate -> at[1].equals(candidate.getSourceIndex()))
+                                .findFirst()
+                                .orElseThrow();
+                rule.setMaxCount(rule.getMaxCount() == null ? 7 : null);
+                String written;
+                try {
+                    written = service.apply(edit(turtle, shape)).getTurtle();
+                } catch (ResourceConflictException e) {
+                    // Clearing the one clause of a rule that says nothing else is refused on
+                    // purpose; anything else is the check catching a writer mistake.
+                    assertThat(e.getMessage())
+                            .describedAs("%s %s#%s", file.getFileName(), shape.getIri(), at[1])
+                            .contains("only thing");
+                    continue;
+                }
+                assertOnlyChanged(before, written, maxCount, file + " " + shape.getIri());
+                edits++;
+            }
+
+            var named =
+                    form.getPropertyShapes().stream()
+                            .filter(rule -> Boolean.TRUE.equals(rule.getEditable()))
+                            .filter(rule -> !locks(rule.getRetained(), "message"))
+                            .toList();
+            for (PropertyShapeModel rule : sample(named)) {
+                rule.setMessage("checked \"quoted\" \\ back\nslash ü 😀");
+                var request = new ShapeEditRequest();
+                request.setTurtle(turtle);
+                request.setPropertyShape(rule);
+                var written = service.apply(request).getTurtle();
+                assertOnlyChanged(before, written, message, file + " " + rule.getIri());
+                edits++;
+            }
+        }
+        assertThat(edits).isGreaterThan(500);
+    }
+
+    private static ShapeEditRequest edit(String turtle, NodeShapeModel shape) {
+        var request = new ShapeEditRequest();
+        request.setTurtle(turtle);
+        request.setShape(shape);
+        return request;
+    }
+
+    private static boolean locks(List<RetainedClause> retained, String field) {
+        return retained != null && retained.stream().anyMatch(c -> field.equals(c.getField()));
+    }
+
+    private static <T> List<T> sample(List<T> all) {
+        if (all.size() <= SAMPLES_PER_FILE) {
+            return all;
+        }
+        var picked = new ArrayList<T>();
+        for (int i = 0; i < SAMPLES_PER_FILE; i++) {
+            picked.add(all.get(i * all.size() / SAMPLES_PER_FILE));
+        }
+        return picked;
+    }
+
+    private static void assertOnlyChanged(
+            Graph before, String written, String predicate, String what) {
+        var after = ShapesTurtleParser.parse(written);
+        assertThat(after.failed()).describedAs("%s: %s", what, after.findings()).isFalse();
+        assertThat(without(after.graph(), predicate).isIsomorphicWith(without(before, predicate)))
+                .describedAs("%s changed more than %s", what, predicate)
+                .isTrue();
+    }
+
+    private static Graph without(Graph graph, String predicate) {
+        var copy = GraphFactory.createDefaultGraph();
+        var skipped = NodeFactory.createURI(predicate);
+        graph.find()
+                .forEach(
+                        triple -> {
+                            if (!triple.getPredicate().equals(skipped)) {
+                                copy.add(triple);
+                            }
+                        });
+        return copy;
     }
 
     /** Every official constraints file in the submodule, CGMES and the NC profiles alike. */

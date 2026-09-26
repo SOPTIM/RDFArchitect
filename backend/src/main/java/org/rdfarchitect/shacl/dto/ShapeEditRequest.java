@@ -26,6 +26,15 @@ public class ShapeEditRequest {
     /** The document as it currently stands, which the edit is applied to. */
     private String turtle;
 
+    /**
+     * The document the posted model was read from, when the client knows it.
+     *
+     * <p>A form edit is a diff between what the model says and what the document says, so a model
+     * read from other text reverts whatever changed in between and can land a rule's clauses on
+     * another rule. When this differs from {@link #turtle} the edit is refused rather than applied.
+     */
+    private String baseTurtle;
+
     /** The shape to write. Its {@code iri} says which statement is replaced or added. */
     private NodeShapeModel shape;
 

@@ -124,6 +124,27 @@ export function newShapeIri(namespace, targetClass, taken) {
 }
 
 /**
+ * The shapes, with each shared rule shown under them knowing who else uses it.
+ *
+ * The backend lists a shared rule's users once, on the rule itself, rather than under every shape
+ * referencing it — on a `-Con-Simple-` profile repeating it was most of the payload. The cards
+ * under a shape ask the same question, so the list is filled in from the rule it copies.
+ */
+export function withSharedUsage(shapes, propertyShapes) {
+    const usedBy = new Map(
+        propertyShapes.map(rule => [rule.iri, rule.usedBy ?? []]),
+    );
+    return shapes.map(shape => ({
+        ...shape,
+        properties: shape.properties?.map(rule =>
+            rule.iri != null && rule.usedBy == null
+                ? { ...rule, usedBy: usedBy.get(rule.iri) ?? [] }
+                : rule,
+        ),
+    }));
+}
+
+/**
  * The form view of the document currently in the editor.
  *
  * Reads and writes the same buffer the Turtle view shows, never the stored document, so switching
@@ -271,12 +292,13 @@ export class ShapesFormView {
                 this.error = "The constraints could not be read as a form.";
                 return;
             }
-            this.shapes = (data?.shapes ?? []).map(shape =>
-                this.#withLocal(shape),
-            );
             this.propertyShapes = (data?.propertyShapes ?? []).map(rule =>
                 this.#localRule(rule),
             );
+            this.shapes = withSharedUsage(
+                data?.shapes ?? [],
+                this.propertyShapes,
+            ).map(shape => this.#withLocal(shape));
             this.parseError = data?.parseError ?? null;
             this.error = null;
             this.#readFrom = turtle;

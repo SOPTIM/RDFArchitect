@@ -43,6 +43,10 @@ public final class ShapesTurtleParser {
     /** Code for a finding that came from the parser rather than from a shape check. */
     public static final String PARSE_ERROR_CODE = "TURTLE_PARSE_ERROR";
 
+    /** What is reported for a document nested more deeply than it can be read. */
+    public static final String TOO_DEEP =
+            "The document nests brackets or lists too deeply to be read.";
+
     /**
      * The graph parsed from {@code turtle} together with whatever the parser complained about.
      *
@@ -69,6 +73,12 @@ public final class ShapesTurtleParser {
                 findings.add(
                         finding(ShapesValidationFinding.Severity.ERROR, e.getMessage(), -1, -1));
             }
+        } catch (StackOverflowError e) {
+            // Jena parses brackets recursively, so a few thousand nested `[` or `(` exhaust the
+            // stack. That is a property of the text, not a fault of the server, and it is answered
+            // like any other text that cannot be read.
+            failed = true;
+            findings.add(finding(ShapesValidationFinding.Severity.ERROR, TOO_DEEP, -1, -1));
         }
         return new Result(graph, List.copyOf(findings), failed);
     }

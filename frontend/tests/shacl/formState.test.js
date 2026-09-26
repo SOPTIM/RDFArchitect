@@ -135,6 +135,35 @@ describe("reading the buffer as shapes", () => {
         expect(view.propertyShapes[0].iri).toBe(RULE);
     });
 
+    test("a shared rule under a shape knows its users from the rule's own card", async () => {
+        // The backend lists them once, on the rule, and leaves them off the copies under shapes.
+        const users = [
+            SHAPES[0].iri,
+            "http://example.org/shapes#TerminalShape",
+        ];
+        server.form = {
+            shapes: [
+                {
+                    ...SHAPES[0],
+                    properties: [
+                        { iri: RULE, sourceIndex: 0 },
+                        {
+                            path: "http://iec.ch/TC57/CIM100#A.b",
+                            sourceIndex: 1,
+                        },
+                    ],
+                },
+            ],
+            propertyShapes: [{ iri: RULE, usedBy: users }],
+            parseError: null,
+        };
+
+        await view.read("shapes");
+
+        expect(view.shapes[0].properties[0].usedBy).toEqual(users);
+        expect(view.shapes[0].properties[1].usedBy).toBeUndefined();
+    });
+
     test("an earlier read that answers late does not replace a newer one", async () => {
         // The regression this guards: switching to the form and typing straight away leaves two
         // reads in flight. The older answering last used to leave the cards describing text the

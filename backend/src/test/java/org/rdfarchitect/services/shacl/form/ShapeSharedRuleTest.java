@@ -136,7 +136,8 @@ class ShapeSharedRuleTest {
                         .orElseThrow();
 
         assertThat(inline.getMaxCount()).isEqualTo(1);
-        assertThat(inline.getUsedBy()).hasSize(2);
+        // Who uses it is said once, on the rule's own card, not repeated under every user.
+        assertThat(inline.getUsedBy()).isNull();
         assertThat(inline.getSourceIndex()).isNotNull();
     }
 

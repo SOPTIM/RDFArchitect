@@ -556,4 +556,148 @@ class ShapeClausePreservationTest {
                                 "sh:property    ex:SequenceNumberRule ;\n"
                                         + "        sh:message \"Checked\" ."));
     }
+
+    // -------------------------------------------------------------------------
+    // Layout the writer has to follow
+    // -------------------------------------------------------------------------
+
+    private static final String PLAIN =
+            """
+            @prefix sh:   <http://www.w3.org/ns/shacl#> .
+            @prefix cim:  <http://iec.ch/TC57/CIM100#> .
+            @prefix ex:   <http://example.org/shapes#> .
+
+            ex:LineShape
+                a sh:NodeShape ;
+                sh:targetClass cim:Line ;
+                sh:name "Line" ;
+                sh:property [
+                    sh:path cim:Line.a ;
+                    sh:minCount 1 # at least one, as agreed
+                ] ;
+                sh:description "Lines" .
+            """;
+
+    @Test
+    void aDocumentWithWindowsLineEndingsKeepsThem() {
+        var crlf = PLAIN.replace("\n", "\r\n");
+
+        var cleared = shapeIn(crlf);
+        cleared.setName(null);
+        var withoutName = service.apply(edit(crlf, cleared)).getTurtle();
+
+        var added = shapeIn(crlf);
+        ruleAt(added, 0).setMaxCount(2);
+        added.setProperties(new ArrayList<>(added.getProperties()));
+        added.getProperties().add(PropertyShapeModel.builder().path(CIM_LINE_B).build());
+        var withMore = service.apply(edit(crlf, added)).getTurtle();
+
+        assertThat(withoutName).isEqualTo(crlf.replace("    sh:name \"Line\" ;\r\n", ""));
+        for (var written : List.of(withoutName, withMore)) {
+            assertThat(written.replace("\r\n", "")).doesNotContain("\n").doesNotContain("\r");
+        }
+    }
+
+    private static final String CIM_LINE_B = "http://iec.ch/TC57/CIM100#Line.b";
+
+    @Test
+    void aClauseAddedAfterATrailingCommentLeavesTheCommentWhereItWas() {
+        var shape = shapeIn(PLAIN);
+        ruleAt(shape, 0).setMaxCount(2);
+
+        var written = service.apply(edit(PLAIN, shape)).getTurtle();
+
+        assertThat(written)
+                .isEqualTo(
+                        PLAIN.replace(
+                                "sh:minCount 1 # at least one, as agreed\n",
+                                "sh:minCount 1 ; # at least one, as agreed\n"
+                                        + "        sh:maxCount 2\n"));
+    }
+
+    @Test
+    void aPrefixDeclaredFurtherDownIsNotUsedAboveIt() {
+        var turtle =
+                """
+                @prefix sh:   <http://www.w3.org/ns/shacl#> .
+                @prefix ex:   <http://example.org/shapes#> .
+                ex:LineShape a sh:NodeShape ;
+                    sh:targetNode ex:line1 .
+
+                @prefix cim:  <http://iec.ch/TC57/CIM100#> .
+                ex:OtherShape a sh:NodeShape ; sh:targetClass cim:Other .
+                """;
+        var shape = shapeIn(turtle);
+        shape.setTargetClasses(List.of("http://iec.ch/TC57/CIM100#Line"));
+
+        var written = service.apply(edit(turtle, shape)).getTurtle();
+
+        assertThat(written).contains("sh:targetClass <http://iec.ch/TC57/CIM100#Line>");
+    }
+
+    @Test
+    void aLongStringEndingInAnEscapedQuoteIsCarriedThroughAnEdit() {
+        var turtle =
+                """
+                @prefix sh:   <http://www.w3.org/ns/shacl#> .
+                @prefix cim:  <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:   <http://example.org/shapes#> .
+
+                ex:LineShape a sh:NodeShape ;
+                    sh:targetClass cim:Line ;
+                    sh:description \"""They said \\"no\\\"""\" ;
+                    sh:severity sh:Warning ;
+                    sh:message '''it is \\'x\\'''' .
+                """;
+        var shape = shapeIn(turtle);
+        shape.setSeverity("http://www.w3.org/ns/shacl#Violation");
+
+        var written = service.apply(edit(turtle, shape)).getTurtle();
+
+        assertThat(written).isEqualTo(turtle.replace("sh:Warning", "sh:Violation"));
+    }
+
+    @Test
+    void aLocalNameWithAnEscapedCharacterIsEditableAndKeptAsWritten() {
+        var turtle =
+                """
+                @prefix sh:   <http://www.w3.org/ns/shacl#> .
+                @prefix cim:  <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:   <http://example.org/shapes#> .
+
+                ex:LineShape a sh:NodeShape ;
+                    sh:targetClass cim:Line\\. ;
+                    sh:name "n" .
+
+                ex:OtherShape a sh:NodeShape ; sh:targetClass cim:Other .
+                """;
+        var shape = shapeIn(turtle);
+        assertThat(shape.getTargetClasses()).containsExactly("http://iec.ch/TC57/CIM100#Line.");
+        shape.setName("m");
+
+        var written = service.apply(edit(turtle, shape)).getTurtle();
+
+        assertThat(written).isEqualTo(turtle.replace("\"n\"", "\"m\""));
+    }
+
+    @Test
+    void aShapeNamedRelativeToTheDocumentsBaseIsEditable() {
+        var turtle =
+                """
+                @base <http://example.org/shapes/> .
+                @prefix sh:   <http://www.w3.org/ns/shacl#> .
+
+                <LineShape> a sh:NodeShape ;
+                    sh:targetClass <Line> ;
+                    sh:name "n" .
+                """;
+        var shape = shapeIn(turtle);
+        assertThat(shape.getIri()).isEqualTo("http://example.org/shapes/LineShape");
+        assertThat(shape.getEditable()).isTrue();
+        assertThat(shape.getTargetClasses()).containsExactly("http://example.org/shapes/Line");
+        shape.setName("m");
+
+        assertThat(service.apply(edit(turtle, shape)).getTurtle())
+                .isEqualTo(turtle.replace("\"n\"", "\"m\""));
+    }
 }

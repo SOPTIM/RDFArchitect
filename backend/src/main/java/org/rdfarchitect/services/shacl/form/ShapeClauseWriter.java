@@ -19,6 +19,7 @@ package org.rdfarchitect.services.shacl.form;
 
 import de.soptim.opencgmes.cimvocabcheck.core.shacl.Shacl;
 
+import org.apache.jena.datatypes.TypeMapper;
 import org.apache.jena.graph.Node;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.exception.database.ResourceConflictException;
@@ -68,7 +69,7 @@ final class ShapeClauseWriter {
             boolean keepsSpelling) {}
 
     /** Where a new clause goes, and how the surrounding text lays its clauses out. */
-    private record Insertion(int at, String indent, String before, String after) {}
+    private record Insertion(int at, String indent, String before, String after, boolean ownLine) {}
 
     /** A predicate-object list and the span it is written in: a statement, or one {@code [ … ]}. */
     private record Region(List<ClauseLocator.Clause> clauses, int start, int end) {}
@@ -84,7 +85,8 @@ final class ShapeClauseWriter {
      */
     static Result rewrite(
             String turtle, NodeShapeModel stored, NodeShapeModel incoming, PrefixMapping prefixes) {
-        var diff = new Diff(prefixes);
+        var spelling = spellingAt(turtle, stored.getIri(), prefixes);
+        var diff = new Diff(spelling);
         var removed = new ArrayList<Integer>();
         var added = new ArrayList<PropertyShapeModel>();
         diffShape(diff, stored, incoming);
@@ -93,7 +95,7 @@ final class ShapeClauseWriter {
         var text = turtle;
         var warnings = new ArrayList<String>();
         for (ClauseChange change : diff.changes()) {
-            text = applyClause(text, stored.getIri(), change, prefixes, warnings);
+            text = applyClause(text, stored.getIri(), change, prefixes, spelling, warnings);
         }
         // Back to front, so removing one rule does not move the rules an earlier ordinal names.
         removed.sort(Comparator.reverseOrder());
@@ -101,9 +103,27 @@ final class ShapeClauseWriter {
             text = applyRemoval(text, stored.getIri(), ordinal, prefixes, warnings);
         }
         for (PropertyShapeModel rule : added) {
-            text = applyAddition(text, stored.getIri(), rule, prefixes);
+            text = applyAddition(text, stored.getIri(), rule, prefixes, spelling);
         }
         return new Result(text, List.copyOf(warnings));
+    }
+
+    /**
+     * The prefixes text written into {@code iri}'s statement may use.
+     *
+     * <p>Those declared above it, not the document's final set: Turtle binds a prefix from its
+     * declaration on, so a name abbreviated with one declared further down does not parse.
+     */
+    private static PrefixMapping spellingAt(String text, String iri, PrefixMapping prefixes) {
+        var statements = ShapeBlockLocator.locateAll(text, iri, prefixes);
+        return statements.isEmpty()
+                ? prefixes
+                : ShapeBlockLocator.prefixesBefore(text, statements.get(0).start());
+    }
+
+    /** The line ending the document uses, so text added to it does not mix two. */
+    static String lineEnding(String text) {
+        return text.contains("\r\n") ? "\r\n" : "\n";
     }
 
     /**
@@ -121,14 +141,15 @@ final class ShapeClauseWriter {
             PropertyShapeModel stored,
             PropertyShapeModel incoming,
             PrefixMapping prefixes) {
-        var diff = new Diff(prefixes, "rule");
+        var spelling = spellingAt(turtle, stored.getIri(), prefixes);
+        var diff = new Diff(spelling, "rule");
         diff.about(null, stored.getRetained());
         diffRuleFields(diff, stored, incoming);
 
         var text = turtle;
         var warnings = new ArrayList<String>();
         for (ClauseChange change : diff.changes()) {
-            text = applyClause(text, stored.getIri(), change, prefixes, warnings);
+            text = applyClause(text, stored.getIri(), change, prefixes, spelling, warnings);
         }
         return new Result(text, List.copyOf(warnings));
     }
@@ -154,14 +175,15 @@ final class ShapeClauseWriter {
             PrefixMapping prefixes) {
         var statement = onlyStatement(turtle, stored.getIri(), prefixes, "rule");
         var copy =
-                ShapeModelWriter.term(newIri, prefixes)
+                ShapeModelWriter.term(
+                                newIri, ShapeBlockLocator.prefixesBefore(turtle, turtle.length()))
                         + turtle.substring(
                                 statement.start() + statement.subjectToken().length(),
                                 statement.end());
-        var separator = turtle.endsWith("\n\n") ? "" : turtle.endsWith("\n") ? "\n" : "\n\n";
+        var eol = lineEnding(turtle);
         var text =
                 repoint(
-                        turtle + separator + copy + "\n",
+                        turtle + separatorAtEnd(turtle) + copy + eol,
                         nodeShapeIri,
                         at,
                         stored,
@@ -198,8 +220,22 @@ final class ShapeClauseWriter {
                             + " the document and make the change again.");
         }
         return text.substring(0, object.start())
-                + ShapeModelWriter.term(newIri, prefixes)
+                + ShapeModelWriter.term(
+                        newIri, ShapeBlockLocator.prefixesBefore(text, statement.start()))
                 + text.substring(object.end());
+    }
+
+    /**
+     * What goes between a document and a statement appended to it: one blank line.
+     *
+     * <p>In the document's own line ending, whichever that is.
+     */
+    static String separatorAtEnd(String turtle) {
+        var eol = lineEnding(turtle);
+        if (turtle.isEmpty() || turtle.endsWith(eol + eol)) {
+            return "";
+        }
+        return turtle.endsWith(eol) ? eol : eol + eol;
     }
 
     /** The one statement a subject is written as, or a refusal naming what is wrong with it. */
@@ -584,6 +620,7 @@ final class ShapeClauseWriter {
             String iri,
             ClauseChange change,
             PrefixMapping prefixes,
+            PrefixMapping spelling,
             List<String> warnings) {
         var region = regionFor(text, iri, change.ordinal(), prefixes);
         var stated =
@@ -609,7 +646,7 @@ final class ShapeClauseWriter {
                     : insert(
                             text,
                             region,
-                            ShapeModelWriter.term(change.predicate(), prefixes)
+                            ShapeModelWriter.term(change.predicate(), spelling)
                                     + " "
                                     + change.object());
         }
@@ -620,7 +657,7 @@ final class ShapeClauseWriter {
         var written = text.substring(clause.objectsStart(), clause.objectsEnd());
         var replacement =
                 change.keepsSpelling() && clause.objects().size() == 1
-                        ? respell(written, change.object())
+                        ? respell(written, change.object(), prefixes)
                         : change.object();
         return text.substring(0, clause.objectsStart())
                 + replacement
@@ -635,23 +672,46 @@ final class ShapeClauseWriter {
      * is simply replaced. This is what makes the official library's 1282 {@code "0.0"^^xsd:float}
      * value ranges editable rather than merely visible: a form holding a {@code double} would have
      * written back {@code 0.0} and quietly changed the datatype.
+     *
+     * <p>Which is also why the value is checked against that datatype: {@code "1.5"^^xsd:integer}
+     * parses, and is a literal no validator will agree with.
      */
-    private static String respell(String written, String value) {
+    private static String respell(String written, String value, PrefixMapping prefixes) {
         if (written.isEmpty() || (written.charAt(0) != '"' && written.charAt(0) != '\'')) {
             return value;
         }
         var quote = String.valueOf(written.charAt(0));
         var delimiter = written.startsWith(quote.repeat(3)) ? quote.repeat(3) : quote;
-        var closes = written.indexOf(delimiter, delimiter.length());
-        return closes < 0 ? value : delimiter + value + written.substring(closes);
+        int closes = ShapeBlockLocator.endOfLiteral(written, 0) - delimiter.length();
+        if (closes < delimiter.length() || !written.startsWith(delimiter, closes)) {
+            return value;
+        }
+        var suffix = written.substring(closes + delimiter.length());
+        if (suffix.startsWith("^^")) {
+            var datatype = ShapeBlockLocator.expand(suffix.substring(2).strip(), prefixes);
+            if (datatype != null
+                    && !TypeMapper.getInstance().getSafeTypeByName(datatype).isValid(value)) {
+                throw new ResourceConflictException(
+                        "\""
+                                + value
+                                + "\" is not a valid "
+                                + suffix.substring(2).strip()
+                                + ", which is the datatype the document writes this value in.");
+            }
+        }
+        return delimiter + value + written.substring(closes);
     }
 
     private static String applyAddition(
-            String text, String iri, PropertyShapeModel rule, PrefixMapping prefixes) {
+            String text,
+            String iri,
+            PropertyShapeModel rule,
+            PrefixMapping prefixes,
+            PrefixMapping spelling) {
         var region = regionFor(text, iri, null, prefixes);
         var where = insertionFor(text, region);
-        return insert(
-                text, region, ShapeModelWriter.propertyClause(rule, prefixes, where.indent()));
+        var clause = ShapeModelWriter.propertyClause(rule, spelling, where.indent());
+        return insert(text, region, clause.replace("\n", lineEnding(text)));
     }
 
     /**
@@ -720,6 +780,18 @@ final class ShapeClauseWriter {
 
     private static String insert(String text, Region region, String clause) {
         var where = insertionFor(text, region);
+        var comment = where.ownLine() ? trailingComment(text, where.at(), region.end()) : null;
+        if (comment != null) {
+            // The comment is about the clause it trails, so the new clause goes below it rather
+            // than between the two.
+            return text.substring(0, where.at())
+                    + (comment.separated() ? "" : " ;")
+                    + text.substring(where.at(), comment.end())
+                    + lineEnding(text)
+                    + where.indent()
+                    + clause
+                    + text.substring(comment.end());
+        }
         return text.substring(0, where.at())
                 + where.before()
                 + clause
@@ -736,13 +808,41 @@ final class ShapeClauseWriter {
      */
     private static Insertion insertionFor(String text, Region region) {
         if (region.clauses().isEmpty()) {
-            return new Insertion(region.start(), ShapeModelWriter.INDENT, " ", " ");
+            return new Insertion(region.start(), ShapeModelWriter.INDENT, " ", " ", false);
         }
         var last = region.clauses().get(region.clauses().size() - 1);
         var indent = lineIndent(text, last.start());
         return indent == null
-                ? new Insertion(last.end(), ShapeModelWriter.INDENT, " ; ", "")
-                : new Insertion(last.end(), indent, " ;\n" + indent, "");
+                ? new Insertion(last.end(), ShapeModelWriter.INDENT, " ; ", "", false)
+                : new Insertion(last.end(), indent, " ;" + lineEnding(text) + indent, "", true);
+    }
+
+    /** A comment ending the line a clause ends on, and whether a {@code ;} stands before it. */
+    private record TrailingComment(boolean separated, int end) {}
+
+    private static TrailingComment trailingComment(String text, int from, int limit) {
+        int index = skipBlanks(text, from, limit);
+        boolean separated = index < limit && text.charAt(index) == ';';
+        if (separated) {
+            index = skipBlanks(text, index + 1, limit);
+        }
+        if (index >= limit || text.charAt(index) != '#') {
+            return null;
+        }
+        int end = text.indexOf('\n', index);
+        end = end < 0 || end > limit ? limit : end;
+        if (end > index && text.charAt(end - 1) == '\r') {
+            end--;
+        }
+        return new TrailingComment(separated, end);
+    }
+
+    private static int skipBlanks(String text, int from, int limit) {
+        int index = from;
+        while (index < limit && (text.charAt(index) == ' ' || text.charAt(index) == '\t')) {
+            index++;
+        }
+        return index;
     }
 
     /**
@@ -786,6 +886,8 @@ final class ShapeClauseWriter {
         }
         if (ownLine && to < region.end() && text.charAt(to) == '\n') {
             to++;
+        } else if (ownLine && text.startsWith("\r\n", to) && to + 1 < region.end()) {
+            to += 2;
         }
         warnAboutComments(text, from, to, warnings);
         return text.substring(0, from) + text.substring(to);

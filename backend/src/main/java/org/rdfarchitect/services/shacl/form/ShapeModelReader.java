@@ -227,6 +227,25 @@ final class ShapeModelReader {
         return new Shapes(nodeShapes, readPropertyShapes(reading, byIri));
     }
 
+    /** One node shape, read as {@link #read} would read it, or empty when the graph has none. */
+    static Optional<NodeShapeModel> readNodeShape(Graph graph, ShapeSource source, String iri) {
+        var shape = NodeFactory.createURI(iri);
+        if (!graph.contains(shape, Node.ANY, Node.ANY)) {
+            return Optional.empty();
+        }
+        return Optional.of(readShape(new Reading(graph, source, referencesToRules(graph)), shape));
+    }
+
+    /** One rule written as a shape of its own, read as {@link #read} would read it. */
+    static Optional<PropertyShapeModel> readRule(Graph graph, ShapeSource source, String iri) {
+        var rule = NodeFactory.createURI(iri);
+        if (!graph.contains(rule, Node.ANY, Node.ANY)) {
+            return Optional.empty();
+        }
+        var reading = new Reading(graph, source, referencesToRules(graph));
+        return Optional.of(readProperty(reading, rule, null, null, Lock.OPEN));
+    }
+
     /**
      * Reading order in the form: the order the document writes the shapes in.
      *
@@ -627,10 +646,13 @@ final class ShapeModelReader {
                                 source.byPredicate(clauses),
                                 PROPERTY_FIELDS,
                                 source))
+                // Only on the rule's own card. The copy shown under each shape using it would
+                // repeat
+                // the list once per user, which on a -Con-Simple- profile is most of the payload.
                 .usedBy(
-                        property.isURI()
+                        ordinal == null && property.isURI()
                                 ? reading.usedBy().getOrDefault(property.getURI(), List.of())
-                                : List.of())
+                                : null)
                 .editable(effective.editable())
                 .readOnlyReason(effective.reason())
                 .build();
