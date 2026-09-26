@@ -347,6 +347,36 @@ class ShapesValidationServiceTest {
     }
 
     @Test
+    void aDeactivatedNodeShapeTakesNoPartInAConflict() {
+        var deactivated =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://ex.org/other#> .
+
+                ex:ACLineSegmentMaxShape
+                    a sh:NodeShape ;
+                    sh:targetClass cim:ACLineSegment ;
+                    sh:deactivated true ;
+                    sh:property [
+                        sh:path cim:ACLineSegment.length ;
+                        sh:maxCount 0 ;
+                    ] .
+                """;
+        documents.replaceShapesDocumentText(
+                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+        documents.createShapesDocument(GRAPH, "off.ttl", null, deactivated, Lang.TURTLE);
+
+        var report = service.validateShapes(GRAPH, null);
+
+        assertThat(findings(report.getDocuments()))
+                .noneSatisfy(
+                        finding ->
+                                assertThat(finding.getCode())
+                                        .isEqualTo("UNSATISFIABLE_CARDINALITY"));
+    }
+
+    @Test
     void aMaxCountThatIsNotANumberDoesNotHideTheConflict() {
         // The regression this guards: an unparsable count used to sort below every real one, so it
         // won the search for the strictest max, widened the bound to Integer.MAX_VALUE, and the

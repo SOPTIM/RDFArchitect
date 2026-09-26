@@ -48,6 +48,7 @@ import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.merge.ModelResourceExclusiveMerge;
+import org.rdfarchitect.services.shacl.effective.ClassHierarchy;
 import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
 import org.rdfarchitect.services.shacl.form.ShapeBlockLocator;
 import org.rdfarchitect.shacl.PropertyShapeToClassAssigner;
@@ -749,7 +750,8 @@ public class SHACLStoringService
                         .derivedPropertyShapes(
                                 shaclToClassAssigner.getDerivedPropertyShapesOfClass(classUUID))
                         .build();
-        summarise(relations, shaclModel, prefixMapping);
+        summarise(
+                relations, shaclModel, prefixMapping, ClassHierarchy.of(ontologyModel.getGraph()));
         return relations;
     }
 
@@ -786,7 +788,10 @@ public class SHACLStoringService
      * spells itself.
      */
     private static void summarise(
-            SHACLToClassRelations relations, Model shaclModel, PrefixMapping prefixes) {
+            SHACLToClassRelations relations,
+            Model shaclModel,
+            PrefixMapping prefixes,
+            ClassHierarchy hierarchy) {
         var subjects = new HashMap<String, Node>();
         shaclModel
                 .listSubjects()
@@ -801,7 +806,9 @@ public class SHACLStoringService
                             .toList();
             wrapper.setSummary(
                     EffectiveConstraints.describe(
-                            EffectiveConstraints.readAll(shaclModel.getGraph(), shapes), prefixes));
+                            EffectiveConstraints.readAll(shaclModel.getGraph(), shapes),
+                            prefixes,
+                            hierarchy));
         }
     }
 

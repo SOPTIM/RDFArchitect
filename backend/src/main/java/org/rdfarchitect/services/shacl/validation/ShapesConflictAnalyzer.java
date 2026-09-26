@@ -23,6 +23,7 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.vocabulary.RDF;
+import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
 import org.rdfarchitect.shacl.dto.ShapesValidationFinding;
 
 import java.util.ArrayList;
@@ -256,14 +257,16 @@ final class ShapesConflictAnalyzer {
             var triple = targeted.next();
             var nodeShape = triple.getSubject();
             var targetClass = triple.getObject();
-            if (!targetClass.isURI()) {
+            if (!targetClass.isURI() || EffectiveConstraints.isDeactivated(graph, nodeShape)) {
                 continue;
             }
             var properties = graph.find(nodeShape, Shacl.PROPERTY, Node.ANY);
             while (properties.hasNext()) {
                 var propertyShape = properties.next().getObject();
                 var path = singleObject(graph, propertyShape, Shacl.PATH);
-                if (path == null || !path.isURI() || isDeactivated(graph, propertyShape)) {
+                if (path == null
+                        || !path.isURI()
+                        || EffectiveConstraints.isDeactivated(graph, propertyShape)) {
                     continue;
                 }
                 var key = new PathKey(targetClass, path);
@@ -319,13 +322,6 @@ final class ShapesConflictAnalyzer {
         // a blank node and so cannot be found in the source text.
         into.computeIfAbsent(key, ignored -> new ArrayList<>())
                 .add(new PropertyConstraint(document, targetClass, path, nodeShape, value));
-    }
-
-    private static boolean isDeactivated(Graph graph, Node shape) {
-        var deactivated = singleObject(graph, shape, Shacl.DEACTIVATED);
-        return deactivated != null
-                && deactivated.isLiteral()
-                && Boolean.TRUE.equals(deactivated.getLiteralValue());
     }
 
     private static Node singleObject(Graph graph, Node subject, Node predicate) {

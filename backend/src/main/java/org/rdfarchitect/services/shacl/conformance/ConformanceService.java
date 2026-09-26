@@ -30,6 +30,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.services.shacl.effective.ClassHierarchy;
 import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
 import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 import org.rdfarchitect.shacl.dto.ConformanceDocument;
@@ -38,6 +39,7 @@ import org.rdfarchitect.shacl.dto.ConformanceReport;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
@@ -70,6 +72,7 @@ public class ConformanceService implements ConformanceUseCase {
         var prefixes = databasePort.getPrefixMapping(graphIdentifier.datasetName());
 
         Graph schemaShapes;
+        ClassHierarchy hierarchy;
         var documentShapes = new LinkedHashMap<String, Graph>();
         var documentRefs = new ArrayList<ConformanceDocument>();
         String documentName;
@@ -96,6 +99,7 @@ public class ConformanceService implements ConformanceUseCase {
 
             var ontology = ModelFactory.createModelForGraph(copyOf(ctx.getRdfGraph()));
             ontology.setNsPrefixes(prefixes);
+            hierarchy = ClassHierarchy.of(ontology.getGraph());
             schemaShapes =
                     new SHACLFromCIMGenerator(
                                     ontology,
@@ -107,7 +111,8 @@ public class ConformanceService implements ConformanceUseCase {
 
         var implied = EffectiveConstraints.of(schemaShapes);
         var asserted = EffectiveConstraints.of(documentShapes);
-        var findings = ConformanceComparator.compare(implied, asserted, prefixes);
+        var findings =
+                ConformanceComparator.compare(implied, asserted, prefixes, hierarchy, Set.of());
 
         var contradicted = count(findings, ConformanceFinding.Kind.CONTRADICTED);
         var different = count(findings, ConformanceFinding.Kind.DIFFERENT);
@@ -115,7 +120,9 @@ public class ConformanceService implements ConformanceUseCase {
         // Only what both sides state is a question of agreement. Counting the schema's whole
         // surface here scored silence as disagreement, which is how a 55-line cross-profile file
         // came to read as "0 of 49 agree".
-        var compared = overlap(implied.keySet(), asserted.constraints().keySet());
+        var stated = new HashSet<>(asserted.constraints().keySet());
+        stated.addAll(asserted.advisory().keySet());
+        var compared = overlap(implied.keySet(), stated);
 
         return ConformanceReport.builder()
                 .documentId(documentId)
@@ -125,7 +132,7 @@ public class ConformanceService implements ConformanceUseCase {
                 .compared(compared)
                 .agreeing(compared - contradicted - different)
                 .impliedBySchema(implied.size())
-                .stated(asserted.constraints().size())
+                .stated(stated.size())
                 .contradictedCount(contradicted)
                 .differentCount(different)
                 .missingInDocumentCount(

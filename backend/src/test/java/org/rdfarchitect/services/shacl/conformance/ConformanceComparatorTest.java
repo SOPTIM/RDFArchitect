@@ -25,6 +25,7 @@ import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.services.shacl.effective.ClassHierarchy;
 import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
 import org.rdfarchitect.shacl.dto.ConformanceFinding;
 
@@ -299,5 +300,253 @@ class ConformanceComparatorTest {
                 """;
 
         assertThat(compare(inverse, shapes(""))).isEmpty();
+    }
+
+    // -------------------------------------------------------------------------
+    // Value types — a type list against sh:class
+    // -------------------------------------------------------------------------
+
+    /**
+     * A range with two concrete subclasses, one of which has a concrete subclass of its own. The
+     * range itself is abstract, as association ranges in CIM usually are.
+     */
+    private static final String HIERARCHY =
+            """
+            @prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+            @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+            @prefix cims: <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#> .
+            @prefix cim:  <http://iec.ch/TC57/CIM100#> .
+
+            cim:Equipment a rdfs:Class .
+            cim:Switch a rdfs:Class ; rdfs:subClassOf cim:Equipment ;
+                cims:stereotype <http://iec.ch/TC57/NonStandard/UML#concrete> .
+            cim:Breaker a rdfs:Class ; rdfs:subClassOf cim:Switch ;
+                cims:stereotype <http://iec.ch/TC57/NonStandard/UML#concrete> .
+            cim:ACLineSegment a rdfs:Class ; rdfs:subClassOf cim:Equipment ;
+                cims:stereotype <http://iec.ch/TC57/NonStandard/UML#concrete> .
+            cim:BaseVoltage a rdfs:Class ;
+                cims:stereotype <http://iec.ch/TC57/NonStandard/UML#concrete> .
+            """;
+
+    /** A value type as RDFArchitect and the CGMES files write it: a list of permitted rdf:types. */
+    private static String typedAs(String classes) {
+        return """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://example.org/> .
+
+                ex:Shape a sh:NodeShape ;
+                    sh:targetClass cim:Terminal ;
+                    sh:property [ sh:path cim:Terminal.ConductingEquipment ; sh:maxCount 1 ] ;
+                    sh:property [ sh:path ( cim:Terminal.ConductingEquipment rdf:type ) ;
+                                  sh:in ( %s ) ; sh:nodeKind sh:IRI ] .
+                """
+                .formatted(classes);
+    }
+
+    /** The same value type as NC files write it. */
+    private static String ofClass(String valueClass) {
+        return """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://example.org/> .
+
+                ex:Shape a sh:NodeShape ;
+                    sh:targetClass cim:Terminal ;
+                    sh:property [ sh:path cim:Terminal.ConductingEquipment ; sh:maxCount 1 ;
+                                  sh:class %s ; sh:nodeKind sh:IRI ] .
+                """
+                .formatted(valueClass);
+    }
+
+    private static List<ConformanceFinding> compareInSchema(String schema, String document) {
+        return ConformanceComparator.compare(
+                constraints(schema),
+                EffectiveConstraints.of(java.util.Map.of("document.ttl", graphOf(document))),
+                PREFIXES,
+                ClassHierarchy.of(graphOf(HIERARCHY)),
+                java.util.Set.of());
+    }
+
+    @Test
+    void aTypeListOfTheRangeAndItsSubclassesAgreesWithShClassOnTheRange() {
+        var generated = typedAs("cim:Equipment cim:Switch cim:Breaker cim:ACLineSegment");
+
+        assertThat(compareInSchema(generated, ofClass("cim:Equipment"))).isEmpty();
+    }
+
+    @Test
+    void anAbstractClassInATypeListAdmitsNothingExtra() {
+        // Official lists name abstract classes too; nothing is ever typed as one.
+        var official = typedAs("cim:Breaker cim:Switch cim:ACLineSegment cim:Equipment");
+
+        assertThat(compareInSchema(official, ofClass("cim:Equipment"))).isEmpty();
+    }
+
+    @Test
+    void aNarrowerTypeListIsADifferenceNotAContradiction() {
+        var findings = compareInSchema(typedAs("cim:Switch cim:Breaker"), ofClass("cim:Equipment"));
+
+        assertThat(findings)
+                .singleElement()
+                .satisfies(
+                        finding -> {
+                            assertThat(finding.getKind())
+                                    .isEqualTo(ConformanceFinding.Kind.DIFFERENT);
+                            assertThat(finding.getSchemaSays()).contains("of class cim:Switch");
+                            assertThat(finding.getDocumentSays())
+                                    .contains("of class cim:Equipment");
+                        });
+    }
+
+    @Test
+    void aTypeListNamingOnlyUnrelatedClassesContradictsShClass() {
+        var findings = compareInSchema(typedAs("cim:BaseVoltage"), ofClass("cim:Switch"));
+
+        assertThat(findings)
+                .singleElement()
+                .satisfies(
+                        finding -> {
+                            assertThat(finding.getKind())
+                                    .isEqualTo(ConformanceFinding.Kind.CONTRADICTED);
+                            assertThat(finding.getMessage()).contains("instance of both");
+                        });
+    }
+
+    // -------------------------------------------------------------------------
+    // What cannot fail validation
+    // -------------------------------------------------------------------------
+
+    @Test
+    void aDeactivatedPropertyShapeStatesNothing() {
+        var findings =
+                compare(
+                        shapes("sh:datatype xsd:float"),
+                        shapes("sh:datatype xsd:string ; sh:deactivated true"));
+
+        assertThat(findings)
+                .singleElement()
+                .satisfies(
+                        finding ->
+                                assertThat(finding.getKind())
+                                        .isEqualTo(ConformanceFinding.Kind.MISSING_IN_DOCUMENT));
+    }
+
+    @Test
+    void aDeactivatedNodeShapeStatesNothing() {
+        var document =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+                @prefix ex:  <http://example.org/> .
+
+                ex:Shape a sh:NodeShape ;
+                    sh:targetClass cim:ACLineSegment ;
+                    sh:deactivated true ;
+                    sh:property [ sh:path cim:ACLineSegment.r ; sh:datatype xsd:string ] .
+                """;
+
+        assertThat(compare(shapes("sh:datatype xsd:float"), document))
+                .extracting(ConformanceFinding::getKind)
+                .containsExactly(ConformanceFinding.Kind.MISSING_IN_DOCUMENT);
+    }
+
+    @Test
+    void aConstraintStatedOnlyAsAWarningIsADifferenceNotAContradiction() {
+        var findings =
+                compare(
+                        shapes("sh:datatype xsd:float"),
+                        shapes("sh:datatype xsd:string ; sh:severity sh:Warning"));
+
+        assertThat(findings)
+                .singleElement()
+                .satisfies(
+                        finding -> {
+                            assertThat(finding.getKind())
+                                    .isEqualTo(ConformanceFinding.Kind.DIFFERENT);
+                            assertThat(finding.getMessage()).contains("below sh:Violation");
+                        });
+    }
+
+    @Test
+    void anExplicitViolationSeverityIsEnforced() {
+        var findings =
+                compare(
+                        shapes("sh:datatype xsd:float"),
+                        shapes("sh:datatype xsd:string ; sh:severity sh:Violation"));
+
+        assertThat(findings)
+                .extracting(ConformanceFinding::getKind)
+                .containsExactly(ConformanceFinding.Kind.CONTRADICTED);
+    }
+
+    // -------------------------------------------------------------------------
+    // Enumerations
+    // -------------------------------------------------------------------------
+
+    @Test
+    void identicalValueListsAgreeWhateverTheirOrder() {
+        assertThat(
+                        compare(
+                                shapes("sh:in ( cim:Kind.a cim:Kind.b )"),
+                                shapes("sh:in ( cim:Kind.b cim:Kind.a )")))
+                .isEmpty();
+    }
+
+    @Test
+    void aDocumentExcludingASchemaValueIsADifference() {
+        var findings =
+                compare(shapes("sh:in ( cim:Kind.a cim:Kind.b )"), shapes("sh:in ( cim:Kind.a )"));
+
+        assertThat(findings)
+                .singleElement()
+                .satisfies(
+                        finding -> {
+                            assertThat(finding.getKind())
+                                    .isEqualTo(ConformanceFinding.Kind.DIFFERENT);
+                            assertThat(finding.getSchemaSays())
+                                    .isEqualTo("one of cim:Kind.a, cim:Kind.b");
+                            assertThat(finding.getDocumentSays()).isEqualTo("one of cim:Kind.a");
+                        });
+    }
+
+    @Test
+    void aDocumentValueTheSchemaDoesNotListIsAContradiction() {
+        // How a national extension of an enumeration drifts from its schema.
+        var findings =
+                compare(
+                        shapes("sh:in ( cim:Kind.a cim:Kind.b )"),
+                        shapes("sh:in ( cim:Kind.a cim:Kind.national )"));
+
+        assertThat(findings)
+                .singleElement()
+                .satisfies(
+                        finding -> {
+                            assertThat(finding.getKind())
+                                    .isEqualTo(ConformanceFinding.Kind.CONTRADICTED);
+                            assertThat(finding.getMessage())
+                                    .isEqualTo(
+                                            "The document allows cim:Kind.national, which the"
+                                                    + " schema does not.");
+                        });
+    }
+
+    @Test
+    void twoValueListsOnOneSideAreIntersected() {
+        var split =
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://example.org/> .
+
+                ex:Shape a sh:NodeShape ;
+                    sh:targetClass cim:ACLineSegment ;
+                    sh:property [ sh:path cim:ACLineSegment.r ; sh:in ( cim:Kind.a cim:Kind.b ) ] ;
+                    sh:property [ sh:path cim:ACLineSegment.r ; sh:in ( cim:Kind.b cim:Kind.c ) ] .
+                """;
+
+        assertThat(compare(shapes("sh:in ( cim:Kind.b )"), split)).isEmpty();
     }
 }
