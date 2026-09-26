@@ -86,20 +86,24 @@ A document that does not parse cannot be shown as a form; the view says where th
 
 Answers the question only RDFArchitect can answer: **do this schema's constraints still agree with the schema they describe?**
 
-It generates the shapes your schema implies and compares them, property by property, with what the graph's constraints state. The comparison reads **every enabled document together**, not just the open one — an official release splits its rules across several files, and the CGMES 3.0 DiagramLayout constraints are a good example: one file defers most of its property shapes to the shared IdentifiedObject file, and two more carry a single cross-profile rule each.
+It generates the shapes your schema implies and compares them, property by property, with what the graph's constraints state. The schema side is the **whole workspace**, scoped to the graph: profiles build on each other — an NC profile adds properties to classes the Equipment profile declares — so the documents are compared with everything the workspace says about the classes they target, while the graph is only asked to cover the classes and properties it declares itself. The comparison reads **every enabled document together**, not just the open one — an official release splits its rules across several files, and the CGMES 3.0 DiagramLayout constraints are a good example: one file defers most of its property shapes to the shared IdentifiedObject file, and two more carry a single cross-profile rule each.
 
 What it finds is grouped:
 
 | | |
 |---|---|
-| **Contradiction** | The two cannot both be satisfied — different datatypes, or the schema requires more values than the documents allow. Someone has to decide which is right. |
+| **Contradiction** | The two cannot both be satisfied — different datatypes, unrelated value classes, or the schema requires more values than the documents allow. A document that permits an enumeration value (`sh:in`) the schema does not list is reported here too, because that is how an extended enumeration drifts from its schema. Someone has to decide which is right. |
 | **Difference** | Both can be satisfied, but they do not say the same thing. Usually the profile deliberately narrowing what the schema allows. |
 | **Not covered** | The schema implies a constraint no document states. |
-| **Not in the schema** | A document constrains a property the schema does not have on that class. |
+| **Not in the schema** | A document constrains a property the schema does not have on that class — or a class or property no schema in the workspace declares, and the finding says which. |
 
 Coverage and agreement are counted separately, and the headline only turns red for a contradiction. A file that says nothing about a property does not disagree with the schema about it: the report says how many of the constraints *both* sides state agree, and reports the rest as a gap. Each finding also names the document that states it, and the name is a link that opens it, so a report over several files still points at the one to open.
 
 Shapes are matched by class and property, never by name, because generated and official shapes share no naming convention and both spread one property's rules over several shapes.
+
+What is compared, per property: `sh:minCount`, `sh:maxCount`, `sh:datatype`, `sh:nodeKind`, the value class, and the permitted values of `sh:in`. A value class is compared by the instances it admits: RDFArchitect and the CGMES files state it as the list of types a value may have (`sh:path (p rdf:type) ; sh:in (…)`), NC files as `sh:class`, and the two agree when they admit the same concrete classes. A shape switched off with `sh:deactivated true` states nothing, and a constraint stated only at `sh:Warning` or `sh:Info` is at most a difference, never a contradiction — data breaking it still conforms.
+
+Not compared: value ranges (`sh:minInclusive` and friends), patterns, `sh:hasValue`, embedded SPARQL, logical combinations (`sh:or`, `sh:not`, …), and any path expression other than the value-type list above, such as the inverse cardinality RDFArchitect generates.
 
 ### What validation checks
 

@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class SHACLFromCIMGenerator {
@@ -81,9 +82,23 @@ public class SHACLFromCIMGenerator {
      * @return a SHACL model
      */
     public Model generate() {
+        return generate(ignored -> true);
+    }
+
+    /**
+     * Generates a SHACL model for the instantiable classes {@code classFilter} accepts, with every
+     * property they have, inherited ones included.
+     *
+     * @param classFilter which instantiable classes to generate node shapes for
+     * @return a SHACL model
+     */
+    public Model generate(Predicate<Resource> classFilter) {
         initResultModel();
         // create propertyShapes and nodeShapes
         for (var instantiableClass : listInstantiableClasses()) {
+            if (!classFilter.test(instantiableClass)) {
+                continue;
+            }
             var propertyShapes = new HashSet<Resource>();
             for (var property : CIMClassUtils.listAllProperties(instantiableClass)) {
                 propertyShapes.addAll(createPropertyShape(property));
