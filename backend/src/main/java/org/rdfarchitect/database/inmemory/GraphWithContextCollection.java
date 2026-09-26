@@ -309,6 +309,40 @@ public class GraphWithContextCollection {
     }
 
     /**
+     * Replaces the graph registered under {@code graphUri} with {@code newGraph}, keeping its
+     * shapes documents.
+     *
+     * <p>Replacing a schema is how a new release of a profile is loaded, and the constraints
+     * written for the old one are what the user wants to check the new one against — dropping them
+     * silently would be the one step of that workflow nothing could undo. Everything else starts
+     * afresh, as for a new graph: the history belongs to the content that was replaced.
+     *
+     * @param graphUri the graph URI, which need not exist yet
+     * @param newGraph initial graph content
+     */
+    public void replace(String graphUri, Graph newGraph) {
+        rwLock.writeLock().lock();
+        try {
+            var expanded = prefixes.expandPrefix(graphUri);
+            assertValidGraphName(expanded);
+            List<ShapesDocumentSeed> documents = List.of();
+            var existing = graphs.get(expanded);
+            if (existing != null) {
+                try (var old = existing.begin(ReadWrite.WRITE)) {
+                    documents =
+                            old.getShapesDocuments().values().stream()
+                                    .map(ShapesDocumentSeed::copyOf)
+                                    .toList();
+                    old.getRdfGraph().close();
+                }
+            }
+            graphs.put(expanded, new GraphWithContextTransactional(newGraph, documents));
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+    }
+
+    /**
      * Registers the graph currently known as {@code oldGraphUri} under {@code newGraphUri} and
      * rewrites every reference to it inside this collection. The graph itself, including its
      * undo/redo history, is kept as is.

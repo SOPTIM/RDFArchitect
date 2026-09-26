@@ -189,6 +189,19 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     @Override
+    public void replace(GraphIdentifier graphIdentifier, Graph newGraph) {
+        lock.lock();
+        try {
+            createDatasetIfAbsent(graphIdentifier.datasetName());
+            graphCollections
+                    .get(graphIdentifier.datasetName())
+                    .replace(graphIdentifier.graphUri(), newGraph);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
     public void remove(GraphIdentifier graphIdentifier) {
         final String datasetName = graphIdentifier.datasetName();
         final String graphUri = graphIdentifier.graphUri();

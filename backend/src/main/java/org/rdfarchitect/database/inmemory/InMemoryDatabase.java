@@ -129,6 +129,16 @@ public interface InMemoryDatabase {
     void createEmptyGraph(GraphIdentifier graphIdentifier);
 
     /**
+     * Replaces a graph's content with {@code newGraph}, or with nothing when it is {@code null},
+     * keeping the graph's shapes documents. Otherwise behaves like {@link #createGraph} and {@link
+     * #createEmptyGraph} respectively.
+     *
+     * @param graphIdentifier identifies dataset and graph URI
+     * @param newGraph the new content, or {@code null} for an empty graph
+     */
+    void replaceGraph(GraphIdentifier graphIdentifier, Graph newGraph);
+
+    /**
      * Deletes the named graph from a specified dataset. If the graph or dataset does not exist,
      * nothing happens.
      *

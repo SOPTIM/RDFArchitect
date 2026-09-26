@@ -18,6 +18,7 @@
 package org.rdfarchitect.database;
 
 import org.apache.jena.graph.Graph;
+import org.rdfarchitect.rdf.graph.GraphUtils;
 
 import java.util.UUID;
 
@@ -44,4 +45,23 @@ public record ShapesDocumentSeed(
         boolean enabled,
         int order,
         String rawText,
-        Graph graph) {}
+        Graph graph) {
+
+    /**
+     * Describes {@code document} as it stands, with a copy of its shapes and their prefixes. Must
+     * be called inside a transaction on the context holding it.
+     */
+    public static ShapesDocumentSeed copyOf(ShapesDocument document) {
+        var graph = GraphUtils.deepCopy(document.getGraph());
+        graph.getPrefixMapping().setNsPrefixes(document.getGraph().getPrefixMapping());
+        return new ShapesDocumentSeed(
+                document.getId(),
+                document.getName(),
+                document.getSourceFileName(),
+                document.getOrigin(),
+                document.isEnabled(),
+                document.getOrder(),
+                document.getRawText(),
+                graph);
+    }
+}

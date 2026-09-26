@@ -51,7 +51,7 @@ class DeleteGraphServiceTest {
     }
 
     @Test
-    void replaceGraph_callsDeleteAndCreateGraph() {
+    void replaceGraph_replacesTheContentInPlace() {
         var graphIdentifier = new GraphIdentifier("default", "http://example.com/graph");
         var mockFile =
                 new MockMultipartFile(
@@ -63,8 +63,9 @@ class DeleteGraphServiceTest {
 
         deleteGraphService.replaceGraph(graphIdentifier, mockFile);
 
-        verify(mockDatabasePort).deleteGraph(graphIdentifier);
-        verify(mockDatabasePort).createGraph(eq(graphIdentifier), any(Graph.class));
+        // Replaced rather than deleted and recreated, which would drop its constraints documents.
+        verify(mockDatabasePort).replaceGraph(eq(graphIdentifier), any(Graph.class));
+        verify(mockDatabasePort, never()).deleteGraph(any());
     }
 
     @Test
@@ -73,8 +74,7 @@ class DeleteGraphServiceTest {
 
         deleteGraphService.replaceGraph(graphIdentifier, null);
 
-        verify(mockDatabasePort).deleteGraph(graphIdentifier);
-        verify(mockDatabasePort).createEmptyGraph(graphIdentifier);
-        verify(mockDatabasePort, never()).createGraph(any(), any());
+        verify(mockDatabasePort).replaceGraph(graphIdentifier, null);
+        verify(mockDatabasePort, never()).deleteGraph(any());
     }
 }

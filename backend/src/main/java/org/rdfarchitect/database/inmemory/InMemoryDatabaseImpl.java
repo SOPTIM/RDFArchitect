@@ -107,6 +107,32 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     public void createGraph(GraphIdentifier graphIdentifier, Graph newGraph) {
         var store = getOrCreateSessionDataStore();
         store.create(graphIdentifier, newGraph);
+        registerContent(store, graphIdentifier, newGraph);
+    }
+
+    @Override
+    public void replaceGraph(GraphIdentifier graphIdentifier, Graph newGraph) {
+        var store = getOrCreateSessionDataStore();
+        var datasetName = graphIdentifier.datasetName();
+        var isNewDataset = !store.listDatasets().contains(datasetName);
+        if (newGraph == null) {
+            store.replace(graphIdentifier, GraphFactory.createDefaultGraph());
+            store.getCrossProfileDiagramInfo(datasetName)
+                    .setColor(
+                            graphIdentifier.graphUri(),
+                            CrossProfileUtils.generateRandomDarkColor());
+            if (isNewDataset) {
+                initializeNewDataset(store, datasetName);
+            }
+        } else {
+            store.replace(graphIdentifier, newGraph);
+            registerContent(store, graphIdentifier, newGraph);
+        }
+    }
+
+    /** Merges a new graph's prefixes into the dataset's and gives it a diagram colour. */
+    private static void registerContent(
+            SessionDataStore store, GraphIdentifier graphIdentifier, Graph newGraph) {
         var currentPrefixMapping =
                 new PrefixMappingImpl()
                         .setNsPrefixes(store.getPrefixMapping(graphIdentifier.datasetName()))

@@ -124,6 +124,16 @@ public interface SessionDataStore {
     void create(GraphIdentifier graphIdentifier, Graph newGraph);
 
     /**
+     * Replaces a graph's content, keeping its shapes documents. Creates the dataset and the graph
+     * if they do not exist yet.
+     *
+     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
+     *     graph URI.
+     * @param newGraph The new content.
+     */
+    void replace(GraphIdentifier graphIdentifier, Graph newGraph);
+
+    /**
      * Deletes the named graph from a specified dataset. If the graph or dataset does not exist,
      * nothing happens.
      *

@@ -79,6 +79,11 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
+    public void replaceGraph(GraphIdentifier graphIdentifier, Graph graph) {
+        database.replaceGraph(graphIdentifier, graph);
+    }
+
+    @Override
     public List<String> listGraphUris(String datasetName) {
         return database.listGraphUris(datasetName);
     }

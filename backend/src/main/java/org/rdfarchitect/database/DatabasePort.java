@@ -95,6 +95,15 @@ public interface DatabasePort {
     void createEmptyGraph(GraphIdentifier graphIdentifier);
 
     /**
+     * Replaces the content of the graph referenced by {@code graphIdentifier}, keeping the shapes
+     * documents written for it. Creates the graph when it does not exist.
+     *
+     * @param graphIdentifier identifies dataset and graph URI
+     * @param graph the new content, or {@code null} for an empty graph
+     */
+    void replaceGraph(GraphIdentifier graphIdentifier, Graph graph);
+
+    /**
      * Lists all graph URIs belonging to the dataset.
      *
      * @param datasetName literal dataset name
