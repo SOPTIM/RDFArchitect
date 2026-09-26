@@ -72,10 +72,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Stores and reads the sets of SHACL shapes belonging to a graph.
@@ -114,6 +116,9 @@ public class SHACLStoringService
     public static final PrefixEntry SHACL_NAMESPACE =
             PrefixEntry.create(RDFA.NS_PREFIX_SHACL, RDFA.NS_URI_SHACL);
 
+    /** Stem of the name a document gets when it is created without one. */
+    private static final String DEFAULT_DOCUMENT_NAME = "constraints";
+
     private final DatabasePort databasePort;
 
     // -------------------------------------------------------------------------
@@ -137,9 +142,10 @@ public class SHACLStoringService
             String sourceFileName,
             String content,
             Lang lang) {
+        var requestedName = name == null ? null : validName(name);
         var parsed = parse(content, lang);
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var documentName = name;
+            var documentName = requestedName != null ? requestedName : freeDefaultName(ctx);
             assertNameIsFree(ctx, documentName, null);
             // A failure before the commit needs no cleanup: the new document is part of the
             // transaction, and the abort on leaving the block discards it.
@@ -185,7 +191,7 @@ public class SHACLStoringService
             String name,
             Boolean enabled,
             Integer order) {
-        var newName = name;
+        var newName = name == null ? null : validName(name);
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var document = requireDocument(ctx, documentId);
             var before = listState(ctx);
@@ -245,15 +251,47 @@ public class SHACLStoringService
         return document;
     }
 
-    /** Names identify documents to the user, so two documents must not share one. */
+    /**
+     * Names identify documents to the user, so two documents must not share one — nor differ only
+     * in case, which reads as the same name and collides as a file name on export.
+     */
     private static void assertNameIsFree(GraphContext ctx, String name, UUID allowedId) {
         var clash =
                 ctx.getShapesDocuments().values().stream()
-                        .anyMatch(d -> d.getName().equals(name) && !d.getId().equals(allowedId));
+                        .anyMatch(
+                                d ->
+                                        d.getName().equalsIgnoreCase(name)
+                                                && !d.getId().equals(allowedId));
         if (clash) {
             throw new ResourceConflictException(
                     "A constraints document named \"" + name + "\" already exists in this graph.");
         }
+    }
+
+    /** The name as it will be stored, or a client error when it cannot serve as one. */
+    private static String validName(String name) {
+        var trimmed = name.strip();
+        if (trimmed.isEmpty()) {
+            throw new InvalidContentException("A constraints document needs a name.");
+        }
+        if (trimmed.codePoints().anyMatch(Character::isISOControl)) {
+            throw new InvalidContentException(
+                    "A constraints document name cannot contain control characters.");
+        }
+        return trimmed;
+    }
+
+    /** For a document created without a name, such as an upload whose file name is unknown. */
+    private static String freeDefaultName(GraphContext ctx) {
+        var taken =
+                ctx.getShapesDocuments().values().stream()
+                        .map(document -> document.getName().toLowerCase(Locale.ROOT))
+                        .collect(Collectors.toSet());
+        var candidate = DEFAULT_DOCUMENT_NAME + ".ttl";
+        for (int i = 2; taken.contains(candidate); i++) {
+            candidate = DEFAULT_DOCUMENT_NAME + "-" + i + ".ttl";
+        }
+        return candidate;
     }
 
     /**
