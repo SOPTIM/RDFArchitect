@@ -271,10 +271,10 @@ class ImportJobServiceTest {
                                         DATASET,
                                         jobId,
                                         List.of(
-                                                new PrefixResolution(
+                                                new PrefixResolutionDTO(
                                                         "cim:",
                                                         CIM18,
-                                                        PrefixResolution.Action.RENAME,
+                                                        PrefixResolutionDTO.Action.RENAME,
                                                         "rdfs:"))))
                 .isInstanceOf(InvalidPrefixException.class);
 
@@ -418,7 +418,7 @@ class ImportJobServiceTest {
 
     @Test
     void startImport_contestedPrefixes_waitForADecisionWithoutImportingAnything() {
-        var received = new AtomicReference<PrefixResolutions>();
+        var received = new AtomicReference<ResolvedPrefixes>();
         service = new ImportJobService(prefixAskingImportService(received));
 
         var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
@@ -433,8 +433,8 @@ class ImportJobServiceTest {
 
         var decisions =
                 List.of(
-                        new PrefixResolution(
-                                "cim:", CIM18, PrefixResolution.Action.RENAME, "cim2:"));
+                        new PrefixResolutionDTO(
+                                "cim:", CIM18, PrefixResolutionDTO.Action.RENAME, "cim2:"));
         assertThat(service.resolvePrefixConflicts(DATASET, jobId, decisions)).isTrue();
 
         var status = awaitFinished(jobId);
@@ -455,10 +455,10 @@ class ImportJobServiceTest {
                                         DATASET,
                                         jobId,
                                         List.of(
-                                                new PrefixResolution(
+                                                new PrefixResolutionDTO(
                                                         "cim:",
                                                         CIM18,
-                                                        PrefixResolution.Action.RENAME,
+                                                        PrefixResolutionDTO.Action.RENAME,
                                                         "2cim:"))))
                 .isInstanceOf(InvalidPrefixException.class);
 
@@ -551,23 +551,23 @@ class ImportJobServiceTest {
 
     /** Stands in for an import that found contested prefixes and waits for them to be decided. */
     /** The prefixes a file binding {@code cim:} to the given namespace ends up with. */
-    private Map<String, String> applyTo(PrefixResolutions resolutions, String iri) {
+    private Map<String, String> applyTo(ResolvedPrefixes resolutions, String iri) {
         var prefixes = new PrefixMappingImpl().setNsPrefixes(Map.of("cim", iri));
         resolutions.applyTo(prefixes);
         return prefixes.getNsPrefixMap();
     }
 
     private ImportGraphsUseCase prefixAskingImportService(
-            AtomicReference<PrefixResolutions> received) {
+            AtomicReference<ResolvedPrefixes> received) {
         return prefixAskingImportService(received, List.of(COMPARISON));
     }
 
     private ImportGraphsUseCase prefixAskingImportService(
-            AtomicReference<PrefixResolutions> received, List<PrefixComparison> comparison) {
+            AtomicReference<ResolvedPrefixes> received, List<PrefixComparison> comparison) {
         return (datasetName, files, graphUris, listener) -> {
             listener.planned(List.of(new PlannedImport(0, "first.ttl", 1)));
             listener.scanningPrefixes();
-            received.set(listener.awaitPrefixResolutions(comparison));
+            received.set(listener.awaitResolvedPrefixes(comparison));
             var result = new ImportResult();
             if (listener.isCancelled()) {
                 listener.finished(0, Outcome.SKIPPED, null);

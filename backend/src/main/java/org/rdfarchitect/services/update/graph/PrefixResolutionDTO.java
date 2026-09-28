@@ -28,13 +28,13 @@ package org.rdfarchitect.services.update.graph;
  * @param action what to do with the binding
  * @param newPrefix the prefix to bind the namespace to, only read for {@link Action#RENAME}
  */
-public record PrefixResolution(String prefix, String iri, Action action, String newPrefix) {
+public record PrefixResolutionDTO(String prefix, String iri, Action action, String newPrefix) {
 
     /** What is to become of a namespace binding. */
     public enum Action {
         /** The namespace keeps the prefix; at most one binding per prefix can. */
         KEEP,
-        /** The namespace is bound to {@link PrefixResolution#newPrefix()} instead. */
+        /** The namespace is bound to {@link PrefixResolutionDTO#newPrefix()} instead. */
         RENAME,
         /** The namespace stays, but without a prefix. */
         DROP

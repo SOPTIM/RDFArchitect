@@ -51,7 +51,7 @@ class ImportJob implements ImportProgressListener {
     private boolean startedAFile;
     private Instant finishedAt;
     private List<PrefixComparison> prefixComparison = List.of();
-    private PrefixResolutions prefixResolutions;
+    private ResolvedPrefixes resolvedPrefixes;
     private Instant lastPolledAt;
 
     ImportJob(UUID id, String sessionId, String datasetName, Instant startedAt) {
@@ -79,14 +79,13 @@ class ImportJob implements ImportProgressListener {
     }
 
     @Override
-    public synchronized PrefixResolutions awaitPrefixResolutions(
-            List<PrefixComparison> comparison) {
+    public synchronized ResolvedPrefixes awaitResolvedPrefixes(List<PrefixComparison> comparison) {
         if (comparison.isEmpty()) {
-            return PrefixResolutions.none();
+            return ResolvedPrefixes.none();
         }
         prefixComparison = List.copyOf(comparison);
         state = JobState.AWAITING_PREFIX_RESOLUTION;
-        while (prefixResolutions == null && !cancelRequested) {
+        while (resolvedPrefixes == null && !cancelRequested) {
             try {
                 wait();
             } catch (InterruptedException _) {
@@ -96,7 +95,7 @@ class ImportJob implements ImportProgressListener {
         }
         prefixComparison = List.of();
         state = JobState.RUNNING;
-        return cancelRequested ? PrefixResolutions.none() : prefixResolutions;
+        return cancelRequested ? ResolvedPrefixes.none() : resolvedPrefixes;
     }
 
     @Override
@@ -147,11 +146,11 @@ class ImportJob implements ImportProgressListener {
      *
      * @return {@code false} if the job is not waiting for any
      */
-    synchronized boolean applyPrefixResolutions(PrefixResolutions resolutions) {
+    synchronized boolean applyResolvedPrefixes(ResolvedPrefixes resolved) {
         if (state != JobState.AWAITING_PREFIX_RESOLUTION) {
             return false;
         }
-        prefixResolutions = resolutions;
+        resolvedPrefixes = resolved;
         notifyAll();
         return true;
     }

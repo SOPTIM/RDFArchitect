@@ -107,7 +107,7 @@ public interface ImportJobUseCase {
      *     waiting for a decision
      */
     boolean resolvePrefixConflicts(
-            String datasetName, UUID jobId, List<PrefixResolution> resolutions);
+            String datasetName, UUID jobId, List<PrefixResolutionDTO> resolutions);
 
     /**
      * Asks the job to stop after the file it is currently importing. A job waiting for prefix

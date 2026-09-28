@@ -34,7 +34,7 @@ import {
     resolvePrefixConflicts as sdkResolvePrefixConflicts,
     type GraphDto,
     type ImportJobStatus,
-    type PrefixResolution,
+    type PrefixResolutionDto,
 } from "../api/generated";
 import { PUBLIC_BACKEND_URL } from "../config/runtime";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
@@ -301,7 +301,7 @@ async function getImportStatus(
 async function resolvePrefixConflicts(
     workspaceName: string,
     jobId: string,
-    resolutions: PrefixResolution[],
+    resolutions: PrefixResolutionDto[],
 ): Promise<Result> {
     console.log(
         `${LOG_PREFIX} Resolving ${resolutions.length} namespace prefix conflict(s) of import job "${jobId}"`,

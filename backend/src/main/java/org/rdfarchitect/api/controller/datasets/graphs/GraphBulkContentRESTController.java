@@ -24,7 +24,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.services.update.graph.ImportJobUseCase;
-import org.rdfarchitect.services.update.graph.PrefixResolution;
+import org.rdfarchitect.services.update.graph.PrefixResolutionDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -146,7 +146,7 @@ public class GraphBulkContentRESTController {
             @Parameter(description = "The id of the import job.") @PathVariable UUID jobId,
             @Parameter(description = "What to do with each contested namespace binding.")
                     @RequestBody
-                    List<PrefixResolution> resolutions) {
+                    List<PrefixResolutionDTO> resolutions) {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/content/imports/{{}}/prefix-resolutions\" from \"{}\".",
                 datasetName,

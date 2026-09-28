@@ -41,7 +41,7 @@ import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
-import org.rdfarchitect.services.update.graph.PrefixResolution.Action;
+import org.rdfarchitect.services.update.graph.PrefixResolutionDTO.Action;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.nio.charset.StandardCharsets;
@@ -219,14 +219,14 @@ class ImportGraphsServiceTest {
      */
     private final class RecordingListener implements ImportProgressListener {
 
-        private final List<PrefixResolution> resolutions;
+        private final List<PrefixResolutionDTO> resolutions;
         private final Map<Integer, String> plannedFileNames = new LinkedHashMap<>();
         private final List<String> failedBeforeAsking = new ArrayList<>();
         private List<PrefixComparison> comparison;
         private int storedGraphsWhenAsked = -1;
         private boolean asked;
 
-        private RecordingListener(List<PrefixResolution> resolutions) {
+        private RecordingListener(List<PrefixResolutionDTO> resolutions) {
             this.resolutions = resolutions;
         }
 
@@ -245,7 +245,7 @@ class ImportGraphsServiceTest {
         }
 
         @Override
-        public PrefixResolutions awaitPrefixResolutions(List<PrefixComparison> comparison) {
+        public ResolvedPrefixes awaitResolvedPrefixes(List<PrefixComparison> comparison) {
             this.asked = true;
             this.comparison = comparison;
             this.storedGraphsWhenAsked =
@@ -255,7 +255,7 @@ class ImportGraphsServiceTest {
                                             "createGraph".equals(invocation.getMethod().getName()))
                             .toList()
                             .size();
-            return PrefixResolutions.of(comparison, resolutions);
+            return ResolvedPrefixes.of(comparison, resolutions);
         }
     }
 
@@ -305,7 +305,7 @@ class ImportGraphsServiceTest {
                 List.of(schemaFile("dl30.ttl", CIM18)),
                 null,
                 new RecordingListener(
-                        List.of(new PrefixResolution("cim:", CIM18, Action.RENAME, "cim2:"))));
+                        List.of(new PrefixResolutionDTO("cim:", CIM18, Action.RENAME, "cim2:"))));
 
         assertThat(storedPrefixes()).containsEntry("cim2", CIM18).doesNotContainKey("cim");
     }
@@ -320,7 +320,7 @@ class ImportGraphsServiceTest {
                 List.of(schemaFile("dl30.ttl", CIM18)),
                 null,
                 new RecordingListener(
-                        List.of(new PrefixResolution("cim:", CIM18, Action.KEEP, null))));
+                        List.of(new PrefixResolutionDTO("cim:", CIM18, Action.KEEP, null))));
 
         assertThat(storedPrefixes()).containsEntry("cim", CIM18);
     }
@@ -336,8 +336,8 @@ class ImportGraphsServiceTest {
                 null,
                 new RecordingListener(
                         List.of(
-                                new PrefixResolution("cim:", CIM16, Action.RENAME, "cim16:"),
-                                new PrefixResolution("cim:", CIM18, Action.KEEP, null))));
+                                new PrefixResolutionDTO("cim:", CIM16, Action.RENAME, "cim16:"),
+                                new PrefixResolutionDTO("cim:", CIM18, Action.KEEP, null))));
 
         var captor = ArgumentCaptor.forClass(PrefixMapping.class);
         verify(databasePortMock).setPrefixMapping(eq(datasetName), captor.capture());

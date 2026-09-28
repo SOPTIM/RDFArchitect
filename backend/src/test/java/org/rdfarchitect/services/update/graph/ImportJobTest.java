@@ -46,22 +46,22 @@ class ImportJobTest {
                     true);
 
     @Test
-    void awaitPrefixResolutions_handedADecision_returnsItAndGoesOn() throws Exception {
+    void awaitResolvedPrefixes_handedADecision_returnsItAndGoesOn() throws Exception {
         var job = job();
-        var answer = new AtomicReference<PrefixResolutions>();
+        var answer = new AtomicReference<ResolvedPrefixes>();
         var waiter = waitForResolutions(job, answer);
 
         awaitWaiting(job);
         var decisions =
-                PrefixResolutions.of(
+                ResolvedPrefixes.of(
                         List.of(COMPARISON),
                         List.of(
-                                new PrefixResolution(
+                                new PrefixResolutionDTO(
                                         "cim:",
                                         "http://iec.ch/TC57/2023/CIM-schema-cim18#",
-                                        PrefixResolution.Action.RENAME,
+                                        PrefixResolutionDTO.Action.RENAME,
                                         "cim2:")));
-        assertThat(job.applyPrefixResolutions(decisions)).isTrue();
+        assertThat(job.applyResolvedPrefixes(decisions)).isTrue();
         waiter.join();
 
         assertThat(answer.get()).isSameAs(decisions);
@@ -70,29 +70,29 @@ class ImportJobTest {
     }
 
     @Test
-    void awaitPrefixResolutions_cancelled_stopsWaitingWithoutADecision() throws Exception {
+    void awaitResolvedPrefixes_cancelled_stopsWaitingWithoutADecision() throws Exception {
         var job = job();
-        var answer = new AtomicReference<PrefixResolutions>();
+        var answer = new AtomicReference<ResolvedPrefixes>();
         var waiter = waitForResolutions(job, answer);
 
         awaitWaiting(job);
         job.requestCancel();
         waiter.join();
 
-        assertThat(answer.get()).isSameAs(PrefixResolutions.none());
+        assertThat(answer.get()).isSameAs(ResolvedPrefixes.none());
     }
 
     @Test
-    void awaitPrefixResolutions_withoutConflicts_doesNotWaitAtAll() {
+    void awaitResolvedPrefixes_withoutConflicts_doesNotWaitAtAll() {
         var job = job();
 
-        assertThat(job.awaitPrefixResolutions(List.of())).isSameAs(PrefixResolutions.none());
+        assertThat(job.awaitResolvedPrefixes(List.of())).isSameAs(ResolvedPrefixes.none());
         assertThat(job.status().state()).isEqualTo(JobState.RUNNING);
     }
 
     @Test
-    void applyPrefixResolutions_whenTheJobIsNotWaiting_isRefused() {
-        assertThat(job().applyPrefixResolutions(PrefixResolutions.none())).isFalse();
+    void applyResolvedPrefixes_whenTheJobIsNotWaiting_isRefused() {
+        assertThat(job().applyResolvedPrefixes(ResolvedPrefixes.none())).isFalse();
     }
 
     @Test
@@ -130,9 +130,9 @@ class ImportJobTest {
         return new ImportJob(UUID.randomUUID(), "session-a", "ds", STARTED_AT);
     }
 
-    private Thread waitForResolutions(ImportJob job, AtomicReference<PrefixResolutions> answer) {
+    private Thread waitForResolutions(ImportJob job, AtomicReference<ResolvedPrefixes> answer) {
         return Thread.ofVirtual()
-                .start(() -> answer.set(job.awaitPrefixResolutions(List.of(COMPARISON))));
+                .start(() -> answer.set(job.awaitResolvedPrefixes(List.of(COMPARISON))));
     }
 
     private void awaitWaiting(ImportJob job) {

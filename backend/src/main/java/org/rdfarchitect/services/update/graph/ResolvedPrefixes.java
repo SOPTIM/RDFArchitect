@@ -31,24 +31,25 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The decisions taken on a {@link PrefixComparison}: which namespace keeps a prefix, which ones are
- * renamed and which ones are imported without one. Applied before anything is stored, which is what
- * makes the result independent of the order the files are imported in.
+ * How every prefix of a {@link PrefixComparison} stands once the answers to it are folded in: which
+ * namespace keeps it, which ones are renamed and which ones are imported without one. Settled
+ * before anything is stored, which is what makes the result independent of the order the files are
+ * imported in.
  */
-public final class PrefixResolutions {
+public final class ResolvedPrefixes {
 
-    private static final PrefixResolutions NONE = new PrefixResolutions(Map.of());
+    private static final ResolvedPrefixes NONE = new ResolvedPrefixes(Map.of());
 
     private static final String PROBE_NAMESPACE = "http://example.org/probe#";
 
     /** prefix (without a trailing colon) to what is to happen to it. */
     private final Map<String, Decision> decisions;
 
-    private PrefixResolutions(Map<String, Decision> decisions) {
+    private ResolvedPrefixes(Map<String, Decision> decisions) {
         this.decisions = decisions;
     }
 
-    static PrefixResolutions none() {
+    static ResolvedPrefixes none() {
         return NONE;
     }
 
@@ -62,8 +63,8 @@ public final class PrefixResolutions {
      * @throws InvalidPrefixException if a rename names a prefix that cannot be bound, or two
      *     namespaces end up on the same prefix
      */
-    static PrefixResolutions of(
-            List<PrefixComparison> comparisons, List<PrefixResolution> resolutions) {
+    static ResolvedPrefixes of(
+            List<PrefixComparison> comparisons, List<PrefixResolutionDTO> resolutions) {
         if (comparisons.isEmpty()) {
             return NONE;
         }
@@ -84,7 +85,7 @@ public final class PrefixResolutions {
             }
             decision.apply(resolution);
         }
-        var folded = new PrefixResolutions(Map.copyOf(decisions));
+        var folded = new ResolvedPrefixes(Map.copyOf(decisions));
         folded.rejectClaimsOnPrefixesThatStay(claimants);
         return folded;
     }
@@ -94,7 +95,7 @@ public final class PrefixResolutions {
      * bind: one RDF does not allow as a name, and one two namespaces were sent to, which would
      * leave whichever of them is written first without a prefix.
      */
-    private static void claimPrefix(Map<String, String> claimants, PrefixResolution resolution) {
+    private static void claimPrefix(Map<String, String> claimants, PrefixResolutionDTO resolution) {
         var claimed =
                 switch (resolution.action()) {
                     case KEEP -> withoutColon(resolution.prefix());
@@ -127,7 +128,7 @@ public final class PrefixResolutions {
      * The prefix a rename asks for. The empty one is refused: Jena reads it as the default
      * namespace, which is a binding of its own and not a rename.
      */
-    private static String validatedRenameOf(PrefixResolution resolution) {
+    private static String validatedRenameOf(PrefixResolutionDTO resolution) {
         var newPrefix = withoutColon(resolution.newPrefix());
         if (newPrefix.isEmpty()) {
             throw InvalidPrefixException.notAName(resolution.newPrefix());
@@ -198,7 +199,7 @@ public final class PrefixResolutions {
         /**
          * A renamed binding hands its prefix on; who gets it is decided by a KEEP, or by nobody.
          */
-        private void apply(PrefixResolution resolution) {
+        private void apply(PrefixResolutionDTO resolution) {
             switch (resolution.action()) {
                 case KEEP -> holderIri = resolution.iri();
                 case RENAME -> {

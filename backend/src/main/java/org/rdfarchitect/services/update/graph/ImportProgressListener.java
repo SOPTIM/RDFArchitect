@@ -68,8 +68,8 @@ public interface ImportProgressListener {
      * @return what to do with each prefix; a binding without an answer keeps its default, which
      *     leaves the prefixes of the dataset as they are
      */
-    default PrefixResolutions awaitPrefixResolutions(List<PrefixComparison> comparison) {
-        return PrefixResolutions.none();
+    default ResolvedPrefixes awaitResolvedPrefixes(List<PrefixComparison> comparison) {
+        return ResolvedPrefixes.none();
     }
 
     default void started(int index) {}

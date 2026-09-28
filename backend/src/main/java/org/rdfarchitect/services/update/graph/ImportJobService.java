@@ -115,13 +115,13 @@ public class ImportJobService implements ImportJobUseCase {
 
     @Override
     public boolean resolvePrefixConflicts(
-            String datasetName, UUID jobId, List<PrefixResolution> resolutions) {
+            String datasetName, UUID jobId, List<PrefixResolutionDTO> resolutions) {
         var job = findJob(datasetName, jobId).orElse(null);
         if (job == null) {
             return false;
         }
-        var folded = PrefixResolutions.of(job.pendingPrefixComparison(), resolutions);
-        if (!job.applyPrefixResolutions(folded)) {
+        var folded = ResolvedPrefixes.of(job.pendingPrefixComparison(), resolutions);
+        if (!job.applyResolvedPrefixes(folded)) {
             throw new ResourceConflictException(
                     "The import is not waiting for namespace prefix decisions.");
         }

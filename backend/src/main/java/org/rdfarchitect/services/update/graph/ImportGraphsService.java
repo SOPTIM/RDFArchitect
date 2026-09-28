@@ -116,17 +116,17 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         var comparison = PrefixComparer.compare(loadExistingPrefixes(datasetName), readableFiles);
         var contested = comparison.stream().filter(PrefixComparison::contested).count();
         if (contested == 0) {
-            return new PrefixNegotiation(PrefixResolutions.none(), unreadableIndices);
+            return new PrefixNegotiation(ResolvedPrefixes.none(), unreadableIndices);
         }
         logger.info(
                 "Import into dataset \"{}\" contests {} namespace prefix(es).",
                 datasetName,
                 contested);
-        var resolutions = listener.awaitPrefixResolutions(comparison);
+        var resolved = listener.awaitResolvedPrefixes(comparison);
         if (!listener.isCancelled()) {
-            applyToWorkspacePrefixes(datasetName, resolutions);
+            applyToWorkspacePrefixes(datasetName, resolved);
         }
-        return new PrefixNegotiation(resolutions, unreadableIndices);
+        return new PrefixNegotiation(resolved, unreadableIndices);
     }
 
     /** Reports the files the scan could not parse and returns where they sit in the plan. */
@@ -146,11 +146,10 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     }
 
     /** Moves the prefixes the dataset holds out of the way, where the decisions call for it. */
-    private void applyToWorkspacePrefixes(String datasetName, PrefixResolutions resolutions) {
+    private void applyToWorkspacePrefixes(String datasetName, ResolvedPrefixes resolved) {
         try {
             var current = databasePort.getPrefixMapping(datasetName);
-            resolutions
-                    .rewriteWorkspacePrefixes(current)
+            resolved.rewriteWorkspacePrefixes(current)
                     .ifPresent(rewritten -> databasePort.setPrefixMapping(datasetName, rewritten));
         } catch (RuntimeException exception) {
             logger.warn(
@@ -386,7 +385,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                         source.file(),
                         reservedGraphUris,
                         listener,
-                        negotiation.resolutions());
+                        negotiation.resolved());
             }
             return;
         }
@@ -412,7 +411,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                                     InMemoryMultipartFile.of(plannedFile.fileName(), content),
                                     reservedGraphUris,
                                     listener,
-                                    negotiation.resolutions());
+                                    negotiation.resolved());
                         });
         failRemaining(result, unreached, listener, negotiation);
     }
@@ -428,7 +427,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             MultipartFile file,
             Set<String> reservedGraphUris,
             ImportProgressListener listener,
-            PrefixResolutions prefixResolutions) {
+            ResolvedPrefixes resolved) {
         if (listener.isCancelled()) {
             listener.finished(plannedFile.index(), Outcome.SKIPPED, null);
             return;
@@ -442,7 +441,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                             reservedGraphUris);
 
             var graph = parseGraph(file, graphUri);
-            prefixResolutions.applyTo(graph.getPrefixMapping());
+            resolved.applyTo(graph.getPrefixMapping());
 
             var undisplayableProperties = findUndisplayableProperties(graph);
             replaceGraph(datasetName, graphUri, graph);
@@ -601,11 +600,10 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     /**
      * What the prefix scan settled: what to do with the prefixes, and which files already failed.
      */
-    private record PrefixNegotiation(
-            PrefixResolutions resolutions, Set<Integer> unreadableIndices) {
+    private record PrefixNegotiation(ResolvedPrefixes resolved, Set<Integer> unreadableIndices) {
 
         private static PrefixNegotiation none() {
-            return new PrefixNegotiation(PrefixResolutions.none(), Set.of());
+            return new PrefixNegotiation(ResolvedPrefixes.none(), Set.of());
         }
 
         private boolean isUnreadable(PlannedFile plannedFile) {
