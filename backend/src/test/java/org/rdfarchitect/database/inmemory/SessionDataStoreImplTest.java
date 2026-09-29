@@ -20,6 +20,7 @@ package org.rdfarchitect.database.inmemory;
 import static org.assertj.core.api.Assertions.*;
 
 import org.apache.jena.graph.Graph;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingMem;
@@ -234,27 +235,25 @@ class SessionDataStoreImplTest {
     }
 
     @Test
-    void getGraphWithContext_existingDataset_returnsGraphContext() {
+    void beginTransaction_existingDataset_exposesTheGraph() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
-        // Act
-        var graphContext = inMemoryDatabase.getGraphWithContext(GRAPH_IDENTIFIER);
-
-        // Assert
-        assertThat(graphContext).isNotNull();
+        // Act/Assert
+        try (var transaction =
+                inMemoryDatabase.beginTransaction(GRAPH_IDENTIFIER.datasetName(), ReadWrite.READ)) {
+            assertThat(transaction.graph(GRAPH_IDENTIFIER.graphUri())).isNotNull();
+        }
     }
 
     @Test
-    void getGraphWithContext_nonExistingDataset_returnsGraphContext() {
-        // Arrange
-
-        // Act
-        var graphContext = inMemoryDatabase.getGraphWithContext(GRAPH_IDENTIFIER);
-
-        // Assert
-        assertThat(graphContext).isNotNull();
+    void beginTransaction_nonExistingDataset_createsTheWorkspace() {
+        // Act/Assert
+        try (var transaction =
+                inMemoryDatabase.beginTransaction(GRAPH_IDENTIFIER.datasetName(), ReadWrite.READ)) {
+            assertThat(transaction.graphUris()).isEmpty();
+        }
     }
 
     @Test

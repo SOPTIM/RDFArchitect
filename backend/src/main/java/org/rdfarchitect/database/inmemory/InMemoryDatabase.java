@@ -18,18 +18,16 @@
 package org.rdfarchitect.database.inmemory;
 
 import org.apache.jena.graph.Graph;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.DataAccessException;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public interface InMemoryDatabase {
@@ -76,36 +74,63 @@ public interface InMemoryDatabase {
     List<String> listDatasets();
 
     /**
-     * Get a {@link GraphContext} for the specified graph.
+     * Begins a transaction on a workspace. Graphs, custom diagrams and layout are reachable only
+     * through the returned transaction, so that a change spanning several graphs commits or rolls
+     * back as a whole.
      *
-     * @param graphIdentifier The identifier of the graph.
-     * @return {@link GraphContext}
+     * @param workspaceName literal workspace name
+     * @param mode the transaction mode
+     * @return the running transaction, to be used in try-with-resources
      */
-    GraphContext getGraphWithContext(GraphIdentifier graphIdentifier);
+    WorkspaceTransaction beginTransaction(String workspaceName, ReadWrite mode);
 
     /**
-     * Get all {@link CustomDiagram} for a dataset.
+     * Returns whether the workspace has a change that can be undone.
      *
-     * @param datasetName literal dataset name
-     * @return map of custom diagrams belonging to the dataset
+     * @param workspaceName literal workspace name
+     * @return {@code true} if there is something to undo
      */
-    Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName);
+    boolean canUndo(String workspaceName);
 
     /**
-     * Get the {@link DiagramLayout} for all custom diagrams defined on a dataset
+     * Returns whether the workspace has an undone change that can be reapplied.
      *
-     * @param datasetName literal dataset name
-     * @return diagram layout for the dataset
+     * @param workspaceName literal workspace name
+     * @return {@code true} if there is something to redo
      */
-    DiagramLayout getDatasetDiagramLayout(String datasetName);
+    boolean canRedo(String workspaceName);
 
     /**
-     * Returns the information of the CrossProfileDiagram of the given dataset.
+     * Rolls back the most recent change anywhere in the workspace.
      *
-     * @param datasetName literal dataset name
-     * @return {@link CrossProfileDiagramInfo} of the CrossProfileDiagram for the dataset
+     * @param workspaceName literal workspace name
+     * @return the change that was undone
      */
-    CrossProfileDiagramInfo getCrossProfileDiagramInfo(String datasetName);
+    WorkspaceChangeLogEntry undo(String workspaceName);
+
+    /**
+     * Reapplies the most recently undone change of the workspace.
+     *
+     * @param workspaceName literal workspace name
+     * @return the change that was redone
+     */
+    WorkspaceChangeLogEntry redo(String workspaceName);
+
+    /**
+     * Rolls the workspace back to the given version.
+     *
+     * @param workspaceName literal workspace name
+     * @param versionId the change to restore to
+     */
+    void restoreToVersion(String workspaceName, UUID versionId);
+
+    /**
+     * Returns the recorded changes of the workspace, newest first.
+     *
+     * @param workspaceName literal workspace name
+     * @return the change history
+     */
+    List<WorkspaceChangeLogEntry> listChanges(String workspaceName);
 
     /**
      * Creates a new named graph in a specified dataset. If the dataset does not exist yet, it will

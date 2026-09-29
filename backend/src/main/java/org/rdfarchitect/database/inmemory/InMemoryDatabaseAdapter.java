@@ -20,17 +20,15 @@ package org.rdfarchitect.database.inmemory;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
+import org.rdfarchitect.database.WorkspaceTransaction;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RequiredArgsConstructor
@@ -39,23 +37,38 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     private final InMemoryDatabase database;
 
     @Override
-    public GraphContext getGraphWithContext(GraphIdentifier graphIdentifier) {
-        return database.getGraphWithContext(graphIdentifier);
+    public WorkspaceTransaction beginTransaction(String workspaceName, ReadWrite mode) {
+        return database.beginTransaction(workspaceName, mode);
     }
 
     @Override
-    public Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName) {
-        return database.getDatasetDiagrams(datasetName);
+    public boolean canUndo(String workspaceName) {
+        return database.canUndo(workspaceName);
     }
 
     @Override
-    public DiagramLayout getDatasetDiagramLayout(String datasetName) {
-        return database.getDatasetDiagramLayout(datasetName);
+    public boolean canRedo(String workspaceName) {
+        return database.canRedo(workspaceName);
     }
 
     @Override
-    public CrossProfileDiagramInfo getCrossProfileDiagramInfo(String datasetName) {
-        return database.getCrossProfileDiagramInfo(datasetName);
+    public WorkspaceChangeLogEntry undo(String workspaceName) {
+        return database.undo(workspaceName);
+    }
+
+    @Override
+    public WorkspaceChangeLogEntry redo(String workspaceName) {
+        return database.redo(workspaceName);
+    }
+
+    @Override
+    public void restoreToVersion(String workspaceName, UUID versionId) {
+        database.restoreToVersion(workspaceName, versionId);
+    }
+
+    @Override
+    public List<WorkspaceChangeLogEntry> listChanges(String workspaceName) {
+        return database.listChanges(workspaceName);
     }
 
     @Override
