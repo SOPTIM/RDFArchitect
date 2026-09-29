@@ -24,8 +24,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.versioncontrol.RestoreVersionUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +46,6 @@ public class RestoreVersionRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(RestoreVersionRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final RestoreVersionUseCase restoreVersionUseCase;
 
     @Operation(
@@ -83,10 +80,7 @@ public class RestoreVersionRESTController {
                 graphURI,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-
-        restoreVersionUseCase.restoreVersion(
-                new GraphIdentifier(datasetName, extendedGraphURI), UUID.fromString(dto.versionId));
+        restoreVersionUseCase.restoreVersion(datasetName, UUID.fromString(dto.versionId));
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/restore\" to \"{}\".",

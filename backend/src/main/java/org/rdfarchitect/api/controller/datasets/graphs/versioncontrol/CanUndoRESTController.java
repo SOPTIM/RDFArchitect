@@ -22,8 +22,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.versioncontrol.CanUndoUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +39,6 @@ public class CanUndoRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(CanUndoRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final CanUndoUseCase canUndoUseCase;
 
     @Operation(
@@ -69,10 +66,7 @@ public class CanUndoRESTController {
                 graphURI,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-
-        boolean canUndo =
-                canUndoUseCase.canUndo(new GraphIdentifier(datasetName, extendedGraphURI));
+        boolean canUndo = canUndoUseCase.canUndo(datasetName);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/canUndo\" to \"{}\".",

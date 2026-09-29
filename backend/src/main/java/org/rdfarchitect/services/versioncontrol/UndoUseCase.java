@@ -17,17 +17,15 @@
 
 package org.rdfarchitect.services.versioncontrol;
 
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 
 public interface UndoUseCase {
 
     /**
-     * Undoes the most recent named commit for the given graph, reverting all associated graph
-     * participants to their previous state.
+     * Rolls back the most recent change anywhere in the workspace, across every graph it touched.
      *
-     * @param graphIdentifier the identifier of the graph to operate on
-     * @return the changelog entry that was undone, or {@code null} if no undo was available
+     * @param workspaceName the workspace to operate on
+     * @return the change that was undone
      */
-    ChangeLogEntry undo(GraphIdentifier graphIdentifier);
+    WorkspaceChangeLogEntry undo(String workspaceName);
 }

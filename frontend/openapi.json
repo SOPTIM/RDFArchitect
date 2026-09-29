@@ -335,44 +335,21 @@
         },
         "type" : "object"
       },
-      "ChangeLog" : {
-        "properties" : {
-          "redoHistory" : {
-            "items" : {
-              "$ref" : "#/components/schemas/ChangeLogEntry"
-            },
-            "type" : "array"
-          },
-          "undoHistory" : {
-            "items" : {
-              "$ref" : "#/components/schemas/ChangeLogEntry"
-            },
-            "type" : "array"
-          }
-        },
-        "type" : "object"
-      },
-      "ChangeLogEntry" : {
+      "ChangeLogEntryDTO" : {
         "properties" : {
           "changeId" : {
-            "format" : "uuid",
             "type" : "string"
           },
           "contextDeltas" : {
             "items" : {
-              "$ref" : "#/components/schemas/ContextDelta"
+              "$ref" : "#/components/schemas/ContextDeltaDTO"
             },
             "type" : "array"
           },
           "message" : {
             "type" : "string"
           },
-          "steps" : {
-            "format" : "int32",
-            "type" : "integer"
-          },
           "timestamp" : {
-            "format" : "date-time",
             "type" : "string"
           }
         },
@@ -631,28 +608,22 @@
         },
         "type" : "object"
       },
-      "ContextDelta" : {
+      "ContextDeltaDTO" : {
         "properties" : {
           "additions" : {
-            "properties" : {
-              "enqueued" : {
-                "deprecated" : true,
-                "type" : "boolean"
-              }
+            "items" : {
+              "$ref" : "#/components/schemas/TripleDTO"
             },
-            "type" : "object"
+            "type" : "array"
           },
           "contextName" : {
             "type" : "string"
           },
           "deletions" : {
-            "properties" : {
-              "enqueued" : {
-                "deprecated" : true,
-                "type" : "boolean"
-              }
+            "items" : {
+              "$ref" : "#/components/schemas/TripleDTO"
             },
-            "type" : "object"
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -2216,6 +2187,20 @@
         },
         "type" : "object"
       },
+      "TripleDTO" : {
+        "properties" : {
+          "object" : {
+            "type" : "string"
+          },
+          "predicate" : {
+            "type" : "string"
+          },
+          "subject" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "TriplePackageChange" : {
         "properties" : {
           "changes" : {
@@ -3745,7 +3730,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ChangeLog"
+                  "$ref" : "#/components/schemas/ChangeLogEntryDTO"
                 }
               }
             },

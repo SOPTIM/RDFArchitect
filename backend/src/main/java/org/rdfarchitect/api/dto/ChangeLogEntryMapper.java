@@ -20,8 +20,9 @@ package org.rdfarchitect.api.dto;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Triple;
 import org.mapstruct.Mapper;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.mapstruct.Mapping;
 import org.rdfarchitect.models.changelog.ContextDelta;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
 import java.lang.ref.WeakReference;
@@ -30,9 +31,10 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface ChangeLogEntryMapper {
 
-    ChangeLogEntryDTO toDTO(ChangeLogEntry entry);
+    @Mapping(target = "contextDeltas", source = "deltas")
+    ChangeLogEntryDTO toDTO(WorkspaceChangeLogEntry entry);
 
-    List<ChangeLogEntryDTO> toDTOList(List<ChangeLogEntry> entries);
+    List<ChangeLogEntryDTO> toDTOList(List<WorkspaceChangeLogEntry> entries);
 
     default ContextDeltaDTO toContextDeltaDTO(ContextDelta contextDelta) {
         var dto = new ContextDeltaDTO();

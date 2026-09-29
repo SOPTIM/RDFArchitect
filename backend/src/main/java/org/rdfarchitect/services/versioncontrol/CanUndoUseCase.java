@@ -17,9 +17,13 @@
 
 package org.rdfarchitect.services.versioncontrol;
 
-import org.rdfarchitect.database.GraphIdentifier;
-
 public interface CanUndoUseCase {
 
-    Boolean canUndo(GraphIdentifier graphIdentifier);
+    /**
+     * Returns whether the workspace has a change that can be undone.
+     *
+     * @param workspaceName the workspace to check
+     * @return {@code true} if there is something to undo
+     */
+    Boolean canUndo(String workspaceName);
 }

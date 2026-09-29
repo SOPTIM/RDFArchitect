@@ -40,12 +40,15 @@ public class GenerateOntologyEntriesService implements GenerateOntologyEntriesUs
 
     @Override
     public List<OntologyEntry> generateOntologyEntries(GraphIdentifier graphIdentifier) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             return new OntologyGeneratableEntriesBuilder(model)
                     .generateDCTModified(
-                            changeLogEntryMapper.toDTOList(ctx.getChangeLog().getUndoHistory()))
+                            changeLogEntryMapper.toDTOList(
+                                    databasePort.listChanges(graphIdentifier.datasetName())))
                     .generateDCTIssued()
                     .build();
         }

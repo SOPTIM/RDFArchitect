@@ -19,11 +19,10 @@ package org.rdfarchitect.services.versioncontrol;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -42,27 +41,23 @@ public class VersionControlService
     private final DatabaseConnection databaseConnection;
 
     @Override
-    public Boolean canRedo(GraphIdentifier graphIdentifier) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            return ctx.canRedo();
-        }
+    public Boolean canRedo(String workspaceName) {
+        return databasePort.canRedo(workspaceName);
     }
 
     @Override
-    public Boolean canUndo(GraphIdentifier graphIdentifier) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            return ctx.canUndo();
-        }
+    public Boolean canUndo(String workspaceName) {
+        return databasePort.canUndo(workspaceName);
     }
 
     @Override
-    public ChangeLogEntry redo(GraphIdentifier graphIdentifier) {
-        return databasePort.getGraphWithContext(graphIdentifier).redo();
+    public WorkspaceChangeLogEntry redo(String workspaceName) {
+        return databasePort.redo(workspaceName);
     }
 
     @Override
-    public ChangeLogEntry undo(GraphIdentifier graphIdentifier) {
-        return databasePort.getGraphWithContext(graphIdentifier).undo();
+    public WorkspaceChangeLogEntry undo(String workspaceName) {
+        return databasePort.undo(workspaceName);
     }
 
     @Override
@@ -71,7 +66,7 @@ public class VersionControlService
     }
 
     @Override
-    public void restoreVersion(GraphIdentifier graphIdentifier, UUID versionId) {
-        databasePort.getGraphWithContext(graphIdentifier).restoreToVersion(versionId);
+    public void restoreVersion(String workspaceName, UUID versionId) {
+        databasePort.restoreToVersion(workspaceName, versionId);
     }
 }
