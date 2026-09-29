@@ -55,7 +55,9 @@ public class RenameGraphService implements RenameGraphUseCase {
         if (newKeyword == null) {
             return;
         }
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             var ontologyFacade = new OntologyFacade(model);
@@ -65,7 +67,7 @@ public class RenameGraphService implements RenameGraphUseCase {
             }
             applyKeyword(ontology, newKeyword);
             ontologyFacade.replaceOntology(ontology);
-            ctx.commit("Renamed schema to " + graphIdentifier.graphUri());
+            transaction.commit("Renamed schema to " + graphIdentifier.graphUri());
         }
     }
 

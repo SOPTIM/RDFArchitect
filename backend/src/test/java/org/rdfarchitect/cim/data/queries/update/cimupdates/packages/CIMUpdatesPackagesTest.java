@@ -85,7 +85,8 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
                                     otherPackage));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isFalse
                 assertThat(
                                 ctx.getRdfGraph()
@@ -152,7 +153,8 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
                                     packageRequired));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 assertThat(
                                 ctx.getRdfGraph()
                                         .contains(
@@ -184,7 +186,8 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
                                     packageOptional));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 assertThat(
                                 ctx.getRdfGraph()
                                         .contains(
@@ -255,7 +258,8 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("class with the same IRI");
 
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 assertThat(
                                 ctx.getRdfGraph()
                                         .contains(
@@ -281,7 +285,8 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
                                     packageRequired));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 assertThat(
                                 ctx.getRdfGraph()
                                         .contains(
@@ -314,7 +319,8 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
                                     packageOptional));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 assertThat(
                                 ctx.getRdfGraph()
                                         .contains(
@@ -360,7 +366,8 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
                                     packageRequired.getUuid()));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 assertThat(
                                 ctx.getRdfGraph()
                                         .contains(

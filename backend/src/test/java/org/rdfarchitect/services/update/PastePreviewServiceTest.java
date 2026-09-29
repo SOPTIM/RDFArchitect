@@ -263,14 +263,16 @@ class PastePreviewServiceTest {
 
     @Test
     void previewPaste_associationWithoutRange_namesNoAssociationTarget() {
-        try (var ctx =
-                databasePort.getGraphWithContext(sourceGraphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(
+                        sourceGraphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(sourceGraphIdentifier.graphUri());
             ctx.getRdfGraph()
                     .remove(
                             NodeFactory.createURI("http://example.org#class.associatedClass"),
                             RDFS.range.asNode(),
                             NodeFactory.createURI("http://example.org#associatedClass"));
-            ctx.commit("Removed a triple for the test.");
+            transaction.commit("Removed a triple for the test.");
         }
 
         var preview =

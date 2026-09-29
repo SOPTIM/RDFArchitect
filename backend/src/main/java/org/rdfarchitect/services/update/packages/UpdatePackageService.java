@@ -64,7 +64,9 @@ public class UpdatePackageService
     public UUID addPackage(GraphIdentifier graphIdentifier, PackageDTO packageDTO) {
         UUID newPackageUUID = UUID.randomUUID();
         packageDTO.setUuid(newPackageUUID);
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
             var newPackage = packageMapper.toCIMObject(packageDTO);
             assertNoClassWithSameIri(graph, newPackage);
@@ -72,7 +74,7 @@ public class UpdatePackageService
                     graph,
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     newPackage);
-            ctx.commit("Added package " + packageDTO.getLabel());
+            transaction.commit("Added package " + packageDTO.getLabel());
         }
 
         createPackageLayoutData.createPackageLayoutData(
@@ -83,7 +85,9 @@ public class UpdatePackageService
 
     @Override
     public void replacePackage(GraphIdentifier graphIdentifier, PackageDTO packageDTO) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
             var newPackage = packageMapper.toCIMObject(packageDTO);
             assertNoClassWithSameIri(graph, newPackage);
@@ -91,7 +95,7 @@ public class UpdatePackageService
                     graph,
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     newPackage);
-            ctx.commit("Replaced package " + packageDTO.getUuid());
+            transaction.commit("Replaced package " + packageDTO.getUuid());
         }
 
         replaceDiagramUseCase.replaceDiagram(
@@ -100,12 +104,14 @@ public class UpdatePackageService
 
     @Override
     public void deletePackage(GraphIdentifier graphIdentifier, UUID packageUUID) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             CIMUpdates.deletePackage(
                     ctx.getRdfGraph(),
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     packageUUID);
-            ctx.commit("Deleted package " + packageUUID);
+            transaction.commit("Deleted package " + packageUUID);
         }
 
         deletePackageLayoutDataUseCase.deletePackageLayoutData(graphIdentifier, packageUUID);
@@ -138,9 +144,7 @@ public class UpdatePackageService
                         .build();
         var resultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier),
-                        query,
-                        graphIdentifier.graphUri());
+                        databasePort, graphIdentifier, query, graphIdentifier.graphUri());
 
         if (!resultSet.hasNext()) {
             throw new DataAccessException("Package not found: " + packageUUID);

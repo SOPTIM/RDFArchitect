@@ -86,14 +86,18 @@ public class UpdateClassService
     @Override
     public void replaceClass(GraphIdentifier graphIdentifier, ClassUMLAdaptedDTO newClass) {
         String oldClassUri;
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var resource =
                     CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), newClass.getUuid());
             oldClassUri = resource.getURI();
         }
 
         UUID releasedUuid;
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
             var cimClass = classMapper.toCIMObject(newClass);
             assertNoPackageWithSameIri(graph, cimClass);
@@ -103,7 +107,7 @@ public class UpdateClassService
                             databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                             cimClass,
                             newValuesAsBlankNode);
-            ctx.commit(
+            transaction.commit(
                     "Updated class \"%s\" (%s)".formatted(newClass.getLabel(), newClass.getUuid()));
         }
 
@@ -133,7 +137,9 @@ public class UpdateClassService
             ClassLayoutPositionDTO classLayoutPosition) {
         var cimPackage = packageMapper.toCIMObject(packageDTO);
         UUID newClassUUID;
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
             var newClass = constructClass(cimPackage, classURIPrefix, className);
             assertNoPackageWithSameIri(graph, newClass);
@@ -142,7 +148,8 @@ public class UpdateClassService
                             graph,
                             databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                             newClass);
-            ctx.commit("Added class \"%s\" (%s)".formatted(newClass.getLabel(), newClassUUID));
+            transaction.commit(
+                    "Added class \"%s\" (%s)".formatted(newClass.getLabel(), newClassUUID));
         }
 
         createClassLayoutDataUseCase.createClassLayoutData(
@@ -179,14 +186,16 @@ public class UpdateClassService
 
     @Override
     public void deleteClass(GraphIdentifier graphIdentifier, UUID classUUID) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var classResource = CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), classUUID);
             var classLabel = CIMResourceUtils.findLabelForResource(classResource);
             CIMUpdates.deleteClass(
                     ctx.getRdfGraph(),
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     classUUID);
-            ctx.commit("Deleted class \"%s\" (%s)".formatted(classLabel, classUUID));
+            transaction.commit("Deleted class \"%s\" (%s)".formatted(classLabel, classUUID));
         }
 
         deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, classUUID);

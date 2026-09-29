@@ -20,6 +20,7 @@ package org.rdfarchitect.services.update.graph;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 
 class RenameGraphServiceTest {
 
@@ -46,6 +48,7 @@ class RenameGraphServiceTest {
     private static final String ONTOLOGY_IRI = "http://graph#old-ontology";
 
     private DatabasePort databasePort;
+    private WorkspaceTransaction transaction;
     private GraphContext graphContext;
     private Model model;
     private RenameGraphService renameGraphService;
@@ -53,11 +56,11 @@ class RenameGraphServiceTest {
     @BeforeEach
     void setUp() {
         databasePort = mock(DatabasePort.class);
+        transaction = mock(WorkspaceTransaction.class);
         graphContext = mock(GraphContext.class);
         model = ModelFactory.createDefaultModel();
 
-        when(databasePort.getGraphWithContext(any())).thenReturn(graphContext);
-        when(graphContext.begin(ReadWrite.WRITE)).thenReturn(graphContext);
+        stubTransaction(graphContext);
         when(graphContext.getRdfGraph()).thenReturn(model.getGraph());
         when(databasePort.getPrefixMapping(DATASET))
                 .thenReturn(new PrefixMappingReadOnly(new PrefixMappingImpl()));
@@ -87,7 +90,7 @@ class RenameGraphServiceTest {
         renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, null);
 
         verify(databasePort).renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
-        verify(databasePort, never()).getGraphWithContext(any());
+        verify(databasePort, never()).beginTransaction(anyString(), any(ReadWrite.class));
         assertThat(keywordInModel()).isEqualTo("old label");
     }
 
@@ -98,8 +101,8 @@ class RenameGraphServiceTest {
         renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, "new label");
 
         verify(databasePort).renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
-        verify(databasePort).getGraphWithContext(new GraphIdentifier(DATASET, NEW_URI));
-        verify(graphContext).commit("Renamed schema to " + NEW_URI);
+        verify(databasePort).beginTransaction(anyString(), any(ReadWrite.class));
+        verify(transaction).commit("Renamed schema to " + NEW_URI);
         assertThat(keywordInModel()).isEqualTo("new label");
     }
 
@@ -117,14 +120,15 @@ class RenameGraphServiceTest {
         renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, "new label");
 
         verify(databasePort).renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
-        verify(graphContext, never()).commit(any(String.class));
+        verify(transaction, never()).commit(any(String.class));
         assertThat(keywordInModel()).isNull();
     }
 
     @Test
     void renameGraph_keywordUpdateFails_rollsBackRename() {
         givenProfileHeader("old label");
-        when(graphContext.begin(ReadWrite.WRITE)).thenThrow(new IllegalStateException("boom"));
+        when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))
+                .thenThrow(new IllegalStateException("boom"));
 
         assertThatThrownBy(
                         () ->
@@ -136,5 +140,11 @@ class RenameGraphServiceTest {
 
         verify(databasePort).renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
         verify(databasePort).renameGraph(new GraphIdentifier(DATASET, NEW_URI), OLD_URI);
+    }
+
+    private void stubTransaction(GraphContext graph) {
+        when(transaction.graph(anyString())).thenReturn(graph);
+        when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))
+                .thenReturn(transaction);
     }
 }

@@ -102,8 +102,9 @@ public class SchemaMigrationService
                         .graph();
 
         Graph updatedGraph;
-        try (var updatedCtx =
-                databasePort.getGraphWithContext(updatedSchema).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(updatedSchema.datasetName(), ReadWrite.READ)) {
+            var updatedCtx = transaction.graph(updatedSchema.graphUri());
             updatedGraph = GraphUtils.deepCopy(updatedCtx.getRdfGraph());
         }
 
@@ -114,14 +115,16 @@ public class SchemaMigrationService
     public void setMigrationContext(
             GraphIdentifier originalSchema, GraphIdentifier updatedSchema, boolean ignorePrefixes) {
         Graph originalGraph;
-        try (var originalCtx =
-                databasePort.getGraphWithContext(originalSchema).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(originalSchema.datasetName(), ReadWrite.READ)) {
+            var originalCtx = transaction.graph(originalSchema.graphUri());
             originalGraph = GraphUtils.deepCopy(originalCtx.getRdfGraph());
         }
 
         Graph updatedGraph;
-        try (var updatedCtx =
-                databasePort.getGraphWithContext(updatedSchema).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(updatedSchema.datasetName(), ReadWrite.READ)) {
+            var updatedCtx = transaction.graph(updatedSchema.graphUri());
             updatedGraph = GraphUtils.deepCopy(updatedCtx.getRdfGraph());
         }
 
@@ -132,8 +135,9 @@ public class SchemaMigrationService
     public void setMigrationContext(
             GraphIdentifier originalSchema, MultipartFile updatedSchema, boolean ignorePrefixes) {
         Graph originalGraph;
-        try (var originalCtx =
-                databasePort.getGraphWithContext(originalSchema).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(originalSchema.datasetName(), ReadWrite.READ)) {
+            var originalCtx = transaction.graph(originalSchema.graphUri());
             originalGraph = GraphUtils.deepCopy(originalCtx.getRdfGraph());
         }
 
