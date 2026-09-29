@@ -31,6 +31,7 @@ import org.jetbrains.annotations.NotNull;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphNotInAWriteTransactionException;
 import org.rdfarchitect.exception.graph.GraphVersionControlException;
+import org.rdfarchitect.models.changelog.ChangeLogParticipant;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,30 +43,44 @@ import java.util.UUID;
 /**
  * A {@link Graph} implementation backed by {@link DeltaCompressible} deltas. Has no lock of its own
  * — transaction lifecycle is managed exclusively by {@link
- * org.rdfarchitect.database.inmemory.GraphWithContextTransactional}. All {@link Graph} methods
- * enforce that the coordinator has an active transaction via the shared {@link TransactionContext}.
+ * org.rdfarchitect.database.inmemory.GraphWithContext}. All {@link Graph} methods enforce that the
+ * coordinator has an active transaction via the shared {@link TransactionContext}.
  */
-public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable {
+public class RDFGraphDelta
+        implements Graph, TransactionParticipant, Rewindable, ChangeLogParticipant {
 
     private static final Logger logger = LoggerFactory.getLogger(RDFGraphDelta.class);
 
-    private final TransactionContext txnContext;
+    private final WorkspaceTransactionContext txnContext;
+
+    /**
+     * What to enrol when this graph is written to. A graph that is the inner store of a larger
+     * participant enrols that participant instead of itself, so that a changelog entry names the
+     * thing the user changed rather than its implementation.
+     */
+    private final TransactionParticipant enrolAs;
 
     private final Deque<DeltaCompressible> pastDeltas;
     private DeltaCompressible currentDelta;
     private final Deque<DeltaCompressible> futureDeltas;
 
-    private final int maxVersions;
-    private final int compressCount;
+    public RDFGraphDelta(@NotNull Graph base, WorkspaceTransactionContext txnContext) {
+        this(base, txnContext, null);
+    }
 
+    /**
+     * Creates a graph that enrols {@code enrolAs} rather than itself when written to.
+     *
+     * @param base the initial contents
+     * @param txnContext the transaction context of the owning workspace
+     * @param enrolAs the participant to enrol on a write, or {@code null} for this graph itself
+     */
     public RDFGraphDelta(
             @NotNull Graph base,
-            int maxVersions,
-            int compressCount,
-            TransactionContext txnContext) {
+            WorkspaceTransactionContext txnContext,
+            TransactionParticipant enrolAs) {
         this.txnContext = txnContext;
-        this.maxVersions = maxVersions;
-        this.compressCount = compressCount;
+        this.enrolAs = enrolAs != null ? enrolAs : this;
         pastDeltas = new ArrayDeque<>();
         pastDeltas.push(new DeltaCompressible(base));
         currentDelta = new DeltaCompressible(head());
@@ -174,6 +189,11 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
     @Override
     public PrefixMapping getPrefixMapping() {
         checkTransaction();
+        if (txnContext.transactionMode() != ReadWrite.READ) {
+            // A write through the mapping we hand out never reaches add() or delete(), so it
+            // has to be enrolled here. The commit drops enrolments that changed nothing.
+            txnContext.enroll(enrolAs);
+        }
         return currentDelta.getPrefixMapping();
     }
 
@@ -185,10 +205,6 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
     public void commit() {
         pastDeltas.push(currentDelta);
         currentDelta = new DeltaCompressible(head());
-        futureDeltas.clear();
-        if (countVersions() > maxVersions) {
-            compressBase();
-        }
         logger.debug("Committed transaction.");
     }
 
@@ -269,6 +285,7 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
         if (txnContext.transactionMode() == ReadWrite.READ) {
             throw new GraphNotInAWriteTransactionException();
         }
+        txnContext.enroll(enrolAs);
     }
 
     private DeltaCompressible head() {
@@ -283,19 +300,21 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
         return pastDeltas.size() - 1;
     }
 
-    private int countVersions() {
-        return pastDeltas.size() + futureDeltas.size();
-    }
-
     private boolean containsDelta(UUID versionId) {
         return pastDeltas.stream().anyMatch(d -> d.getVersionId().equals(versionId));
     }
 
-    private void compressBase() {
-        int deleteCount = Math.min(pastDeltas.size() - 1, compressCount);
-        for (int i = 0; i < deleteCount; i++) {
-            pastDeltas.removeLast();
+    @Override
+    public void discardOldestVersion() {
+        if (pastDeltas.size() < 2) {
+            return;
         }
+        pastDeltas.removeLast();
         pastDeltas.getLast().compress();
+    }
+
+    @Override
+    public void discardRedoHistory() {
+        futureDeltas.clear();
     }
 }

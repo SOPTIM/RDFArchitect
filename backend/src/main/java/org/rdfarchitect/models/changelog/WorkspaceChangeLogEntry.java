@@ -35,15 +35,19 @@ import java.util.stream.Collectors;
  * @param timestamp when the commit happened
  * @param message what the commit did
  * @param participants the participants that gained a version in this commit
+ * @param deltas what changed, for display in the changelog; held weakly, so an entry never keeps a
+ *     graph alive on its own
  */
 public record WorkspaceChangeLogEntry(
         UUID changeId,
         LocalDateTime timestamp,
         String message,
-        List<ParticipantVersion> participants) {
+        List<ParticipantVersion> participants,
+        List<ContextDelta> deltas) {
 
     public WorkspaceChangeLogEntry {
         participants = List.copyOf(participants);
+        deltas = List.copyOf(deltas);
     }
 
     /**
@@ -55,8 +59,21 @@ public record WorkspaceChangeLogEntry(
      */
     public static WorkspaceChangeLogEntry of(
             String message, List<ParticipantVersion> participants) {
+        return of(message, participants, List.of());
+    }
+
+    /**
+     * Creates an entry stamped with a fresh id and the current time.
+     *
+     * @param message what the commit did
+     * @param participants the participants that gained a version in this commit
+     * @param deltas what changed, for display in the changelog
+     * @return the entry
+     */
+    public static WorkspaceChangeLogEntry of(
+            String message, List<ParticipantVersion> participants, List<ContextDelta> deltas) {
         return new WorkspaceChangeLogEntry(
-                UUID.randomUUID(), LocalDateTime.now(), message, participants);
+                UUID.randomUUID(), LocalDateTime.now(), message, participants, deltas);
     }
 
     /** Returns the URIs of the graphs this commit touched. */

@@ -19,7 +19,7 @@ package org.rdfarchitect.rdf.graph.wrapper;
 
 /**
  * Implemented by every component that participates in a transaction managed by {@link
- * org.rdfarchitect.database.inmemory.GraphWithContextTransactional}.
+ * org.rdfarchitect.database.inmemory.GraphWithContext}.
  */
 public interface TransactionParticipant {
 

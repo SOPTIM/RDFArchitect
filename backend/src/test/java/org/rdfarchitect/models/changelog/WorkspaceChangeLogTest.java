@@ -220,6 +220,47 @@ class WorkspaceChangeLogTest {
     }
 
     // -------------------------------------------------------------------------
+    // Restoring and forgetting
+    // -------------------------------------------------------------------------
+
+    @Test
+    void restoreTo_undoesEverythingRecordedAfterTheGivenChange() {
+        var target = commit("first", rdfOf(graphA, "urn:a"));
+        log.push(target);
+        log.push(commit("second", rdfOf(graphA, "urn:a")));
+        log.push(commit("third", rdfOf(graphB, "urn:b")));
+        calls.clear();
+
+        log.restoreTo(target.changeId());
+
+        assertThat(calls).containsExactly("graphB.undo", "graphA.undo");
+        assertThat(log.undoHistory().getFirst()).isEqualTo(target);
+    }
+
+    @Test
+    void restoreTo_unknownChange_throwsException() {
+        assertThatThrownBy(() -> log.restoreTo(UUID.randomUUID()))
+                .isInstanceOf(GraphVersionControlException.class)
+                .hasMessageContaining("not found");
+    }
+
+    @Test
+    void forgetHistory_keepsTheCurrentStateAsTheStartingPoint() {
+        log.push(commit("loaded a graph", rdfOf(graphA, "urn:a")));
+        calls.clear();
+
+        log.forgetHistory("loaded workspace");
+
+        assertThat(log.canUndo()).isFalse();
+        assertThat(log.canRedo()).isFalse();
+        assertThat(calls).containsExactly("graphA.discardOldestVersion");
+        assertThat(log.undoHistory())
+                .singleElement()
+                .extracting(WorkspaceChangeLogEntry::message)
+                .isEqualTo("loaded workspace");
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 

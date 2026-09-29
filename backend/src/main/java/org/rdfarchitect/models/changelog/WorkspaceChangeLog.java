@@ -23,6 +23,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * The single undo/redo stack of a workspace.
@@ -136,6 +137,38 @@ public class WorkspaceChangeLog {
         entry.participants().forEach(version -> version.participant().redo());
         undoStack.push(entry);
         return entry;
+    }
+
+    /**
+     * Rolls back to the given change, undoing everything recorded after it.
+     *
+     * @param changeId the change to restore to
+     * @throws GraphVersionControlException if no such change is recorded
+     */
+    public void restoreTo(UUID changeId) {
+        if (undoStack.stream().noneMatch(entry -> entry.changeId().equals(changeId))) {
+            throw new GraphVersionControlException(
+                    "Version " + changeId + " not found in the history.");
+        }
+        while (!undoStack.element().changeId().equals(changeId)) {
+            undo();
+        }
+    }
+
+    /**
+     * Collapses the history into the current state, which then becomes the point the workspace
+     * started from. Used after loading, where the recorded steps describe how the state was built
+     * up rather than anything the user did and could sensibly undo.
+     *
+     * @param message describes the state that is kept
+     */
+    public void forgetHistory(String message) {
+        abandonRedoBranch();
+        while (!undoStack.isEmpty()) {
+            var dropped = undoStack.removeLast();
+            dropped.participants().forEach(version -> version.participant().discardOldestVersion());
+        }
+        undoStack.push(WorkspaceChangeLogEntry.of(message, List.of()));
     }
 
     // -------------------------------------------------------------------------

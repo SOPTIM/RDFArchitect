@@ -21,6 +21,8 @@ import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphNotInAWriteTransactionException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
+import org.rdfarchitect.models.changelog.ContextDelta;
+import org.rdfarchitect.models.changelog.ParticipantVersion;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -70,6 +72,8 @@ public class WorkspaceTransactionContext {
         private final ReadWrite mode;
         private final Set<TransactionParticipant> enrolled = new LinkedHashSet<>();
         private final List<String> messages = new ArrayList<>();
+        private final List<ParticipantVersion> pendingVersions = new ArrayList<>();
+        private final List<ContextDelta> pendingDeltas = new ArrayList<>();
         private int depth = 1;
         private boolean aborted;
 
@@ -231,6 +235,54 @@ public class WorkspaceTransactionContext {
      */
     public void clearMessages() {
         requireFrame().messages.clear();
+    }
+
+    // -------------------------------------------------------------------------
+    // Versions gained but not yet written to the changelog
+    // -------------------------------------------------------------------------
+
+    /**
+     * Remembers the versions a commit produced. A commit that does not name itself contributes its
+     * versions here, so that the entry written when the transaction ends covers them too and no
+     * participant ends up a version ahead of the changelog.
+     *
+     * @param versions the versions the participants gained
+     * @param deltas what changed, for display in the changelog
+     * @throws GraphNotInATransactionException if this thread is not inside this workspace
+     */
+    public void addPendingVersions(List<ParticipantVersion> versions, List<ContextDelta> deltas) {
+        var frame = requireUnabortedFrame();
+        frame.pendingVersions.addAll(versions);
+        frame.pendingDeltas.addAll(deltas);
+    }
+
+    /**
+     * Returns the versions gained so far that no changelog entry covers yet.
+     *
+     * @throws GraphNotInATransactionException if this thread is not inside this workspace
+     */
+    public List<ParticipantVersion> pendingVersions() {
+        return List.copyOf(requireFrame().pendingVersions);
+    }
+
+    /**
+     * Returns the changes gained so far that no changelog entry covers yet.
+     *
+     * @throws GraphNotInATransactionException if this thread is not inside this workspace
+     */
+    public List<ContextDelta> pendingDeltas() {
+        return List.copyOf(requireFrame().pendingDeltas);
+    }
+
+    /**
+     * Forgets the pending versions, after an entry covering them has been written.
+     *
+     * @throws GraphNotInATransactionException if this thread is not inside this workspace
+     */
+    public void clearPendingVersions() {
+        var frame = requireFrame();
+        frame.pendingVersions.clear();
+        frame.pendingDeltas.clear();
     }
 
     // -------------------------------------------------------------------------
