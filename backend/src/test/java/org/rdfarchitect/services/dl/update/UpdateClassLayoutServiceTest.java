@@ -182,11 +182,42 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     }
 
     @Test
+    void createClassLayoutData_packageNeverOpened_createsTheDiagramItBelongsTo() {
+        // Layout data is only written once a package is opened, so a class can be the first thing
+        // a package ever gets. Without a diagram of its own the object below is invisible to both
+        // fetch queries: the position is lost and the next call adds a second object for it.
+        addGraphFromFile("package.ttl");
+        var packageDTO =
+                PackageDTO.builder()
+                        .uuid(PACKAGE_A_UUID)
+                        .label(PACKAGE_A_LABEL)
+                        .prefix("http://example.org#")
+                        .build();
+        var classLayoutPosition = new ClassLayoutPositionDTO();
+        classLayoutPosition.setXPosition(123.0F);
+        classLayoutPosition.setYPosition(456.0F);
+
+        // Act
+        service.createClassLayoutData(
+                graphIdentifier, packageDTO, CLASS_A_LABEL, CLASS_A_UUID, classLayoutPosition);
+
+        // Assert
+        assertDiagram(PACKAGE_A_UUID, "");
+        assertThat(
+                        DLObjectFetcher.fetchDiagramDOForClass(
+                                diagramLayout.getDiagramLayoutModelDirect(),
+                                PACKAGE_A_UUID,
+                                CLASS_A_UUID))
+                .isNotNull();
+        assertDiagramObjectCoordinates(CLASS_A_UUID, 123.0F, 456.0F);
+    }
+
+    @Test
     void createClassLayoutData_layoutDataExists_keepsExistingLayoutData() {
         // Arrange: a class that already has layout data, as when it takes over an uri whose
         // class was deleted while references to it remained
         addGraphFromFile("package_and_class.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
         var packageDTO =
                 PackageDTO.builder()
                         .uuid(PACKAGE_A_UUID)
@@ -220,7 +251,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void createClassLayoutData_layoutDataWithoutPoint_placesClassAtRequestedPosition() {
         // Arrange: a diagram object that lost its point, so the class has layout data but no place
         addGraphFromFile("package_and_class.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
         var doMRID = assertDiagramObject(CLASS_A_UUID, PACKAGE_A_UUID, CLASS_A_LABEL);
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModelDirect();
         DLUpdates.deleteDiagramObjectPoint(
@@ -250,7 +281,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void updateClassPositions_fullGraph_repositionsClasses() {
         // Arrange
         addGraphFromFile("full_graph.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
 
         // Act
         var classAPositionDTO = new ClassPositionDTO();
@@ -267,7 +298,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void updateDiagramObjectName_classExists_updatesDiagramObjectName() {
         // Arrange
         addGraphFromFile("package_and_class.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
 
         // Act
         service.updateDiagramObjectName(graphIdentifier, CLASS_A_UUID, "newClassLabel");
@@ -280,7 +311,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void deleteClassLayoutData_classExists_deletesClassLayoutData() {
         // Arrange
         addGraphFromFile("association.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
         var diagramObjects =
                 diagramLayout
                         .getDiagramLayoutModelDirect()

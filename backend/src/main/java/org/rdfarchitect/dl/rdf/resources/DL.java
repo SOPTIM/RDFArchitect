@@ -45,15 +45,9 @@ public class DL {
             ResourceFactory.createProperty(
                     constructDLNamespacedTerm("DiagramObjectPoint.DiagramObject"));
 
-    public final Property diagramObjectStyle =
+    public final Property belongsToDiagramObjectStyle =
             ResourceFactory.createProperty(
                     constructDLNamespacedTerm("DiagramObject.DiagramObjectStyle"));
-
-    public final Property offsetX =
-            ResourceFactory.createProperty(constructDLNamespacedTerm("DiagramObject.offsetX"));
-
-    public final Property offsetY =
-            ResourceFactory.createProperty(constructDLNamespacedTerm("DiagramObject.offsetY"));
 
     public final Property xPosition =
             ResourceFactory.createProperty(

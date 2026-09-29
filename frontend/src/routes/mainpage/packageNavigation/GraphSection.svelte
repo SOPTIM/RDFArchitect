@@ -286,7 +286,7 @@
             </ContextMenu.Item.Button>
             {#if !readonly}
                 <ContextMenu.Separator />
-                {#if ontology}
+                {#if ontology?.uuid}
                     <ContextMenu.Item.Button
                         onSelect={() => {
                             showEditOntologyDialog = true;

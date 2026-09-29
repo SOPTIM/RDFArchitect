@@ -31,7 +31,6 @@ import org.mockito.ArgumentCaptor;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
-import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.nio.charset.StandardCharsets;
@@ -40,15 +39,12 @@ import java.util.List;
 class ImportGraphsServiceTest {
 
     private ImportGraphsUseCase importGraphsUseCase;
-    private CreateDiagramLayoutUseCase createDiagramLayoutUseCaseMock;
     private DatabasePort databasePortMock;
 
     @BeforeEach
     void setUp() {
-        createDiagramLayoutUseCaseMock = mock(CreateDiagramLayoutUseCase.class);
         databasePortMock = mock(DatabasePort.class);
-        importGraphsUseCase =
-                new ImportGraphsService(createDiagramLayoutUseCaseMock, databasePortMock);
+        importGraphsUseCase = new ImportGraphsService(databasePortMock);
     }
 
     @Test
@@ -73,7 +69,9 @@ class ImportGraphsServiceTest {
         when(databasePortMock.listGraphUris(datasetName))
                 .thenThrow(new RuntimeException("dataset does not exist"));
 
-        var result = importGraphsUseCase.importGraphs(datasetName, List.of(file1, file2), null);
+        var result =
+                importGraphsUseCase.importGraphs(
+                        datasetName, List.of(file1, file2), null, ImportProgressListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedGraphUris())
@@ -86,8 +84,6 @@ class ImportGraphsServiceTest {
         assertThat(captor.getAllValues())
                 .extracting(GraphIdentifier::graphUri)
                 .containsExactly(RDFA.GRAPH_URI + "graph", RDFA.GRAPH_URI + "graph_1");
-
-        verify(createDiagramLayoutUseCaseMock, times(2)).createDiagramLayout(any());
     }
 
     @Test
@@ -137,7 +133,9 @@ class ImportGraphsServiceTest {
                         "text/turtle",
                         schema.getBytes(StandardCharsets.UTF_8));
 
-        var result = importGraphsUseCase.importGraphs(datasetName, List.of(file), null);
+        var result =
+                importGraphsUseCase.importGraphs(
+                        datasetName, List.of(file), null, ImportProgressListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "schema");
@@ -182,7 +180,9 @@ class ImportGraphsServiceTest {
                         "text/turtle",
                         schema.getBytes(StandardCharsets.UTF_8));
 
-        var result = importGraphsUseCase.importGraphs(datasetName, List.of(file), null);
+        var result =
+                importGraphsUseCase.importGraphs(
+                        datasetName, List.of(file), null, ImportProgressListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "schema");

@@ -137,6 +137,7 @@
                 );
             }
             ontologyObject.save();
+            ontologyStore.invalidateGraph(workspace, graphUri);
             if (onSubmit) {
                 onSubmit();
             } else {

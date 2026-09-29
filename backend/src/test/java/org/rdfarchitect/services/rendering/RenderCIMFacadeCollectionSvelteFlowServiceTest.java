@@ -34,7 +34,6 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.sub.AssociationDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.AttributeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeLabelDTO;
-import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeLabelDTO.Anchor;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EnumEntryDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.SuperClassDTO;
@@ -47,8 +46,10 @@ import org.rdfarchitect.services.rendering.svelteflow.RenderCIMFacadeCollectionS
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 class RenderCIMFacadeCollectionSvelteFlowServiceTest {
 
@@ -348,17 +349,15 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                         .toList();
         assertThat(associationEdges).hasSize(1);
         var edge = associationEdges.getFirst();
+        var data = edge.getData();
         assertThat(edge.getSource()).isEqualTo(CHILD_UUID);
         assertThat(edge.getTarget()).isEqualTo(TERMINAL_UUID);
-        assertThat(edge.getData().getLabels())
-                .extracting(EdgeLabelDTO::getAnchor, EdgeLabelDTO::getKind, EdgeLabelDTO::getText)
-                .containsExactly(
-                        tuple(Anchor.SOURCE, "multiplicity", "1..1"),
-                        tuple(Anchor.SOURCE, "associationLabel", "Child"),
-                        tuple(Anchor.TARGET, "multiplicity", "0..n"),
-                        tuple(Anchor.TARGET, "associationLabel", "Terminals"));
-        assertThat(edge.getData().isUseToAssociation()).isTrue();
-        assertThat(edge.getData().isUseFromAssociation()).isFalse();
+        assertThat(data.getSourceMultiplicityLabel().getText()).isEqualTo("1..1");
+        assertThat(data.getSourceAssociationLabel().getText()).isEqualTo("Child");
+        assertThat(data.getTargetMultiplicityLabel().getText()).isEqualTo("0..n");
+        assertThat(data.getTargetAssociationLabel().getText()).isEqualTo("Terminals");
+        assertThat(data.isUseToAssociation()).isTrue();
+        assertThat(data.isUseFromAssociation()).isFalse();
     }
 
     @Test
@@ -375,12 +374,11 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                         .filter(candidate -> candidate.getType().equals("association"))
                         .findFirst()
                         .orElseThrow();
-        assertThat(edge.getData().getLabels())
-                .extracting(EdgeLabelDTO::getAnchor, EdgeLabelDTO::getText)
-                .containsExactly(
-                        tuple(Anchor.SOURCE, "1..1"),
-                        tuple(Anchor.TARGET, "0..n"),
-                        tuple(Anchor.TARGET, "Terminals"));
+        var data = edge.getData();
+        assertThat(data.getSourceMultiplicityLabel().getText()).isEqualTo("1..1");
+        assertThat(data.getSourceAssociationLabel()).isNull();
+        assertThat(data.getTargetMultiplicityLabel().getText()).isEqualTo("0..n");
+        assertThat(data.getTargetAssociationLabel().getText()).isEqualTo("Terminals");
     }
 
     @Test
@@ -1134,8 +1132,9 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     }
 
     private List<String> multiplicityTexts(EdgeDTO edge) {
-        return edge.getData().getLabels().stream()
-                .filter(label -> label.getKind().equals("multiplicity"))
+        var data = edge.getData();
+        return Stream.of(data.getSourceMultiplicityLabel(), data.getTargetMultiplicityLabel())
+                .filter(Objects::nonNull)
                 .map(EdgeLabelDTO::getText)
                 .toList();
     }
@@ -1446,17 +1445,32 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         assertThat(edge.getTarget()).isEqualTo(TERMINAL_UUID);
         var ownedByTarget = uuidIn(model, "Terminal.Child");
         var ownedBySource = uuidIn(model, "Child.Terminals");
-        assertThat(edge.getData().getLabels())
+        var data = edge.getData();
+
+        assertThat(data.getSourceMultiplicityLabel())
                 .extracting(
-                        EdgeLabelDTO::getAnchor,
                         EdgeLabelDTO::getKind,
                         EdgeLabelDTO::getAssociationEndUUID,
                         EdgeLabelDTO::getIdentifiedObjectUUID)
-                .containsExactly(
-                        tuple(Anchor.SOURCE, "multiplicity", ownedByTarget, ownedByTarget),
-                        tuple(Anchor.SOURCE, "associationLabel", ownedByTarget, ownedByTarget),
-                        tuple(Anchor.TARGET, "multiplicity", ownedBySource, ownedBySource),
-                        tuple(Anchor.TARGET, "associationLabel", ownedBySource, ownedBySource));
+                .containsExactly("multiplicity", ownedByTarget, ownedByTarget);
+        assertThat(data.getSourceAssociationLabel())
+                .extracting(
+                        EdgeLabelDTO::getKind,
+                        EdgeLabelDTO::getAssociationEndUUID,
+                        EdgeLabelDTO::getIdentifiedObjectUUID)
+                .containsExactly("associationLabel", ownedByTarget, ownedByTarget);
+        assertThat(data.getTargetMultiplicityLabel())
+                .extracting(
+                        EdgeLabelDTO::getKind,
+                        EdgeLabelDTO::getAssociationEndUUID,
+                        EdgeLabelDTO::getIdentifiedObjectUUID)
+                .containsExactly("multiplicity", ownedBySource, ownedBySource);
+        assertThat(data.getTargetAssociationLabel())
+                .extracting(
+                        EdgeLabelDTO::getKind,
+                        EdgeLabelDTO::getAssociationEndUUID,
+                        EdgeLabelDTO::getIdentifiedObjectUUID)
+                .containsExactly("associationLabel", ownedBySource, ownedBySource);
     }
 
     @Test
@@ -1467,8 +1481,13 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                         renderer.renderMergedUML(
                                 List.of(new CIMProfileModel(GRAPH_URI, null, null, facade)), null);
 
-        var labels = associationEdge(result).getData().getLabels();
-        assertThat(labels)
+        var data = associationEdge(result).getData();
+        assertThat(
+                        List.of(
+                                data.getSourceMultiplicityLabel(),
+                                data.getSourceAssociationLabel(),
+                                data.getTargetMultiplicityLabel(),
+                                data.getTargetAssociationLabel()))
                 .extracting(
                         EdgeLabelDTO::getAssociationEndUUID, EdgeLabelDTO::getIdentifiedObjectUUID)
                 .containsExactlyInAnyOrder(
