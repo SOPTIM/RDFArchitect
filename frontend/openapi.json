@@ -1039,6 +1039,32 @@
         },
         "type" : "object"
       },
+      "IssueOccurrenceDTO" : {
+        "properties" : {
+          "classUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "graphUri" : {
+            "type" : "string"
+          },
+          "keyword" : {
+            "type" : "string"
+          },
+          "packageUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "uuid" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "value" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "LabelPositionDTO" : {
         "properties" : {
           "identifiedObjectUUID" : {
@@ -1715,39 +1741,6 @@
         },
         "type" : "object"
       },
-      "SchemaValidationIssueDTO" : {
-        "properties" : {
-          "message" : {
-            "type" : "string"
-          },
-          "resourceUri" : {
-            "type" : "string"
-          },
-          "severity" : {
-            "enum" : [
-              "ERROR",
-              "WARNING",
-              "INFO"
-            ],
-            "type" : "string"
-          }
-        },
-        "type" : "object"
-      },
-      "SchemaValidationReportDTO" : {
-        "properties" : {
-          "issues" : {
-            "items" : {
-              "$ref" : "#/components/schemas/SchemaValidationIssueDTO"
-            },
-            "type" : "array"
-          },
-          "valid" : {
-            "type" : "boolean"
-          }
-        },
-        "type" : "object"
-      },
       "SearchFilter" : {
         "description" : "The scope where the search is performed.",
         "properties" : {
@@ -2189,6 +2182,58 @@
           },
           "suffix" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ValidationIssueDTO" : {
+        "properties" : {
+          "kind" : {
+            "enum" : [
+              "RULE",
+              "INFRASTRUCTURE"
+            ],
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "occurrences" : {
+            "items" : {
+              "$ref" : "#/components/schemas/IssueOccurrenceDTO"
+            },
+            "type" : "array"
+          },
+          "resourceUri" : {
+            "type" : "string"
+          },
+          "ruleId" : {
+            "type" : "string"
+          },
+          "ruleLabel" : {
+            "type" : "string"
+          },
+          "severity" : {
+            "enum" : [
+              "ERROR",
+              "WARNING",
+              "INFO"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ValidationReportDTO" : {
+        "properties" : {
+          "issues" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ValidationIssueDTO"
+            },
+            "type" : "array"
+          },
+          "valid" : {
+            "type" : "boolean"
           }
         },
         "type" : "object"
@@ -7832,6 +7877,58 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/validate-workspace" : {
+      "get" : {
+        "description" : "Validates a schema against the other schemas of its workspace and returns the issues that involve the schema.",
+        "operationId" : "validateSchemaInWorkspace",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ValidationReportDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Validate schema in workspace",
+        "tags" : [
+          "graph"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/validate/{cgmesVersion}" : {
       "get" : {
         "description" : "Validates the RDFS schema of a graph for completeness, including the profile header.",
@@ -7883,7 +7980,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/SchemaValidationReportDTO"
+                  "$ref" : "#/components/schemas/ValidationReportDTO"
                 }
               }
             },
@@ -8412,6 +8509,49 @@
           }
         },
         "summary" : "Rename dataset",
+        "tags" : [
+          "dataset"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/validate-workspace" : {
+      "get" : {
+        "description" : "Validates that the schemas of a workspace are compatible with each other.",
+        "operationId" : "validateWorkspace",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ValidationReportDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Validate workspace",
         "tags" : [
           "dataset"
         ]
@@ -9355,7 +9495,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/SchemaValidationReportDTO"
+                  "$ref" : "#/components/schemas/ValidationReportDTO"
                 }
               }
             },

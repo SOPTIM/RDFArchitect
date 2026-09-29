@@ -34,6 +34,7 @@
         faRotateRight,
         faGear,
         faCircleCheck,
+        faListCheck,
         faEyeDropper,
         faPalette,
         faSliders,
@@ -41,6 +42,7 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
+    import { validateWorkspaceAndShowResult } from "$lib/actions/validationActions.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { graphColors } from "$lib/graphColors.svelte.js";
@@ -365,6 +367,19 @@
                 altText="Ctrl+Shift+D"
             >
                 Validate Schema
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    focusGraphContext();
+                    validateWorkspaceAndShowResult(
+                        workspaceNavEntry.id,
+                        graphNavEntry.id,
+                        graphNavEntry.label,
+                    );
+                }}
+                faIcon={faListCheck}
+            >
+                Validate Schema in Workspace
             </ContextMenu.Item.Button>
             <ContextMenu.SubMenu.Root>
                 <ContextMenu.SubMenu.Trigger faIcon={faFileImport}>
