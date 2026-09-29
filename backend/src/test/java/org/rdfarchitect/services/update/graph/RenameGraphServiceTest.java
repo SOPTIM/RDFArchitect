@@ -19,10 +19,12 @@ package org.rdfarchitect.services.update.graph;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.vocabulary.DCAT;
@@ -85,7 +87,7 @@ class RenameGraphServiceTest {
 
         renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
 
-        verify(databasePort, never()).getGraphWithContext(any());
+        verify(databasePort, never()).beginTransaction(anyString(), any(ReadWrite.class));
         verify(databasePort, never()).getPrefixMapping(any());
         assertThat(literalOf(DCTERMS_TITLE)).isEqualTo("Core Equipment Vocabulary");
         assertThat(literalOf(DCAT.keyword.getURI())).isEqualTo("EQ");

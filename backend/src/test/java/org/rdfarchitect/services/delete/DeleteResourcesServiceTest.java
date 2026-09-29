@@ -19,6 +19,7 @@ package org.rdfarchitect.services.delete;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import org.apache.jena.query.ReadWrite;
@@ -40,8 +41,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.rdfarchitect.api.dto.delete.DeleteAction;
 import org.rdfarchitect.api.dto.delete.ResourceDeleteRequest;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.GraphWithContextTransactional;
+import org.rdfarchitect.database.WorkspaceTransaction;
+import org.rdfarchitect.database.inmemory.Workspace;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
@@ -87,10 +90,11 @@ class DeleteResourcesServiceTest {
             UUID.fromString("bc0bc228-f5cd-5925-ab6b-4bfe83ef9b3e");
 
     @Mock private DatabasePort databasePort;
+    @Mock private WorkspaceTransaction transaction;
 
     @InjectMocks private DeleteResourcesService service;
 
-    private GraphWithContextTransactional wrappedContext;
+    private Workspace workspace;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -99,19 +103,23 @@ class DeleteResourcesServiceTest {
         RDFDataMgr.read(graph, in, Lang.TTL);
         in.close();
 
-        wrappedContext = new GraphWithContextTransactional(graph);
-
-        when(databasePort.getGraphWithContext(any(GraphIdentifier.class)))
-                .thenReturn(wrappedContext);
+        workspace = new Workspace(GRAPH_IDENTIFIER.datasetName());
+        workspace.create(GRAPH_IDENTIFIER.graphUri(), graph);
+        when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))
+                .thenAnswer(invocation -> workspace.begin(invocation.getArgument(1)));
     }
 
     private Model readModel() {
-        wrappedContext.begin(ReadWrite.READ);
-        return ModelFactory.createModelForGraph(wrappedContext.getRdfGraph());
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            return ModelFactory.createDefaultModel()
+                    .add(
+                            ModelFactory.createModelForGraph(
+                                    transaction.graph(GRAPH_IDENTIFIER.graphUri()).getRdfGraph()));
+        }
     }
 
     private void endRead() {
-        wrappedContext.end();
+        // the model handed out by readModel() is a detached copy
     }
 
     private ResourceDeleteRequest request(UUID uuid, DeleteAction action) {
@@ -407,5 +415,11 @@ class DeleteResourcesServiceTest {
         } finally {
             endRead();
         }
+    }
+
+    private void stubTransaction(GraphContext graph) {
+        when(transaction.graph(anyString())).thenReturn(graph);
+        when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))
+                .thenReturn(transaction);
     }
 }

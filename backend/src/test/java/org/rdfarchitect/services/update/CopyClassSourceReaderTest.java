@@ -24,6 +24,7 @@ import static org.mockito.Mockito.verify;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
+import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.SchemaConfig;
@@ -80,7 +81,8 @@ class CopyClassSourceReaderTest {
         sourceReader.readSources(sources(CLASS_UUID), snapshots);
         sourceReader.readSources(sources(CLASS_UUID), snapshots);
 
-        verify(databasePort, times(1)).getGraphWithContext(graphIdentifier);
+        verify(databasePort, times(1))
+                .beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ);
     }
 
     @Test
@@ -88,7 +90,8 @@ class CopyClassSourceReaderTest {
         sourceReader.readSources(sources(CLASS_UUID));
         sourceReader.readSources(sources(CLASS_UUID));
 
-        verify(databasePort, times(2)).getGraphWithContext(graphIdentifier);
+        verify(databasePort, times(2))
+                .beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ);
     }
 
     @Test

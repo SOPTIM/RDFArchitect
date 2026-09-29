@@ -113,15 +113,19 @@ class QueryClassServiceTest {
 
     /** Referencing a uri that nothing defines makes it a referenced only resource with a uuid. */
     private UUID addReferencedOnlyResource(String label) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             ctx.getRdfGraph()
                     .add(
                             NodeFactory.createURI(PREFIX + "class.associatedClass"),
                             RDFS.range.asNode(),
                             NodeFactory.createURI(PREFIX + label));
-            ctx.commit("referenced only resource");
+            transaction.commit("referenced only resource");
         }
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             return UUID.fromString(
                     model.getResource(PREFIX + label).getProperty(RDFA.uuid).getString());

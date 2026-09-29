@@ -26,8 +26,8 @@ import org.apache.jena.update.UpdateRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.database.inmemory.SessionDataStore;
@@ -49,7 +49,6 @@ public class CIMUpdatesTestBase {
     protected static final String GRAPH_URI = "http://graph";
     protected static final GraphIdentifier graphIdentifier =
             new GraphIdentifier("default", GRAPH_URI);
-    protected GraphContext testGraph;
     protected DatabasePort databasePort;
 
     // base test constants
@@ -133,13 +132,18 @@ public class CIMUpdatesTestBase {
                         .build()
                         .graph();
         databasePort.createGraph(graphIdentifier, graph);
-        testGraph = databasePort.getGraphWithContext(graphIdentifier);
+    }
+
+    /** Opens a transaction on the test workspace. */
+    protected WorkspaceTransaction beginTestTransaction(ReadWrite mode) {
+        return databasePort.beginTransaction(graphIdentifier.datasetName(), mode);
     }
 
     protected void addTriple(Node subject, Node predicate, Node object) {
-        try (var ctx = testGraph.begin(ReadWrite.WRITE)) {
+        try (var transaction = beginTestTransaction(ReadWrite.WRITE)) {
+            var ctx = transaction.graph(GRAPH_URI);
             ctx.getRdfGraph().add(subject, predicate, object);
-            ctx.commit();
+            transaction.commit("test change");
         }
     }
 
@@ -150,20 +154,22 @@ public class CIMUpdatesTestBase {
 
     /** Use this method to execute a multi-operation {@link UpdateRequest} on the test graph. */
     protected void executeUpdateOnTestGraph(UpdateRequest update) {
-        try (var ctx = testGraph.begin(ReadWrite.WRITE)) {
+        try (var transaction = beginTestTransaction(ReadWrite.WRITE)) {
+            var ctx = transaction.graph(GRAPH_URI);
             var dataset =
                     SessionDataStore.wrapGraphInDataset(
                             ctx.getRdfGraph(), graphIdentifier.graphUri());
             UpdateExecutionFactory.create(update, dataset).execute();
-            ctx.commit();
+            transaction.commit("test change");
         }
     }
 
     /** Use this method to execute write actions in a transaction using lambda expression */
     protected void executeWriteTransaction(Consumer<Graph> graphOperation) {
-        try (var ctx = testGraph.begin(ReadWrite.WRITE)) {
+        try (var transaction = beginTestTransaction(ReadWrite.WRITE)) {
+            var ctx = transaction.graph(GRAPH_URI);
             graphOperation.accept(ctx.getRdfGraph());
-            ctx.commit();
+            transaction.commit("test change");
         }
     }
 
@@ -174,13 +180,14 @@ public class CIMUpdatesTestBase {
      */
     protected void executeUpdateBuiltAgainstTestGraph(
             Function<Graph, UpdateRequest> updateBuilder) {
-        try (var ctx = testGraph.begin(ReadWrite.WRITE)) {
+        try (var transaction = beginTestTransaction(ReadWrite.WRITE)) {
+            var ctx = transaction.graph(GRAPH_URI);
             var update = updateBuilder.apply(ctx.getRdfGraph());
             var dataset =
                     org.rdfarchitect.database.inmemory.SessionDataStore.wrapGraphInDataset(
                             ctx.getRdfGraph(), graphIdentifier.graphUri());
             org.apache.jena.update.UpdateExecutionFactory.create(update, dataset).execute();
-            ctx.commit();
+            transaction.commit("test change");
         }
     }
 }

@@ -92,11 +92,13 @@ class GraphToCIMCollectionConverterServiceNoFilterTest {
         InputStream in = Files.newInputStream(Path.of(fileName));
         Lang lang = fileName.endsWith(".rdf") ? Lang.RDFXML : Lang.TTL;
         RDFDataMgr.read(graph, in, lang);
-        try (var ctx = database.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                database.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             for (var triple : graph.find().toList()) {
                 ctx.getRdfGraph().add(triple);
             }
-            ctx.commit();
+            transaction.commit("test change");
         }
     }
 

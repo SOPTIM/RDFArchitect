@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update;
 
 import static org.assertj.core.api.AssertionsForClassTypes.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import org.apache.jena.graph.NodeFactory;
@@ -35,6 +36,7 @@ import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
@@ -55,9 +57,13 @@ class UpdatePackageServiceTest {
     private GraphContext mockGraphWithContext;
     private final PackageMapper mapper = Mappers.getMapper(PackageMapper.class);
 
+    private DatabasePort databasePort;
+    private WorkspaceTransaction transaction;
+
     @BeforeEach
     void setUp() {
-        DatabasePort databasePort = mock(DatabasePort.class);
+        databasePort = mock(DatabasePort.class);
+        transaction = mock(WorkspaceTransaction.class);
         var mockUpdatePackageLayoutService = mock(UpdatePackageLayoutService.class);
         service =
                 new UpdatePackageService(
@@ -68,8 +74,7 @@ class UpdatePackageServiceTest {
                         mockUpdatePackageLayoutService);
         mockGraph = mock(GraphRewindable.class);
         mockGraphWithContext = mock(GraphContext.class);
-        when(mockGraphWithContext.begin(any(ReadWrite.class))).thenReturn(mockGraphWithContext);
-        when(databasePort.getGraphWithContext(any())).thenReturn(mockGraphWithContext);
+        stubTransaction(mockGraphWithContext);
         when(mockGraphWithContext.getRdfGraph()).thenReturn(mockGraph);
         when(databasePort.getPrefixMapping(anyString())).thenReturn(mock(PrefixMapping.class));
         var dummyDelta = mock(DeltaCompressible.class);
@@ -88,8 +93,8 @@ class UpdatePackageServiceTest {
 
             service.addPackage(new GraphIdentifier("default", "test"), dto);
 
-            verify(mockGraphWithContext).commit(anyString());
-            verify(mockGraphWithContext).close();
+            verify(transaction).commit(anyString());
+            verify(transaction).close();
 
             CIMPackage captured = captor.getValue();
             assertThat(captured.getUri()).isEqualTo(new URI("http://example.com#TestPackage"));
@@ -116,8 +121,8 @@ class UpdatePackageServiceTest {
 
             service.addPackage(new GraphIdentifier("default", "test"), dto);
 
-            verify(mockGraphWithContext).commit(anyString());
-            verify(mockGraphWithContext).close();
+            verify(transaction).commit(anyString());
+            verify(transaction).close();
 
             CIMPackage captured = captor.getValue();
             assertThat(captured.getUri()).isEqualTo(new URI("http://example.com#TestPackage"));
@@ -147,7 +152,7 @@ class UpdatePackageServiceTest {
                 // expected
             }
 
-            verify(mockGraphWithContext).close();
+            verify(transaction).close();
         }
     }
 
@@ -164,8 +169,8 @@ class UpdatePackageServiceTest {
                 .isInstanceOf(ResourceConflictException.class)
                 .hasMessageContaining("class with the same IRI");
 
-        verify(mockGraphWithContext, never()).commit(anyString());
-        verify(mockGraphWithContext).close();
+        verify(transaction, never()).commit(anyString());
+        verify(transaction).close();
     }
 
     @Test
@@ -185,8 +190,8 @@ class UpdatePackageServiceTest {
 
             service.replacePackage(new GraphIdentifier("default", "test"), dto);
 
-            verify(mockGraphWithContext).commit(anyString());
-            verify(mockGraphWithContext).close();
+            verify(transaction).commit(anyString());
+            verify(transaction).close();
 
             CIMPackage captured = captor.getValue();
             assertThat(captured.getUri()).isEqualTo(new URI("http://other.org#otherPackage"));
@@ -207,8 +212,8 @@ class UpdatePackageServiceTest {
                     () -> CIMUpdates.deletePackage(eq(mockGraph), any(), eq(packageUuid)));
         }
 
-        verify(mockGraphWithContext).commit("Deleted package " + packageUuid);
-        verify(mockGraphWithContext).close();
+        verify(transaction).commit("Deleted package " + packageUuid);
+        verify(transaction).close();
     }
 
     @Test
@@ -224,7 +229,13 @@ class UpdatePackageServiceTest {
             assertThatThrownBy(() -> service.deletePackage(graphIdentifier, packageUuid))
                     .isInstanceOf(RuntimeException.class);
 
-            verify(mockGraphWithContext).close();
+            verify(transaction).close();
         }
+    }
+
+    private void stubTransaction(GraphContext graph) {
+        when(transaction.graph(anyString())).thenReturn(graph);
+        when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))
+                .thenReturn(transaction);
     }
 }
