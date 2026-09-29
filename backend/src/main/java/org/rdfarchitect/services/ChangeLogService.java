@@ -19,11 +19,9 @@ package org.rdfarchitect.services;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
 import org.rdfarchitect.api.dto.ChangeLogEntryMapper;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -36,9 +34,7 @@ public class ChangeLogService implements ChangeLogUseCase {
     private final DatabasePort databasePort;
 
     @Override
-    public List<ChangeLogEntryDTO> listChanges(GraphIdentifier graphIdentifier) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            return mapper.toDTOList(ctx.getChangeLog().getUndoHistory());
-        }
+    public List<ChangeLogEntryDTO> listChanges(String workspaceName) {
+        return mapper.toDTOList(databasePort.listChanges(workspaceName));
     }
 }

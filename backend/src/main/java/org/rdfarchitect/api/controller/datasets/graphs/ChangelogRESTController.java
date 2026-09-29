@@ -26,10 +26,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.changelog.ChangeLog;
 import org.rdfarchitect.services.ChangeLogUseCase;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -48,7 +45,6 @@ public class ChangelogRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(ChangelogRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final ChangeLogUseCase changelogUseCase;
 
     @Operation(
@@ -61,7 +57,7 @@ public class ChangelogRESTController {
                         content =
                                 @Content(
                                         mediaType = "application/json",
-                                        schema = @Schema(implementation = ChangeLog.class)))
+                                        schema = @Schema(implementation = ChangeLogEntryDTO.class)))
             })
     @GetMapping
     public List<ChangeLogEntryDTO> getChangeLog(
@@ -84,10 +80,7 @@ public class ChangelogRESTController {
                 graphURI,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-
-        var changes =
-                changelogUseCase.listChanges(new GraphIdentifier(datasetName, extendedGraphURI));
+        var changes = changelogUseCase.listChanges(datasetName);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/changes\" to \"{}\".",

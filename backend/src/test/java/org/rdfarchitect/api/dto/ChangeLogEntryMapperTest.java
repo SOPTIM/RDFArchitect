@@ -26,8 +26,8 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.changelog.ContextDelta;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
 import java.lang.ref.WeakReference;
@@ -49,7 +49,7 @@ class ChangeLogEntryMapperTest {
     private static final String DELETED = "deleted";
     private static final String ADDED = "added";
 
-    private static ChangeLogEntry changeLogEntry;
+    private static WorkspaceChangeLogEntry changeLogEntry;
 
     @BeforeAll
     static void beforeAll() {
@@ -82,9 +82,9 @@ class ChangeLogEntryMapperTest {
                                 "rdf",
                                 new WeakReference<>(delta.getAdditions()),
                                 new WeakReference<>(delta.getDeletions())));
-        changeLogEntry = new ChangeLogEntry(MESSAGE, 1, contextDeltas);
-        changeLogEntry.setChangeId(CHANGE_ID);
-        changeLogEntry.setTimestamp(TIMESTAMP);
+        changeLogEntry =
+                new WorkspaceChangeLogEntry(
+                        CHANGE_ID, TIMESTAMP, MESSAGE, List.of(), contextDeltas);
     }
 
     @Test

@@ -24,8 +24,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.versioncontrol.UndoUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +41,6 @@ public class UndoRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(UndoRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final UndoUseCase undoUseCase;
 
     @Operation(
@@ -72,9 +69,7 @@ public class UndoRESTController {
                 graphURI,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-
-        undoUseCase.undo(new GraphIdentifier(datasetName, extendedGraphURI));
+        undoUseCase.undo(datasetName);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/undo\" to \"{}\".",
