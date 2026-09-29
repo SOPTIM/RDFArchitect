@@ -63,10 +63,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         service.addClassesToCustomDatasetDiagram(
                 graphIdentifier.datasetName(), diagramUUID, List.of(classAInDiagram()));
 
-        var model =
-                databasePort
-                        .getDatasetDiagramLayout(graphIdentifier.datasetName())
-                        .getDiagramLayoutModel();
+        var model = workspaceLayoutModel();
         assertThat(
                         DLObjectFetcher.fetchDiagramDOForClass(
                                 model, diagramUUID, CrossProfileUtils.mergedUuid(CLASS_A_URI)))
@@ -85,13 +82,10 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         service.removeClassesFromCustomDatasetDiagram(
                 datasetName, diagramUUID, List.of(CrossProfileUtils.mergedUuid(CLASS_A_URI)));
 
-        assertThat(databasePort.getDatasetDiagrams(datasetName).get(diagramUUID).getClasses())
-                .isEmpty();
+        assertThat(workspaceDiagrams().get(diagramUUID).getClasses()).isEmpty();
         assertThat(
                         DLObjectFetcher.fetchDiagramDOForClass(
-                                databasePort
-                                        .getDatasetDiagramLayout(datasetName)
-                                        .getDiagramLayoutModel(),
+                                workspaceLayoutModel(),
                                 diagramUUID,
                                 CrossProfileUtils.mergedUuid(CLASS_A_URI)))
                 .isNull();
@@ -101,19 +95,17 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void addClassesToCustomDiagram_schemaDiagram_layoutIsKeyedByTheClassUuid() {
         addGraphFromFile("package_and_class.ttl");
         var diagramUUID = UUID.randomUUID();
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             ctx.getCustomDiagrams()
                     .put(diagramUUID, new CustomDiagram(diagramUUID, "custom", new ArrayList<>()));
-            ctx.commit("created custom diagram");
+            transaction.commit("created custom diagram");
         }
 
         service.addClassesToCustomDiagram(graphIdentifier, diagramUUID, List.of(classAInDiagram()));
 
-        var model =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModelDirect();
+        var model = layoutModelOf(graphIdentifier);
         assertThat(DLObjectFetcher.fetchDiagramDOForClass(model, diagramUUID, CLASS_A_UUID))
                 .isNotNull();
     }
@@ -125,16 +117,15 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     @AfterEach
     void cleanUpDatasetDiagrams() {
         var datasetName = graphIdentifier.datasetName();
-        databasePort.getDatasetDiagrams(datasetName).clear();
-        databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel().removeAll();
+        workspaceDiagrams().clear();
+        workspaceLayoutModel().removeAll();
         databasePort.deleteGraph(new GraphIdentifier(datasetName, GRAPH_URI));
     }
 
     private static UUID createWorkspaceDiagram() {
         addGraphFromFile("package_and_class.ttl", GRAPH_URI);
         var diagramUUID = UUID.randomUUID();
-        databasePort
-                .getDatasetDiagrams(graphIdentifier.datasetName())
+        workspaceDiagrams()
                 .put(diagramUUID, new CustomDiagram(diagramUUID, "custom", new ArrayList<>()));
         return diagramUUID;
     }
@@ -205,9 +196,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         assertDiagram(PACKAGE_A_UUID, "");
         assertThat(
                         DLObjectFetcher.fetchDiagramDOForClass(
-                                diagramLayout.getDiagramLayoutModelDirect(),
-                                PACKAGE_A_UUID,
-                                CLASS_A_UUID))
+                                layoutModelOf(graphIdentifier), PACKAGE_A_UUID, CLASS_A_UUID))
                 .isNotNull();
         assertDiagramObjectCoordinates(CLASS_A_UUID, 123.0F, 456.0F);
     }
@@ -236,8 +225,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
         // Assert
         assertThat(
-                        diagramLayout
-                                .getDiagramLayoutModelDirect()
+                        layoutModelOf(graphIdentifier)
                                 .listSubjectsWithProperty(
                                         DL.belongsToIdentifiedObject,
                                         ResourceFactory.createResource(
@@ -253,10 +241,11 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         addGraphFromFile("package_and_class.ttl");
         initialiseDiagramLayout();
         var doMRID = assertDiagramObject(CLASS_A_UUID, PACKAGE_A_UUID, CLASS_A_LABEL);
-        var diagramLayoutModel = diagramLayout.getDiagramLayoutModelDirect();
-        DLUpdates.deleteDiagramObjectPoint(
-                diagramLayoutModel,
-                DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, doMRID).getMRID());
+        withLayoutModel(
+                graphIdentifier,
+                model ->
+                        DLUpdates.deleteDiagramObjectPoint(
+                                model, DLObjectFetcher.fetchDOPForDO(model, doMRID).getMRID()));
         assertDiagramObjectPointDoesNotExist(doMRID);
 
         var packageDTO =
@@ -313,8 +302,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         addGraphFromFile("association.ttl");
         initialiseDiagramLayout();
         var diagramObjects =
-                diagramLayout
-                        .getDiagramLayoutModelDirect()
+                layoutModelOf(graphIdentifier)
                         .listSubjectsWithProperty(
                                 DL.belongsToIdentifiedObject,
                                 ResourceFactory.createResource(

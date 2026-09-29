@@ -54,7 +54,9 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
             GraphIdentifier graphIdentifier,
             UUID diagramUUID,
             List<LabelPositionDTO> labelPositionDTOList) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagramLayout = ctx.getDiagramLayout();
             var resolvedDiagramUUID =
                     diagramUUID != null
@@ -65,17 +67,20 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
                     diagramLayout.getDiagramLayoutModel(),
                     resolvedDiagramUUID,
                     labelPositionDTOList);
-            ctx.commit();
+            transaction.commit("moved labels in diagram %s".formatted(diagramUUID));
         }
     }
 
     @Override
     public void updateLabelPositions(
             String datasetName, UUID diagramUUID, List<LabelPositionDTO> labelPositionDTOList) {
-        applyLabelPositions(
-                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel(),
-                diagramUUID,
-                labelPositionDTOList);
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            applyLabelPositions(
+                    transaction.layout().getDiagramLayoutModel(),
+                    diagramUUID,
+                    labelPositionDTOList);
+            transaction.commit("moved labels in diagram %s".formatted(diagramUUID));
+        }
     }
 
     /**

@@ -56,7 +56,9 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
         Graph rdfGraphCopy;
         RenderingLayoutData layoutData;
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             rdfGraphCopy = GraphUtils.deepCopy(ctx.getRdfGraph());
             layoutData = fetchLayoutData(ctx, packageUUID);
         }
@@ -70,7 +72,9 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
         Graph rdfGraphCopy;
         RenderingLayoutData layoutData;
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagram = ctx.getCustomDiagrams().get(diagramUUID);
             if (diagram == null) {
                 throw new IllegalArgumentException(
@@ -116,10 +120,10 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
         var otherProfiles =
                 CIMProfileModels.loadAll(
                         databasePort, keywords, datasetName, graphIdentifier.graphUri());
-        var primaryColor =
-                databasePort
-                        .getCrossProfileDiagramInfo(datasetName)
-                        .getColor(graphIdentifier.graphUri());
+        String primaryColor;
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            primaryColor = transaction.crossProfileInfo().getColor(graphIdentifier.graphUri());
+        }
 
         return renderer.renderUML(
                 cimModel,
