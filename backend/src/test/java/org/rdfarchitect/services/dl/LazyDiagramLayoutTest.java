@@ -19,6 +19,9 @@ package org.rdfarchitect.services.dl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -168,11 +171,19 @@ class LazyDiagramLayoutTest {
     }
 
     private boolean diagramExists(UUID packageUUID) {
-        var model =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModelDirect();
+        var model = layoutModelOf(graphIdentifier);
         return DLObjectFetcher.fetchDiagram(model, packageUUID) != null;
+    }
+
+    private Model layoutModelOf(GraphIdentifier identifier) {
+        try (var transaction =
+                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
+            return ModelFactory.createDefaultModel()
+                    .add(
+                            transaction
+                                    .graph(identifier.graphUri())
+                                    .getDiagramLayout()
+                                    .getDiagramLayoutModel());
+        }
     }
 }

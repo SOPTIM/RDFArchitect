@@ -251,7 +251,9 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
         var association = NodeFactory.createURI(ASSOCIATION_URI);
         var inverseAssociation = NodeFactory.createURI(INVERSE_ASSOCIATION_URI);
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
 
             graph.add(classA, RDF.type.asNode(), RDFS.Class.asNode());
@@ -291,7 +293,7 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
                     NodeFactory.createLiteralString("Yes"));
             graph.add(inverseAssociation, CIMS.inverseRoleName.asNode(), association);
 
-            ctx.commit();
+            transaction.commit("test change");
         }
     }
 
@@ -334,9 +336,6 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
     }
 
     private static Model model() {
-        return databasePort
-                .getGraphWithContext(graphIdentifier)
-                .getDiagramLayout()
-                .getDiagramLayoutModelDirect();
+        return layoutModelOf(graphIdentifier);
     }
 }

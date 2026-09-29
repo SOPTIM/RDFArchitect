@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabasePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,11 +57,10 @@ public class CrossProfileDiagramIDRESTController {
                 datasetName,
                 originURL);
 
-        var result =
-                databasePort
-                        .getCrossProfileDiagramInfo(datasetName)
-                        .getCrossProfileDiagramUUID()
-                        .toString();
+        String result;
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            result = transaction.crossProfileInfo().getCrossProfileDiagramUUID().toString();
+        }
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/crossprofilediagram\" from \"{}\"",

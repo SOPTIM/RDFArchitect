@@ -78,7 +78,9 @@ public class UpdateClassLayoutService
             String className,
             UUID classUUID,
             ClassLayoutPositionDTO classLayoutPosition) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagramLayout = ctx.getDiagramLayout();
             var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
             UUID packageUUID =
@@ -106,7 +108,7 @@ public class UpdateClassLayoutService
                             classLayoutPosition.getXPosition(),
                             classLayoutPosition.getYPosition(),
                             null);
-                    ctx.commit();
+                    transaction.commit("laid out class %s".formatted(classUUID));
                 }
                 return;
             }
@@ -118,7 +120,7 @@ public class UpdateClassLayoutService
             float yPosition = classLayoutPosition != null ? classLayoutPosition.getYPosition() : 0;
             DiagramLayoutServiceUtils.insertDiagramObjectPoint(
                     diagramLayoutModel, doMRID, packageUUID, xPosition, yPosition);
-            ctx.commit();
+            transaction.commit("laid out class %s".formatted(classUUID));
         }
     }
 
@@ -155,7 +157,9 @@ public class UpdateClassLayoutService
             GraphIdentifier graphIdentifier,
             UUID packageUUID,
             List<ClassPositionDTO> classPositionDTOList) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagramLayout = ctx.getDiagramLayout();
             var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
             var resolvedPackageUUID =
@@ -198,15 +202,26 @@ public class UpdateClassLayoutService
                         classPositionDTO.getZPosition());
             }
 
-            ctx.commit();
+            transaction.commit("moved classes in package %s".formatted(packageUUID));
         }
     }
 
     @Override
     public void updateClassPositions(
             String datasetName, UUID diagramUUID, List<ClassPositionDTO> classPositionDTOList) {
-        var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
-        var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            applyClassPositions(
+                    transaction.layout().getDiagramLayoutModel(),
+                    diagramUUID,
+                    classPositionDTOList);
+            transaction.commit("moved classes in diagram %s".formatted(diagramUUID));
+        }
+    }
+
+    private void applyClassPositions(
+            Model diagramLayoutModel,
+            UUID diagramUUID,
+            List<ClassPositionDTO> classPositionDTOList) {
 
         for (var classPositionDTO : classPositionDTOList) {
             var diagramObject =
@@ -243,24 +258,28 @@ public class UpdateClassLayoutService
     @Override
     public void updateDiagramObjectName(
             GraphIdentifier graphIdentifier, UUID classUUID, String name) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             for (var diagramObject : DLObjectFetcher.fetchAllDOs(diagramLayoutModel, classUUID)) {
                 DLUpdates.updateDiagramObjectName(diagramLayoutModel, diagramObject, name);
             }
-            ctx.commit();
+            transaction.commit("renamed class %s in the diagrams".formatted(classUUID));
         }
     }
 
     @Override
     public void deleteClassLayoutData(GraphIdentifier graphIdentifier, UUID classUUID) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             for (var diagramObject : DLObjectFetcher.fetchAllDOs(diagramLayoutModel, classUUID)) {
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
             }
             deleteOrphanedLabels(diagramLayoutModel, ctx.getRdfGraph(), classUUID);
-            ctx.commit();
+            transaction.commit("removed the layout of class %s".formatted(classUUID));
         }
     }
 
@@ -326,7 +345,9 @@ public class UpdateClassLayoutService
             return;
         }
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagram = ctx.getCustomDiagrams().get(diagramUUID);
             if (diagram != null) {
                 var updated = diagram.getClasses();
@@ -340,7 +361,7 @@ public class UpdateClassLayoutService
                     classes.stream()
                             .map(ClassInDiagram::getUuid)
                             .collect(Collectors.toCollection(LinkedHashSet::new)));
-            ctx.commit();
+            transaction.commit("added classes to diagram %s".formatted(diagramUUID));
         }
     }
 
@@ -381,7 +402,9 @@ public class UpdateClassLayoutService
             return;
         }
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagram = ctx.getCustomDiagrams().get(diagramUUID);
             if (diagram != null) {
                 var updated = diagram.getClasses();
@@ -390,7 +413,7 @@ public class UpdateClassLayoutService
             }
             deleteLayoutForClasses(
                     ctx.getDiagramLayout().getDiagramLayoutModel(), diagramUUID, classUUIDs);
-            ctx.commit();
+            transaction.commit("removed classes from diagram %s".formatted(diagramUUID));
         }
     }
 
@@ -431,18 +454,19 @@ public class UpdateClassLayoutService
                     "Some referenced graphs do not exist in dataset: " + datasetName);
         }
 
-        var diagram = databasePort.getDatasetDiagrams(datasetName).get(diagramUUID);
-        if (diagram != null) {
-            var updated = diagram.getClasses();
-            updated.addAll(classes);
-            diagram.setClasses(updated);
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            var diagram = transaction.diagrams().get(diagramUUID);
+            if (diagram != null) {
+                var updated = diagram.getClasses();
+                updated.addAll(classes);
+                diagram.setClasses(updated);
+            }
+            insertLayoutForClasses(
+                    transaction.layout().getDiagramLayoutModel(),
+                    diagramUUID,
+                    mergedUuidsOf(classes, classUriByUuid(datasetName, classes)));
+            transaction.commit("added classes to diagram %s".formatted(diagramUUID));
         }
-        var diagramLayoutModel =
-                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        insertLayoutForClasses(
-                diagramLayoutModel,
-                diagramUUID,
-                mergedUuidsOf(classes, classUriByUuid(datasetName, classes)));
     }
 
     private Map<UUID, String> classUriByUuid(String datasetName, List<ClassInDiagram> classes) {
@@ -456,7 +480,9 @@ public class UpdateClassLayoutService
         var classUriByUuid = new HashMap<UUID, String>();
         for (var entry : classesByGraphUri.entrySet()) {
             var identifier = new GraphIdentifier(datasetName, entry.getKey());
-            try (var ctx = databasePort.getGraphWithContext(identifier).begin(ReadWrite.READ)) {
+            try (var transaction =
+                    databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
+                var ctx = transaction.graph(identifier.graphUri());
                 var model =
                         new CIMModelFacade(
                                 entry.getKey(),
@@ -476,38 +502,43 @@ public class UpdateClassLayoutService
             return;
         }
 
-        var model = databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        var diagram = databasePort.getDatasetDiagrams(datasetName).get(diagramUUID);
-        if (diagram == null) {
-            deleteLayoutForClasses(model, diagramUUID, classUUIDs);
-            return;
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            var model = transaction.layout().getDiagramLayoutModel();
+            var diagram = transaction.diagrams().get(diagramUUID);
+            if (diagram == null) {
+                deleteLayoutForClasses(model, diagramUUID, classUUIDs);
+            } else {
+                var updated = diagram.getClasses();
+                var classUriByUuid = classUriByUuid(datasetName, updated);
+                updated.removeIf(removedByAnyOf(classUUIDs, classUriByUuid));
+                diagram.setClasses(updated);
+
+                var stillRendered = mergedUuidsOf(updated, classUriByUuid);
+                deleteLayoutForClasses(
+                        model,
+                        diagramUUID,
+                        classUUIDs.stream().filter(uuid -> !stillRendered.contains(uuid)).toList());
+            }
+            transaction.commit("removed classes from diagram %s".formatted(diagramUUID));
         }
-
-        var updated = diagram.getClasses();
-        var classUriByUuid = classUriByUuid(datasetName, updated);
-        updated.removeIf(removedByAnyOf(classUUIDs, classUriByUuid));
-        diagram.setClasses(updated);
-
-        var stillRendered = mergedUuidsOf(updated, classUriByUuid);
-        deleteLayoutForClasses(
-                model,
-                diagramUUID,
-                classUUIDs.stream().filter(uuid -> !stillRendered.contains(uuid)).toList());
     }
 
     @Override
     public void migrateLayoutToNewClassUri(
             String datasetName, UUID oldMergedUuid, UUID newMergedUuid, String newClassUri) {
-        var model = databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            var model = transaction.layout().getDiagramLayoutModel();
 
-        var diagramUUIDs = new LinkedHashSet<UUID>();
-        diagramUUIDs.add(
-                databasePort.getCrossProfileDiagramInfo(datasetName).getCrossProfileDiagramUUID());
-        diagramUUIDs.addAll(databasePort.getDatasetDiagrams(datasetName).keySet());
+            var diagramUUIDs = new LinkedHashSet<UUID>();
+            diagramUUIDs.add(transaction.crossProfileInfo().getCrossProfileDiagramUUID());
+            diagramUUIDs.addAll(transaction.diagrams().keySet());
 
-        for (var diagramUUID : diagramUUIDs) {
-            migrateLayoutToNewClassUri(
-                    model, diagramUUID, oldMergedUuid, newMergedUuid, newClassUri);
+            for (var diagramUUID : diagramUUIDs) {
+                migrateLayoutToNewClassUri(
+                        model, diagramUUID, oldMergedUuid, newMergedUuid, newClassUri);
+            }
+            transaction.commit(
+                    "moved the layout of class %s to %s".formatted(oldMergedUuid, newClassUri));
         }
     }
 
