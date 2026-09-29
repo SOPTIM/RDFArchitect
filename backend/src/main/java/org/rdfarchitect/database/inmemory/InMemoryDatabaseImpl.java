@@ -20,6 +20,7 @@ package org.rdfarchitect.database.inmemory;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -27,16 +28,13 @@ import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabaseConnection;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.ResourceConflictException;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -84,23 +82,38 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
-    public Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName) {
-        return getOrCreateSessionDataStore().getDatasetDiagrams(datasetName);
+    public WorkspaceTransaction beginTransaction(String workspaceName, ReadWrite mode) {
+        return getOrCreateSessionDataStore().beginTransaction(workspaceName, mode);
     }
 
     @Override
-    public DiagramLayout getDatasetDiagramLayout(String datasetName) {
-        return getOrCreateSessionDataStore().getDatasetDiagramLayout(datasetName);
+    public boolean canUndo(String workspaceName) {
+        return getOrCreateSessionDataStore().canUndo(workspaceName);
     }
 
     @Override
-    public CrossProfileDiagramInfo getCrossProfileDiagramInfo(String datasetName) {
-        return getOrCreateSessionDataStore().getCrossProfileDiagramInfo(datasetName);
+    public boolean canRedo(String workspaceName) {
+        return getOrCreateSessionDataStore().canRedo(workspaceName);
     }
 
     @Override
-    public GraphContext getGraphWithContext(GraphIdentifier graphIdentifier) {
-        return getOrCreateSessionDataStore().getGraphWithContext(graphIdentifier);
+    public WorkspaceChangeLogEntry undo(String workspaceName) {
+        return getOrCreateSessionDataStore().undo(workspaceName);
+    }
+
+    @Override
+    public WorkspaceChangeLogEntry redo(String workspaceName) {
+        return getOrCreateSessionDataStore().redo(workspaceName);
+    }
+
+    @Override
+    public void restoreToVersion(String workspaceName, UUID versionId) {
+        getOrCreateSessionDataStore().restoreToVersion(workspaceName, versionId);
+    }
+
+    @Override
+    public List<WorkspaceChangeLogEntry> listChanges(String workspaceName) {
+        return getOrCreateSessionDataStore().listChanges(workspaceName);
     }
 
     @Override
@@ -112,8 +125,7 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
                         .setNsPrefixes(store.getPrefixMapping(graphIdentifier.datasetName()))
                         .setNsPrefixes(newGraph.getPrefixMapping());
         store.setPrefixMapping(graphIdentifier.datasetName(), currentPrefixMapping);
-        store.getCrossProfileDiagramInfo(graphIdentifier.datasetName())
-                .setColor(graphIdentifier.graphUri(), CrossProfileUtils.generateRandomDarkColor());
+        assignCrossProfileColor(store, graphIdentifier);
     }
 
     @Override
@@ -122,10 +134,22 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
         var datasetName = graphIdentifier.datasetName();
         var isNewDataset = !store.listDatasets().contains(datasetName);
         store.create(graphIdentifier, GraphFactory.createDefaultGraph());
-        store.getCrossProfileDiagramInfo(graphIdentifier.datasetName())
-                .setColor(graphIdentifier.graphUri(), CrossProfileUtils.generateRandomDarkColor());
+        assignCrossProfileColor(store, graphIdentifier);
         if (isNewDataset) {
             initializeNewDataset(store, datasetName);
+        }
+    }
+
+    private void assignCrossProfileColor(SessionDataStore store, GraphIdentifier graphIdentifier) {
+        try (var transaction =
+                store.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            transaction
+                    .crossProfileInfo()
+                    .setColor(
+                            graphIdentifier.graphUri(),
+                            CrossProfileUtils.generateRandomDarkColor());
+            transaction.commit(
+                    "assigned a cross profile colour to %s".formatted(graphIdentifier.graphUri()));
         }
     }
 
