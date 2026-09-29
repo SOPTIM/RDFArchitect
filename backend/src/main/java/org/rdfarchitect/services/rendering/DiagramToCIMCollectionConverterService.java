@@ -24,6 +24,7 @@ import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
@@ -69,14 +70,17 @@ public class DiagramToCIMCollectionConverterService
 
     @Override
     public CIMCollection convert(String datasetName, UUID diagramId) {
-        var diagram = getDiagram(datasetName, diagramId);
-        var graphEntries = buildSortedGraphEntries(datasetName, diagram);
-        var copiedGraphs = copyGraphsUnderLocks(graphEntries);
-        return convertAndMerge(copiedGraphs);
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            var diagram = getDiagram(transaction, datasetName, diagramId);
+            var graphEntries = buildSortedGraphEntries(datasetName, diagram);
+            var copiedGraphs = copyGraphs(transaction, graphEntries);
+            return convertAndMerge(copiedGraphs);
+        }
     }
 
-    private CustomDiagram getDiagram(String datasetName, UUID diagramId) {
-        var diagrams = databasePort.getDatasetDiagrams(datasetName);
+    private CustomDiagram getDiagram(
+            WorkspaceTransaction transaction, String datasetName, UUID diagramId) {
+        var diagrams = transaction.diagrams();
         if (!diagrams.containsKey(diagramId)) {
             throw new IllegalArgumentException(
                     "Diagram with ID "
@@ -103,28 +107,14 @@ public class DiagramToCIMCollectionConverterService
                 .toList();
     }
 
-    private List<CopiedGraph> copyGraphsUnderLocks(List<GraphEntry> graphEntries) {
+    private List<CopiedGraph> copyGraphs(
+            WorkspaceTransaction transaction, List<GraphEntry> graphEntries) {
         var copiedGraphs = new ArrayList<CopiedGraph>(graphEntries.size());
-        var contexts = new ArrayList<GraphContext>(graphEntries.size());
-        try {
-            for (var entry : graphEntries) {
-                var ctx =
-                        databasePort
-                                .getGraphWithContext(entry.graphIdentifier())
-                                .begin(ReadWrite.READ);
-                contexts.add(ctx);
-                copiedGraphs.add(new CopiedGraph(entry, GraphUtils.deepCopy(ctx.getRdfGraph())));
-            }
-        } finally {
-            releaseAll(contexts);
+        for (var entry : graphEntries) {
+            var graph = transaction.graph(entry.graphIdentifier().graphUri()).getRdfGraph();
+            copiedGraphs.add(new CopiedGraph(entry, GraphUtils.deepCopy(graph)));
         }
         return copiedGraphs;
-    }
-
-    private void releaseAll(List<GraphContext> contexts) {
-        for (var ctx : contexts) {
-            ctx.close();
-        }
     }
 
     private CIMCollection convertAndMerge(List<CopiedGraph> copiedGraphs) {
