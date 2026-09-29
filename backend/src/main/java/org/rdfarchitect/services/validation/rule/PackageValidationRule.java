@@ -21,7 +21,7 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationIssueDTO;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.springframework.stereotype.Component;
 
@@ -31,14 +31,13 @@ import java.util.List;
 public class PackageValidationRule implements ValidationRule {
 
     @Override
-    public void validate(
-            Model model, List<SchemaValidationIssueDTO> issues, CGMESVersion cgmesVersion) {
+    public void validate(Model model, List<ValidationIssueDTO> issues, CGMESVersion cgmesVersion) {
         model.listSubjectsWithProperty(RDF.type, CIMS.classCategory)
                 .forEach(packageResource -> validatePackage(model, packageResource, issues));
     }
 
     private void validatePackage(
-            Model model, Resource packageResource, List<SchemaValidationIssueDTO> issues) {
+            Model model, Resource packageResource, List<ValidationIssueDTO> issues) {
         var uri = packageResource.getURI();
 
         validateRDFSLabel(packageResource, issues, uri);

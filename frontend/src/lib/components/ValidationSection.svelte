@@ -18,14 +18,14 @@
 <script>
     import ValidationReport from "$lib/components/ValidationReport.svelte";
 
-    let { title, result, errorMessage } = $props();
+    let { title, result, errorMessage, subject, workspace } = $props();
 </script>
 
 <span class="text-text-subtle px-1 text-xs font-medium uppercase">
     {title}
 </span>
 {#if result}
-    <ValidationReport {result} />
+    <ValidationReport {result} {subject} {workspace} />
 {:else}
     <div class="text-default-text text-sm">
         {errorMessage}

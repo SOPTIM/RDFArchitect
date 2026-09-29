@@ -24,9 +24,19 @@ import java.util.List;
 
 @Data
 @Builder
-public class SchemaValidationReportDTO {
+public class ValidationIssueDTO {
 
-    private boolean valid;
+    @Builder.Default private IssueKind kind = IssueKind.RULE;
 
-    private List<SchemaValidationIssueDTO> issues;
+    private String ruleId;
+
+    private String ruleLabel;
+
+    private ValidationSeverity severity;
+
+    private String resourceUri;
+
+    private String message;
+
+    @Builder.Default private List<IssueOccurrenceDTO> occurrences = List.of();
 }

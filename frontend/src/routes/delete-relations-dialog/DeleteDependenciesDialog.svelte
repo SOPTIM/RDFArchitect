@@ -31,6 +31,7 @@
     } from "$lib/sharedState.svelte.js";
     import { classStore } from "$lib/stores/classStore.ts";
     import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
+    import { ontologyStore } from "$lib/stores/ontologyStore.ts";
     import { packageStore } from "$lib/stores/packageStore.ts";
 
     import { getDefaultAction } from "./deleteDependencyDefaults.js";
@@ -202,6 +203,7 @@
             packageStore.invalidateGraph(workspaceName, graphUri);
             classStore.invalidateGraph(workspaceName, graphUri);
             crossProfileStore.invalidateWorkspace(workspaceName);
+            ontologyStore.invalidateGraph(workspaceName, graphUri);
 
             console.log("Successfully submitted delete request");
             forceReloadTrigger.trigger();

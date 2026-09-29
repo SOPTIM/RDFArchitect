@@ -1,6 +1,6 @@
 ---
 title: Schema Migration
-sidebar_position: 10
+sidebar_position: 11
 ---
 
 # Schema Migration
