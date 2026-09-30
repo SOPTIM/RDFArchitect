@@ -27,6 +27,7 @@ import { customDiagramStore } from "../../src/lib/stores/diagramStore";
 import { ontologyStore } from "../../src/lib/stores/ontologyStore";
 import { packageStore } from "../../src/lib/stores/packageStore";
 import { createVersionControlStore } from "../../src/lib/stores/versionControlStore";
+import { workspaceStore } from "../../src/lib/stores/workspaceStore";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -61,6 +62,9 @@ vi.mock("$lib/stores/ontologyStore", () => ({
 }));
 vi.mock("$lib/stores/packageStore", () => ({
     packageStore: { invalidateWorkspace: vi.fn() },
+}));
+vi.mock("$lib/stores/workspaceStore", () => ({
+    workspaceStore: { invalidate: vi.fn() },
 }));
 
 vi.mock("$lib/eventhandling/toastStore.svelte.js", () => ({
@@ -282,6 +286,8 @@ describe("versionControlStore", () => {
             expect(customDiagramStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
             );
+            // The namespaces live in the cached workspace list.
+            expect(workspaceStore.invalidate).toHaveBeenCalled();
 
             expect(toastStore.info).toHaveBeenCalledWith(
                 "Undone",
@@ -518,6 +524,7 @@ describe("versionControlStore", () => {
             expect(customDiagramStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
             );
+            expect(workspaceStore.invalidate).toHaveBeenCalled();
 
             expect(toastStore.info).toHaveBeenCalledWith(
                 "Redone",

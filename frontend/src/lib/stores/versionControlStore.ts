@@ -25,6 +25,7 @@ import { ontologyStore } from "./ontologyStore";
 import { packageStore } from "./packageStore";
 import { loadSlot } from "./storeHelpers";
 import { type AsyncSlot, createEmptySlot } from "./storeTypes";
+import { workspaceStore } from "./workspaceStore";
 import {
     undo as sdkUndo,
     redo as sdkRedo,
@@ -215,6 +216,9 @@ function createVersionControlStore() {
         packageStore.invalidateWorkspace(workspace);
         datatypesStore.invalidateWorkspace(workspace);
         customDiagramStore.invalidateWorkspace(workspace);
+        // The namespaces are part of the cached workspace list, and they are
+        // undoable like everything else in a workspace.
+        workspaceStore.invalidate();
     }
 
     return {
