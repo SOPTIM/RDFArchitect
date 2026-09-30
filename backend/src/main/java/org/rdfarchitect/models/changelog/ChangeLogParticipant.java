@@ -45,4 +45,14 @@ public interface ChangeLogParticipant {
      * invalidates the redo branch, so that the abandoned versions do not stay reachable.
      */
     void discardRedoHistory();
+
+    /**
+     * Merges the version just committed into the one before it, leaving the participant with the
+     * new content but the same number of versions.
+     *
+     * <p>Used for a change the user did not make and cannot mean to undo — the layout a diagram is
+     * given the first time it is opened. Recording it as a version while the log ignored it would
+     * put the two out of step, which is the one thing the log must never allow.
+     */
+    void foldLastVersionIntoPrevious();
 }

@@ -106,4 +106,9 @@ public class DiagramLayoutDelta
     public void discardRedoHistory() {
         inner.discardRedoHistory();
     }
+
+    @Override
+    public void foldLastVersionIntoPrevious() {
+        inner.foldLastVersionIntoPrevious();
+    }
 }

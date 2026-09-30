@@ -234,6 +234,11 @@ public class Workspace {
         }
 
         @Override
+        public void commitWithoutHistory() {
+            coordinator.commitWithoutHistory();
+        }
+
+        @Override
         public void abort() {
             coordinator.abort();
         }
