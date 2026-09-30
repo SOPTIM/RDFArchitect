@@ -98,19 +98,6 @@
                 {toast.message}
             </p>
         {/if}
-        {#if toast.action}
-            <a
-                class="text-blue mt-1 inline-block cursor-pointer font-medium
-                    underline underline-offset-2"
-                href={toast.action.href ?? "#"}
-                onclick={() => {
-                    toast.action.onSelect?.();
-                    onDismiss(toast.id);
-                }}
-            >
-                {toast.action.label}
-            </a>
-        {/if}
     </div>
     <button
         type="button"
