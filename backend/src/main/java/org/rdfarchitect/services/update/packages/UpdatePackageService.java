@@ -95,11 +95,10 @@ public class UpdatePackageService
                     graph,
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     newPackage);
+            replaceDiagramUseCase.replaceDiagram(
+                    graphIdentifier, packageDTO.getUuid(), packageDTO.getLabel());
             transaction.commit("Replaced package " + packageDTO.getUuid());
         }
-
-        replaceDiagramUseCase.replaceDiagram(
-                graphIdentifier, packageDTO.getUuid(), packageDTO.getLabel());
     }
 
     @Override
@@ -111,10 +110,9 @@ public class UpdatePackageService
                     ctx.getRdfGraph(),
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     packageUUID);
+            deletePackageLayoutDataUseCase.deletePackageLayoutData(graphIdentifier, packageUUID);
             transaction.commit("Deleted package " + packageUUID);
         }
-
-        deletePackageLayoutDataUseCase.deletePackageLayoutData(graphIdentifier, packageUUID);
     }
 
     private void assertNoClassWithSameIri(Graph graph, CIMPackage newPackage) {

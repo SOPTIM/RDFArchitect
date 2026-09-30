@@ -50,6 +50,9 @@ class ImportConcurrencyTest {
 
     private static final String TURTLE = "@prefix ex: <http://example.com/> . ex:a ex:b ex:c .";
 
+    private static final String OTHER_TURTLE =
+            "@prefix ex: <http://example.com/> . ex:d ex:e ex:f .";
+
     private DatabasePort databasePort;
     private ImportGraphsUseCase importGraphs;
     private int originalTimeout;
@@ -144,6 +147,45 @@ class ImportConcurrencyTest {
         } finally {
             new GraphCompressionConfig().setLockTimeoutSeconds(originalTimeout);
         }
+    }
+
+    @Test
+    void importGraphs_severalFiles_areOneChangeInTheHistory() {
+        databasePort.createWorkspaceIfAbsent(WORKSPACE);
+
+        var result =
+                importGraphs.importGraphs(
+                        WORKSPACE,
+                        List.of(
+                                new BlockingMultipartFile(TURTLE, null, null),
+                                new BlockingMultipartFile(OTHER_TURTLE, null, null)),
+                        List.of("http://example.org/one", "http://example.org/two"),
+                        ImportProgressListener.NOOP);
+
+        assertThat(result.importedGraphUris()).hasSize(2);
+        assertThat(databasePort.listChanges(WORKSPACE))
+                .first()
+                .satisfies(
+                        entry -> {
+                            assertThat(entry.message()).isEqualTo("imported 2 graphs");
+                            assertThat(entry.affectedGraphUris()).hasSize(2);
+                        });
+    }
+
+    @Test
+    void undo_ofAnImportOfSeveralFiles_takesAllOfThemBack() {
+        databasePort.createWorkspaceIfAbsent(WORKSPACE);
+        importGraphs.importGraphs(
+                WORKSPACE,
+                List.of(
+                        new BlockingMultipartFile(TURTLE, null, null),
+                        new BlockingMultipartFile(OTHER_TURTLE, null, null)),
+                List.of("http://example.org/one", "http://example.org/two"),
+                ImportProgressListener.NOOP);
+
+        databasePort.undo(WORKSPACE);
+
+        assertThat(databasePort.listGraphUris(WORKSPACE)).isEmpty();
     }
 
     /**

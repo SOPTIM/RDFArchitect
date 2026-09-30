@@ -279,7 +279,7 @@ class WorkspaceTransactionTest {
     }
 
     @Test
-    void commit_nestedCommits_collectTheirMessagesIntoOneEntry() {
+    void commit_nestedCommits_areNamedByTheEnclosingOne() {
         try (var outer = workspace.begin(ReadWrite.WRITE)) {
             try (var inner = workspace.begin(ReadWrite.WRITE)) {
                 inner.graph(GRAPH_A).getRdfGraph().add(triple);
@@ -292,7 +292,7 @@ class WorkspaceTransactionTest {
         assertThat(workspace.getChangeHistory())
                 .first()
                 .extracting(WorkspaceChangeLogEntry::message)
-                .isEqualTo("inserted a stub; extended a class");
+                .isEqualTo("extended a class");
     }
 
     @Test
@@ -354,8 +354,7 @@ class WorkspaceTransactionTest {
         }
 
         assertThat(workspace.getChangeHistory()).hasSize(entriesBefore + 1);
-        assertThat(workspace.getChangeHistory().getFirst().message())
-                .isEqualTo("inner change; outer change");
+        assertThat(workspace.getChangeHistory().getFirst().message()).isEqualTo("outer change");
         assertThat(triplesIn(GRAPH_A)).containsExactly(triple);
         assertThat(triplesIn(GRAPH_B)).containsExactly(triple2);
     }

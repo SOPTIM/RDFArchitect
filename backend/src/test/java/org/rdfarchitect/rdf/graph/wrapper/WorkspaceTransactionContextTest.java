@@ -230,14 +230,16 @@ class WorkspaceTransactionContextTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void addMessage_collectsInnerCommitMessagesForTheOutermostEntry() {
+    void addMessage_fromAnInnerCommit_isDroppedInFavourOfTheEnclosingOne() {
+        // An inner commit describes a step of a larger action; the enclosing commit names what the
+        // user actually did.
         workspaceA.begin(ReadWrite.WRITE);
         workspaceA.begin(ReadWrite.WRITE);
-        workspaceA.addMessage("inserted stubs");
+        workspaceA.addMessage("renamed the class in the diagrams");
         workspaceA.end();
-        workspaceA.addMessage("extended classes");
+        workspaceA.addMessage("renamed a class");
 
-        assertThat(workspaceA.messages()).containsExactly("inserted stubs", "extended classes");
+        assertThat(workspaceA.messages()).containsExactly("renamed a class");
     }
 
     @Test

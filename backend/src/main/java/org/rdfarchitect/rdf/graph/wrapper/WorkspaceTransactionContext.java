@@ -206,15 +206,19 @@ public class WorkspaceTransactionContext {
     // -------------------------------------------------------------------------
 
     /**
-     * Records the message of a commit. Inner commits use this to contribute their description to
-     * the single entry the outermost commit will write.
+     * Records the message of a commit, if that commit is the one naming the change.
+     *
+     * <p>Only the outermost commit names it. An inner commit describes a step of a larger action —
+     * updating the layout after a class was renamed — and the user did not perform that step, they
+     * renamed a class. Collecting those descriptions too would turn one action into a sentence
+     * listing its own implementation.
      *
      * @param message the commit message; blank messages are ignored
      * @throws GraphNotInATransactionException if this thread is not inside this workspace
      */
     public void addMessage(String message) {
         var frame = requireUnabortedFrame();
-        if (message != null && !message.isBlank()) {
+        if (frame.depth == 1 && message != null && !message.isBlank()) {
             frame.messages.add(message);
         }
     }

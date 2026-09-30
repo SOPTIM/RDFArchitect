@@ -84,9 +84,11 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         var negotiation = negotiatePrefixes(datasetName, sources, listener, result);
 
         var reservedGraphUris = loadExistingGraphUris(datasetName);
+        var parsed = new ArrayList<ParsedGraph>();
         for (var source : sources) {
-            importSource(result, datasetName, source, reservedGraphUris, listener, negotiation);
+            importSource(result, parsed, source, reservedGraphUris, listener, negotiation);
         }
+        swapIn(result, datasetName, parsed, listener);
         return result;
     }
 
@@ -148,10 +150,12 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     /** Moves the prefixes the dataset holds out of the way, where the decisions call for it. */
     private void applyToWorkspacePrefixes(String datasetName, ResolvedPrefixes resolved) {
-        try {
-            var current = databasePort.getPrefixMapping(datasetName);
-            resolved.rewriteWorkspacePrefixes(current)
-                    .ifPresent(rewritten -> databasePort.setPrefixMapping(datasetName, rewritten));
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            var rewritten = resolved.rewriteWorkspacePrefixes(transaction.prefixes());
+            if (rewritten.isPresent()) {
+                transaction.setPrefixes(rewritten.get());
+                transaction.commit("changed the namespace prefixes");
+            }
         } catch (RuntimeException exception) {
             logger.warn(
                     "Unable to apply the namespace prefix decisions to dataset \"{}\": {}",
@@ -367,7 +371,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     private void importSource(
             ImportResult result,
-            String datasetName,
+            List<ParsedGraph> parsed,
             PlannedSource source,
             Set<String> reservedGraphUris,
             ImportProgressListener listener,
@@ -381,7 +385,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             if (!negotiation.isUnreadable(plannedFile)) {
                 importPlannedFile(
                         result,
-                        datasetName,
+                        parsed,
                         plannedFile,
                         source.file(),
                         reservedGraphUris,
@@ -407,7 +411,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                             }
                             importPlannedFile(
                                     result,
-                                    datasetName,
+                                    parsed,
                                     plannedFile,
                                     InMemoryMultipartFile.of(plannedFile.fileName(), content),
                                     reservedGraphUris,
@@ -423,7 +427,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
      */
     private void importPlannedFile(
             ImportResult result,
-            String datasetName,
+            List<ParsedGraph> parsed,
             PlannedFile plannedFile,
             MultipartFile file,
             Set<String> reservedGraphUris,
@@ -445,14 +449,15 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             resolved.applyTo(graph.getPrefixMapping());
 
             var undisplayableProperties = findUndisplayableProperties(graph);
-            replaceGraph(datasetName, graphUri, graph);
-
-            result.importedGraphUris().add(graphUri);
-            if (!undisplayableProperties.isEmpty()) {
-                result.warnings()
-                        .add(new ImportWarning(plannedFile.fileName(), undisplayableProperties));
-            }
-            listener.finished(plannedFile.index(), Outcome.IMPORTED, graphUri);
+            // Reported as imported only once it is actually in the workspace, which happens after
+            // everything has been read.
+            parsed.add(
+                    new ParsedGraph(
+                            graphUri,
+                            graph,
+                            plannedFile.index(),
+                            plannedFile.fileName(),
+                            undisplayableProperties));
         } catch (RuntimeException exception) {
             logger.warn(
                     "Unable to import '{}': {}", plannedFile.fileName(), exception.getMessage());
@@ -476,15 +481,59 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         }
     }
 
-    private void replaceGraph(String datasetName, String graphUri, Graph graph) {
-        // The graph is fully built by now, so the write lock is only held for the swap and the
-        // workspace stays readable while a large import is being parsed.
+    /**
+     * Hangs every graph of this upload into the workspace at once.
+     *
+     * <p>Two things follow from doing it here rather than per file. The write lock is taken only
+     * after everything is parsed, so the workspace stays readable while a large upload is being
+     * read; and one upload becomes one entry in the history, because the user performed one import,
+     * not one per file they happened to select.
+     */
+    private void swapIn(
+            ImportResult result,
+            String datasetName,
+            List<ParsedGraph> parsed,
+            ImportProgressListener listener) {
+        if (parsed.isEmpty()) {
+            return;
+        }
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
-            transaction.deleteGraph(graphUri);
-            transaction.createGraph(graphUri, graph);
-            transaction.commit("imported graph %s".formatted(graphUri));
+            for (var graph : parsed) {
+                transaction.deleteGraph(graph.uri());
+                transaction.createGraph(graph.uri(), graph.graph());
+            }
+            transaction.commit(importMessage(parsed));
+        } catch (RuntimeException exception) {
+            logger.warn("Unable to store the imported graphs: {}", exception.getMessage());
+            for (var graph : parsed) {
+                result.failedFileNames().add(graph.fileName());
+                listener.finished(graph.index(), Outcome.FAILED, null);
+            }
+            return;
+        }
+        for (var graph : parsed) {
+            result.importedGraphUris().add(graph.uri());
+            if (!graph.undisplayableProperties().isEmpty()) {
+                result.warnings()
+                        .add(new ImportWarning(graph.fileName(), graph.undisplayableProperties()));
+            }
+            listener.finished(graph.index(), Outcome.IMPORTED, graph.uri());
         }
     }
+
+    private static String importMessage(List<ParsedGraph> parsed) {
+        return parsed.size() == 1
+                ? "imported graph %s".formatted(parsed.getFirst().uri())
+                : "imported %d graphs".formatted(parsed.size());
+    }
+
+    /** A graph that has been read but not yet hung into the workspace. */
+    private record ParsedGraph(
+            String uri,
+            Graph graph,
+            int index,
+            String fileName,
+            List<String> undisplayableProperties) {}
 
     /**
      * Finds properties that are imported but will not be displayed in the editor. RDFArchitect only
