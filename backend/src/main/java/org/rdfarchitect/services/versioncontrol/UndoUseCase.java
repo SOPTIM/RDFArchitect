@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.services.versioncontrol;
 
-import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
+import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
 
 public interface UndoUseCase {
 
@@ -27,5 +27,5 @@ public interface UndoUseCase {
      * @param workspaceName the workspace to operate on
      * @return the change that was undone
      */
-    WorkspaceChangeLogEntry undo(String workspaceName);
+    ChangeLogEntryDTO undo(String workspaceName);
 }

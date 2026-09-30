@@ -33,6 +33,10 @@ public interface ChangeLogEntryMapper {
 
     @Mapping(target = "contextDeltas", source = "deltas")
     @Mapping(target = "removedOnUndo", expression = "java(entry.removedOnUndo())")
+    @Mapping(
+            target = "affectedGraphUris",
+            expression = "java(java.util.List.copyOf(entry.affectedGraphUris()))")
+    @Mapping(target = "affectedKinds", expression = "java(entry.affectedKinds())")
     ChangeLogEntryDTO toDTO(WorkspaceChangeLogEntry entry);
 
     List<ChangeLogEntryDTO> toDTOList(List<WorkspaceChangeLogEntry> entries);

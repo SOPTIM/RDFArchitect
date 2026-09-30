@@ -86,6 +86,14 @@ public record WorkspaceChangeLogEntry(
         return participants.stream().flatMap(version -> version.additions().stream()).toList();
     }
 
+    /**
+     * Returns what kinds of data this commit touched — the schema, the SHACL shapes, the layout —
+     * so that a message about it can say where the change landed.
+     */
+    public List<String> affectedKinds() {
+        return participants.stream().map(version -> version.id().kind().name()).distinct().toList();
+    }
+
     /** Returns the URIs of the graphs this commit touched. */
     public Set<String> affectedGraphUris() {
         return participants.stream()
