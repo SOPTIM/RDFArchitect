@@ -15,13 +15,10 @@
  *
  */
 
-package org.rdfarchitect.dl.data.dto.relations;
+package org.rdfarchitect.api.dto.validation;
 
-/**
- * A two dimensional offset of a diagram object relative to whatever it is anchored to. Unlike a
- * {@link XYZPosition} this is not a coordinate within the diagram and carries no stacking order.
- *
- * @param x the offset along the x axis
- * @param y the offset along the y axis
- */
-public record XYOffset(float x, float y) {}
+public enum ValidationSeverity {
+    ERROR,
+    WARNING,
+    INFO
+}

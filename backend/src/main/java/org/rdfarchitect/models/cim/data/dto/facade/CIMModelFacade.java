@@ -24,6 +24,8 @@ import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
+import org.rdfarchitect.models.cim.data.dto.facade.header.CIMProfileHeaders;
+import org.rdfarchitect.models.cim.data.dto.facade.header.ICIMProfileHeader;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
@@ -104,6 +106,11 @@ public class CIMModelFacade implements ICIMModelFacade {
             return null;
         }
         return new CIMClassCategory(this.graphUri, this.model, categoryResources.getFirst());
+    }
+
+    @Override
+    public ICIMProfileHeader getHeader() {
+        return CIMProfileHeaders.of(model.getGraph());
     }
 
     private boolean isClassCategory(Resource resource) {

@@ -31,5 +31,6 @@ public class SuperClassDTO {
     private UUID uuid;
     private String label;
     private List<AttributeDTO> attributes;
+    private List<AssociationDTO> associations;
     private List<EnumEntryDTO> enumEntries;
 }

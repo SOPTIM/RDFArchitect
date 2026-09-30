@@ -29,18 +29,16 @@ import java.util.UUID;
 @NoArgsConstructor
 public class LabelPositionDTO {
 
-    /** The UUID of the CIM resource the label belongs to, e.g. an association end. */
     @JsonProperty("identifiedObjectUUID")
     private UUID identifiedObjectUUID;
 
-    /** The label kind, e.g. {@code multiplicity}. Together with the UUID it identifies a label. */
     @JsonProperty("kind")
     private String kind;
 
-    /** Offset relative to the class the label is anchored to. Null resets it to its default. */
-    @JsonProperty("xOffset")
-    private Float xOffset;
+    /** The absolute position in the diagram. Null resets the label to its default placement. */
+    @JsonProperty("x")
+    private Float x;
 
-    @JsonProperty("yOffset")
-    private Float yOffset;
+    @JsonProperty("y")
+    private Float y;
 }

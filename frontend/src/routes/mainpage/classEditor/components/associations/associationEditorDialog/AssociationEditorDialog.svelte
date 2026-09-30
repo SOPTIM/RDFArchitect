@@ -34,6 +34,8 @@
         associations,
         association = $bindable(),
         targetClass = null,
+        focusField = null,
+        focusInverse = false,
     } = $props();
 
     let classEditorContext = $state();
@@ -145,8 +147,14 @@
         <div
             class="mx-2 grid w-full grid-cols-2 items-start gap-x-4 gap-y-1 px-2"
         >
-            <Direct {association} />
-            <Inverse {association} />
+            <Direct
+                {association}
+                focusField={focusInverse ? null : focusField}
+            />
+            <Inverse
+                {association}
+                focusField={focusInverse ? focusField : null}
+            />
         </div>
     {/if}
 </ModifyDataDialog>

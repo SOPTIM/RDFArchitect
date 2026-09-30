@@ -17,12 +17,14 @@
 
 <script>
     import {
+        faAlignLeft,
         faAnglesUp,
         faArrowUpRightFromSquare,
         faCaretDown,
         faDiagramProject,
         faExpand,
         faFilter,
+        faFont,
         faLayerGroup,
         faLink,
         faListUl,
@@ -84,6 +86,21 @@
             key: "includeAssociations",
             label: "Associations",
             icon: faLink,
+            appliesTo: SINGLE_SCHEMA_DIAGRAM_TYPES,
+        },
+        {
+            key: "showAssociationLabels",
+            label: "Association Labels",
+            icon: faFont,
+            appliesTo: [
+                ...SINGLE_SCHEMA_DIAGRAM_TYPES,
+                ...MERGED_DIAGRAM_TYPES,
+            ],
+        },
+        {
+            key: "showAssociationsInClass",
+            label: "Associations in Class",
+            icon: faAlignLeft,
             appliesTo: SINGLE_SCHEMA_DIAGRAM_TYPES,
         },
         {

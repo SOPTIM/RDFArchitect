@@ -28,6 +28,7 @@
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
+    import PropertyEditorHost from "./classEditor/PropertyEditorHost.svelte";
     import NoSchemaPlaceholder from "./emptyStates/NoSchemaPlaceholder.svelte";
     import NoWorkspacePlaceholder from "./emptyStates/NoWorkspacePlaceholder.svelte";
     import ExtendSourceDialog from "./packageNavigation/ExtendSourceDialog.svelte";
@@ -119,6 +120,8 @@
         </Splitpanes>
     {/if}
 </div>
+
+<PropertyEditorHost />
 
 {#if extendSourceRequest.open}
     <ExtendSourceDialog

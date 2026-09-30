@@ -17,6 +17,8 @@
 
 import { editorState, multiSelectState } from "$lib/sharedState.svelte.js";
 
+import { propertyContextMenu } from "./propertyInteraction.svelte.js";
+
 export class ContextMenuController {
     #paneRequest = $state(null);
     #classRequest = $state(null);
@@ -45,6 +47,7 @@ export class ContextMenuController {
     close() {
         this.#paneRequest = null;
         this.#classRequest = null;
+        propertyContextMenu.close();
     }
 
     #consumeEvent(event) {

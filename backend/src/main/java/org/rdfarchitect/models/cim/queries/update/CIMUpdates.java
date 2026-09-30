@@ -319,6 +319,14 @@ public class CIMUpdates {
         baseUpdate.addInsert(newURI, RDF.type, RDF.Property);
         baseUpdate.addInsert(newURI, RDFS.domain, attribute.getDomain().getUri().toNode());
         baseUpdate.addInsert(newURI, CIMS.stereotype, CIMStereotypes.attribute);
+        if (attribute.getStereotypes() != null) {
+            for (CIMSStereotype stereotype : attribute.getStereotypes()) {
+                baseUpdate.addInsert(
+                        newURI,
+                        CIMS.stereotype,
+                        RDFUtils.wrapURLorLiteral(stereotype.getStereotype()));
+            }
+        }
         // range/datatype
         if (attribute.getDataType().getType() == CIMSDataType.Type.PRIMITIVE) {
             baseUpdate.addInsert(newURI, CIMS.datatype, attribute.getDataType().getUri().toNode());

@@ -24,6 +24,8 @@ export const RENDER_OPTION_DEFAULTS = {
     includeInheritance: true,
     includeRelationsToExternalPackages: true,
     includePropertiesFromOtherProfiles: false,
+    showAssociationLabels: true,
+    showAssociationsInClass: false,
     showInheritedProperties: false,
     useColoredPropertiesInMergedView: true,
 };

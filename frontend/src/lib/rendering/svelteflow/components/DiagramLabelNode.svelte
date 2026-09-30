@@ -16,19 +16,64 @@
   -->
 
 <script>
-    import { labelHighlight } from "../interaction/labelHighlight.svelte.js";
+    import { getContext } from "svelte";
 
-    let { id, data, draggable } = $props();
+    import {
+        FocusField,
+        propertyEditorRequest,
+        PropertyKind,
+    } from "$lib/propertyEditorRequest.svelte.js";
+
+    import { MULTIPLICITY_KIND } from "../diagram/labelNodes.js";
+    import { DIAGRAM_SELECTION_CONTEXT } from "../interaction/diagramSelection.svelte.js";
+    import { labelHighlight } from "../interaction/labelHighlight.svelte.js";
+    import { bypassesProperties } from "../interaction/modifierKeys.svelte.js";
+    import { propertyContextMenu } from "../interaction/propertyInteraction.svelte.js";
+
+    let { id, data, draggable, dragging } = $props();
+
+    const selection = getContext(DIAGRAM_SELECTION_CONTEXT);
+
+    const target = $derived(
+        data.associationEndUUID && data.ownerClassId
+            ? {
+                  classUuid: data.ownerClassId,
+                  graphUri: data.graphUri,
+                  kind: PropertyKind.ASSOCIATION,
+                  propertyUuid: data.associationEndUUID,
+                  focus:
+                      data.kind === MULTIPLICITY_KIND
+                          ? FocusField.MULTIPLICITY
+                          : FocusField.LABEL,
+              }
+            : null,
+    );
+
+    function openAssociationEditor(event) {
+        if (bypassesProperties(event)) {
+            return;
+        }
+        event.stopPropagation();
+        labelHighlight.clear();
+        propertyEditorRequest.open(target);
+    }
 
     /**
      * Lights the association up while the label is pressed. The release is taken from the window
      * because the pointer is let go wherever it happens to be, which after a drag is rarely over
      * the label itself.
      */
-    function handlePointerDown() {
+    function handlePointerDown(event) {
         labelHighlight.press(id);
+        const holdsSelection = event.button === 0 && !!selection;
+        if (holdsSelection) {
+            selection.notifyLabelPress();
+        }
         const release = () => {
             labelHighlight.release();
+            if (holdsSelection) {
+                selection.notifyLabelRelease();
+            }
             window.removeEventListener("pointerup", release);
             window.removeEventListener("pointercancel", release);
         };
@@ -39,8 +84,14 @@
 
 <div
     class="rounded bg-white/80 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-[#303030] shadow-sm select-none"
-    class:cursor-move={draggable}
+    class:cursor-grabbing={dragging}
+    class:cursor-grab={draggable && !dragging}
+    class:cursor-pointer={!draggable && !!target}
     onpointerdown={handlePointerDown}
+    ondblclick={target ? openAssociationEditor : undefined}
+    oncontextmenu={target
+        ? event => propertyContextMenu.open(event, target)
+        : undefined}
     role="presentation"
 >
     {data.text}

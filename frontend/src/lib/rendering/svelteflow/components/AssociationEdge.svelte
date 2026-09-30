@@ -21,6 +21,7 @@
     import { renderOptions } from "$lib/renderOptions.svelte.js";
 
     import { getEdgeParams } from "./edgeUtils.ts";
+    import { labelsOf } from "../diagram/labelNodes.js";
     import { labelHighlight } from "../interaction/labelHighlight.svelte.js";
 
     let { id, source, target, data } = $props();
@@ -44,7 +45,7 @@
     let sourceNode = useInternalNode(source);
     let targetNode = useInternalNode(target);
 
-    let held = $derived(labelHighlight.isHeld(data.labels));
+    let held = $derived(labelHighlight.isHeld(labelsOf(data)));
 
     let style = $derived.by(() => {
         const stroke =

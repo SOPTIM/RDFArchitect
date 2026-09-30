@@ -37,6 +37,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
+import java.util.List;
 import java.util.UUID;
 
 class AttributeMapperTest {
@@ -62,8 +63,10 @@ class AttributeMapperTest {
                                         new URI("http://www.w3.org/2001/XMLSchema#string"),
                                         new RDFSLabel("string", "en"),
                                         CIMSDataType.Type.PRIMITIVE))
-                        .stereotype(
-                                new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#attribute"))
+                        .stereotypes(
+                                List.of(
+                                        new CIMSStereotype(
+                                                "http://iec.ch/TC57/NonStandard/UML#attribute")))
                         .multiplicity(
                                 new CIMSMultiplicity(
                                         "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#0...1"))
@@ -81,6 +84,7 @@ class AttributeMapperTest {
                                         "string",
                                         "http://www.w3.org/2001/XMLSchema#",
                                         DataTypeDTO.Type.PRIMITIVE))
+                        .stereotypes(List.of("http://iec.ch/TC57/NonStandard/UML#attribute"))
                         .build();
     }
 
@@ -174,10 +178,11 @@ class AttributeMapperTest {
                                                     CIMSDataType.Type.PRIMITIVE)),
                     () -> assertThat(mappedCIMAttribute.getComment()).isNull(),
                     () ->
-                            assertThat(mappedCIMAttribute.getStereotype())
+                            assertThat(mappedCIMAttribute.getStereotypes())
                                     .isEqualTo(
-                                            new CIMSStereotype(
-                                                    "http://iec.ch/TC57/NonStandard/UML#attribute")),
+                                            List.of(
+                                                    new CIMSStereotype(
+                                                            "http://iec.ch/TC57/NonStandard/UML#attribute"))),
                     () -> assertThat(mappedCIMAttribute.getFixedValue()).isNull(),
                     () -> assertThat(mappedCIMAttribute.getDefaultValue()).isNull());
         }
@@ -228,10 +233,11 @@ class AttributeMapperTest {
                                                     new URI(
                                                             "http://www.w3.org/2001/XMLSchema#string"))),
                     () ->
-                            assertThat(mappedCIMAttribute.getStereotype())
+                            assertThat(mappedCIMAttribute.getStereotypes())
                                     .isEqualTo(
-                                            new CIMSStereotype(
-                                                    "http://iec.ch/TC57/NonStandard/UML#attribute")),
+                                            List.of(
+                                                    new CIMSStereotype(
+                                                            "http://iec.ch/TC57/NonStandard/UML#attribute"))),
                     () ->
                             assertThat(mappedCIMAttribute.getFixedValue())
                                     .isEqualTo(

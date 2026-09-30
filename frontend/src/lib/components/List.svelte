@@ -27,6 +27,8 @@
         warn = false,
         isExpanded = $bindable(true),
         isCollapsible = true,
+        accentTextClass = "text-blue",
+        accentBorderClass = "border-blue",
     } = $props();
 
     let scrollContainer = $state();
@@ -60,7 +62,7 @@
         flex h-full
         w-full flex-col
         rounded border
-        {warn ? 'border-red' : 'border-blue'}
+        {warn ? 'border-red' : accentBorderClass}
     "
 >
     <div
@@ -71,17 +73,19 @@
             {warn
             ? 'border-red'
             : highlight
-              ? 'border-blue'
+              ? accentBorderClass
               : 'border-transparent'}
         "
     >
         <div class="flex flex-none justify-start text-left">
             {#if isExpanded === null || !isCollapsible}
-                <span class="text-blue w-fit pl-1 text-lg">{legend}</span>
+                <span class="{accentTextClass} w-fit pl-1 text-lg">
+                    {legend}
+                </span>
             {:else}
                 <button
                     type="button"
-                    class="text-blue flex w-fit cursor-pointer pl-1 text-lg"
+                    class="{accentTextClass} flex w-fit cursor-pointer pl-1 text-lg"
                     onclick={toggleExpanded}
                 >
                     <span class="flex items-center space-x-1">

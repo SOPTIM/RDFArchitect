@@ -17,20 +17,48 @@
 
 <script>
     import ValidationSection from "$lib/components/ValidationSection.svelte";
-    import { validationState } from "$lib/sharedState.svelte.js";
+    import {
+        validationState,
+        ValidationKind,
+    } from "$lib/sharedState.svelte.js";
 
     let result = $state(null);
+    let context = $state(null);
+
+    const isWorkspaceCheck = $derived(
+        context?.kind === ValidationKind.WORKSPACE,
+    );
+
+    const title = $derived.by(() => {
+        if (!isWorkspaceCheck) {
+            return "Validation Result";
+        }
+        return context.graph
+            ? `Workspace Validation Result: ${context.workspace} (${context.schemaLabel ?? context.graph})`
+            : `Workspace Validation Result: ${context.workspace}`;
+    });
+
+    const subject = $derived.by(() => {
+        if (!isWorkspaceCheck) {
+            return "Schema";
+        }
+        return context.graph ? "Schema in workspace context" : "Workspace";
+    });
 
     $effect(() => {
         validationState.result.subscribe();
+        validationState.context.subscribe();
         result = validationState.result.getValue();
+        context = validationState.context.getValue();
     });
 </script>
 
 <div class="bg-window-background flex h-full flex-col overflow-y-auto p-6">
     <ValidationSection
-        title="Validation Result"
+        {title}
         {result}
+        {subject}
+        workspace={context?.workspace}
         errorMessage="Use the menu to start a new validation."
     />
 </div>

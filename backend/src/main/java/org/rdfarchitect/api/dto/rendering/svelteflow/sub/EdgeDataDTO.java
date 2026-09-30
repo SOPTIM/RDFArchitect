@@ -20,15 +20,15 @@ package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 import lombok.Builder;
 import lombok.Data;
 
-import java.util.List;
-
 /** DTO representing the specific data object in a SvelteFlow edge. */
 @Data
 @Builder
 public class EdgeDataDTO {
 
-    /** The movable labels of both edge ends. */
-    private List<EdgeLabelDTO> labels;
+    private EdgeLabelDTO sourceMultiplicityLabel;
+    private EdgeLabelDTO targetMultiplicityLabel;
+    private EdgeLabelDTO sourceAssociationLabel;
+    private EdgeLabelDTO targetAssociationLabel;
 
     private boolean useToAssociation;
     private boolean useFromAssociation;

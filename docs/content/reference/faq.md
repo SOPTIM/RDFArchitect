@@ -102,6 +102,22 @@ No. Always run it against a test dataset first, then validate the result with th
 
 Yes. The output is plain SPARQL 1.1 UPDATE and can be opened, inspected, and modified in any text editor before execution.
 
+### What is the migration report, and how is it different from the script?
+
+The script *does* the migration; the report *documents* it. The report is a Markdown protocol that lists the validation state of both schemas, how many classes were added, deleted, and changed, and then every change per class in prose, together with the comments you entered in the review step. It is meant to be read by a person — attached to a release, reviewed by a colleague, or archived with the migrated dataset. See [Schema Migration](/user-guide/migration#the-migration-report).
+
+### Should I download the summary or the detailed report?
+
+Both describe the same migration and differ only in how inheritance is unfolded. The summary states each change once and names the concrete subclasses it affects — the better read for a release note or a review meeting. The detailed report walks every affected concrete class and repeats the inherited changes under each one — the better reference when a specific class has to be checked or signed off. Downloading both is a reasonable default.
+
+### Can I record why a change was made?
+
+Yes. In the review step of the wizard, every class, attribute, association, and enum entry has a comment field. Comments appear as `#` lines above the corresponding block in the generated SPARQL and as quoted notes in the migration report, so the reasoning travels with both artefacts.
+
+### The two schemas use different namespaces, and now everything looks renamed.
+
+Tick **Ignore prefixes** in the first step of the wizard. Rename detection then compares local names instead of full IRIs, so a resource that only moved to a new namespace is reported as a plain change, and renames that consist of nothing but the prefix are left out of the review steps and the report.
+
 ## Sharing
 
 ### I shared a snapshot but the recipient can't open it.

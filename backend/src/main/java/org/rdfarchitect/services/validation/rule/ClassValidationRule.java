@@ -22,8 +22,8 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO.Severity;
+import org.rdfarchitect.api.dto.validation.ValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationSeverity;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.springframework.stereotype.Component;
 
@@ -33,14 +33,13 @@ import java.util.List;
 public class ClassValidationRule implements ValidationRule {
 
     @Override
-    public void validate(
-            Model model, List<SchemaValidationIssueDTO> issues, CGMESVersion cgmesVersion) {
+    public void validate(Model model, List<ValidationIssueDTO> issues, CGMESVersion cgmesVersion) {
         model.listSubjectsWithProperty(RDF.type, RDFS.Class)
                 .forEach(classResource -> validateClass(model, classResource, issues));
     }
 
     private void validateClass(
-            Model model, Resource classResource, List<SchemaValidationIssueDTO> issues) {
+            Model model, Resource classResource, List<ValidationIssueDTO> issues) {
         var uri = classResource.getURI();
 
         validateRDFSLabel(classResource, issues, uri);
@@ -51,11 +50,11 @@ public class ClassValidationRule implements ValidationRule {
     }
 
     private void validateCIMSBelongsToCategory(
-            Resource classResource, List<SchemaValidationIssueDTO> issues, String uri) {
+            Resource classResource, List<ValidationIssueDTO> issues, String uri) {
         if (!classResource.hasProperty(CIMS.belongsToCategory)) {
             issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.WARNING)
+                    ValidationIssueDTO.builder()
+                            .severity(ValidationSeverity.WARNING)
                             .resourceUri(uri)
                             .message(
                                     "Class is not assigned to a package (cims:belongsToCategory is missing).")

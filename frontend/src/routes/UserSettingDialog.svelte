@@ -38,6 +38,8 @@
         includeInheritance: true,
         includeRelationsToExternalPackages: true,
         includePropertiesFromOtherProfiles: false,
+        showAssociationLabels: true,
+        showAssociationsInClass: false,
     };
 
     let localSettings = $state({});
@@ -134,6 +136,16 @@
             <CheckBoxEditControl
                 label="Include properties from other schemas"
                 bind:value={localSettings["includePropertiesFromOtherProfiles"]}
+                labelFirst={false}
+            />
+            <CheckBoxEditControl
+                label="Show association labels"
+                bind:value={localSettings["showAssociationLabels"]}
+                labelFirst={false}
+            />
+            <CheckBoxEditControl
+                label="Show associations in class"
+                bind:value={localSettings["showAssociationsInClass"]}
                 labelFirst={false}
             />
         </USC.Section>

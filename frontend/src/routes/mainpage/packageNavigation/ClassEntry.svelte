@@ -21,6 +21,7 @@
         faArrowUpRightFromSquare,
         faDiagramProject,
         faEye,
+        faGear,
         faPencil,
         faMinus,
         faObjectGroup,
@@ -176,6 +177,10 @@
             keepOpenClassLightWhenSelectionEmpty();
             return;
         }
+        openClass(entry);
+    }
+
+    function openClass(entry = buildSelectionEntry()) {
         editorState.markClassActive();
         multiSelectState.clear();
         multiSelectState.anchor = entry;
@@ -372,6 +377,15 @@
         />
     </ContextMenu.TriggerArea>
     <ContextMenu.Content>
+        {#if !multiActive}
+            <ContextMenu.Item.Button
+                onSelect={() => openClass()}
+                faIcon={readonly ? faEye : faGear}
+            >
+                {readonly ? "View Class" : "Edit Class"}
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+        {/if}
         {#if classType === ClassType.SINGLE_CLASS}
             <ContextMenu.Item.Button
                 onSelect={copyClass}

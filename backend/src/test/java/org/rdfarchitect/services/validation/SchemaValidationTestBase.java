@@ -26,8 +26,9 @@ import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
-import org.rdfarchitect.api.dto.validation.SchemaValidationReportDTO;
+import org.rdfarchitect.api.dto.validation.ValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationReportDTO;
+import org.rdfarchitect.api.dto.validation.ValidationSeverity;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.models.cim.ontology.KnownOntologyFields;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
@@ -126,15 +127,15 @@ abstract class SchemaValidationTestBase {
         return model;
     }
 
-    protected List<SchemaValidationIssueDTO> errorsOf(SchemaValidationReportDTO report) {
+    protected List<ValidationIssueDTO> errorsOf(ValidationReportDTO report) {
         return report.getIssues().stream()
-                .filter(i -> i.getSeverity() == SchemaValidationIssueDTO.Severity.ERROR)
+                .filter(i -> i.getSeverity() == ValidationSeverity.ERROR)
                 .toList();
     }
 
     protected boolean hasIssue(
-            SchemaValidationReportDTO report,
-            SchemaValidationIssueDTO.Severity severity,
+            ValidationReportDTO report,
+            ValidationSeverity severity,
             String uri,
             String messagePart) {
         return report.getIssues().stream()

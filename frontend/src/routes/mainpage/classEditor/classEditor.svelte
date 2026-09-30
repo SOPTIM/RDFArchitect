@@ -25,11 +25,7 @@
         eventStack,
         EventType,
     } from "$lib/eventhandling/closeEventManager.svelte.js";
-    import {
-        findSuperClass,
-        mapClassDtoToReactiveClass,
-        mapSuperClassesToInherited,
-    } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
+    import { mapSuperClassesToInherited } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { adoptUnsavedClassChanges } from "$lib/models/reactive/utils/adopt-model-changes-utils.js";
     import {
         ClassType,
@@ -38,14 +34,15 @@
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
     import { classStore } from "$lib/stores/classStore.ts";
-    import { datatypesStore } from "$lib/stores/datatypesStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import {
-        getClasses,
-        getDataTypes,
-        getPackages,
-    } from "./fetch-class-editor-context.js";
+        createClassEditorContextValue,
+        createReactiveClass,
+        loadClassEditorContextData,
+        openClassEditor,
+    } from "./class-editor-context.js";
+    import { getPackages } from "./fetch-class-editor-context.js";
     import ShaclPropertySpecificDialog from "../../shacl/SHACLPropertySpecificDialog.svelte";
     import Associations from "./components/associations/Associations.svelte";
     import Attributes from "./components/attributes/Attributes.svelte";
@@ -71,6 +68,27 @@
         classes: [],
         superClass: null,
         targetClassInfos: [],
+    };
+
+    const editorSource = {
+        get workspaceName() {
+            return workspaceName;
+        },
+        get graphUri() {
+            return graphUri;
+        },
+        get classUuid() {
+            return classUuid;
+        },
+        get readOnly() {
+            return isWorkspaceReadOnly;
+        },
+        get data() {
+            return context;
+        },
+        get reactiveClass() {
+            return reactiveClass;
+        },
     };
 
     let isWorkspaceReadOnly = $state(false);
@@ -162,11 +180,13 @@
     onMount(() => {
         eventStack.addEvent(closeClassEditor, EventType.CLASS_EDITOR);
         eventStack.registerActionGuard(withUnsavedChangesCheck);
+        openClassEditor.register(editorSource);
     });
 
     onDestroy(() => {
         eventStack.removeEvent(closeClassEditor);
         eventStack.unregisterActionGuard(withUnsavedChangesCheck);
+        openClassEditor.unregister(editorSource);
     });
 
     function withUnsavedChangesCheck(action) {
@@ -242,34 +262,17 @@
     }
 
     async function loadContext(cancellation) {
-        const [classes, packages, datatypes] = await Promise.all([
-            getClasses(workspaceName, graphUri),
-            getPackages(workspaceName, graphUri),
-            getDataTypes(workspaceName, graphUri),
-        ]);
+        const data = await loadClassEditorContextData(workspaceName, graphUri);
         if (cancellation.cancelled) return;
-        context.classes = classes;
-        context.packages = packages;
-        context.datatypes = datatypes;
-        context.stereotypes = await datatypesStore.getStereotypes(
-            workspaceName,
-            graphUri,
-        );
-        context.namespaces = await workspaceStore.getNamespaces(workspaceName);
+        Object.assign(context, data);
         loadingContext = false;
         editorState.selectedContext.trigger();
     }
 
     async function loadReactiveClass(cancelled, classDTO) {
         if (cancelled.cancelled) return;
-        context.superClass = findSuperClass(context.classes, classDTO);
-        const newReactiveClass = mapClassDtoToReactiveClass(
-            classDTO,
-            context,
-            uuid => context.targetClassInfos.find(cls => cls.uuid === uuid),
-        );
         reactiveClass = adoptUnsavedClassChanges(
-            newReactiveClass,
+            createReactiveClass(classDTO, context),
             reactiveClass,
         );
         const inherited = mapSuperClassesToInherited(
@@ -310,95 +313,24 @@
         propertyShaclRulesDialog.showDialog = true;
     }
 
-    setContext("classEditor", {
-        get workspaceName() {
-            return workspaceName;
-        },
-        get graphUri() {
-            return graphUri;
-        },
-        get readOnly() {
-            return isWorkspaceReadOnly;
-        },
-        get namespaces() {
-            return context.namespaces;
-        },
-        get stereotypes() {
-            return context.stereotypes;
-        },
-        get datatypes() {
-            return context.datatypes;
-        },
-        get classes() {
-            return context.classes;
-        },
-        get packages() {
-            return context.packages;
-        },
-        get reactiveClass() {
-            return reactiveClass;
-        },
-        get targetClassInfos() {
-            return context.targetClassInfos;
-        },
-        get getClassByUuid() {
-            return function (uuid) {
-                const cls = context.classes.find(cls => cls.uuid === uuid);
-                if (cls) {
-                    return cls;
+    setContext(
+        "classEditor",
+        createClassEditorContextValue(
+            () => editorSource,
+            classUuidToOpen => {
+                if (!classUuidToOpen) return;
+                if (!reactiveClass?.isModified) {
+                    multiSelectState.clear();
                 }
-                return context.superClass?.uuid === uuid
-                    ? context.superClass
-                    : undefined;
-            };
-        },
-        get getTargetClassInfoByUuid() {
-            return function (uuid) {
-                return context.targetClassInfos.find(cls => cls.uuid === uuid);
-            };
-        },
-        get getSubstitutedNamespace() {
-            return function (namespace) {
-                const namespaceObj = context.namespaces.find(
-                    p => p.prefix === namespace,
-                );
-                let returnValue = namespaceObj
-                    ? namespaceObj.substitutedPrefix
-                    : namespace;
-                if (returnValue && returnValue.endsWith(":")) {
-                    returnValue = returnValue.slice(0, -1);
-                }
-                return returnValue;
-            };
-        },
-        get getDatatypeByUri() {
-            return function (uri) {
-                return context.datatypes.find(
-                    dt => dt.prefix + dt.label === uri,
-                );
-            };
-        },
-        get getPackageByUuid() {
-            return function (uuid) {
-                return context.packages.find(pkg => pkg.uuid === uuid);
-            };
-        },
-        addTargetClassInfo(classInfo) {
-            context.targetClassInfos = [...context.targetClassInfos, classInfo];
-        },
-        openClass(classUuidToOpen) {
-            if (!classUuidToOpen) return;
-            if (!reactiveClass?.isModified) {
-                multiSelectState.clear();
-            }
-            closeClassEditor({
-                workspaceName,
-                graphUri,
-                classUuid: classUuidToOpen,
-                classType: ClassType.SINGLE_CLASS,
-            });
-        },
-    });
+                closeClassEditor({
+                    workspaceName,
+                    graphUri,
+                    classUuid: classUuidToOpen,
+                    classType: ClassType.SINGLE_CLASS,
+                });
+            },
+        ),
+    );
 </script>
 
 <div class="relative h-full w-full">

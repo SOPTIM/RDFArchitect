@@ -28,4 +28,6 @@ Layout positions are persisted as RDF using a small custom vocabulary under `dl/
 
 ## Migration scripts
 
-The migration generator stitches together templates from `src/main/resources/sparql-templates/migration/`. Each template is a parameterised SPARQL UPDATE block — `class-renamed.sparql`, `attribute-renamed.sparql`, etc. The composer is in `services/schemamigration/`. Adding a new migration capability means: (1) adding the template, (2) wiring it into the composer, and (3) extending the wizard's confirmation step DTOs and UI.
+The migration generator stitches together templates from `src/main/resources/sparql-templates/migration/`. Each template is a parameterised SPARQL UPDATE block — `class-renamed.sparql`, `attribute-renamed.sparql`, etc. — filled in by `SparqlUpdateGenerator`; `SparqlMigrationBuilder` decides which block a given semantic change needs and in which order the blocks are emitted. Both live in `services/schemamigration/artifacts/`. Adding a new migration capability means: (1) adding the template, (2) wiring it into the composer, and (3) extending the wizard's confirmation step DTOs and UI.
+
+The comment a user enters for a change in the wizard's review step is emitted as `#` lines directly above the block it belongs to, so the script carries its own rationale. The wizard's other artefact, the Markdown migration report, is not SPARQL at all — see [Backend Architecture](./backend-architecture#generated-artefacts) for where it is built.

@@ -49,6 +49,14 @@ function getNodeIntersection(
     const x1 = targetPos.x + (targetNode.measured.width ?? 0) / 2;
     const y1 = targetPos.y + (targetNode.measured.height ?? 0) / 2 + offsetY;
 
+    // Two classes share a centre for as long as a diagram has not been laid out, where every
+    // class still sits at (0,0), and again whenever one is dropped on top of another. There is
+    // no border intersection to compute then, and the formula below would turn 0 * Infinity
+    // into NaN — which travels on into the edge path and the placement of its labels.
+    if (w === 0 || h === 0 || (x1 === x2 && y1 === y2)) {
+        return { x: x2, y: y2 };
+    }
+
     const xx1 = (x1 - x2) / (2 * w) - (y1 - y2) / (2 * h);
     const yy1 = (x1 - x2) / (2 * w) + (y1 - y2) / (2 * h);
 

@@ -54,6 +54,10 @@ public class CIMStereotypes {
 
     public final Literal primitive = ResourceFactory.createPlainLiteral(primitiveString);
 
+    public final String compoundString = "Compound";
+
+    public final Literal compound = ResourceFactory.createPlainLiteral(compoundString);
+
     public final String enumLiteralString = "enum";
 
     public final Literal enumLiteral = ResourceFactory.createPlainLiteral(enumLiteralString);

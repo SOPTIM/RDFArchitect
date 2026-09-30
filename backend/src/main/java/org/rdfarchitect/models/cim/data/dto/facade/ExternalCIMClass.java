@@ -71,9 +71,15 @@ public class ExternalCIMClass implements ICIMClass {
 
     @Override
     public RDFSLabel getLabel() {
+        var label = getLabelOrNull();
+        return label != null ? label : new RDFSLabel(getUri().getSuffix());
+    }
+
+    @Override
+    public RDFSLabel getLabelOrNull() {
         var statement = model.getProperty(resource, RDFS.label);
         if (statement == null || !statement.getObject().isLiteral()) {
-            return new RDFSLabel(getUri().getSuffix());
+            return null;
         }
         var langLiteral = statement.getObject().asLiteral();
         return new RDFSLabel(langLiteral.getString(), langLiteral.getLanguage());

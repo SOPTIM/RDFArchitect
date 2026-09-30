@@ -26,6 +26,7 @@ const sidebars = {
     'user-guide/namespaces',
     'user-guide/profile-header',
     'user-guide/shacl',
+    'user-guide/validation',
     'user-guide/history',
     'user-guide/comparing-schemas',
     'user-guide/migration',

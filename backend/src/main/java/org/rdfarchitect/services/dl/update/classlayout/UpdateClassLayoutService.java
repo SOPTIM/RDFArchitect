@@ -85,6 +85,11 @@ public class UpdateClassLayoutService
                     packageDTO != null
                             ? packageMapper.toCIMObject(packageDTO).getUuid()
                             : diagramLayout.getDefaultPackageMRID().getUuid();
+            // Layout data is only created once a package is opened, so the diagram this object
+            // belongs to may still be missing. Without it both fetch queries skip the object.
+            if (DLObjectFetcher.fetchDiagram(diagramLayoutModel, packageUUID) == null) {
+                DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, packageUUID, "");
+            }
 
             var existingDiagramObject =
                     DLObjectFetcher.fetchDiagramDOForClass(

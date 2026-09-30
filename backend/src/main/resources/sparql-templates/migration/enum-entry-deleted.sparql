@@ -4,4 +4,4 @@ DELETE {
     ?instance ?attribute ?replacementValue .
 } WHERE {
     ?instance ?attribute ?enumEntry .
-}
+};

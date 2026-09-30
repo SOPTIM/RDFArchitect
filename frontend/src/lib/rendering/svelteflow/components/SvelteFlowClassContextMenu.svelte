@@ -27,6 +27,8 @@
         faObjectGroup,
         faTrash,
         faDiagramProject,
+        faEye,
+        faGear,
     } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
@@ -61,6 +63,7 @@
         nodeOrder = [],
         nodeCount = 0,
         onClose = () => {},
+        onOpenClass = () => {},
         onMoveClass = () => {},
         onSetLayer = () => {},
         onPersistLayer = () => {},
@@ -226,6 +229,11 @@
         onPersistLayer({ classUuid: contextMenuClass.uuid, layer: clamped });
     }
 
+    function openClass() {
+        onOpenClass(contextMenuClass.uuid);
+        onClose();
+    }
+
     function copyClass() {
         copyState.set(
             multiSelectState.copyEntriesOr({
@@ -247,6 +255,15 @@
         {disabled}
     />
     <ContextMenu.Content>
+        {#if !multiActive && contextMenuClass}
+            <ContextMenu.Item.Button
+                onSelect={openClass}
+                faIcon={readOnly ? faEye : faGear}
+            >
+                {readOnly ? "View Class" : "Edit Class"}
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+        {/if}
         {#if !isMergedDiagram}
             <ContextMenu.Item.Button
                 onSelect={copyClass}

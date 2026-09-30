@@ -17,6 +17,7 @@
 <script>
     import { getContext } from "svelte";
 
+    import { claimFocus } from "$lib/actions/claimFocus.js";
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import NumberInputControl from "$lib/components/NumberInputControl.svelte";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
@@ -24,9 +25,10 @@
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
+    import { FocusField } from "$lib/propertyEditorRequest.svelte.js";
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
-    const { association } = $props();
+    const { association, focusField = null } = $props();
 
     const classEditorContext = getContext("classEditor");
     const readonly = classEditorContext.readOnly;
@@ -82,7 +84,10 @@
     </div>
 
     <!-- Row 3: Label -->
-    <div class="col-start-1 row-start-3 pl-2">
+    <div
+        class="col-start-1 row-start-3 pl-2"
+        use:claimFocus={focusField === FocusField.LABEL}
+    >
         <TextEditControl
             label="Label:"
             placeholder="association label..."
@@ -129,7 +134,10 @@
     </div>
 
     <!-- Row 5: Multiplicity LowerBound -->
-    <div class="col-start-1 row-start-5 pl-2">
+    <div
+        class="col-start-1 row-start-5 pl-2"
+        use:claimFocus={focusField === FocusField.MULTIPLICITY}
+    >
         <NumberInputControl
             label="Multiplicity LowerBound:"
             placeholder="multiplicity LowerBound..."

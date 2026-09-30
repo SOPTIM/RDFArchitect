@@ -15,16 +15,28 @@
  *
  */
 
-package org.rdfarchitect.services.dl.update.packagelayout;
+package org.rdfarchitect.api.dto.validation;
 
-import org.rdfarchitect.database.GraphIdentifier;
+import lombok.Builder;
+import lombok.Data;
 
-public interface CreateDiagramLayoutUseCase {
+import java.util.List;
 
-    /**
-     * Creates the initial diagram layout structure for a newly imported graph
-     *
-     * @param graphIdentifier the identifier of the graph
-     */
-    void createDiagramLayout(GraphIdentifier graphIdentifier);
+@Data
+@Builder
+public class ValidationIssueDTO {
+
+    @Builder.Default private IssueKind kind = IssueKind.RULE;
+
+    private String ruleId;
+
+    private String ruleLabel;
+
+    private ValidationSeverity severity;
+
+    private String resourceUri;
+
+    private String message;
+
+    @Builder.Default private List<IssueOccurrenceDTO> occurrences = List.of();
 }

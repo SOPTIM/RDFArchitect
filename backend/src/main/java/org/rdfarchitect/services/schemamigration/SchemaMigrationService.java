@@ -34,7 +34,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.changes.MappingType;
 import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
-import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
@@ -42,6 +41,7 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticPropertyChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.rdf.graph.GraphUtils;
@@ -345,12 +345,17 @@ public class SchemaMigrationService
                             == SemanticResourceChangeType.DELETE;
             association.setAssociationUsed(
                     isAssociationUsed(
-                            association.getIri(), deleted ? originalModel : updatedModel));
+                            association.getIri(),
+                            deleted ? originalModel : updatedModel,
+                            deleted ? updatedModel : originalModel));
         }
     }
 
-    private boolean isAssociationUsed(String iri, Model model) {
-        var association = model.getResource(iri);
+    private boolean isAssociationUsed(String iri, Model preferred, Model fallback) {
+        var association = preferred.getResource(iri);
+        if (!association.hasProperty(CIMS.associationUsed)) {
+            association = fallback.getResource(iri);
+        }
         return CIMPropertyUtils.isAssociationUsed(association);
     }
 

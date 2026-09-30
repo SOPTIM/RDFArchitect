@@ -24,13 +24,11 @@ import org.rdfarchitect.api.dto.association.AssociationPairMapper;
 import org.rdfarchitect.api.dto.attributes.AttributeMapper;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryMapper;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
-import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSSubClassOf;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 
-import java.util.Collections;
 import java.util.List;
 
 @Mapper(
@@ -59,13 +57,6 @@ public interface ClassUMLAdaptedMapper {
 
     List<CIMClassUMLAdapted> toCIMObjectList(List<ClassUMLAdaptedDTO> dtoList);
 
-    default List<String> mapStereotypes(List<CIMSStereotype> stereotypes) {
-        if (stereotypes == null || stereotypes.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return stereotypes.stream().map(CIMSStereotype::getStereotype).toList();
-    }
-
     default ClassUMLAdaptedDTO mapSuperClass(RDFSSubClassOf superClass) {
         if (superClass == null) {
             return null;
@@ -86,12 +77,5 @@ public interface ClassUMLAdaptedMapper {
         }
         return new RDFSSubClassOf(
                 new URI(dto.getPrefix() + dto.getLabel()), new RDFSLabel(dto.getLabel(), "en"));
-    }
-
-    default List<CIMSStereotype> buildStereotypes(List<String> stereotypes) {
-        if (stereotypes == null || stereotypes.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return stereotypes.stream().map(CIMSStereotype::new).toList();
     }
 }

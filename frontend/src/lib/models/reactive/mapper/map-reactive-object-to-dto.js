@@ -139,6 +139,7 @@ export function mapReactiveAttributeToAttributeDto(
         comment: attribute.comment,
         fixedValue: attribute.fixedValue,
         defaultValue: attribute.defaultValue,
+        stereotypes: attribute.stereotypes,
     };
 }
 

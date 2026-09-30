@@ -15,18 +15,32 @@
  *
  */
 
-package org.rdfarchitect.api.dto.validation;
+package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 
 import lombok.Builder;
 import lombok.Data;
 
-import java.util.List;
+import java.util.UUID;
 
+/**
+ * DTO representing an association end rendered as text inside a SvelteFlow class node. The
+ * association is still drawn as an edge independently of this.
+ */
 @Data
 @Builder
-public class SchemaValidationReportDTO {
+public class AssociationDTO {
 
-    private boolean valid;
+    /** The UUID of the association end. */
+    private UUID uuid;
 
-    private List<SchemaValidationIssueDTO> issues;
+    /** The role name of this association end, or null when the model holds none. */
+    private String label;
+
+    /** The label of the class this association end points to. */
+    private String rangeLabel;
+
+    private String multiplicity;
+    private String graphUri;
+    private String graphKeyword;
+    private String color;
 }

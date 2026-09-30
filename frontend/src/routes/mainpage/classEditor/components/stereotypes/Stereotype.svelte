@@ -26,7 +26,12 @@
     import { CONCRETE_STEREOTYPE } from "$lib/models/stereotype-constants.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
-    let { classStereotypes, stereotype } = $props();
+    let {
+        classStereotypes,
+        stereotype,
+        readonlyStereotypes = [],
+        iconButtonVariant = "default",
+    } = $props();
 
     const classEditorContext = getContext("classEditor");
 
@@ -43,6 +48,17 @@
     let isManagedConcrete = $derived(
         stereotype.value === CONCRETE_STEREOTYPE && !stereotype.isModified,
     );
+
+    // Entries listed in `readonlyStereotypes` are set by the backend and must
+    // stay visible but non-editable/non-removable as long as they were not
+    // modified/added manually. A row the user has explicitly added (even with
+    // the same value) is a distinct, modified entry and stays fully editable.
+    let isProtected = $derived(
+        readonlyStereotypes.includes(stereotype.value) &&
+            !stereotype.isModified,
+    );
+
+    let effectiveReadonly = $derived(readonly || isProtected);
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
@@ -77,13 +93,14 @@
                     warn={!stereotype.isValid}
                     buttons={getControlButtonsForReactiveObject(
                         stereotype,
-                        readonly,
+                        effectiveReadonly,
                     )}
-                    {readonly}
+                    readonly={effectiveReadonly}
                 />
-                {#if !readonly}
+                {#if !readonly && !isProtected}
                     <div class="size-8">
                         <FaIconButton
+                            variant={iconButtonVariant}
                             icon={faMinus}
                             callOnClick={() =>
                                 classStereotypes.remove(stereotype, true)}

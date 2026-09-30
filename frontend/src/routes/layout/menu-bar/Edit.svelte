@@ -111,7 +111,7 @@
             selectedPackageDetails.label !== "default" &&
             !isWorkspaceReadOnly,
     );
-    let graphHasOntology = $derived(!!ontology);
+    let graphHasOntology = $derived(!!ontology?.uuid);
 
     let mergedDiagramShown = $derived(
         isMergedDiagramType(editorState.selectedDiagram.getProperty("type")),

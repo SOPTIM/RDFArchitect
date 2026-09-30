@@ -15,13 +15,24 @@
  *
  */
 
+import { ReactiveObjectsArrayWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-objects-array-wrapper.svelte.js";
 import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
 import {
     isInvalidLabel,
     isInvalidMultiplicityLowerBound,
     isInvalidMultiplicityUpperBound,
+    isInvalidStereotype,
     isInvalidUuid,
 } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+
+function initializeAttributeStereotypeViolationChecks(
+    stereotype,
+    stereotypesArray,
+) {
+    stereotype.violationChecks.push(value =>
+        isInvalidStereotype(value, stereotypesArray),
+    );
+}
 
 export class ReactiveAttribute {
     constructor({
@@ -34,6 +45,7 @@ export class ReactiveAttribute {
         comment = null,
         fixedValue = null,
         defaultValue = null,
+        stereotypes = [],
     } = {}) {
         this.uuid = new ReactiveValueWrapper(uuid, isInvalidUuid);
         this.label = new ReactiveValueWrapper(label, isInvalidLabel);
@@ -58,6 +70,11 @@ export class ReactiveAttribute {
         this.comment = new ReactiveValueWrapper(comment);
         this.fixedValue = new ReactiveValueWrapper(fixedValue);
         this.defaultValue = new ReactiveValueWrapper(defaultValue);
+        this.stereotypes = new ReactiveObjectsArrayWrapper(
+            stereotypes,
+            ReactiveValueWrapper,
+            initializeAttributeStereotypeViolationChecks,
+        );
     }
 
     /**
@@ -115,6 +132,12 @@ export class ReactiveAttribute {
      */
     defaultValue;
 
+    /**
+     * An array of stereotypes in string representation applied to this attribute
+     * @type {ReactiveObjectsArrayWrapper<ReactiveValueWrapper<string>>}
+     */
+    stereotypes;
+
     // noinspection JSUnresolvedFunction
     /**
      * Indicates whether this attribute has changes
@@ -129,7 +152,8 @@ export class ReactiveAttribute {
             this.datatype.isModified ||
             this.comment.isModified ||
             this.fixedValue.isModified ||
-            this.defaultValue.isModified,
+            this.defaultValue.isModified ||
+            this.stereotypes.isModified,
     );
 
     // noinspection JSUnresolvedFunction
@@ -146,7 +170,8 @@ export class ReactiveAttribute {
             this.datatype.isValid &&
             this.comment.isValid &&
             this.fixedValue.isValid &&
-            this.defaultValue.isValid,
+            this.defaultValue.isValid &&
+            this.stereotypes.isValid,
     );
 
     /**
@@ -162,6 +187,7 @@ export class ReactiveAttribute {
         this.comment.reset();
         this.fixedValue.reset();
         this.defaultValue.reset();
+        this.stereotypes.reset();
     }
 
     /**
@@ -177,6 +203,7 @@ export class ReactiveAttribute {
         this.comment.save();
         this.fixedValue.save();
         this.defaultValue.save();
+        this.stereotypes.save();
     }
 
     /**
@@ -216,6 +243,7 @@ export class ReactiveAttribute {
             comment: this.comment.getPlainObject(),
             fixedValue: this.fixedValue.getPlainObject(),
             defaultValue: this.defaultValue.getPlainObject(),
+            stereotypes: this.stereotypes.getPlainObject(),
         };
     }
 }

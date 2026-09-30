@@ -15,24 +15,33 @@
  *
  */
 
-package org.rdfarchitect.api.dto.validation;
+export const PropertyKind = {
+    ATTRIBUTE: "attribute",
+    ASSOCIATION: "association",
+    ENUM_ENTRY: "enumEntry",
+};
 
-import lombok.Builder;
-import lombok.Data;
+export const FocusField = {
+    LABEL: "label",
+    MULTIPLICITY: "multiplicity",
+};
 
-@Data
-@Builder
-public class SchemaValidationIssueDTO {
+export const propertyEditorRequest = createPropertyEditorRequest();
 
-    public enum Severity {
-        ERROR,
-        WARNING,
-        INFO
-    }
+function createPropertyEditorRequest() {
+    let request = $state(null);
 
-    private String resourceUri;
+    return {
+        get current() {
+            return request;
+        },
 
-    private String message;
+        open(target) {
+            request = { ...target };
+        },
 
-    private Severity severity;
+        close() {
+            request = null;
+        },
+    };
 }
