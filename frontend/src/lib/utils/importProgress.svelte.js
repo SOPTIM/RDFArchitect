@@ -19,6 +19,8 @@
 export const ImportPhase = {
     UPLOADING: "uploading",
     IMPORTING: "importing",
+    /** Held up by namespace prefixes that need a decision before anything is stored. */
+    RESOLVING: "resolving",
     FINISHED: "finished",
 };
 
@@ -34,9 +36,18 @@ export const FileState = {
 /** How the job as a whole ended, mirroring the states of the backend. */
 export const JobState = {
     RUNNING: "RUNNING",
+    SCANNING_PREFIXES: "SCANNING_PREFIXES",
+    AWAITING_PREFIX_RESOLUTION: "AWAITING_PREFIX_RESOLUTION",
     COMPLETED: "COMPLETED",
     CANCELLED: "CANCELLED",
     FAILED: "FAILED",
+};
+
+/** Which phase a job state puts the import in; everything else has it finished. */
+const PHASE_BY_JOB_STATE = {
+    [JobState.RUNNING]: ImportPhase.IMPORTING,
+    [JobState.SCANNING_PREFIXES]: ImportPhase.IMPORTING,
+    [JobState.AWAITING_PREFIX_RESOLUTION]: ImportPhase.RESOLVING,
 };
 
 /**
@@ -84,6 +95,13 @@ export class ImportProgress {
     failedImports = $state([]);
     /** @type {{fileName: string, undisplayableProperties: string[]}[]} */
     warnings = $state([]);
+    /**
+     * Every prefix of the workspace and of the import, side by side; empty unless the import is
+     * waiting for a decision on them.
+     *
+     * @type {{prefix: string, workspace: object|null, imported: object[], contested: boolean}[]}
+     */
+    prefixComparison = $state([]);
     /** Set when the import could not be started or ended unexpectedly. */
     errorMessage = $state(null);
     cancelling = $state(false);
@@ -102,6 +120,11 @@ export class ImportProgress {
 
     get finished() {
         return this.phase === ImportPhase.FINISHED;
+    }
+
+    /** Whether the import is held up by prefixes the user has to decide on. */
+    get awaitingPrefixResolution() {
+        return this.phase === ImportPhase.RESOLVING;
     }
 
     get failed() {
@@ -130,7 +153,12 @@ export class ImportProgress {
         switch (this.phase) {
             case ImportPhase.UPLOADING:
                 return "Uploading the files…";
+            case ImportPhase.RESOLVING:
+                return "Waiting for your decision on the namespace prefixes…";
             case ImportPhase.IMPORTING: {
+                if (this.jobState === JobState.SCANNING_PREFIXES) {
+                    return "Checking the namespace prefixes…";
+                }
                 const running = this.files.find(
                     file => file.state === FileState.RUNNING,
                 );
@@ -143,12 +171,13 @@ export class ImportProgress {
         }
     }
 
-    /** Applies a status the backend reported for the job. */
+    /**
+     * Applies a status the backend reported for the job. The prefix comparison is taken only
+     * once: a job reports the same one with every poll, and replacing it would throw away what
+     * the user is entering on it.
+     */
     apply(status) {
-        this.phase =
-            status.state === JobState.RUNNING
-                ? ImportPhase.IMPORTING
-                : ImportPhase.FINISHED;
+        this.phase = PHASE_BY_JOB_STATE[status.state] ?? ImportPhase.FINISHED;
         this.files = (status.files ?? []).map(file => ({
             index: file.index ?? 0,
             fileName: file.fileName ?? "",
@@ -160,6 +189,13 @@ export class ImportProgress {
         this.importedGraphUris = status.importedGraphUris ?? [];
         this.failedImports = status.failedImports ?? [];
         this.warnings = status.warnings ?? [];
+        const reportedComparison = status.prefixComparison ?? [];
+        if (
+            reportedComparison.length === 0 ||
+            this.prefixComparison.length === 0
+        ) {
+            this.prefixComparison = reportedComparison;
+        }
         if (status.state === JobState.FAILED) {
             this.errorMessage =
                 status.errorMessage ?? "The import ended unexpectedly.";

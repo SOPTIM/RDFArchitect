@@ -52,6 +52,26 @@ public interface ImportProgressListener {
     /** The files to import are known. Called once, before the first file is started. */
     default void planned(List<PlannedImport> plannedImports) {}
 
+    /**
+     * The import is reading the namespace prefixes of the planned files to find out whether any of
+     * them collide. Called once, after {@link #planned(List)} and before the first file is stored.
+     */
+    default void scanningPrefixes() {}
+
+    /**
+     * Asks what to do with the prefixes of the import once at least one of them is contested. The
+     * import blocks on this call, so an implementation that lets a user decide may take as long as
+     * it needs; it only has to return, or report itself {@link #isCancelled() cancelled}, for the
+     * import to go on.
+     *
+     * @param comparison every prefix of the dataset and of the import, contested ones marked
+     * @return what to do with each prefix; a binding without an answer keeps its default, which
+     *     leaves the prefixes of the dataset as they are
+     */
+    default ResolvedPrefixes awaitResolvedPrefixes(List<PrefixComparison> comparison) {
+        return ResolvedPrefixes.none();
+    }
+
     default void started(int index) {}
 
     default void finished(int index, Outcome outcome, String graphUri) {}

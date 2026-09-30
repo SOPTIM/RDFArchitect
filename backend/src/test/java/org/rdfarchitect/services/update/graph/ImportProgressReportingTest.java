@@ -147,14 +147,12 @@ class ImportProgressReportingTest {
 
     @Test
     void importGraphs_zipEntryUnreadableHalfWayThrough_leavesNoEntryUnreported() throws Exception {
-        // The plan reads the archive once and the import reads it again, so an archive that only
-        // survives the first pass breaks exactly where a file has already been taken off the plan.
         var archive =
                 zip(new LinkedHashMap<>(Map.of("a.ttl", SCHEMA, "b.ttl", SCHEMA, "c.ttl", SCHEMA)));
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        "ds", List.of(readableOnce(archive)), null, listener);
+                        "ds", List.of(readableUntilImported(archive)), null, listener);
 
         assertThat(listener.planned).hasSize(3);
         // Whatever the archive still managed to give up, no planned entry may be left without an
@@ -162,6 +160,21 @@ class ImportProgressReportingTest {
         assertThat(listener.outcomes).hasSameSizeAs(listener.planned);
         assertThat(result.importedGraphUris().size() + result.failedFileNames().size())
                 .isEqualTo(listener.planned.size());
+    }
+
+    @Test
+    void importGraphs_zipTheScanCannotRead_importsNoEntryBehindTheQuestion() throws Exception {
+        var archive =
+                zip(new LinkedHashMap<>(Map.of("a.ttl", SCHEMA, "b.ttl", SCHEMA, "c.ttl", SCHEMA)));
+
+        var result =
+                importGraphsUseCase.importGraphs(
+                        "ds", List.of(unscannable(archive)), null, listener);
+
+        assertThat(listener.planned).hasSize(3);
+        assertThat(listener.outcomes.values()).containsOnly(Outcome.FAILED);
+        assertThat(result.importedGraphUris()).isEmpty();
+        assertThat(result.failedFileNames()).containsExactlyInAnyOrder("a.ttl", "b.ttl", "c.ttl");
     }
 
     @Test
@@ -179,10 +192,10 @@ class ImportProgressReportingTest {
     }
 
     /**
-     * The archive as uploaded on the first read and a truncated one on every read after that, so
-     * that the plan pass sees a whole archive and the import pass runs into a broken stream.
+     * The archive as uploaded to the plan and the prefix scan, and a truncated one to every read
+     * after those, so that the import pass is the one that runs into a broken stream.
      */
-    private MultipartFile readableOnce(MultipartFile archive) throws IOException {
+    private MultipartFile readableUntilImported(MultipartFile archive) throws IOException {
         var content = archive.getBytes();
         var truncated = Arrays.copyOf(content, content.length / 2);
         var reads = new AtomicInteger();
@@ -190,7 +203,28 @@ class ImportProgressReportingTest {
                 "files", archive.getOriginalFilename(), "application/zip", content) {
             @Override
             public InputStream getInputStream() {
-                return new ByteArrayInputStream(reads.getAndIncrement() == 0 ? content : truncated);
+                return new ByteArrayInputStream(reads.getAndIncrement() < 2 ? content : truncated);
+            }
+        };
+    }
+
+    /** The archive on every pass but the prefix scan, which runs into a stream it cannot read. */
+    private MultipartFile unscannable(MultipartFile archive) throws IOException {
+        var content = archive.getBytes();
+        var reads = new AtomicInteger();
+        return new MockMultipartFile(
+                "files", archive.getOriginalFilename(), "application/zip", content) {
+            @Override
+            public InputStream getInputStream() {
+                if (reads.getAndIncrement() != 1) {
+                    return new ByteArrayInputStream(content);
+                }
+                return new InputStream() {
+                    @Override
+                    public int read() throws IOException {
+                        throw new IOException("stream broke");
+                    }
+                };
             }
         };
     }

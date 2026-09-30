@@ -1007,9 +1007,17 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "prefixComparison" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PrefixComparison"
+            },
+            "type" : "array"
+          },
           "state" : {
             "enum" : [
               "RUNNING",
+              "SCANNING_PREFIXES",
+              "AWAITING_PREFIX_RESOLUTION",
               "COMPLETED",
               "CANCELLED",
               "FAILED"
@@ -1337,6 +1345,62 @@
             "type" : "string"
           },
           "memberName" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PrefixBinding" : {
+        "properties" : {
+          "fileNames" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "iri" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PrefixComparison" : {
+        "properties" : {
+          "contested" : {
+            "type" : "boolean"
+          },
+          "imported" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PrefixBinding"
+            },
+            "type" : "array"
+          },
+          "prefix" : {
+            "type" : "string"
+          },
+          "workspace" : {
+            "$ref" : "#/components/schemas/PrefixBinding"
+          }
+        },
+        "type" : "object"
+      },
+      "PrefixResolutionDTO" : {
+        "properties" : {
+          "action" : {
+            "enum" : [
+              "KEEP",
+              "RENAME",
+              "DROP"
+            ],
+            "type" : "string"
+          },
+          "iri" : {
+            "type" : "string"
+          },
+          "newPrefix" : {
+            "type" : "string"
+          },
+          "prefix" : {
             "type" : "string"
           }
         },
@@ -3362,6 +3426,75 @@
           }
         },
         "summary" : "Get the progress of an import",
+        "tags" : [
+          "graph"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/content/imports/{jobId}/prefix-resolutions" : {
+      "put" : {
+        "description" : "Hands an import that is waiting for namespace prefix decisions the decisions it asked for and lets it go on. A contested namespace left out of the request is imported without a prefix, leaving the prefixes of the dataset as they are.",
+        "operationId" : "resolvePrefixConflicts",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the import job.",
+            "in" : "path",
+            "name" : "jobId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "description" : "What to do with each contested namespace binding.",
+                "items" : {
+                  "$ref" : "#/components/schemas/PrefixResolutionDTO"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Import continues"
+          },
+          "400" : {
+            "description" : "Invalid namespace prefix"
+          },
+          "404" : {
+            "description" : "No such import job"
+          },
+          "409" : {
+            "description" : "The import is not waiting for decisions"
+          }
+        },
+        "summary" : "Resolve the namespace prefix conflicts of an import",
         "tags" : [
           "graph"
         ]
