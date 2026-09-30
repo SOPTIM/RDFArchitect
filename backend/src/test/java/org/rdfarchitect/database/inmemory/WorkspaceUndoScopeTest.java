@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -195,6 +196,33 @@ class WorkspaceUndoScopeTest {
             try (var transaction = workspace.begin(ReadWrite.READ)) {
                 assertThat(transaction.graph(GRAPH_A).getCustomDiagrams().get(diagramId).getName())
                         .isEqualTo("before");
+            }
+        }
+
+        @Test
+        void undo_ofALayoutChangeInTheWorkspaceDiagram_restoresThePreviousLayout() {
+            // The workspace has a layout of its own, for the cross-profile and custom workspace
+            // diagrams. It takes part in the same stack as the graph-scoped ones.
+            var subject = ResourceFactory.createResource("urn:diagramObject");
+            var position = ResourceFactory.createProperty("urn:x");
+
+            try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+                transaction
+                        .layout()
+                        .getDiagramLayoutModel()
+                        .add(subject, position, ResourceFactory.createPlainLiteral("120"));
+                transaction.commit("laid out the workspace diagram");
+            }
+
+            assertThat(workspace.getChangeHistory().getFirst().participants())
+                    .extracting(version -> version.id().kind())
+                    .containsExactly(ParticipantId.Kind.DL);
+
+            workspace.undo();
+
+            try (var transaction = workspace.begin(ReadWrite.READ)) {
+                assertThat(transaction.layout().getDiagramLayoutModel().contains(subject, position))
+                        .isFalse();
             }
         }
 
