@@ -19,6 +19,7 @@ package org.rdfarchitect.services.update.dataset;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
@@ -63,6 +64,9 @@ public class UpdateDatasetService
             }
             prefixMapping.setNsPrefix(substitutedPrefix, namespace.getPrefix());
         }
-        databasePort.setPrefixMapping(datasetName, prefixMapping);
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            transaction.setPrefixes(prefixMapping);
+            transaction.commit("changed the namespace prefixes");
+        }
     }
 }

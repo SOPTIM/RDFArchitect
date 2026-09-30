@@ -19,11 +19,9 @@ package org.rdfarchitect.database.inmemory;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
-import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
@@ -32,7 +30,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
-import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 
 import java.util.List;
 import java.util.UUID;
@@ -62,6 +59,13 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
+    public void createWorkspaceIfAbsent(String workspaceName) {
+        if (!getOrCreateSessionDataStore().listDatasets().contains(workspaceName)) {
+            createDataset(workspaceName);
+        }
+    }
+
+    @Override
     public void deleteDataset(String datasetName) {
         getOrCreateSessionDataStore().deleteDataset(datasetName);
     }
@@ -69,11 +73,6 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     @Override
     public void renameDataset(String oldDatasetName, String newDatasetName) {
         getOrCreateSessionDataStore().renameDataset(oldDatasetName, newDatasetName);
-    }
-
-    @Override
-    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri) {
-        getOrCreateSessionDataStore().renameGraph(graphIdentifier, newGraphUri);
     }
 
     @Override
@@ -116,56 +115,16 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
         return getOrCreateSessionDataStore().listChanges(workspaceName);
     }
 
-    @Override
-    public void createGraph(GraphIdentifier graphIdentifier, Graph newGraph) {
-        var store = getOrCreateSessionDataStore();
-        store.create(graphIdentifier, newGraph);
-        var currentPrefixMapping =
-                new PrefixMappingImpl()
-                        .setNsPrefixes(store.getPrefixMapping(graphIdentifier.datasetName()))
-                        .setNsPrefixes(newGraph.getPrefixMapping());
-        store.setPrefixMapping(graphIdentifier.datasetName(), currentPrefixMapping);
-        assignCrossProfileColor(store, graphIdentifier);
-    }
-
-    @Override
-    public void createEmptyGraph(GraphIdentifier graphIdentifier) {
-        var store = getOrCreateSessionDataStore();
-        var datasetName = graphIdentifier.datasetName();
-        var isNewDataset = !store.listDatasets().contains(datasetName);
-        store.create(graphIdentifier, GraphFactory.createDefaultGraph());
-        assignCrossProfileColor(store, graphIdentifier);
-        if (isNewDataset) {
-            initializeNewDataset(store, datasetName);
-        }
-    }
-
-    private void assignCrossProfileColor(SessionDataStore store, GraphIdentifier graphIdentifier) {
-        try (var transaction =
-                store.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            transaction
-                    .crossProfileInfo()
-                    .setColor(
-                            graphIdentifier.graphUri(),
-                            CrossProfileUtils.generateRandomDarkColor());
-            transaction.commit(
-                    "assigned a cross profile colour to %s".formatted(graphIdentifier.graphUri()));
-        }
-    }
-
     private void initializeNewDataset(SessionDataStore store, String datasetName) {
         store.enableEditing(datasetName);
-        var configNamespaces = schemaConfig.getNamespaces();
         var prefixMapping = new PrefixMappingImpl().setNsPrefixes(PrefixMapping.Standard);
-        for (var entry : configNamespaces.entrySet()) {
+        for (var entry : schemaConfig.getNamespaces().entrySet()) {
             prefixMapping.setNsPrefix(entry.getKey(), entry.getValue());
         }
-        store.setPrefixMapping(datasetName, prefixMapping);
-    }
-
-    @Override
-    public void remove(GraphIdentifier graphIdentifier) {
-        getOrCreateSessionDataStore().remove(graphIdentifier);
+        try (var transaction = store.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            transaction.setPrefixes(prefixMapping);
+            transaction.commit("created workspace %s".formatted(datasetName));
+        }
     }
 
     @Override
@@ -181,11 +140,6 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     @Override
     public PrefixMappingReadOnly getPrefixMapping(String datasetName) {
         return getOrCreateSessionDataStore().getPrefixMapping(datasetName);
-    }
-
-    @Override
-    public void setPrefixMapping(String datasetName, PrefixMapping newPrefixes) {
-        getOrCreateSessionDataStore().setPrefixMapping(datasetName, newPrefixes);
     }
 
     @Override

@@ -21,13 +21,13 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.jena.graph.Graph;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
@@ -72,6 +72,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             List<MultipartFile> files,
             List<String> graphUris,
             ImportProgressListener listener) {
+        databasePort.createWorkspaceIfAbsent(datasetName);
         var sources = planSources(files, graphUris);
         listener.planned(
                 sources.stream()
@@ -476,9 +477,13 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     }
 
     private void replaceGraph(String datasetName, String graphUri, Graph graph) {
-        var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
-        databasePort.deleteGraph(graphIdentifier);
-        databasePort.createGraph(graphIdentifier, graph);
+        // The graph is fully built by now, so the write lock is only held for the swap and the
+        // workspace stays readable while a large import is being parsed.
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            transaction.deleteGraph(graphUri);
+            transaction.createGraph(graphUri, graph);
+            transaction.commit("imported graph %s".formatted(graphUri));
+        }
     }
 
     /**

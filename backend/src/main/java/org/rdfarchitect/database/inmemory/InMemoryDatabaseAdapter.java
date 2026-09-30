@@ -19,7 +19,6 @@ package org.rdfarchitect.database.inmemory;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.database.DatabaseConnection;
@@ -77,21 +76,6 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
-    public void deleteGraph(GraphIdentifier graphIdentifier) {
-        database.remove(graphIdentifier);
-    }
-
-    @Override
-    public void createGraph(GraphIdentifier graphIdentifier, Graph graph) {
-        database.createGraph(graphIdentifier, graph);
-    }
-
-    @Override
-    public void createEmptyGraph(GraphIdentifier graphIdentifier) {
-        database.createEmptyGraph(graphIdentifier);
-    }
-
-    @Override
     public List<String> listGraphUris(String datasetName) {
         return database.listGraphUris(datasetName);
     }
@@ -99,11 +83,6 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     @Override
     public void persist(DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier) {
         database.writeToDatabase(databaseConnection, graphIdentifier);
-    }
-
-    @Override
-    public void setPrefixMapping(String datasetName, PrefixMapping prefixMapping) {
-        database.setPrefixMapping(datasetName, prefixMapping);
     }
 
     @Override
@@ -117,6 +96,11 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
+    public void createWorkspaceIfAbsent(String workspaceName) {
+        database.createWorkspaceIfAbsent(workspaceName);
+    }
+
+    @Override
     public void deleteDataset(String datasetName) {
         database.deleteDataset(datasetName);
     }
@@ -124,11 +108,6 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     @Override
     public void renameDataset(String oldDatasetName, String newDatasetName) {
         database.renameDataset(oldDatasetName, newDatasetName);
-    }
-
-    @Override
-    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri) {
-        database.renameGraph(graphIdentifier, newGraphUri);
     }
 
     @Override

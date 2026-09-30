@@ -36,6 +36,7 @@ import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagramCollection;
 import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
 import org.rdfarchitect.models.changelog.ParticipantId;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLog;
@@ -45,6 +46,7 @@ import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.rdf.graph.wrapper.TransactionParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
+import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -201,6 +203,26 @@ public class Workspace {
         }
 
         @Override
+        public void createGraph(String graphUri, Graph graph) {
+            Workspace.this.createGraph(graphUri, graph);
+        }
+
+        @Override
+        public void deleteGraph(String graphUri) {
+            Workspace.this.deleteGraph(graphUri);
+        }
+
+        @Override
+        public void renameGraph(String oldGraphUri, String newGraphUri) {
+            Workspace.this.renameGraph(oldGraphUri, newGraphUri);
+        }
+
+        @Override
+        public void setPrefixes(PrefixMapping prefixMapping) {
+            Workspace.this.setPrefixes(prefixMapping);
+        }
+
+        @Override
         public ReadWrite mode() {
             return txnContext.transactionMode();
         }
@@ -344,38 +366,23 @@ public class Workspace {
         }
         assertValidGraphName(expanded);
         if (!expanded.equals(DEFAULT_GRAPH_NAME)) {
-            throw new IllegalArgumentException("Graph URI " + expanded + " does not exist.");
+            throw new ResourceNotFoundException("Graph URI " + expanded + " does not exist.");
         }
         return graphs.computeIfAbsent(
                 DEFAULT_GRAPH_NAME,
                 _ -> new GraphWithContext(GraphFactory.createDefaultGraph(), txnContext));
     }
 
-    /**
-     * Creates or replaces the graph registered under {@code graphUri}.
-     *
-     * @param graphUri the graph URI
-     * @param newGraph initial graph content
-     */
-    public void create(String graphUri, Graph newGraph) {
-        try (var transaction = begin(ReadWrite.WRITE)) {
-            var expanded = prefixes.expandPrefix(graphUri);
-            assertValidGraphName(expanded);
-            graphs.put(expanded, new GraphWithContext(newGraph, txnContext));
-            transaction.commit("imported graph %s".formatted(expanded));
-        }
+    private void createGraph(String graphUri, Graph newGraph) {
+        var expanded = prefixes.expandPrefix(graphUri);
+        assertValidGraphName(expanded);
+        graphs.put(expanded, new GraphWithContext(newGraph, txnContext));
+        prefixes.setNsPrefixes(newGraph.getPrefixMapping());
+        crossProfileDiagramInfo.setColor(expanded, CrossProfileUtils.generateRandomDarkColor());
     }
 
-    /**
-     * Registers the graph currently known as {@code oldGraphUri} under {@code newGraphUri} and
-     * rewrites every reference to it inside this workspace. The graph itself, including its
-     * history, is kept as is.
-     *
-     * @param oldGraphUri the graph URI to rename
-     * @param newGraphUri the graph URI to rename to
-     */
-    public void rename(String oldGraphUri, String newGraphUri) {
-        try (var transaction = begin(ReadWrite.WRITE)) {
+    private void renameGraph(String oldGraphUri, String newGraphUri) {
+        {
             var oldUri = prefixes.expandPrefix(oldGraphUri);
             var newUri = prefixes.expandPrefix(newGraphUri);
             assertValidGraphName(oldUri);
@@ -384,7 +391,7 @@ public class Workspace {
                 return;
             }
             if (!graphs.containsKey(oldUri)) {
-                throw new IllegalArgumentException("Graph URI " + oldUri + " does not exist.");
+                throw new ResourceNotFoundException("Graph URI " + oldUri + " does not exist.");
             }
             if (graphs.containsKey(newUri)) {
                 throw new ResourceConflictException("Graph URI " + newUri + " already exists.");
@@ -392,7 +399,6 @@ public class Workspace {
             graphs.put(newUri, graphs.remove(oldUri));
             renameGraphInDiagrams(oldUri, newUri);
             crossProfileDiagramInfo.renameGraph(oldUri, newUri);
-            transaction.commit("renamed graph %s to %s".formatted(oldUri, newUri));
         }
     }
 
@@ -429,16 +435,8 @@ public class Workspace {
         }
     }
 
-    /**
-     * Removes the graph identified by {@code graphUri}.
-     *
-     * @param graphUri the graph URI
-     */
-    public void remove(String graphUri) {
-        try (var transaction = begin(ReadWrite.WRITE)) {
-            graphs.remove(prefixes.expandPrefix(graphUri));
-            transaction.commit("deleted graph %s".formatted(graphUri));
-        }
+    private void deleteGraph(String graphUri) {
+        graphs.remove(prefixes.expandPrefix(graphUri));
     }
 
     /** Returns a snapshot of the current graph URIs. */
@@ -459,17 +457,9 @@ public class Workspace {
         }
     }
 
-    /**
-     * Replaces the namespace prefixes of the workspace.
-     *
-     * @param newPrefixMapping the prefixes to set
-     */
-    public void setPrefixMapping(PrefixMapping newPrefixMapping) {
-        try (var transaction = begin(ReadWrite.WRITE)) {
-            this.prefixes.clearNsPrefixMap();
-            this.prefixes.setNsPrefixes(newPrefixMapping);
-            transaction.commit("changed the namespace prefixes");
-        }
+    private void setPrefixes(PrefixMapping newPrefixMapping) {
+        this.prefixes.clearNsPrefixMap();
+        this.prefixes.setNsPrefixes(newPrefixMapping);
     }
 
     private void assertValidGraphName(String graphUri) {

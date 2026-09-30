@@ -17,7 +17,6 @@
 
 package org.rdfarchitect.database;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
@@ -95,31 +94,6 @@ public interface DatabasePort {
     PrefixMapping getPrefixMapping(String datasetName);
 
     /**
-     * Deletes the graph specified by {@code graphIdentifier}.
-     *
-     * @param graphIdentifier identifies dataset and graph URI
-     */
-    void deleteGraph(GraphIdentifier graphIdentifier);
-
-    /**
-     * Creates or replaces the graph referenced by {@code graphIdentifier} using the supplied RDF
-     * content.
-     *
-     * @param graphIdentifier identifies dataset and graph URI
-     * @param graph graph contents to persist
-     */
-    void createGraph(GraphIdentifier graphIdentifier, Graph graph);
-
-    /**
-     * Creates an empty graph referenced by {@code graphIdentifier}.
-     *
-     * <p>If the dataset does not exist yet, it will be created.
-     *
-     * @param graphIdentifier identifies dataset and graph URI
-     */
-    void createEmptyGraph(GraphIdentifier graphIdentifier);
-
-    /**
      * Lists all graph URIs belonging to the dataset.
      *
      * @param datasetName literal dataset name
@@ -134,14 +108,6 @@ public interface DatabasePort {
      * @param graphIdentifier identifies dataset and graph URI
      */
     void persist(DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier);
-
-    /**
-     * Sets the complete prefix mapping for the dataset, replacing any existing prefixes.
-     *
-     * @param datasetName literal dataset name
-     * @param prefixMapping new prefix mapping to set
-     */
-    void setPrefixMapping(String datasetName, PrefixMapping prefixMapping);
 
     /**
      * Lists all available dataset names.
@@ -160,6 +126,14 @@ public interface DatabasePort {
     void createDataset(String datasetName);
 
     /**
+     * Creates the workspace unless it already exists. For uploads that address a workspace by name
+     * and are expected to bring it into existence; everything else must create it explicitly.
+     *
+     * @param workspaceName the literal workspace name
+     */
+    void createWorkspaceIfAbsent(String workspaceName);
+
+    /**
      * Removes the dataset identified by {@code datasetName} and clears all graphs that belong to
      * it.
      *
@@ -174,15 +148,6 @@ public interface DatabasePort {
      * @param newDatasetName the literal dataset name to rename to
      */
     void renameDataset(String oldDatasetName, String newDatasetName);
-
-    /**
-     * Renames a graph within its dataset and rewrites all references to it. The content and history
-     * of the graph are kept.
-     *
-     * @param graphIdentifier identifies dataset and current graph URI
-     * @param newGraphUri the graph URI to rename to
-     */
-    void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri);
 
     /**
      * Synchronizes dataset metadata and graph structure from the backing database.

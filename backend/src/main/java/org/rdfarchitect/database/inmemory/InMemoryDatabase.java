@@ -17,9 +17,7 @@
 
 package org.rdfarchitect.database.inmemory;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -45,6 +43,13 @@ public interface InMemoryDatabase {
      *
      * @param datasetName The name of the Dataset to be deleted.
      */
+    /**
+     * Creates the workspace unless it already exists.
+     *
+     * @param workspaceName the literal workspace name
+     */
+    void createWorkspaceIfAbsent(String workspaceName);
+
     void deleteDataset(String datasetName);
 
     /**
@@ -64,8 +69,6 @@ public interface InMemoryDatabase {
      * @param newGraphUri The graph URI to rename to.
      * @throws DataAccessException if the Dataset or graph does not exist.
      */
-    void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri);
-
     /**
      * Returns a list of all datasets in the database
      *
@@ -133,36 +136,6 @@ public interface InMemoryDatabase {
     List<WorkspaceChangeLogEntry> listChanges(String workspaceName);
 
     /**
-     * Creates a new named graph in a specified dataset. If the dataset does not exist yet, it will
-     * be created. If the graph already exists, nothing happens. Merges the graph's prefix mapping
-     * into the dataset's existing prefixes.
-     *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
-     * @param newGraph The new Graph.
-     */
-    void createGraph(GraphIdentifier graphIdentifier, Graph newGraph);
-
-    /**
-     * Creates an empty graph referenced by {@code graphIdentifier}.
-     *
-     * <p>If the dataset does not exist yet, it will be created with editing enabled and default
-     * namespace prefixes from the schema configuration.
-     *
-     * @param graphIdentifier identifies dataset and graph URI
-     */
-    void createEmptyGraph(GraphIdentifier graphIdentifier);
-
-    /**
-     * Deletes the named graph from a specified dataset. If the graph or dataset does not exist,
-     * nothing happens.
-     *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
-     */
-    void remove(GraphIdentifier graphIdentifier);
-
-    /**
      * Checks whether a Graph exists in a specified dataset.
      *
      * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
@@ -195,8 +168,6 @@ public interface InMemoryDatabase {
      * @param datasetName The name of the dataset.
      * @param newPrefixes the new Prefixes.
      */
-    void setPrefixMapping(String datasetName, PrefixMapping newPrefixes);
-
     /**
      * Writes a specified graph to a database.
      *

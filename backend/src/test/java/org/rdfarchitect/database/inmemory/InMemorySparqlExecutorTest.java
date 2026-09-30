@@ -26,6 +26,7 @@ import org.apache.jena.graph.Node;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QueryFactory;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.query.ResultSetFactory;
 import org.apache.jena.query.TxnType;
@@ -56,8 +57,7 @@ class InMemorySparqlExecutorTest {
         String datasetName = UUID.randomUUID().toString();
         setUpGraph = GraphFactory.createDefaultGraph();
         inMemoryDatabase = new SessionDataStoreImpl();
-        inMemoryDatabase.create(
-                new GraphIdentifier(datasetName, "Http://validBeforeEach.uri"), setUpGraph);
+        createGraph(new GraphIdentifier(datasetName, "Http://validBeforeEach.uri"), setUpGraph);
     }
 
     @AfterEach
@@ -234,6 +234,16 @@ class InMemorySparqlExecutorTest {
             assertThat(graphRewindable.isIsomorphicWith(exampleGraphs.getFirst())).isTrue();
         } finally {
             graphRewindable.end();
+        }
+    }
+
+    /** Creates a workspace and a graph in it, the way an upload does. */
+    private void createGraph(GraphIdentifier id, Graph graph) {
+        inMemoryDatabase.createDataset(id.datasetName());
+        try (var transaction =
+                inMemoryDatabase.beginTransaction(id.datasetName(), ReadWrite.WRITE)) {
+            transaction.createGraph(id.graphUri(), graph);
+            transaction.commit("created graph %s".formatted(id.graphUri()));
         }
     }
 }

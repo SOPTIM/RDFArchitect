@@ -19,6 +19,7 @@ package org.rdfarchitect.services.dl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -103,7 +104,7 @@ public class DiagramLayoutServicesTestBase {
                         .build()
                         .graph();
         var identifier = new GraphIdentifier(graphIdentifier.datasetName(), graphUri);
-        databasePort.createGraph(identifier, graph);
+        createGraph(databasePort, identifier, graph);
         diagramLayout = layoutOf(identifier);
     }
 
@@ -304,7 +305,7 @@ public class DiagramLayoutServicesTestBase {
 
     @AfterEach
     void tearDown() {
-        databasePort.deleteGraph(graphIdentifier);
+        deleteGraph(databasePort, graphIdentifier);
     }
 
     /** The diagram layout of a graph, read inside a transaction as production code does. */
@@ -354,6 +355,23 @@ public class DiagramLayoutServicesTestBase {
                             .getDiagramLayout()
                             .getDiagramLayoutModel());
             transaction.commit("test change");
+        }
+    }
+
+    /** Creates a workspace and a graph in it, the way an upload does. */
+    protected static void createGraph(DatabasePort port, GraphIdentifier identifier, Graph graph) {
+        port.createWorkspaceIfAbsent(identifier.datasetName());
+        try (var transaction = port.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.createGraph(identifier.graphUri(), graph);
+            transaction.commit("created graph %s".formatted(identifier.graphUri()));
+        }
+    }
+
+    /** Deletes a graph from its workspace. */
+    protected static void deleteGraph(DatabasePort port, GraphIdentifier identifier) {
+        try (var transaction = port.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.deleteGraph(identifier.graphUri());
+            transaction.commit("deleted graph %s".formatted(identifier.graphUri()));
         }
     }
 }

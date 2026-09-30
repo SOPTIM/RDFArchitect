@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.database;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
@@ -83,6 +84,37 @@ public interface WorkspaceTransaction extends AutoCloseable {
      * @return the prefix mapping
      */
     PrefixMapping prefixes();
+
+    /**
+     * Creates or replaces the graph registered under {@code graphUri}.
+     *
+     * @param graphUri the graph URI
+     * @param graph the graph's initial contents
+     */
+    void createGraph(String graphUri, Graph graph);
+
+    /**
+     * Removes the graph identified by {@code graphUri}. Does nothing if it does not exist.
+     *
+     * @param graphUri the graph URI
+     */
+    void deleteGraph(String graphUri);
+
+    /**
+     * Registers the graph known as {@code oldGraphUri} under {@code newGraphUri} and rewrites every
+     * reference to it in the workspace. The graph keeps its contents and its history.
+     *
+     * @param oldGraphUri the graph URI to rename
+     * @param newGraphUri the graph URI to rename to
+     */
+    void renameGraph(String oldGraphUri, String newGraphUri);
+
+    /**
+     * Replaces the namespace prefixes shared by all graphs of the workspace.
+     *
+     * @param prefixMapping the prefixes to set
+     */
+    void setPrefixes(PrefixMapping prefixMapping);
 
     /**
      * Returns the mode this transaction was opened in.

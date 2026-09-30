@@ -102,7 +102,7 @@ class CopyClassServiceTest {
                         .setFile(file)
                         .setGraphName(graphIdentifier.graphUri())
                         .build();
-        databasePort.createGraph(graphIdentifier, graphSource.graph());
+        createGraph(graphIdentifier, graphSource.graph());
     }
 
     private void setUpReferenceGraphs() {
@@ -112,7 +112,7 @@ class CopyClassServiceTest {
                         .setFile(file)
                         .setGraphName(referenceSourceGraphIdentifier.graphUri())
                         .build();
-        databasePort.createGraph(referenceSourceGraphIdentifier, graphSource.graph());
+        createGraph(referenceSourceGraphIdentifier, graphSource.graph());
 
         var targetGraph = GraphFactory.createDefaultGraph();
         var packageNode = NodeFactory.createURI(PREFIX + "newPackage");
@@ -125,7 +125,7 @@ class CopyClassServiceTest {
                 packageNode,
                 RDFA.uuid.asNode(),
                 NodeFactory.createLiteralString(TARGET_PACKAGE_UUID.toString()));
-        databasePort.createGraph(targetGraphIdentifier, targetGraph);
+        createGraph(targetGraphIdentifier, targetGraph);
     }
 
     private PasteClassesRequestDTO referenceRequest(String... referencesToCopy) {
@@ -915,5 +915,15 @@ class CopyClassServiceTest {
     private boolean containsClass(Graph graph, String classUri) {
         return graph.contains(
                 NodeFactory.createURI(classUri), RDF.type.asNode(), RDFS.Class.asNode());
+    }
+
+    /** Creates a workspace and a graph in it, the way an upload does. */
+    private void createGraph(GraphIdentifier identifier, Graph graph) {
+        databasePort.createWorkspaceIfAbsent(identifier.datasetName());
+        try (var transaction =
+                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.createGraph(identifier.graphUri(), graph);
+            transaction.commit("created graph %s".formatted(identifier.graphUri()));
+        }
     }
 }

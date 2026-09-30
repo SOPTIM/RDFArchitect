@@ -19,8 +19,10 @@ package org.rdfarchitect.database.inmemory;
 
 import static org.assertj.core.api.Assertions.*;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,8 +63,8 @@ class WorkspaceTransactionTest {
     void setUp() {
         originalTimeout = GraphCompressionConfig.getLockTimeoutSeconds();
         workspace = new Workspace(WORKSPACE);
-        workspace.create(GRAPH_A, GraphFactory.createDefaultGraph());
-        workspace.create(GRAPH_B, GraphFactory.createDefaultGraph());
+        createGraph(workspace, GRAPH_A, GraphFactory.createDefaultGraph());
+        createGraph(workspace, GRAPH_B, GraphFactory.createDefaultGraph());
         triple = TestRDFUtils.triple("s p o");
         triple2 = TestRDFUtils.triple("s2 p2 o2");
     }
@@ -456,7 +458,7 @@ class WorkspaceTransactionTest {
     @Test
     void undo_inOneWorkspace_leavesTheOtherUntouched() {
         var other = new Workspace("other");
-        other.create(GRAPH_A, GraphFactory.createDefaultGraph());
+        createGraph(other, GRAPH_A, GraphFactory.createDefaultGraph());
         commitTriple(GRAPH_A, triple, "change in the first workspace");
         try (var transaction = other.begin(ReadWrite.WRITE)) {
             transaction.graph(GRAPH_A).getRdfGraph().add(triple2);
@@ -525,6 +527,34 @@ class WorkspaceTransactionTest {
     private java.util.List<Triple> triplesIn(String graphUri) {
         try (var transaction = workspace.begin(ReadWrite.READ)) {
             return transaction.graph(graphUri).getRdfGraph().find().toList();
+        }
+    }
+
+    private static void createGraph(Workspace workspace, String graphUri, Graph graph) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.createGraph(graphUri, graph);
+            transaction.commit("created graph %s".formatted(graphUri));
+        }
+    }
+
+    private static void renameGraph(Workspace workspace, String oldGraphUri, String newGraphUri) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.renameGraph(oldGraphUri, newGraphUri);
+            transaction.commit("renamed graph %s".formatted(oldGraphUri));
+        }
+    }
+
+    private static void deleteGraph(Workspace workspace, String graphUri) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.deleteGraph(graphUri);
+            transaction.commit("deleted graph %s".formatted(graphUri));
+        }
+    }
+
+    private static void setPrefixes(Workspace workspace, PrefixMapping prefixMapping) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.setPrefixes(prefixMapping);
+            transaction.commit("changed the namespace prefixes");
         }
     }
 }

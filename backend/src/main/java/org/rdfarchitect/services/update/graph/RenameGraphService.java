@@ -19,6 +19,7 @@ package org.rdfarchitect.services.update.graph;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,10 @@ public class RenameGraphService implements RenameGraphUseCase {
 
     @Override
     public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri) {
-        databasePort.renameGraph(graphIdentifier, newGraphUri);
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.renameGraph(graphIdentifier.graphUri(), newGraphUri);
+            transaction.commit("renamed schema to " + newGraphUri);
+        }
     }
 }

@@ -119,7 +119,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         var datasetName = graphIdentifier.datasetName();
         workspaceDiagrams().clear();
         workspaceLayoutModel().removeAll();
-        databasePort.deleteGraph(new GraphIdentifier(datasetName, GRAPH_URI));
+        deleteGraph(databasePort, new GraphIdentifier(datasetName, GRAPH_URI));
     }
 
     private static UUID createWorkspaceDiagram() {

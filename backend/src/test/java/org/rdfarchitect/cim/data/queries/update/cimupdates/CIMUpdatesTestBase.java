@@ -131,7 +131,7 @@ public class CIMUpdatesTestBase {
                         .setGraphName(graphIdentifier.graphUri())
                         .build()
                         .graph();
-        databasePort.createGraph(graphIdentifier, graph);
+        createGraph(databasePort, graphIdentifier, graph);
     }
 
     /** Opens a transaction on the test workspace. */
@@ -188,6 +188,15 @@ public class CIMUpdatesTestBase {
                             ctx.getRdfGraph(), graphIdentifier.graphUri());
             org.apache.jena.update.UpdateExecutionFactory.create(update, dataset).execute();
             transaction.commit("test change");
+        }
+    }
+
+    /** Creates a workspace and a graph in it, the way an upload does. */
+    private static void createGraph(DatabasePort port, GraphIdentifier id, Graph graph) {
+        port.createWorkspaceIfAbsent(id.datasetName());
+        try (var transaction = port.beginTransaction(id.datasetName(), ReadWrite.WRITE)) {
+            transaction.createGraph(id.graphUri(), graph);
+            transaction.commit("created graph %s".formatted(id.graphUri()));
         }
     }
 }

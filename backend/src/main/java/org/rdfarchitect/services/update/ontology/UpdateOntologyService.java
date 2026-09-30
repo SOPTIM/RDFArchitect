@@ -72,7 +72,7 @@ public class UpdateOntologyService
             if (pm.getNsURIPrefix(OWL2.getURI()) == null) {
                 pm.setNsPrefix("owl", OWL2.getURI());
             }
-            databasePort.setPrefixMapping(graphIdentifier.datasetName(), pm);
+            transaction.setPrefixes(pm);
 
             transaction.commit("Created Ontology");
         }

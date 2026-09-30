@@ -19,8 +19,10 @@ package org.rdfarchitect.database.inmemory;
 
 import static org.assertj.core.api.Assertions.*;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +38,7 @@ class WorkspacePrefixTest {
     @BeforeEach
     void setUp() {
         workspace = new Workspace(WORKSPACE);
-        workspace.create(GRAPH_URI, GraphFactory.createDefaultGraph());
+        createGraph(workspace, GRAPH_URI, GraphFactory.createDefaultGraph());
     }
 
     @Test
@@ -89,6 +91,34 @@ class WorkspacePrefixTest {
             ModelFactory.createModelForGraph(transaction.graph(GRAPH_URI).getCustomSHACL())
                     .setNsPrefix("foo", FOO_URI);
             transaction.commit("set prefix");
+        }
+    }
+
+    private static void createGraph(Workspace workspace, String graphUri, Graph graph) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.createGraph(graphUri, graph);
+            transaction.commit("created graph %s".formatted(graphUri));
+        }
+    }
+
+    private static void renameGraph(Workspace workspace, String oldGraphUri, String newGraphUri) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.renameGraph(oldGraphUri, newGraphUri);
+            transaction.commit("renamed graph %s".formatted(oldGraphUri));
+        }
+    }
+
+    private static void deleteGraph(Workspace workspace, String graphUri) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.deleteGraph(graphUri);
+            transaction.commit("deleted graph %s".formatted(graphUri));
+        }
+    }
+
+    private static void setPrefixes(Workspace workspace, PrefixMapping prefixMapping) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.setPrefixes(prefixMapping);
+            transaction.commit("changed the namespace prefixes");
         }
     }
 }

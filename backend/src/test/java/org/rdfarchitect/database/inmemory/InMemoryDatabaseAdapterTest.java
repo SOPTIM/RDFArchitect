@@ -19,9 +19,9 @@ package org.rdfarchitect.database.inmemory;
 
 import static org.mockito.Mockito.*;
 
+import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.database.GraphIdentifier;
 
 class InMemoryDatabaseAdapterTest {
 
@@ -35,20 +35,16 @@ class InMemoryDatabaseAdapterTest {
     }
 
     @Test
-    void createEmptyGraph_newDataset_delegatesToDatabase() {
-        var graphIdentifier = new GraphIdentifier("new-dataset", "http://example.com/graph");
+    void createWorkspaceIfAbsent_delegatesToDatabase() {
+        adapter.createWorkspaceIfAbsent("a-workspace");
 
-        adapter.createEmptyGraph(graphIdentifier);
-
-        verify(database).createEmptyGraph(graphIdentifier);
+        verify(database).createWorkspaceIfAbsent("a-workspace");
     }
 
     @Test
-    void createEmptyGraph_existingDataset_delegatesToDatabase() {
-        var graphIdentifier = new GraphIdentifier("existing-dataset", "http://example.com/graph");
+    void beginTransaction_delegatesToDatabase() {
+        adapter.beginTransaction("a-workspace", ReadWrite.READ);
 
-        adapter.createEmptyGraph(graphIdentifier);
-
-        verify(database).createEmptyGraph(graphIdentifier);
+        verify(database).beginTransaction("a-workspace", ReadWrite.READ);
     }
 }
