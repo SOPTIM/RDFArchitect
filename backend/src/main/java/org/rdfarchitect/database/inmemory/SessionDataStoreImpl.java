@@ -119,6 +119,11 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     @Override
+    public WorkspaceChangeLogEntry pendingUndo(String workspaceName) {
+        return workspace(workspaceName).pendingUndo();
+    }
+
+    @Override
     public boolean canRedo(String workspaceName) {
         return workspace(workspaceName).canRedo();
     }

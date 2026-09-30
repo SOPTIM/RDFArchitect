@@ -29,4 +29,7 @@ public class ChangeLogEntryDTO {
     private String timestamp;
     private String message;
     private List<ContextDeltaDTO> contextDeltas;
+
+    /** Graphs and diagrams that undoing this change would remove; empty when nothing disappears. */
+    private List<String> removedOnUndo;
 }

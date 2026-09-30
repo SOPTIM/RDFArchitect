@@ -30,4 +30,13 @@ public interface ChangeLogUseCase {
      * @return the change history
      */
     List<ChangeLogEntryDTO> listChanges(String workspaceName);
+
+    /**
+     * Returns the change the next undo would take back, so that the editor can ask before an undo
+     * that makes something disappear.
+     *
+     * @param workspaceName the workspace to inspect
+     * @return the pending change, or {@code null} if there is nothing to undo
+     */
+    ChangeLogEntryDTO pendingUndo(String workspaceName);
 }

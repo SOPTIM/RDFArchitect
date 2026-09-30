@@ -76,6 +76,16 @@ public record WorkspaceChangeLogEntry(
                 UUID.randomUUID(), LocalDateTime.now(), message, participants, deltas);
     }
 
+    /**
+     * Returns what undoing this commit would take away — the graphs and diagrams it brought into
+     * existence. Empty for a commit that only changed things that already existed, which is what
+     * lets the editor ask before an undo that makes something disappear and stay out of the way
+     * otherwise.
+     */
+    public List<String> removedOnUndo() {
+        return participants.stream().flatMap(version -> version.additions().stream()).toList();
+    }
+
     /** Returns the URIs of the graphs this commit touched. */
     public Set<String> affectedGraphUris() {
         return participants.stream()

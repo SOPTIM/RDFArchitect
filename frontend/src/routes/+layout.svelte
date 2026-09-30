@@ -33,6 +33,7 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ToastContainer from "$lib/components/ToastContainer.svelte";
     import { PUBLIC_EMBED_SESSION_HANDSHAKE } from "$lib/config/runtime";
+    import UndoConfirmDialog from "$lib/dialog/UndoConfirmDialog.svelte";
     import { installSessionHandshake } from "$lib/embedding/session-handshake.js";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
@@ -317,5 +318,6 @@
         </div>
     </div>
     <ToastContainer />
+    <UndoConfirmDialog />
     <PasteClassesDialog />
 </Tooltip.Provider>

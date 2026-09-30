@@ -22,6 +22,7 @@ import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -83,5 +84,20 @@ class GraphCollection extends SnapshotParticipant<Map<String, GraphWithContext>>
     protected void restore(Map<String, GraphWithContext> state) {
         graphs.clear();
         graphs.putAll(state);
+    }
+
+    /**
+     * A rename moves the same graph to another key, so a new key alone does not mean a new graph.
+     * Only a graph that was not in the workspace before would disappear when the commit is undone.
+     */
+    @Override
+    protected List<String> describeAdditions(
+            Map<String, GraphWithContext> before, Map<String, GraphWithContext> after) {
+        var existing = Collections.newSetFromMap(new IdentityHashMap<GraphWithContext, Boolean>());
+        existing.addAll(before.values());
+        return after.entrySet().stream()
+                .filter(entry -> !existing.contains(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .toList();
     }
 }

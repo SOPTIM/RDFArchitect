@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.models.changelog;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -29,6 +30,30 @@ import java.util.UUID;
  * @param id describes which part of the workspace the participant represents
  * @param participant the participant itself
  * @param versionId the version the participant gained in this commit
+ * @param additions what this version brought into existence and undoing it would remove again,
+ *     recorded here rather than asked of the participant later, which would answer for its newest
+ *     version instead of this one
  */
 public record ParticipantVersion(
-        ParticipantId id, ChangeLogParticipant participant, UUID versionId) {}
+        ParticipantId id,
+        ChangeLogParticipant participant,
+        UUID versionId,
+        List<String> additions) {
+
+    public ParticipantVersion {
+        additions = List.copyOf(additions);
+    }
+
+    /**
+     * Creates a version that brought nothing new into existence.
+     *
+     * @param id describes which part of the workspace the participant represents
+     * @param participant the participant itself
+     * @param versionId the version the participant gained in this commit
+     * @return the version
+     */
+    public static ParticipantVersion of(
+            ParticipantId id, ChangeLogParticipant participant, UUID versionId) {
+        return new ParticipantVersion(id, participant, versionId, List.of());
+    }
+}

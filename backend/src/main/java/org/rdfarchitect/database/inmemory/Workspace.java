@@ -322,6 +322,17 @@ public class Workspace {
         }
     }
 
+    /**
+     * Returns the change the next undo would take back, or {@code null} if there is none.
+     *
+     * @return the pending change
+     */
+    public WorkspaceChangeLogEntry pendingUndo() {
+        try (var transaction = begin(ReadWrite.READ)) {
+            return changeLog.pendingUndo();
+        }
+    }
+
     /** Returns whether the workspace has an undone change that can be reapplied. */
     public boolean canRedo() {
         try (var transaction = begin(ReadWrite.READ)) {

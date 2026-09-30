@@ -269,14 +269,14 @@ class WorkspaceChangeLogTest {
     }
 
     private static ParticipantVersion rdfOf(ChangeLogParticipant participant, String graphUri) {
-        return new ParticipantVersion(
+        return ParticipantVersion.of(
                 ParticipantId.ofGraph(ParticipantId.Kind.RDF, graphUri),
                 participant,
                 UUID.randomUUID());
     }
 
     private static ParticipantVersion dlOf(ChangeLogParticipant participant) {
-        return new ParticipantVersion(
+        return ParticipantVersion.of(
                 ParticipantId.ofWorkspace(ParticipantId.Kind.DL), participant, UUID.randomUUID());
     }
 

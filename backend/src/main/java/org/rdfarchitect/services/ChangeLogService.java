@@ -37,4 +37,10 @@ public class ChangeLogService implements ChangeLogUseCase {
     public List<ChangeLogEntryDTO> listChanges(String workspaceName) {
         return mapper.toDTOList(databasePort.listChanges(workspaceName));
     }
+
+    @Override
+    public ChangeLogEntryDTO pendingUndo(String workspaceName) {
+        var pending = databasePort.pendingUndo(workspaceName);
+        return pending == null ? null : mapper.toDTO(pending);
+    }
 }

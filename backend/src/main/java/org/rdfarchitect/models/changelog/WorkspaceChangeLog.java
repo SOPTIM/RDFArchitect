@@ -97,6 +97,14 @@ public class WorkspaceChangeLog {
         return undoStack.size() > 1;
     }
 
+    /**
+     * Returns the commit the next {@link #undo()} would take back, or {@code null} if there is
+     * none. Lets a caller see what an undo is about to do before doing it.
+     */
+    public WorkspaceChangeLogEntry pendingUndo() {
+        return canUndo() ? undoStack.peek() : null;
+    }
+
     /** Returns whether there is an undone commit that can be reapplied. */
     public boolean canRedo() {
         return !redoStack.isEmpty();

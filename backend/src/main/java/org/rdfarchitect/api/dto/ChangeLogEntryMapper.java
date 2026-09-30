@@ -32,6 +32,7 @@ import java.util.List;
 public interface ChangeLogEntryMapper {
 
     @Mapping(target = "contextDeltas", source = "deltas")
+    @Mapping(target = "removedOnUndo", expression = "java(entry.removedOnUndo())")
     ChangeLogEntryDTO toDTO(WorkspaceChangeLogEntry entry);
 
     List<ChangeLogEntryDTO> toDTOList(List<WorkspaceChangeLogEntry> entries);
