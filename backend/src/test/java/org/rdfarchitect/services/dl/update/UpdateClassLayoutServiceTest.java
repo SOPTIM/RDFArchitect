@@ -20,6 +20,7 @@ package org.rdfarchitect.services.dl.update;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -42,6 +43,7 @@ import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
@@ -117,16 +119,19 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     @AfterEach
     void cleanUpDatasetDiagrams() {
         var datasetName = graphIdentifier.datasetName();
-        workspaceDiagrams().clear();
-        workspaceLayoutModel().removeAll();
+        withWorkspaceDiagrams(Map::clear);
+        withWorkspaceLayoutModel(Model::removeAll);
         deleteGraph(databasePort, new GraphIdentifier(datasetName, GRAPH_URI));
     }
 
     private static UUID createWorkspaceDiagram() {
         addGraphFromFile("package_and_class.ttl", GRAPH_URI);
         var diagramUUID = UUID.randomUUID();
-        workspaceDiagrams()
-                .put(diagramUUID, new CustomDiagram(diagramUUID, "custom", new ArrayList<>()));
+        withWorkspaceDiagrams(
+                diagrams ->
+                        diagrams.put(
+                                diagramUUID,
+                                new CustomDiagram(diagramUUID, "custom", new ArrayList<>())));
         return diagramUUID;
     }
 

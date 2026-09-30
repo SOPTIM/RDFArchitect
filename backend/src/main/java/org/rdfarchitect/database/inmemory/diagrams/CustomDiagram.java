@@ -20,6 +20,7 @@ package org.rdfarchitect.database.inmemory.diagrams;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -33,8 +34,10 @@ import java.util.UUID;
  *
  * <p>Holds no transaction state of its own. Creating, changing and deleting a diagram are all
  * changes to the {@link CustomDiagramCollection} that holds it, which is the transaction
- * participant.
+ * participant. Equality is by value, so that the collection can tell a diagram that was only read
+ * from one that was actually changed.
  */
+@EqualsAndHashCode
 public class CustomDiagram {
 
     @Getter private final UUID diagramId;

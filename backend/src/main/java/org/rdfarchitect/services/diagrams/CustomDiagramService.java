@@ -32,7 +32,7 @@ import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
+import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
 import org.rdfarchitect.services.rendering.CIMProfileModels;
@@ -157,7 +157,7 @@ public class CustomDiagramService
     }
 
     private static void doDiagramLayout(
-            DiagramLayout diagramLayout,
+            DiagramLayoutDelta diagramLayout,
             UUID crossProfileDiagramUUID,
             Map<String, MergedClassDTO> mergeMap) {
 
