@@ -197,6 +197,19 @@ class LazyDiagramLayoutTest {
                 .hasSize(entriesBefore + 1);
     }
 
+    @Test
+    void movingClasses_isRecordedUnderThePackageName_notItsId() {
+        var packageUUID = onlyPackageUUID();
+        var gadgetUUID = nodeUUID("Gadget", renderPackage(packageUUID));
+        sendPosition(packageUUID, gadgetUUID, 120.0F, 80.0F);
+
+        sendPosition(packageUUID, gadgetUUID, 300.0F, 400.0F);
+
+        assertThat(databasePort.listChanges(graphIdentifier.datasetName()).getFirst().message())
+                .doesNotContain(packageUUID.toString())
+                .isEqualTo("Moved classes in package \"gadgets\"");
+    }
+
     private void sendPosition(UUID packageUUID, UUID classUUID, float x, float y) {
         var position = new ClassPositionDTO();
         position.setClassUUID(classUUID);
