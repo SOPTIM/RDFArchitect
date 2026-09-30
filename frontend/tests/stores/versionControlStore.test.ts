@@ -341,7 +341,6 @@ describe("versionControlStore", () => {
                 data: {
                     message: 'Renamed class "Terminal" to "Node"',
                     affectedGraphUris: [OTHER],
-                    affectedKinds: ["RDF"],
                 },
                 error: undefined,
             });
@@ -359,7 +358,6 @@ describe("versionControlStore", () => {
                 data: {
                     message: "a change",
                     affectedGraphUris: [GRAPH],
-                    affectedKinds: ["RDF"],
                 },
                 error: undefined,
             });
@@ -371,23 +369,6 @@ describe("versionControlStore", () => {
             );
         });
 
-        test("says when the change was not in the schema", async () => {
-            vi.mocked(api.undo).mockResolvedValue({
-                data: {
-                    message: "replaced the shapes",
-                    affectedGraphUris: [GRAPH],
-                    affectedKinds: ["SHACL"],
-                },
-                error: undefined,
-            });
-
-            await store.undo(WORKSPACE);
-
-            expect(vi.mocked(toastStore.info).mock.calls[0][1]).toContain(
-                "SHACL shapes",
-            );
-        });
-
         test("counts the graphs when a change spanned several", async () => {
             vi.mocked(api.undo).mockResolvedValue({
                 data: {
@@ -396,7 +377,6 @@ describe("versionControlStore", () => {
                         OTHER,
                         "http://example.org/schemas/Third",
                     ],
-                    affectedKinds: ["RDF"],
                 },
                 error: undefined,
             });
