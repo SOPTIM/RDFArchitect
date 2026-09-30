@@ -19,6 +19,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import * as api from "../../src/lib/api/generated";
 import { toastStore } from "../../src/lib/eventhandling/toastStore.svelte.js";
+import { undoConfirmStore } from "../../src/lib/eventhandling/undoConfirmStore.svelte.js";
 import { editorState } from "../../src/lib/sharedState.svelte.js";
 import { classStore } from "../../src/lib/stores/classStore";
 import { datatypesStore } from "../../src/lib/stores/datatypesStore";
@@ -36,6 +37,7 @@ vi.mock("$lib/api/generated", () => ({
     redo: vi.fn(),
     canUndo: vi.fn(),
     canRedo: vi.fn(),
+    getPendingUndo: vi.fn(),
 }));
 
 vi.mock("$lib/sharedState.svelte.js", () => ({
@@ -65,6 +67,10 @@ vi.mock("$lib/eventhandling/toastStore.svelte.js", () => ({
     toastStore: { info: vi.fn(), error: vi.fn() },
 }));
 
+vi.mock("$lib/eventhandling/undoConfirmStore.svelte.js", () => ({
+    undoConfirmStore: { confirm: vi.fn() },
+}));
+
 // Suppress console outputs during error tests
 vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -87,6 +93,12 @@ describe("versionControlStore", () => {
         vi.mocked(editorState.selectedGraph.getValue).mockReturnValue(
             undefined,
         );
+
+        // Nothing disappears unless a test says so, so undo goes through unasked.
+        vi.mocked(api.getPendingUndo).mockResolvedValue({
+            data: { message: "a change", removedOnUndo: [] },
+            error: undefined,
+        });
     });
 
     // -------------------------------------------------------------------------
@@ -296,6 +308,96 @@ describe("versionControlStore", () => {
 
             expect(result.error).toBe("No undo target selected.");
             expect(api.undo).not.toHaveBeenCalled();
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("undo that removes something", () => {
+        beforeEach(() => {
+            vi.mocked(editorState.selectedWorkspace.getValue).mockReturnValue(
+                WORKSPACE,
+            );
+            vi.mocked(api.undo).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: false,
+                error: undefined,
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+            vi.mocked(api.getPendingUndo).mockResolvedValue({
+                data: {
+                    message: "imported graph http://example.org/a",
+                    removedOnUndo: ["http://example.org/a"],
+                },
+                error: undefined,
+            });
+        });
+
+        test("asks before undoing and goes ahead when confirmed", async () => {
+            vi.mocked(undoConfirmStore.confirm).mockResolvedValue(true);
+
+            const result = await store.undo(WORKSPACE);
+
+            expect(undoConfirmStore.confirm).toHaveBeenCalledWith(
+                "imported graph http://example.org/a",
+                ["http://example.org/a"],
+            );
+            expect(api.undo).toHaveBeenCalled();
+            expect(result.error).toBeNull();
+        });
+
+        test("leaves everything alone when the user declines", async () => {
+            vi.mocked(undoConfirmStore.confirm).mockResolvedValue(false);
+
+            const result = await store.undo(WORKSPACE);
+
+            expect(api.undo).not.toHaveBeenCalled();
+            expect(classStore.invalidateWorkspace).not.toHaveBeenCalled();
+            expect(toastStore.info).not.toHaveBeenCalled();
+            expect(result.cancelled).toBe(true);
+            expect(result.error).toBeNull();
+        });
+
+        test("does not ask when nothing would disappear", async () => {
+            vi.mocked(api.getPendingUndo).mockResolvedValue({
+                data: { message: "renamed a class", removedOnUndo: [] },
+                error: undefined,
+            });
+
+            await store.undo(WORKSPACE);
+
+            expect(undoConfirmStore.confirm).not.toHaveBeenCalled();
+            expect(api.undo).toHaveBeenCalled();
+        });
+
+        test("undoes rather than blocks when the peek fails", async () => {
+            // A failed peek must not stand between the user and their undo.
+            vi.mocked(api.getPendingUndo).mockResolvedValue({
+                data: undefined,
+                error: new Error("Server down"),
+            });
+
+            await store.undo(WORKSPACE);
+
+            expect(undoConfirmStore.confirm).not.toHaveBeenCalled();
+            expect(api.undo).toHaveBeenCalled();
+        });
+
+        test("redo never asks", async () => {
+            vi.mocked(api.redo).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+
+            await store.redo(WORKSPACE);
+
+            expect(api.getPendingUndo).not.toHaveBeenCalled();
+            expect(undoConfirmStore.confirm).not.toHaveBeenCalled();
         });
     });
 

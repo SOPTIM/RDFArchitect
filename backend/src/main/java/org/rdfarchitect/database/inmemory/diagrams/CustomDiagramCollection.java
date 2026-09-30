@@ -21,6 +21,7 @@ import org.rdfarchitect.rdf.graph.wrapper.SnapshotParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,5 +63,20 @@ public class CustomDiagramCollection extends SnapshotParticipant<Map<UUID, Custo
     protected void restore(Map<UUID, CustomDiagram> state) {
         diagrams.clear();
         state.forEach((id, diagram) -> diagrams.put(id, diagram.copy()));
+    }
+
+    @Override
+    protected List<String> describeAdditions(
+            Map<UUID, CustomDiagram> before, Map<UUID, CustomDiagram> after) {
+        return after.entrySet().stream()
+                .filter(entry -> !before.containsKey(entry.getKey()))
+                .map(entry -> nameOf(entry.getValue(), entry.getKey()))
+                .toList();
+    }
+
+    /** A diagram is created before it is named, so the id has to stand in until then. */
+    private static String nameOf(CustomDiagram diagram, UUID id) {
+        var name = diagram.getName();
+        return name == null || name.isBlank() ? id.toString() : name;
     }
 }

@@ -30,8 +30,10 @@ import {
     redo as sdkRedo,
     canUndo as sdkCanUndo,
     canRedo as sdkCanRedo,
+    getPendingUndo as sdkPendingUndo,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
+import { undoConfirmStore } from "../eventhandling/undoConfirmStore.svelte.js";
 
 type WorkspaceFlags = {
     canUndo: AsyncSlot<boolean>;
@@ -157,6 +159,9 @@ function createVersionControlStore() {
             toastStore.error(FAILURE_TITLE[direction], message);
             return { error: message };
         }
+        if (direction === "undo" && !(await confirmedIfDestructive(target))) {
+            return { error: null, cancelled: true };
+        }
         const call = direction === "undo" ? sdkUndo : sdkRedo;
         const { error } = await call({ path: { datasetName: target } });
         if (error) {
@@ -169,6 +174,24 @@ function createVersionControlStore() {
         invalidateWorkspace(target);
         await refresh(target);
         return { error: null };
+    }
+
+    /**
+     * Asks before an undo that makes something disappear — an imported or newly created graph, a
+     * new diagram. A change that only alters what already exists goes through unasked, which is
+     * the common case and must not become a click-through habit.
+     */
+    async function confirmedIfDestructive(workspace: string): Promise<boolean> {
+        const { data, error } = await sdkPendingUndo({
+            path: { datasetName: workspace },
+        });
+        if (error) {
+            console.error(`${LOG} could not read the pending undo`, error);
+            return true;
+        }
+        const removed = data?.removedOnUndo ?? [];
+        if (removed.length === 0) return true;
+        return undoConfirmStore.confirm(data?.message ?? "", removed);
     }
 
     function invalidateWorkspace(workspace: string) {

@@ -250,6 +250,102 @@ class WorkspaceUndoScopeTest {
     }
 
     // -------------------------------------------------------------------------
+    // What an undo would take away
+    // -------------------------------------------------------------------------
+
+    @Nested
+    class RemovedOnUndo {
+
+        @Test
+        void afterCreatingAGraph_namesTheGraphThatWouldDisappear() {
+            createGraph(GRAPH_A);
+
+            assertThat(workspace.pendingUndo().removedOnUndo()).containsExactly(GRAPH_A);
+        }
+
+        @Test
+        void afterCreatingADiagram_namesTheDiagramThatWouldDisappear() {
+            var diagramId = UUID.randomUUID();
+            try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+                transaction
+                        .diagrams()
+                        .put(diagramId, new CustomDiagram(diagramId, "overview", List.of()));
+                transaction.commit("created a diagram");
+            }
+
+            assertThat(workspace.pendingUndo().removedOnUndo()).containsExactly("overview");
+        }
+
+        @Test
+        void afterDeletingAGraph_saysNothingWouldDisappear() {
+            // Undoing a deletion brings the graph back, so there is nothing to warn about.
+            createGraph(GRAPH_A);
+            deleteGraph(GRAPH_A);
+
+            assertThat(workspace.pendingUndo().removedOnUndo()).isEmpty();
+        }
+
+        @Test
+        void afterChangingASchema_saysNothingWouldDisappear() {
+            createGraph(GRAPH_A);
+            commitTriple(GRAPH_A, triple);
+
+            assertThat(workspace.pendingUndo().removedOnUndo()).isEmpty();
+        }
+
+        @Test
+        void afterChangingADiagramsContents_saysNothingWouldDisappear() {
+            var diagramId = UUID.randomUUID();
+            try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+                transaction
+                        .diagrams()
+                        .put(diagramId, new CustomDiagram(diagramId, "overview", List.of()));
+                transaction.commit("created a diagram");
+            }
+            try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+                transaction
+                        .diagrams()
+                        .get(diagramId)
+                        .setClasses(
+                                List.of(new ClassInDiagram(UUID.randomUUID(), new URI(GRAPH_A))));
+                transaction.commit("added a class to the diagram");
+            }
+
+            assertThat(workspace.pendingUndo().removedOnUndo()).isEmpty();
+        }
+
+        @Test
+        void afterRenamingAGraph_saysNothingWouldDisappear() {
+            createGraph(GRAPH_A);
+            try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+                transaction.renameGraph(GRAPH_A, GRAPH_B);
+                transaction.commit("renamed the graph");
+            }
+
+            assertThat(workspace.pendingUndo().removedOnUndo()).isEmpty();
+        }
+
+        @Test
+        void isAnsweredForTheEntryThatWouldBeUndone_notTheNewestStateOfTheParticipant() {
+            // The graph collection changed twice; the pending entry must report its own addition,
+            // not whatever the collection did most recently.
+            createGraph(GRAPH_A);
+            createGraph(GRAPH_B);
+
+            assertThat(workspace.pendingUndo().removedOnUndo()).containsExactly(GRAPH_B);
+
+            workspace.undo();
+
+            assertThat(workspace.pendingUndo().removedOnUndo()).containsExactly(GRAPH_A);
+        }
+
+        @Test
+        void withNothingLeftToUndo_thereIsNoPendingChange() {
+            assertThat(new Workspace("fresh").pendingUndo()).isNull();
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // The history horizon
     // -------------------------------------------------------------------------
 

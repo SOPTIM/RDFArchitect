@@ -22,6 +22,7 @@ import org.rdfarchitect.models.changelog.ChangeLogParticipant;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 
 /**
  * A transaction participant that keeps whole copies of its state instead of deltas.
@@ -51,6 +52,9 @@ public abstract class SnapshotParticipant<S>
     /** State at the first change of the running transaction, or {@code null} outside one. */
     private S preTransactionState;
 
+    /** What the most recent committed version brought into existence. */
+    private List<String> lastAdditions = List.of();
+
     protected SnapshotParticipant(WorkspaceTransactionContext txnContext) {
         this.txnContext = txnContext;
     }
@@ -68,6 +72,27 @@ public abstract class SnapshotParticipant<S>
      * @param state the state to restore
      */
     protected abstract void restore(S state);
+
+    /**
+     * Names what a state gained, so that the changelog can say what undoing a commit would take
+     * away again. Only worth answering where something can disappear that the user would miss — a
+     * graph, a diagram. The default reports nothing.
+     *
+     * @param before the state the commit started from
+     * @param after the state it produced
+     * @return names of what {@code after} holds and {@code before} did not
+     */
+    protected List<String> describeAdditions(S before, S after) {
+        return List.of();
+    }
+
+    /**
+     * Returns what the most recent version of this participant brought into existence, and would
+     * therefore remove again when undone.
+     */
+    public List<String> additionsOfLastVersion() {
+        return lastAdditions;
+    }
 
     /**
      * Announces a mutation, joining the running write transaction. Callers must invoke this before
@@ -88,14 +113,17 @@ public abstract class SnapshotParticipant<S>
         if (preTransactionState == null) {
             return;
         }
+        var before = preTransactionState;
+        var after = snapshot();
         // The state the transaction started from is the version undo has to be able to return to,
         // and it is only known here — a constructor cannot take it, as the subclass is not built
         // yet at that point.
         if (pastStates.isEmpty()) {
-            pastStates.push(preTransactionState);
+            pastStates.push(before);
         }
         preTransactionState = null;
-        pastStates.push(snapshot());
+        pastStates.push(after);
+        lastAdditions = describeAdditions(before, after);
     }
 
     @Override
