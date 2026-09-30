@@ -52,6 +52,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -329,19 +330,40 @@ public class DiagramLayoutServicesTestBase {
         }
     }
 
-    /** The workspace's own custom diagrams, read inside a transaction. */
+    /** A detached copy of the workspace's custom diagrams, for assertions outside a transaction. */
     protected static Map<UUID, CustomDiagram> workspaceDiagrams() {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            return transaction.diagrams();
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var copy = new HashMap<UUID, CustomDiagram>();
+            transaction.diagrams().forEach((id, diagram) -> copy.put(id, diagram.copy()));
+            return copy;
         }
     }
 
-    /** The workspace's own layout model, read inside a transaction. */
+    /** A detached copy of the workspace's layout model, for assertions outside a transaction. */
     protected static Model workspaceLayoutModel() {
         try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            return ModelFactory.createDefaultModel()
+                    .add(transaction.layout().getDiagramLayoutModel());
+        }
+    }
+
+    /** Runs {@code action} against the workspace's live custom diagrams, inside a transaction. */
+    protected static void withWorkspaceDiagrams(Consumer<Map<UUID, CustomDiagram>> action) {
+        try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            return transaction.layout().getDiagramLayoutModel();
+            action.accept(transaction.diagrams());
+            transaction.commit("test change");
+        }
+    }
+
+    /** Runs {@code action} against the workspace's live layout model, inside a transaction. */
+    protected static void withWorkspaceLayoutModel(Consumer<Model> action) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            action.accept(transaction.layout().getDiagramLayoutModel());
+            transaction.commit("test change");
         }
     }
 

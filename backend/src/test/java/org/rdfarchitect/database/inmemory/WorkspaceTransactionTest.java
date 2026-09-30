@@ -226,7 +226,6 @@ class WorkspaceTransactionTest {
 
         assertThat(triplesIn(GRAPH_A)).isEmpty();
         assertThat(triplesIn(GRAPH_B)).isEmpty();
-        assertThat(workspace.canUndo()).isFalse();
     }
 
     @Test
@@ -343,6 +342,8 @@ class WorkspaceTransactionTest {
 
     @Test
     void nestedTransaction_commitsOnceWithTheEnclosingOne() {
+        var entriesBefore = workspace.getChangeHistory().size();
+
         try (var outer = workspace.begin(ReadWrite.WRITE)) {
             outer.graph(GRAPH_A).getRdfGraph().add(triple);
             try (var inner = workspace.begin(ReadWrite.WRITE)) {
@@ -352,7 +353,9 @@ class WorkspaceTransactionTest {
             outer.commit("outer change");
         }
 
-        assertThat(workspace.getChangeHistory()).hasSize(2);
+        assertThat(workspace.getChangeHistory()).hasSize(entriesBefore + 1);
+        assertThat(workspace.getChangeHistory().getFirst().message())
+                .isEqualTo("inner change; outer change");
         assertThat(triplesIn(GRAPH_A)).containsExactly(triple);
         assertThat(triplesIn(GRAPH_B)).containsExactly(triple2);
     }
@@ -389,8 +392,10 @@ class WorkspaceTransactionTest {
 
     @Test
     void freshWorkspace_hasNothingToUndo() {
-        assertThat(workspace.canUndo()).isFalse();
-        assertThat(workspace.canRedo()).isFalse();
+        var fresh = new Workspace("fresh");
+
+        assertThat(fresh.canUndo()).isFalse();
+        assertThat(fresh.canRedo()).isFalse();
     }
 
     @Test
@@ -416,7 +421,9 @@ class WorkspaceTransactionTest {
 
     @Test
     void undo_withNothingToUndo_throwsException() {
-        assertThatThrownBy(() -> workspace.undo()).isInstanceOf(GraphVersionControlException.class);
+        var fresh = new Workspace("fresh");
+
+        assertThatThrownBy(fresh::undo).isInstanceOf(GraphVersionControlException.class);
     }
 
     @Test

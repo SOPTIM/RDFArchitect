@@ -25,7 +25,6 @@ import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.shared.PrefixMapping;
-import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.config.GraphCompressionConfig;
@@ -43,7 +42,7 @@ import org.rdfarchitect.models.changelog.WorkspaceChangeLog;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.RDFUtils;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
+import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 import org.rdfarchitect.rdf.graph.wrapper.TransactionParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
@@ -55,8 +54,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -78,8 +75,6 @@ public class Workspace {
 
     @Setter @Getter private volatile boolean isReadOnly = true;
 
-    private final ConcurrentMap<String, GraphWithContext> graphs = new ConcurrentHashMap<>();
-
     private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     private final WorkspaceTransactionContext txnContext;
@@ -88,13 +83,15 @@ public class Workspace {
 
     private final TransactionCoordinator coordinator;
 
+    private final GraphCollection graphs;
+
     private final CustomDiagramCollection customDiagrams;
 
-    private final DiagramLayout diagramLayout = new DiagramLayout();
+    private final DiagramLayoutDelta diagramLayout;
 
-    private final CrossProfileDiagramInfo crossProfileDiagramInfo = new CrossProfileDiagramInfo();
+    private final CrossProfileDiagramInfo crossProfileDiagramInfo;
 
-    private final PrefixMapping prefixes = new PrefixMappingImpl();
+    private final WorkspacePrefixes prefixes;
 
     public Workspace(String workspaceName) {
         this.txnContext = new WorkspaceTransactionContext(workspaceName);
@@ -102,7 +99,11 @@ public class Workspace {
                 new WorkspaceChangeLog(
                         INITIAL_CHANGE_MESSAGE, GraphCompressionConfig.getMaxVersions());
         this.coordinator = new TransactionCoordinator(txnContext, changeLog, this::identify);
+        this.graphs = new GraphCollection(txnContext);
         this.customDiagrams = new CustomDiagramCollection(txnContext);
+        this.diagramLayout = new DiagramLayoutDelta(txnContext);
+        this.crossProfileDiagramInfo = new CrossProfileDiagramInfo(txnContext);
+        this.prefixes = new WorkspacePrefixes(txnContext);
     }
 
     /**
@@ -114,7 +115,7 @@ public class Workspace {
     public Workspace(String workspaceName, Dataset dataset) {
         this(workspaceName);
         try (var transaction = begin(ReadWrite.WRITE)) {
-            this.prefixes.setNsPrefixes(dataset.getPrefixMapping());
+            this.prefixes.addAll(dataset.getPrefixMapping());
             if (!dataset.getDefaultModel().isEmpty()) {
                 graphs.put(
                         DEFAULT_GRAPH_NAME,
@@ -179,7 +180,7 @@ public class Workspace {
 
         @Override
         public List<String> graphUris() {
-            return graphs.keySet().stream().toList();
+            return graphs.uris();
         }
 
         @Override
@@ -188,7 +189,7 @@ public class Workspace {
         }
 
         @Override
-        public DiagramLayout layout() {
+        public DiagramLayoutDelta layout() {
             return diagramLayout;
         }
 
@@ -199,7 +200,7 @@ public class Workspace {
 
         @Override
         public PrefixMapping prefixes() {
-            return new PrefixMappingReadOnly(prefixes);
+            return prefixes.readOnlyView();
         }
 
         @Override
@@ -219,7 +220,7 @@ public class Workspace {
 
         @Override
         public void setPrefixes(PrefixMapping prefixMapping) {
-            Workspace.this.setPrefixes(prefixMapping);
+            prefixes.setAll(prefixMapping);
         }
 
         @Override
@@ -268,25 +269,46 @@ public class Workspace {
      * behind.
      */
     private ParticipantId identify(TransactionParticipant participant) {
-        for (var entry : graphs.entrySet()) {
-            var graph = entry.getValue();
-            if (participant == graph.getRdfGraph()) {
-                return ParticipantId.ofGraph(ParticipantId.Kind.RDF, entry.getKey());
+        for (var entry : graphs.view().entrySet()) {
+            var kind = kindWithin(entry.getValue(), participant);
+            if (kind != null) {
+                return ParticipantId.ofGraph(kind, entry.getKey());
             }
-            if (participant == graph.getCustomSHACL()) {
-                return ParticipantId.ofGraph(ParticipantId.Kind.SHACL, entry.getKey());
-            }
-            if (participant == graph.getDiagramLayout()) {
-                return ParticipantId.ofGraph(ParticipantId.Kind.DL, entry.getKey());
-            }
-            if (participant == graph.customDiagrams()) {
-                return ParticipantId.ofGraph(ParticipantId.Kind.DIAGRAMS, entry.getKey());
-            }
+        }
+        if (participant == graphs) {
+            return ParticipantId.ofWorkspace(ParticipantId.Kind.GRAPHS);
         }
         if (participant == customDiagrams) {
             return ParticipantId.ofWorkspace(ParticipantId.Kind.DIAGRAMS);
         }
-        return ParticipantId.ofWorkspace(ParticipantId.Kind.DL);
+        if (participant == crossProfileDiagramInfo) {
+            return ParticipantId.ofWorkspace(ParticipantId.Kind.COLORS);
+        }
+        if (participant == prefixes) {
+            return ParticipantId.ofWorkspace(ParticipantId.Kind.PREFIXES);
+        }
+        if (participant == diagramLayout) {
+            return ParticipantId.ofWorkspace(ParticipantId.Kind.DL);
+        }
+        throw new IllegalStateException(
+                "A participant enrolled that does not belong to this workspace: " + participant);
+    }
+
+    private static ParticipantId.Kind kindWithin(
+            GraphWithContext graph, TransactionParticipant participant) {
+        if (participant == graph.getRdfGraph()) {
+            return ParticipantId.Kind.RDF;
+        }
+        if (participant == graph.getCustomSHACL()) {
+            return ParticipantId.Kind.SHACL;
+        }
+        if (participant == graph.getDiagramLayout()) {
+            return ParticipantId.Kind.DL;
+        }
+        if (participant == graph.customDiagrams()) {
+            return ParticipantId.Kind.DIAGRAMS;
+        }
+        return null;
     }
 
     // -------------------------------------------------------------------------
@@ -368,45 +390,43 @@ public class Workspace {
         if (!expanded.equals(DEFAULT_GRAPH_NAME)) {
             throw new ResourceNotFoundException("Graph URI " + expanded + " does not exist.");
         }
-        return graphs.computeIfAbsent(
-                DEFAULT_GRAPH_NAME,
-                _ -> new GraphWithContext(GraphFactory.createDefaultGraph(), txnContext));
+        var defaultGraph = new GraphWithContext(GraphFactory.createDefaultGraph(), txnContext);
+        graphs.put(DEFAULT_GRAPH_NAME, defaultGraph);
+        return defaultGraph;
     }
 
     private void createGraph(String graphUri, Graph newGraph) {
         var expanded = prefixes.expandPrefix(graphUri);
         assertValidGraphName(expanded);
         graphs.put(expanded, new GraphWithContext(newGraph, txnContext));
-        prefixes.setNsPrefixes(newGraph.getPrefixMapping());
+        prefixes.addAll(newGraph.getPrefixMapping());
         crossProfileDiagramInfo.setColor(expanded, CrossProfileUtils.generateRandomDarkColor());
     }
 
     private void renameGraph(String oldGraphUri, String newGraphUri) {
-        {
-            var oldUri = prefixes.expandPrefix(oldGraphUri);
-            var newUri = prefixes.expandPrefix(newGraphUri);
-            assertValidGraphName(oldUri);
-            assertValidGraphName(newUri);
-            if (oldUri.equals(newUri)) {
-                return;
-            }
-            if (!graphs.containsKey(oldUri)) {
-                throw new ResourceNotFoundException("Graph URI " + oldUri + " does not exist.");
-            }
-            if (graphs.containsKey(newUri)) {
-                throw new ResourceConflictException("Graph URI " + newUri + " already exists.");
-            }
-            graphs.put(newUri, graphs.remove(oldUri));
-            renameGraphInDiagrams(oldUri, newUri);
-            crossProfileDiagramInfo.renameGraph(oldUri, newUri);
+        var oldUri = prefixes.expandPrefix(oldGraphUri);
+        var newUri = prefixes.expandPrefix(newGraphUri);
+        assertValidGraphName(oldUri);
+        assertValidGraphName(newUri);
+        if (oldUri.equals(newUri)) {
+            return;
         }
+        if (!graphs.contains(oldUri)) {
+            throw new ResourceNotFoundException("Graph URI " + oldUri + " does not exist.");
+        }
+        if (graphs.contains(newUri)) {
+            throw new ResourceConflictException("Graph URI " + newUri + " already exists.");
+        }
+        graphs.rename(oldUri, newUri);
+        renameGraphInDiagrams(oldUri, newUri);
+        crossProfileDiagramInfo.renameGraph(oldUri, newUri);
     }
 
     private void renameGraphInDiagrams(String oldGraphUri, String newGraphUri) {
         var oldUri = new URI(oldGraphUri);
         var newUri = new URI(newGraphUri);
         rewriteGraphUri(customDiagrams.get().values(), oldUri, newUri);
-        for (var graph : graphs.values()) {
+        for (var graph : graphs.view().values()) {
             rewriteGraphUri(graph.getCustomDiagrams().values(), oldUri, newUri);
         }
     }
@@ -442,7 +462,7 @@ public class Workspace {
     /** Returns a snapshot of the current graph URIs. */
     public List<String> listGraphUris() {
         try (var transaction = begin(ReadWrite.READ)) {
-            return graphs.keySet().stream().toList();
+            return graphs.uris();
         }
     }
 
@@ -453,13 +473,8 @@ public class Workspace {
     /** Returns the namespace prefixes shared by all graphs of the workspace. */
     public PrefixMappingReadOnly getPrefixMapping() {
         try (var transaction = begin(ReadWrite.READ)) {
-            return new PrefixMappingReadOnly(prefixes);
+            return prefixes.readOnlyView();
         }
-    }
-
-    private void setPrefixes(PrefixMapping newPrefixMapping) {
-        this.prefixes.clearNsPrefixMap();
-        this.prefixes.setNsPrefixes(newPrefixMapping);
     }
 
     private void assertValidGraphName(String graphUri) {

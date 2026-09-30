@@ -40,7 +40,9 @@ public record ParticipantId(Kind kind, String scope) {
         /** The namespace prefix mapping of the workspace. */
         PREFIXES,
         /** The set of graphs the workspace contains. */
-        GRAPHS
+        GRAPHS,
+        /** The colours the graphs are drawn in on the cross-profile diagram. */
+        COLORS
     }
 
     /**
