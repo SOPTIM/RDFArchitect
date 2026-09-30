@@ -31,6 +31,7 @@ import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
@@ -166,6 +167,8 @@ public class UpdateClassLayoutService
                     packageUUID != null
                             ? packageUUID
                             : diagramLayout.getDefaultPackageMRID().getUuid();
+            var firstLayout =
+                    DLObjectFetcher.fetchDiagram(diagramLayoutModel, resolvedPackageUUID) == null;
 
             for (var classPositionDTO : classPositionDTOList) {
                 var diagramObject =
@@ -202,7 +205,8 @@ public class UpdateClassLayoutService
                         classPositionDTO.getZPosition());
             }
 
-            transaction.commit("moved classes in package %s".formatted(packageUUID));
+            commitLayout(
+                    transaction, firstLayout, "moved classes in package %s".formatted(packageUUID));
         }
     }
 
@@ -210,11 +214,27 @@ public class UpdateClassLayoutService
     public void updateClassPositions(
             String datasetName, UUID diagramUUID, List<ClassPositionDTO> classPositionDTOList) {
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
-            applyClassPositions(
-                    transaction.layout().getDiagramLayoutModel(),
-                    diagramUUID,
-                    classPositionDTOList);
-            transaction.commit("moved classes in diagram %s".formatted(diagramUUID));
+            var diagramLayoutModel = transaction.layout().getDiagramLayoutModel();
+            var firstLayout = DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null;
+            applyClassPositions(diagramLayoutModel, diagramUUID, classPositionDTOList);
+            commitLayout(
+                    transaction, firstLayout, "moved classes in diagram %s".formatted(diagramUUID));
+        }
+    }
+
+    /**
+     * Records a layout change, unless it is the one a diagram gets the first time it is opened.
+     *
+     * <p>That first layout is computed by the editor and sent back without the user doing anything,
+     * so offering to undo it would mean offering to undo opening a diagram. It still has to be
+     * stored, or every visit would lay the diagram out anew.
+     */
+    private static void commitLayout(
+            WorkspaceTransaction transaction, boolean firstLayout, String message) {
+        if (firstLayout) {
+            transaction.commitWithoutHistory();
+        } else {
+            transaction.commit(message);
         }
     }
 

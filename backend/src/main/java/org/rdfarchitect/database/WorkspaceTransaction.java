@@ -136,6 +136,12 @@ public interface WorkspaceTransaction extends AutoCloseable {
      * Rolls back the whole transaction, including the levels that enclose this one. Any further
      * write fails, so that a caller that catches the failure cannot commit the remains.
      */
+    /**
+     * Commits without adding a step to the history, for a change the user did not make and cannot
+     * mean to undo. Only valid on the outermost transaction.
+     */
+    void commitWithoutHistory();
+
     void abort();
 
     /**

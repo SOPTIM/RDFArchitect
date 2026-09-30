@@ -170,6 +170,41 @@ class LazyDiagramLayoutTest {
                 .orElseThrow();
     }
 
+    @Test
+    void firstLayoutOfADiagram_isNotSomethingTheUserCanUndo() {
+        var packageUUID = onlyPackageUUID();
+        var gadgetUUID = nodeUUID("Gadget", renderPackage(packageUUID));
+        var entriesBefore = databasePort.listChanges(graphIdentifier.datasetName()).size();
+
+        sendPosition(packageUUID, gadgetUUID, 120.0F, 80.0F);
+
+        assertThat(databasePort.listChanges(graphIdentifier.datasetName()))
+                .as("the layout the editor computes on opening a diagram")
+                .hasSize(entriesBefore);
+        assertThat(diagramExists(packageUUID)).isTrue();
+    }
+
+    @Test
+    void movingAClassInALaidOutDiagram_isUndoable() {
+        var packageUUID = onlyPackageUUID();
+        var gadgetUUID = nodeUUID("Gadget", renderPackage(packageUUID));
+        sendPosition(packageUUID, gadgetUUID, 120.0F, 80.0F);
+        var entriesBefore = databasePort.listChanges(graphIdentifier.datasetName()).size();
+
+        sendPosition(packageUUID, gadgetUUID, 300.0F, 400.0F);
+
+        assertThat(databasePort.listChanges(graphIdentifier.datasetName()))
+                .hasSize(entriesBefore + 1);
+    }
+
+    private void sendPosition(UUID packageUUID, UUID classUUID, float x, float y) {
+        var position = new ClassPositionDTO();
+        position.setClassUUID(classUUID);
+        position.setXPosition(x);
+        position.setYPosition(y);
+        classLayoutService.updateClassPositions(graphIdentifier, packageUUID, List.of(position));
+    }
+
     private boolean diagramExists(UUID packageUUID) {
         var model = layoutModelOf(graphIdentifier);
         return DLObjectFetcher.fetchDiagram(model, packageUUID) != null;

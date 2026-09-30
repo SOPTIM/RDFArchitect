@@ -309,5 +309,10 @@ class WorkspaceChangeLogTest {
         public void discardRedoHistory() {
             calls.add(name + ".discardRedoHistory");
         }
+
+        @Override
+        public void foldLastVersionIntoPrevious() {
+            // not exercised here
+        }
     }
 }

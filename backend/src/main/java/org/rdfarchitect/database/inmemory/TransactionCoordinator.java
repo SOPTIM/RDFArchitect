@@ -123,6 +123,47 @@ class TransactionCoordinator {
     }
 
     /**
+     * Commits without adding a step to the history.
+     *
+     * <p>For a change the user did not make: the layout a diagram is given the first time it is
+     * opened. It has to be stored — otherwise every visit lays it out anew — but offering to undo
+     * it would mean offering to undo opening a diagram. The change is folded into the current
+     * version instead, so the participants stay in step with the log.
+     */
+    void commitWithoutHistory() {
+        requireWriteTransaction();
+        if (txnContext.isAborted()) {
+            throw new GraphTransactionException("Cannot commit an aborted transaction.");
+        }
+        if (!txnContext.isOutermost()) {
+            throw new GraphTransactionException(
+                    "Cannot skip the history from inside a transaction that records it.");
+        }
+        var enrolled = List.copyOf(txnContext.enrolledParticipants());
+        var versioned = new ArrayList<TransactionParticipant>();
+        var complete = false;
+        try {
+            for (var participant : enrolled) {
+                if (!participant.hasChanges()) {
+                    continue;
+                }
+                participant.commit();
+                versioned.add(participant);
+                if (participant instanceof ChangeLogParticipant rewindable) {
+                    rewindable.foldLastVersionIntoPrevious();
+                }
+            }
+            complete = true;
+        } finally {
+            if (!complete) {
+                failCommit(versioned);
+            }
+        }
+        txnContext.clearEnrolled();
+        logger.debug("Workspace committed without recording history.");
+    }
+
+    /**
      * Leaves nothing of a commit that died halfway through.
      *
      * <p>A participant that already committed has cut a version and no longer considers itself

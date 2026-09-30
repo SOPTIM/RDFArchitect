@@ -290,4 +290,17 @@ public class RDFGraphDelta
     public void discardRedoHistory() {
         futureDeltas.clear();
     }
+
+    @Override
+    public void foldLastVersionIntoPrevious() {
+        if (pastDeltas.size() < 2) {
+            return;
+        }
+        // Compressing first detaches the newest delta from the version it is about to replace, so
+        // dropping that version leaves the chain below it intact.
+        var newest = pastDeltas.pop();
+        newest.compress();
+        pastDeltas.pop();
+        pastDeltas.push(newest);
+    }
 }

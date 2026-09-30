@@ -144,6 +144,7 @@ class TransactionCoordinatorTest {
         private int aborts;
         private int undos;
         private int redoHistoryDiscards;
+        private int folds;
 
         StubParticipant failingOnCommit() {
             failOnCommit = true;
@@ -194,6 +195,11 @@ class TransactionCoordinatorTest {
         @Override
         public void discardRedoHistory() {
             redoHistoryDiscards++;
+        }
+
+        @Override
+        public void foldLastVersionIntoPrevious() {
+            folds++;
         }
     }
 }

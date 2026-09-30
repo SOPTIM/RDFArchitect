@@ -170,4 +170,15 @@ public abstract class SnapshotParticipant<S>
     public void discardRedoHistory() {
         futureStates.clear();
     }
+
+    @Override
+    public void foldLastVersionIntoPrevious() {
+        if (pastStates.size() < 2) {
+            return;
+        }
+        var newest = pastStates.pop();
+        pastStates.pop();
+        pastStates.push(newest);
+        lastAdditions = List.of();
+    }
 }
