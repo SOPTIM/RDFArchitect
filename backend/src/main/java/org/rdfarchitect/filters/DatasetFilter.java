@@ -63,14 +63,14 @@ public class DatasetFilter implements Filter {
     }
 
     private boolean hasDatasetAccess(String method, String uri, String datasetName) {
-        // allow dataset and graph creation without requiring the dataset to exist beforehand
+        // Creating a workspace, and the two uploads that bring the workspace they address into
+        // existence, are the only requests allowed to name one that does not exist yet. An import's
+        // progress also stays readable when it failed before the workspace came into existence.
         if ("PUT".equals(method)
                 && (uri.matches("/api/datasets/[^/]+")
                         || uri.matches("/api/datasets/[^/]+/graphs/[^/]+/content"))) {
             return true;
         }
-        // an import creates the dataset it imports into, and its progress stays readable even when
-        // the import failed before the dataset came into existence
         if (uri.matches("/api/datasets/[^/]+/graphs/content/imports(/.*)?")) {
             return true;
         }

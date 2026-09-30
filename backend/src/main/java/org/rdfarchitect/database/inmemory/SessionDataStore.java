@@ -67,12 +67,9 @@ public interface SessionDataStore {
     void renameDataset(String oldDatasetName, String newDatasetName);
 
     /**
-     * Renames a named graph within its Dataset and rewrites all references to it, i.e. in custom
-     * diagrams and cross profile diagram colors. The content and history of the graph are kept.
+     * Lists the names of all workspaces of this session.
      *
-     * @param graphIdentifier The identifier of the graph to rename.
-     * @param newGraphUri The graph URI to rename to.
-     * @throws DataAccessException if the Dataset or graph does not exist.
+     * @return the workspace names
      */
     List<String> listDatasets();
 
@@ -162,12 +159,6 @@ public interface SessionDataStore {
      */
     PrefixMappingReadOnly getPrefixMapping(String datasetName);
 
-    /**
-     * Replace all prefixes in a specified dataset.
-     *
-     * @param datasetName The name of the dataset.
-     * @param newPrefixes the new Prefixes.
-     */
     /**
      * Writes a specified graph to a database.
      *
