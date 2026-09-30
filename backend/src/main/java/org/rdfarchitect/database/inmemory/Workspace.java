@@ -448,13 +448,6 @@ public class Workspace {
         }
     }
 
-    /** Drops all graphs of the workspace. */
-    public void clear() {
-        try (var transaction = begin(ReadWrite.WRITE)) {
-            graphs.clear();
-        }
-    }
-
     private void deleteGraph(String graphUri) {
         graphs.remove(prefixes.expandPrefix(graphUri));
     }

@@ -74,10 +74,6 @@ public class SessionDataStoreImpl implements SessionDataStore {
     public void deleteDataset(String datasetName) {
         lock.lock();
         try {
-            if (!workspaces.containsKey(datasetName)) {
-                return;
-            }
-            workspaces.get(datasetName).clear();
             workspaces.remove(datasetName);
         } finally {
             lock.unlock();
@@ -218,7 +214,6 @@ public class SessionDataStoreImpl implements SessionDataStore {
     private void clearGraphCollections() {
         lock.lock();
         try {
-            workspaces.values().forEach(Workspace::clear);
             workspaces.clear();
         } finally {
             lock.unlock();
