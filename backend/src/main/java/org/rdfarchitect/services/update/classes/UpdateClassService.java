@@ -83,48 +83,48 @@ public class UpdateClassService
         this.removeFromCustomDiagramUseCase = removeFromCustomDiagramUseCase;
     }
 
+    /**
+     * Renaming a class also renames it in the layout, in the diagrams it appears in and in the
+     * cross-profile view. One enclosing transaction keeps that one change in the history and one
+     * step to undo, rather than four the user never asked for separately.
+     */
     @Override
     public void replaceClass(GraphIdentifier graphIdentifier, ClassUMLAdaptedDTO newClass) {
-        String oldClassUri;
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
-            var resource =
-                    CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), newClass.getUuid());
-            oldClassUri = resource.getURI();
-        }
-
-        UUID releasedUuid;
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
+            var oldClassUri =
+                    CIMResourceUtils.findResourceForUuid(graph, newClass.getUuid()).getURI();
+
             var cimClass = classMapper.toCIMObject(newClass);
             assertNoPackageWithSameIri(graph, cimClass);
-            releasedUuid =
+            var releasedUuid =
                     CIMUpdates.replaceClass(
                             graph,
                             databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                             cimClass,
                             newValuesAsBlankNode);
+
+            if (releasedUuid != null) {
+                deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, releasedUuid);
+                removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, releasedUuid);
+            }
+
+            updateDiagramObjectNameUseCase.updateDiagramObjectName(
+                    graphIdentifier, newClass.getUuid(), newClass.getLabel());
+
+            String newClassUri = newClass.getPrefix() + newClass.getLabel();
+            if (!oldClassUri.equals(newClassUri)) {
+                crossProfileDiagramLayoutUseCase.migrateLayoutToNewClassUri(
+                        graphIdentifier.datasetName(),
+                        CrossProfileUtils.mergedUuid(oldClassUri),
+                        CrossProfileUtils.mergedUuid(newClassUri),
+                        newClassUri);
+            }
+
             transaction.commit(
                     "Updated class \"%s\" (%s)".formatted(newClass.getLabel(), newClass.getUuid()));
-        }
-
-        if (releasedUuid != null) {
-            deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, releasedUuid);
-            removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, releasedUuid);
-        }
-
-        updateDiagramObjectNameUseCase.updateDiagramObjectName(
-                graphIdentifier, newClass.getUuid(), newClass.getLabel());
-
-        String newClassUri = newClass.getPrefix() + newClass.getLabel();
-        if (!oldClassUri.equals(newClassUri)) {
-            var oldMergedUuid = CrossProfileUtils.mergedUuid(oldClassUri);
-            var newMergedUuid = CrossProfileUtils.mergedUuid(newClassUri);
-            crossProfileDiagramLayoutUseCase.migrateLayoutToNewClassUri(
-                    graphIdentifier.datasetName(), oldMergedUuid, newMergedUuid, newClassUri);
         }
     }
 
@@ -148,12 +148,11 @@ public class UpdateClassService
                             graph,
                             databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                             newClass);
+            createClassLayoutDataUseCase.createClassLayoutData(
+                    graphIdentifier, packageDTO, className, newClassUUID, classLayoutPosition);
             transaction.commit(
                     "Added class \"%s\" (%s)".formatted(newClass.getLabel(), newClassUUID));
         }
-
-        createClassLayoutDataUseCase.createClassLayoutData(
-                graphIdentifier, packageDTO, className, newClassUUID, classLayoutPosition);
 
         return newClassUUID;
     }
