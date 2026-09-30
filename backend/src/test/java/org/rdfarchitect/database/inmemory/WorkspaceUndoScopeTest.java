@@ -346,6 +346,29 @@ class WorkspaceUndoScopeTest {
     }
 
     // -------------------------------------------------------------------------
+    // How a change reads afterwards
+    // -------------------------------------------------------------------------
+
+    @Nested
+    class ChangeDescription {
+
+        @Test
+        void aDiagramIsNamedByItsName_notItsId() {
+            var diagramId = UUID.randomUUID();
+            try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+                transaction
+                        .diagrams()
+                        .put(diagramId, new CustomDiagram(diagramId, "Overview", List.of()));
+                transaction.commit("created a diagram");
+            }
+
+            assertThat(workspace.pendingUndo().removedOnUndo()).containsExactly("Overview");
+            assertThat(workspace.pendingUndo().removedOnUndo().getFirst())
+                    .doesNotContain(diagramId.toString());
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // The history horizon
     // -------------------------------------------------------------------------
 

@@ -36,6 +36,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.diagrams.RemoveFromCustomDiagramUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
@@ -123,9 +124,16 @@ public class UpdateClassService
                         newClassUri);
             }
 
-            transaction.commit(
-                    "Updated class \"%s\" (%s)".formatted(newClass.getLabel(), newClass.getUuid()));
+            transaction.commit(describeClassUpdate(oldClassUri, newClass.getLabel()));
         }
+    }
+
+    /** Names a rename by both names, since that is the change the reader will be looking for. */
+    private static String describeClassUpdate(String oldClassUri, String newLabel) {
+        var oldLabel = ChangeDescriptions.localName(oldClassUri);
+        return oldLabel.equals(newLabel)
+                ? "Updated class \"%s\"".formatted(newLabel)
+                : "Renamed class \"%s\" to \"%s\"".formatted(oldLabel, newLabel);
     }
 
     @Override
@@ -150,8 +158,7 @@ public class UpdateClassService
                             newClass);
             createClassLayoutDataUseCase.createClassLayoutData(
                     graphIdentifier, packageDTO, className, newClassUUID, classLayoutPosition);
-            transaction.commit(
-                    "Added class \"%s\" (%s)".formatted(newClass.getLabel(), newClassUUID));
+            transaction.commit("Added class \"%s\"".formatted(newClass.getLabel()));
         }
 
         return newClassUUID;
@@ -194,7 +201,7 @@ public class UpdateClassService
                     ctx.getRdfGraph(),
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     classUUID);
-            transaction.commit("Deleted class \"%s\" (%s)".formatted(classLabel, classUUID));
+            transaction.commit("Deleted class \"%s\"".formatted(classLabel));
         }
 
         deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, classUUID);

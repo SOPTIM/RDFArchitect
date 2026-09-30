@@ -56,7 +56,7 @@ public class UpdatePackageLayoutService
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             DiagramLayoutServiceUtils.insertDiagram(
                     diagramLayoutModel, cimPackage.getUuid(), cimPackage.getLabel().getValue());
-            transaction.commit("laid out package %s".formatted(newPackageUUID));
+            transaction.commit("Laid out a package");
         }
     }
 
@@ -67,7 +67,7 @@ public class UpdatePackageLayoutService
             var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             DLUpdates.deleteDiagramCascade(diagramLayoutModel, new MRID(packageUUID));
-            transaction.commit("removed the layout of package %s".formatted(packageUUID));
+            transaction.commit("Removed the layout of a package");
         }
     }
 
@@ -86,7 +86,7 @@ public class UpdatePackageLayoutService
                             .orientation(OrientationKind.NEGATIVE)
                             .build();
             DLUpdates.replaceDiagram(diagramLayoutModel, diagramMRID, newDiagram);
-            transaction.commit("renamed diagram %s".formatted(packageUUID));
+            transaction.commit("Renamed diagram to \"%s\"".formatted(packageName));
         }
     }
 }

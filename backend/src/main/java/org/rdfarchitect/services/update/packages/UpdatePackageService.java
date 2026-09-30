@@ -97,7 +97,7 @@ public class UpdatePackageService
                     newPackage);
             replaceDiagramUseCase.replaceDiagram(
                     graphIdentifier, packageDTO.getUuid(), packageDTO.getLabel());
-            transaction.commit("Replaced package " + packageDTO.getUuid());
+            transaction.commit("Updated package \"%s\"".formatted(packageDTO.getLabel()));
         }
     }
 
@@ -106,12 +106,16 @@ public class UpdatePackageService
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphUri());
+            // Read before deleting: afterwards there is no label left to name the change with.
+            var packageResource =
+                    CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), packageUUID);
+            var packageLabel = CIMResourceUtils.findLabelForResource(packageResource);
             CIMUpdates.deletePackage(
                     ctx.getRdfGraph(),
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     packageUUID);
             deletePackageLayoutDataUseCase.deletePackageLayoutData(graphIdentifier, packageUUID);
-            transaction.commit("Deleted package " + packageUUID);
+            transaction.commit("Deleted package \"%s\"".formatted(packageLabel));
         }
     }
 

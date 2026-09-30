@@ -21,9 +21,12 @@ import static org.assertj.core.api.AssertionsForClassTypes.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.shared.PrefixMapping;
+import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +46,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 import org.rdfarchitect.rdf.graph.wrapper.RDFGraphDelta;
 import org.rdfarchitect.services.dl.update.packagelayout.UpdatePackageLayoutService;
@@ -204,22 +208,35 @@ class UpdatePackageServiceTest {
     void deletePackage_validUuid_deletesPackageAndRecordsChange() {
         var graphIdentifier = new GraphIdentifier("default", "test");
         UUID packageUuid = UUID.randomUUID();
+        var graph = graphWithPackage(packageUuid, "Assets");
 
         try (MockedStatic<CIMUpdates> mockedStatic = mockStatic(CIMUpdates.class)) {
             service.deletePackage(graphIdentifier, packageUuid);
 
-            mockedStatic.verify(
-                    () -> CIMUpdates.deletePackage(eq(mockGraph), any(), eq(packageUuid)));
+            mockedStatic.verify(() -> CIMUpdates.deletePackage(eq(graph), any(), eq(packageUuid)));
         }
 
-        verify(transaction).commit("Deleted package " + packageUuid);
+        // The label has to be read before the package is gone, or the history cannot name it.
+        verify(transaction).commit("Deleted package \"Assets\"");
         verify(transaction).close();
+    }
+
+    /** A graph holding one package, so that its label can be read the way the service reads it. */
+    private Graph graphWithPackage(UUID packageUuid, String label) {
+        var graph = GraphFactory.createDefaultGraph();
+        var model = ModelFactory.createModelForGraph(graph);
+        var resource = model.createResource("http://example.com#" + label);
+        resource.addProperty(RDFA.uuid, packageUuid.toString());
+        resource.addProperty(RDFS.label, label);
+        when(mockGraphWithContext.getRdfGraph()).thenReturn(graph);
+        return graph;
     }
 
     @Test
     void deletePackage_failureDuringDelete_alwaysEndsGraphTransaction() {
         var graphIdentifier = new GraphIdentifier("default", "test");
         UUID packageUuid = UUID.randomUUID();
+        graphWithPackage(packageUuid, "Assets");
 
         try (MockedStatic<CIMUpdates> mockedStatic = mockStatic(CIMUpdates.class)) {
             mockedStatic

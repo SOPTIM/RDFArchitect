@@ -121,7 +121,7 @@ public class CustomDiagramService
         if (doLayout) {
             try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
                 doDiagramLayout(transaction.layout(), crossProfileDiagramUUID, mergeMap);
-                transaction.commit("laid out the cross profile diagram");
+                transaction.commit("Laid out the cross profile diagram");
             }
         }
         return new CrossProfileDiagramDTO(
@@ -192,8 +192,8 @@ public class CustomDiagramService
     @Override
     public void deleteCustomDatasetDiagram(String datasetName, String diagramId) {
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
-            transaction.diagrams().remove(UUID.fromString(diagramId));
-            transaction.commit("deleted diagram %s".formatted(diagramId));
+            var removed = transaction.diagrams().remove(UUID.fromString(diagramId));
+            transaction.commit("Deleted diagram \"%s\"".formatted(nameOf(removed, diagramId)));
         }
     }
 
@@ -215,7 +215,7 @@ public class CustomDiagramService
                         diagramDTO.getDiagramId(), diagramDTO.getName(), diagramDTO.getClasses());
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
             transaction.diagrams().put(UUID.fromString(diagramId), diagram);
-            transaction.commit("replaced diagram %s".formatted(diagramId));
+            transaction.commit("Updated diagram \"%s\"".formatted(nameOf(diagram, diagramId)));
         }
     }
 
@@ -228,7 +228,8 @@ public class CustomDiagramService
                 classes.removeIf(c -> c.getUuid().equals(classId));
                 diagram.setClasses(classes);
                 transaction.commit(
-                        "removed class %s from diagram %s".formatted(classId, diagramId));
+                        "Removed a class from diagram \"%s\""
+                                .formatted(nameOf(diagram, diagramId)));
             }
         }
     }
@@ -238,8 +239,8 @@ public class CustomDiagramService
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphUri());
-            ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
-            transaction.commit("deleted diagram %s".formatted(diagramId));
+            var removed = ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
+            transaction.commit("Deleted diagram \"%s\"".formatted(nameOf(removed, diagramId)));
         }
     }
 
@@ -265,7 +266,7 @@ public class CustomDiagramService
                             diagramDTO.getName(),
                             diagramDTO.getClasses());
             ctx.getCustomDiagrams().put(UUID.fromString(diagramId), diagram);
-            transaction.commit("replaced diagram %s".formatted(diagramId));
+            transaction.commit("Updated diagram \"%s\"".formatted(nameOf(diagram, diagramId)));
         }
     }
 
@@ -281,7 +282,8 @@ public class CustomDiagramService
                 classes.removeIf(c -> c.getUuid().equals(classId));
                 diagram.setClasses(classes);
             }
-            transaction.commit("removed class %s from diagram %s".formatted(classId, diagramId));
+            transaction.commit(
+                    "Removed a class from diagram \"%s\"".formatted(nameOf(diagram, diagramId)));
         }
     }
 
@@ -300,8 +302,15 @@ public class CustomDiagramService
                 classes.removeIf(c -> c.getUuid().equals(classId));
                 diagram.setClasses(classes);
             }
-            transaction.commit("removed class %s from all diagrams".formatted(classId));
+            transaction.commit("Removed a class from all diagrams");
         }
+    }
+
+    /** A diagram the user never named still has to be recognisable in the history. */
+    private static String nameOf(CustomDiagram diagram, String diagramId) {
+        return diagram == null || diagram.getName() == null || diagram.getName().isBlank()
+                ? diagramId
+                : diagram.getName();
     }
 
     @Override
@@ -327,7 +336,7 @@ public class CustomDiagramService
                             .setColor(graphUri, dto.getGraphColors().get(graphUri));
                 }
             }
-            transaction.commit("changed cross profile colors");
+            transaction.commit("Changed the cross profile colours");
         }
     }
 }

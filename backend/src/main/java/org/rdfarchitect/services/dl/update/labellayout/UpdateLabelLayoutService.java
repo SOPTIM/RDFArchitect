@@ -29,6 +29,7 @@ import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher.LabelKey;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.springframework.stereotype.Service;
 
@@ -63,11 +64,13 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
                             ? diagramUUID
                             : diagramLayout.getDefaultPackageMRID().getUuid();
 
-            applyLabelPositions(
-                    diagramLayout.getDiagramLayoutModel(),
-                    resolvedDiagramUUID,
-                    labelPositionDTOList);
-            transaction.commit("moved labels in diagram %s".formatted(diagramUUID));
+            var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
+            applyLabelPositions(diagramLayoutModel, resolvedDiagramUUID, labelPositionDTOList);
+            transaction.commit(
+                    "Moved labels in %s"
+                            .formatted(
+                                    ChangeDescriptions.diagram(
+                                            diagramLayoutModel, resolvedDiagramUUID)));
         }
     }
 
@@ -75,11 +78,12 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
     public void updateLabelPositions(
             String datasetName, UUID diagramUUID, List<LabelPositionDTO> labelPositionDTOList) {
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
-            applyLabelPositions(
-                    transaction.layout().getDiagramLayoutModel(),
-                    diagramUUID,
-                    labelPositionDTOList);
-            transaction.commit("moved labels in diagram %s".formatted(diagramUUID));
+            var diagramLayoutModel = transaction.layout().getDiagramLayoutModel();
+            applyLabelPositions(diagramLayoutModel, diagramUUID, labelPositionDTOList);
+            transaction.commit(
+                    "Moved labels in %s"
+                            .formatted(
+                                    ChangeDescriptions.diagram(diagramLayoutModel, diagramUUID)));
         }
     }
 

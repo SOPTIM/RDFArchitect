@@ -336,10 +336,10 @@ describe("versionControlStore", () => {
             });
         });
 
-        test("names the change and offers to go where it landed", async () => {
+        test("names the change and where it landed", async () => {
             vi.mocked(api.undo).mockResolvedValue({
                 data: {
-                    message: 'Updated class "Terminal"',
+                    message: 'Renamed class "Terminal" to "Node"',
                     affectedGraphUris: [OTHER],
                     affectedKinds: ["RDF"],
                 },
@@ -348,37 +348,13 @@ describe("versionControlStore", () => {
 
             await store.undo(WORKSPACE);
 
-            const [title, message, options] = vi.mocked(toastStore.info).mock
-                .calls[0];
+            const [title, message] = vi.mocked(toastStore.info).mock.calls[0];
             expect(title).toBe("Undone");
-            expect(message).toContain('Updated class "Terminal"');
+            expect(message).toContain('Renamed class "Terminal" to "Node"');
             expect(message).toContain("Operation");
-            expect(options.action.label).toBe("Go to Operation");
-            expect(options.action.href).toBe("/mainpage");
         });
 
-        test("the link selects the graph the change landed in", async () => {
-            vi.mocked(api.undo).mockResolvedValue({
-                data: {
-                    message: "a change",
-                    affectedGraphUris: [OTHER],
-                    affectedKinds: ["RDF"],
-                },
-                error: undefined,
-            });
-
-            await store.undo(WORKSPACE);
-            vi.mocked(toastStore.info).mock.calls[0][2].action.onSelect();
-
-            expect(
-                editorState.selectedWorkspace.updateValue,
-            ).toHaveBeenCalledWith(WORKSPACE);
-            expect(editorState.selectedGraph.updateValue).toHaveBeenCalledWith(
-                OTHER,
-            );
-        });
-
-        test("offers no link when the change was in the open graph", async () => {
+        test("says nothing about a place when the change is in the open graph", async () => {
             vi.mocked(api.undo).mockResolvedValue({
                 data: {
                     message: "a change",
@@ -390,7 +366,9 @@ describe("versionControlStore", () => {
 
             await store.undo(WORKSPACE);
 
-            expect(vi.mocked(toastStore.info).mock.calls[0][2]).toBeUndefined();
+            expect(vi.mocked(toastStore.info).mock.calls[0][1]).toBe(
+                "a change",
+            );
         });
 
         test("says when the change was not in the schema", async () => {

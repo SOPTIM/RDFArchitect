@@ -170,7 +170,7 @@ function createVersionControlStore() {
             toastStore.error(FAILURE_TITLE[direction], FAILURE_TEXT[direction]);
             return { error };
         }
-        announce(SUCCESS_TITLE[direction], target, data);
+        announce(SUCCESS_TITLE[direction], data);
 
         invalidateWorkspace(target);
         await refresh(target);
@@ -178,36 +178,17 @@ function createVersionControlStore() {
     }
 
     /**
-     * Says what was undone or redone, and offers to go there.
+     * Says what was undone or redone, and where.
      *
      * Undo reaches the whole workspace, so what it took back may sit in a graph the user is not
      * looking at — or in its SHACL shapes rather than its schema. Without saying so, the editor
      * would appear unchanged and the change would look lost.
      */
-    function announce(
-        title: string,
-        workspace: string,
-        entry: ChangeLogEntryDTO | undefined,
-    ) {
+    function announce(title: string, entry: ChangeLogEntryDTO | undefined) {
         const elsewhere = (entry?.affectedGraphUris ?? []).filter(
             graph => graph !== editorState.selectedGraph.getValue(),
         );
-        const description = describe(entry, elsewhere);
-        if (elsewhere.length !== 1) {
-            toastStore.info(title, description);
-            return;
-        }
-        const graph = elsewhere[0];
-        toastStore.info(title, description, {
-            action: {
-                label: `Go to ${shortName(graph)}`,
-                href: "/mainpage",
-                onSelect: () => {
-                    editorState.selectedWorkspace.updateValue(workspace);
-                    editorState.selectedGraph.updateValue(graph);
-                },
-            },
-        });
+        toastStore.info(title, describe(entry, elsewhere));
     }
 
     /**

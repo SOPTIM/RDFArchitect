@@ -33,6 +33,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
@@ -44,6 +45,7 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.rdfarchitect.services.rendering.MergedClasses;
@@ -109,7 +111,7 @@ public class UpdateClassLayoutService
                             classLayoutPosition.getXPosition(),
                             classLayoutPosition.getYPosition(),
                             null);
-                    transaction.commit("laid out class %s".formatted(classUUID));
+                    transaction.commit("Laid out class \"%s\"".formatted(className));
                 }
                 return;
             }
@@ -121,7 +123,7 @@ public class UpdateClassLayoutService
             float yPosition = classLayoutPosition != null ? classLayoutPosition.getYPosition() : 0;
             DiagramLayoutServiceUtils.insertDiagramObjectPoint(
                     diagramLayoutModel, doMRID, packageUUID, xPosition, yPosition);
-            transaction.commit("laid out class %s".formatted(classUUID));
+            transaction.commit("Laid out class \"%s\"".formatted(className));
         }
     }
 
@@ -229,6 +231,11 @@ public class UpdateClassLayoutService
      * so offering to undo it would mean offering to undo opening a diagram. It still has to be
      * stored, or every visit would lay the diagram out anew.
      */
+    /** Custom diagrams carry their own name; the DL model only knows them by id. */
+    private static String nameOf(CustomDiagram diagram, UUID diagramUUID) {
+        return ChangeDescriptions.nameOr(diagram == null ? null : diagram.getName(), diagramUUID);
+    }
+
     private static void commitLayout(
             WorkspaceTransaction transaction, boolean firstLayout, String message) {
         if (firstLayout) {
@@ -285,7 +292,7 @@ public class UpdateClassLayoutService
             for (var diagramObject : DLObjectFetcher.fetchAllDOs(diagramLayoutModel, classUUID)) {
                 DLUpdates.updateDiagramObjectName(diagramLayoutModel, diagramObject, name);
             }
-            transaction.commit("renamed class %s in the diagrams".formatted(classUUID));
+            transaction.commit("Renamed class \"%s\" in the diagrams".formatted(name));
         }
     }
 
@@ -299,7 +306,7 @@ public class UpdateClassLayoutService
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
             }
             deleteOrphanedLabels(diagramLayoutModel, ctx.getRdfGraph(), classUUID);
-            transaction.commit("removed the layout of class %s".formatted(classUUID));
+            transaction.commit("Removed the layout of a class");
         }
     }
 
@@ -381,7 +388,8 @@ public class UpdateClassLayoutService
                     classes.stream()
                             .map(ClassInDiagram::getUuid)
                             .collect(Collectors.toCollection(LinkedHashSet::new)));
-            transaction.commit("added classes to diagram %s".formatted(diagramUUID));
+            transaction.commit(
+                    "Added classes to diagram \"%s\"".formatted(nameOf(diagram, diagramUUID)));
         }
     }
 
@@ -433,7 +441,8 @@ public class UpdateClassLayoutService
             }
             deleteLayoutForClasses(
                     ctx.getDiagramLayout().getDiagramLayoutModel(), diagramUUID, classUUIDs);
-            transaction.commit("removed classes from diagram %s".formatted(diagramUUID));
+            transaction.commit(
+                    "Removed classes from diagram \"%s\"".formatted(nameOf(diagram, diagramUUID)));
         }
     }
 
@@ -485,7 +494,8 @@ public class UpdateClassLayoutService
                     transaction.layout().getDiagramLayoutModel(),
                     diagramUUID,
                     mergedUuidsOf(classes, classUriByUuid(datasetName, classes)));
-            transaction.commit("added classes to diagram %s".formatted(diagramUUID));
+            transaction.commit(
+                    "Added classes to diagram \"%s\"".formatted(nameOf(diagram, diagramUUID)));
         }
     }
 
@@ -539,7 +549,8 @@ public class UpdateClassLayoutService
                         diagramUUID,
                         classUUIDs.stream().filter(uuid -> !stillRendered.contains(uuid)).toList());
             }
-            transaction.commit("removed classes from diagram %s".formatted(diagramUUID));
+            transaction.commit(
+                    "Removed classes from diagram \"%s\"".formatted(nameOf(diagram, diagramUUID)));
         }
     }
 
@@ -553,12 +564,13 @@ public class UpdateClassLayoutService
             diagramUUIDs.add(transaction.crossProfileInfo().getCrossProfileDiagramUUID());
             diagramUUIDs.addAll(transaction.diagrams().keySet());
 
-            for (var diagramUUID : diagramUUIDs) {
+            for (var diagram : diagramUUIDs) {
                 migrateLayoutToNewClassUri(
-                        model, diagramUUID, oldMergedUuid, newMergedUuid, newClassUri);
+                        model, diagram, oldMergedUuid, newMergedUuid, newClassUri);
             }
             transaction.commit(
-                    "moved the layout of class %s to %s".formatted(oldMergedUuid, newClassUri));
+                    "Moved the layout of class \"%s\""
+                            .formatted(ChangeDescriptions.localName(newClassUri)));
         }
     }
 
