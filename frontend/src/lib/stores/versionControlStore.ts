@@ -96,10 +96,7 @@ function createVersionControlStore() {
                     }),
                 () =>
                     sdkCanUndo({
-                        path: {
-                            datasetName: targets.workspace,
-                            graphURI: targets.graph,
-                        },
+                        path: { datasetName: targets.workspace },
                     }),
                 LOG,
                 `canUndo for workspace="${targets.workspace}" graph="${targets.graph}"`,
@@ -132,10 +129,7 @@ function createVersionControlStore() {
                     }),
                 () =>
                     sdkCanRedo({
-                        path: {
-                            datasetName: targets.workspace,
-                            graphURI: targets.graph,
-                        },
+                        path: { datasetName: targets.workspace },
                     }),
                 LOG,
                 `canRedo for workspace="${targets.workspace}" graph="${targets.graph}"`,
@@ -161,7 +155,7 @@ function createVersionControlStore() {
             return { error: "No undo target selected." };
         }
         const { error } = await sdkUndo({
-            path: { datasetName: targets.workspace, graphURI: targets.graph },
+            path: { datasetName: targets.workspace },
         });
         if (error) {
             console.error(`${LOG} undo failed`, error);
@@ -188,7 +182,7 @@ function createVersionControlStore() {
             return { error: "No redo target selected." };
         }
         const { error } = await sdkRedo({
-            path: { datasetName: targets.workspace, graphURI: targets.graph },
+            path: { datasetName: targets.workspace },
         });
         if (error) {
             console.error(`${LOG} redo failed`, error);

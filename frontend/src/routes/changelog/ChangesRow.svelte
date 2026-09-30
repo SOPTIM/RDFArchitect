@@ -44,7 +44,7 @@
         const workspaceName = editorState.selectedWorkspace.getValue();
         const graphUri = editorState.selectedGraph.getValue();
         const { error } = await restoreVersion({
-            path: { datasetName: workspaceName, graphURI: graphUri },
+            path: { datasetName: workspaceName },
             body: { versionId: changeId },
         });
         if (!error) {

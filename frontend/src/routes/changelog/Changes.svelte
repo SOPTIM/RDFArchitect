@@ -56,10 +56,7 @@
             return;
         }
         const { data, error } = await getChangeLogAPI({
-            path: {
-                datasetName: selectedWorkspaceName,
-                graphURI: selectedGraphUri,
-            },
+            path: { datasetName: selectedWorkspaceName },
         });
         if (!error) {
             changelog = data;

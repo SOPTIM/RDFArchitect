@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs.versioncontrol;
+package org.rdfarchitect.api.controller.datasets.versioncontrol;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -39,7 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/restore")
+@RequestMapping("api/datasets/{datasetName}/restore")
 @RequiredArgsConstructor
 public class RestoreVersionRESTController {
 
@@ -51,7 +51,7 @@ public class RestoreVersionRESTController {
     @Operation(
             summary = "restore ",
             description = "restores the graph to the state specified by the version id",
-            tags = {"graph"},
+            tags = {"workspace"},
             responses = {@ApiResponse(responseCode = "200")})
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public String restoreVersion(
@@ -63,11 +63,6 @@ public class RestoreVersionRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description = "The ID of the version to restore.")
@@ -75,17 +70,15 @@ public class RestoreVersionRESTController {
                     RestoreVersionDTO dto) {
 
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/restore\" from \"{}\".",
+                "Received POST request: \"/api/datasets/{{}}/restore\" from \"{}\".",
                 datasetName,
-                graphURI,
                 originURL);
 
         restoreVersionUseCase.restoreVersion(datasetName, UUID.fromString(dto.versionId));
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/restore\" to \"{}\".",
+                "Sending response to POST request: \"/api/datasets/{{}}/restore\" to \"{}\".",
                 datasetName,
-                graphURI,
                 originURL);
         return Response.SUCCESS;
     }

@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs;
+package org.rdfarchitect.api.controller.datasets;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -39,7 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/changes")
+@RequestMapping("api/datasets/{datasetName}/changes")
 @RequiredArgsConstructor
 public class ChangelogRESTController {
 
@@ -50,7 +50,7 @@ public class ChangelogRESTController {
     @Operation(
             summary = "list changes for graph",
             description = "Get a list containing all changes made to a graph",
-            tags = {"graph"},
+            tags = {"workspace"},
             responses = {
                 @ApiResponse(
                         responseCode = "200",
@@ -68,24 +68,17 @@ public class ChangelogRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI) {
+                    String datasetName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/changes\" from \"{}\".",
+                "Received GET request: \"/api/datasets/{{}}/changes\" from \"{}\".",
                 datasetName,
-                graphURI,
                 originURL);
 
         var changes = changelogUseCase.listChanges(datasetName);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/changes\" to \"{}\".",
+                "Sending response to GET request: \"/api/datasets/{{}}/changes\" to \"{}\".",
                 datasetName,
-                graphURI,
                 originURL);
         return changes;
     }
