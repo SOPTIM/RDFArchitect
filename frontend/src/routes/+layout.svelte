@@ -42,7 +42,6 @@
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import {
-        DiagramType,
         editorState,
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
@@ -217,16 +216,6 @@
             if (key === "z" || key === "y") {
                 if (inputFocused) return;
                 if (isDialogOpen()) {
-                    return;
-                }
-                if (
-                    editorState.selectedDiagram.getProperty("type") ===
-                    DiagramType.CROSS_PROFILE
-                ) {
-                    toastStore.info(
-                        "Undo/Redo not possible",
-                        "Undo/Redo is not available in the Merged View.",
-                    );
                     return;
                 }
                 event.preventDefault();
