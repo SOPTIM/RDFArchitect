@@ -37,6 +37,13 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class DatasetFilter implements Filter {
 
+    /**
+     * Every path this filter guards starts here. Derived rather than repeated, so that renaming the
+     * route cannot leave the offset below pointing into the middle of a workspace name — a mistake
+     * that builds cleanly and silently guards the wrong thing.
+     */
+    private static final String PREFIX = "/api/datasets/";
+
     private final DatabasePort databasePort;
 
     @Override
@@ -52,7 +59,7 @@ public class DatasetFilter implements Filter {
 
         // calls to OPTIONS are rejected as they come from preflight and are sent under a different
         // sessionID
-        if (!requestMethod.equals("OPTIONS") && requestURI.startsWith("/api/datasets/")) {
+        if (!requestMethod.equals("OPTIONS") && requestURI.startsWith(PREFIX)) {
             var datasetName = extractDatasetNameFromURI(httpRequest.getRequestURI());
             if (!hasDatasetAccess(requestMethod, requestURI, datasetName)) {
                 throw new DatasetAccessDeniedException(SessionContext.getSessionId(), datasetName);
@@ -67,11 +74,11 @@ public class DatasetFilter implements Filter {
         // existence, are the only requests allowed to name one that does not exist yet. An import's
         // progress also stays readable when it failed before the workspace came into existence.
         if ("PUT".equals(method)
-                && (uri.matches("/api/datasets/[^/]+")
-                        || uri.matches("/api/datasets/[^/]+/graphs/[^/]+/content"))) {
+                && (uri.matches(PREFIX + "[^/]+")
+                        || uri.matches(PREFIX + "[^/]+/graphs/[^/]+/content"))) {
             return true;
         }
-        if (uri.matches("/api/datasets/[^/]+/graphs/content/imports(/.*)?")) {
+        if (uri.matches(PREFIX + "[^/]+/graphs/content/imports(/.*)?")) {
             return true;
         }
         var datasets = databasePort.listDatasets();
@@ -79,8 +86,8 @@ public class DatasetFilter implements Filter {
     }
 
     private String extractDatasetNameFromURI(String uri) {
-        if (uri != null && uri.startsWith("/api/datasets/")) {
-            String remaining = uri.substring(14);
+        if (uri != null && uri.startsWith(PREFIX)) {
+            String remaining = uri.substring(PREFIX.length());
             int slashIndex = remaining.indexOf('/');
             String encoded = slashIndex == -1 ? remaining : remaining.substring(0, slashIndex);
             return URLDecoder.decode(encoded, StandardCharsets.UTF_8);
