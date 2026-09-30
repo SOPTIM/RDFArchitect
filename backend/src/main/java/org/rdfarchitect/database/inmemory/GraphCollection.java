@@ -74,11 +74,6 @@ class GraphCollection extends SnapshotParticipant<Map<String, GraphWithContext>>
         graphs.put(newGraphUri, graphs.remove(oldGraphUri));
     }
 
-    void clear() {
-        beginChange();
-        graphs.clear();
-    }
-
     @Override
     protected Map<String, GraphWithContext> snapshot() {
         return new HashMap<>(graphs);

@@ -93,12 +93,22 @@ class TransactionCoordinator {
 
         var versions = new ArrayList<ParticipantVersion>();
         var deltas = new ArrayList<ContextDelta>();
-        for (var participant : enrolled) {
-            if (!participant.hasChanges()) {
-                continue;
+        var versioned = new ArrayList<TransactionParticipant>();
+        var complete = false;
+        try {
+            for (var participant : enrolled) {
+                if (!participant.hasChanges()) {
+                    continue;
+                }
+                participant.commit();
+                versioned.add(participant);
+                recordVersion(participant, versions, deltas);
             }
-            participant.commit();
-            recordVersion(participant, versions, deltas);
+            complete = true;
+        } finally {
+            if (!complete) {
+                failCommit(versioned);
+            }
         }
         txnContext.clearEnrolled();
         txnContext.addPendingVersions(versions, deltas);
@@ -109,6 +119,35 @@ class TransactionCoordinator {
             writeChangeLogEntry();
         }
         logger.debug("Workspace committed: {}", message);
+    }
+
+    /**
+     * Leaves nothing of a commit that died halfway through.
+     *
+     * <p>A participant that already committed has cut a version and no longer considers itself
+     * changed, so {@code abort()} alone would not reach it — its change would survive with no
+     * changelog entry naming it, which is the one state the log must never be in. Its version is
+     * therefore taken back explicitly before the usual abort handles the rest.
+     *
+     * <p>Runs from a {@code finally} block, so the failure that got us here is still on its way up:
+     * a second failure while cleaning up is logged rather than thrown, so it cannot displace the
+     * first.
+     *
+     * @param versioned the participants that committed during this attempt, in commit order
+     */
+    private void failCommit(List<TransactionParticipant> versioned) {
+        logger.error("A participant failed while committing; taking the commit back.");
+        for (int i = versioned.size() - 1; i >= 0; i--) {
+            if (versioned.get(i) instanceof ChangeLogParticipant participant) {
+                try {
+                    participant.undo();
+                    participant.discardRedoHistory();
+                } catch (RuntimeException e) {
+                    logger.error("Could not take back the version of a participant.", e);
+                }
+            }
+        }
+        abort();
     }
 
     /** Rolls back everything the transaction changed and marks it unusable. */
