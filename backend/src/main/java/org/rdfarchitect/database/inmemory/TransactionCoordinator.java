@@ -28,7 +28,7 @@ import org.rdfarchitect.models.changelog.ParticipantVersion;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLog;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.rdf.graph.GraphUtils;
-import org.rdfarchitect.rdf.graph.wrapper.Rewindable;
+import org.rdfarchitect.rdf.graph.wrapper.DeltaSource;
 import org.rdfarchitect.rdf.graph.wrapper.TransactionParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 import org.slf4j.Logger;
@@ -163,7 +163,7 @@ class TransactionCoordinator {
             return;
         }
         var id = identify.apply(participant);
-        var lastDelta = participant instanceof Rewindable r ? r.getLastDelta() : null;
+        var lastDelta = participant instanceof DeltaSource r ? r.getLastDelta() : null;
         versions.add(
                 new ParticipantVersion(
                         id, rewindable, lastDelta != null ? lastDelta.getVersionId() : null));

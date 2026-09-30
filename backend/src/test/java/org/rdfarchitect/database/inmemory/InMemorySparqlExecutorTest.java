@@ -19,17 +19,16 @@ package org.rdfarchitect.database.inmemory;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import org.apache.jena.arq.querybuilder.UpdateBuilder;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.Query;
-import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QueryFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.query.ResultSet;
-import org.apache.jena.query.ResultSetFactory;
-import org.apache.jena.query.TxnType;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.update.UpdateExecutionFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -37,14 +36,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.TestRDFUtils;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 
 import java.util.List;
-import java.util.UUID;
 
 class InMemorySparqlExecutorTest {
+
+    private static final String WORKSPACE = "workspace";
 
     private List<Graph> exampleGraphs;
 
@@ -54,10 +54,9 @@ class InMemorySparqlExecutorTest {
 
     @BeforeEach
     void setUp() {
-        String datasetName = UUID.randomUUID().toString();
         setUpGraph = GraphFactory.createDefaultGraph();
         inMemoryDatabase = new SessionDataStoreImpl();
-        createGraph(new GraphIdentifier(datasetName, "Http://validBeforeEach.uri"), setUpGraph);
+        createGraph(new GraphIdentifier(WORKSPACE, "Http://validBeforeEach.uri"), setUpGraph);
     }
 
     @AfterEach
@@ -83,17 +82,14 @@ class InMemorySparqlExecutorTest {
         return graph;
     }
 
-    private ResultSet executeSingleQuery(GraphRewindable graph, Query query, String graphUri) {
-        graph.begin(TxnType.READ);
-        try {
-            var dataset = SessionDataStore.wrapGraphInDataset(graph, graphUri);
-            try (var queryExecution = QueryExecutionFactory.create(query, dataset)) {
-                var resultSet = queryExecution.execSelect();
-                return ResultSetFactory.copyResults(resultSet);
-            }
-        } finally {
-            graph.end();
-        }
+    private ResultSet executeSingleQuery(GraphIdentifier identifier, Query query, String graphUri) {
+        DatabasePort port = mock(DatabasePort.class);
+        when(port.beginTransaction(anyString(), any(ReadWrite.class)))
+                .thenAnswer(
+                        invocation ->
+                                inMemoryDatabase.beginTransaction(
+                                        invocation.getArgument(0), invocation.getArgument(1)));
+        return InMemorySparqlExecutor.executeSingleQuery(port, identifier, query, graphUri);
     }
 
     @Test
@@ -101,12 +97,13 @@ class InMemorySparqlExecutorTest {
         // Arrange
         String graphUri = "default";
         exampleGraphs = List.of(createExampleGraph());
-        var graphRewindable = new GraphRewindable(exampleGraphs.getFirst(), 20, 5);
+        var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
+        createGraph(identifier, exampleGraphs.getFirst());
         String queryString = "SELECT * WHERE { ?s ?p ?o }";
         var query = QueryFactory.create(queryString);
 
         // Act
-        var resultSet = executeSingleQuery(graphRewindable, query, graphUri);
+        var resultSet = executeSingleQuery(identifier, query, graphUri);
 
         // Assert
         assertNotNull(resultSet);
@@ -125,12 +122,13 @@ class InMemorySparqlExecutorTest {
     void executeSingleQuery_onNamedWithValidAllQuery_shouldReturnAllResults(String graphUri) {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
-        var graphRewindable = new GraphRewindable(exampleGraphs.getFirst(), 20, 5);
+        var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
+        createGraph(identifier, exampleGraphs.getFirst());
         String queryString = "SELECT * FROM <" + graphUri + "> WHERE { ?s ?p ?o }";
         var query = QueryFactory.create(queryString);
 
         // Act
-        var resultSet = executeSingleQuery(graphRewindable, query, graphUri);
+        var resultSet = executeSingleQuery(identifier, query, graphUri);
 
         // Assert
         assertNotNull(resultSet);
@@ -149,12 +147,13 @@ class InMemorySparqlExecutorTest {
         // Arrange
         String graphUri = "default";
         exampleGraphs = List.of(createExampleGraph());
-        var graphRewindable = new GraphRewindable(exampleGraphs.getFirst(), 20, 5);
+        var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
+        createGraph(identifier, exampleGraphs.getFirst());
         String queryString = "SELECT * WHERE { ?s ?p ?o . FILTER(?p = <http://nonexisting>) }";
         var query = QueryFactory.create(queryString);
 
         // Act
-        var resultSet = executeSingleQuery(graphRewindable, query, graphUri);
+        var resultSet = executeSingleQuery(identifier, query, graphUri);
 
         // Assert
         assertNotNull(resultSet);
@@ -168,7 +167,8 @@ class InMemorySparqlExecutorTest {
         // Arrange
         String graphUri = "http://example.org/graph";
         exampleGraphs = List.of(createExampleGraph());
-        var graphRewindable = new GraphRewindable(exampleGraphs.getFirst(), 20, 5);
+        var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
+        createGraph(identifier, exampleGraphs.getFirst());
         String queryString =
                 "SELECT * FROM <"
                         + graphUri
@@ -176,7 +176,7 @@ class InMemorySparqlExecutorTest {
         var query = QueryFactory.create(queryString);
 
         // Act
-        var resultSet = executeSingleQuery(graphRewindable, query, graphUri);
+        var resultSet = executeSingleQuery(identifier, query, graphUri);
 
         // Assert
         assertNotNull(resultSet);
@@ -190,12 +190,13 @@ class InMemorySparqlExecutorTest {
         // Arrange
         String graphUri = "default";
         exampleGraphs = List.of(createExampleGraph());
-        var graphRewindable = new GraphRewindable(exampleGraphs.getFirst(), 20, 5);
+        var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
+        createGraph(identifier, exampleGraphs.getFirst());
         String queryString = "SELECT * FROM <http://nonexisting> WHERE { ?s ?p ?o }";
         var query = QueryFactory.create(queryString);
 
         // Act
-        var resultSet = executeSingleQuery(graphRewindable, query, graphUri);
+        var resultSet = executeSingleQuery(identifier, query, graphUri);
 
         // Assert
         assertNotNull(resultSet);
@@ -209,31 +210,33 @@ class InMemorySparqlExecutorTest {
         // Arrange
         String graphUri = "default";
         exampleGraphs = List.of(createExampleGraph(), GraphFactory.createDefaultGraph());
-        var graphRewindable = new GraphRewindable(exampleGraphs.get(1), 20, 5);
+        var identifier = new GraphIdentifier(WORKSPACE, graphUri);
+        createGraph(identifier, exampleGraphs.get(1));
 
         // Act
-        for (var t : exampleGraphs.get(0).find().toList()) {
+        for (var t : exampleGraphs.getFirst().find().toList()) {
             var update =
                     new UpdateBuilder()
                             .addInsert(t)
                             .addOptional(Node.ANY, Node.ANY, Node.ANY)
                             .build();
-            graphRewindable.begin(TxnType.WRITE);
-            try {
-                var dataset = SessionDataStore.wrapGraphInDataset(graphRewindable, graphUri);
+            try (var transaction = inMemoryDatabase.beginTransaction(WORKSPACE, ReadWrite.WRITE)) {
+                var dataset =
+                        SessionDataStore.wrapGraphInDataset(
+                                transaction.graph(graphUri).getRdfGraph(), graphUri);
                 UpdateExecutionFactory.create(update, dataset).execute();
-                graphRewindable.commit();
-            } finally {
-                graphRewindable.end();
+                transaction.commit("inserted a triple");
             }
         }
 
         // Assert
-        try {
-            graphRewindable.begin(TxnType.READ);
-            assertThat(graphRewindable.isIsomorphicWith(exampleGraphs.getFirst())).isTrue();
-        } finally {
-            graphRewindable.end();
+        try (var transaction = inMemoryDatabase.beginTransaction(WORKSPACE, ReadWrite.READ)) {
+            assertThat(
+                            transaction
+                                    .graph(graphUri)
+                                    .getRdfGraph()
+                                    .isIsomorphicWith(exampleGraphs.getFirst()))
+                    .isTrue();
         }
     }
 

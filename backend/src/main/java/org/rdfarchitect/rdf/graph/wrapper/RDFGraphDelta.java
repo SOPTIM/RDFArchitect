@@ -38,7 +38,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.UUID;
 
 /**
  * A {@link Graph} implementation backed by {@link DeltaCompressible} deltas. Has no lock of its own
@@ -47,7 +46,7 @@ import java.util.UUID;
  * coordinator has an active transaction via the shared {@link TransactionContext}.
  */
 public class RDFGraphDelta
-        implements Graph, TransactionParticipant, Rewindable, ChangeLogParticipant {
+        implements Graph, TransactionParticipant, DeltaSource, ChangeLogParticipant {
 
     private static final Logger logger = LoggerFactory.getLogger(RDFGraphDelta.class);
 
@@ -220,7 +219,7 @@ public class RDFGraphDelta
 
     @Override
     public void undo() {
-        if (!canUndo()) {
+        if (currentVersion() == 0) {
             throw new GraphVersionControlException("Cannot undo: already at the oldest version.");
         }
         futureDeltas.push(pastDeltas.pop());
@@ -229,32 +228,10 @@ public class RDFGraphDelta
 
     @Override
     public void redo() {
-        if (!canRedo()) {
+        if (futureDeltas.isEmpty()) {
             throw new GraphVersionControlException("Cannot redo: already at the newest version.");
         }
         pastDeltas.push(futureDeltas.pop());
-        currentDelta = new DeltaCompressible(head());
-    }
-
-    @Override
-    public boolean canUndo() {
-        return currentVersion() > 0;
-    }
-
-    @Override
-    public boolean canRedo() {
-        return !futureDeltas.isEmpty();
-    }
-
-    @Override
-    public void restore(UUID versionId) {
-        if (!containsDelta(versionId)) {
-            throw new GraphVersionControlException(
-                    "Cannot restore to version " + versionId + ": does not exist.");
-        }
-        while (!pastDeltas.isEmpty() && !pastDeltas.peek().getVersionId().equals(versionId)) {
-            pastDeltas.pop();
-        }
         currentDelta = new DeltaCompressible(head());
     }
 
@@ -298,10 +275,6 @@ public class RDFGraphDelta
 
     private int currentVersion() {
         return pastDeltas.size() - 1;
-    }
-
-    private boolean containsDelta(UUID versionId) {
-        return pastDeltas.stream().anyMatch(d -> d.getVersionId().equals(versionId));
     }
 
     @Override
