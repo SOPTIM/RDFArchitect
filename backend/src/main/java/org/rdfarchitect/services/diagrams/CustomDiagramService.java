@@ -33,6 +33,7 @@ import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
 import org.rdfarchitect.services.rendering.CIMProfileModels;
@@ -193,7 +194,7 @@ public class CustomDiagramService
     public void deleteCustomDatasetDiagram(String datasetName, String diagramId) {
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
             var removed = transaction.diagrams().remove(UUID.fromString(diagramId));
-            transaction.commit("Deleted diagram \"%s\"".formatted(nameOf(removed, diagramId)));
+            transaction.commit(ChangeDescriptions.in("Deleted", "diagram", nameOf(removed)));
         }
     }
 
@@ -215,7 +216,7 @@ public class CustomDiagramService
                         diagramDTO.getDiagramId(), diagramDTO.getName(), diagramDTO.getClasses());
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
             transaction.diagrams().put(UUID.fromString(diagramId), diagram);
-            transaction.commit("Updated diagram \"%s\"".formatted(nameOf(diagram, diagramId)));
+            transaction.commit(ChangeDescriptions.in("Updated", "diagram", nameOf(diagram)));
         }
     }
 
@@ -228,8 +229,7 @@ public class CustomDiagramService
                 classes.removeIf(c -> c.getUuid().equals(classId));
                 diagram.setClasses(classes);
                 transaction.commit(
-                        "Removed a class from diagram \"%s\""
-                                .formatted(nameOf(diagram, diagramId)));
+                        ChangeDescriptions.in("Removed a class from", "diagram", nameOf(diagram)));
             }
         }
     }
@@ -240,7 +240,7 @@ public class CustomDiagramService
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphUri());
             var removed = ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
-            transaction.commit("Deleted diagram \"%s\"".formatted(nameOf(removed, diagramId)));
+            transaction.commit(ChangeDescriptions.in("Deleted", "diagram", nameOf(removed)));
         }
     }
 
@@ -266,7 +266,7 @@ public class CustomDiagramService
                             diagramDTO.getName(),
                             diagramDTO.getClasses());
             ctx.getCustomDiagrams().put(UUID.fromString(diagramId), diagram);
-            transaction.commit("Updated diagram \"%s\"".formatted(nameOf(diagram, diagramId)));
+            transaction.commit(ChangeDescriptions.in("Updated", "diagram", nameOf(diagram)));
         }
     }
 
@@ -283,7 +283,7 @@ public class CustomDiagramService
                 diagram.setClasses(classes);
             }
             transaction.commit(
-                    "Removed a class from diagram \"%s\"".formatted(nameOf(diagram, diagramId)));
+                    ChangeDescriptions.in("Removed a class from", "diagram", nameOf(diagram)));
         }
     }
 
@@ -306,11 +306,8 @@ public class CustomDiagramService
         }
     }
 
-    /** A diagram the user never named still has to be recognisable in the history. */
-    private static String nameOf(CustomDiagram diagram, String diagramId) {
-        return diagram == null || diagram.getName() == null || diagram.getName().isBlank()
-                ? diagramId
-                : diagram.getName();
+    private static String nameOf(CustomDiagram diagram) {
+        return diagram == null ? "" : ChangeDescriptions.name(diagram.getName());
     }
 
     @Override
