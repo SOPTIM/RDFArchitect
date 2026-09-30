@@ -44,6 +44,27 @@ public class RDFUtils {
     }
 
     /**
+     * The namespace prefix as the REST API writes it, with a trailing colon.
+     *
+     * @param prefix Prefix with or without a trailing colon
+     * @return Prefix with a trailing colon
+     */
+    public static String withColon(String prefix) {
+        return withoutColon(prefix) + ":";
+    }
+
+    /**
+     * The namespace prefix as RDF stores it, without a trailing colon.
+     *
+     * @param prefix Prefix with or without a trailing colon
+     * @return Prefix without a trailing colon
+     */
+    public static String withoutColon(String prefix) {
+        var trimmed = prefix == null ? "" : prefix.trim();
+        return trimmed.endsWith(":") ? trimmed.substring(0, trimmed.length() - 1) : trimmed;
+    }
+
+    /**
      * Checks if given String is an URL
      *
      * @param s Possible URL

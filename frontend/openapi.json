@@ -840,32 +840,6 @@
         },
         "type" : "object"
       },
-      "GraphBulkImportResponse" : {
-        "properties" : {
-          "failedImports" : {
-            "items" : {
-              "type" : "string"
-            },
-            "type" : "array"
-          },
-          "importedGraphUris" : {
-            "items" : {
-              "type" : "string"
-            },
-            "type" : "array"
-          },
-          "message" : {
-            "type" : "string"
-          },
-          "warnings" : {
-            "items" : {
-              "$ref" : "#/components/schemas/ImportWarning"
-            },
-            "type" : "array"
-          }
-        },
-        "type" : "object"
-      },
       "GraphDTO" : {
         "properties" : {
           "keyword" : {
@@ -965,6 +939,100 @@
         },
         "type" : "object"
       },
+      "ImportFileStatus" : {
+        "properties" : {
+          "fileName" : {
+            "type" : "string"
+          },
+          "graphUri" : {
+            "type" : "string"
+          },
+          "index" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sizeBytes" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "state" : {
+            "enum" : [
+              "PENDING",
+              "RUNNING",
+              "IMPORTED",
+              "FAILED",
+              "SKIPPED"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ImportJobCreatedResponse" : {
+        "properties" : {
+          "jobId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ImportJobStatus" : {
+        "properties" : {
+          "datasetName" : {
+            "type" : "string"
+          },
+          "errorMessage" : {
+            "type" : "string"
+          },
+          "failedImports" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "files" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ImportFileStatus"
+            },
+            "type" : "array"
+          },
+          "importedGraphUris" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "jobId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "prefixComparison" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PrefixComparison"
+            },
+            "type" : "array"
+          },
+          "state" : {
+            "enum" : [
+              "RUNNING",
+              "SCANNING_PREFIXES",
+              "AWAITING_PREFIX_RESOLUTION",
+              "COMPLETED",
+              "CANCELLED",
+              "FAILED"
+            ],
+            "type" : "string"
+          },
+          "warnings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ImportWarning"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "ImportWarning" : {
         "properties" : {
           "fileName" : {
@@ -979,6 +1047,32 @@
         },
         "type" : "object"
       },
+      "IssueOccurrenceDTO" : {
+        "properties" : {
+          "classUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "graphUri" : {
+            "type" : "string"
+          },
+          "keyword" : {
+            "type" : "string"
+          },
+          "packageUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "uuid" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "value" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "LabelPositionDTO" : {
         "properties" : {
           "identifiedObjectUUID" : {
@@ -988,19 +1082,11 @@
           "kind" : {
             "type" : "string"
           },
-          "xOffset" : {
+          "x" : {
             "format" : "float",
             "type" : "number"
           },
-          "xoffset" : {
-            "format" : "float",
-            "type" : "number"
-          },
-          "yOffset" : {
-            "format" : "float",
-            "type" : "number"
-          },
-          "yoffset" : {
+          "y" : {
             "format" : "float",
             "type" : "number"
           }
@@ -1259,6 +1345,62 @@
             "type" : "string"
           },
           "memberName" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PrefixBinding" : {
+        "properties" : {
+          "fileNames" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "iri" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PrefixComparison" : {
+        "properties" : {
+          "contested" : {
+            "type" : "boolean"
+          },
+          "imported" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PrefixBinding"
+            },
+            "type" : "array"
+          },
+          "prefix" : {
+            "type" : "string"
+          },
+          "workspace" : {
+            "$ref" : "#/components/schemas/PrefixBinding"
+          }
+        },
+        "type" : "object"
+      },
+      "PrefixResolutionDTO" : {
+        "properties" : {
+          "action" : {
+            "enum" : [
+              "KEEP",
+              "RENAME",
+              "DROP"
+            ],
+            "type" : "string"
+          },
+          "iri" : {
+            "type" : "string"
+          },
+          "newPrefix" : {
+            "type" : "string"
+          },
+          "prefix" : {
             "type" : "string"
           }
         },
@@ -1659,39 +1801,6 @@
               "$ref" : "#/components/schemas/PropertyShapesWrapper"
             },
             "type" : "array"
-          }
-        },
-        "type" : "object"
-      },
-      "SchemaValidationIssueDTO" : {
-        "properties" : {
-          "message" : {
-            "type" : "string"
-          },
-          "resourceUri" : {
-            "type" : "string"
-          },
-          "severity" : {
-            "enum" : [
-              "ERROR",
-              "WARNING",
-              "INFO"
-            ],
-            "type" : "string"
-          }
-        },
-        "type" : "object"
-      },
-      "SchemaValidationReportDTO" : {
-        "properties" : {
-          "issues" : {
-            "items" : {
-              "$ref" : "#/components/schemas/SchemaValidationIssueDTO"
-            },
-            "type" : "array"
-          },
-          "valid" : {
-            "type" : "boolean"
           }
         },
         "type" : "object"
@@ -2145,6 +2254,58 @@
           },
           "suffix" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ValidationIssueDTO" : {
+        "properties" : {
+          "kind" : {
+            "enum" : [
+              "RULE",
+              "INFRASTRUCTURE"
+            ],
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "occurrences" : {
+            "items" : {
+              "$ref" : "#/components/schemas/IssueOccurrenceDTO"
+            },
+            "type" : "array"
+          },
+          "resourceUri" : {
+            "type" : "string"
+          },
+          "ruleId" : {
+            "type" : "string"
+          },
+          "ruleLabel" : {
+            "type" : "string"
+          },
+          "severity" : {
+            "enum" : [
+              "ERROR",
+              "WARNING",
+              "INFO"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ValidationReportDTO" : {
+        "properties" : {
+          "issues" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ValidationIssueDTO"
+            },
+            "type" : "array"
+          },
+          "valid" : {
+            "type" : "boolean"
           }
         },
         "type" : "object"
@@ -3091,10 +3252,10 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/content" : {
-      "put" : {
-        "description" : "Replace or insert one or more rdf graphs for the dataset. Accepts multiple files and/or zip archives containing several graph files.",
-        "operationId" : "replaceGraphs",
+    "/api/datasets/{datasetName}/graphs/content/imports" : {
+      "post" : {
+        "description" : "Starts a background import of one or more rdf graphs into the dataset. Accepts multiple files and/or zip archives containing several graph files, and returns the id of the job to poll for progress.",
+        "operationId" : "startImport",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -3151,18 +3312,197 @@
           }
         },
         "responses" : {
+          "202" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobCreatedResponse"
+                }
+              }
+            },
+            "description" : "Import started"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobCreatedResponse"
+                }
+              }
+            },
+            "description" : "An import is already running for this session"
+          }
+        },
+        "summary" : "Start importing multiple graphs",
+        "tags" : [
+          "graph"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/content/imports/{jobId}" : {
+      "delete" : {
+        "description" : "Asks a running import to stop after the file it is currently importing. The graphs imported up to that point are kept.",
+        "operationId" : "cancelImport",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the import job.",
+            "in" : "path",
+            "name" : "jobId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "204" : {
+            "description" : "Cancellation requested"
+          },
+          "404" : {
+            "description" : "No such import job"
+          }
+        },
+        "summary" : "Cancel an import",
+        "tags" : [
+          "graph"
+        ]
+      },
+      "get" : {
+        "description" : "Returns the progress of a running import and the result of a finished one, including the graphs that were imported, the files that failed and any warnings.",
+        "operationId" : "getImportStatus",
+        "parameters" : [
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the import job.",
+            "in" : "path",
+            "name" : "jobId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
           "200" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/GraphBulkImportResponse"
+                  "$ref" : "#/components/schemas/ImportJobStatus"
                 }
               }
             },
             "description" : "OK"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobStatus"
+                }
+              }
+            },
+            "description" : "No such import job"
           }
         },
-        "summary" : "Replace/Insert multiple graphs",
+        "summary" : "Get the progress of an import",
+        "tags" : [
+          "graph"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/content/imports/{jobId}/prefix-resolutions" : {
+      "put" : {
+        "description" : "Hands an import that is waiting for namespace prefix decisions the decisions it asked for and lets it go on. A contested namespace left out of the request is imported without a prefix, leaving the prefixes of the dataset as they are.",
+        "operationId" : "resolvePrefixConflicts",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the import job.",
+            "in" : "path",
+            "name" : "jobId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "description" : "What to do with each contested namespace binding.",
+                "items" : {
+                  "$ref" : "#/components/schemas/PrefixResolutionDTO"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Import continues"
+          },
+          "400" : {
+            "description" : "Invalid namespace prefix"
+          },
+          "404" : {
+            "description" : "No such import job"
+          },
+          "409" : {
+            "description" : "The import is not waiting for decisions"
+          }
+        },
+        "summary" : "Resolve the namespace prefix conflicts of an import",
         "tags" : [
           "graph"
         ]
@@ -7678,6 +8018,58 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/validate-workspace" : {
+      "get" : {
+        "description" : "Validates a schema against the other schemas of its workspace and returns the issues that involve the schema.",
+        "operationId" : "validateSchemaInWorkspace",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ValidationReportDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Validate schema in workspace",
+        "tags" : [
+          "graph"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/validate/{cgmesVersion}" : {
       "get" : {
         "description" : "Validates the RDFS schema of a graph for completeness, including the profile header.",
@@ -7729,7 +8121,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/SchemaValidationReportDTO"
+                  "$ref" : "#/components/schemas/ValidationReportDTO"
                 }
               }
             },
@@ -8258,6 +8650,49 @@
           }
         },
         "summary" : "Rename dataset",
+        "tags" : [
+          "dataset"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/validate-workspace" : {
+      "get" : {
+        "description" : "Validates that the schemas of a workspace are compatible with each other.",
+        "operationId" : "validateWorkspace",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ValidationReportDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Validate workspace",
         "tags" : [
           "dataset"
         ]
@@ -9221,7 +9656,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/SchemaValidationReportDTO"
+                  "$ref" : "#/components/schemas/ValidationReportDTO"
                 }
               }
             },

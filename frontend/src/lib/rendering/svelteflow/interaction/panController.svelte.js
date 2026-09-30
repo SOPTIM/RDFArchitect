@@ -20,8 +20,6 @@ import { multiSelectState } from "$lib/sharedState.svelte.js";
 const RIGHT_DRAG_THRESHOLD_PX = 5;
 
 export class PanController {
-    #ctrlHeld = $state(false);
-    #shiftHeld = $state(false);
     #panningActive = $state(false);
 
     #manualPan = null;
@@ -40,14 +38,6 @@ export class PanController {
         this.#getContainer = getContainer;
     }
 
-    get ctrlHeld() {
-        return this.#ctrlHeld;
-    }
-
-    get shiftHeld() {
-        return this.#shiftHeld;
-    }
-
     get panningActive() {
         return this.#panningActive;
     }
@@ -62,16 +52,6 @@ export class PanController {
 
     get boxPriorSelection() {
         return this.#boxPriorSelection;
-    }
-
-    syncModifierKeys(event) {
-        this.#ctrlHeld = event.ctrlKey || event.metaKey;
-        this.#shiftHeld = event.shiftKey;
-    }
-
-    clearModifiers() {
-        this.#ctrlHeld = false;
-        this.#shiftHeld = false;
     }
 
     clearBoxMode() {

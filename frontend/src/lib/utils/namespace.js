@@ -16,15 +16,29 @@
  */
 
 /**
+ * The prefix as the REST API writes it, with a trailing colon.
+ * @param prefix The prefix, with or without a trailing colon
+ * @returns {string} The prefix with a trailing colon
+ */
+export function withColon(prefix) {
+    const trimmed = (prefix ?? "").trim();
+    return trimmed.endsWith(":") ? trimmed : `${trimmed}:`;
+}
+
+/**
+ * The prefix as RDF stores it, without a trailing colon.
+ * @param prefix The prefix, with or without a trailing colon
+ * @returns {string} The prefix without a trailing colon
+ */
+export function withoutColon(prefix) {
+    return (prefix ?? "").trim().replace(/:$/, "");
+}
+
+/**
  * Formats the given namespace as "(substitutedPrefix) prefix", e.g. "(ex) http://example.com/"
  * @param namespace The namespace to format, must have the properties "prefix" and "substitutedPrefix"
  * @returns {string} The formatted namespace string
  */
 export function getNsPrefixNsUriString(namespace) {
-    let namespacePrefix = namespace.substitutedPrefix;
-    if (namespacePrefix && namespacePrefix.endsWith(":")) {
-        namespacePrefix = namespacePrefix.slice(0, -1);
-    }
-    const namespaceUri = namespace.prefix;
-    return `(${namespacePrefix}) ${namespaceUri}`;
+    return `(${withoutColon(namespace.substitutedPrefix)}) ${namespace.prefix}`;
 }

@@ -41,6 +41,8 @@ Edit the ontology metadata block (title, version, conformsTo, keyword, license, 
 
 Diagrams render classes with full attribute and association detail, inheritance arrows, stereotypes, and cardinalities. SvelteFlow is the default renderer (pan/zoom/auto-layout); Mermaid is available as an alternative, for example for embedding in Markdown-based documentation.
 
+In the SvelteFlow diagram, classes, attributes, associations, enum entries, and the multiplicities and role names on association edges open their editors directly, without a detour through the class editor.
+
 ### Visualise SHACL constraints on the class you are looking at
 
 Every attribute and association row in the class editor has a SHACL icon that opens exactly the constraints that target that property on that class. No need to grep through a SHACL file.
@@ -66,6 +68,10 @@ A dedicated page that lists the change history of a graph: additions, updates, d
 ### Restore previous versions
 
 Roll a graph back to any earlier tracked state from the changelog.
+
+### Workspace validation
+
+Checks whether the schemas of a workspace fit together: identical inheritance, datatypes that are not concrete classes elsewhere, properties defined in several schemas, one CIM version, unique profile headers, matching inverse associations and enum entries. Runs for a whole workspace or for one schema against its workspace, reports errors, warnings, and infos in a groupable table, and links every finding to the class editor of the schema it came from.
 
 ### Schema comparison
 
