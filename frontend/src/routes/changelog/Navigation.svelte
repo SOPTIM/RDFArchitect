@@ -15,29 +15,19 @@
   -->
 
 <script>
-    import {
-        faDatabase,
-        faDiagramProject,
-    } from "@fortawesome/free-solid-svg-icons";
+    import { faDatabase } from "@fortawesome/free-solid-svg-icons";
 
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import {
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
-    import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
-    import {
-        graphLabeller,
-        graphTooltip,
-        graphUri as getUri,
-    } from "$lib/utils/graph-label.js";
 
     let workspaceList = $state([]);
     let selectedWorkspaceName = $derived(
         editorState.selectedWorkspace.getValue(),
     );
-    let selectedGraphUri = $derived(editorState.selectedGraph.getValue());
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
@@ -45,25 +35,7 @@
     });
 
     async function fetchNavigationObject() {
-        const newWorkspaceList = [];
-        const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
-        for (const workspace of workspaces) {
-            const workspaceName = workspace.label;
-            let showWorkspaceContents = workspaceName === selectedWorkspaceName;
-            showWorkspaceContents |= workspaceList.find(
-                workspaceObject => workspaceObject.label === workspaceName,
-            )?.showContents;
-            const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
-            newWorkspaceList.push({
-                label: workspaceName,
-                // Copied: this list becomes a $state proxy, and the one graphStore handed over
-                // is its own cache.
-                graphs: [...graphs],
-                labelOf: graphLabeller(graphs),
-                showContents: showWorkspaceContents,
-            });
-        }
-        workspaceList = newWorkspaceList;
+        workspaceList = (await workspaceStore.getWorkspaces()) ?? [];
     }
 </script>
 
@@ -72,50 +44,18 @@
         {#if workspaceList && workspaceList.length > 0}
             <div class="flex flex-col gap-1 pr-2">
                 {#each workspaceList as workspace}
-                    <div>
-                        <NavigationEntry
-                            level={1}
-                            label={workspace.label}
-                            icon={faDatabase}
-                            hasChildren={workspace.graphs.length > 0}
-                            expanded={workspace.showContents}
-                            isSelected={workspace.label ===
-                                selectedWorkspaceName}
-                            title={workspace.label}
-                            onclick={() => {
-                                editorState.selectedWorkspace.updateValue(
-                                    workspace.label,
-                                );
-                            }}
-                            onToggle={() => {
-                                if (!workspace.graphs.length) return;
-                                workspace.showContents =
-                                    !workspace.showContents;
-                            }}
-                        />
-                        {#if workspace.showContents}
-                            {#each workspace.graphs as graph}
-                                <NavigationEntry
-                                    level={2}
-                                    label={workspace.labelOf(graph)}
-                                    secondaryLabel={graph.uri.prefix ?? ""}
-                                    icon={faDiagramProject}
-                                    isSelected={selectedWorkspaceName ===
-                                        workspace.label &&
-                                        getUri(graph) === selectedGraphUri}
-                                    title={graphTooltip(graph)}
-                                    onclick={() => {
-                                        editorState.selectedWorkspace.updateValue(
-                                            workspace.label,
-                                        );
-                                        editorState.selectedGraph.updateValue(
-                                            getUri(graph),
-                                        );
-                                    }}
-                                />
-                            {/each}
-                        {/if}
-                    </div>
+                    <NavigationEntry
+                        level={1}
+                        label={workspace.label}
+                        icon={faDatabase}
+                        isSelected={workspace.label === selectedWorkspaceName}
+                        title={workspace.label}
+                        onclick={() => {
+                            editorState.selectedWorkspace.updateValue(
+                                workspace.label,
+                            );
+                        }}
+                    />
                 {/each}
             </div>
         {:else}

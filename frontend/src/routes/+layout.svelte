@@ -150,10 +150,9 @@
 
     async function fetchUndoRedo() {
         const workspaceName = editorState.selectedWorkspace.getValue();
-        const graph = editorState.selectedGraph.getValue();
-        await versionControlStore.refresh(workspaceName, graph);
-        canUndo = await versionControlStore.canUndo(workspaceName, graph);
-        canRedo = await versionControlStore.canRedo(workspaceName, graph);
+        await versionControlStore.refresh(workspaceName);
+        canUndo = await versionControlStore.canUndo(workspaceName);
+        canRedo = await versionControlStore.canRedo(workspaceName);
     }
 
     async function reload() {

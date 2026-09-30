@@ -405,20 +405,14 @@
     }
 
     async function undo() {
-        const { error } = await versionControlStore.undo(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
-        );
+        const { error } = await versionControlStore.undo();
         if (!error) {
             reload();
         }
     }
 
     async function redo() {
-        const { error } = await versionControlStore.redo(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
-        );
+        const { error } = await versionControlStore.redo();
         if (!error) {
             reload();
         }
