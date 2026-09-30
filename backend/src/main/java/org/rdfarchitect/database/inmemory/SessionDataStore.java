@@ -22,7 +22,6 @@ import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -75,8 +74,6 @@ public interface SessionDataStore {
      * @param newGraphUri The graph URI to rename to.
      * @throws DataAccessException if the Dataset or graph does not exist.
      */
-    void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri);
-
     List<String> listDatasets();
 
     /**
@@ -139,25 +136,6 @@ public interface SessionDataStore {
     List<WorkspaceChangeLogEntry> listChanges(String workspaceName);
 
     /**
-     * Creates a new named graph in a specified dataset. If the dataset does not exist yet, it will
-     * be created. If the graph already exists, nothing happens.
-     *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
-     * @param newGraph The new Graph.
-     */
-    void create(GraphIdentifier graphIdentifier, Graph newGraph);
-
-    /**
-     * Deletes the named graph from a specified dataset. If the graph or dataset does not exist,
-     * nothing happens.
-     *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
-     */
-    void remove(GraphIdentifier graphIdentifier);
-
-    /**
      * Checks whether a Graph exists in a specified dataset.
      *
      * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
@@ -190,8 +168,6 @@ public interface SessionDataStore {
      * @param datasetName The name of the dataset.
      * @param newPrefixes the new Prefixes.
      */
-    void setPrefixMapping(String datasetName, PrefixMapping newPrefixes);
-
     /**
      * Writes a specified graph to a database.
      *

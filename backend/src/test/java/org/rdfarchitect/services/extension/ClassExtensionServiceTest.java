@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
@@ -76,7 +77,7 @@ class ClassExtensionServiceTest {
                         .setFile(sourceFile)
                         .setGraphName(sourceGraphId.graphUri())
                         .build();
-        databasePort.createGraph(sourceGraphId, sourceGraphSource.graph());
+        createGraph(sourceGraphId, sourceGraphSource.graph());
 
         var targetFile = readMultipartFileFromFile(PATH, "class-extension-target-with-core.ttl");
         var targetGraphSource =
@@ -84,7 +85,7 @@ class ClassExtensionServiceTest {
                         .setFile(targetFile)
                         .setGraphName(targetGraphId.graphUri())
                         .build();
-        databasePort.createGraph(targetGraphId, targetGraphSource.graph());
+        createGraph(targetGraphId, targetGraphSource.graph());
 
         // act
         var results =
@@ -214,7 +215,7 @@ class ClassExtensionServiceTest {
                         .setFile(sourceFile)
                         .setGraphName(sourceGraphId.graphUri())
                         .build();
-        databasePort.createGraph(sourceGraphId, sourceGraphSource.graph());
+        createGraph(sourceGraphId, sourceGraphSource.graph());
 
         // target already contains Base class with existing UUID; should not be replaced
         var targetFile =
@@ -224,7 +225,7 @@ class ClassExtensionServiceTest {
                         .setFile(targetFile)
                         .setGraphName(targetGraphId.graphUri())
                         .build();
-        databasePort.createGraph(targetGraphId, targetGraphSource.graph());
+        createGraph(targetGraphId, targetGraphSource.graph());
 
         var ex = "http://example.org#";
         var rdfa = "http://example.org#uuid";
@@ -307,7 +308,7 @@ class ClassExtensionServiceTest {
                         .setFile(sourceFile)
                         .setGraphName(sourceGraphId.graphUri())
                         .build();
-        databasePort.createGraph(sourceGraphId, sourceGraphSource.graph());
+        createGraph(sourceGraphId, sourceGraphSource.graph());
 
         var targetFile = readMultipartFileFromFile(PATH, "class-extension-target-no-core.ttl");
         var targetGraphSource =
@@ -315,7 +316,7 @@ class ClassExtensionServiceTest {
                         .setFile(targetFile)
                         .setGraphName(targetGraphId.graphUri())
                         .build();
-        databasePort.createGraph(targetGraphId, targetGraphSource.graph());
+        createGraph(targetGraphId, targetGraphSource.graph());
 
         // act
         var results =
@@ -467,7 +468,7 @@ class ClassExtensionServiceTest {
                         .setFile(file)
                         .setGraphName(graphIdentifier.graphUri())
                         .build();
-        databasePort.createGraph(graphIdentifier, graphSource.graph());
+        createGraph(graphIdentifier, graphSource.graph());
     }
 
     private Model copyOf(GraphIdentifier identifier) {
@@ -477,6 +478,16 @@ class ClassExtensionServiceTest {
                     .add(
                             ModelFactory.createModelForGraph(
                                     transaction.graph(identifier.graphUri()).getRdfGraph()));
+        }
+    }
+
+    /** Creates a workspace and a graph in it, the way an upload does. */
+    private void createGraph(GraphIdentifier identifier, Graph graph) {
+        databasePort.createWorkspaceIfAbsent(identifier.datasetName());
+        try (var transaction =
+                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.createGraph(identifier.graphUri(), graph);
+            transaction.commit("created graph %s".formatted(identifier.graphUri()));
         }
     }
 }

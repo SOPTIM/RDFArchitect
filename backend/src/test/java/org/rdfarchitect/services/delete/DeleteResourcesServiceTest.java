@@ -104,7 +104,10 @@ class DeleteResourcesServiceTest {
         in.close();
 
         workspace = new Workspace(GRAPH_IDENTIFIER.datasetName());
-        workspace.create(GRAPH_IDENTIFIER.graphUri(), graph);
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.createGraph(GRAPH_IDENTIFIER.graphUri(), graph);
+            transaction.commit("created the test graph");
+        }
         when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))
                 .thenAnswer(invocation -> workspace.begin(invocation.getArgument(1)));
     }

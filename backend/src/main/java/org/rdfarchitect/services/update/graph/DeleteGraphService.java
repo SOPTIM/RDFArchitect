@@ -19,6 +19,8 @@ package org.rdfarchitect.services.update.graph;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.query.ReadWrite;
+import org.apache.jena.sparql.graph.GraphFactory;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
@@ -33,22 +35,29 @@ public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCa
 
     @Override
     public void deleteGraph(GraphIdentifier graphIdentifier) {
-        databasePort.deleteGraph(graphIdentifier);
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.deleteGraph(graphIdentifier.graphUri());
+            transaction.commit("deleted graph %s".formatted(graphIdentifier.graphUri()));
+        }
     }
 
     @Override
     public void replaceGraph(GraphIdentifier graphIdentifier, MultipartFile file) {
-        databasePort.deleteGraph(graphIdentifier);
-        if (file == null || file.isEmpty()) {
-            databasePort.createEmptyGraph(graphIdentifier);
-        } else {
-            var graph =
-                    new GraphFileSourceBuilderImpl()
-                            .setFile(file)
-                            .setGraphName(graphIdentifier.graphUri())
-                            .build()
-                            .graph();
-            databasePort.createGraph(graphIdentifier, graph);
+        databasePort.createWorkspaceIfAbsent(graphIdentifier.datasetName());
+        var graph =
+                file == null || file.isEmpty()
+                        ? GraphFactory.createDefaultGraph()
+                        : new GraphFileSourceBuilderImpl()
+                                .setFile(file)
+                                .setGraphName(graphIdentifier.graphUri())
+                                .build()
+                                .graph();
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.deleteGraph(graphIdentifier.graphUri());
+            transaction.createGraph(graphIdentifier.graphUri(), graph);
+            transaction.commit("replaced graph %s".formatted(graphIdentifier.graphUri()));
         }
     }
 }

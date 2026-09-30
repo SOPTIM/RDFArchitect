@@ -23,6 +23,7 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -34,6 +35,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.TestRDFUtils;
 
@@ -162,7 +164,7 @@ class WorkspaceTest {
         Workspace workspace = new Workspace(WORKSPACE);
 
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
-        workspace.create("http://example.org/graph1", exampleGraphs.getFirst());
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
         try (var transaction = workspace.begin(mode)) {
@@ -195,9 +197,9 @@ class WorkspaceTest {
         Workspace workspace = new Workspace(WORKSPACE);
 
         // Act/Assert
-        assertThatExceptionOfType(IllegalArgumentException.class)
+        assertThatExceptionOfType(ResourceNotFoundException.class)
                 .isThrownBy(() -> workspace.getGraphWithContext("http://example.org/nonexistent"))
-                .withMessage("Graph URI http://example.org/nonexistent does not exist.");
+                .withMessageContaining("Graph URI http://example.org/nonexistent does not exist.");
     }
 
     @ParameterizedTest
@@ -217,7 +219,7 @@ class WorkspaceTest {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph());
-        workspace.create("http://example.org/graph1", exampleGraphs.getFirst());
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act - begin READ, end it, then begin WRITE
         try (var transaction = workspace.begin(ReadWrite.READ)) {
@@ -245,7 +247,7 @@ class WorkspaceTest {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph());
-        workspace.create("http://example.org/graph1", exampleGraphs.getFirst());
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act - begin WRITE, commit changes, end, then begin READ
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
@@ -278,7 +280,7 @@ class WorkspaceTest {
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
 
         // Act
-        workspace.create(graphUri, exampleGraphs.getFirst());
+        createGraph(workspace, graphUri, exampleGraphs.getFirst());
         try (var transaction = workspace.begin(ReadWrite.READ)) {
             var ctx = transaction.graph(graphUri);
             // Assert
@@ -298,7 +300,7 @@ class WorkspaceTest {
         // Act/Assert
         var firstGraph = exampleGraphs.getFirst();
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> workspace.create(graphUri, firstGraph));
+                .isThrownBy(() -> createGraph(workspace, graphUri, firstGraph));
     }
 
     @Test
@@ -306,10 +308,10 @@ class WorkspaceTest {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph());
-        workspace.create("http://example.org/graph1", exampleGraphs.getFirst());
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
-        workspace.remove("http://example.org/graph1");
+        deleteGraph(workspace, "http://example.org/graph1");
 
         // Assert
         assertThat(workspace.listGraphUris()).isEmpty();
@@ -320,10 +322,10 @@ class WorkspaceTest {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
-        workspace.create("http://example.org/graph1", exampleGraphs.getFirst());
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
-        workspace.rename("http://example.org/graph1", "http://example.org/graph2");
+        renameGraph(workspace, "http://example.org/graph1", "http://example.org/graph2");
 
         // Assert
         assertThat(workspace.listGraphUris()).containsExactly("http://example.org/graph2");
@@ -338,7 +340,7 @@ class WorkspaceTest {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph());
-        workspace.create("http://example.org/graph1", exampleGraphs.getFirst());
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
         var diagramId = UUID.randomUUID();
         var classUuid = UUID.randomUUID();
         var diagram = new CustomDiagram(diagramId);
@@ -353,7 +355,7 @@ class WorkspaceTest {
         }
 
         // Act
-        workspace.rename("http://example.org/graph1", "http://example.org/graph2");
+        renameGraph(workspace, "http://example.org/graph1", "http://example.org/graph2");
 
         // Assert
         try (var transaction = workspace.begin(ReadWrite.READ)) {
@@ -368,8 +370,8 @@ class WorkspaceTest {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
-        workspace.create("http://example.org/graph1", exampleGraphs.getFirst());
-        workspace.create("http://example.org/other", exampleGraphs.get(1));
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
+        createGraph(workspace, "http://example.org/other", exampleGraphs.get(1));
         var ownDiagramId = UUID.randomUUID();
         var ownDiagram = new CustomDiagram(ownDiagramId);
         ownDiagram.setClasses(
@@ -396,7 +398,7 @@ class WorkspaceTest {
         }
 
         // Act
-        workspace.rename("http://example.org/graph1", "http://example.org/graph2");
+        renameGraph(workspace, "http://example.org/graph1", "http://example.org/graph2");
 
         // Assert
         try (var transaction = workspace.begin(ReadWrite.READ)) {
@@ -424,14 +426,14 @@ class WorkspaceTest {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph());
-        workspace.create("http://example.org/graph1", exampleGraphs.getFirst());
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
             transaction.crossProfileInfo().setColor("http://example.org/graph1", "#123456");
             transaction.commit("assigned a colour");
         }
 
         // Act
-        workspace.rename("http://example.org/graph1", "http://example.org/graph2");
+        renameGraph(workspace, "http://example.org/graph1", "http://example.org/graph2");
 
         // Assert
         try (var transaction = workspace.begin(ReadWrite.READ)) {
@@ -447,11 +449,13 @@ class WorkspaceTest {
         Workspace workspace = new Workspace(WORKSPACE);
 
         // Act/Assert
-        assertThatExceptionOfType(IllegalArgumentException.class)
+        assertThatExceptionOfType(ResourceNotFoundException.class)
                 .isThrownBy(
                         () ->
-                                workspace.rename(
-                                        "http://example.org/missing", "http://example.org/graph2"));
+                                renameGraph(
+                                        workspace,
+                                        "http://example.org/missing",
+                                        "http://example.org/graph2"));
     }
 
     @Test
@@ -459,15 +463,17 @@ class WorkspaceTest {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
-        workspace.create("http://example.org/graph1", exampleGraphs.getFirst());
-        workspace.create("http://example.org/graph2", exampleGraphs.get(1));
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
+        createGraph(workspace, "http://example.org/graph2", exampleGraphs.get(1));
 
         // Act/Assert
         assertThatExceptionOfType(ResourceConflictException.class)
                 .isThrownBy(
                         () ->
-                                workspace.rename(
-                                        "http://example.org/graph1", "http://example.org/graph2"));
+                                renameGraph(
+                                        workspace,
+                                        "http://example.org/graph1",
+                                        "http://example.org/graph2"));
     }
 
     @Test
@@ -476,7 +482,7 @@ class WorkspaceTest {
         Workspace workspace = new Workspace(WORKSPACE);
 
         // Act
-        workspace.remove("http://example.org/nonexistent");
+        deleteGraph(workspace, "http://example.org/nonexistent");
 
         // Assert
         assertThat(workspace.listGraphUris()).isEmpty();
@@ -499,9 +505,9 @@ class WorkspaceTest {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph(), createExampleGraph());
-        workspace.create("http://example.org/graph1", exampleGraphs.get(0));
-        workspace.create("http://example.org/graph2", exampleGraphs.get(1));
-        workspace.create("http://example.org/graph3", exampleGraphs.get(2));
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.get(0));
+        createGraph(workspace, "http://example.org/graph2", exampleGraphs.get(1));
+        createGraph(workspace, "http://example.org/graph3", exampleGraphs.get(2));
 
         // Act
         List<String> graphUris = workspace.listGraphUris();
@@ -543,9 +549,9 @@ class WorkspaceTest {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph(), createExampleGraph());
-        workspace.create("http://example.org/graph1", exampleGraphs.get(0));
-        workspace.create("http://example.org/graph2", exampleGraphs.get(1));
-        workspace.create("http://example.org/graph3", exampleGraphs.get(2));
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.get(0));
+        createGraph(workspace, "http://example.org/graph2", exampleGraphs.get(1));
+        createGraph(workspace, "http://example.org/graph3", exampleGraphs.get(2));
 
         // Act
         var prefixes = workspace.getPrefixMapping();
@@ -642,7 +648,7 @@ class WorkspaceTest {
         var initialPrefixes = new PrefixMappingImpl();
         initialPrefixes.setNsPrefix("ex", "http://example.org/");
         initialPrefixes.setNsPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-        workspace.setPrefixMapping(initialPrefixes);
+        setPrefixes(workspace, initialPrefixes);
 
         // Act
         initialPrefixes.setNsPrefix("rdfs", "http://www.w3.org/2000/01/rdf-schema#");
@@ -664,7 +670,7 @@ class WorkspaceTest {
         var newPrefixes = new PrefixMappingImpl();
 
         // Act
-        workspace.setPrefixMapping(newPrefixes);
+        setPrefixes(workspace, newPrefixes);
 
         // Assert
         var prefixes = workspace.getPrefixMapping();
@@ -678,11 +684,11 @@ class WorkspaceTest {
         var initialPrefixes = new PrefixMappingImpl();
         initialPrefixes.setNsPrefix("ex", "http://example.org/");
         initialPrefixes.setNsPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-        workspace.setPrefixMapping(initialPrefixes);
+        setPrefixes(workspace, initialPrefixes);
         var newPrefixes = new PrefixMappingImpl();
 
         // Act
-        workspace.setPrefixMapping(newPrefixes);
+        setPrefixes(workspace, newPrefixes);
 
         // Assert
         var prefixes = workspace.getPrefixMapping();
@@ -698,7 +704,7 @@ class WorkspaceTest {
         newPrefixes.setNsPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
 
         // Act
-        workspace.setPrefixMapping(newPrefixes);
+        setPrefixes(workspace, newPrefixes);
 
         // Assert
         var prefixes = workspace.getPrefixMapping();
@@ -716,13 +722,13 @@ class WorkspaceTest {
         var initialPrefixes = new PrefixMappingImpl();
         initialPrefixes.setNsPrefix("ex", "http://example.org/");
         initialPrefixes.setNsPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-        workspace.setPrefixMapping(initialPrefixes);
+        setPrefixes(workspace, initialPrefixes);
         var newPrefixes = new PrefixMappingImpl();
         newPrefixes.setNsPrefix("rdfs", "http://www.w3.org/2000/01/rdf-schema#");
         newPrefixes.setNsPrefix("owl", "http://www.w3.org/2002/07/owl#");
 
         // Act
-        workspace.setPrefixMapping(newPrefixes);
+        setPrefixes(workspace, newPrefixes);
 
         // Assert
         var prefixes = workspace.getPrefixMapping();
@@ -731,5 +737,33 @@ class WorkspaceTest {
                         Map.of(
                                 "rdfs", "http://www.w3.org/2000/01/rdf-schema#",
                                 "owl", "http://www.w3.org/2002/07/owl#"));
+    }
+
+    private static void createGraph(Workspace workspace, String graphUri, Graph graph) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.createGraph(graphUri, graph);
+            transaction.commit("created graph %s".formatted(graphUri));
+        }
+    }
+
+    private static void renameGraph(Workspace workspace, String oldGraphUri, String newGraphUri) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.renameGraph(oldGraphUri, newGraphUri);
+            transaction.commit("renamed graph %s".formatted(oldGraphUri));
+        }
+    }
+
+    private static void deleteGraph(Workspace workspace, String graphUri) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.deleteGraph(graphUri);
+            transaction.commit("deleted graph %s".formatted(graphUri));
+        }
+    }
+
+    private static void setPrefixes(Workspace workspace, PrefixMapping prefixMapping) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.setPrefixes(prefixMapping);
+            transaction.commit("changed the namespace prefixes");
+        }
     }
 }

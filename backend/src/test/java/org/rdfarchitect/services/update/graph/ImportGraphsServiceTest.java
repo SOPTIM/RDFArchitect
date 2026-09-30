@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
@@ -33,12 +34,14 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
+import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
 import org.rdfarchitect.services.update.graph.PrefixResolutionDTO.Action;
@@ -58,9 +61,14 @@ class ImportGraphsServiceTest {
     private ImportGraphsUseCase importGraphsUseCase;
     private DatabasePort databasePortMock;
 
+    private WorkspaceTransaction transaction;
+
     @BeforeEach
     void setUp() {
         databasePortMock = mock(DatabasePort.class);
+        transaction = mock(WorkspaceTransaction.class);
+        when(databasePortMock.beginTransaction(anyString(), any(ReadWrite.class)))
+                .thenReturn(transaction);
         importGraphsUseCase = new ImportGraphsService(databasePortMock);
     }
 
@@ -94,12 +102,11 @@ class ImportGraphsServiceTest {
         assertThat(result.importedGraphUris())
                 .containsExactly(RDFA.GRAPH_URI + "graph", RDFA.GRAPH_URI + "graph_1");
 
-        var captor = ArgumentCaptor.forClass(GraphIdentifier.class);
+        var captor = ArgumentCaptor.forClass(String.class);
 
-        verify(databasePortMock, times(2)).createGraph(captor.capture(), any(Graph.class));
+        verify(transaction, times(2)).createGraph(captor.capture(), any(Graph.class));
 
         assertThat(captor.getAllValues())
-                .extracting(GraphIdentifier::graphUri)
                 .containsExactly(RDFA.GRAPH_URI + "graph", RDFA.GRAPH_URI + "graph_1");
     }
 

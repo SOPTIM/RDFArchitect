@@ -89,8 +89,7 @@ class RenameGraphServiceTest {
 
         renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, null);
 
-        verify(databasePort).renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
-        verify(databasePort, never()).beginTransaction(anyString(), any(ReadWrite.class));
+        verify(transaction).renameGraph(OLD_URI, NEW_URI);
         assertThat(keywordInModel()).isEqualTo("old label");
     }
 
@@ -100,9 +99,8 @@ class RenameGraphServiceTest {
 
         renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, "new label");
 
-        verify(databasePort).renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
-        verify(databasePort).beginTransaction(anyString(), any(ReadWrite.class));
-        verify(transaction).commit("Renamed schema to " + NEW_URI);
+        verify(transaction).renameGraph(OLD_URI, NEW_URI);
+        verify(transaction).commit("renamed schema to " + NEW_URI);
         assertThat(keywordInModel()).isEqualTo("new label");
     }
 
@@ -116,16 +114,16 @@ class RenameGraphServiceTest {
     }
 
     @Test
-    void renameGraph_withKeywordAndNoProfileHeader_doesNotCommit() {
+    void renameGraph_withKeywordAndNoProfileHeader_stillRenames() {
         renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI, "new label");
 
-        verify(databasePort).renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
-        verify(transaction, never()).commit(any(String.class));
+        verify(transaction).renameGraph(OLD_URI, NEW_URI);
+        verify(transaction).commit("renamed schema to " + NEW_URI);
         assertThat(keywordInModel()).isNull();
     }
 
     @Test
-    void renameGraph_keywordUpdateFails_rollsBackRename() {
+    void renameGraph_keywordUpdateFails_doesNotCommit() {
         givenProfileHeader("old label");
         when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))
                 .thenThrow(new IllegalStateException("boom"));
@@ -138,8 +136,7 @@ class RenameGraphServiceTest {
                                         "new label"))
                 .isInstanceOf(IllegalStateException.class);
 
-        verify(databasePort).renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
-        verify(databasePort).renameGraph(new GraphIdentifier(DATASET, NEW_URI), OLD_URI);
+        verify(transaction, never()).commit(anyString());
     }
 
     private void stubTransaction(GraphContext graph) {

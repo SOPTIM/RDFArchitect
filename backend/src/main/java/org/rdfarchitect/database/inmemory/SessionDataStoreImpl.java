@@ -34,6 +34,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphSourceBuilderImpl;
@@ -102,19 +103,6 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     @Override
-    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri) {
-        lock.lock();
-        try {
-            assertThatGraphExists(graphIdentifier);
-            workspaces
-                    .get(graphIdentifier.datasetName())
-                    .rename(graphIdentifier.graphUri(), newGraphUri);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Override
     public List<String> listDatasets() {
         lock.lock();
         try {
@@ -126,76 +114,44 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public WorkspaceTransaction beginTransaction(String workspaceName, ReadWrite mode) {
-        return workspace(workspaceName, true).begin(mode);
+        return workspace(workspaceName).begin(mode);
     }
 
     @Override
     public boolean canUndo(String workspaceName) {
-        return workspace(workspaceName, false).canUndo();
+        return workspace(workspaceName).canUndo();
     }
 
     @Override
     public boolean canRedo(String workspaceName) {
-        return workspace(workspaceName, false).canRedo();
+        return workspace(workspaceName).canRedo();
     }
 
     @Override
     public WorkspaceChangeLogEntry undo(String workspaceName) {
-        return workspace(workspaceName, false).undo();
+        return workspace(workspaceName).undo();
     }
 
     @Override
     public WorkspaceChangeLogEntry redo(String workspaceName) {
-        return workspace(workspaceName, false).redo();
+        return workspace(workspaceName).redo();
     }
 
     @Override
     public void restoreToVersion(String workspaceName, UUID versionId) {
-        workspace(workspaceName, false).restoreToVersion(versionId);
+        workspace(workspaceName).restoreToVersion(versionId);
     }
 
     @Override
     public List<WorkspaceChangeLogEntry> listChanges(String workspaceName) {
-        return workspace(workspaceName, false).getChangeHistory();
+        return workspace(workspaceName).getChangeHistory();
     }
 
-    private Workspace workspace(String workspaceName, boolean createIfAbsent) {
+    private Workspace workspace(String workspaceName) {
         lock.lock();
         try {
-            if (createIfAbsent) {
-                createDatasetIfAbsent(workspaceName);
-            } else {
-                assertThatDatasetExists(workspaceName);
-            }
+            assertThatDatasetExists(workspaceName);
             return workspaces.get(workspaceName);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public void create(GraphIdentifier graphIdentifier, Graph newGraph) {
-        lock.lock();
-        try {
-            createDatasetIfAbsent(graphIdentifier.datasetName());
-            workspaces
-                    .get(graphIdentifier.datasetName())
-                    .create(graphIdentifier.graphUri(), newGraph);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public void remove(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.datasetName();
-        final String graphUri = graphIdentifier.graphUri();
-        lock.lock();
-        try {
-            if (!workspaces.containsKey(datasetName)) {
-                return;
-            }
-            workspaces.get(datasetName).remove(graphUri);
         } finally {
             lock.unlock();
         }
@@ -231,19 +187,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
         try {
             assertThatDatasetExists(datasetName);
             return workspaces.get(datasetName).getPrefixMapping();
-        } catch (DataAccessException _) {
+        } catch (ResourceNotFoundException _) {
             return new PrefixMappingReadOnly(PrefixMapping.Factory.create());
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public void setPrefixMapping(String datasetName, PrefixMapping newPrefixes) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            workspaces.get(datasetName).setPrefixMapping(newPrefixes);
         } finally {
             lock.unlock();
         }
@@ -421,7 +366,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
      */
     private void assertThatDatasetExists(String datasetName) {
         if (!workspaces.containsKey(datasetName)) {
-            throw new DataAccessException("Dataset " + datasetName + " does not exist");
+            throw new ResourceNotFoundException("Workspace " + datasetName + " does not exist");
         }
     }
 
@@ -437,8 +382,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
         final String graphUri = graphIdentifier.graphUri();
         assertThatDatasetExists(datasetName);
         if (!workspaces.get(datasetName).listGraphUris().contains(graphUri)) {
-            throw new DataAccessException(
-                    "Graph " + graphUri + " does not exist in dataset " + datasetName);
+            throw new ResourceNotFoundException(
+                    "Graph " + graphUri + " does not exist in workspace " + datasetName);
         }
     }
 }
