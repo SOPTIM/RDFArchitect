@@ -193,6 +193,22 @@ describe("ClassStore", () => {
             expect(result?.attributes).toHaveLength(1);
         });
 
+        test("treats a body without a uuid as no class at all", async () => {
+            const cls = makeClass("uuid-1");
+            vi.mocked(api.getClassList).mockResolvedValue(ok([cls]));
+            // What the client yields for the empty `200` the endpoint answers a uuid that names
+            // something else with: truthy, and spreading it would build a class with no fields.
+            vi.mocked(api.getClassInformation).mockResolvedValue(
+                ok(new ReadableStream() as unknown as ClassUmlAdaptedDto),
+            );
+
+            await store.getClasses(WORKSPACE, GRAPH, false);
+
+            expect(
+                await store.getClassInfo(WORKSPACE, GRAPH, "not-a-class"),
+            ).toBeNull();
+        });
+
         test("returns cached details without re-fetching", async () => {
             const cls = makeClass("uuid-1");
             vi.mocked(api.getClassList).mockResolvedValue(ok([cls]));
