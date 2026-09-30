@@ -19,37 +19,17 @@ package org.rdfarchitect.rdf.graph.wrapper;
 
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
-import java.util.UUID;
-
-public interface Rewindable {
-
-    /** Undo the last change to this Object. Is its own transaction. */
-    void undo();
-
-    /** Redo a previously undone change. Is its own transaction. */
-    void redo();
+/**
+ * A participant that records what each of its versions changed, so that a changelog entry can show
+ * it. Stepping through the versions is {@link
+ * org.rdfarchitect.models.changelog.ChangeLogParticipant}.
+ */
+public interface DeltaSource {
 
     /**
-     * Check if there is a change to undo. Is its own transaction.
+     * Returns the delta of the most recent version.
      *
-     * @return true if there is a change to undo.
-     */
-    boolean canUndo();
-
-    /**
-     * Check if there is a change to redo. Is its own transaction.
-     *
-     * @return true if there is a change to redo.
-     */
-    boolean canRedo();
-
-    /** Restore the state of this object to a specific version. */
-    void restore(UUID versionId);
-
-    /**
-     * Get the last delta that was applied to this object.
-     *
-     * @return the last delta that was applied to this object.
+     * @return the additions and deletions that produced the current state
      */
     DeltaCompressible getLastDelta();
 }

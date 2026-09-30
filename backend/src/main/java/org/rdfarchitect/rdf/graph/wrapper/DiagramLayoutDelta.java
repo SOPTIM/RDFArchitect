@@ -35,7 +35,7 @@ import java.util.UUID;
  * transaction lifecycle is managed exclusively by the owning coordinator.
  */
 public class DiagramLayoutDelta
-        implements TransactionParticipant, Rewindable, ChangeLogParticipant {
+        implements TransactionParticipant, DeltaSource, ChangeLogParticipant {
 
     @Getter private final MRID defaultPackageMRID;
     private final RDFGraphDelta inner;
@@ -78,7 +78,7 @@ public class DiagramLayoutDelta
     }
 
     // -------------------------------------------------------------------------
-    // Rewindable
+    // DeltaSource
     // -------------------------------------------------------------------------
 
     @Override
@@ -89,21 +89,6 @@ public class DiagramLayoutDelta
     @Override
     public void redo() {
         inner.redo();
-    }
-
-    @Override
-    public boolean canUndo() {
-        return inner.canUndo();
-    }
-
-    @Override
-    public boolean canRedo() {
-        return inner.canRedo();
-    }
-
-    @Override
-    public void restore(UUID versionId) {
-        inner.restore(versionId);
     }
 
     @Override
