@@ -27,12 +27,15 @@
  *
  * @typedef {"success" | "error" | "info" | "warning"} ToastVariant
  *
+ * @typedef {{ label: string, href?: string, onSelect?: () => void }} ToastAction
+ *
  * @typedef {{
  *   id: number,
  *   variant: ToastVariant,
  *   title: string,
  *   message?: string,
  *   duration: number,
+ *   action?: ToastAction,
  * }} Toast
  */
 
@@ -86,9 +89,10 @@ let nextId = 1;
  *   title: string,
  *   message?: string,
  *   duration?: number,
+ *   action?: ToastAction,
  * }} options
  */
-function show({ variant = "info", title, message, duration } = {}) {
+function show({ variant = "info", title, message, duration, action } = {}) {
     const id = nextId++;
     const resolvedDuration = duration ?? DEFAULT_DURATIONS[variant] ?? 3500;
     const toast = {
@@ -97,6 +101,7 @@ function show({ variant = "info", title, message, duration } = {}) {
         title,
         message,
         duration: resolvedDuration,
+        action,
     };
     toasts = [...toasts, toast];
 

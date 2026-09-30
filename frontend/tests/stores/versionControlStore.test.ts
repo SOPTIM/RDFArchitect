@@ -43,8 +43,8 @@ vi.mock("$lib/api/generated", () => ({
 
 vi.mock("$lib/sharedState.svelte.js", () => ({
     editorState: {
-        selectedWorkspace: { getValue: vi.fn() },
-        selectedGraph: { getValue: vi.fn() },
+        selectedWorkspace: { getValue: vi.fn(), updateValue: vi.fn() },
+        selectedGraph: { getValue: vi.fn(), updateValue: vi.fn() },
     },
 }));
 
@@ -291,7 +291,10 @@ describe("versionControlStore", () => {
                 WORKSPACE,
             );
 
-            expect(toastStore.info).toHaveBeenCalledWith("Undone");
+            expect(toastStore.info).toHaveBeenCalledWith(
+                "Undone",
+                expect.any(String),
+            );
             expect(api.canUndo).toHaveBeenCalled(); // Proves refresh was called
         });
 
@@ -316,6 +319,123 @@ describe("versionControlStore", () => {
 
             expect(result.error).toBe("No undo target selected.");
             expect(api.undo).not.toHaveBeenCalled();
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("what the toast says", () => {
+        const GRAPH = "http://example.org/schemas/Core";
+        const OTHER = "http://example.org/schemas/Operation";
+
+        beforeEach(() => {
+            vi.mocked(editorState.selectedWorkspace.getValue).mockReturnValue(
+                WORKSPACE,
+            );
+            vi.mocked(editorState.selectedGraph.getValue).mockReturnValue(
+                GRAPH,
+            );
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: false,
+                error: undefined,
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+        });
+
+        test("names the change and offers to go where it landed", async () => {
+            vi.mocked(api.undo).mockResolvedValue({
+                data: {
+                    message: 'Updated class "Terminal"',
+                    affectedGraphUris: [OTHER],
+                    affectedKinds: ["RDF"],
+                },
+                error: undefined,
+            });
+
+            await store.undo(WORKSPACE);
+
+            const [title, message, options] = vi.mocked(toastStore.info).mock
+                .calls[0];
+            expect(title).toBe("Undone");
+            expect(message).toContain('Updated class "Terminal"');
+            expect(message).toContain("Operation");
+            expect(options.action.label).toBe("Go to Operation");
+            expect(options.action.href).toBe("/mainpage");
+        });
+
+        test("the link selects the graph the change landed in", async () => {
+            vi.mocked(api.undo).mockResolvedValue({
+                data: {
+                    message: "a change",
+                    affectedGraphUris: [OTHER],
+                    affectedKinds: ["RDF"],
+                },
+                error: undefined,
+            });
+
+            await store.undo(WORKSPACE);
+            vi.mocked(toastStore.info).mock.calls[0][2].action.onSelect();
+
+            expect(
+                editorState.selectedWorkspace.updateValue,
+            ).toHaveBeenCalledWith(WORKSPACE);
+            expect(editorState.selectedGraph.updateValue).toHaveBeenCalledWith(
+                OTHER,
+            );
+        });
+
+        test("offers no link when the change was in the open graph", async () => {
+            vi.mocked(api.undo).mockResolvedValue({
+                data: {
+                    message: "a change",
+                    affectedGraphUris: [GRAPH],
+                    affectedKinds: ["RDF"],
+                },
+                error: undefined,
+            });
+
+            await store.undo(WORKSPACE);
+
+            expect(vi.mocked(toastStore.info).mock.calls[0][2]).toBeUndefined();
+        });
+
+        test("says when the change was not in the schema", async () => {
+            vi.mocked(api.undo).mockResolvedValue({
+                data: {
+                    message: "replaced the shapes",
+                    affectedGraphUris: [GRAPH],
+                    affectedKinds: ["SHACL"],
+                },
+                error: undefined,
+            });
+
+            await store.undo(WORKSPACE);
+
+            expect(vi.mocked(toastStore.info).mock.calls[0][1]).toContain(
+                "SHACL shapes",
+            );
+        });
+
+        test("counts the graphs when a change spanned several", async () => {
+            vi.mocked(api.undo).mockResolvedValue({
+                data: {
+                    message: "copied a class",
+                    affectedGraphUris: [
+                        OTHER,
+                        "http://example.org/schemas/Third",
+                    ],
+                    affectedKinds: ["RDF"],
+                },
+                error: undefined,
+            });
+
+            await store.undo(WORKSPACE);
+
+            expect(vi.mocked(toastStore.info).mock.calls[0][1]).toContain(
+                "in 2 graphs",
+            );
         });
     });
 
@@ -453,7 +573,10 @@ describe("versionControlStore", () => {
                 WORKSPACE,
             );
 
-            expect(toastStore.info).toHaveBeenCalledWith("Redone");
+            expect(toastStore.info).toHaveBeenCalledWith(
+                "Redone",
+                expect.any(String),
+            );
         });
 
         test("returns error and prevents invalidation if SDK fails", async () => {

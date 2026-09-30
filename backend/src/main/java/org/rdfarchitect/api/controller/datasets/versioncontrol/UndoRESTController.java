@@ -19,11 +19,13 @@ package org.rdfarchitect.api.controller.datasets.versioncontrol;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.controller.Response;
+import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
 import org.rdfarchitect.services.versioncontrol.UndoUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,9 +49,16 @@ public class UndoRESTController {
             summary = "undo ",
             description = "Undo the last change",
             tags = {"workspace"},
-            responses = {@ApiResponse(responseCode = "200")})
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        schema = @Schema(implementation = ChangeLogEntryDTO.class)))
+            })
     @PostMapping
-    public String undo(
+    public ChangeLogEntryDTO undo(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -63,12 +72,12 @@ public class UndoRESTController {
                 datasetName,
                 originURL);
 
-        undoUseCase.undo(datasetName);
+        var entry = undoUseCase.undo(datasetName);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/undo\" to \"{}\".",
                 datasetName,
                 originURL);
-        return Response.SUCCESS;
+        return entry;
     }
 }

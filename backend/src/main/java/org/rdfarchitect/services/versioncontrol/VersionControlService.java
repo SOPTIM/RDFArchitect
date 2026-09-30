@@ -19,10 +19,11 @@ package org.rdfarchitect.services.versioncontrol;
 
 import lombok.RequiredArgsConstructor;
 
+import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
+import org.rdfarchitect.api.dto.ChangeLogEntryMapper;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -38,6 +39,7 @@ public class VersionControlService
                 RestoreVersionUseCase {
 
     private final DatabasePort databasePort;
+    private final ChangeLogEntryMapper changeLogEntryMapper;
     private final DatabaseConnection databaseConnection;
 
     @Override
@@ -51,13 +53,13 @@ public class VersionControlService
     }
 
     @Override
-    public WorkspaceChangeLogEntry redo(String workspaceName) {
-        return databasePort.redo(workspaceName);
+    public ChangeLogEntryDTO redo(String workspaceName) {
+        return changeLogEntryMapper.toDTO(databasePort.redo(workspaceName));
     }
 
     @Override
-    public WorkspaceChangeLogEntry undo(String workspaceName) {
-        return databasePort.undo(workspaceName);
+    public ChangeLogEntryDTO undo(String workspaceName) {
+        return changeLogEntryMapper.toDTO(databasePort.undo(workspaceName));
     }
 
     @Override

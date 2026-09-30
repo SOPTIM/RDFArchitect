@@ -32,4 +32,10 @@ public class ChangeLogEntryDTO {
 
     /** Graphs and diagrams that undoing this change would remove; empty when nothing disappears. */
     private List<String> removedOnUndo;
+
+    /** The graphs this change touched, so the editor can offer to go where it landed. */
+    private List<String> affectedGraphUris;
+
+    /** What kinds of data it touched: RDF, SHACL, DL, DIAGRAMS, GRAPHS, PREFIXES, COLORS. */
+    private List<String> affectedKinds;
 }

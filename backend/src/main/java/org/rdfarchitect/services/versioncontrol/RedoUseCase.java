@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.services.versioncontrol;
 
-import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
+import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
 
 public interface RedoUseCase {
 
@@ -27,5 +27,5 @@ public interface RedoUseCase {
      * @param workspaceName the workspace to operate on
      * @return the change that was redone
      */
-    WorkspaceChangeLogEntry redo(String workspaceName);
+    ChangeLogEntryDTO redo(String workspaceName);
 }

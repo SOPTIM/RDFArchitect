@@ -337,6 +337,18 @@
       },
       "ChangeLogEntryDTO" : {
         "properties" : {
+          "affectedGraphUris" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "affectedKinds" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "changeId" : {
             "type" : "string"
           },
@@ -8446,9 +8458,9 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "type" : "string"
+                  "$ref" : "#/components/schemas/ChangeLogEntryDTO"
                 }
               }
             },
@@ -8595,9 +8607,9 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "type" : "string"
+                  "$ref" : "#/components/schemas/ChangeLogEntryDTO"
                 }
               }
             },

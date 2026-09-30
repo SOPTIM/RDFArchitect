@@ -33,6 +33,7 @@ import {
     canRedo as sdkCanRedo,
     getPendingUndo as sdkPendingUndo,
 } from "../api/generated";
+import { type ChangeLogEntryDTO } from "../api/generated/types.gen";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 import { undoConfirmStore } from "../eventhandling/undoConfirmStore.svelte.js";
 
@@ -164,17 +165,50 @@ function createVersionControlStore() {
             return { error: null, cancelled: true };
         }
         const call = direction === "undo" ? sdkUndo : sdkRedo;
-        const { error } = await call({ path: { datasetName: target } });
+        const { data, error } = await call({ path: { datasetName: target } });
         if (error) {
             console.error(`${LOG} ${direction} failed`, error);
             toastStore.error(FAILURE_TITLE[direction], FAILURE_TEXT[direction]);
             return { error };
         }
-        toastStore.info(SUCCESS_TITLE[direction]);
+        announce(SUCCESS_TITLE[direction], target, data);
 
         invalidateWorkspace(target);
         await refresh(target);
         return { error: null };
+    }
+
+    /**
+     * Says what was undone or redone, and offers to go there.
+     *
+     * Undo reaches the whole workspace, so what it took back may sit in a graph the user is not
+     * looking at — or in its SHACL shapes rather than its schema. Without saying so, the editor
+     * would appear unchanged and the change would look lost.
+     */
+    function announce(
+        title: string,
+        workspace: string,
+        entry: ChangeLogEntryDTO | undefined,
+    ) {
+        const elsewhere = (entry?.affectedGraphUris ?? []).filter(
+            graph => graph !== editorState.selectedGraph.getValue(),
+        );
+        const description = describe(entry, elsewhere);
+        if (elsewhere.length !== 1) {
+            toastStore.info(title, description);
+            return;
+        }
+        const graph = elsewhere[0];
+        toastStore.info(title, description, {
+            action: {
+                label: `Go to ${shortName(graph)}`,
+                href: "/mainpage",
+                onSelect: () => {
+                    editorState.selectedWorkspace.updateValue(workspace);
+                    editorState.selectedGraph.updateValue(graph);
+                },
+            },
+        });
     }
 
     /**
@@ -215,6 +249,53 @@ function createVersionControlStore() {
 
 function resolveWorkspace(workspace?: string) {
     return workspace ?? editorState.selectedWorkspace.getValue() ?? null;
+}
+
+/**
+ * What the change did, and where it landed if that is somewhere the user is not looking. The kind
+ * is worth naming for anything other than the schema: a reverted SHACL shape is invisible in the
+ * class editor.
+ */
+function describe(
+    entry: ChangeLogEntryDTO | undefined,
+    elsewhere: string[],
+): string {
+    const what = entry?.message ?? "The last change was reverted.";
+    const kinds = (entry?.affectedKinds ?? []).filter(kind => kind !== "RDF");
+    const where =
+        elsewhere.length > 1
+            ? ` in ${elsewhere.length} graphs`
+            : elsewhere.length === 1
+              ? ` in ${shortName(elsewhere[0])}`
+              : "";
+    const scope =
+        kinds.length > 0 ? ` (${kinds.map(KIND_LABEL).join(", ")})` : "";
+    return `${what}${where}${scope}`;
+}
+
+/** The readable tail of a graph URI, for a label that has to fit in a toast. */
+function shortName(graphUri: string): string {
+    const tail = graphUri.split(/[#/]/).filter(Boolean).pop();
+    return tail || graphUri;
+}
+
+function KIND_LABEL(kind: string): string {
+    switch (kind) {
+        case "SHACL":
+            return "SHACL shapes";
+        case "DL":
+            return "layout";
+        case "DIAGRAMS":
+            return "diagrams";
+        case "GRAPHS":
+            return "graphs";
+        case "PREFIXES":
+            return "prefixes";
+        case "COLORS":
+            return "colours";
+        default:
+            return kind.toLowerCase();
+    }
 }
 
 export { createVersionControlStore };
