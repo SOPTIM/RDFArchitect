@@ -38,18 +38,18 @@ public interface InMemoryDatabase {
     void createDataset(String datasetName);
 
     /**
-     * Deletes a complete Dataset with all containing graphs. Waits for ongoing transactions on
-     * individual graphs before deleting.
-     *
-     * @param datasetName The name of the Dataset to be deleted.
-     */
-    /**
      * Creates the workspace unless it already exists.
      *
      * @param workspaceName the literal workspace name
      */
     void createWorkspaceIfAbsent(String workspaceName);
 
+    /**
+     * Deletes a complete Dataset with all containing graphs. Waits for ongoing transactions on
+     * individual graphs before deleting.
+     *
+     * @param datasetName The name of the Dataset to be deleted.
+     */
     void deleteDataset(String datasetName);
 
     /**
@@ -61,14 +61,6 @@ public interface InMemoryDatabase {
      */
     void renameDataset(String oldDatasetName, String newDatasetName);
 
-    /**
-     * Renames a named graph within its Dataset and rewrites all references to it. The content and
-     * history of the graph are kept.
-     *
-     * @param graphIdentifier The identifier of the graph to rename.
-     * @param newGraphUri The graph URI to rename to.
-     * @throws DataAccessException if the Dataset or graph does not exist.
-     */
     /**
      * Returns a list of all datasets in the database
      *
@@ -162,12 +154,6 @@ public interface InMemoryDatabase {
      */
     PrefixMappingReadOnly getPrefixMapping(String datasetName);
 
-    /**
-     * Replace all prefixes in a specified dataset.
-     *
-     * @param datasetName The name of the dataset.
-     * @param newPrefixes the new Prefixes.
-     */
     /**
      * Writes a specified graph to a database.
      *
