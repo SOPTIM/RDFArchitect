@@ -343,12 +343,6 @@
             },
             "type" : "array"
           },
-          "affectedKinds" : {
-            "items" : {
-              "type" : "string"
-            },
-            "type" : "array"
-          },
           "changeId" : {
             "type" : "string"
           },

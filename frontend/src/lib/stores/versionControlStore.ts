@@ -233,50 +233,23 @@ function resolveWorkspace(workspace?: string) {
 }
 
 /**
- * What the change did, and where it landed if that is somewhere the user is not looking. The kind
- * is worth naming for anything other than the schema: a reverted SHACL shape is invisible in the
- * class editor.
+ * What the change did, and where it landed if that is somewhere the user is not looking.
  */
 function describe(
     entry: ChangeLogEntryDTO | undefined,
     elsewhere: string[],
 ): string {
     const what = entry?.message ?? "The last change was reverted.";
-    const kinds = (entry?.affectedKinds ?? []).filter(kind => kind !== "RDF");
-    const where =
-        elsewhere.length > 1
-            ? ` in ${elsewhere.length} graphs`
-            : elsewhere.length === 1
-              ? ` in ${shortName(elsewhere[0])}`
-              : "";
-    const scope =
-        kinds.length > 0 ? ` (${kinds.map(KIND_LABEL).join(", ")})` : "";
-    return `${what}${where}${scope}`;
+    if (elsewhere.length === 0) return what;
+    return elsewhere.length === 1
+        ? `${what} in ${shortName(elsewhere[0])}`
+        : `${what} in ${elsewhere.length} graphs`;
 }
 
 /** The readable tail of a graph URI, for a label that has to fit in a toast. */
 function shortName(graphUri: string): string {
     const tail = graphUri.split(/[#/]/).filter(Boolean).pop();
     return tail || graphUri;
-}
-
-function KIND_LABEL(kind: string): string {
-    switch (kind) {
-        case "SHACL":
-            return "SHACL shapes";
-        case "DL":
-            return "layout";
-        case "DIAGRAMS":
-            return "diagrams";
-        case "GRAPHS":
-            return "graphs";
-        case "PREFIXES":
-            return "prefixes";
-        case "COLORS":
-            return "colours";
-        default:
-            return kind.toLowerCase();
-    }
 }
 
 export { createVersionControlStore };
