@@ -114,7 +114,7 @@ describe("versionControlStore", () => {
             expect(await store.canUndo(WORKSPACE, GRAPH)).toBe(true);
             expect(await store.canRedo(WORKSPACE, GRAPH)).toBe(false);
             expect(api.canUndo).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE, graphURI: GRAPH },
+                path: { datasetName: WORKSPACE },
             });
         });
 
@@ -216,7 +216,7 @@ describe("versionControlStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.undo).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE, graphURI: GRAPH },
+                path: { datasetName: WORKSPACE },
             });
 
             // Ensure invalidations were broadcast
@@ -285,7 +285,7 @@ describe("versionControlStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.redo).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE, graphURI: GRAPH },
+                path: { datasetName: WORKSPACE },
             });
 
             expect(classStore.invalidateGraph).toHaveBeenCalledWith(

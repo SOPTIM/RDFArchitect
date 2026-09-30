@@ -31,8 +31,9 @@ import org.rdfarchitect.rdf.graph.DeltaCompressible;
 import java.util.UUID;
 
 /**
- * Transactional diagram-layout store backed by an {@link RDFGraphDelta}. Has no lock of its own —
- * transaction lifecycle is managed exclusively by the owning coordinator.
+ * Transactional diagram-layout store backed by an {@link RDFGraphDelta}, used both for a graph's
+ * layout and for the workspace's own. Has no lock of its own — the owning workspace drives the
+ * transaction.
  */
 public class DiagramLayoutDelta
         implements TransactionParticipant, DeltaSource, ChangeLogParticipant {
@@ -78,7 +79,7 @@ public class DiagramLayoutDelta
     }
 
     // -------------------------------------------------------------------------
-    // DeltaSource
+    // ChangeLogParticipant and DeltaSource
     // -------------------------------------------------------------------------
 
     @Override

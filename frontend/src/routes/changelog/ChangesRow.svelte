@@ -40,10 +40,7 @@
 
     async function callRestoreVersion(changeId) {
         const { error } = await restoreVersion({
-            path: {
-                datasetName: editorState.selectedWorkspace.getValue(),
-                graphURI: editorState.selectedGraph.getValue(),
-            },
+            path: { datasetName: editorState.selectedWorkspace.getValue() },
             body: { versionId: changeId },
         });
         if (!error) {
