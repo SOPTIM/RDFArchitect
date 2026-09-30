@@ -119,6 +119,10 @@
         }
         association.save();
         forceReloadTrigger.trigger();
+        classStore.invalidateGraph(
+            classEditorContext.workspaceName,
+            classEditorContext.graphUri,
+        );
     }
 
     function onClose() {
