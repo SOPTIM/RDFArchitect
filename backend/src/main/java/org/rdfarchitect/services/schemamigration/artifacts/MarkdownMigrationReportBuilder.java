@@ -252,6 +252,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                             new SemanticClassChange(
                                     domain, SemanticResourceChangeType.INDIRECT_CHANGE);
                     result.add(affectedClassChange);
+                    classChangeMap.put(domain.getURI(), affectedClassChange);
                 }
 
                 var associationChange =
