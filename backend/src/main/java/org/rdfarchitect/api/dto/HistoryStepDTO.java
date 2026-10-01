@@ -15,17 +15,19 @@
  *
  */
 
-package org.rdfarchitect.services.versioncontrol;
+package org.rdfarchitect.api.dto;
 
-import org.rdfarchitect.api.dto.HistoryStepDTO;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-public interface RedoUseCase {
+/** What one undo or redo did, and what is left to undo or redo afterwards. */
+@Data
+@NoArgsConstructor
+public class HistoryStepDTO {
 
-    /**
-     * Reapplies the most recently undone change of the workspace, across every graph it touched.
-     *
-     * @param workspaceName the workspace to operate on
-     * @return the change that was redone
-     */
-    HistoryStepDTO redo(String workspaceName);
+    /** The change that was undone or redone. */
+    private ChangeLogEntryDTO change;
+
+    private Boolean canUndo;
+    private Boolean canRedo;
 }

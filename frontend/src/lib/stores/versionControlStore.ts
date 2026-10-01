@@ -199,10 +199,24 @@ function createVersionControlStore() {
             toastStore.error(FAILURE_TITLE[direction], FAILURE_TEXT[direction]);
             return { error };
         }
-        announce(SUCCESS_TITLE[direction], data);
+        announce(SUCCESS_TITLE[direction], data?.change);
 
         invalidateWorkspace(target);
-        await refresh(target);
+        // The step says where it left the history, so there is nothing left to
+        // ask: two fewer requests, and no window in which another request could
+        // move the workspace on between the step and the question.
+        store.update(s =>
+            setFlags(s, target, {
+                canUndo: {
+                    ...getFlags(s, target).canUndo,
+                    data: !!data?.canUndo,
+                },
+                canRedo: {
+                    ...getFlags(s, target).canRedo,
+                    data: !!data?.canRedo,
+                },
+            }),
+        );
         return { error: null };
     }
 

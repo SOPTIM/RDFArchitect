@@ -36,6 +36,7 @@ import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
+import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphSourceBuilderImpl;
 
@@ -129,12 +130,12 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     @Override
-    public WorkspaceChangeLogEntry undo(String workspaceName) {
+    public WorkspaceHistoryStep undo(String workspaceName) {
         return workspace(workspaceName).undo();
     }
 
     @Override
-    public WorkspaceChangeLogEntry redo(String workspaceName) {
+    public WorkspaceHistoryStep redo(String workspaceName) {
         return workspace(workspaceName).redo();
     }
 

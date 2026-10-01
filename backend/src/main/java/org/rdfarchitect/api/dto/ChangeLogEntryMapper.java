@@ -23,6 +23,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.rdfarchitect.models.changelog.ContextDelta;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
+import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
 import java.lang.ref.WeakReference;
@@ -39,6 +40,8 @@ public interface ChangeLogEntryMapper {
     ChangeLogEntryDTO toDTO(WorkspaceChangeLogEntry entry);
 
     List<ChangeLogEntryDTO> toDTOList(List<WorkspaceChangeLogEntry> entries);
+
+    HistoryStepDTO toDTO(WorkspaceHistoryStep step);
 
     default ContextDeltaDTO toContextDeltaDTO(ContextDelta contextDelta) {
         var dto = new ContextDeltaDTO();

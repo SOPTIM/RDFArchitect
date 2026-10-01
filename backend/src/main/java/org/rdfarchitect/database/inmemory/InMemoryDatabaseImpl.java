@@ -30,6 +30,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
+import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 
 import java.util.List;
 import java.util.UUID;
@@ -101,12 +102,12 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
-    public WorkspaceChangeLogEntry undo(String workspaceName) {
+    public WorkspaceHistoryStep undo(String workspaceName) {
         return getOrCreateSessionDataStore().undo(workspaceName);
     }
 
     @Override
-    public WorkspaceChangeLogEntry redo(String workspaceName) {
+    public WorkspaceHistoryStep redo(String workspaceName) {
         return getOrCreateSessionDataStore().redo(workspaceName);
     }
 

@@ -19,8 +19,8 @@ package org.rdfarchitect.services.versioncontrol;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
 import org.rdfarchitect.api.dto.ChangeLogEntryMapper;
+import org.rdfarchitect.api.dto.HistoryStepDTO;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -53,12 +53,12 @@ public class VersionControlService
     }
 
     @Override
-    public ChangeLogEntryDTO redo(String workspaceName) {
+    public HistoryStepDTO redo(String workspaceName) {
         return changeLogEntryMapper.toDTO(databasePort.redo(workspaceName));
     }
 
     @Override
-    public ChangeLogEntryDTO undo(String workspaceName) {
+    public HistoryStepDTO undo(String workspaceName) {
         return changeLogEntryMapper.toDTO(databasePort.undo(workspaceName));
     }
 

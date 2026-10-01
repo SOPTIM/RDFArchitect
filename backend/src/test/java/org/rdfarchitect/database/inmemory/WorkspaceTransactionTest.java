@@ -435,8 +435,32 @@ class WorkspaceTransactionTest {
         commitTriple(GRAPH_A, triple, "first");
         commitTriple(GRAPH_A, triple2, "second");
 
-        assertThat(workspace.undo().message()).isEqualTo("second");
-        assertThat(workspace.undo().message()).isEqualTo("first");
+        assertThat(workspace.undo().change().message()).isEqualTo("second");
+        assertThat(workspace.undo().change().message()).isEqualTo("first");
+    }
+
+    @Test
+    void undo_reportsWhatIsLeftToUndoAndRedo() {
+        // Answered while the step still holds the lock, so the editor does not
+        // have to ask twice more and cannot be told about a workspace that has
+        // meanwhile moved on.
+        commitTriple(GRAPH_A, triple, "first");
+        commitTriple(GRAPH_A, triple2, "second");
+
+        var step = workspace.undo();
+
+        assertThat(step.change().message()).isEqualTo("second");
+        assertThat(step.canUndo()).isTrue();
+        assertThat(step.canRedo()).isTrue();
+
+        // The two graphs of the fixture are entries of their own, so the last
+        // step is the one that reports there is nothing left.
+        var last = step;
+        while (last.canUndo()) {
+            last = workspace.undo();
+        }
+        assertThat(last.canUndo()).isFalse();
+        assertThat(last.canRedo()).isTrue();
     }
 
     @Test

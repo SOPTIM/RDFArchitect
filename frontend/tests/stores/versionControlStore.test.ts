@@ -257,19 +257,13 @@ describe("versionControlStore", () => {
 
     // -------------------------------------------------------------------------
     describe("undo", () => {
-        test("calls SDK, invalidates the whole workspace, toasts, and refreshes", async () => {
+        test("calls SDK, invalidates the whole workspace, and toasts", async () => {
             vi.mocked(api.undo).mockResolvedValue({
-                data: undefined,
-                error: undefined,
-            });
-
-            // Mock refresh endpoints so it doesn't fail when called at the end
-            vi.mocked(api.canUndo).mockResolvedValue({
-                data: false,
-                error: undefined,
-            });
-            vi.mocked(api.canRedo).mockResolvedValue({
-                data: true,
+                data: {
+                    change: { message: "a change" },
+                    canUndo: false,
+                    canRedo: true,
+                },
                 error: undefined,
             });
 
@@ -311,7 +305,10 @@ describe("versionControlStore", () => {
                 "Undone",
                 expect.any(String),
             );
-            expect(api.canUndo).toHaveBeenCalled(); // Proves refresh was called
+            // The step reports where it left the history, so nothing is asked
+            // again afterwards.
+            expect(api.canUndo).not.toHaveBeenCalled();
+            expect(await store.canRedo(WORKSPACE)).toBe(true);
         });
 
         test("returns error and prevents invalidation if SDK fails", async () => {
@@ -363,8 +360,12 @@ describe("versionControlStore", () => {
         test("names the change and where it landed", async () => {
             vi.mocked(api.undo).mockResolvedValue({
                 data: {
-                    message: 'Renamed class "Terminal" to "Node"',
-                    affectedGraphUris: [OTHER],
+                    change: {
+                        message: 'Renamed class "Terminal" to "Node"',
+                        affectedGraphUris: [OTHER],
+                    },
+                    canUndo: false,
+                    canRedo: true,
                 },
                 error: undefined,
             });
@@ -380,8 +381,12 @@ describe("versionControlStore", () => {
         test("says nothing about a place when the change is in the open graph", async () => {
             vi.mocked(api.undo).mockResolvedValue({
                 data: {
-                    message: "a change",
-                    affectedGraphUris: [GRAPH],
+                    change: {
+                        message: "a change",
+                        affectedGraphUris: [GRAPH],
+                    },
+                    canUndo: false,
+                    canRedo: true,
                 },
                 error: undefined,
             });
@@ -396,11 +401,15 @@ describe("versionControlStore", () => {
         test("counts the graphs when a change spanned several", async () => {
             vi.mocked(api.undo).mockResolvedValue({
                 data: {
-                    message: "copied a class",
-                    affectedGraphUris: [
-                        OTHER,
-                        "http://example.org/schemas/Third",
-                    ],
+                    change: {
+                        message: "copied a class",
+                        affectedGraphUris: [
+                            OTHER,
+                            "http://example.org/schemas/Third",
+                        ],
+                    },
+                    canUndo: false,
+                    canRedo: true,
                 },
                 error: undefined,
             });
@@ -439,7 +448,10 @@ describe("versionControlStore", () => {
                 highWaterMark = Math.max(highWaterMark, running);
                 await new Promise(resolve => setTimeout(resolve, 0));
                 running--;
-                return { data: { message: "a change" }, error: undefined };
+                return {
+                    data: { change: { message: "a change" } },
+                    error: undefined,
+                };
             });
 
             await Promise.all([
@@ -457,7 +469,10 @@ describe("versionControlStore", () => {
             // released.
             vi.mocked(api.undo).mockImplementation(async () => {
                 await new Promise(resolve => setTimeout(resolve, 0));
-                return { data: { message: "a change" }, error: undefined };
+                return {
+                    data: { change: { message: "a change" } },
+                    error: undefined,
+                };
             });
 
             await Promise.all(
@@ -469,7 +484,7 @@ describe("versionControlStore", () => {
 
         test("the next press goes through once the step is done", async () => {
             vi.mocked(api.undo).mockResolvedValue({
-                data: { message: "a change" },
+                data: { change: { message: "a change" } },
                 error: undefined,
             });
 
@@ -482,10 +497,13 @@ describe("versionControlStore", () => {
         test("a redo pressed during an undo is ignored too", async () => {
             vi.mocked(api.undo).mockImplementation(async () => {
                 await new Promise(resolve => setTimeout(resolve, 0));
-                return { data: { message: "a change" }, error: undefined };
+                return {
+                    data: { change: { message: "a change" } },
+                    error: undefined,
+                };
             });
             vi.mocked(api.redo).mockResolvedValue({
-                data: { message: "a change" },
+                data: { change: { message: "a change" } },
                 error: undefined,
             });
 
@@ -499,7 +517,7 @@ describe("versionControlStore", () => {
 
             await store.undo(WORKSPACE).catch(() => {});
             vi.mocked(api.undo).mockResolvedValue({
-                data: { message: "a change" },
+                data: { change: { message: "a change" } },
                 error: undefined,
             });
             const result = await store.undo(WORKSPACE);

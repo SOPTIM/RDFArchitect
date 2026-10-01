@@ -20,6 +20,7 @@ package org.rdfarchitect.database;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
+import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 
 import java.util.List;
 import java.util.UUID;
@@ -67,7 +68,7 @@ public interface DatabasePort {
      * @param workspaceName literal workspace name
      * @return the change that was undone
      */
-    WorkspaceChangeLogEntry undo(String workspaceName);
+    WorkspaceHistoryStep undo(String workspaceName);
 
     /**
      * Reapplies the most recently undone change of the workspace.
@@ -75,7 +76,7 @@ public interface DatabasePort {
      * @param workspaceName literal workspace name
      * @return the change that was redone
      */
-    WorkspaceChangeLogEntry redo(String workspaceName);
+    WorkspaceHistoryStep redo(String workspaceName);
 
     /**
      * Rolls the workspace back to the given version.

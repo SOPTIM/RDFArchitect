@@ -26,6 +26,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
+import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 
 import java.util.List;
 import java.util.UUID;
@@ -56,12 +57,12 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
-    public WorkspaceChangeLogEntry undo(String workspaceName) {
+    public WorkspaceHistoryStep undo(String workspaceName) {
         return database.undo(workspaceName);
     }
 
     @Override
-    public WorkspaceChangeLogEntry redo(String workspaceName) {
+    public WorkspaceHistoryStep redo(String workspaceName) {
         return database.redo(workspaceName);
     }
 
