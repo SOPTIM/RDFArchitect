@@ -164,7 +164,9 @@ function createVersionControlStore() {
         direction: Direction,
     ) {
         if (running) {
-            return { error: null };
+            // Told apart from a step that ran, so that a press which did
+            // nothing does not reload the editor for nothing.
+            return { error: null, skipped: true };
         }
         running = true;
         try {

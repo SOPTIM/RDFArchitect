@@ -188,11 +188,11 @@
         if (!isRedo && !canUndo) return;
 
         await eventStack.guardAction(async () => {
-            const { error } = isRedo
+            const { error, skipped } = isRedo
                 ? await versionControlStore.redo()
                 : await versionControlStore.undo();
 
-            if (!error) {
+            if (!error && !skipped) {
                 await reload();
             }
         });

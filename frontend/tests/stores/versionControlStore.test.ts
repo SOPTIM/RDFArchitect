@@ -463,6 +463,24 @@ describe("versionControlStore", () => {
             expect(highWaterMark).toBe(1);
         });
 
+        test("a press that was ignored says so, so nothing reloads for it", async () => {
+            vi.mocked(api.undo).mockImplementation(async () => {
+                await new Promise(resolve => setTimeout(resolve, 0));
+                return {
+                    data: { change: { message: "a change" } },
+                    error: undefined,
+                };
+            });
+
+            const [first, second] = await Promise.all([
+                store.undo(WORKSPACE),
+                store.undo(WORKSPACE),
+            ]);
+
+            expect(first.skipped).toBeUndefined();
+            expect(second.skipped).toBe(true);
+        });
+
         test("presses made while one runs are ignored, not collected", async () => {
             // Key repeat fires far faster than a step completes. Remembering
             // the presses would keep the editor busy long after the key was
