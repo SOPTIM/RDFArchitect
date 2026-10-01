@@ -145,17 +145,21 @@
     }
 
     async function undo() {
-        const { error } = await versionControlStore.undo(workspaceNavEntry.id);
+        const { error, skipped } = await versionControlStore.undo(
+            workspaceNavEntry.id,
+        );
 
-        if (!error) {
+        if (!error && !skipped) {
             forceReloadTrigger.trigger();
         }
     }
 
     async function redo() {
-        const { error } = await versionControlStore.redo(workspaceNavEntry.id);
+        const { error, skipped } = await versionControlStore.redo(
+            workspaceNavEntry.id,
+        );
 
-        if (!error) {
+        if (!error && !skipped) {
             forceReloadTrigger.trigger();
         }
     }

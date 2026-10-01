@@ -392,15 +392,15 @@
     }
 
     async function undo() {
-        const { error } = await versionControlStore.undo();
-        if (!error) {
+        const { error, skipped } = await versionControlStore.undo();
+        if (!error && !skipped) {
             reload();
         }
     }
 
     async function redo() {
-        const { error } = await versionControlStore.redo();
-        if (!error) {
+        const { error, skipped } = await versionControlStore.redo();
+        if (!error && !skipped) {
             reload();
         }
     }
