@@ -65,6 +65,8 @@ class ImportGraphsServiceTest {
         transaction = mock(WorkspaceTransaction.class);
         when(databasePortMock.beginTransaction(anyString(), any(ReadWrite.class)))
                 .thenReturn(transaction);
+        // A workspace always has prefixes, empty ones included; the tests that care say which.
+        when(transaction.prefixes()).thenReturn(new PrefixMappingImpl());
         importGraphsUseCase = new ImportGraphsService(databasePortMock);
     }
 
@@ -220,6 +222,7 @@ class ImportGraphsServiceTest {
         private List<PrefixComparison> comparison;
         private int storedGraphsWhenAsked = -1;
         private boolean asked;
+        private boolean cancelAfterAnswering;
 
         private RecordingListener(List<PrefixResolutionDTO> resolutions) {
             this.resolutions = resolutions;
@@ -251,6 +254,11 @@ class ImportGraphsServiceTest {
                             .toList()
                             .size();
             return ResolvedPrefixes.of(comparison, resolutions);
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return cancelAfterAnswering && asked;
         }
     }
 
@@ -321,7 +329,7 @@ class ImportGraphsServiceTest {
     }
 
     @Test
-    void importGraphs_datasetPrefixRenamed_isRewrittenBeforeTheFirstFileIsStored() {
+    void importGraphs_datasetPrefixRenamed_isRewrittenAlongsideTheImportedGraphs() {
         var datasetName = "ds";
         workspaceHolding(datasetName, CIM16);
 
@@ -338,6 +346,26 @@ class ImportGraphsServiceTest {
         verify(transaction).setPrefixes(captor.capture());
         assertThat(captor.getValue().getNsPrefixMap()).containsExactly(entry("cim16", CIM16));
         assertThat(storedPrefixes()).containsEntry("cim", CIM18);
+    }
+
+    @Test
+    void importGraphs_cancelledAfterTheDecision_leavesTheDatasetPrefixesAlone() {
+        var datasetName = "ds";
+        workspaceHolding(datasetName, CIM16);
+
+        var listener =
+                new RecordingListener(
+                        List.of(
+                                new PrefixResolutionDTO("cim:", CIM16, Action.RENAME, "cim16:"),
+                                new PrefixResolutionDTO("cim:", CIM18, Action.KEEP, null)));
+        listener.cancelAfterAnswering = true;
+
+        var result =
+                importGraphsUseCase.importGraphs(
+                        datasetName, List.of(schemaFile("dl30.ttl", CIM18)), null, listener);
+
+        assertThat(result.importedGraphUris()).isEmpty();
+        verify(transaction, never()).setPrefixes(any());
     }
 
     @Test

@@ -88,6 +88,14 @@ public class WorkspaceChangeLog {
         trimToMaxEntries();
     }
 
+    /**
+     * Drops the redo branch without recording an entry, for a change folded into the current
+     * version. What was undone cannot be redone once something has been written over it.
+     */
+    public void abandonRedo() {
+        abandonRedoBranch();
+    }
+
     // -------------------------------------------------------------------------
     // Stepping through history
     // -------------------------------------------------------------------------

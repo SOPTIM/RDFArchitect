@@ -122,7 +122,8 @@ public class CustomDiagramService
         if (doLayout) {
             try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
                 doDiagramLayout(transaction.layout(), crossProfileDiagramUUID, mergeMap);
-                transaction.commit("Laid out the cross profile diagram");
+                // Looking at the diagram is not a change the user's next undo should take back.
+                transaction.commitWithoutHistory();
             }
         }
         return new CrossProfileDiagramDTO(
@@ -194,7 +195,9 @@ public class CustomDiagramService
     public void deleteCustomDatasetDiagram(String datasetName, String diagramId) {
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
             var removed = transaction.diagrams().remove(UUID.fromString(diagramId));
-            transaction.commit(ChangeDescriptions.in("Deleted", "diagram", nameOf(removed)));
+            transaction.commit(
+                    ChangeDescriptions.in(
+                            "Deleted", "diagram", ChangeDescriptions.diagramName(removed)));
         }
     }
 
@@ -216,7 +219,9 @@ public class CustomDiagramService
                         diagramDTO.getDiagramId(), diagramDTO.getName(), diagramDTO.getClasses());
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
             transaction.diagrams().put(UUID.fromString(diagramId), diagram);
-            transaction.commit(ChangeDescriptions.in("Updated", "diagram", nameOf(diagram)));
+            transaction.commit(
+                    ChangeDescriptions.in(
+                            "Updated", "diagram", ChangeDescriptions.diagramName(diagram)));
         }
     }
 
@@ -228,9 +233,14 @@ public class CustomDiagramService
                 var classes = diagram.getClasses();
                 classes.removeIf(c -> c.getUuid().equals(classId));
                 diagram.setClasses(classes);
-                transaction.commit(
-                        ChangeDescriptions.in("Removed a class from", "diagram", nameOf(diagram)));
             }
+            // Reading the diagrams enrolled them, so the transaction has to be committed either
+            // way; a commit that changed nothing records nothing.
+            transaction.commit(
+                    ChangeDescriptions.in(
+                            "Removed a class from",
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagram)));
         }
     }
 
@@ -240,7 +250,9 @@ public class CustomDiagramService
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphUri());
             var removed = ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
-            transaction.commit(ChangeDescriptions.in("Deleted", "diagram", nameOf(removed)));
+            transaction.commit(
+                    ChangeDescriptions.in(
+                            "Deleted", "diagram", ChangeDescriptions.diagramName(removed)));
         }
     }
 
@@ -266,7 +278,9 @@ public class CustomDiagramService
                             diagramDTO.getName(),
                             diagramDTO.getClasses());
             ctx.getCustomDiagrams().put(UUID.fromString(diagramId), diagram);
-            transaction.commit(ChangeDescriptions.in("Updated", "diagram", nameOf(diagram)));
+            transaction.commit(
+                    ChangeDescriptions.in(
+                            "Updated", "diagram", ChangeDescriptions.diagramName(diagram)));
         }
     }
 
@@ -283,7 +297,10 @@ public class CustomDiagramService
                 diagram.setClasses(classes);
             }
             transaction.commit(
-                    ChangeDescriptions.in("Removed a class from", "diagram", nameOf(diagram)));
+                    ChangeDescriptions.in(
+                            "Removed a class from",
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagram)));
         }
     }
 
@@ -304,10 +321,6 @@ public class CustomDiagramService
             }
             transaction.commit("Removed a class from all diagrams");
         }
-    }
-
-    private static String nameOf(CustomDiagram diagram) {
-        return diagram == null ? "" : ChangeDescriptions.name(diagram.getName());
     }
 
     @Override

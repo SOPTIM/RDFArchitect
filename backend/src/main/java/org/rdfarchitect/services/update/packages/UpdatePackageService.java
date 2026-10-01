@@ -38,6 +38,7 @@ import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.dl.update.ReplaceDiagramUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.CreatePackageLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.DeletePackageLayoutDataUseCase;
@@ -74,11 +75,10 @@ public class UpdatePackageService
                     graph,
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     newPackage);
+            createPackageLayoutData.createPackageLayoutData(
+                    graphIdentifier, packageDTO, newPackageUUID);
             transaction.commit("Added package " + packageDTO.getLabel());
         }
-
-        createPackageLayoutData.createPackageLayoutData(
-                graphIdentifier, packageDTO, newPackageUUID);
 
         return newPackageUUID;
     }
@@ -107,15 +107,30 @@ public class UpdatePackageService
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphUri());
             // Read before deleting: afterwards there is no label left to name the change with.
-            var packageResource =
-                    CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), packageUUID);
-            var packageLabel = CIMResourceUtils.findLabelForResource(packageResource);
+            var packageLabel = packageLabel(ctx.getRdfGraph(), packageUUID);
             CIMUpdates.deletePackage(
                     ctx.getRdfGraph(),
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     packageUUID);
             deletePackageLayoutDataUseCase.deletePackageLayoutData(graphIdentifier, packageUUID);
-            transaction.commit("Deleted package \"%s\"".formatted(packageLabel));
+            transaction.commit(
+                    packageLabel.isEmpty()
+                            ? "Deleted a package"
+                            : "Deleted package \"%s\"".formatted(packageLabel));
+        }
+    }
+
+    /**
+     * The name a package carries in the schema, or {@code ""} where it has none. An unnamed package
+     * is still deletable, so this answers rather than throwing the way the lookups it wraps do.
+     */
+    private static String packageLabel(Graph schema, UUID packageUUID) {
+        try {
+            return ChangeDescriptions.name(
+                    CIMResourceUtils.findLabelForResource(
+                            CIMResourceUtils.findResourceForUuid(schema, packageUUID)));
+        } catch (IllegalStateException _) {
+            return "";
         }
     }
 

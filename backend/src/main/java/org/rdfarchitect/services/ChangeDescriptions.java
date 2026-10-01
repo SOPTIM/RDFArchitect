@@ -22,6 +22,7 @@ import lombok.NoArgsConstructor;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.rdf.model.Model;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 
@@ -60,6 +61,17 @@ public final class ChangeDescriptions {
         } catch (IllegalStateException _) {
             return "";
         }
+    }
+
+    /**
+     * Returns the name of a custom diagram, which carries its own: the DL model only stores an
+     * empty one for them.
+     *
+     * @param diagram the diagram, possibly {@code null}
+     * @return the name, or {@code ""} if it has none
+     */
+    public static String diagramName(CustomDiagram diagram) {
+        return diagram == null ? "" : name(diagram.getName());
     }
 
     /**

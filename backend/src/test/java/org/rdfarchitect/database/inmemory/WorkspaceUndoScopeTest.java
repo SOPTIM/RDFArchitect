@@ -85,6 +85,20 @@ class WorkspaceUndoScopeTest {
         }
 
         @Test
+        void redo_afterACommitWithoutHistory_cannotPutTheOldStateBackOnTopOfIt() {
+            createGraph(GRAPH_A);
+            workspace.undo();
+
+            try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+                transaction.createGraph(GRAPH_B, GraphFactory.createDefaultGraph());
+                transaction.commitWithoutHistory();
+            }
+
+            assertThat(workspace.canRedo()).isFalse();
+            assertThat(workspace.listGraphUris()).containsExactly(GRAPH_B);
+        }
+
+        @Test
         void undo_ofAGraphDeletion_bringsBackTheGraphWithItsContents() {
             createGraph(GRAPH_A);
             commitTriple(GRAPH_A, triple);

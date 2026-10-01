@@ -91,7 +91,7 @@ public class InMemorySnapshotAdapter implements SnapshotPort {
             // Loading a snapshot is not a change the user made and cannot mean to undo.
             transaction.commitWithoutHistory();
         }
-        // A fresh workspace starts out editable, a snapshot is a shared copy that must not be.
+        // A fresh workspace starts out editable; a snapshot is a shared copy and must not be.
         databasePort.disableEditing(snapshot.snapshotName());
     }
 

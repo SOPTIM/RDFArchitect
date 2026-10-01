@@ -52,14 +52,27 @@ const LOG = "[versionControlStore]";
 
 export const versionControlStore = createVersionControlStore();
 
-const FAILURE_TITLE: Record<Direction, string> = {
-    undo: "Undo failed",
-    redo: "Redo failed",
-};
-
-const FAILURE_TEXT: Record<Direction, string> = {
-    undo: "Could not undo the last change.",
-    redo: "Could not redo the change.",
+const WORDING: Record<
+    Direction,
+    {
+        successTitle: string;
+        failureTitle: string;
+        failureText: string;
+        unnamedChange: string;
+    }
+> = {
+    undo: {
+        successTitle: "Undone",
+        failureTitle: "Undo failed",
+        failureText: "Could not undo the last change.",
+        unnamedChange: "The last change was reverted.",
+    },
+    redo: {
+        successTitle: "Redone",
+        failureTitle: "Redo failed",
+        failureText: "Could not redo the change.",
+        unnamedChange: "The last change was restored.",
+    },
 };
 
 /**
@@ -72,11 +85,6 @@ const FAILURE_TEXT: Record<Direction, string> = {
  * back through the history at a deliberate pace.
  */
 const MIN_STEP_INTERVAL_MS = 300;
-
-const SUCCESS_TITLE: Record<Direction, string> = {
-    undo: "Undone",
-    redo: "Redone",
-};
 
 function getFlags(s: State, workspace: string): WorkspaceFlags {
     return (
@@ -113,48 +121,43 @@ function createVersionControlStore() {
     let running = false;
     let lastStepEndedAt = 0;
 
-    async function canUndo(
-        workspace?: string,
-        force = false,
+    /**
+     * Whether the workspace has a change to step over in this direction.
+     *
+     * Cached per workspace and direction; `force` reloads rather than
+     * answering from the cache.
+     */
+    async function canStep(
+        workspace: string | undefined,
+        direction: Direction,
+        force: boolean,
     ): Promise<boolean> {
         const target = resolveWorkspace(workspace);
         if (!target) return false;
+        const slot = direction === "undo" ? "canUndo" : "canRedo";
+        const call = direction === "undo" ? sdkCanUndo : sdkCanRedo;
         return (
             (await loadSlot(
                 store,
-                s => getFlags(s, target).canUndo,
+                s => getFlags(s, target)[slot],
                 (s, patch) =>
                     setFlags(s, target, {
-                        canUndo: { ...getFlags(s, target).canUndo, ...patch },
+                        [slot]: { ...getFlags(s, target)[slot], ...patch },
                     }),
-                () => sdkCanUndo({ path: { datasetName: target } }),
+                () => call({ path: { datasetName: target } }),
                 LOG,
-                `canUndo for workspace="${target}"`,
+                `${slot} for workspace="${target}"`,
                 force,
             )) ?? false
         );
     }
 
-    async function canRedo(
-        workspace?: string,
-        force = false,
-    ): Promise<boolean> {
-        const target = resolveWorkspace(workspace);
-        if (!target) return false;
-        return (
-            (await loadSlot(
-                store,
-                s => getFlags(s, target).canRedo,
-                (s, patch) =>
-                    setFlags(s, target, {
-                        canRedo: { ...getFlags(s, target).canRedo, ...patch },
-                    }),
-                () => sdkCanRedo({ path: { datasetName: target } }),
-                LOG,
-                `canRedo for workspace="${target}"`,
-                force,
-            )) ?? false
-        );
+    async function canUndo(workspace?: string, force = false) {
+        return canStep(workspace, "undo", force);
+    }
+
+    async function canRedo(workspace?: string, force = false) {
+        return canStep(workspace, "redo", force);
     }
 
     async function refresh(workspace?: string) {
@@ -181,11 +184,15 @@ function createVersionControlStore() {
             return { error: null, skipped: true };
         }
         running = true;
+        let cancelled = false;
         try {
-            return await step(workspace, direction);
+            const result = await step(workspace, direction);
+            cancelled = !!result.cancelled;
+            return result;
         } finally {
             running = false;
-            lastStepEndedAt = Date.now();
+            // Declining is not a step; the next press is a fresh decision.
+            if (!cancelled) lastStepEndedAt = Date.now();
         }
     }
 
@@ -201,20 +208,24 @@ function createVersionControlStore() {
         if (!target) {
             const message = `No ${direction} target selected.`;
             console.error(`${LOG} ${direction} failed`, message);
-            toastStore.error(FAILURE_TITLE[direction], message);
+            toastStore.error(WORDING[direction].failureTitle, message);
             return { error: message };
         }
         if (direction === "undo" && !(await confirmedIfDestructive(target))) {
-            return { error: null, cancelled: true };
+            // Skipped too: nothing moved, so there is nothing to reload for.
+            return { error: null, cancelled: true, skipped: true };
         }
         const call = direction === "undo" ? sdkUndo : sdkRedo;
         const { data, error } = await call({ path: { datasetName: target } });
         if (error) {
             console.error(`${LOG} ${direction} failed`, error);
-            toastStore.error(FAILURE_TITLE[direction], FAILURE_TEXT[direction]);
+            toastStore.error(
+                WORDING[direction].failureTitle,
+                WORDING[direction].failureText,
+            );
             return { error };
         }
-        announce(SUCCESS_TITLE[direction], data?.change);
+        announce(direction, data?.change);
 
         invalidateWorkspace(target);
         // The step says where it left the history, so there is nothing left to
@@ -242,11 +253,17 @@ function createVersionControlStore() {
      * looking at — or in its SHACL shapes rather than its schema. Without saying so, the editor
      * would appear unchanged and the change would look lost.
      */
-    function announce(title: string, entry: ChangeLogEntryDTO | undefined) {
+    function announce(
+        direction: Direction,
+        entry: ChangeLogEntryDTO | undefined,
+    ) {
         const elsewhere = (entry?.affectedGraphUris ?? []).filter(
             graph => graph !== editorState.selectedGraph.getValue(),
         );
-        toastStore.info(title, describe(entry, elsewhere));
+        toastStore.info(
+            WORDING[direction].successTitle,
+            describe(direction, entry, elsewhere),
+        );
     }
 
     /**
@@ -303,10 +320,11 @@ function resolveWorkspace(workspace?: string) {
  * What the change did, and where it landed if that is somewhere the user is not looking.
  */
 function describe(
+    direction: Direction,
     entry: ChangeLogEntryDTO | undefined,
     elsewhere: string[],
 ): string {
-    const what = entry?.message ?? "The last change was reverted.";
+    const what = entry?.message ?? WORDING[direction].unnamedChange;
     if (elsewhere.length === 0) return what;
     return elsewhere.length === 1
         ? `${what} in ${shortName(elsewhere[0])}`

@@ -190,6 +190,10 @@ public class UpdateClassService
         }
     }
 
+    /**
+     * Deleting a class also takes its layout and its appearances in diagrams with it. As with a
+     * rename, one enclosing transaction keeps that one change in the history and one step to undo.
+     */
     @Override
     public void deleteClass(GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var transaction =
@@ -201,10 +205,11 @@ public class UpdateClassService
                     ctx.getRdfGraph(),
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     classUUID);
+
+            deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, classUUID);
+            removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, classUUID);
+
             transaction.commit("Deleted class \"%s\"".formatted(classLabel));
         }
-
-        deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, classUUID);
-        removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, classUUID);
     }
 }

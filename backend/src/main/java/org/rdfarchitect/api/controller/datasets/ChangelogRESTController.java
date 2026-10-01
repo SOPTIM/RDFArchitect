@@ -19,6 +19,7 @@ package org.rdfarchitect.api.controller.datasets;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -57,7 +58,13 @@ public class ChangelogRESTController {
                         content =
                                 @Content(
                                         mediaType = "application/json",
-                                        schema = @Schema(implementation = ChangeLogEntryDTO.class)))
+                                        array =
+                                                @ArraySchema(
+                                                        schema =
+                                                                @Schema(
+                                                                        implementation =
+                                                                                ChangeLogEntryDTO
+                                                                                        .class))))
             })
     @GetMapping
     public List<ChangeLogEntryDTO> getChangeLog(

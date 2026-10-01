@@ -61,8 +61,10 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
 
     @Override
     public void createWorkspaceIfAbsent(String workspaceName) {
-        if (!getOrCreateSessionDataStore().listDatasets().contains(workspaceName)) {
-            createDataset(workspaceName);
+        // The store decides who creates it; looking first would let both callers through.
+        var store = getOrCreateSessionDataStore();
+        if (store.createDatasetIfAbsent(workspaceName)) {
+            initializeNewDataset(store, workspaceName);
         }
     }
 
@@ -129,7 +131,8 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
         }
         try (var transaction = store.beginTransaction(datasetName, ReadWrite.WRITE)) {
             transaction.setPrefixes(prefixMapping);
-            transaction.commit("created workspace %s".formatted(datasetName));
+            // The prefixes it starts with are not a change the user made and cannot be undone.
+            transaction.commitWithoutHistory();
         }
     }
 
