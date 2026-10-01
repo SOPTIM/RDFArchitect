@@ -28,6 +28,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
+import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 
 import java.util.List;
 import java.util.UUID;
@@ -114,7 +115,7 @@ public interface SessionDataStore {
      * @param workspaceName literal workspace name
      * @return the change that was undone
      */
-    WorkspaceChangeLogEntry undo(String workspaceName);
+    WorkspaceHistoryStep undo(String workspaceName);
 
     /**
      * Reapplies the most recently undone change of the workspace.
@@ -122,7 +123,7 @@ public interface SessionDataStore {
      * @param workspaceName literal workspace name
      * @return the change that was redone
      */
-    WorkspaceChangeLogEntry redo(String workspaceName);
+    WorkspaceHistoryStep redo(String workspaceName);
 
     /**
      * Rolls the workspace back to the given version.

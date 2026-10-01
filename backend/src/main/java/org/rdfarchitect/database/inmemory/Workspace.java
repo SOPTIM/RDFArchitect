@@ -40,6 +40,7 @@ import org.rdfarchitect.exception.graph.GraphTransactionException;
 import org.rdfarchitect.models.changelog.ParticipantId;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLog;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
+import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
@@ -348,23 +349,27 @@ public class Workspace {
     /**
      * Rolls back the most recent change anywhere in the workspace.
      *
-     * @return the entry that was undone
+     * @return what was undone and what is left to undo or redo
      */
-    public WorkspaceChangeLogEntry undo() {
+    public WorkspaceHistoryStep undo() {
         try (var transaction = begin(ReadWrite.WRITE)) {
-            return changeLog.undo();
+            return stepOf(changeLog.undo());
         }
     }
 
     /**
      * Reapplies the most recently undone change.
      *
-     * @return the entry that was redone
+     * @return what was redone and what is left to undo or redo
      */
-    public WorkspaceChangeLogEntry redo() {
+    public WorkspaceHistoryStep redo() {
         try (var transaction = begin(ReadWrite.WRITE)) {
-            return changeLog.redo();
+            return stepOf(changeLog.redo());
         }
+    }
+
+    private WorkspaceHistoryStep stepOf(WorkspaceChangeLogEntry change) {
+        return new WorkspaceHistoryStep(change, changeLog.canUndo(), changeLog.canRedo());
     }
 
     /**

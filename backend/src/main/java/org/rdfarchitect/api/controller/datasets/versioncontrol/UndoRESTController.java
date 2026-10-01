@@ -25,7 +25,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
+import org.rdfarchitect.api.dto.HistoryStepDTO;
 import org.rdfarchitect.services.versioncontrol.UndoUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,10 +55,10 @@ public class UndoRESTController {
                         content =
                                 @Content(
                                         mediaType = "application/json",
-                                        schema = @Schema(implementation = ChangeLogEntryDTO.class)))
+                                        schema = @Schema(implementation = HistoryStepDTO.class)))
             })
     @PostMapping
-    public ChangeLogEntryDTO undo(
+    public HistoryStepDTO undo(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

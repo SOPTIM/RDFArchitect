@@ -922,6 +922,20 @@
         },
         "type" : "object"
       },
+      "HistoryStepDTO" : {
+        "properties" : {
+          "canRedo" : {
+            "type" : "boolean"
+          },
+          "canUndo" : {
+            "type" : "boolean"
+          },
+          "change" : {
+            "$ref" : "#/components/schemas/ChangeLogEntryDTO"
+          }
+        },
+        "type" : "object"
+      },
       "ImportFileStatus" : {
         "properties" : {
           "fileName" : {
@@ -8436,7 +8450,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ChangeLogEntryDTO"
+                  "$ref" : "#/components/schemas/HistoryStepDTO"
                 }
               }
             },
@@ -8585,7 +8599,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ChangeLogEntryDTO"
+                  "$ref" : "#/components/schemas/HistoryStepDTO"
                 }
               }
             },
