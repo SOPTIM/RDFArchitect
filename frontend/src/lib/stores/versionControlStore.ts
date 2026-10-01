@@ -19,6 +19,7 @@ import { writable } from "svelte/store";
 
 import { editorState } from "../sharedState.svelte.js";
 import { classStore } from "./classStore";
+import { crossProfileStore } from "./crossProfileStore";
 import { datatypesStore } from "./datatypesStore";
 import { customDiagramStore } from "./diagramStore";
 import { graphStore } from "./graphStore";
@@ -217,6 +218,13 @@ function createVersionControlStore() {
         packageStore.invalidateWorkspace(workspace);
         datatypesStore.invalidateWorkspace(workspace);
         customDiagramStore.invalidateWorkspace(workspace);
+        // Creating, deleting and renaming a graph are undoable, so the graph
+        // list the navigation shows can be stale too.
+        graphStore.invalidateWorkspace(workspace);
+        // The merged view is derived from the schemas: undoing a rename moves
+        // a class between merged entries, and the class editor resolves the
+        // open class through this diagram.
+        crossProfileStore.invalidateWorkspace(workspace);
         // The namespaces are part of the cached workspace list, and they are
         // undoable like everything else in a workspace.
         workspaceStore.invalidate();
