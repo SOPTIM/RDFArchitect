@@ -20,9 +20,8 @@ package org.rdfarchitect.services.update.graph;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
@@ -31,16 +30,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.apache.jena.graph.Graph;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
-import org.apache.jena.sparql.graph.GraphFactory;
-import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphContext;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
@@ -191,16 +187,9 @@ class ImportGraphsServiceTest {
     private void workspaceHolding(String datasetName, String cimNamespace) {
         when(databasePortMock.getPrefixMapping(datasetName))
                 .thenReturn(prefixMapping(cimNamespace));
-        var graphUri = RDFA.GRAPH_URI + "existing";
-        when(databasePortMock.listGraphUris(datasetName)).thenReturn(List.of(graphUri));
-
-        var graph = GraphFactory.createDefaultGraph();
-        graph.getPrefixMapping().setNsPrefixes(prefixMapping(cimNamespace));
-        var context = mock(GraphContext.class);
-        when(context.begin(any())).thenReturn(context);
-        when(context.getRdfGraph()).thenReturn(graph);
-        when(databasePortMock.getGraphWithContext(new GraphIdentifier(datasetName, graphUri)))
-                .thenReturn(context);
+        when(transaction.prefixes()).thenReturn(prefixMapping(cimNamespace));
+        when(databasePortMock.listGraphUris(datasetName))
+                .thenReturn(List.of(RDFA.GRAPH_URI + "existing"));
     }
 
     private PrefixComparison contestedEntryOf(RecordingListener listener) {
@@ -216,8 +205,7 @@ class ImportGraphsServiceTest {
     /** The prefixes of the graph that was stored last. */
     private Map<String, String> storedPrefixes() {
         var captor = ArgumentCaptor.forClass(Graph.class);
-        verify(databasePortMock, atLeastOnce())
-                .createGraph(any(GraphIdentifier.class), captor.capture());
+        verify(transaction, atLeastOnce()).createGraph(anyString(), captor.capture());
         return captor.getValue().getPrefixMapping().getNsPrefixMap();
     }
 
@@ -256,7 +244,7 @@ class ImportGraphsServiceTest {
             this.asked = true;
             this.comparison = comparison;
             this.storedGraphsWhenAsked =
-                    mockingDetails(databasePortMock).getInvocations().stream()
+                    mockingDetails(transaction).getInvocations().stream()
                             .filter(
                                     invocation ->
                                             "createGraph".equals(invocation.getMethod().getName()))
@@ -347,7 +335,7 @@ class ImportGraphsServiceTest {
                                 new PrefixResolutionDTO("cim:", CIM18, Action.KEEP, null))));
 
         var captor = ArgumentCaptor.forClass(PrefixMapping.class);
-        verify(databasePortMock).setPrefixMapping(eq(datasetName), captor.capture());
+        verify(transaction).setPrefixes(captor.capture());
         assertThat(captor.getValue().getNsPrefixMap()).containsExactly(entry("cim16", CIM16));
         assertThat(storedPrefixes()).containsEntry("cim", CIM18);
     }
@@ -363,7 +351,7 @@ class ImportGraphsServiceTest {
                 null,
                 new RecordingListener(List.of()));
 
-        verify(databasePortMock, never()).setPrefixMapping(any(), any());
+        verify(transaction, never()).setPrefixes(any());
     }
 
     @Test
