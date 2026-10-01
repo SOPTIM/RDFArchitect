@@ -33,7 +33,6 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
@@ -237,11 +236,6 @@ public class UpdateClassLayoutService
      * so offering to undo it would mean offering to undo opening a diagram. It still has to be
      * stored, or every visit would lay the diagram out anew.
      */
-    /** Custom diagrams carry their own name; the DL model only stores an empty one for them. */
-    private static String nameOf(CustomDiagram diagram) {
-        return diagram == null ? "" : ChangeDescriptions.name(diagram.getName());
-    }
-
     private static void commitLayout(
             WorkspaceTransaction transaction, boolean firstLayout, String message) {
         if (firstLayout) {
@@ -395,7 +389,10 @@ public class UpdateClassLayoutService
                             .map(ClassInDiagram::getUuid)
                             .collect(Collectors.toCollection(LinkedHashSet::new)));
             transaction.commit(
-                    ChangeDescriptions.in("Added classes to", "diagram", nameOf(diagram)));
+                    ChangeDescriptions.in(
+                            "Added classes to",
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagram)));
         }
     }
 
@@ -448,7 +445,10 @@ public class UpdateClassLayoutService
             deleteLayoutForClasses(
                     ctx.getDiagramLayout().getDiagramLayoutModel(), diagramUUID, classUUIDs);
             transaction.commit(
-                    ChangeDescriptions.in("Removed classes from", "diagram", nameOf(diagram)));
+                    ChangeDescriptions.in(
+                            "Removed classes from",
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagram)));
         }
     }
 
@@ -501,7 +501,10 @@ public class UpdateClassLayoutService
                     diagramUUID,
                     mergedUuidsOf(classes, classUriByUuid(datasetName, classes)));
             transaction.commit(
-                    ChangeDescriptions.in("Added classes to", "diagram", nameOf(diagram)));
+                    ChangeDescriptions.in(
+                            "Added classes to",
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagram)));
         }
     }
 
@@ -556,7 +559,10 @@ public class UpdateClassLayoutService
                         classUUIDs.stream().filter(uuid -> !stillRendered.contains(uuid)).toList());
             }
             transaction.commit(
-                    ChangeDescriptions.in("Removed classes from", "diagram", nameOf(diagram)));
+                    ChangeDescriptions.in(
+                            "Removed classes from",
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagram)));
         }
     }
 

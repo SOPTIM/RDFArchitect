@@ -99,6 +99,7 @@ class TransactionCoordinator {
         try {
             for (var participant : enrolled) {
                 if (!participant.hasChanges()) {
+                    releaseUnchanged(participant);
                     continue;
                 }
                 participant.commit();
@@ -145,6 +146,7 @@ class TransactionCoordinator {
         try {
             for (var participant : enrolled) {
                 if (!participant.hasChanges()) {
+                    releaseUnchanged(participant);
                     continue;
                 }
                 participant.commit();
@@ -160,7 +162,21 @@ class TransactionCoordinator {
             }
         }
         txnContext.clearEnrolled();
+        if (!versioned.isEmpty()) {
+            // Folding still writes over what undo moved aside, so the redo branch is gone.
+            changeLog.abandonRedo();
+        }
         logger.debug("Workspace committed without recording history.");
+    }
+
+    /**
+     * Lets a participant that enrolled but changed nothing go of the state it kept for an abort.
+     *
+     * <p>Committing it would cut a version it did not earn; dropping it silently would leave it
+     * holding this transaction's state into the next one, where it would pass as that one's start.
+     */
+    private void releaseUnchanged(TransactionParticipant participant) {
+        participant.abort();
     }
 
     /**

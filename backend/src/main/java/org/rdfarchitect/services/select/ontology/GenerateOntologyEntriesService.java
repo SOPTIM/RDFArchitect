@@ -25,6 +25,7 @@ import org.rdfarchitect.api.dto.ChangeLogEntryMapper;
 import org.rdfarchitect.api.dto.ontology.OntologyEntry;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.cim.ontology.OntologyGeneratableEntriesBuilder;
 import org.springframework.stereotype.Service;
 
@@ -47,10 +48,19 @@ public class GenerateOntologyEntriesService implements GenerateOntologyEntriesUs
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             return new OntologyGeneratableEntriesBuilder(model)
                     .generateDCTModified(
-                            changeLogEntryMapper.toDTOList(
-                                    databasePort.listChanges(graphIdentifier.datasetName())))
+                            changeLogEntryMapper.toDTOList(changesTouching(graphIdentifier)))
                     .generateDCTIssued()
                     .build();
         }
+    }
+
+    /**
+     * The changes that touched this graph, newest first. The log is workspace-wide, but
+     * dcterms:modified speaks for one graph: an edit in a neighbouring one must not restamp it.
+     */
+    private List<WorkspaceChangeLogEntry> changesTouching(GraphIdentifier graphIdentifier) {
+        return databasePort.listChanges(graphIdentifier.datasetName()).stream()
+                .filter(entry -> entry.affectedGraphUris().contains(graphIdentifier.graphUri()))
+                .toList();
     }
 }

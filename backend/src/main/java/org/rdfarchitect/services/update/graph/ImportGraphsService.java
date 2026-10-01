@@ -88,7 +88,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         for (var source : sources) {
             importSource(result, parsed, source, reservedGraphUris, listener, negotiation);
         }
-        swapIn(result, datasetName, parsed, listener);
+        swapIn(result, datasetName, parsed, negotiation.resolved(), listener);
         return result;
     }
 
@@ -126,9 +126,6 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                 datasetName,
                 contested);
         var resolved = listener.awaitResolvedPrefixes(comparison);
-        if (!listener.isCancelled()) {
-            applyToWorkspacePrefixes(datasetName, resolved);
-        }
         return new PrefixNegotiation(resolved, unreadableIndices);
     }
 
@@ -146,22 +143,6 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             unreadableIndices.add(plannedFile.index());
         }
         return unreadableIndices;
-    }
-
-    /** Moves the prefixes the dataset holds out of the way, where the decisions call for it. */
-    private void applyToWorkspacePrefixes(String datasetName, ResolvedPrefixes resolved) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
-            var rewritten = resolved.rewriteWorkspacePrefixes(transaction.prefixes());
-            if (rewritten.isPresent()) {
-                transaction.setPrefixes(rewritten.get());
-                transaction.commit("changed the namespace prefixes");
-            }
-        } catch (RuntimeException exception) {
-            logger.warn(
-                    "Unable to apply the namespace prefix decisions to dataset \"{}\": {}",
-                    datasetName,
-                    exception.getMessage());
-        }
     }
 
     /** Reads the prefixes of every planned file, zip entries included. */
@@ -488,16 +469,22 @@ public class ImportGraphsService implements ImportGraphsUseCase {
      * after everything is parsed, so the workspace stays readable while a large upload is being
      * read; and one upload becomes one entry in the history, because the user performed one import,
      * not one per file they happened to select.
+     *
+     * <p>The decided prefixes are rewritten here too: they only make sense next to the graphs that
+     * contested them, so an upload that stores nothing must not leave them renamed.
      */
     private void swapIn(
             ImportResult result,
             String datasetName,
             List<ParsedGraph> parsed,
+            ResolvedPrefixes resolved,
             ImportProgressListener listener) {
         if (parsed.isEmpty()) {
             return;
         }
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            resolved.rewriteWorkspacePrefixes(transaction.prefixes())
+                    .ifPresent(transaction::setPrefixes);
             for (var graph : parsed) {
                 transaction.deleteGraph(graph.uri());
                 transaction.createGraph(graph.uri(), graph.graph());

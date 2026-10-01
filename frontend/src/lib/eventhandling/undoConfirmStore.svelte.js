@@ -36,6 +36,8 @@ export const undoConfirmStore = {
      * @returns {Promise<boolean>} whether the user confirmed
      */
     confirm(message, removed) {
+        // A replaced question was not answered; its caller is still waiting on one.
+        answer?.(false);
         state.request = { message, removed };
         return new Promise(resolve => {
             answer = resolve;

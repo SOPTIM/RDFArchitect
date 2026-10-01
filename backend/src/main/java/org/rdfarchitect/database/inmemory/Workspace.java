@@ -260,12 +260,15 @@ public class Workspace {
 
     private void doEnd() {
         var mode = txnContext.transactionMode();
-        if (txnContext.isOutermost() && mode == ReadWrite.WRITE && !txnContext.isAborted()) {
-            coordinator.finishOutermostWrite();
-        }
-        if (txnContext.end()) {
-            var lock = mode == ReadWrite.READ ? rwLock.readLock() : rwLock.writeLock();
-            lock.unlock();
+        try {
+            if (txnContext.isOutermost() && mode == ReadWrite.WRITE && !txnContext.isAborted()) {
+                coordinator.finishOutermostWrite();
+            }
+        } finally {
+            if (txnContext.end()) {
+                var lock = mode == ReadWrite.READ ? rwLock.readLock() : rwLock.writeLock();
+                lock.unlock();
+            }
         }
     }
 
@@ -398,6 +401,9 @@ public class Workspace {
      * Returns the graph identified by {@code graphUri}, creating the default graph if it is asked
      * for and does not exist yet.
      *
+     * <p>A reader gets an empty graph that is not kept: a read transaction enrols nothing, so the
+     * insertion could neither be rolled back nor seen by a concurrent reader doing the same.
+     *
      * @param graphUri the graph URI
      * @return the graph's contents
      */
@@ -412,7 +418,9 @@ public class Workspace {
             throw new ResourceNotFoundException("Graph URI " + expanded + " does not exist.");
         }
         var defaultGraph = new GraphWithContext(GraphFactory.createDefaultGraph(), txnContext);
-        graphs.put(DEFAULT_GRAPH_NAME, defaultGraph);
+        if (txnContext.transactionMode() == ReadWrite.WRITE) {
+            graphs.put(DEFAULT_GRAPH_NAME, defaultGraph);
+        }
         return defaultGraph;
     }
 

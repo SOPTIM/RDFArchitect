@@ -59,16 +59,17 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public void createDataset(String datasetName) {
+        createDatasetIfAbsent(datasetName);
+    }
+
+    @Override
+    public boolean createDatasetIfAbsent(String datasetName) {
         lock.lock();
         try {
-            createDatasetIfAbsent(datasetName);
+            return workspaces.putIfAbsent(datasetName, new Workspace(datasetName)) == null;
         } finally {
             lock.unlock();
         }
-    }
-
-    private void createDatasetIfAbsent(String datasetName) {
-        workspaces.putIfAbsent(datasetName, new Workspace(datasetName));
     }
 
     @Override
@@ -150,9 +151,23 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     private Workspace workspace(String workspaceName) {
+        var workspace = findWorkspace(workspaceName);
+        if (workspace == null) {
+            throw new ResourceNotFoundException("Workspace " + workspaceName + " does not exist");
+        }
+        return workspace;
+    }
+
+    /**
+     * Looks a workspace up, or returns {@code null} where the session holds none under that name.
+     *
+     * <p>The lock guards the set of workspaces, not their contents, and is released before the
+     * workspace is touched: a caller inside a transaction already holds that workspace's own lock,
+     * so holding both here would invert the order and deadlock.
+     */
+    private Workspace findWorkspace(String workspaceName) {
         lock.lock();
         try {
-            assertThatDatasetExists(workspaceName);
             return workspaces.get(workspaceName);
         } finally {
             lock.unlock();
@@ -161,39 +176,21 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public boolean containsGraph(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.datasetName();
-        final String graphUri = graphIdentifier.graphUri();
-        lock.lock();
-        try {
-            return workspaces.containsKey(datasetName)
-                    && workspaces.get(datasetName).listGraphUris().contains(graphUri);
-        } finally {
-            lock.unlock();
-        }
+        var workspace = findWorkspace(graphIdentifier.datasetName());
+        return workspace != null && workspace.listGraphUris().contains(graphIdentifier.graphUri());
     }
 
     @Override
     public List<String> listGraphUris(String datasetName) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            return workspaces.get(datasetName).listGraphUris();
-        } finally {
-            lock.unlock();
-        }
+        return workspace(datasetName).listGraphUris();
     }
 
     @Override
     public PrefixMappingReadOnly getPrefixMapping(String datasetName) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            return workspaces.get(datasetName).getPrefixMapping();
-        } catch (ResourceNotFoundException _) {
-            return new PrefixMappingReadOnly(PrefixMapping.Factory.create());
-        } finally {
-            lock.unlock();
-        }
+        var workspace = findWorkspace(datasetName);
+        return workspace == null
+                ? new PrefixMappingReadOnly(PrefixMapping.Factory.create())
+                : workspace.getPrefixMapping();
     }
 
     @Override
@@ -201,19 +198,14 @@ public class SessionDataStoreImpl implements SessionDataStore {
             DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier) {
         final String datasetName = graphIdentifier.datasetName();
         final String graphUri = graphIdentifier.graphUri();
-        lock.lock();
-        try {
-            assertThatGraphExists(graphIdentifier);
-            try (var transaction = beginTransaction(datasetName, ReadWrite.READ)) {
-                var graphSource =
-                        new GraphSourceBuilderImpl()
-                                .setGraph(transaction.graph(graphUri).getRdfGraph())
-                                .setGraphName(graphUri)
-                                .build();
-                databaseConnection.insertGraph(graphSource, datasetName);
-            }
-        } finally {
-            lock.unlock();
+        assertThatGraphExists(graphIdentifier);
+        try (var transaction = beginTransaction(datasetName, ReadWrite.READ)) {
+            var graphSource =
+                    new GraphSourceBuilderImpl()
+                            .setGraph(transaction.graph(graphUri).getRdfGraph())
+                            .setGraphName(graphUri)
+                            .build();
+            databaseConnection.insertGraph(graphSource, datasetName);
         }
     }
 
@@ -328,35 +320,17 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public boolean isReadOnly(String datasetName) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            return workspaces.get(datasetName).isReadOnly();
-        } finally {
-            lock.unlock();
-        }
+        return workspace(datasetName).isReadOnly();
     }
 
     @Override
     public void enableEditing(String datasetName) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            workspaces.get(datasetName).setReadOnly(false);
-        } finally {
-            lock.unlock();
-        }
+        workspace(datasetName).setReadOnly(false);
     }
 
     @Override
     public void disableEditing(String datasetName) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            workspaces.get(datasetName).setReadOnly(true);
-        } finally {
-            lock.unlock();
-        }
+        workspace(datasetName).setReadOnly(true);
     }
 
     /**
@@ -381,8 +355,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
     private void assertThatGraphExists(GraphIdentifier graphIdentifier) {
         final String datasetName = graphIdentifier.datasetName();
         final String graphUri = graphIdentifier.graphUri();
-        assertThatDatasetExists(datasetName);
-        if (!workspaces.get(datasetName).listGraphUris().contains(graphUri)) {
+        if (!workspace(datasetName).listGraphUris().contains(graphUri)) {
             throw new ResourceNotFoundException(
                     "Graph " + graphUri + " does not exist in workspace " + datasetName);
         }

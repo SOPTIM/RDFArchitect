@@ -27,6 +27,7 @@ import org.rdfarchitect.exception.graph.GraphTransactionException;
 import org.rdfarchitect.models.changelog.ChangeLogParticipant;
 import org.rdfarchitect.models.changelog.ParticipantId;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLog;
+import org.rdfarchitect.rdf.graph.wrapper.SnapshotParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.TransactionParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 
@@ -132,6 +133,67 @@ class TransactionCoordinatorTest {
         assertThat(participant.commits).isEqualTo(1);
         assertThat(participant.undos).isZero();
         assertThat(changeLog.canUndo()).isTrue();
+    }
+
+    @Test
+    void commit_whenAParticipantChangedNothing_doesNotCarryItsStateIntoTheNextTransaction() {
+        var box = new StringBox(txnContext, "first");
+        box.touch();
+
+        coordinator.commit("a transaction that only looked");
+        txnContext.end();
+
+        box.moveWithoutAnnouncing("moved by an undo");
+        txnContext.begin(ReadWrite.WRITE);
+        box.touch();
+
+        assertThat(box.hasChanges()).isFalse();
+    }
+
+    @Test
+    void commitWithoutHistory_whenAParticipantChangedNothing_alsoLetsItGo() {
+        var box = new StringBox(txnContext, "first");
+        box.touch();
+
+        coordinator.commitWithoutHistory();
+        txnContext.end();
+
+        box.moveWithoutAnnouncing("moved by an undo");
+        txnContext.begin(ReadWrite.WRITE);
+        box.touch();
+
+        assertThat(box.hasChanges()).isFalse();
+    }
+
+    /** The smallest real {@link SnapshotParticipant}: one value, snapshotted by copying it. */
+    private static final class StringBox extends SnapshotParticipant<String> {
+
+        private String value;
+
+        private StringBox(WorkspaceTransactionContext txnContext, String value) {
+            super(txnContext);
+            this.value = value;
+        }
+
+        /** Announces a mutation that then does not change anything, as a read does. */
+        void touch() {
+            beginChange();
+        }
+
+        /** Changes the value the way undo does: behind the transaction's back. */
+        void moveWithoutAnnouncing(String newValue) {
+            value = newValue;
+        }
+
+        @Override
+        protected String snapshot() {
+            return value;
+        }
+
+        @Override
+        protected void restore(String state) {
+            value = state;
+        }
     }
 
     private static final class StubParticipant

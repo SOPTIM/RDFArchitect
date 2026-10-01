@@ -398,6 +398,19 @@ describe("versionControlStore", () => {
             );
         });
 
+        test("an unnamed redo does not say the change was reverted", async () => {
+            vi.mocked(api.redo).mockResolvedValue({
+                data: { change: {}, canUndo: true, canRedo: false },
+                error: undefined,
+            });
+
+            await store.redo(WORKSPACE);
+
+            expect(vi.mocked(toastStore.info).mock.calls[0][1]).not.toContain(
+                "reverted",
+            );
+        });
+
         test("counts the graphs when a change spanned several", async () => {
             vi.mocked(api.undo).mockResolvedValue({
                 data: {
@@ -615,6 +628,25 @@ describe("versionControlStore", () => {
             expect(toastStore.info).not.toHaveBeenCalled();
             expect(result.cancelled).toBe(true);
             expect(result.error).toBeNull();
+        });
+
+        test("a declined undo reports itself skipped, so nothing reloads", async () => {
+            vi.mocked(undoConfirmStore.confirm).mockResolvedValue(false);
+
+            const result = await store.undo(WORKSPACE);
+
+            expect(result.skipped).toBe(true);
+        });
+
+        test("declining does not block the next press", async () => {
+            vi.mocked(undoConfirmStore.confirm).mockResolvedValueOnce(false);
+            await store.undo(WORKSPACE);
+
+            vi.mocked(undoConfirmStore.confirm).mockResolvedValue(true);
+            const second = await store.undo(WORKSPACE);
+
+            expect(second.skipped).toBeUndefined();
+            expect(api.undo).toHaveBeenCalledTimes(1);
         });
 
         test("does not ask when nothing would disappear", async () => {
