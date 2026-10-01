@@ -22,8 +22,10 @@ import { toastStore } from "../../src/lib/eventhandling/toastStore.svelte.js";
 import { undoConfirmStore } from "../../src/lib/eventhandling/undoConfirmStore.svelte.js";
 import { editorState } from "../../src/lib/sharedState.svelte.js";
 import { classStore } from "../../src/lib/stores/classStore";
+import { crossProfileStore } from "../../src/lib/stores/crossProfileStore";
 import { datatypesStore } from "../../src/lib/stores/datatypesStore";
 import { customDiagramStore } from "../../src/lib/stores/diagramStore";
+import { graphStore } from "../../src/lib/stores/graphStore";
 import { ontologyStore } from "../../src/lib/stores/ontologyStore";
 import { packageStore } from "../../src/lib/stores/packageStore";
 import { createVersionControlStore } from "../../src/lib/stores/versionControlStore";
@@ -65,6 +67,12 @@ vi.mock("$lib/stores/packageStore", () => ({
 }));
 vi.mock("$lib/stores/workspaceStore", () => ({
     workspaceStore: { invalidate: vi.fn() },
+}));
+vi.mock("$lib/stores/graphStore", () => ({
+    graphStore: { invalidateWorkspace: vi.fn() },
+}));
+vi.mock("$lib/stores/crossProfileStore", () => ({
+    crossProfileStore: { invalidateWorkspace: vi.fn() },
 }));
 
 vi.mock("$lib/eventhandling/toastStore.svelte.js", () => ({
@@ -284,6 +292,12 @@ describe("versionControlStore", () => {
                 WORKSPACE,
             );
             expect(customDiagramStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+            expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+            expect(crossProfileStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
             );
             // The namespaces live in the cached workspace list.
@@ -522,6 +536,12 @@ describe("versionControlStore", () => {
                 WORKSPACE,
             );
             expect(customDiagramStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+            expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+            expect(crossProfileStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
             );
             expect(workspaceStore.invalidate).toHaveBeenCalled();
