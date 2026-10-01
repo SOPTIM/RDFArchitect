@@ -414,6 +414,101 @@ describe("versionControlStore", () => {
     });
 
     // -------------------------------------------------------------------------
+    describe("one step at a time", () => {
+        beforeEach(() => {
+            vi.mocked(editorState.selectedWorkspace.getValue).mockReturnValue(
+                WORKSPACE,
+            );
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+        });
+
+        test("a held shortcut does not put several undos on the wire at once", async () => {
+            // Every request takes the workspace lock, so overlapping steps queue
+            // up on it and hold a request thread each until they time out.
+            let running = 0;
+            let highWaterMark = 0;
+            vi.mocked(api.undo).mockImplementation(async () => {
+                running++;
+                highWaterMark = Math.max(highWaterMark, running);
+                await new Promise(resolve => setTimeout(resolve, 0));
+                running--;
+                return { data: { message: "a change" }, error: undefined };
+            });
+
+            await Promise.all([
+                store.undo(WORKSPACE),
+                store.undo(WORKSPACE),
+                store.undo(WORKSPACE),
+            ]);
+
+            expect(highWaterMark).toBe(1);
+        });
+
+        test("presses made while one runs are ignored, not collected", async () => {
+            // Key repeat fires far faster than a step completes. Remembering
+            // the presses would keep the editor busy long after the key was
+            // released.
+            vi.mocked(api.undo).mockImplementation(async () => {
+                await new Promise(resolve => setTimeout(resolve, 0));
+                return { data: { message: "a change" }, error: undefined };
+            });
+
+            await Promise.all(
+                Array.from({ length: 20 }, () => store.undo(WORKSPACE)),
+            );
+
+            expect(api.undo).toHaveBeenCalledTimes(1);
+        });
+
+        test("the next press goes through once the step is done", async () => {
+            vi.mocked(api.undo).mockResolvedValue({
+                data: { message: "a change" },
+                error: undefined,
+            });
+
+            await store.undo(WORKSPACE);
+            await store.undo(WORKSPACE);
+
+            expect(api.undo).toHaveBeenCalledTimes(2);
+        });
+
+        test("a redo pressed during an undo is ignored too", async () => {
+            vi.mocked(api.undo).mockImplementation(async () => {
+                await new Promise(resolve => setTimeout(resolve, 0));
+                return { data: { message: "a change" }, error: undefined };
+            });
+            vi.mocked(api.redo).mockResolvedValue({
+                data: { message: "a change" },
+                error: undefined,
+            });
+
+            await Promise.all([store.undo(WORKSPACE), store.redo(WORKSPACE)]);
+
+            expect(api.redo).not.toHaveBeenCalled();
+        });
+
+        test("a failed step does not block the next one", async () => {
+            vi.mocked(api.undo).mockRejectedValueOnce(new Error("boom"));
+
+            await store.undo(WORKSPACE).catch(() => {});
+            vi.mocked(api.undo).mockResolvedValue({
+                data: { message: "a change" },
+                error: undefined,
+            });
+            const result = await store.undo(WORKSPACE);
+
+            expect(result.error).toBeNull();
+        });
+    });
+
+    // -------------------------------------------------------------------------
     describe("undo that removes something", () => {
         beforeEach(() => {
             vi.mocked(editorState.selectedWorkspace.getValue).mockReturnValue(
