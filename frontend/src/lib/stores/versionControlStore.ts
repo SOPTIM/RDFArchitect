@@ -62,6 +62,17 @@ const FAILURE_TEXT: Record<Direction, string> = {
     redo: "Could not redo the change.",
 };
 
+/**
+ * How long after a step the next press is ignored.
+ *
+ * A step is two requests, but what follows it is a reload of the whole editor
+ * — a burst of further requests. Without a pause between them those bursts
+ * overlap, and pressing faster than they settle buries the workspace in work
+ * nobody is waiting for. Long enough to let one settle, short enough to walk
+ * back through the history at a deliberate pace.
+ */
+const MIN_STEP_INTERVAL_MS = 300;
+
 const SUCCESS_TITLE: Record<Direction, string> = {
     undo: "Undone",
     redo: "Redone",
@@ -100,6 +111,7 @@ function createVersionControlStore() {
      * fast as the backend manages, and letting go stops at once.
      */
     let running = false;
+    let lastStepEndedAt = 0;
 
     async function canUndo(
         workspace?: string,
@@ -163,9 +175,9 @@ function createVersionControlStore() {
         workspace: string | undefined,
         direction: Direction,
     ) {
-        if (running) {
-            // Told apart from a step that ran, so that a press which did
-            // nothing does not reload the editor for nothing.
+        // Told apart from a step that ran, so that a press which did nothing
+        // does not reload the editor for nothing.
+        if (running || Date.now() - lastStepEndedAt < MIN_STEP_INTERVAL_MS) {
             return { error: null, skipped: true };
         }
         running = true;
@@ -173,6 +185,7 @@ function createVersionControlStore() {
             return await step(workspace, direction);
         } finally {
             running = false;
+            lastStepEndedAt = Date.now();
         }
     }
 

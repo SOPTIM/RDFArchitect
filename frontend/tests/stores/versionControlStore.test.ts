@@ -500,16 +500,37 @@ describe("versionControlStore", () => {
             expect(api.undo).toHaveBeenCalledTimes(1);
         });
 
-        test("the next press goes through once the step is done", async () => {
+        test("a press right after a finished step is still ignored", async () => {
+            // The reload a step sets off outlasts the step itself, so the next
+            // press has to wait for more than the response.
             vi.mocked(api.undo).mockResolvedValue({
                 data: { change: { message: "a change" } },
                 error: undefined,
             });
 
             await store.undo(WORKSPACE);
-            await store.undo(WORKSPACE);
+            const second = await store.undo(WORKSPACE);
 
-            expect(api.undo).toHaveBeenCalledTimes(2);
+            expect(second.skipped).toBe(true);
+            expect(api.undo).toHaveBeenCalledTimes(1);
+        });
+
+        test("the next press goes through once the interval has passed", async () => {
+            vi.useFakeTimers();
+            try {
+                vi.mocked(api.undo).mockResolvedValue({
+                    data: { change: { message: "a change" } },
+                    error: undefined,
+                });
+
+                await store.undo(WORKSPACE);
+                vi.advanceTimersByTime(1000);
+                await store.undo(WORKSPACE);
+
+                expect(api.undo).toHaveBeenCalledTimes(2);
+            } finally {
+                vi.useRealTimers();
+            }
         });
 
         test("a redo pressed during an undo is ignored too", async () => {
