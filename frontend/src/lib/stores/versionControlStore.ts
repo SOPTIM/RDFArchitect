@@ -90,6 +90,17 @@ function createVersionControlStore() {
     const store = writable<State>({ byWorkspace: new Map() });
     const { subscribe } = store;
 
+    /**
+     * Whether a step is running.
+     *
+     * One step is four requests plus a reload of the editor, and each of them
+     * takes the workspace lock. Key repeat fires far faster than that
+     * completes, so a press that arrives while one is running is ignored
+     * rather than remembered: holding Ctrl+Z steps through the history as
+     * fast as the backend manages, and letting go stops at once.
+     */
+    let running = false;
+
     async function canUndo(
         workspace?: string,
         force = false,
@@ -141,11 +152,26 @@ function createVersionControlStore() {
     }
 
     async function doUndo(workspace?: string) {
-        return step(workspace, "undo");
+        return runStep(workspace, "undo");
     }
 
     async function doRedo(workspace?: string) {
-        return step(workspace, "redo");
+        return runStep(workspace, "redo");
+    }
+
+    async function runStep(
+        workspace: string | undefined,
+        direction: Direction,
+    ) {
+        if (running) {
+            return { error: null };
+        }
+        running = true;
+        try {
+            return await step(workspace, direction);
+        } finally {
+            running = false;
+        }
     }
 
     /**
