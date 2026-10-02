@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.UUID;
 
 /**
  * A {@link Graph} implementation backed by {@link DeltaCompressible} deltas. Has no lock and no
@@ -241,6 +242,12 @@ public class RDFGraphDelta
     }
 
     @Override
+    public UUID currentVersionId() {
+        var head = pastDeltas.peek();
+        return head != null ? head.getVersionId() : null;
+    }
+
+    @Override
     public boolean hasChanges() {
         return !currentDelta.getAdditions().isEmpty()
                 || !currentDelta.getDeletions().isEmpty()
@@ -300,7 +307,7 @@ public class RDFGraphDelta
         // dropping that version leaves the chain below it intact.
         var newest = pastDeltas.pop();
         newest.compress();
-        pastDeltas.pop();
+        newest.adoptVersionId(pastDeltas.pop().getVersionId());
         pastDeltas.push(newest);
     }
 }

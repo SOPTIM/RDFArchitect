@@ -56,7 +56,19 @@ public class DeltaCompressible extends CompositionBase {
      */
     private DeltaPrefixMapping prefixMapping;
 
-    @Getter private final UUID versionId = UUID.randomUUID();
+    @Getter private UUID versionId = UUID.randomUUID();
+
+    /**
+     * Takes over the identity of the version this delta replaces.
+     *
+     * <p>Only for folding two versions into one: the result is still the version the changelog
+     * recorded, with more content in it, so it has to keep answering to the same id.
+     *
+     * @param replaced the id of the version being folded into this one
+     */
+    public void adoptVersionId(UUID replaced) {
+        this.versionId = replaced;
+    }
 
     public DeltaCompressible(@NotNull Graph base) {
         super();

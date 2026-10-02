@@ -23,7 +23,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.exception.graph.GraphVersionControlException;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.UUID;
 
@@ -69,6 +71,29 @@ class WorkspaceChangeLogTest {
         log.push(commit("renamed class", rdfOf(graphA, "urn:a")));
 
         assertThat(log.canUndo()).isTrue();
+    }
+
+    @Test
+    void undo_whenAParticipantGainedAVersionOfItsOwn_refusesRatherThanTakingBackTheWrongOne() {
+        log.push(commit("renamed class", rdfOf(graphA, "urn:a")));
+        // A commit that bypassed the workspace transaction: the graph moved on, the log did not.
+        graphA.cutVersion();
+
+        assertThatThrownBy(log::undo)
+                .isInstanceOf(GraphVersionControlException.class)
+                .hasMessageContaining("outside the workspace transaction");
+        assertThat(calls).isEmpty();
+        assertThat(log.canUndo()).isTrue();
+    }
+
+    @Test
+    void undo_whenOneParticipantOfTheEntryDrifted_stepsNoneOfThem() {
+        log.push(commit("copied class", rdfOf(graphA, "urn:a"), rdfOf(graphB, "urn:b")));
+        graphB.cutVersion();
+
+        assertThatThrownBy(log::undo).isInstanceOf(GraphVersionControlException.class);
+
+        assertThat(calls).isEmpty();
     }
 
     @Test
@@ -268,36 +293,62 @@ class WorkspaceChangeLogTest {
         return WorkspaceChangeLogEntry.of(message, List.of(versions));
     }
 
-    private static ParticipantVersion rdfOf(ChangeLogParticipant participant, String graphUri) {
+    private static ParticipantVersion rdfOf(RecordingParticipant participant, String graphUri) {
         return ParticipantVersion.of(
                 ParticipantId.ofGraph(ParticipantId.Kind.RDF, graphUri),
                 participant,
-                UUID.randomUUID());
+                participant.cutVersion());
     }
 
-    private static ParticipantVersion dlOf(ChangeLogParticipant participant) {
+    private static ParticipantVersion dlOf(RecordingParticipant participant) {
         return ParticipantVersion.of(
-                ParticipantId.ofWorkspace(ParticipantId.Kind.DL), participant, UUID.randomUUID());
+                ParticipantId.ofWorkspace(ParticipantId.Kind.DL),
+                participant,
+                participant.cutVersion());
     }
 
+    /**
+     * Records which steps the log asked for, and keeps a version stack so that the log's check
+     * against {@link ChangeLogParticipant#currentVersionId()} sees a participant that really moves.
+     */
     private static final class RecordingParticipant implements ChangeLogParticipant {
 
         private final String name;
         private final List<String> calls;
+        private final Deque<UUID> pastVersions = new ArrayDeque<>();
+        private final Deque<UUID> futureVersions = new ArrayDeque<>();
 
         private RecordingParticipant(String name, List<String> calls) {
             this.name = name;
             this.calls = calls;
         }
 
+        /** Cuts a version the way a commit does, and answers its id. */
+        UUID cutVersion() {
+            var versionId = UUID.randomUUID();
+            pastVersions.push(versionId);
+            return versionId;
+        }
+
+        @Override
+        public UUID currentVersionId() {
+            return pastVersions.peek();
+        }
+
         @Override
         public void undo() {
             calls.add(name + ".undo");
+            if (!pastVersions.isEmpty()) {
+                futureVersions.push(pastVersions.pop());
+            }
         }
 
         @Override
         public void redo() {
             calls.add(name + ".redo");
+            if (!futureVersions.isEmpty()) {
+                pastVersions.push(futureVersions.pop());
+            }
         }
 
         @Override

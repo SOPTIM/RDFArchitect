@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.models.changelog;
 
+import java.util.UUID;
+
 /**
  * A component whose version history is driven by the {@link WorkspaceChangeLog}.
  *
@@ -27,6 +29,18 @@ package org.rdfarchitect.models.changelog;
  * the history horizon, and when a redo branch has been abandoned.
  */
 public interface ChangeLogParticipant {
+
+    /**
+     * Returns the id of the version this participant is standing on, or {@code null} if it does not
+     * track version ids.
+     *
+     * <p>Lets the log check that the two still agree on where the participant is before it steps
+     * it. They can only disagree if something committed the participant outside the workspace
+     * transaction, and the log would then undo a change other than the one its entry names.
+     */
+    default UUID currentVersionId() {
+        return null;
+    }
 
     /** Steps back to the previous version. */
     void undo();
