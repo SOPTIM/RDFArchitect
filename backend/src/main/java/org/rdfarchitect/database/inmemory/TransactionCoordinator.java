@@ -115,8 +115,8 @@ class TransactionCoordinator {
         txnContext.clearEnrolled();
         txnContext.addPendingVersions(versions, deltas);
 
-        // Inner commits are invisible: they contribute their message to the entry the outermost
-        // commit writes, so that one user action does not turn into several changelog entries.
+        // Inner commits are invisible: their versions are carried until the outermost commit
+        // covers them with one entry, so that one user action does not turn into several.
         if (txnContext.isOutermost()) {
             writeChangeLogEntry();
         }
@@ -283,14 +283,14 @@ class TransactionCoordinator {
     private void writeChangeLogEntry() {
         var versions = txnContext.pendingVersions();
         if (versions.isEmpty()) {
-            txnContext.clearMessages();
+            txnContext.clearMessage();
             return;
         }
-        var messages = txnContext.messages();
-        var message = messages.isEmpty() ? UNNAMED_CHANGE_MESSAGE : String.join("; ", messages);
+        var recorded = txnContext.message();
+        var message = recorded != null ? recorded : UNNAMED_CHANGE_MESSAGE;
         changeLog.push(WorkspaceChangeLogEntry.of(message, versions, txnContext.pendingDeltas()));
         txnContext.clearPendingVersions();
-        txnContext.clearMessages();
+        txnContext.clearMessage();
     }
 
     private void requireWriteTransaction() {

@@ -31,8 +31,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Per-workspace transaction state for the current thread. Replaces the per-graph {@link
- * TransactionContext} once transactions are owned by the workspace.
+ * Per-workspace transaction state for the current thread. A transaction is owned by the workspace
+ * rather than by the individual graph, so that a change touching several graphs is one unit.
  *
  * <p>Transactions nest by joining: a {@link #begin(ReadWrite)} on a workspace that this thread is
  * already inside increments a depth counter and reuses the running transaction instead of failing.
@@ -48,8 +48,9 @@ import java.util.Set;
  *   <li>Participants enrol themselves on their first write. The enrolled set is the authoritative
  *       answer to "who changed in this transaction" and therefore determines which participants a
  *       commit records — no participant receives a version it did not earn.
- *   <li>Only the outermost commit produces a changelog entry. Inner commits contribute their
- *       message via {@link #addMessage(String)} and are otherwise invisible.
+ *   <li>Only the outermost commit produces a changelog entry and names it. An inner commit's
+ *       message is discarded — see {@link #addMessage(String)} — and the versions it produced are
+ *       carried until the outermost commit covers them.
  * </ul>
  *
  * <p>All state is thread-local, so multiple readers may be inside the same workspace concurrently
@@ -71,7 +72,7 @@ public class WorkspaceTransactionContext {
         private final WorkspaceTransactionContext owner;
         private final ReadWrite mode;
         private final Set<TransactionParticipant> enrolled = new LinkedHashSet<>();
-        private final List<String> messages = new ArrayList<>();
+        private String message;
         private final List<ParticipantVersion> pendingVersions = new ArrayList<>();
         private final List<ContextDelta> pendingDeltas = new ArrayList<>();
         private int depth = 1;
@@ -202,16 +203,17 @@ public class WorkspaceTransactionContext {
     }
 
     // -------------------------------------------------------------------------
-    // Commit messages
+    // Commit message
     // -------------------------------------------------------------------------
 
     /**
      * Records the message of a commit, if that commit is the one naming the change.
      *
-     * <p>Only the outermost commit names it. An inner commit describes a step of a larger action —
-     * updating the layout after a class was renamed — and the user did not perform that step, they
-     * renamed a class. Collecting those descriptions too would turn one action into a sentence
-     * listing its own implementation.
+     * <p>Only the outermost commit names it, and it writes its entry straight away, so at most one
+     * message is held at a time. An inner commit describes a step of a larger action — updating the
+     * layout after a class was renamed — and the user did not perform that step, they renamed a
+     * class. Keeping those descriptions too would turn one action into a sentence listing its own
+     * implementation.
      *
      * @param message the commit message; blank messages are ignored
      * @throws GraphNotInATransactionException if this thread is not inside this workspace
@@ -219,26 +221,27 @@ public class WorkspaceTransactionContext {
     public void addMessage(String message) {
         var frame = requireUnabortedFrame();
         if (frame.depth == 1 && message != null && !message.isBlank()) {
-            frame.messages.add(message);
+            frame.message = message;
         }
     }
 
     /**
-     * Returns the commit messages recorded during the running transaction, oldest first.
+     * Returns the message recorded by the running transaction, or {@code null} if no commit has
+     * named itself yet.
      *
      * @throws GraphNotInATransactionException if this thread is not inside this workspace
      */
-    public List<String> messages() {
-        return List.copyOf(requireFrame().messages);
+    public String message() {
+        return requireFrame().message;
     }
 
     /**
-     * Forgets all recorded commit messages.
+     * Forgets the recorded commit message.
      *
      * @throws GraphNotInATransactionException if this thread is not inside this workspace
      */
-    public void clearMessages() {
-        requireFrame().messages.clear();
+    public void clearMessage() {
+        requireFrame().message = null;
     }
 
     // -------------------------------------------------------------------------
