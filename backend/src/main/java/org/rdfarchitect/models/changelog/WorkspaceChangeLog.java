@@ -21,6 +21,7 @@ import org.rdfarchitect.exception.graph.GraphVersionControlException;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
@@ -129,13 +130,47 @@ public class WorkspaceChangeLog {
         if (!canUndo()) {
             throw new GraphVersionControlException("Cannot undo: no history available.");
         }
-        var entry = undoStack.pop();
+        var entry = undoStack.element();
+        requireParticipantsAtRecordedVersions(entry);
+        undoStack.pop();
         var versions = entry.participants();
         for (int i = versions.size() - 1; i >= 0; i--) {
             versions.get(i).participant().undo();
         }
         redoStack.push(entry);
         return entry;
+    }
+
+    /**
+     * Refuses to step an entry whose participants have moved on without it.
+     *
+     * <p>Stepping blind means popping whatever version happens to be on top, so a participant that
+     * gained a version outside the workspace transaction would have that version taken back instead
+     * of the one the entry names — and the user would see a change they did not ask to undo
+     * disappear. Checked before anything is stepped, so a mismatch leaves the log untouched rather
+     * than half-walked.
+     *
+     * <p>A participant may appear more than once in one entry, once per commit that touched it
+     * within the transaction. Only the version it gained last is the one it should be standing on,
+     * so later entries win. Participants that track no version id are not checked.
+     *
+     * <p>No such check is needed for a redo: it can only follow an undo, which already ran one.
+     */
+    private static void requireParticipantsAtRecordedVersions(WorkspaceChangeLogEntry entry) {
+        var expected = new LinkedHashMap<ChangeLogParticipant, ParticipantVersion>();
+        for (var version : entry.participants()) {
+            if (version.versionId() != null) {
+                expected.put(version.participant(), version);
+            }
+        }
+        for (var version : expected.values()) {
+            if (!version.versionId().equals(version.participant().currentVersionId())) {
+                throw new GraphVersionControlException(
+                        ("Cannot undo \"%s\": %s has gained a version that no change recorded. "
+                                        + "It was committed outside the workspace transaction.")
+                                .formatted(entry.message(), version.id()));
+            }
+        }
     }
 
     /**

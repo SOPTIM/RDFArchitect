@@ -100,6 +100,11 @@ public class DiagramLayoutDelta
     }
 
     @Override
+    public UUID currentVersionId() {
+        return inner.currentVersionId();
+    }
+
+    @Override
     public void discardOldestVersion() {
         inner.discardOldestVersion();
     }

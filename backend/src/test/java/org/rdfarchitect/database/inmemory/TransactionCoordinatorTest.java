@@ -23,6 +23,7 @@ import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
 import org.rdfarchitect.models.changelog.ChangeLogParticipant;
 import org.rdfarchitect.models.changelog.ParticipantId;
@@ -133,6 +134,16 @@ class TransactionCoordinatorTest {
         assertThat(participant.commits).isEqualTo(1);
         assertThat(participant.undos).isZero();
         assertThat(changeLog.canUndo()).isTrue();
+    }
+
+    @Test
+    void beginChange_outsideATransaction_throwsRatherThanLettingTheChangeThrough() {
+        // A reference kept past close() would otherwise change the workspace with nothing to roll
+        // it back and no entry naming it.
+        var box = new StringBox(txnContext, "first");
+        txnContext.end();
+
+        assertThatThrownBy(box::touch).isInstanceOf(GraphNotInATransactionException.class);
     }
 
     @Test

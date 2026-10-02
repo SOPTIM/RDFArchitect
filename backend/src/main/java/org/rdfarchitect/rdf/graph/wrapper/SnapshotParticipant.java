@@ -18,6 +18,7 @@
 package org.rdfarchitect.rdf.graph.wrapper;
 
 import org.apache.jena.query.ReadWrite;
+import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.models.changelog.ChangeLogParticipant;
 
 import java.util.ArrayDeque;
@@ -97,9 +98,19 @@ public abstract class SnapshotParticipant<S>
     /**
      * Announces a mutation, joining the running write transaction. Callers must invoke this before
      * changing anything, including before handing out a reference the caller may change.
+     *
+     * <p>Outside a transaction this throws rather than letting the mutation through: it could
+     * neither be rolled back nor recorded, so it would be a change the workspace does not know
+     * about. In a read transaction it returns quietly instead, because the call also guards
+     * references handed to readers, which do not go on to change them.
+     *
+     * @throws GraphNotInATransactionException if this thread is not inside the owning workspace
      */
     protected void beginChange() {
-        if (!txnContext.isInTransaction() || txnContext.transactionMode() == ReadWrite.READ) {
+        if (!txnContext.isInTransaction()) {
+            throw new GraphNotInATransactionException();
+        }
+        if (txnContext.transactionMode() == ReadWrite.READ) {
             return;
         }
         if (preTransactionState == null) {
