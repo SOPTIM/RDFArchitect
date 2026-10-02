@@ -31,6 +31,7 @@ import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.DiagramLayout;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabase;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
@@ -42,7 +43,6 @@ import org.rdfarchitect.dl.rdf.resources.CIM;
 import org.rdfarchitect.dl.rdf.resources.DL;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.dl.update.packagelayout.UpdatePackageLayoutService;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterService;
@@ -77,7 +77,7 @@ public class DiagramLayoutServicesTestBase {
     public static DatabasePort databasePort;
     public static PackageMapper packageMapper;
     public static InMemoryDatabase database;
-    public static DiagramLayoutDelta diagramLayout;
+    public static DiagramLayout diagramLayout;
 
     @BeforeAll
     static void setUpEnvironment() {
@@ -310,7 +310,7 @@ public class DiagramLayoutServicesTestBase {
     }
 
     /** The diagram layout of a graph, read inside a transaction as production code does. */
-    protected static DiagramLayoutDelta layoutOf(GraphIdentifier identifier) {
+    protected static DiagramLayout layoutOf(GraphIdentifier identifier) {
         try (var transaction =
                 databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
             return transaction.graph(identifier.graphUri()).getDiagramLayout();

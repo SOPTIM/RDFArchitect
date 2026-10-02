@@ -20,9 +20,7 @@ package org.rdfarchitect.database;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 
 import java.util.List;
 import java.util.Map;
@@ -69,14 +67,14 @@ public interface WorkspaceTransaction extends AutoCloseable {
      *
      * @return the workspace diagram layout
      */
-    DiagramLayoutDelta layout();
+    DiagramLayout layout();
 
     /**
      * Returns the cross-profile diagram of the workspace.
      *
      * @return the cross-profile diagram information
      */
-    CrossProfileDiagramInfo crossProfileInfo();
+    CrossProfileColors crossProfileInfo();
 
     /**
      * Returns the namespace prefixes shared by all graphs of the workspace.

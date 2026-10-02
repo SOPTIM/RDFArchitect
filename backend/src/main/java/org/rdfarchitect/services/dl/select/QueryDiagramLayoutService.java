@@ -23,8 +23,8 @@ import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.DiagramLayout;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -37,7 +37,7 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
 
     @Override
     public RenderingLayoutData fetchRenderingLayoutData(
-            DiagramLayoutDelta diagramLayout, UUID packageUUID) {
+            DiagramLayout diagramLayout, UUID packageUUID) {
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
         return fetchRenderingLayoutData(
                 diagramLayout.getDefaultPackageMRID().getUuid(), diagramLayoutModel, packageUUID);
