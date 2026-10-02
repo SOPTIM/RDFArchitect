@@ -33,6 +33,7 @@ import org.rdfarchitect.exception.graph.GraphTransactionException;
 import org.rdfarchitect.exception.graph.GraphVersionControlException;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.rdf.TestRDFUtils;
+import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 
 import java.util.List;
 import java.util.UUID;
@@ -104,6 +105,47 @@ class WorkspaceTransactionTest {
             release.countDown();
             writer.join(5000);
         }
+    }
+
+    @Test
+    void abandonCurrentTransaction_rollsBackWhatTheAbandonedTransactionChanged() {
+        var transaction = workspace.begin(ReadWrite.WRITE);
+        transaction.graph(GRAPH_A).getRdfGraph().add(triple);
+        // The caller never closes it — the thread would otherwise go back into the pool holding it.
+
+        var abandoned = WorkspaceTransactionContext.abandonCurrentTransaction();
+
+        assertThat(abandoned).isEqualTo(WORKSPACE);
+        try (var next = workspace.begin(ReadWrite.READ)) {
+            assertThat(next.graph(GRAPH_A).getRdfGraph().contains(triple)).isFalse();
+        }
+    }
+
+    @Test
+    void abandonCurrentTransaction_givesTheWorkspaceLockBackToOtherThreads()
+            throws InterruptedException {
+        graphConfig.setLockTimeoutSeconds(5);
+        workspace.begin(ReadWrite.WRITE);
+
+        WorkspaceTransactionContext.abandonCurrentTransaction();
+
+        var acquired = new AtomicBoolean();
+        var writer =
+                new Thread(
+                        () -> {
+                            try (var _ = workspace.begin(ReadWrite.WRITE)) {
+                                acquired.set(true);
+                            }
+                        });
+        writer.start();
+        writer.join(10_000);
+
+        assertThat(acquired).isTrue();
+    }
+
+    @Test
+    void abandonCurrentTransaction_withoutATransaction_doesNothing() {
+        assertThat(WorkspaceTransactionContext.abandonCurrentTransaction()).isNull();
     }
 
     @Test
