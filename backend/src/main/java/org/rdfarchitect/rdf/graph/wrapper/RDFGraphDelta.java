@@ -40,10 +40,10 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 /**
- * A {@link Graph} implementation backed by {@link DeltaCompressible} deltas. Has no lock of its own
- * — transaction lifecycle is managed exclusively by {@link
- * org.rdfarchitect.database.inmemory.GraphWithContext}. All {@link Graph} methods enforce that the
- * coordinator has an active transaction via the shared {@link TransactionContext}.
+ * A {@link Graph} implementation backed by {@link DeltaCompressible} deltas. Has no lock and no
+ * transaction of its own: it takes part in the transaction of the workspace that owns it, and every
+ * {@link Graph} method checks against the shared {@link WorkspaceTransactionContext} that one is
+ * running.
  */
 public class RDFGraphDelta
         implements Graph, TransactionParticipant, DeltaSource, ChangeLogParticipant {

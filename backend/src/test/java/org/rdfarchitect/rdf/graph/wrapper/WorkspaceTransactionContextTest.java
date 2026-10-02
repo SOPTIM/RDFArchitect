@@ -239,7 +239,7 @@ class WorkspaceTransactionContextTest {
         workspaceA.end();
         workspaceA.addMessage("renamed a class");
 
-        assertThat(workspaceA.messages()).containsExactly("renamed a class");
+        assertThat(workspaceA.message()).isEqualTo("renamed a class");
     }
 
     @Test
@@ -249,17 +249,17 @@ class WorkspaceTransactionContextTest {
         workspaceA.addMessage(null);
         workspaceA.addMessage("   ");
 
-        assertThat(workspaceA.messages()).isEmpty();
+        assertThat(workspaceA.message()).isNull();
     }
 
     @Test
-    void clearMessages_forgetsRecordedMessages() {
+    void clearMessage_forgetsTheRecordedMessage() {
         workspaceA.begin(ReadWrite.WRITE);
         workspaceA.addMessage("something");
 
-        workspaceA.clearMessages();
+        workspaceA.clearMessage();
 
-        assertThat(workspaceA.messages()).isEmpty();
+        assertThat(workspaceA.message()).isNull();
     }
 
     // -------------------------------------------------------------------------
