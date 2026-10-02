@@ -99,13 +99,9 @@ class ClassExtensionServiceTest {
         var cims = "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#";
         var rdfa = "http://example.org#uuid";
 
-        // The two graphs live in different workspaces, so they are read one after the other: a
-        // thread may only be inside one workspace at a time.
-        // The two graphs live in different workspaces and are therefore read one after the
-        // other: a thread may only be inside one workspace at a time.
+        // Read one after the other: a thread may only be inside one workspace at a time.
         var sourceModel = copyOf(sourceGraphId);
         var targetModel = copyOf(targetGraphId);
-        var sourceGraph = sourceModel.getGraph();
         var targetGraph = targetModel.getGraph();
 
         // class exists in target
