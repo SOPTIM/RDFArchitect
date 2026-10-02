@@ -62,7 +62,9 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
     @Override
     public CIMCollection convert(GraphIdentifier graphIdentifier, GraphFilter filter) {
         Graph copiedGraph;
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             copiedGraph = GraphUtils.deepCopy(ctx.getRdfGraph());
         }
         return convert(copiedGraph, graphIdentifier, filter);

@@ -40,10 +40,7 @@
 
     async function callRestoreVersion(changeId) {
         const { error } = await restoreVersion({
-            path: {
-                datasetName: editorState.selectedWorkspace.getValue(),
-                graphURI: editorState.selectedGraph.getValue(),
-            },
+            path: { datasetName: editorState.selectedWorkspace.getValue() },
             body: { versionId: changeId },
         });
         if (!error) {
@@ -90,12 +87,24 @@
         );
     }
 
-    function getAdditionsKey(contextName) {
-        return `${change.changeId}::${contextName}::additions`;
+    function describeContext(context) {
+        return context.graphUri
+            ? `${context.contextName} — ${context.graphUri}`
+            : context.contextName;
     }
 
-    function getDeletionsKey(contextName) {
-        return `${change.changeId}::${contextName}::deletions`;
+    function getAdditionsKey(context) {
+        return `${change.changeId}::${contextKey(context)}::additions`;
+    }
+
+    function getDeletionsKey(context) {
+        return `${change.changeId}::${contextKey(context)}::deletions`;
+    }
+
+    // One change can touch the same kind of data in several graphs, so the kind alone would give
+    // two contexts the same key and make them expand and collapse together.
+    function contextKey(context) {
+        return `${context.graphUri ?? "workspace"}::${context.contextName}`;
     }
 </script>
 
@@ -147,7 +156,7 @@
                     {#if context.additions?.length || context.deletions?.length}
                         <div class="border-border rounded-xl border p-2">
                             <h3 class="mb-2 font-semibold">
-                                Context: {context.contextName}
+                                Context: {describeContext(context)}
                             </h3>
 
                             {#if context.additions?.length}
@@ -155,9 +164,7 @@
                                     triples={context.additions}
                                     color="green"
                                     title="Additions"
-                                    expandedKey={getAdditionsKey(
-                                        context.contextName,
-                                    )}
+                                    expandedKey={getAdditionsKey(context)}
                                     {getExpanded}
                                     {setExpanded}
                                 />
@@ -168,9 +175,7 @@
                                     triples={context.deletions}
                                     color="red"
                                     title="Deletions"
-                                    expandedKey={getDeletionsKey(
-                                        context.contextName,
-                                    )}
+                                    expandedKey={getDeletionsKey(context)}
                                     {getExpanded}
                                     {setExpanded}
                                 />

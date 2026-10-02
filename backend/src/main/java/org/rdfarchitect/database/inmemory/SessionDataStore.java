@@ -20,19 +20,17 @@ package org.rdfarchitect.database.inmemory;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.DataAccessException;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
+import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public interface SessionDataStore {
@@ -53,6 +51,14 @@ public interface SessionDataStore {
     void createDataset(String datasetName);
 
     /**
+     * Creates the dataset unless the session already holds one under that name.
+     *
+     * @param datasetName The name of the Dataset to be created.
+     * @return whether this call was the one that created it
+     */
+    boolean createDatasetIfAbsent(String datasetName);
+
+    /**
      * Deletes a complete Dataset with all containing graphs. Waits for ongoing transactions on
      * individual graphs before deleting.
      *
@@ -70,67 +76,78 @@ public interface SessionDataStore {
     void renameDataset(String oldDatasetName, String newDatasetName);
 
     /**
-     * Renames a named graph within its Dataset and rewrites all references to it, i.e. in custom
-     * diagrams and cross profile diagram colors. The content and history of the graph are kept.
+     * Lists the names of all workspaces of this session.
      *
-     * @param graphIdentifier The identifier of the graph to rename.
-     * @param newGraphUri The graph URI to rename to.
-     * @throws DataAccessException if the Dataset or graph does not exist.
+     * @return the workspace names
      */
-    void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri);
-
     List<String> listDatasets();
 
     /**
-     * Get a {@link GraphContext} for the specified graph.
+     * Begins a transaction on a workspace. Graphs, custom diagrams and layout are reachable only
+     * through the returned transaction, so that a change spanning several graphs commits or rolls
+     * back as a whole.
      *
-     * @param graphIdentifier The identifier of the graph.
-     * @return The {@link GraphContext}.
+     * @param workspaceName literal workspace name
+     * @param mode the transaction mode
+     * @return the running transaction, to be used in try-with-resources
      */
-    GraphContext getGraphWithContext(GraphIdentifier graphIdentifier);
+    WorkspaceTransaction beginTransaction(String workspaceName, ReadWrite mode);
 
     /**
-     * Get all {@link CustomDiagram} for a dataset.
+     * Returns whether the workspace has a change that can be undone.
      *
-     * @param datasetName literal dataset name
-     * @return map of custom diagrams belonging to the dataset
+     * @param workspaceName literal workspace name
+     * @return {@code true} if there is something to undo
      */
-    Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName);
+    boolean canUndo(String workspaceName);
 
     /**
-     * Get the {@link DiagramLayout} for all custom diagrams defined on a dataset
+     * Returns the change the next undo would take back, or {@code null} if there is none.
      *
-     * @param datasetName literal dataset name
-     * @return diagram layout for the dataset
+     * @param workspaceName the workspace to inspect
+     * @return the pending change
      */
-    DiagramLayout getDatasetDiagramLayout(String datasetName);
+    WorkspaceChangeLogEntry pendingUndo(String workspaceName);
 
     /**
-     * Returns the information of the CrossProfileDiagram of the given dataset.
+     * Returns whether the workspace has an undone change that can be reapplied.
      *
-     * @param datasetName literal dataset name
-     * @return {@link CrossProfileDiagramInfo} of the CrossProfileDiagram for the dataset
+     * @param workspaceName literal workspace name
+     * @return {@code true} if there is something to redo
      */
-    CrossProfileDiagramInfo getCrossProfileDiagramInfo(String datasetName);
+    boolean canRedo(String workspaceName);
 
     /**
-     * Creates a new named graph in a specified dataset. If the dataset does not exist yet, it will
-     * be created. If the graph already exists, nothing happens.
+     * Rolls back the most recent change anywhere in the workspace.
      *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
-     * @param newGraph The new Graph.
+     * @param workspaceName literal workspace name
+     * @return the change that was undone
      */
-    void create(GraphIdentifier graphIdentifier, Graph newGraph);
+    WorkspaceHistoryStep undo(String workspaceName);
 
     /**
-     * Deletes the named graph from a specified dataset. If the graph or dataset does not exist,
-     * nothing happens.
+     * Reapplies the most recently undone change of the workspace.
      *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
+     * @param workspaceName literal workspace name
+     * @return the change that was redone
      */
-    void remove(GraphIdentifier graphIdentifier);
+    WorkspaceHistoryStep redo(String workspaceName);
+
+    /**
+     * Rolls the workspace back to the given version.
+     *
+     * @param workspaceName literal workspace name
+     * @param versionId the change to restore to
+     */
+    void restoreToVersion(String workspaceName, UUID versionId);
+
+    /**
+     * Returns the recorded changes of the workspace, newest first.
+     *
+     * @param workspaceName literal workspace name
+     * @return the change history
+     */
+    List<WorkspaceChangeLogEntry> listChanges(String workspaceName);
 
     /**
      * Checks whether a Graph exists in a specified dataset.
@@ -158,14 +175,6 @@ public interface SessionDataStore {
      * @throws DataAccessException if the dataset does not exist.
      */
     PrefixMappingReadOnly getPrefixMapping(String datasetName);
-
-    /**
-     * Replace all prefixes in a specified dataset.
-     *
-     * @param datasetName The name of the dataset.
-     * @param newPrefixes the new Prefixes.
-     */
-    void setPrefixMapping(String datasetName, PrefixMapping newPrefixes);
 
     /**
      * Writes a specified graph to a database.

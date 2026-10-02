@@ -31,7 +31,6 @@ import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.api.dto.DatasetDTO;
 import org.rdfarchitect.api.dto.GraphDTO;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.graph.GraphUtils;
@@ -54,15 +53,16 @@ public class QueryDatasetService
 
     @Override
     public ByteArrayOutputStream getDatasetSchema(String datasetName, RDFFormat format) {
-        var graphUris = databasePort.listGraphUris(datasetName);
         var resultDataset = DatasetFactory.create();
 
         // fetch graphs and insert into resultDataset
-        for (String graphUri : graphUris) {
-            if (graphUri.equals("default")) {
-                resultDataset.setDefaultModel(getGraphAsModel(datasetName, "default"));
-            } else {
-                resultDataset.addNamedModel(graphUri, getGraphAsModel(datasetName, graphUri));
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            for (String graphUri : transaction.graphUris()) {
+                if (graphUri.equals("default")) {
+                    resultDataset.setDefaultModel(getGraphAsModel(datasetName, "default"));
+                } else {
+                    resultDataset.addNamedModel(graphUri, getGraphAsModel(datasetName, graphUri));
+                }
             }
         }
 
@@ -77,10 +77,8 @@ public class QueryDatasetService
     }
 
     private Model getGraphAsModel(String datasetName, String graphURI) {
-        try (var ctx =
-                databasePort
-                        .getGraphWithContext(new GraphIdentifier(datasetName, graphURI))
-                        .begin(ReadWrite.READ)) {
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            var ctx = transaction.graph(graphURI);
             return ModelFactory.createModelForGraph(GraphUtils.deepCopy(ctx.getRdfGraph()));
         }
     }
@@ -89,20 +87,19 @@ public class QueryDatasetService
     public List<GraphDTO> listGraphs(String datasetName) {
         var result = new ArrayList<GraphDTO>();
 
-        var graphUriList = databasePort.listGraphUris(datasetName);
-        for (var graphUri : graphUriList) {
-            String keyword = null;
-            try (var ctx =
-                    databasePort
-                            .getGraphWithContext(new GraphIdentifier(datasetName, graphUri))
-                            .begin(ReadWrite.READ)) {
-                var graph = GraphUtils.deepCopy(ctx.getRdfGraph());
-                graph.getPrefixMapping().setNsPrefixes(databasePort.getPrefixMapping(datasetName));
-                keyword = CimProfile.wrap(graph).getDcatKeyword();
-            } catch (IllegalArgumentException e) {
-                keyword = null;
-            } finally {
-                result.add(new GraphDTO(new URI(graphUri), keyword));
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            for (var graphUri : transaction.graphUris()) {
+                String keyword = null;
+                try {
+                    var graph = GraphUtils.deepCopy(transaction.graph(graphUri).getRdfGraph());
+                    graph.getPrefixMapping()
+                            .setNsPrefixes(databasePort.getPrefixMapping(datasetName));
+                    keyword = CimProfile.wrap(graph).getDcatKeyword();
+                } catch (IllegalArgumentException _) {
+                    keyword = null;
+                } finally {
+                    result.add(new GraphDTO(new URI(graphUri), keyword));
+                }
             }
         }
 

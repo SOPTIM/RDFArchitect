@@ -139,38 +139,27 @@
             graphNavEntry.id,
         );
 
-        await versionControlStore.refresh(
-            workspaceNavEntry.id,
-            graphNavEntry.id,
-        );
-        canUndo = await versionControlStore.canUndo(
-            workspaceNavEntry.id,
-            graphNavEntry.id,
-        );
-        canRedo = await versionControlStore.canRedo(
-            workspaceNavEntry.id,
-            graphNavEntry.id,
-        );
+        await versionControlStore.refresh(workspaceNavEntry.id);
+        canUndo = await versionControlStore.canUndo(workspaceNavEntry.id);
+        canRedo = await versionControlStore.canRedo(workspaceNavEntry.id);
     }
 
     async function undo() {
-        const { error } = await versionControlStore.undo(
+        const { error, skipped } = await versionControlStore.undo(
             workspaceNavEntry.id,
-            graphNavEntry.id,
         );
 
-        if (!error) {
+        if (!error && !skipped) {
             forceReloadTrigger.trigger();
         }
     }
 
     async function redo() {
-        const { error } = await versionControlStore.redo(
+        const { error, skipped } = await versionControlStore.redo(
             workspaceNavEntry.id,
-            graphNavEntry.id,
         );
 
-        if (!error) {
+        if (!error && !skipped) {
             forceReloadTrigger.trigger();
         }
     }

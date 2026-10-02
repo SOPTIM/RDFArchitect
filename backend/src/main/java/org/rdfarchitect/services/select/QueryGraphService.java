@@ -144,9 +144,7 @@ public class QueryGraphService
         // execute query
         var queryResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier),
-                        QueryFactory.create(query),
-                        null);
+                        databasePort, graphIdentifier, QueryFactory.create(query), null);
 
         // format results
         var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
@@ -178,9 +176,7 @@ public class QueryGraphService
         // execute query
         var queryResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier),
-                        query,
-                        graphIdentifier.graphUri());
+                        databasePort, graphIdentifier, query, graphIdentifier.graphUri());
 
         // format results
         return CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
@@ -191,7 +187,9 @@ public class QueryGraphService
         var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.datasetName());
         var baseList = getClassList(graphIdentifier, false);
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             return baseList.stream()
                     .filter(dto -> dto.getUuid() != null)
                     .map(
@@ -232,9 +230,7 @@ public class QueryGraphService
         // execute query
         var queryResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier),
-                        query,
-                        graphIdentifier.graphUri());
+                        databasePort, graphIdentifier, query, graphIdentifier.graphUri());
 
         // format results
         var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
@@ -245,8 +241,11 @@ public class QueryGraphService
 
     @Override
     public ByteArrayOutputStream getSchema(GraphIdentifier graphIdentifier, RDFFormat format) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ);
+        try (var transaction =
+                        databasePort.beginTransaction(
+                                graphIdentifier.datasetName(), ReadWrite.READ);
                 var out = new ByteArrayOutputStream()) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var copiedGraph = GraphUtils.deepCopy(ctx.getRdfGraph());
             copiedGraph
                     .getPrefixMapping()
@@ -284,7 +283,8 @@ public class QueryGraphService
         // execute package query
         var internalPackageQueryResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier),
+                        databasePort,
+                        graphIdentifier,
                         internalPackageQuery,
                         graphIdentifier.graphUri());
 
@@ -320,7 +320,8 @@ public class QueryGraphService
         // execute external package query
         var externalPackageQueryResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier),
+                        databasePort,
+                        graphIdentifier,
                         externalPackageQuery,
                         graphIdentifier.graphUri());
 
@@ -353,9 +354,7 @@ public class QueryGraphService
         // execute query
         var queryResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier),
-                        query,
-                        graphIdentifier.graphUri());
+                        databasePort, graphIdentifier, query, graphIdentifier.graphUri());
 
         // format results
         var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
@@ -379,9 +378,7 @@ public class QueryGraphService
         // execute query
         var queryResult =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier),
-                        query,
-                        graphIdentifier.graphUri());
+                        databasePort, graphIdentifier, query, graphIdentifier.graphUri());
 
         // format results
         List<CIMSStereotype> resultList = new ArrayList<>();
@@ -402,7 +399,9 @@ public class QueryGraphService
 
     @Override
     public UUID resolveIRI(GraphIdentifier graphIdentifier, String resourceIRI) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             var resource = model.getResource(resourceIRI);
             if (resource == null || !model.contains(resource, RDFA.uuid)) {

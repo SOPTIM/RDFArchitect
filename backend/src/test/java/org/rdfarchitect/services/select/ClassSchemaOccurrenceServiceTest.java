@@ -22,6 +22,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
+import org.apache.jena.graph.Graph;
+import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.SchemaConfig;
@@ -110,6 +112,16 @@ class ClassSchemaOccurrenceServiceTest {
                         .setFile(file)
                         .setGraphName(graphIdentifier.graphUri())
                         .build();
-        databasePort.createGraph(graphIdentifier, graphSource.graph());
+        createGraph(graphIdentifier, graphSource.graph());
+    }
+
+    /** Creates a workspace and a graph in it, the way an upload does. */
+    private void createGraph(GraphIdentifier identifier, Graph graph) {
+        databasePort.createWorkspaceIfAbsent(identifier.datasetName());
+        try (var transaction =
+                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.createGraph(identifier.graphUri(), graph);
+            transaction.commit("created graph %s".formatted(identifier.graphUri()));
+        }
     }
 }

@@ -69,8 +69,10 @@ public class PastePreviewService implements PastePreviewUseCase {
         var missingByKind =
                 new EnumMap<CopyClassReference.Kind, List<CopyClassReference>>(
                         CopyClassReference.Kind.class);
-        try (var ctx =
-                databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(
+                        targetGraphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(targetGraphIdentifier.graphUri());
             for (var kind : CopyClassReference.Kind.values()) {
                 missingByKind.put(kind, missing(references, kind, ctx.getRdfGraph(), pastedUris));
             }

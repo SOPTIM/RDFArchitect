@@ -15,30 +15,21 @@
  *
  */
 
-package org.rdfarchitect.database;
+package org.rdfarchitect.rdf.graph.wrapper;
 
-import org.apache.jena.query.ReadWrite;
+import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
 /**
- * Transaction lifecycle contract. Implementations must be usable in try-with-resources: {@link
- * #begin(ReadWrite)} returns {@code this}, and {@link #close()} calls {@link #end()}.
+ * A participant that records what each of its versions changed, so that a changelog entry can show
+ * it. Stepping through the versions is {@link
+ * org.rdfarchitect.models.changelog.ChangeLogParticipant}.
  */
-public interface Transactional extends AutoCloseable {
+public interface DeltaSource {
 
-    Transactional begin(ReadWrite mode);
-
-    void commit();
-
-    void commit(String message);
-
-    void abort();
-
-    void end();
-
-    boolean isInTransaction();
-
-    ReadWrite transactionMode();
-
-    @Override
-    void close();
+    /**
+     * Returns the delta of the most recent version.
+     *
+     * @return the additions and deletions that produced the current state
+     */
+    DeltaCompressible getLastDelta();
 }

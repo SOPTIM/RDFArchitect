@@ -15,44 +15,53 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs.versioncontrol;
+package org.rdfarchitect.api.controller.datasets.versioncontrol;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.controller.Response;
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
-import org.rdfarchitect.services.versioncontrol.RedoUseCase;
+import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
+import org.rdfarchitect.services.ChangeLogUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/redo")
+@RequestMapping("api/datasets/{datasetName}/undo/pending")
 @RequiredArgsConstructor
-public class RedoRESTController {
+public class PendingUndoRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(RedoRESTController.class);
+    private static final Logger logger = LoggerFactory.getLogger(PendingUndoRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
-    private final RedoUseCase redoUseCase;
+    private final ChangeLogUseCase changelogUseCase;
 
     @Operation(
-            summary = "redo ",
-            description = "Redo the last undone change",
-            tags = {"graph"},
-            responses = {@ApiResponse(responseCode = "200")})
-    @PostMapping
-    public String redo(
+            summary = "peek at the next undo",
+            description =
+                    "Get the change that the next undo would take back, so that the editor can ask"
+                            + " before an undo that makes something disappear. Returns nothing when"
+                            + " there is no history left.",
+            tags = {"workspace"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        schema = @Schema(implementation = ChangeLogEntryDTO.class)))
+            })
+    @GetMapping
+    public ChangeLogEntryDTO getPendingUndo(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -60,27 +69,18 @@ public class RedoRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI) {
+                    String datasetName) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/redo\" from \"{}\".",
+                "Received GET request: \"/api/datasets/{{}}/undo/pending\" from \"{}\".",
                 datasetName,
-                graphURI,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-
-        redoUseCase.redo(new GraphIdentifier(datasetName, extendedGraphURI));
+        var pending = changelogUseCase.pendingUndo(datasetName);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/redo\" to \"{}\".",
+                "Sending response to GET request: \"/api/datasets/{{}}/undo/pending\" to \"{}\".",
                 datasetName,
-                graphURI,
                 originURL);
-        return Response.SUCCESS;
+        return pending;
     }
 }

@@ -19,6 +19,7 @@ package org.rdfarchitect.services.update.ontology;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -38,6 +39,7 @@ import org.rdfarchitect.api.dto.ontology.OntologyEntry;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.models.cim.ontology.OntologyFactory;
 import org.rdfarchitect.services.ExpandURIService;
 
@@ -51,17 +53,18 @@ class UpdateOntologyServiceTest {
     private static final String ONTOLOGY_IRI = NAMESPACE + "Ontology";
 
     private DatabasePort databasePort;
+    private WorkspaceTransaction transaction;
     private Model model;
     private UpdateOntologyService updateOntologyService;
 
     @BeforeEach
     void setUp() {
         databasePort = mock(DatabasePort.class);
+        transaction = mock(WorkspaceTransaction.class);
         var graphContext = mock(GraphContext.class);
         model = ModelFactory.createDefaultModel();
 
-        when(databasePort.getGraphWithContext(any())).thenReturn(graphContext);
-        when(graphContext.begin(ReadWrite.WRITE)).thenReturn(graphContext);
+        stubTransaction(graphContext);
         when(graphContext.getRdfGraph()).thenReturn(model.getGraph());
         when(databasePort.getPrefixMapping(DATASET)).thenReturn(prefixMapping());
 
@@ -159,5 +162,11 @@ class UpdateOntologyServiceTest {
 
         assertThat(datatypeOf(DCTerms.title.getURI())).isEqualTo(XSD.xstring.getURI());
         assertThat(datatypeOf(DCAT.keyword.getURI())).isEqualTo(XSD.xstring.getURI());
+    }
+
+    private void stubTransaction(GraphContext graph) {
+        when(transaction.graph(anyString())).thenReturn(graph);
+        when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))
+                .thenReturn(transaction);
     }
 }

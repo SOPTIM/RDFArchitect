@@ -26,6 +26,7 @@ import org.rdfarchitect.api.dto.ontology.OntologyDTO;
 import org.rdfarchitect.api.dto.ontology.OntologyEntry;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.models.cim.ontology.OntologyFacade;
 import org.springframework.stereotype.Service;
 
@@ -38,35 +39,31 @@ public class RenameGraphService implements RenameGraphUseCase {
     @Override
     public void renameGraph(
             GraphIdentifier graphIdentifier, String newGraphUri, String newKeyword) {
-        databasePort.renameGraph(graphIdentifier, newGraphUri);
-        var renamedIdentifier = new GraphIdentifier(graphIdentifier.datasetName(), newGraphUri);
-        var keywordUpdated = false;
-        try {
-            updateKeyword(renamedIdentifier, newKeyword);
-            keywordUpdated = true;
-        } finally {
-            if (!keywordUpdated) {
-                databasePort.renameGraph(renamedIdentifier, graphIdentifier.graphUri());
-            }
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.renameGraph(graphIdentifier.graphUri(), newGraphUri);
+            updateKeyword(transaction, graphIdentifier.datasetName(), newGraphUri, newKeyword);
+            transaction.commit("renamed schema to " + newGraphUri);
         }
     }
 
-    private void updateKeyword(GraphIdentifier graphIdentifier, String newKeyword) {
+    private void updateKeyword(
+            WorkspaceTransaction transaction,
+            String workspaceName,
+            String graphUri,
+            String newKeyword) {
         if (newKeyword == null) {
             return;
         }
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
-            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
-            var ontologyFacade = new OntologyFacade(model);
-            var ontology = ontologyFacade.getOntology();
-            if (ontology == null) {
-                return;
-            }
-            applyKeyword(ontology, newKeyword);
-            ontologyFacade.replaceOntology(ontology);
-            ctx.commit("Renamed schema to " + graphIdentifier.graphUri());
+        var model = ModelFactory.createModelForGraph(transaction.graph(graphUri).getRdfGraph());
+        model.setNsPrefixes(databasePort.getPrefixMapping(workspaceName));
+        var ontologyFacade = new OntologyFacade(model);
+        var ontology = ontologyFacade.getOntology();
+        if (ontology == null) {
+            return;
         }
+        applyKeyword(ontology, newKeyword);
+        ontologyFacade.replaceOntology(ontology);
     }
 
     private void applyKeyword(OntologyDTO ontology, String newKeyword) {

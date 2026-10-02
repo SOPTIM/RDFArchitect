@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
@@ -84,7 +85,7 @@ class AssociationsServiceTest {
                         .setFile(readMultipartFileFromFile(PATH, "class.ttl"))
                         .setGraphName(GRAPH_URI)
                         .build();
-        databasePort.createGraph(graphIdentifier, graphSource.graph());
+        createGraph(graphIdentifier, graphSource.graph());
     }
 
     @Test
@@ -112,7 +113,9 @@ class AssociationsServiceTest {
     }
 
     private void assertBothDirectionsArePresent() {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
             assertThat(graph.contains(ASSOCIATION, RDF.type.asNode(), RDF.Property.asNode()))
                     .isTrue();
@@ -163,5 +166,15 @@ class AssociationsServiceTest {
                         .associationUsed(true)
                         .build();
         return new AssociationPairDTO(from, to);
+    }
+
+    /** Creates a workspace and a graph in it, the way an upload does. */
+    private void createGraph(GraphIdentifier identifier, Graph graph) {
+        databasePort.createWorkspaceIfAbsent(identifier.datasetName());
+        try (var transaction =
+                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.createGraph(identifier.graphUri(), graph);
+            transaction.commit("created graph %s".formatted(identifier.graphUri()));
+        }
     }
 }

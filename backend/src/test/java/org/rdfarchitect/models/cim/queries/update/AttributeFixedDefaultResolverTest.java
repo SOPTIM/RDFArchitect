@@ -19,8 +19,8 @@ package org.rdfarchitect.models.cim.queries.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.GraphMemFactory;
-import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
@@ -35,7 +35,6 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 import java.util.UUID;
 
@@ -112,13 +111,8 @@ class AttributeFixedDefaultResolverTest {
     }
 
     private static void resolveInTxn(
-            GraphRewindableWithUUIDs graph, CIMAttribute attribute, boolean newValuesAsBlankNode) {
-        try {
-            graph.begin(TxnType.READ);
-            AttributeFixedDefaultResolver.resolve(graph, attribute, newValuesAsBlankNode);
-        } finally {
-            graph.end();
-        }
+            Graph graph, CIMAttribute attribute, boolean newValuesAsBlankNode) {
+        AttributeFixedDefaultResolver.resolve(graph, attribute, newValuesAsBlankNode);
     }
 
     private static CIMAttribute.CIMAttributeBuilder baseAttribute() {
@@ -128,11 +122,11 @@ class AttributeFixedDefaultResolverTest {
                 .label(new RDFSLabel("test", "en"));
     }
 
-    private static GraphRewindableWithUUIDs emptyGraph() {
-        return new GraphRewindableWithUUIDs(GraphMemFactory.createDefaultGraph(), 10, 5);
+    private static Graph emptyGraph() {
+        return GraphMemFactory.createDefaultGraph();
     }
 
-    private static GraphRewindableWithUUIDs graphWithBlankNodeFixedValue() {
+    private static Graph graphWithBlankNodeFixedValue() {
         var base = GraphMemFactory.createDefaultGraph();
         var model = ModelFactory.createModelForGraph(base);
         var attribute = model.createResource(ATTRIBUTE_URI);
@@ -143,16 +137,16 @@ class AttributeFixedDefaultResolverTest {
                 ResourceFactory.createProperty(RDFS.Literal.getURI()),
                 ResourceFactory.createPlainLiteral("existing"));
         attribute.addProperty(CIMS.isFixed, blank);
-        return new GraphRewindableWithUUIDs(base, 10, 5);
+        return base;
     }
 
-    private static GraphRewindableWithUUIDs graphWithLiteralFixedValue() {
+    private static Graph graphWithLiteralFixedValue() {
         var base = GraphMemFactory.createDefaultGraph();
         var model = ModelFactory.createModelForGraph(base);
         var attribute = model.createResource(ATTRIBUTE_URI);
         attribute.addProperty(RDF.type, RDF.Property);
         attribute.addProperty(RDFA.uuid, model.createLiteral(ATTRIBUTE_UUID.toString()));
         attribute.addProperty(CIMS.isFixed, ResourceFactory.createPlainLiteral("existing"));
-        return new GraphRewindableWithUUIDs(base, 10, 5);
+        return base;
     }
 }

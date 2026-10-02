@@ -23,31 +23,32 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.vocabulary.RDF;
-import org.rdfarchitect.config.GraphCompressionConfig;
+import org.rdfarchitect.database.DiagramLayout;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.rdf.resources.CIM;
+import org.rdfarchitect.models.changelog.ChangeLogParticipant;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
 import java.util.UUID;
 
 /**
- * Transactional diagram-layout store backed by an {@link RDFGraphDelta}. Has no lock of its own —
- * transaction lifecycle is managed exclusively by the owning coordinator.
+ * Transactional diagram-layout store backed by an {@link RDFGraphDelta}, used both for a graph's
+ * layout and for the workspace's own. Has no lock of its own — the owning workspace drives the
+ * transaction.
  */
-public class DiagramLayoutDelta implements TransactionParticipant, Rewindable {
+public class DiagramLayoutDelta
+        implements DiagramLayout, TransactionParticipant, DeltaSource, ChangeLogParticipant {
 
     @Getter private final MRID defaultPackageMRID;
     private final RDFGraphDelta inner;
 
-    public DiagramLayoutDelta(TransactionContext txnContext) {
+    public DiagramLayoutDelta(WorkspaceTransactionContext txnContext) {
         this.defaultPackageMRID = new MRID(UUID.randomUUID());
         var emptyBase = GraphFactory.createDefaultGraph();
         var prefixModel = ModelFactory.createModelForGraph(emptyBase);
         prefixModel.setNsPrefix(CIM.PREFIX, CIM.NAMESPACE);
         prefixModel.setNsPrefix("rdf", RDF.uri);
-        int maxVersions = GraphCompressionConfig.getMaxVersions();
-        int compressCount = GraphCompressionConfig.getCompressCount();
-        this.inner = new RDFGraphDelta(emptyBase, maxVersions, compressCount, txnContext);
+        this.inner = new RDFGraphDelta(emptyBase, txnContext, this);
     }
 
     /**
@@ -55,19 +56,9 @@ public class DiagramLayoutDelta implements TransactionParticipant, Rewindable {
      * returned model are written into the active delta and will be committed or aborted together
      * with the enclosing transaction.
      */
+    @Override
     public Model getDiagramLayoutModel() {
         return ModelFactory.createModelForGraph(inner);
-    }
-
-    /**
-     * Returns a live {@link Model} view of the last <em>committed</em> diagram-layout state,
-     * bypassing the transaction layer. Reads and writes succeed without an active transaction.
-     * Writes go directly into the committed head delta and are not tracked as a separate undo entry
-     * — they survive undo/redo of semantic changes. Use this for infrastructure operations (layout
-     * initialisation, auto-positions) that must not pollute the undo history.
-     */
-    public Model getDiagramLayoutModelDirect() {
-        return ModelFactory.createModelForGraph(inner.getLastDelta());
     }
 
     // -------------------------------------------------------------------------
@@ -90,7 +81,7 @@ public class DiagramLayoutDelta implements TransactionParticipant, Rewindable {
     }
 
     // -------------------------------------------------------------------------
-    // Rewindable
+    // ChangeLogParticipant and DeltaSource
     // -------------------------------------------------------------------------
 
     @Override
@@ -104,22 +95,27 @@ public class DiagramLayoutDelta implements TransactionParticipant, Rewindable {
     }
 
     @Override
-    public boolean canUndo() {
-        return inner.canUndo();
-    }
-
-    @Override
-    public boolean canRedo() {
-        return inner.canRedo();
-    }
-
-    @Override
-    public void restore(UUID versionId) {
-        inner.restore(versionId);
-    }
-
-    @Override
     public DeltaCompressible getLastDelta() {
         return inner.getLastDelta();
+    }
+
+    @Override
+    public UUID currentVersionId() {
+        return inner.currentVersionId();
+    }
+
+    @Override
+    public void discardOldestVersion() {
+        inner.discardOldestVersion();
+    }
+
+    @Override
+    public void discardRedoHistory() {
+        inner.discardRedoHistory();
+    }
+
+    @Override
+    public void foldLastVersionIntoPrevious() {
+        inner.foldLastVersionIntoPrevious();
     }
 }

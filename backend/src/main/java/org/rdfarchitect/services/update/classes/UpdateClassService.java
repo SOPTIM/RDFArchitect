@@ -36,6 +36,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.diagrams.RemoveFromCustomDiagramUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
@@ -83,45 +84,56 @@ public class UpdateClassService
         this.removeFromCustomDiagramUseCase = removeFromCustomDiagramUseCase;
     }
 
+    /**
+     * Renaming a class also renames it in the layout, in the diagrams it appears in and in the
+     * cross-profile view. One enclosing transaction keeps that one change in the history and one
+     * step to undo, rather than four the user never asked for separately.
+     */
     @Override
     public void replaceClass(GraphIdentifier graphIdentifier, ClassUMLAdaptedDTO newClass) {
-        String oldClassUri;
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var resource =
-                    CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), newClass.getUuid());
-            oldClassUri = resource.getURI();
-        }
-
-        UUID releasedUuid;
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
+            var oldClassUri =
+                    CIMResourceUtils.findResourceForUuid(graph, newClass.getUuid()).getURI();
+
             var cimClass = classMapper.toCIMObject(newClass);
             assertNoPackageWithSameIri(graph, cimClass);
-            releasedUuid =
+            var releasedUuid =
                     CIMUpdates.replaceClass(
                             graph,
                             databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                             cimClass,
                             newValuesAsBlankNode);
-            ctx.commit(
-                    "Updated class \"%s\" (%s)".formatted(newClass.getLabel(), newClass.getUuid()));
-        }
 
-        if (releasedUuid != null) {
-            deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, releasedUuid);
-            removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, releasedUuid);
-        }
+            if (releasedUuid != null) {
+                deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, releasedUuid);
+                removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, releasedUuid);
+            }
 
-        updateDiagramObjectNameUseCase.updateDiagramObjectName(
-                graphIdentifier, newClass.getUuid(), newClass.getLabel());
+            updateDiagramObjectNameUseCase.updateDiagramObjectName(
+                    graphIdentifier, newClass.getUuid(), newClass.getLabel());
 
-        String newClassUri = newClass.getPrefix() + newClass.getLabel();
-        if (!oldClassUri.equals(newClassUri)) {
-            var oldMergedUuid = CrossProfileUtils.mergedUuid(oldClassUri);
-            var newMergedUuid = CrossProfileUtils.mergedUuid(newClassUri);
-            crossProfileDiagramLayoutUseCase.migrateLayoutToNewClassUri(
-                    graphIdentifier.datasetName(), oldMergedUuid, newMergedUuid, newClassUri);
+            String newClassUri = newClass.getPrefix() + newClass.getLabel();
+            if (!oldClassUri.equals(newClassUri)) {
+                crossProfileDiagramLayoutUseCase.migrateLayoutToNewClassUri(
+                        graphIdentifier.datasetName(),
+                        CrossProfileUtils.mergedUuid(oldClassUri),
+                        CrossProfileUtils.mergedUuid(newClassUri),
+                        newClassUri);
+            }
+
+            transaction.commit(describeClassUpdate(oldClassUri, newClass.getLabel()));
         }
+    }
+
+    /** Names a rename by both names, since that is the change the reader will be looking for. */
+    private static String describeClassUpdate(String oldClassUri, String newLabel) {
+        var oldLabel = ChangeDescriptions.localName(oldClassUri);
+        return oldLabel.equals(newLabel)
+                ? "Updated class \"%s\"".formatted(newLabel)
+                : "Renamed class \"%s\" to \"%s\"".formatted(oldLabel, newLabel);
     }
 
     @Override
@@ -133,7 +145,9 @@ public class UpdateClassService
             ClassLayoutPositionDTO classLayoutPosition) {
         var cimPackage = packageMapper.toCIMObject(packageDTO);
         UUID newClassUUID;
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
             var newClass = constructClass(cimPackage, classURIPrefix, className);
             assertNoPackageWithSameIri(graph, newClass);
@@ -142,11 +156,10 @@ public class UpdateClassService
                             graph,
                             databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                             newClass);
-            ctx.commit("Added class \"%s\" (%s)".formatted(newClass.getLabel(), newClassUUID));
+            createClassLayoutDataUseCase.createClassLayoutData(
+                    graphIdentifier, packageDTO, className, newClassUUID, classLayoutPosition);
+            transaction.commit("Added class \"%s\"".formatted(newClass.getLabel()));
         }
-
-        createClassLayoutDataUseCase.createClassLayoutData(
-                graphIdentifier, packageDTO, className, newClassUUID, classLayoutPosition);
 
         return newClassUUID;
     }
@@ -177,19 +190,26 @@ public class UpdateClassService
         }
     }
 
+    /**
+     * Deleting a class also takes its layout and its appearances in diagrams with it. As with a
+     * rename, one enclosing transaction keeps that one change in the history and one step to undo.
+     */
     @Override
     public void deleteClass(GraphIdentifier graphIdentifier, UUID classUUID) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var classResource = CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), classUUID);
             var classLabel = CIMResourceUtils.findLabelForResource(classResource);
             CIMUpdates.deleteClass(
                     ctx.getRdfGraph(),
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     classUUID);
-            ctx.commit("Deleted class \"%s\" (%s)".formatted(classLabel, classUUID));
-        }
 
-        deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, classUUID);
-        removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, classUUID);
+            deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, classUUID);
+            removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, classUUID);
+
+            transaction.commit("Deleted class \"%s\"".formatted(classLabel));
+        }
     }
 }

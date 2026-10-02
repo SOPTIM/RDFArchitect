@@ -42,7 +42,9 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
         String message;
         UUID uuid;
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
             if (enumEntryDTO.getLabel() == null || enumEntryDTO.getLabel().trim().isEmpty()) {
                 throw new IllegalArgumentException("New enum entry label cannot be null or empty");
@@ -67,7 +69,7 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
                         "Replaced enum entry \"%s\" (%s)".formatted(cimEnumEntry.getLabel(), uuid);
             }
 
-            ctx.commit(message);
+            transaction.commit(message);
         }
 
         return uuid;
