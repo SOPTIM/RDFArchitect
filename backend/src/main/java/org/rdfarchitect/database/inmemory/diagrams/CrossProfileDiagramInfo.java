@@ -19,6 +19,7 @@ package org.rdfarchitect.database.inmemory.diagrams;
 
 import lombok.Getter;
 
+import org.rdfarchitect.database.CrossProfileColors;
 import org.rdfarchitect.rdf.graph.wrapper.SnapshotParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 
@@ -29,7 +30,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /** The colour each graph is drawn in on the cross-profile diagram of a workspace. */
-public class CrossProfileDiagramInfo extends SnapshotParticipant<Map<String, String>> {
+public class CrossProfileDiagramInfo extends SnapshotParticipant<Map<String, String>>
+        implements CrossProfileColors {
 
     @Getter private final UUID crossProfileDiagramUUID = UUID.randomUUID();
 
@@ -45,6 +47,7 @@ public class CrossProfileDiagramInfo extends SnapshotParticipant<Map<String, Str
      * @param graphUri the graph URI
      * @return the colour, or {@code null} if the graph has none
      */
+    @Override
     public String getColor(String graphUri) {
         return colors.getOrDefault(graphUri, null);
     }
@@ -55,6 +58,7 @@ public class CrossProfileDiagramInfo extends SnapshotParticipant<Map<String, Str
      * @param graphUri the graph URI
      * @param color the colour to use
      */
+    @Override
     public void setColor(String graphUri, String color) {
         beginChange();
         colors.put(graphUri, color);

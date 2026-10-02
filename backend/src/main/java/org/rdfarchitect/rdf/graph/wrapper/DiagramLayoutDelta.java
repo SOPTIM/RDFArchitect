@@ -23,6 +23,7 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.vocabulary.RDF;
+import org.rdfarchitect.database.DiagramLayout;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.rdf.resources.CIM;
 import org.rdfarchitect.models.changelog.ChangeLogParticipant;
@@ -36,7 +37,7 @@ import java.util.UUID;
  * transaction.
  */
 public class DiagramLayoutDelta
-        implements TransactionParticipant, DeltaSource, ChangeLogParticipant {
+        implements DiagramLayout, TransactionParticipant, DeltaSource, ChangeLogParticipant {
 
     @Getter private final MRID defaultPackageMRID;
     private final RDFGraphDelta inner;
@@ -55,6 +56,7 @@ public class DiagramLayoutDelta
      * returned model are written into the active delta and will be committed or aborted together
      * with the enclosing transaction.
      */
+    @Override
     public Model getDiagramLayoutModel() {
         return ModelFactory.createModelForGraph(inner);
     }

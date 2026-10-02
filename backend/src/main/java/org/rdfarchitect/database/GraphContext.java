@@ -19,8 +19,6 @@ package org.rdfarchitect.database;
 
 import org.apache.jena.graph.Graph;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
-import org.rdfarchitect.rdf.graph.wrapper.RDFGraphDelta;
 
 import java.util.Map;
 import java.util.UUID;
@@ -39,10 +37,10 @@ public interface GraphContext {
     Graph getRdfGraph();
 
     /** Returns the diagram layout belonging to the graph. */
-    DiagramLayoutDelta getDiagramLayout();
+    DiagramLayout getDiagramLayout();
 
     /** Returns the custom SHACL shapes of the graph. */
-    RDFGraphDelta getCustomSHACL();
+    Graph getCustomSHACL();
 
     /** Returns the custom diagrams defined on the graph, by id. */
     Map<UUID, CustomDiagram> getCustomDiagrams();
