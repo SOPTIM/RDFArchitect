@@ -148,8 +148,30 @@ public class Workspace {
     public WorkspaceTransaction begin(ReadWrite mode) {
         if (txnContext.begin(mode)) {
             acquireLock(mode);
+            txnContext.onOutermostBegun(() -> abandonStaleTransaction(mode));
         }
         return new Transaction();
+    }
+
+    /**
+     * Ends a transaction whose caller never closed it, so that the thread running it can be used
+     * again: whatever it changed is rolled back and the lock is given back.
+     *
+     * <p>Rolling back can only fail on a workspace that is already damaged, and the lock has to be
+     * released either way — otherwise the workspace stays locked for good — so a failure here is
+     * logged rather than thrown.
+     */
+    private void abandonStaleTransaction(ReadWrite mode) {
+        try {
+            if (mode == ReadWrite.WRITE && !txnContext.isAborted()) {
+                coordinator.abort();
+            }
+        } catch (RuntimeException e) {
+            logger.error("Could not roll back an abandoned transaction.", e);
+        } finally {
+            var lock = mode == ReadWrite.READ ? rwLock.readLock() : rwLock.writeLock();
+            lock.unlock();
+        }
     }
 
     private void acquireLock(ReadWrite mode) {

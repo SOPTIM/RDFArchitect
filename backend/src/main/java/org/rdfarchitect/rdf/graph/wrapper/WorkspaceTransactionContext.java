@@ -78,6 +78,13 @@ public class WorkspaceTransactionContext {
         private int depth = 1;
         private boolean aborted;
 
+        /**
+         * How to end this transaction if its caller never does. Supplied by the workspace, because
+         * ending it means releasing the lock, which the workspace owns. Kept here rather than on
+         * the context, which every thread entering the workspace shares.
+         */
+        private Runnable abandon;
+
         private Frame(WorkspaceTransactionContext owner, ReadWrite mode) {
             this.owner = owner;
             this.mode = mode;
@@ -132,6 +139,44 @@ public class WorkspaceTransactionContext {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Records how to end the transaction this thread just opened, should its caller never close it.
+     *
+     * <p>Called by the workspace right after it took the lock, because rolling back and unlocking
+     * are its business; the context only keeps the action and runs it when asked.
+     *
+     * @param action what to run if the transaction is abandoned rather than closed
+     * @throws GraphNotInATransactionException if this thread is not inside this workspace
+     */
+    public void onOutermostBegun(Runnable action) {
+        requireFrame().abandon = action;
+    }
+
+    /**
+     * Ends a transaction that nobody closed, and names the workspace it was on.
+     *
+     * <p>A transaction lives in a thread-local, and a thread that returns to its pool still holding
+     * one would carry it into every request that follows: the lock is never given back, and the
+     * thread counts as being inside that workspace from then on. Whoever hands the thread back —
+     * the request filter — calls this to make sure it does not.
+     *
+     * @return the workspace the abandoned transaction was on, or {@code null} if there was none
+     */
+    public static String abandonCurrentTransaction() {
+        var frame = currentFrame.get();
+        if (frame == null) {
+            return null;
+        }
+        try {
+            if (frame.abandon != null) {
+                frame.abandon.run();
+            }
+        } finally {
+            currentFrame.remove();
+        }
+        return frame.owner.workspaceName;
     }
 
     /**
