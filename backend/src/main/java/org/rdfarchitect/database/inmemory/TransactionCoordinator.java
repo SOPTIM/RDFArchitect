@@ -38,7 +38,6 @@ import org.slf4j.LoggerFactory;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.Function;
 
 /**
@@ -301,7 +300,7 @@ class TransactionCoordinator {
         if (lastDelta != null) {
             deltas.add(
                     new ContextDelta(
-                            id.kind().name().toLowerCase(Locale.ROOT),
+                            id,
                             new WeakReference<>(lastDelta.getAdditions()),
                             new WeakReference<>(lastDelta.getDeletions())));
         }
