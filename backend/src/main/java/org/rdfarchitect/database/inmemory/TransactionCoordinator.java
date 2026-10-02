@@ -213,8 +213,35 @@ class TransactionCoordinator {
         requireWriteTransaction();
         txnContext.enrolledParticipants().forEach(TransactionParticipant::abort);
         txnContext.clearEnrolled();
+        takeBackPendingVersions();
         txnContext.markAborted();
         logger.debug("Workspace transaction aborted.");
+    }
+
+    /**
+     * Takes back the versions that an inner commit already cut.
+     *
+     * <p>An abort is never local to the level that triggered it, so it has to reach what the
+     * enclosing transaction committed as well. Those participants no longer consider themselves
+     * changed, so {@code abort()} alone would not touch them — their change would survive while the
+     * entry that was going to name it is never written, which is the one state the log must never
+     * be in.
+     *
+     * <p>A failure while taking a version back is logged rather than thrown: an abort is usually
+     * already the answer to an earlier failure, and that one must not be displaced.
+     */
+    private void takeBackPendingVersions() {
+        var pending = txnContext.pendingVersions();
+        for (int i = pending.size() - 1; i >= 0; i--) {
+            var participant = pending.get(i).participant();
+            try {
+                participant.undo();
+                participant.discardRedoHistory();
+            } catch (RuntimeException e) {
+                logger.error("Could not take back the version of a participant.", e);
+            }
+        }
+        txnContext.clearPendingVersions();
     }
 
     /**

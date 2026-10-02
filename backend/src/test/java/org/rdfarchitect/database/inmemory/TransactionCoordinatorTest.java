@@ -136,6 +136,38 @@ class TransactionCoordinatorTest {
     }
 
     @Test
+    void abort_afterAnInnerCommit_takesBackTheVersionThatCommitCut() {
+        // The inner commit cut a version but wrote no entry; leaving it in place would put the
+        // participant a version ahead of the log.
+        var participant = new StubParticipant();
+        txnContext.begin(ReadWrite.WRITE);
+        txnContext.enroll(participant);
+        coordinator.commit("a step of a larger action");
+        txnContext.end();
+
+        coordinator.abort();
+
+        assertThat(participant.undos).isEqualTo(1);
+        assertThat(participant.redoHistoryDiscards).isEqualTo(1);
+        assertThat(txnContext.pendingVersions()).isEmpty();
+        assertThat(changeLog.canUndo()).isFalse();
+    }
+
+    @Test
+    void abort_whenTakingBackAVersionFails_stillAbortsTheTransaction() {
+        var participant = new StubParticipant().failingOnUndo();
+        txnContext.begin(ReadWrite.WRITE);
+        txnContext.enroll(participant);
+        coordinator.commit("a step of a larger action");
+        txnContext.end();
+
+        coordinator.abort();
+
+        assertThat(txnContext.isAborted()).isTrue();
+        assertThat(txnContext.pendingVersions()).isEmpty();
+    }
+
+    @Test
     void commit_whenAParticipantChangedNothing_doesNotCarryItsStateIntoTheNextTransaction() {
         var box = new StringBox(txnContext, "first");
         box.touch();
