@@ -636,6 +636,9 @@
               "$ref" : "#/components/schemas/TripleDTO"
             },
             "type" : "array"
+          },
+          "graphUri" : {
+            "type" : "string"
           }
         },
         "type" : "object"

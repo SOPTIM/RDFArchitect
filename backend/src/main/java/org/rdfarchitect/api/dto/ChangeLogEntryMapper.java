@@ -46,6 +46,7 @@ public interface ChangeLogEntryMapper {
     default ContextDeltaDTO toContextDeltaDTO(ContextDelta contextDelta) {
         var dto = new ContextDeltaDTO();
         dto.setContextName(contextDelta.contextName());
+        dto.setGraphUri(contextDelta.graphUri());
         dto.setAdditions(mapTriples(contextDelta.additions()));
         dto.setDeletions(mapTriples(contextDelta.deletions()));
         return dto;
