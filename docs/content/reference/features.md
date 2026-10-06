@@ -69,6 +69,10 @@ A dedicated page that lists the change history of a graph: additions, updates, d
 
 Roll a graph back to any earlier tracked state from the changelog.
 
+### Workspace validation
+
+Checks whether the schemas of a workspace fit together: identical inheritance, datatypes that are not concrete classes elsewhere, properties defined in several schemas, one CIM version, unique profile headers, matching inverse associations and enum entries. Runs for a whole workspace or for one schema against its workspace, reports errors, warnings, and infos in a groupable table, and links every finding to the class editor of the schema it came from.
+
 ### Schema comparison
 
 Three-way compare: stored↔stored, upload↔stored, upload↔upload. Package-level and class-level summary with drill-down into attributes, associations, enum entries, and comments. Whitespace-normalised comment diffs avoid noise.

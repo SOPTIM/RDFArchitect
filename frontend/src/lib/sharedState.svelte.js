@@ -85,6 +85,7 @@ export const SelectionLevel = {
  *  selectedClassGraph: StateValuePair<string | null>,
  *  selectedClass: StateObjectPair<Object | null>,
  *  focusedClassUUID: StateValuePair<string | null>,
+ *  focusedPropertyUUID: StateValuePair<string | null>,
  *  selectedContext: StateValuePair<string | null>,
  *  mergedViewOriginGraph: StateValuePair<string | null>,
  *  classEditorSchema: StateObjectPair<Object | null>,
@@ -101,6 +102,8 @@ export const editorState = {
     selectedClassGraph: new StateValuePair(),
     selectedClass: new StateObjectPair({ type: null, id: null }),
     focusedClassUUID: new StateValuePair(),
+    // An attribute/association/enum entry the class editor should reveal once, then forget.
+    focusedPropertyUUID: new StateValuePair(),
     selectedContext: new StateValuePair(),
     // The level the user selected last; drives the nav highlight (see SelectionLevel).
     activeSelectionKind: new StateValuePair(),
@@ -126,6 +129,7 @@ export const editorState = {
         this.selectedClassGraph.updateValue(null);
         this.selectedClass.updateValue({ type: null, id: null });
         this.focusedClassUUID.updateValue(null);
+        this.focusedPropertyUUID.updateValue(null);
         this.selectedContext.updateValue(null);
         this.activeSelectionKind.updateValue(null);
         this.mergedViewOriginGraph.updateValue(null);
@@ -329,11 +333,32 @@ export const copyState = {
 };
 
 /**
+ * What a validation report on /validate is about.
+ * @typedef {object} ValidationContext
+ * @property {"schema" | "workspace"} kind
+ * @property {string | null} workspace the workspace the report belongs to
+ * @property {string | null} graph the schema the report is scoped to, null for
+ *     the whole workspace
+ * @property {string | null} schemaLabel the name that schema goes by
+ */
+
+export const ValidationKind = Object.freeze({
+    SCHEMA: "schema",
+    WORKSPACE: "workspace",
+});
+
+/**
  * Stores validation results to display on /validate.
- * @type {{ result: StateValuePair<any | null> }}
+ * @type {{
+ *     result: StateValuePair<any | null>,
+ *     context: StateValuePair<ValidationContext>,
+ *     running: StateValuePair<boolean>,
+ * }}
  */
 export const validationState = {
     result: new StateValuePair(null),
+    context: new StateValuePair(validationContext(ValidationKind.SCHEMA)),
+    running: new StateValuePair(false),
 };
 
 export const multiSelectState = new MultiSelectState();
@@ -350,6 +375,19 @@ export const migrationState = writable({
     cgmesVersionB: null,
     ignorePrefixes: false,
 });
+
+/**
+ * Builds a context, so that every caller stores the same shape.
+ * @returns {ValidationContext}
+ */
+export function validationContext(kind, options = {}) {
+    return {
+        kind,
+        workspace: options.workspace ?? null,
+        graph: options.graph ?? null,
+        schemaLabel: options.schemaLabel ?? null,
+    };
+}
 
 export function isMergedDiagramType(diagramType) {
     return MERGED_DIAGRAM_TYPES.includes(diagramType);

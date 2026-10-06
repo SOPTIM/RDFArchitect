@@ -82,7 +82,7 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
     @BeforeEach
     void setUp() {
         addGraphFromFile("package.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
     }
 
     @Test

@@ -92,6 +92,7 @@ vi.mock("$lib/stores/ontologyStore.ts", () => ({
         getOntologyForGraph: vi.fn(),
         replaceOntology: vi.fn(),
         createOntology: vi.fn(),
+        invalidateGraph: vi.fn(),
     },
 }));
 

@@ -15,16 +15,15 @@
  *
  */
 
-package org.rdfarchitect.services.dl.update.packagelayout;
+package org.rdfarchitect.services.update.graph;
 
-import org.rdfarchitect.database.GraphIdentifier;
+import java.util.List;
 
-public interface CreateDiagramLayoutUseCase {
-
-    /**
-     * Creates the initial diagram layout structure for a newly imported graph
-     *
-     * @param graphIdentifier the identifier of the graph
-     */
-    void createDiagramLayout(GraphIdentifier graphIdentifier);
-}
+/**
+ * One namespace laying claim to a prefix, either because the dataset already binds it or because a
+ * file of the import declares it.
+ *
+ * @param iri the namespace URI
+ * @param fileNames the files declaring it, empty for the binding the dataset already has
+ */
+public record PrefixBinding(String iri, List<String> fileNames) {}

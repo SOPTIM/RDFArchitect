@@ -15,18 +15,16 @@
  *
  */
 
-package org.rdfarchitect.api.dto.validation;
+package org.rdfarchitect.api.dto;
 
-import lombok.Builder;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.util.List;
-
+/** The session a request belongs to. The id doubles as the session cookie's value. */
 @Data
-@Builder
-public class SchemaValidationReportDTO {
-
-    private boolean valid;
-
-    private List<SchemaValidationIssueDTO> issues;
+@NoArgsConstructor
+@AllArgsConstructor
+public class SessionDTO {
+    private String id;
 }
