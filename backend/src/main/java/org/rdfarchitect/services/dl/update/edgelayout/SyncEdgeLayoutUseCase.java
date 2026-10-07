@@ -19,17 +19,15 @@ package org.rdfarchitect.services.dl.update.edgelayout;
 
 import org.rdfarchitect.database.GraphIdentifier;
 
-import java.util.UUID;
-
-public interface RenameEdgeLayoutDataUseCase {
+public interface SyncEdgeLayoutUseCase {
 
     /**
-     * Renames an existing edge diagram object across all diagrams it appears in within the graph.
+     * Brings the edge diagram objects in line with the schema after the edges of a graph may have
+     * changed, for example because a super class was set or an association was created or deleted.
+     * This covers the diagrams of the graph as well as the merged diagrams of its dataset, see
+     * {@link EdgeLayoutReconciler#reconcileEdges}.
      *
-     * @param graphIdentifier the identifier of the graph the edge belongs to
-     * @param identifiedObjectUUID the UUID of the identified object the edge references (the
-     *     association for associations, the sub class for inheritances)
-     * @param newName the new name to set on the edge diagram object
+     * @param graphIdentifier the graph whose schema changed
      */
-    void renameEdge(GraphIdentifier graphIdentifier, UUID identifiedObjectUUID, String newName);
+    void syncEdgeLayout(GraphIdentifier graphIdentifier);
 }
