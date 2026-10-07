@@ -34,35 +34,9 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class UpdateEdgeLayoutDataService implements SyncEdgeLayoutUseCase, UpdateBendPointsUseCase {
+public class UpdateEdgeLayoutDataService implements UpdateBendPointsUseCase {
 
     private final DatabasePort databasePort;
-
-    @Override
-    public void syncEdgeLayout(GraphIdentifier graphIdentifier) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
-            var edgeResolver = EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph());
-            for (var diagramMRID : DLObjectFetcher.fetchDiagramMRIDs(diagramLayoutModel)) {
-                EdgeLayoutReconciler.reconcileEdges(
-                        diagramLayoutModel, diagramMRID.getUuid(), edgeResolver);
-            }
-            ctx.commit();
-        }
-
-        var datasetName = graphIdentifier.datasetName();
-        var datasetLayoutModel =
-                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        var mergedDiagramMRIDs = DLObjectFetcher.fetchDiagramMRIDs(datasetLayoutModel);
-        if (mergedDiagramMRIDs.isEmpty()) {
-            return;
-        }
-        var mergedEdgeResolver = EdgeResolver.forDataset(databasePort, datasetName);
-        for (var diagramMRID : mergedDiagramMRIDs) {
-            EdgeLayoutReconciler.reconcileEdges(
-                    datasetLayoutModel, diagramMRID.getUuid(), mergedEdgeResolver);
-        }
-    }
 
     // TODO RENDERING: SEHR WICHTIG: END POINTS SIND NOCH AUßEN VOR: also im updateBendPoints unten
     // hab ich die noch nicht eingebaut, weil hier das API design noch sehr offen war. also ob ich

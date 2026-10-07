@@ -39,6 +39,7 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
+import org.rdfarchitect.services.rendering.DiagramClassSelection;
 import org.rdfarchitect.services.rendering.RenderCIMFacadeCollectionUseCase;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -73,8 +74,6 @@ public class RenderCIMFacadeCollectionSvelteFlowService
     private static final String INHERITANCE_EDGE_TYPE = "inheritance";
     private static final String ASSOCIATION_EDGE_TYPE = "association";
 
-    private static final String DEFAULT_PACKAGE = "default";
-
     private static final Comparator<AttributeDTO> MERGED_ATTRIBUTE_ORDER =
             Comparator.comparing(
                             AttributeDTO::getGraphUri,
@@ -95,7 +94,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             List<CIMProfileModel> otherProfiles,
             String primaryColor,
             String primaryKeyword) {
-        var selection = selectClasses(cimModel, filter);
+        var selection = DiagramClassSelection.select(cimModel, filter);
         if (selection.classes().isEmpty()) {
             return createEmptyDiagram();
         }
@@ -419,84 +418,6 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
     private SvelteFlowDTO createEmptyDiagram() {
         return SvelteFlowDTO.builder().nodes(List.of()).edges(List.of()).build();
-    }
-
-    private SelectedClasses selectClasses(ICIMModelFacade cimModel, GraphFilter filter) {
-        var classes = new LinkedHashMap<String, ICIMClass>();
-
-        if (filter.getAllowedUUIDs() != null) {
-            for (var allowedUUID : filter.getAllowedUUIDs()) {
-                var cimClass = cimModel.getCIMClass(UUID.fromString(allowedUUID));
-                if (cimClass != null) {
-                    classes.put(cimClass.getUri().toString(), cimClass);
-                }
-            }
-            return new SelectedClasses(classes, Set.of());
-        }
-
-        var category = cimModel.getCIMClassCategory(resolvePackageUUID(filter));
-        if (category == null) {
-            return new SelectedClasses(classes, Set.of());
-        }
-        for (var cimClass : category.getClasses()) {
-            classes.put(cimClass.getUri().toString(), cimClass);
-        }
-
-        if (!filter.isIncludeRelationsToExternalPackages()) {
-            return new SelectedClasses(classes, Set.of());
-        }
-
-        var packageUris = Set.copyOf(classes.keySet());
-        addExternallyRelatedClasses(filter, classes);
-        var outsidePackageUris =
-                classes.keySet().stream()
-                        .filter(uri -> !packageUris.contains(uri))
-                        .collect(Collectors.toSet());
-
-        return new SelectedClasses(classes, outsidePackageUris);
-    }
-
-    private UUID resolvePackageUUID(GraphFilter filter) {
-        if (filter.getPackageUUID() == null || filter.getPackageUUID().equals(DEFAULT_PACKAGE)) {
-            return null;
-        }
-        return UUID.fromString(filter.getPackageUUID());
-    }
-
-    private void addExternallyRelatedClasses(GraphFilter filter, Map<String, ICIMClass> classes) {
-        if (!filter.isIncludeAssociations() && !filter.isIncludeInheritance()) {
-            return;
-        }
-        var classesInPackage = List.copyOf(classes.values());
-
-        if (filter.isIncludeAssociations()) {
-            for (var cimClass : classesInPackage) {
-                for (var association : cimClass.getAssociations()) {
-                    if (association.isRenderable()) {
-                        addExternallyRelatedClass(classes, association.getRange());
-                    }
-                }
-            }
-        }
-
-        if (filter.isIncludeInheritance()) {
-            for (var cimClass : classesInPackage) {
-                for (var superClass : cimClass.getSuperClasses()) {
-                    addExternallyRelatedClass(classes, superClass);
-                }
-                for (var subClass : cimClass.getSubClasses()) {
-                    addExternallyRelatedClass(classes, subClass);
-                }
-            }
-        }
-    }
-
-    private void addExternallyRelatedClass(Map<String, ICIMClass> classes, ICIMClass cimClass) {
-        var uri = cimClass.getUri().toString();
-        if (cimClass.getUuid() == null || classes.containsKey(uri)) {
-            return;
-        }
-        classes.put(uri, cimClass);
     }
 
     private List<NodeDTO> assembleNodeDTOList(RenderContext renderContext) {
@@ -862,9 +783,6 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         void collect(
                 List<T> target, ICIMClass cimClass, String graphUri, String keyword, String color);
     }
-
-    private record SelectedClasses(
-            Map<String, ICIMClass> classes, Set<String> outsidePackageUris) {}
 
     private record RenderContext(
             List<ICIMClass> classes,
