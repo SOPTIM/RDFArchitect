@@ -2,7 +2,7 @@
 
 ### Apache Commons Lang
 - **Package:** org.apache.commons
-- **Version:** 3.20.0
+- **Version:** 3.21.0
 - **License:** Apache License 2.0
 - **URL:** [https://commons.apache.org/proper/commons-lang/](https://commons.apache.org/proper/commons-lang/)
 
