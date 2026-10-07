@@ -447,6 +447,22 @@ describe("ClassStore", () => {
             ).toBe("local-uuid");
         });
 
+        /** A CGMES 2.4.15 profile states its name and version IRIs as fixed attribute values. */
+        test("invalidates the schema list the navigation names schemas from", async () => {
+            vi.mocked(api.createAttribute).mockResolvedValue(ok("attr-1"));
+
+            await store.addAttribute(
+                WORKSPACE,
+                GRAPH,
+                "class-1",
+                makeAttribute(""),
+            );
+
+            expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+        });
+
         test("returns error and shows toast on failure", async () => {
             vi.mocked(api.createAttribute).mockResolvedValue(err());
             const result = await store.addAttribute(
@@ -480,6 +496,20 @@ describe("ClassStore", () => {
             expect(
                 classes?.find(c => c.uuid === "class-1")?.attributes?.[0].label,
             ).toBe("updated-attr");
+        });
+
+        /** A CGMES 2.4.15 profile states its name and version IRIs as fixed attribute values. */
+        test("invalidates the schema list the navigation names schemas from", async () => {
+            vi.mocked(api.replaceAttribute).mockResolvedValue(ok(undefined));
+
+            await store.replaceAttribute(WORKSPACE, GRAPH, "class-1", {
+                uuid: "attr-1",
+                fixedValue: "changed",
+            } as AttributeDto);
+
+            expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
         });
 
         test("returns error immediately if attribute.uuid is missing", async () => {

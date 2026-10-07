@@ -500,6 +500,8 @@ function createClassStore() {
             ...prev,
             attributes: upsertByUuid(prev.attributes ?? [], stored),
         }));
+        // A CGMES 2.4.15 profile states its name and version IRIs as fixed attribute values.
+        graphStore.invalidateWorkspace(workspaceName);
 
         console.log(
             `${LOG_PREFIX} Added attribute uuid="${newUUID ?? ""}" to class classUUID="${classUUID}"`,
@@ -553,6 +555,7 @@ function createClassStore() {
             ...prev,
             attributes: upsertByUuid(prev.attributes ?? [], attribute),
         }));
+        graphStore.invalidateWorkspace(workspaceName);
         console.log(
             `${LOG_PREFIX} Replaced attribute uuid="${attribute.uuid}"`,
         );
