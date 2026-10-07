@@ -120,7 +120,8 @@ public class RenameObjectBuilder {
     private <T extends SemanticResourceChange> T findMatchingProperty(
             List<T> properties, T target) {
         return properties.stream()
-                .filter(member -> member.getLabel().equals(target.getLabel()))
+                .filter(member -> member.getLabel().equals(target.getLabel()) &&
+                        new URI(member.getIri()).getPrefix().equals(new URI(target.getIri()).getPrefix()))
                 .findFirst()
                 .orElse(null);
     }

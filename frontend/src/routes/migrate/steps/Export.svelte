@@ -24,6 +24,7 @@
     } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
     import { saveFile, sparqlMediaType } from "$lib/utils/fileUtils.js";
 
@@ -35,32 +36,56 @@
 
     async function downloadMigrationScript() {
         try {
-            const { data, response } = await generateMigrationScript();
+            const { data, error, response } = await generateMigrationScript();
+            if (error) {
+                console.error("Failed to generate script:", error);
+                toastStore.error(
+                    "Export failed",
+                    "Could not generate the migration script.",
+                );
+                return;
+            }
             const suggestedFilename = response.headers.get(
                 "content-disposition",
             );
             saveFile(data, suggestedFilename, sparqlMediaType);
         } catch (e) {
             console.error("Failed to generate script:", e);
+            toastStore.error(
+                "Export failed",
+                "Could not generate the migration script.",
+            );
         }
     }
 
     async function downloadMigrationReport(reportType) {
         const state = get(migrationState);
         try {
-            const { data, response } = await generateMigrationReport({
+            const { data, error, response } = await generateMigrationReport({
                 query: {
                     reportType: reportType,
                     originalCGMESVersion: state.cgmesVersionA,
                     updatedCGMESVersion: state.cgmesVersionB,
                 },
             });
+            if (error) {
+                console.error("Failed to generate report:", error);
+                toastStore.error(
+                    "Export failed",
+                    "Could not generate the migration report.",
+                );
+                return;
+            }
             const suggestedFilename = response.headers.get(
                 "content-disposition",
             );
             saveFile(data, suggestedFilename, sparqlMediaType);
         } catch (e) {
             console.error("Failed to generate report:", e);
+            toastStore.error(
+                "Export failed",
+                "Could not generate the migration report.",
+            );
         }
     }
 </script>
