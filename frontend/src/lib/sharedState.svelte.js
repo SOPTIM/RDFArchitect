@@ -237,6 +237,19 @@ export const editorState = {
         }
     },
 
+    /** Selects a class of a graph and opens it in the class editor. */
+    editClass(workspaceName, graphUri, classUuid) {
+        this.selectGraph(workspaceName, graphUri);
+        this.classEditorSchema.updateValue({ classUuid, graphUri });
+        this.selectedClassWorkspace.updateValue(workspaceName);
+        this.selectedClassGraph.updateValue(graphUri);
+        this.selectedClass.updateValue({
+            type: ClassType.SINGLE_CLASS,
+            id: classUuid,
+        });
+        this.focusedClassUUID.updateValue(classUuid);
+    },
+
     selectPackage(workspaceName, graphUri, packageId) {
         multiSelectState.clear();
         this.activeSelectionKind.updateValue(SelectionLevel.PACKAGE);

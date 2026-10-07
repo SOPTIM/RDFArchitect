@@ -22,6 +22,7 @@ import { toastStore } from "../../src/lib/eventhandling/toastStore.svelte.js";
 import { editorState } from "../../src/lib/sharedState.svelte.js";
 import { classStore } from "../../src/lib/stores/classStore";
 import { customDiagramStore } from "../../src/lib/stores/diagramStore";
+import { graphStore } from "../../src/lib/stores/graphStore";
 import { ontologyStore } from "../../src/lib/stores/ontologyStore";
 import { packageStore } from "../../src/lib/stores/packageStore";
 import { createVersionControlStore } from "../../src/lib/stores/versionControlStore";
@@ -49,6 +50,9 @@ vi.mock("$lib/stores/classStore", () => ({
 }));
 vi.mock("$lib/stores/diagramStore", () => ({
     customDiagramStore: { invalidateWorkspace: vi.fn() },
+}));
+vi.mock("$lib/stores/graphStore", () => ({
+    graphStore: { invalidateWorkspace: vi.fn() },
 }));
 vi.mock("$lib/stores/ontologyStore", () => ({
     ontologyStore: { invalidateGraph: vi.fn() },
@@ -235,6 +239,10 @@ describe("versionControlStore", () => {
             expect(customDiagramStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
             );
+            // The navigation names a schema from the graph list.
+            expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
 
             expect(toastStore.info).toHaveBeenCalledWith("Undone");
             expect(api.canUndo).toHaveBeenCalled(); // Proves refresh was called
@@ -301,6 +309,10 @@ describe("versionControlStore", () => {
                 GRAPH,
             );
             expect(customDiagramStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+            // The navigation names a schema from the graph list.
+            expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
             );
 

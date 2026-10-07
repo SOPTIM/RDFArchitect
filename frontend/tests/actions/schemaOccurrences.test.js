@@ -19,6 +19,7 @@ import { describe, expect, it } from "vitest";
 import {
     groupCandidatesByStub,
     mergeSchemaOccurrences,
+    schemaLabel,
     sortSchemaOccurrences,
     sourceCandidates,
     stubsDiffer,
@@ -82,7 +83,61 @@ describe("stubsDiffer", () => {
     });
 });
 
+describe("schemaLabel", () => {
+    it("names a schema the way the navigation tree does", () => {
+        const named = sortSchemaOccurrences([
+            {
+                graphUri: "http://graph#Equipment",
+                keyword: "EQ",
+                label: "Core Equipment Vocabulary",
+            },
+        ]);
+
+        expect(schemaLabel(named[0])).toBe("Core Equipment Vocabulary");
+    });
+
+    it("falls back to the keyword and then to the graph", () => {
+        expect(
+            schemaLabel({ graphUri: "http://graph#EQ_", keyword: "EQ" }),
+        ).toBe("EQ");
+        expect(schemaLabel({ graphUri: "http://graph#Notes" })).toBe("Notes");
+    });
+
+    /**
+     * The four official equipment profiles name themselves alike, so a list that offers a class
+     * in "EquipmentProfile" four times says nothing about which one is meant.
+     */
+    it("tells apart the schemas that read alike", () => {
+        const occurrences = sortSchemaOccurrences([
+            {
+                graphUri: "http://graph#EquipmentCore",
+                label: "EquipmentProfile",
+            },
+            {
+                graphUri: "http://graph#EquipmentOperation",
+                label: "EquipmentProfile",
+            },
+        ]);
+
+        expect(occurrences.map(schemaLabel)).toEqual([
+            "EquipmentProfile (EquipmentCore)",
+            "EquipmentProfile (EquipmentOperation)",
+        ]);
+    });
+});
+
 describe("sortSchemaOccurrences", () => {
+    it("orders by the name the schema is shown under, not by its keyword", () => {
+        const occurrences = [
+            { graphUri: "http://graph#a", keyword: "ZZ", label: "Apples" },
+            { graphUri: "http://graph#b", keyword: "AA", label: "Bananas" },
+        ];
+
+        expect(sortSchemaOccurrences(occurrences).map(o => o.graphUri)).toEqual(
+            ["http://graph#a", "http://graph#b"],
+        );
+    });
+
     it("orders by short name and falls back to the uri", () => {
         const occurrences = [
             { graphUri: "http://graph#z", keyword: "OP" },

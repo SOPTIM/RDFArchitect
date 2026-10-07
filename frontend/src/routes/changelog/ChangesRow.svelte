@@ -25,6 +25,8 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { graphStore } from "$lib/stores/graphStore.ts";
+    import { ontologyStore } from "$lib/stores/ontologyStore.ts";
 
     import TripleTable from "./TripleTable.svelte";
 
@@ -39,15 +41,16 @@
     const rowKey = $derived(`${change.changeId}::row`);
 
     async function callRestoreVersion(changeId) {
+        const workspaceName = editorState.selectedWorkspace.getValue();
+        const graphUri = editorState.selectedGraph.getValue();
         const { error } = await restoreVersion({
-            path: {
-                datasetName: editorState.selectedWorkspace.getValue(),
-                graphURI: editorState.selectedGraph.getValue(),
-            },
+            path: { datasetName: workspaceName, graphURI: graphUri },
             body: { versionId: changeId },
         });
         if (!error) {
             console.log("Version restored successfully");
+            ontologyStore.invalidateGraph(workspaceName, graphUri);
+            graphStore.invalidateWorkspace(workspaceName);
             forceReloadTrigger.trigger();
             toastStore.success(
                 "Version restored",
