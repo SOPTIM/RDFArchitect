@@ -19,9 +19,7 @@ package org.rdfarchitect.services.update.classes;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
-import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
 import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
@@ -29,7 +27,6 @@ import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
@@ -39,21 +36,16 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
-import org.rdfarchitect.models.cim.relations.model.properties.CIMAssociationUtils;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.diagrams.RemoveFromCustomDiagramUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CrossProfileDiagramLayoutUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUseCase;
-import org.rdfarchitect.services.dl.update.edgelayout.RenameEdgeLayoutDataUseCase;
-import org.rdfarchitect.services.dl.update.edgelayout.SyncAssociationEdgesUseCase;
-import org.rdfarchitect.services.dl.update.edgelayout.SyncEdgeCreatedUseCase;
-import org.rdfarchitect.services.dl.update.edgelayout.SyncEdgeDeletedUseCase;
+import org.rdfarchitect.services.dl.update.edgelayout.SyncEdgeLayoutUseCase;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -70,10 +62,7 @@ public class UpdateClassService
     private final DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase;
     private final RemoveFromCustomDiagramUseCase removeFromCustomDiagramUseCase;
     private final CrossProfileDiagramLayoutUseCase crossProfileDiagramLayoutUseCase;
-    private final SyncEdgeCreatedUseCase syncEdgeCreatedUseCase;
-    private final SyncEdgeDeletedUseCase syncEdgeDeletedUseCase;
-    private final RenameEdgeLayoutDataUseCase renameEdgeLayoutDataUseCase;
-    private final SyncAssociationEdgesUseCase syncAssociationEdgesUseCase;
+    private final SyncEdgeLayoutUseCase syncEdgeLayoutUseCase;
 
     public UpdateClassService(
             DatabasePort databasePort,
@@ -85,10 +74,7 @@ public class UpdateClassService
             @Value("${attributes.newValuesBlankNode:false}") boolean newValuesAsBlankNode,
             CrossProfileDiagramLayoutUseCase crossProfileDiagramLayoutUseCase,
             RemoveFromCustomDiagramUseCase removeFromCustomDiagramUseCase,
-            SyncEdgeCreatedUseCase syncEdgeCreatedUseCase,
-            SyncEdgeDeletedUseCase syncEdgeDeletedUseCase,
-            RenameEdgeLayoutDataUseCase renameEdgeLayoutDataUseCase,
-            SyncAssociationEdgesUseCase syncAssociationEdgesUseCase) {
+            SyncEdgeLayoutUseCase syncEdgeLayoutUseCase) {
         this.databasePort = databasePort;
         this.classMapper = classMapper;
         this.packageMapper = packageMapper;
@@ -98,10 +84,7 @@ public class UpdateClassService
         this.newValuesAsBlankNode = newValuesAsBlankNode;
         this.crossProfileDiagramLayoutUseCase = crossProfileDiagramLayoutUseCase;
         this.removeFromCustomDiagramUseCase = removeFromCustomDiagramUseCase;
-        this.syncEdgeCreatedUseCase = syncEdgeCreatedUseCase;
-        this.syncEdgeDeletedUseCase = syncEdgeDeletedUseCase;
-        this.renameEdgeLayoutDataUseCase = renameEdgeLayoutDataUseCase;
-        this.syncAssociationEdgesUseCase = syncAssociationEdgesUseCase;
+        this.syncEdgeLayoutUseCase = syncEdgeLayoutUseCase;
     }
 
     /**
@@ -112,20 +95,10 @@ public class UpdateClassService
     @Override
     public void replaceClass(GraphIdentifier graphIdentifier, ClassUMLAdaptedDTO newClass) {
         String oldClassUri;
-        UUID oldSuperClassUUID = null;
-        Set<CIMAssociationUtils.AssociationEndUuids> associationsBefore;
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             var resource =
                     CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), newClass.getUuid());
             oldClassUri = resource.getURI();
-            var superClassStmt = resource.getProperty(RDFS.subClassOf);
-            if (superClassStmt != null) {
-                oldSuperClassUUID =
-                        CIMResourceUtils.findUuidForResource((Resource) superClassStmt.getObject());
-            }
-            associationsBefore =
-                    CIMAssociationUtils.associationEndUuidsForClass(
-                            ctx.getRdfGraph(), newClass.getUuid());
         }
 
         UUID releasedUuid;
@@ -163,9 +136,7 @@ public class UpdateClassService
             transaction.commit(describeClassUpdate(oldClassUri, newClass.getLabel()));
         }
 
-        syncInheritanceEdge(graphIdentifier, newClass, oldSuperClassUUID);
-        syncAssociationEdgesUseCase.syncAssociationEdges(
-                graphIdentifier, newClass.getUuid(), associationsBefore);
+        syncEdgeLayoutUseCase.syncEdgeLayout(graphIdentifier);
     }
 
     /** Names a rename by both names, since that is the change the reader will be looking for. */
@@ -203,35 +174,11 @@ public class UpdateClassService
                             "Added", "class", ChangeDescriptions.name(newClass.getLabel())));
         }
 
+        createClassLayoutDataUseCase.createClassLayoutData(
+                graphIdentifier, packageDTO, className, newClassUUID, classLayoutPosition);
+        syncEdgeLayoutUseCase.syncEdgeLayout(graphIdentifier);
+
         return newClassUUID;
-    }
-
-    /**
-     * Diffs a class's super class before and after a {@link #replaceClass} save, and keeps the
-     * inheritance edge in sync: gaining a super class creates the edge, losing one deletes it,
-     * switching to a different one just renames it in place since the edge's identifying UUID (the
-     * sub class's own UUID) never changes.
-     */
-    private void syncInheritanceEdge(
-            GraphIdentifier graphIdentifier, ClassUMLAdaptedDTO newClass, UUID oldSuperClassUUID) {
-        var newSuperClass = newClass.getSuperClass();
-        var newSuperClassUUID = newSuperClass != null ? newSuperClass.getUuid() : null;
-
-        if (oldSuperClassUUID == null && newSuperClassUUID != null) {
-            syncEdgeCreatedUseCase.syncEdgeCreated(
-                    graphIdentifier,
-                    newClass.getUuid(),
-                    newClass.getUuid(),
-                    newClass.getLabel() + " " + newSuperClass.getLabel(),
-                    DiagramObjectStyle.INHERITANCE);
-        } else if (oldSuperClassUUID != null && newSuperClassUUID == null) {
-            syncEdgeDeletedUseCase.syncEdgeDeleted(graphIdentifier, newClass.getUuid(), Set.of());
-        } else if (oldSuperClassUUID != null && !oldSuperClassUUID.equals(newSuperClassUUID)) {
-            renameEdgeLayoutDataUseCase.renameEdge(
-                    graphIdentifier,
-                    newClass.getUuid(),
-                    newClass.getLabel() + " " + newSuperClass.getLabel());
-        }
     }
 
     private CIMClass constructClass(
@@ -276,10 +223,8 @@ public class UpdateClassService
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     classUUID);
 
-            deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, classUUID);
-            removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, classUUID);
-
-            transaction.commit("Deleted class \"%s\"".formatted(classLabel));
-        }
+        deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, classUUID);
+        removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, classUUID);
+        syncEdgeLayoutUseCase.syncEdgeLayout(graphIdentifier);
     }
 }
