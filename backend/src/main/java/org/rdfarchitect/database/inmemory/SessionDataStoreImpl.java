@@ -35,6 +35,7 @@ import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
+import org.rdfarchitect.models.changelog.RevertScope;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
@@ -141,8 +142,9 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     @Override
-    public void restoreToVersion(String workspaceName, UUID versionId) {
-        workspace(workspaceName).restoreToVersion(versionId);
+    public WorkspaceHistoryStep restoreToVersion(
+            String workspaceName, UUID versionId, RevertScope scope) {
+        return workspace(workspaceName).restoreToVersion(versionId, scope);
     }
 
     @Override

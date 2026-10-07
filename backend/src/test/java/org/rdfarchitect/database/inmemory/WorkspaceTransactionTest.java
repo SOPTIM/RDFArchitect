@@ -18,11 +18,13 @@
 package org.rdfarchitect.database.inmemory;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.rdfarchitect.database.inmemory.WorkspaceFixtures.GRAPH_A;
+import static org.rdfarchitect.database.inmemory.WorkspaceFixtures.GRAPH_B;
+import static org.rdfarchitect.database.inmemory.WorkspaceFixtures.WORKSPACE;
+import static org.rdfarchitect.database.inmemory.WorkspaceFixtures.createGraph;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,10 +50,6 @@ import java.util.concurrent.atomic.AtomicReference;
  * checked here is that the workspace wires them to real graphs.
  */
 class WorkspaceTransactionTest {
-
-    private static final String WORKSPACE = "workspace";
-    private static final String GRAPH_A = "http://example.org/a";
-    private static final String GRAPH_B = "http://example.org/b";
 
     private final GraphCompressionConfig graphConfig = new GraphCompressionConfig();
 
@@ -505,24 +503,6 @@ class WorkspaceTransactionTest {
         assertThat(last.canRedo()).isTrue();
     }
 
-    @Test
-    void restoreToVersion_undoesEverythingAfterTheTargetVersion() {
-        commitTriple(GRAPH_A, triple, "first");
-        var target = workspace.getChangeHistory().getFirst().changeId();
-        commitTriple(GRAPH_A, triple2, "second");
-
-        workspace.restoreToVersion(target);
-
-        assertThat(triplesIn(GRAPH_A)).containsExactly(triple);
-        assertThat(workspace.canRedo()).isTrue();
-    }
-
-    @Test
-    void restoreToVersion_unknownVersion_throwsException() {
-        assertThatThrownBy(() -> workspace.restoreToVersion(java.util.UUID.randomUUID()))
-                .isInstanceOf(GraphVersionControlException.class);
-    }
-
     // -------------------------------------------------------------------------
     // Isolation between workspaces
     // -------------------------------------------------------------------------
@@ -590,43 +570,10 @@ class WorkspaceTransactionTest {
     }
 
     private void commitTriple(String graphUri, Triple value, String message) {
-        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.graph(graphUri).getRdfGraph().add(value);
-            transaction.commit(message);
-        }
+        WorkspaceFixtures.commitTriple(workspace, graphUri, value, message);
     }
 
     private java.util.List<Triple> triplesIn(String graphUri) {
-        try (var transaction = workspace.begin(ReadWrite.READ)) {
-            return transaction.graph(graphUri).getRdfGraph().find().toList();
-        }
-    }
-
-    private static void createGraph(Workspace workspace, String graphUri, Graph graph) {
-        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.createGraph(graphUri, graph);
-            transaction.commit("created graph %s".formatted(graphUri));
-        }
-    }
-
-    private static void renameGraph(Workspace workspace, String oldGraphUri, String newGraphUri) {
-        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.renameGraph(oldGraphUri, newGraphUri);
-            transaction.commit("renamed graph %s".formatted(oldGraphUri));
-        }
-    }
-
-    private static void deleteGraph(Workspace workspace, String graphUri) {
-        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.deleteGraph(graphUri);
-            transaction.commit("deleted graph %s".formatted(graphUri));
-        }
-    }
-
-    private static void setPrefixes(Workspace workspace, PrefixMapping prefixMapping) {
-        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.setPrefixes(prefixMapping);
-            transaction.commit("changed the namespace prefixes");
-        }
+        return WorkspaceFixtures.triplesIn(workspace, graphUri);
     }
 }

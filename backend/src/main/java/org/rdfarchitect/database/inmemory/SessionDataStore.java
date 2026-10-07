@@ -27,6 +27,7 @@ import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.models.changelog.RevertScope;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 
@@ -139,7 +140,7 @@ public interface SessionDataStore {
      * @param workspaceName literal workspace name
      * @param versionId the change to restore to
      */
-    void restoreToVersion(String workspaceName, UUID versionId);
+    WorkspaceHistoryStep restoreToVersion(String workspaceName, UUID versionId, RevertScope scope);
 
     /**
      * Returns the recorded changes of the workspace, newest first.

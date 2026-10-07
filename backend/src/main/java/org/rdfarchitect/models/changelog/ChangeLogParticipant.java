@@ -39,8 +39,38 @@ public interface ChangeLogParticipant {
      * transaction, and the log would then undo a change other than the one its entry names.
      */
     default UUID currentVersionId() {
+        return versionIdAt(0);
+    }
+
+    /**
+     * Returns the id of the version this participant gained {@code versionsBack} versions ago, or
+     * {@code null} if it does not track version ids.
+     *
+     * <p>Lets a caller that worked out how far back a state lies check that answer against the
+     * participant's own chain before acting on it.
+     *
+     * @param versionsBack how far back to look; {@code 0} is the version it is standing on
+     * @return the version's id
+     */
+    default UUID versionIdAt(int versionsBack) {
         return null;
     }
+
+    /**
+     * Takes a state this participant was in, so that it can be written back as a change of its own.
+     *
+     * <p>That is what makes a restore a new commit rather than a rewind: nothing is stepped, the
+     * old state is read where it already lies and written forward. History then only ever grows in
+     * one direction, the restore can itself be undone, and a restore covering part of the workspace
+     * never touches the rest.
+     *
+     * @param versionsBack how far back the state lies; {@code 0} is the current state
+     * @return what writes the captured state back, to be run inside a write transaction on the
+     *     owning workspace
+     * @throws org.rdfarchitect.exception.graph.GraphVersionControlException if the participant does
+     *     not reach that far back
+     */
+    CapturedState capture(int versionsBack);
 
     /** Steps back to the previous version. */
     void undo();
