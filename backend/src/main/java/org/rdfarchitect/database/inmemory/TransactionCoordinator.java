@@ -35,7 +35,6 @@ import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -297,10 +296,9 @@ class TransactionCoordinator {
                         snapshot != null ? snapshot.affectedGraphsOfLastVersion() : List.of()));
         if (lastDelta != null) {
             deltas.add(
-                    new ContextDelta(
-                            id,
-                            new WeakReference<>(lastDelta.getAdditions()),
-                            new WeakReference<>(lastDelta.getDeletions())));
+                    ContextDelta.ofTriples(id, lastDelta.getAdditions(), lastDelta.getDeletions()));
+        } else if (snapshot != null && !snapshot.valueChangesOfLastVersion().isEmpty()) {
+            deltas.add(ContextDelta.ofValues(id, snapshot.valueChangesOfLastVersion()));
         }
     }
 

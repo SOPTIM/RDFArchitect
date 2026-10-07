@@ -26,6 +26,7 @@ import static org.rdfarchitect.rdf.TestRDFUtils.triple;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +34,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.models.changelog.ContextDelta;
+import org.rdfarchitect.models.changelog.ValueChange;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 
 import java.util.List;
@@ -46,6 +48,7 @@ import java.util.UUID;
 class ChangeLogAttributionTest {
 
     private static final String CLASS_URI = "http://example.org/a#Breaker";
+    private static final String EXAMPLE_NAMESPACE = "http://example.org/";
 
     private Workspace workspace;
 
@@ -233,8 +236,79 @@ class ChangeLogAttributionTest {
     }
 
     // -------------------------------------------------------------------------
+    // What a change did to data kept as values rather than as triples
+    // -------------------------------------------------------------------------
+
+    @Nested
+    class ChangedValues {
+
+        @Test
+        void aPrefixChange_saysWhichPrefixItIntroduced() {
+            WorkspaceFixtures.setPrefixes(
+                    workspace, PrefixMapping.Factory.create().setNsPrefix("ex", EXAMPLE_NAMESPACE));
+
+            assertThat(valuesOf(newestChange(), "prefixes"))
+                    .contains(new ValueChange("ex", null, EXAMPLE_NAMESPACE));
+        }
+
+        @Test
+        void aColourChange_saysWhatTheSchemaWasDrawnInBeforeAndAfter() {
+            createGraph(GRAPH_A);
+            var generated = colorOf(GRAPH_A);
+
+            try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+                transaction.crossProfileInfo().setColor(GRAPH_A, "#123456");
+                transaction.commit("recoloured graph a");
+            }
+
+            assertThat(valuesOf(newestChange(), "colors"))
+                    .containsExactly(new ValueChange(GRAPH_A, generated, "#123456"));
+        }
+
+        @Test
+        void aValueTheChangeLeftAlone_isNotPartOfTheDelta() {
+            createGraph(GRAPH_A);
+            createGraph(GRAPH_B);
+
+            try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+                transaction.crossProfileInfo().setColor(GRAPH_A, "#123456");
+                transaction.commit("recoloured graph a");
+            }
+
+            assertThat(valuesOf(newestChange(), "colors"))
+                    .extracting(ValueChange::key)
+                    .containsExactly(GRAPH_A);
+        }
+
+        @Test
+        void aSchemaChange_carriesTriplesRatherThanValues() {
+            createGraph(GRAPH_A);
+
+            commitClass(GRAPH_A);
+
+            assertThat(newestChange().deltas())
+                    .singleElement()
+                    .satisfies(delta -> assertThat(delta.values()).isEmpty());
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    private List<ValueChange> valuesOf(WorkspaceChangeLogEntry change, String contextName) {
+        return change.deltas().stream()
+                .filter(delta -> delta.contextName().equals(contextName))
+                .findFirst()
+                .orElseThrow()
+                .values();
+    }
+
+    private String colorOf(String graphUri) {
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            return transaction.crossProfileInfo().getColor(graphUri);
+        }
+    }
 
     private WorkspaceChangeLogEntry newestChange() {
         return WorkspaceFixtures.newestChange(workspace);

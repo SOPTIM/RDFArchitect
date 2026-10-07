@@ -21,6 +21,7 @@ import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.models.changelog.CapturedState;
 import org.rdfarchitect.models.changelog.ChangeLogParticipant;
+import org.rdfarchitect.models.changelog.ValueChange;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -59,6 +60,9 @@ public abstract class SnapshotParticipant<S>
 
     /** Which graphs the most recent committed version reached. */
     private List<String> lastAffectedGraphs = List.of();
+
+    /** What the most recent committed version changed, value by value. */
+    private List<ValueChange> lastValueChanges = List.of();
 
     protected SnapshotParticipant(WorkspaceTransactionContext txnContext) {
         this.txnContext = txnContext;
@@ -120,6 +124,25 @@ public abstract class SnapshotParticipant<S>
     }
 
     /**
+     * Says what a commit changed value by value, so that the changelog can open up a change the
+     * user cannot read as triples. Worth answering wherever the state is a handful of named values
+     * someone might want to look at — the prefixes, the colours. The default reports nothing, which
+     * leaves the change showing in the log with no details to expand.
+     *
+     * @param before the state the commit started from
+     * @param after the state it produced
+     * @return what changed between the two
+     */
+    protected List<ValueChange> describeValueChanges(S before, S after) {
+        return List.of();
+    }
+
+    /** Returns what the most recent version of this participant changed, value by value. */
+    public List<ValueChange> valueChangesOfLastVersion() {
+        return lastValueChanges;
+    }
+
+    /**
      * Announces a mutation, joining the running write transaction. Callers must invoke this before
      * changing anything, including before handing out a reference the caller may change.
      *
@@ -160,6 +183,7 @@ public abstract class SnapshotParticipant<S>
         pastStates.push(after);
         lastAdditions = describeAdditions(before, after);
         lastAffectedGraphs = describeAffectedGraphs(before, after);
+        lastValueChanges = describeValueChanges(before, after);
     }
 
     @Override

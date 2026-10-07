@@ -17,26 +17,19 @@
 
 package org.rdfarchitect.api.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 @Data
-@NoArgsConstructor
-public class ContextDeltaDTO {
-    private String contextName;
-    private String graphUri;
+@AllArgsConstructor
+public class ValueChangeDTO {
 
-    /** The triples the change added and removed; {@code null} for data that is not held as RDF. */
-    private List<TripleDTO> additions;
+    /** What the value is called — the prefix, the schema the colour belongs to. */
+    private String key;
 
-    private List<TripleDTO> deletions;
+    /** What it was, or {@code null} if the change brought it into existence. */
+    private String before;
 
-    /**
-     * What the change did to data held as named values rather than as triples — the namespace
-     * prefixes, the colours the schemas are drawn in. Empty wherever {@link #getAdditions()} and
-     * {@link #getDeletions()} answer, since a participant is one or the other.
-     */
-    private List<ValueChangeDTO> values;
+    /** What it became, or {@code null} if the change removed it. */
+    private String after;
 }

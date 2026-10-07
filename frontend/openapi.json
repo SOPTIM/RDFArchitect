@@ -654,6 +654,12 @@
           },
           "graphUri" : {
             "type" : "string"
+          },
+          "values" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ValueChangeDTO"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -2368,6 +2374,20 @@
           },
           "valid" : {
             "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ValueChangeDTO" : {
+        "properties" : {
+          "after" : {
+            "type" : "string"
+          },
+          "before" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
           }
         },
         "type" : "object"

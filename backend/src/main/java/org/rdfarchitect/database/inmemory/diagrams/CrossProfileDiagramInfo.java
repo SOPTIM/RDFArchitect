@@ -20,10 +20,12 @@ package org.rdfarchitect.database.inmemory.diagrams;
 import lombok.Getter;
 
 import org.rdfarchitect.database.CrossProfileColors;
+import org.rdfarchitect.models.changelog.ValueChange;
 import org.rdfarchitect.rdf.graph.wrapper.SnapshotParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -87,5 +89,11 @@ public class CrossProfileDiagramInfo extends SnapshotParticipant<Map<String, Str
     protected void restore(Map<String, String> state) {
         colors.clear();
         colors.putAll(state);
+    }
+
+    @Override
+    protected List<ValueChange> describeValueChanges(
+            Map<String, String> before, Map<String, String> after) {
+        return ValueChange.between(before, after);
     }
 }

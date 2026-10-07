@@ -71,9 +71,14 @@ export function restoresChange(change, graphUri) {
 }
 
 /**
- * Returns the deltas of a change that the filter leaves showing.
+ * Returns the deltas of a change that the filter leaves showing, and that have something to show.
  *
- * @param {{contextDeltas?: Array<{contextName?: string, graphUri?: string}>}} change the change
+ * A delta carries either triples or named values, depending on whether the data behind it is held
+ * as RDF: the prefixes and the colours the schemas are drawn in are neither added nor deleted, they
+ * are given another value. One carrying neither would be a heading over nothing — the triples of a
+ * delta are held weakly, so they can be gone while the entry naming them remains.
+ *
+ * @param {{contextDeltas?: Array<object>}} change the change
  * @param {ChangelogFilter} filter what is being shown
  * @returns {Array<object>} the deltas to show
  */
@@ -82,6 +87,15 @@ export function visibleDeltas(change, { hiddenKinds, graphUri } = {}) {
     return (change.contextDeltas ?? []).filter(
         delta =>
             !hidden.has(delta.contextName) &&
-            (!graphUri || delta.graphUri === graphUri),
+            (!graphUri || delta.graphUri === graphUri) &&
+            showsSomething(delta),
+    );
+}
+
+function showsSomething(delta) {
+    return (
+        delta.additions?.length > 0 ||
+        delta.deletions?.length > 0 ||
+        delta.values?.length > 0
     );
 }

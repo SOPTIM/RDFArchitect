@@ -31,10 +31,10 @@ import org.rdfarchitect.models.changelog.ChangeLogParticipant;
 import org.rdfarchitect.models.changelog.ContextDelta;
 import org.rdfarchitect.models.changelog.ParticipantId;
 import org.rdfarchitect.models.changelog.ParticipantVersion;
+import org.rdfarchitect.models.changelog.ValueChange;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
-import java.lang.ref.WeakReference;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -83,10 +83,10 @@ class ChangeLogEntryMapperTest {
 
         var contextDeltas =
                 List.of(
-                        new ContextDelta(
+                        ContextDelta.ofTriples(
                                 ParticipantId.ofGraph(ParticipantId.Kind.RDF, GRAPH_URI),
-                                new WeakReference<>(delta.getAdditions()),
-                                new WeakReference<>(delta.getDeletions())));
+                                delta.getAdditions(),
+                                delta.getDeletions()));
         var participant =
                 ParticipantVersion.of(
                         ParticipantId.ofGraph(ParticipantId.Kind.RDF, GRAPH_URI),
@@ -146,6 +146,40 @@ class ChangeLogEntryMapperTest {
                 () -> assertThat(dto.getAffectedKinds()).containsExactly("rdf"),
                 () -> assertThat(dto.getAffectedGraphUris()).containsExactly(GRAPH_URI),
                 () -> assertThat(dto.getRestorableGraphUris()).containsExactly(GRAPH_URI));
+    }
+
+    @Test
+    void toDTO_aDeltaOfValuesCarriesThemInsteadOfTriples() {
+        var entry =
+                new WorkspaceChangeLogEntry(
+                        UUID.randomUUID(),
+                        TIMESTAMP,
+                        "changed the namespace prefixes",
+                        List.of(
+                                ParticipantVersion.of(
+                                        ParticipantId.ofWorkspace(ParticipantId.Kind.PREFIXES),
+                                        new UnsteppableParticipant(),
+                                        UUID.randomUUID())),
+                        List.of(
+                                ContextDelta.ofValues(
+                                        ParticipantId.ofWorkspace(ParticipantId.Kind.PREFIXES),
+                                        List.of(
+                                                new ValueChange(
+                                                        "ex", null, "http://example.org/")))),
+                        false);
+
+        var dto = changeLogEntryMapper.toDTO(entry);
+
+        var contextDelta = dto.getContextDeltas().getFirst();
+        var value = contextDelta.getValues().getFirst();
+        assertAll(
+                () -> assertThat(contextDelta.getContextName()).isEqualTo("prefixes"),
+                () -> assertThat(contextDelta.getAdditions()).isNull(),
+                () -> assertThat(contextDelta.getDeletions()).isNull(),
+                () -> assertThat(contextDelta.getValues()).hasSize(1),
+                () -> assertThat(value.getKey()).isEqualTo("ex"),
+                () -> assertThat(value.getBefore()).isNull(),
+                () -> assertThat(value.getAfter()).isEqualTo("http://example.org/"));
     }
 
     @Test

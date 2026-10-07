@@ -130,14 +130,24 @@ describe("restoresChange", () => {
 });
 
 describe("visibleDeltas", () => {
-    const change = {
-        contextDeltas: [
-            { contextName: "rdf", graphUri: GRAPH_A },
-            { contextName: "dl", graphUri: GRAPH_A },
-            { contextName: "rdf", graphUri: GRAPH_B },
-            { contextName: "prefixes", graphUri: null },
-        ],
+    const triple = { subject: "s", predicate: "p", object: "o" };
+    const rdfInA = {
+        contextName: "rdf",
+        graphUri: GRAPH_A,
+        additions: [triple],
     };
+    const dlInA = { contextName: "dl", graphUri: GRAPH_A, deletions: [triple] };
+    const rdfInB = {
+        contextName: "rdf",
+        graphUri: GRAPH_B,
+        additions: [triple],
+    };
+    const prefixes = {
+        contextName: "prefixes",
+        graphUri: null,
+        values: [{ key: "ex", before: null, after: "http://example.org/" }],
+    };
+    const change = { contextDeltas: [rdfInA, dlInA, rdfInB, prefixes] };
 
     test("shows every delta when nothing is filtered", () => {
         expect(visibleDeltas(change, {})).toHaveLength(4);
@@ -156,10 +166,7 @@ describe("visibleDeltas", () => {
     test("drops the deltas of other graphs, and those of none", () => {
         const shown = visibleDeltas(change, { graphUri: GRAPH_A });
 
-        expect(shown).toEqual([
-            { contextName: "rdf", graphUri: GRAPH_A },
-            { contextName: "dl", graphUri: GRAPH_A },
-        ]);
+        expect(shown).toEqual([rdfInA, dlInA]);
     });
 
     test("applies both filters at once", () => {
@@ -168,7 +175,22 @@ describe("visibleDeltas", () => {
             graphUri: GRAPH_A,
         });
 
-        expect(shown).toEqual([{ contextName: "rdf", graphUri: GRAPH_A }]);
+        expect(shown).toEqual([rdfInA]);
+    });
+
+    test("keeps a delta that changed values rather than triples", () => {
+        // The prefixes and the colours are not held as RDF, and a change to them would otherwise
+        // be a row that cannot be opened.
+        expect(visibleDeltas({ contextDeltas: [prefixes] }, {})).toEqual([
+            prefixes,
+        ]);
+    });
+
+    test("drops a delta that has nothing behind it", () => {
+        // The triples of a delta are held weakly, so they can be gone while the entry remains.
+        const collected = { contextName: "rdf", graphUri: GRAPH_A };
+
+        expect(visibleDeltas({ contextDeltas: [collected] }, {})).toEqual([]);
     });
 
     test("copes with a change that carries no deltas", () => {

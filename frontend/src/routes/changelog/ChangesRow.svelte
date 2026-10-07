@@ -19,10 +19,12 @@
     import { Fa } from "svelte-fa";
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import { counted } from "$lib/utils/plural.js";
 
     import { labelOf } from "./changeKinds.js";
     import { visibleDeltas as deltasToShow } from "./changelogFilter.js";
     import TripleTable from "./TripleTable.svelte";
+    import ValueTable from "./ValueTable.svelte";
 
     const {
         change,
@@ -37,18 +39,12 @@
 
     const rowKey = $derived(`${change.changeId}::row`);
 
-    /**
-     * The deltas the filter leaves showing, and only those that have something
-     * to show: a delta without triples would be a heading over nothing.
-     */
     const visibleDeltas = $derived(
-        deltasToShow(change, { hiddenKinds, graphUri }).filter(
-            context =>
-                context.additions?.length > 0 || context.deletions?.length > 0,
-        ),
+        deltasToShow(change, { hiddenKinds, graphUri }),
     );
 
-    const hasTriples = $derived(visibleDeltas.length > 0);
+    /** Whether there is anything behind the row worth expanding it for. */
+    const hasDetails = $derived(visibleDeltas.length > 0);
 
     /**
      * How the row is drawn where it stands: the one the workspace is on is
@@ -87,6 +83,10 @@
         return `${change.changeId}::${contextKey(context)}::deletions`;
     }
 
+    function getValuesKey(context) {
+        return `${change.changeId}::${contextKey(context)}::values`;
+    }
+
     // One change can touch the same kind of data in several graphs, so the kind alone would give
     // two contexts the same key and make them expand and collapse together.
     function contextKey(context) {
@@ -104,7 +104,7 @@
     </td>
 
     <td class="p-4 text-center">
-        {#if hasTriples}
+        {#if hasDetails}
             <button
                 onclick={toggleRowExpanded}
                 class="cursor-pointer text-lg"
@@ -149,27 +149,40 @@
                             Context: {describeContext(context)}
                         </h3>
 
-                        {#if context.additions?.length}
-                            <TripleTable
-                                triples={context.additions}
-                                color="green"
-                                title="Additions"
-                                expandedKey={getAdditionsKey(context)}
-                                {getExpanded}
-                                {setExpanded}
-                            />
-                        {/if}
-                        <div class="h-1"></div>
-                        {#if context.deletions?.length}
-                            <TripleTable
-                                triples={context.deletions}
-                                color="red"
-                                title="Deletions"
-                                expandedKey={getDeletionsKey(context)}
-                                {getExpanded}
-                                {setExpanded}
-                            />
-                        {/if}
+                        <div class="space-y-1">
+                            {#if context.additions?.length}
+                                <TripleTable
+                                    triples={context.additions}
+                                    color="green"
+                                    title="Additions"
+                                    expandedKey={getAdditionsKey(context)}
+                                    {getExpanded}
+                                    {setExpanded}
+                                />
+                            {/if}
+                            {#if context.deletions?.length}
+                                <TripleTable
+                                    triples={context.deletions}
+                                    color="red"
+                                    title="Deletions"
+                                    expandedKey={getDeletionsKey(context)}
+                                    {getExpanded}
+                                    {setExpanded}
+                                />
+                            {/if}
+                            {#if context.values?.length}
+                                <ValueTable
+                                    values={context.values}
+                                    title={counted(
+                                        context.values.length,
+                                        "value",
+                                    )}
+                                    expandedKey={getValuesKey(context)}
+                                    {getExpanded}
+                                    {setExpanded}
+                                />
+                            {/if}
+                        </div>
                     </div>
                 {/each}
             </div>
