@@ -26,6 +26,17 @@ import java.util.List;
 @NoArgsConstructor
 public class ContextDeltaDTO {
     private String contextName;
+    private String graphUri;
+
+    /** The triples the change added and removed; {@code null} for data that is not held as RDF. */
     private List<TripleDTO> additions;
+
     private List<TripleDTO> deletions;
+
+    /**
+     * What the change did to data held as named values rather than as triples — the namespace
+     * prefixes, the colours the schemas are drawn in. Empty wherever {@link #getAdditions()} and
+     * {@link #getDeletions()} answer, since a participant is one or the other.
+     */
+    private List<ValueChangeDTO> values;
 }

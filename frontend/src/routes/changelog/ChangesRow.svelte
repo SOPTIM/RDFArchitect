@@ -18,66 +18,43 @@
     import { faCaretDown, faCaretUp } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
-    import { restoreVersion } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import {
-        editorState,
-        forceReloadTrigger,
-    } from "$lib/sharedState.svelte.js";
-    import { graphStore } from "$lib/stores/graphStore.ts";
-    import { ontologyStore } from "$lib/stores/ontologyStore.ts";
+    import { counted } from "$lib/utils/plural.js";
 
+    import { labelOf } from "./changeKinds.js";
+    import { visibleDeltas as deltasToShow } from "./changelogFilter.js";
     import TripleTable from "./TripleTable.svelte";
+    import ValueTable from "./ValueTable.svelte";
 
     const {
         change,
         getExpanded,
         setExpanded,
-        newest = false,
+        hiddenKinds = new Set(),
+        graphUri = null,
+        current = false,
         readonly,
+        onRestore,
     } = $props();
 
     const rowKey = $derived(`${change.changeId}::row`);
 
-    async function callRestoreVersion(changeId) {
-        const workspaceName = editorState.selectedWorkspace.getValue();
-        const graphUri = editorState.selectedGraph.getValue();
-        const { error } = await restoreVersion({
-            path: { datasetName: workspaceName, graphURI: graphUri },
-            body: { versionId: changeId },
-        });
-        if (!error) {
-            console.log("Version restored successfully");
-            ontologyStore.invalidateGraph(workspaceName, graphUri);
-            graphStore.invalidateWorkspace(workspaceName);
-            forceReloadTrigger.trigger();
-            toastStore.success(
-                "Version restored",
-                "The selected version has been restored.",
-            );
-        } else {
-            console.error("Failed to restore version:", error);
-            toastStore.error(
-                "Restore failed",
-                "Could not restore the selected version.",
-            );
-        }
-    }
+    const visibleDeltas = $derived(
+        deltasToShow(change, { hiddenKinds, graphUri }),
+    );
 
-    function hasTriples(change) {
-        return change.contextDeltas?.some(
-            context =>
-                (context.additions && context.additions.length > 0) ||
-                (context.deletions && context.deletions.length > 0),
-        );
-    }
+    /** Whether there is anything behind the row worth expanding it for. */
+    const hasDetails = $derived(visibleDeltas.length > 0);
 
-    function isDataLost(change) {
-        return change.contextDeltas?.some(
-            context => context.additions === null || context.deletions === null,
-        );
-    }
+    /**
+     * How the row is drawn where it stands: the one the workspace is on is
+     * marked, the ones ahead of it are faded. Held here because the detail row
+     * below has to be drawn the same way.
+     */
+    const placement = $derived(
+        `${current ? "bg-background-select" : ""} ${change.undone ? "opacity-50" : ""}`,
+    );
+
     function toggleRowExpanded() {
         setExpanded(rowKey, !getExpanded(rowKey));
     }
@@ -93,16 +70,31 @@
         );
     }
 
-    function getAdditionsKey(contextName) {
-        return `${change.changeId}::${contextName}::additions`;
+    function describeContext(context) {
+        const kind = labelOf(context.contextName);
+        return context.graphUri ? `${kind} — ${context.graphUri}` : kind;
     }
 
-    function getDeletionsKey(contextName) {
-        return `${change.changeId}::${contextName}::deletions`;
+    function getAdditionsKey(context) {
+        return `${change.changeId}::${contextKey(context)}::additions`;
+    }
+
+    function getDeletionsKey(context) {
+        return `${change.changeId}::${contextKey(context)}::deletions`;
+    }
+
+    function getValuesKey(context) {
+        return `${change.changeId}::${contextKey(context)}::values`;
+    }
+
+    // One change can touch the same kind of data in several graphs, so the kind alone would give
+    // two contexts the same key and make them expand and collapse together.
+    function contextKey(context) {
+        return `${context.graphUri ?? "workspace"}::${context.contextName}`;
     }
 </script>
 
-<tr>
+<tr class={placement}>
     <td class="p-4">
         {change.message}
     </td>
@@ -112,7 +104,7 @@
     </td>
 
     <td class="p-4 text-center">
-        {#if hasTriples(change)}
+        {#if hasDetails}
             <button
                 onclick={toggleRowExpanded}
                 class="cursor-pointer text-lg"
@@ -124,62 +116,74 @@
     </td>
 
     <td class="w-px p-4 text-center whitespace-nowrap">
-        {#if newest}
-            <span class="text-default-text text-sm">Current Version</span>
-        {:else if isDataLost(change)}
-            <span class="text-default-text text-sm">
-                Can no longer be restored
+        {#if current}
+            <span
+                class="text-default-text text-sm font-semibold"
+                title="The version the workspace stands on"
+            >
+                Current version
             </span>
         {:else}
             <ButtonControl
                 disabled={readonly}
-                title={readonly ? "Cannot restore in read-only workspace" : ""}
-                callOnClick={() => callRestoreVersion(change.changeId)}
+                title={readonly
+                    ? "The workspace is read-only"
+                    : change.undone
+                      ? "Advance the workspace to this version"
+                      : "Restore the workspace to this version"}
+                callOnClick={() => onRestore(change)}
             >
-                Restore Version
+                {change.undone ? "Advance" : "Restore"}
             </ButtonControl>
         {/if}
     </td>
 </tr>
 
 {#if getExpanded(rowKey)}
-    <tr>
+    <tr class={placement}>
         <td colspan="4" class="p-0">
             <div class="space-y-6 p-2">
-                {#each change.contextDeltas ?? [] as context}
-                    {#if context.additions?.length || context.deletions?.length}
-                        <div class="border-border rounded-xl border p-2">
-                            <h3 class="mb-2 font-semibold">
-                                Context: {context.contextName}
-                            </h3>
+                {#each visibleDeltas as context}
+                    <div class="border-border rounded-xl border p-2">
+                        <h3 class="mb-2 font-semibold">
+                            Context: {describeContext(context)}
+                        </h3>
 
+                        <div class="space-y-1">
                             {#if context.additions?.length}
                                 <TripleTable
                                     triples={context.additions}
                                     color="green"
                                     title="Additions"
-                                    expandedKey={getAdditionsKey(
-                                        context.contextName,
-                                    )}
+                                    expandedKey={getAdditionsKey(context)}
                                     {getExpanded}
                                     {setExpanded}
                                 />
                             {/if}
-                            <div class="h-1"></div>
                             {#if context.deletions?.length}
                                 <TripleTable
                                     triples={context.deletions}
                                     color="red"
                                     title="Deletions"
-                                    expandedKey={getDeletionsKey(
-                                        context.contextName,
+                                    expandedKey={getDeletionsKey(context)}
+                                    {getExpanded}
+                                    {setExpanded}
+                                />
+                            {/if}
+                            {#if context.values?.length}
+                                <ValueTable
+                                    values={context.values}
+                                    title={counted(
+                                        context.values.length,
+                                        "value",
                                     )}
+                                    expandedKey={getValuesKey(context)}
                                     {getExpanded}
                                     {setExpanded}
                                 />
                             {/if}
                         </div>
-                    {/if}
+                    </div>
                 {/each}
             </div>
         </td>

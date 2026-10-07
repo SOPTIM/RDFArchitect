@@ -46,7 +46,9 @@ public class SchemaValidationService implements SchemaValidationUseCase {
     public ValidationReportDTO validateSchema(
             GraphIdentifier graphIdentifier, CGMESVersion cgmesVersion) {
         ValidationReportDTO report;
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 

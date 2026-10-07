@@ -27,17 +27,18 @@
     } from "$lib/sharedState.svelte.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
-    import {
-        graphLabeller,
-        graphTooltip,
-        graphUri as getUri,
-    } from "$lib/utils/graph-label.js";
+    import { compareGraphs } from "$lib/utils/graph-order.js";
+    import { uriSuffix } from "$lib/utils/iri.js";
+
+    import { getUri } from "../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
+
+    const { graphUri = null, onSelectGraph } = $props();
 
     let workspaceList = $state([]);
+
     let selectedWorkspaceName = $derived(
         editorState.selectedWorkspace.getValue(),
     );
-    let selectedGraphUri = $derived(editorState.selectedGraph.getValue());
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
@@ -45,33 +46,49 @@
     });
 
     async function fetchNavigationObject() {
-        const newWorkspaceList = [];
         const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
-        for (const workspace of workspaces) {
-            const workspaceName = workspace.label;
-            let showWorkspaceContents = workspaceName === selectedWorkspaceName;
-            showWorkspaceContents |= workspaceList.find(
-                workspaceObject => workspaceObject.label === workspaceName,
-            )?.showContents;
-            const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
-            newWorkspaceList.push({
-                label: workspaceName,
-                // Copied: this list becomes a $state proxy, and the one graphStore handed over
-                // is its own cache.
-                graphs: [...graphs],
-                labelOf: graphLabeller(graphs),
-                showContents: showWorkspaceContents,
-            });
-        }
-        workspaceList = newWorkspaceList;
+        workspaceList = await Promise.all(
+            workspaces.map(async workspace => {
+                const workspaceName = workspace.label;
+                const wasExpanded = workspaceList.find(
+                    entry => entry.label === workspaceName,
+                )?.showContents;
+                return {
+                    label: workspaceName,
+                    graphs: await listGraphs(workspaceName),
+                    showContents:
+                        wasExpanded ?? workspaceName === selectedWorkspaceName,
+                };
+            }),
+        );
+    }
+
+    /**
+     * The schemas of a workspace, in the order the editor's own navigation
+     * lists them — two sidebars showing the same schemas must not disagree
+     * about where each of them sits.
+     */
+    async function listGraphs(workspaceName) {
+        const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
+        return [...graphs].sort((a, b) =>
+            compareGraphs(
+                { label: labelOf(a), uri: getUri(a) },
+                { label: labelOf(b), uri: getUri(b) },
+            ),
+        );
+    }
+
+    /** What a schema is called in the navigation. */
+    function labelOf(graph) {
+        return graph.keyword ?? uriSuffix(getUri(graph));
     }
 </script>
 
-<div class="nav-sidebar h-full w-full">
-    <div class="nav-sidebar__scroll no-scrollbar">
+<div class="flex h-full min-h-0 w-full flex-col">
+    <div class="no-scrollbar min-h-0 flex-1 overflow-y-auto py-[0.4rem]">
         {#if workspaceList && workspaceList.length > 0}
-            <div class="flex flex-col gap-1 pr-2">
-                {#each workspaceList as workspace}
+            <div class="flex flex-col gap-1 px-2">
+                {#each workspaceList as workspace (workspace.label)}
                     <div>
                         <NavigationEntry
                             level={1}
@@ -80,12 +97,13 @@
                             hasChildren={workspace.graphs.length > 0}
                             expanded={workspace.showContents}
                             isSelected={workspace.label ===
-                                selectedWorkspaceName}
-                            title={workspace.label}
+                                selectedWorkspaceName && !graphUri}
+                            title="{workspace.label} — every change in the workspace"
                             onclick={() => {
                                 editorState.selectedWorkspace.updateValue(
                                     workspace.label,
                                 );
+                                onSelectGraph(null);
                             }}
                             onToggle={() => {
                                 if (!workspace.graphs.length) return;
@@ -94,23 +112,21 @@
                             }}
                         />
                         {#if workspace.showContents}
-                            {#each workspace.graphs as graph}
+                            {#each workspace.graphs as graph (getUri(graph))}
                                 <NavigationEntry
                                     level={2}
-                                    label={workspace.labelOf(graph)}
+                                    label={labelOf(graph)}
                                     secondaryLabel={graph.uri.prefix ?? ""}
                                     icon={faDiagramProject}
                                     isSelected={selectedWorkspaceName ===
                                         workspace.label &&
-                                        getUri(graph) === selectedGraphUri}
-                                    title={graphTooltip(graph)}
+                                        getUri(graph) === graphUri}
+                                    title={getUri(graph)}
                                     onclick={() => {
                                         editorState.selectedWorkspace.updateValue(
                                             workspace.label,
                                         );
-                                        editorState.selectedGraph.updateValue(
-                                            getUri(graph),
-                                        );
+                                        onSelectGraph(getUri(graph));
                                     }}
                                 />
                             {/each}

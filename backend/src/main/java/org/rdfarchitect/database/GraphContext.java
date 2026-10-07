@@ -18,31 +18,30 @@
 package org.rdfarchitect.database;
 
 import org.apache.jena.graph.Graph;
-import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.models.changelog.ChangeLog;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
-import org.rdfarchitect.rdf.graph.wrapper.RDFGraphDelta;
 
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * Transactional access to the RDF graph, diagram layout, and custom SHACL data for a single named
- * graph. Extends {@link Transactional} so it can be used in try-with-resources.
+ * The contents of a single named graph: its RDF schema, its diagram layout, its custom SHACL and
+ * its custom diagrams.
+ *
+ * <p>Carries no transaction of its own. Graphs take part in the transaction of the workspace that
+ * holds them and are reachable only through {@link WorkspaceTransaction#graph(String)}, so a graph
+ * cannot be touched outside a transaction.
  */
-public interface GraphContext extends Transactional, VersionControl {
+public interface GraphContext {
 
-    @Override
-    GraphContext begin(ReadWrite mode);
-
+    /** Returns the RDF schema of the graph. */
     Graph getRdfGraph();
 
-    DiagramLayoutDelta getDiagramLayout();
+    /** Returns the diagram layout belonging to the graph. */
+    DiagramLayout getDiagramLayout();
 
-    RDFGraphDelta getCustomSHACL();
+    /** Returns the custom SHACL shapes of the graph. */
+    Graph getCustomSHACL();
 
-    ChangeLog getChangeLog();
-
+    /** Returns the custom diagrams defined on the graph, by id. */
     Map<UUID, CustomDiagram> getCustomDiagrams();
 }

@@ -20,8 +20,11 @@ package org.rdfarchitect.api.dto;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Triple;
 import org.mapstruct.Mapper;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.mapstruct.Mapping;
 import org.rdfarchitect.models.changelog.ContextDelta;
+import org.rdfarchitect.models.changelog.ValueChange;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
+import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
 import java.lang.ref.WeakReference;
@@ -30,19 +33,39 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface ChangeLogEntryMapper {
 
-    ChangeLogEntryDTO toDTO(ChangeLogEntry entry);
+    @Mapping(target = "contextDeltas", source = "deltas")
+    @Mapping(target = "removedOnUndo", expression = "java(entry.removedOnUndo())")
+    @Mapping(
+            target = "affectedGraphUris",
+            expression = "java(java.util.List.copyOf(entry.affectedGraphUris()))")
+    @Mapping(
+            target = "restorableGraphUris",
+            expression = "java(java.util.List.copyOf(entry.restorableGraphUris()))")
+    @Mapping(target = "affectedKinds", expression = "java(entry.affectedKinds())")
+    ChangeLogEntryDTO toDTO(WorkspaceChangeLogEntry entry);
 
-    List<ChangeLogEntryDTO> toDTOList(List<ChangeLogEntry> entries);
+    List<ChangeLogEntryDTO> toDTOList(List<WorkspaceChangeLogEntry> entries);
+
+    HistoryStepDTO toDTO(WorkspaceHistoryStep step);
 
     default ContextDeltaDTO toContextDeltaDTO(ContextDelta contextDelta) {
         var dto = new ContextDeltaDTO();
         dto.setContextName(contextDelta.contextName());
+        dto.setGraphUri(contextDelta.graphUri());
         dto.setAdditions(mapTriples(contextDelta.additions()));
         dto.setDeletions(mapTriples(contextDelta.deletions()));
+        dto.setValues(contextDelta.values().stream().map(this::mapValueChange).toList());
         return dto;
     }
 
+    default ValueChangeDTO mapValueChange(ValueChange valueChange) {
+        return new ValueChangeDTO(valueChange.key(), valueChange.before(), valueChange.after());
+    }
+
     default List<TripleDTO> mapTriples(WeakReference<Graph> graphReference) {
+        if (graphReference == null) {
+            return null;
+        }
         var graph = graphReference.get();
         if (graph == null) {
             return null;

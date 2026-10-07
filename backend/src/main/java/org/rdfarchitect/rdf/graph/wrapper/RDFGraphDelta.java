@@ -31,41 +31,60 @@ import org.jetbrains.annotations.NotNull;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphNotInAWriteTransactionException;
 import org.rdfarchitect.exception.graph.GraphVersionControlException;
+import org.rdfarchitect.models.changelog.CapturedState;
+import org.rdfarchitect.models.changelog.ChangeLogParticipant;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
- * A {@link Graph} implementation backed by {@link DeltaCompressible} deltas. Has no lock of its own
- * — transaction lifecycle is managed exclusively by {@link
- * org.rdfarchitect.database.inmemory.GraphWithContextTransactional}. All {@link Graph} methods
- * enforce that the coordinator has an active transaction via the shared {@link TransactionContext}.
+ * A {@link Graph} implementation backed by {@link DeltaCompressible} deltas. Has no lock and no
+ * transaction of its own: it takes part in the transaction of the workspace that owns it, and every
+ * {@link Graph} method checks against the shared {@link WorkspaceTransactionContext} that one is
+ * running.
  */
-public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable {
+public class RDFGraphDelta
+        implements Graph, TransactionParticipant, DeltaSource, ChangeLogParticipant {
 
     private static final Logger logger = LoggerFactory.getLogger(RDFGraphDelta.class);
 
-    private final TransactionContext txnContext;
+    private final WorkspaceTransactionContext txnContext;
+
+    /**
+     * What to enrol when this graph is written to. A graph that is the inner store of a larger
+     * participant enrols that participant instead of itself, so that a changelog entry names the
+     * thing the user changed rather than its implementation.
+     */
+    private final TransactionParticipant enrolAs;
 
     private final Deque<DeltaCompressible> pastDeltas;
     private DeltaCompressible currentDelta;
     private final Deque<DeltaCompressible> futureDeltas;
 
-    private final int maxVersions;
-    private final int compressCount;
+    public RDFGraphDelta(@NotNull Graph base, WorkspaceTransactionContext txnContext) {
+        this(base, txnContext, null);
+    }
 
+    /**
+     * Creates a graph that enrols {@code enrolAs} rather than itself when written to.
+     *
+     * @param base the initial contents
+     * @param txnContext the transaction context of the owning workspace
+     * @param enrolAs the participant to enrol on a write, or {@code null} for this graph itself
+     */
     public RDFGraphDelta(
             @NotNull Graph base,
-            int maxVersions,
-            int compressCount,
-            TransactionContext txnContext) {
+            WorkspaceTransactionContext txnContext,
+            TransactionParticipant enrolAs) {
         this.txnContext = txnContext;
-        this.maxVersions = maxVersions;
-        this.compressCount = compressCount;
+        this.enrolAs = enrolAs != null ? enrolAs : this;
         pastDeltas = new ArrayDeque<>();
         pastDeltas.push(new DeltaCompressible(base));
         currentDelta = new DeltaCompressible(head());
@@ -174,6 +193,11 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
     @Override
     public PrefixMapping getPrefixMapping() {
         checkTransaction();
+        if (txnContext.transactionMode() != ReadWrite.READ) {
+            // A write through the mapping we hand out never reaches add() or delete(), so it
+            // has to be enrolled here. The commit drops enrolments that changed nothing.
+            txnContext.enroll(enrolAs);
+        }
         return currentDelta.getPrefixMapping();
     }
 
@@ -185,10 +209,6 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
     public void commit() {
         pastDeltas.push(currentDelta);
         currentDelta = new DeltaCompressible(head());
-        futureDeltas.clear();
-        if (countVersions() > maxVersions) {
-            compressBase();
-        }
         logger.debug("Committed transaction.");
     }
 
@@ -203,8 +223,49 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
     }
 
     @Override
+    public CapturedState capture(int versionsBack) {
+        var version = versionAt(versionsBack);
+        var triples = version.find().toList();
+        var prefixes = Map.copyOf(version.getPrefixMapping().getNsPrefixMap());
+        return () -> reinstate(triples, prefixes);
+    }
+
+    /**
+     * Returns a committed version of this graph without stepping to it.
+     *
+     * <p>A delta's base is the delta before it, so every version in the chain already composes to
+     * the state it left behind: reading one is a read, not a rewind.
+     */
+    private DeltaCompressible versionAt(int versionsBack) {
+        return RetainedVersions.at(pastDeltas, versionsBack);
+    }
+
+    /**
+     * Writes a captured state back as the smallest change that reaches it, so that the commit
+     * recording the change shows what really differs rather than the whole graph twice over.
+     */
+    private void reinstate(List<Triple> triples, Map<String, String> prefixes) {
+        var wanted = new HashSet<>(triples);
+        var present = currentDelta.find().toList();
+        present.stream().filter(triple -> !wanted.contains(triple)).forEach(this::delete);
+        present.forEach(wanted::remove);
+        wanted.forEach(this::add);
+        reinstatePrefixes(prefixes);
+    }
+
+    private void reinstatePrefixes(Map<String, String> prefixes) {
+        var mapping = currentDelta.getPrefixMapping();
+        if (mapping.getNsPrefixMap().equals(prefixes)) {
+            return;
+        }
+        checkWriteTransaction();
+        mapping.clearNsPrefixMap();
+        mapping.setNsPrefixes(prefixes);
+    }
+
+    @Override
     public void undo() {
-        if (!canUndo()) {
+        if (currentVersion() == 0) {
             throw new GraphVersionControlException("Cannot undo: already at the oldest version.");
         }
         futureDeltas.push(pastDeltas.pop());
@@ -213,7 +274,7 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
 
     @Override
     public void redo() {
-        if (!canRedo()) {
+        if (futureDeltas.isEmpty()) {
             throw new GraphVersionControlException("Cannot redo: already at the newest version.");
         }
         pastDeltas.push(futureDeltas.pop());
@@ -221,30 +282,13 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
     }
 
     @Override
-    public boolean canUndo() {
-        return currentVersion() > 0;
-    }
-
-    @Override
-    public boolean canRedo() {
-        return !futureDeltas.isEmpty();
-    }
-
-    @Override
-    public void restore(UUID versionId) {
-        if (!containsDelta(versionId)) {
-            throw new GraphVersionControlException(
-                    "Cannot restore to version " + versionId + ": does not exist.");
-        }
-        while (!pastDeltas.isEmpty() && !pastDeltas.peek().getVersionId().equals(versionId)) {
-            pastDeltas.pop();
-        }
-        currentDelta = new DeltaCompressible(head());
-    }
-
-    @Override
     public DeltaCompressible getLastDelta() {
         return pastDeltas.peek();
+    }
+
+    @Override
+    public UUID versionIdAt(int versionsBack) {
+        return versionAt(versionsBack).getVersionId();
     }
 
     @Override
@@ -269,6 +313,7 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
         if (txnContext.transactionMode() == ReadWrite.READ) {
             throw new GraphNotInAWriteTransactionException();
         }
+        txnContext.enroll(enrolAs);
     }
 
     private DeltaCompressible head() {
@@ -283,19 +328,30 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
         return pastDeltas.size() - 1;
     }
 
-    private int countVersions() {
-        return pastDeltas.size() + futureDeltas.size();
-    }
-
-    private boolean containsDelta(UUID versionId) {
-        return pastDeltas.stream().anyMatch(d -> d.getVersionId().equals(versionId));
-    }
-
-    private void compressBase() {
-        int deleteCount = Math.min(pastDeltas.size() - 1, compressCount);
-        for (int i = 0; i < deleteCount; i++) {
-            pastDeltas.removeLast();
+    @Override
+    public void discardOldestVersion() {
+        if (pastDeltas.size() < 2) {
+            return;
         }
+        pastDeltas.removeLast();
         pastDeltas.getLast().compress();
+    }
+
+    @Override
+    public void discardRedoHistory() {
+        futureDeltas.clear();
+    }
+
+    @Override
+    public void foldLastVersionIntoPrevious() {
+        if (pastDeltas.size() < 2) {
+            return;
+        }
+        // Compressing first detaches the newest delta from the version it is about to replace, so
+        // dropping that version leaves the chain below it intact.
+        var newest = pastDeltas.pop();
+        newest.compress();
+        newest.adoptVersionId(pastDeltas.pop().getVersionId());
+        pastDeltas.push(newest);
     }
 }

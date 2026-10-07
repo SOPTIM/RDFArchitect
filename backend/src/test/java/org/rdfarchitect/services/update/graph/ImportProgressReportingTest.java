@@ -89,7 +89,7 @@ class ImportProgressReportingTest {
 
     @Test
     void importGraphs_cancelledAfterFirstFile_skipsTheRestAndKeepsWhatWasImported() {
-        listener.cancelAfterFirstFinish = true;
+        listener.cancelAfterFirstStart = true;
 
         var result =
                 importGraphsUseCase.importGraphs(
@@ -98,8 +98,11 @@ class ImportProgressReportingTest {
                         null,
                         listener);
 
+        // Skips are reported as they happen, imports once the graphs are in the workspace, so the
+        // outcomes no longer arrive in file order. The panel keys them by index.
         assertThat(listener.outcomes)
-                .containsExactly(Map.entry(0, Outcome.IMPORTED), Map.entry(1, Outcome.SKIPPED));
+                .containsExactlyInAnyOrderEntriesOf(
+                        Map.of(0, Outcome.IMPORTED, 1, Outcome.SKIPPED));
         assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "first");
         assertThat(result.failedFileNames()).isEmpty();
     }
@@ -242,12 +245,12 @@ class ImportProgressReportingTest {
                 "files", "archive.zip", "application/zip", bytes.toByteArray());
     }
 
-    /** Collects everything the import reports, and can cancel it once a file is done. */
+    /** Collects everything the import reports, and can cancel it once a file has been picked up. */
     private static final class RecordingListener implements ImportProgressListener {
 
         private final List<PlannedImport> planned = new ArrayList<>();
         private final Map<Integer, Outcome> outcomes = new LinkedHashMap<>();
-        private boolean cancelAfterFirstFinish;
+        private boolean cancelAfterFirstStart;
         private boolean cancelled;
 
         @Override
@@ -256,11 +259,15 @@ class ImportProgressReportingTest {
         }
 
         @Override
-        public void finished(int index, Outcome outcome, String graphUri) {
-            outcomes.put(index, outcome);
-            if (cancelAfterFirstFinish) {
+        public void started(int index) {
+            if (cancelAfterFirstStart) {
                 cancelled = true;
             }
+        }
+
+        @Override
+        public void finished(int index, Outcome outcome, String graphUri) {
+            outcomes.put(index, outcome);
         }
 
         @Override
