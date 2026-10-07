@@ -30,6 +30,7 @@ import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeKey;
 
 import java.util.Set;
 import java.util.UUID;
@@ -84,19 +85,6 @@ public class DiagramLayoutServiceUtils {
         DLUpdates.insertDiagramObject(diagramLayoutModel, diagramObject);
 
         return diagramObjectMRID;
-    }
-
-    /**
-     * Helper method for creating and inserting a {@link DiagramObjectPoint} into a given model.
-     *
-     * @param diagramLayoutModel the model into which the diagram object point is inserted
-     * @param diagrammUUID the uuid of the diagram
-     * @param diagramObjectMRID the mRID of the diagram object the point belongs to
-     */
-    public void insertDiagramObjectPoint(
-            Model diagramLayoutModel, UUID diagrammUUID, MRID diagramObjectMRID) {
-        insertDiagramObjectPoint(
-                diagramLayoutModel, diagramObjectMRID, diagrammUUID, 0, 0, null, null);
     }
 
     /**
@@ -216,41 +204,29 @@ public class DiagramLayoutServiceUtils {
     }
 
     /**
-     * Creates the edge diagram object for a new inheritance relationship.
+     * Creates the diagram object of an edge. The edge gets no points: the edge is drawn straight
+     * between its classes until bend points are stored for it.
      *
      * @param diagramLayoutModel the model into which the diagram object is inserted
      * @param diagramUUID the UUID of the diagram the edge belongs to
+     * @param edge the two identified objects the edge connects
      * @param name the name of the edge diagram object
-     * @param subClassUUID the UUID of the sub class, used as the edge's identified object
      * @return the mRID of the created diagram object
      */
-    public MRID insertInheritanceLayoutData(
-            Model diagramLayoutModel, UUID diagramUUID, String name, UUID subClassUUID) {
-        return insertDiagramObject(
+    public MRID insertEdgeDiagramObject(
+            Model diagramLayoutModel, UUID diagramUUID, EdgeKey edge, String name) {
+        var diagramObjectMRID = new MRID(UUID.randomUUID());
+        DLUpdates.insertDiagramObject(
                 diagramLayoutModel,
-                diagramUUID,
-                name,
-                subClassUUID,
-                DiagramObjectStyle.INHERITANCE);
-    }
-
-    /**
-     * Creates the edge diagram object for a new association.
-     *
-     * @param diagramLayoutModel the model into which the diagram object is inserted
-     * @param diagramUUID the UUID of the diagram the edge belongs to
-     * @param name the name of the edge diagram object
-     * @param associationUUID the UUID of the association, used as the edge's identified object
-     * @return the mRID of the created diagram object
-     */
-    public MRID insertAssociationLayoutData(
-            Model diagramLayoutModel, UUID diagramUUID, String name, UUID associationUUID) {
-        return insertDiagramObject(
-                diagramLayoutModel,
-                diagramUUID,
-                name,
-                associationUUID,
-                DiagramObjectStyle.ASSOCIATION);
+                DiagramObject.builder()
+                        .mRID(diagramObjectMRID)
+                        .name(name)
+                        .belongsToDiagramObjectStyle(edge.style())
+                        .belongsToDiagram(new MRID(diagramUUID))
+                        .belongsToIdentifiedObject(new MRID(edge.identifiedObject()))
+                        .otherClass(new MRID(edge.otherClass()))
+                        .build());
+        return diagramObjectMRID;
     }
 
     /**

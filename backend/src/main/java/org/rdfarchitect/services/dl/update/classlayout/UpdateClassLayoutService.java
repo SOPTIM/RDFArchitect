@@ -46,6 +46,8 @@ import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutReconciler;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeResolver;
 import org.rdfarchitect.services.rendering.MergedClasses;
 import org.springframework.stereotype.Service;
 
@@ -118,6 +120,10 @@ public class UpdateClassLayoutService
                     classUUID,
                     classLayoutPosition != null ? classLayoutPosition.getXPosition() : 0,
                     classLayoutPosition != null ? classLayoutPosition.getYPosition() : 0);
+            EdgeLayoutReconciler.reconcileEdges(
+                    diagramLayoutModel,
+                    packageUUID,
+                    EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
             ctx.commit();
         }
     }
@@ -135,7 +141,13 @@ public class UpdateClassLayoutService
                             ? packageUUID
                             : diagramLayout.getDefaultPackageMRID().getUuid();
 
-            applyClassPositions(diagramLayoutModel, resolvedPackageUUID, classPositionDTOList);
+            if (applyClassPositions(
+                    diagramLayoutModel, resolvedPackageUUID, classPositionDTOList)) {
+                EdgeLayoutReconciler.reconcileEdges(
+                        diagramLayoutModel,
+                        resolvedPackageUUID,
+                        EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
+            }
 
             ctx.commit();
         }
@@ -147,13 +159,25 @@ public class UpdateClassLayoutService
         var diagramLayoutModel =
                 databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
 
-        applyClassPositions(diagramLayoutModel, diagramUUID, classPositionDTOList);
+        if (applyClassPositions(diagramLayoutModel, diagramUUID, classPositionDTOList)) {
+            EdgeLayoutReconciler.reconcileEdges(
+                    diagramLayoutModel,
+                    diagramUUID,
+                    EdgeResolver.forDataset(databasePort, datasetName));
+        }
     }
 
-    private void applyClassPositions(
+    /**
+     * Moves the classes of a diagram, creating the layout data of classes that have none yet.
+     *
+     * @return whether layout data was created for a class, in which case the classes may have
+     *     gained edges in the diagram
+     */
+    private boolean applyClassPositions(
             Model diagramLayoutModel,
             UUID diagramUUID,
             List<ClassPositionDTO> classPositionDTOList) {
+        var createdClassLayoutData = false;
         for (var classPositionDTO : classPositionDTOList) {
             var diagramObject =
                     DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
@@ -172,6 +196,7 @@ public class UpdateClassLayoutService
                         classPositionDTO.getClassUUID(),
                         classPositionDTO.getXPosition(),
                         classPositionDTO.getYPosition());
+                createdClassLayoutData = true;
                 continue;
             }
             moveClassDOPPosition(
@@ -182,6 +207,7 @@ public class UpdateClassLayoutService
                     classPositionDTO.getYPosition(),
                     classPositionDTO.getZPosition());
         }
+        return createdClassLayoutData;
     }
 
     /**
@@ -219,6 +245,10 @@ public class UpdateClassLayoutService
                         xPosition,
                         yPosition,
                         zPosition != null ? zPosition : diagramObjectPoint.getPosition().getZ()));
+        if (diagramObjectPoint.getBelongsToGluePoint() == null) {
+            diagramObjectPoint.setBelongsToGluePoint(
+                    resolveGluePointMRID(diagramLayoutModel, diagramObject.getMRID()));
+        }
         DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);
     }
 
@@ -251,12 +281,18 @@ public class UpdateClassLayoutService
     public void deleteClassLayoutData(GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
+            var diagramUUIDs = new LinkedHashSet<UUID>();
             for (var diagramObject :
                     DLObjectFetcher.fetchAllDOs(
                             diagramLayoutModel, classUUID, DiagramObjectStyle.CLASS)) {
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
+                diagramUUIDs.add(diagramObject.getBelongsToDiagram().getUuid());
             }
             deleteOrphanedLabels(diagramLayoutModel, ctx.getRdfGraph(), classUUID);
+            var edgeResolver = EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph());
+            for (var diagramUUID : diagramUUIDs) {
+                EdgeLayoutReconciler.reconcileEdges(diagramLayoutModel, diagramUUID, edgeResolver);
+            }
             ctx.commit();
         }
     }
@@ -329,6 +365,10 @@ public class UpdateClassLayoutService
                     classes.stream()
                             .map(ClassInDiagram::getUuid)
                             .collect(Collectors.toCollection(LinkedHashSet::new)));
+            EdgeLayoutReconciler.reconcileEdges(
+                    diagramLayoutModel,
+                    diagramUUID,
+                    EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
             ctx.commit();
         }
     }
@@ -375,8 +415,12 @@ public class UpdateClassLayoutService
                 updated.removeIf(cls -> classUUIDs.contains(cls.getUuid()));
                 diagram.setClasses(updated);
             }
-            deleteLayoutForClasses(
-                    ctx.getDiagramLayout().getDiagramLayoutModel(), diagramUUID, classUUIDs);
+            var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
+            deleteLayoutForClasses(diagramLayoutModel, diagramUUID, classUUIDs);
+            EdgeLayoutReconciler.reconcileEdges(
+                    diagramLayoutModel,
+                    diagramUUID,
+                    EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
             ctx.commit();
         }
     }
@@ -430,6 +474,10 @@ public class UpdateClassLayoutService
                 diagramLayoutModel,
                 diagramUUID,
                 mergedUuidsOf(classes, classUriByUuid(datasetName, classes)));
+        EdgeLayoutReconciler.reconcileEdges(
+                diagramLayoutModel,
+                diagramUUID,
+                EdgeResolver.forDataset(databasePort, datasetName));
     }
 
     private Map<UUID, String> classUriByUuid(String datasetName, List<ClassInDiagram> classes) {
@@ -467,19 +515,20 @@ public class UpdateClassLayoutService
         var diagram = databasePort.getDatasetDiagrams(datasetName).get(diagramUUID);
         if (diagram == null) {
             deleteLayoutForClasses(model, diagramUUID, classUUIDs);
-            return;
+        } else {
+            var updated = diagram.getClasses();
+            var classUriByUuid = classUriByUuid(datasetName, updated);
+            updated.removeIf(removedByAnyOf(classUUIDs, classUriByUuid));
+            diagram.setClasses(updated);
+
+            var stillRendered = mergedUuidsOf(updated, classUriByUuid);
+            deleteLayoutForClasses(
+                    model,
+                    diagramUUID,
+                    classUUIDs.stream().filter(uuid -> !stillRendered.contains(uuid)).toList());
         }
-
-        var updated = diagram.getClasses();
-        var classUriByUuid = classUriByUuid(datasetName, updated);
-        updated.removeIf(removedByAnyOf(classUUIDs, classUriByUuid));
-        diagram.setClasses(updated);
-
-        var stillRendered = mergedUuidsOf(updated, classUriByUuid);
-        deleteLayoutForClasses(
-                model,
-                diagramUUID,
-                classUUIDs.stream().filter(uuid -> !stillRendered.contains(uuid)).toList());
+        EdgeLayoutReconciler.reconcileEdges(
+                model, diagramUUID, EdgeResolver.forDataset(databasePort, datasetName));
     }
 
     @Override

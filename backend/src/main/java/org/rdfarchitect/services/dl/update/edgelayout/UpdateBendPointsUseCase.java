@@ -26,18 +26,19 @@ import java.util.UUID;
 public interface UpdateBendPointsUseCase {
 
     /**
-     * Replaces all bend points of the edge identified by the given identified object UUID with the
-     * provided list of bend points. Passing the full list covers creation, movement and deletion of
-     * bend points in a single call, consistent with the replace strategy used elsewhere.
+     * Replaces all bend points of an edge with the provided list of bend points. Passing the full
+     * list covers creation, movement and deletion of bend points in a single call, consistent with
+     * the replace strategy used elsewhere. Does nothing if the edge has no diagram object in the
+     * diagram, i.e. if one of its classes has no layout data there.
      *
      * @param graphIdentifier the identifier of the graph
      * @param diagramUUID the UUID of the diagram the edge belongs to
-     * @param identifiedObjectUUID the UUID of the identified object the edge references
+     * @param edge the edge whose bend points are replaced
      * @param bendPoints the new, ordered list of bend points for the edge
      */
     void updateBendPoints(
             GraphIdentifier graphIdentifier,
             UUID diagramUUID,
-            UUID identifiedObjectUUID,
+            EdgeKey edge,
             List<BendPointDTO> bendPoints);
 }
