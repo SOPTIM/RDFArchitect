@@ -68,6 +68,7 @@ public class DLObjectFactory {
                         DiagramObjectStyle.byName(parser.getName(DLQueryVars.STYLE_NAME)))
                 .belongsToDiagram(parser.getMRID(DLQueryVars.DIAGRAM_MRID))
                 .belongsToIdentifiedObject(parser.getMRID(DLQueryVars.IO_MRID))
+                .otherClass(parser.getMRID(DLQueryVars.OTHER_CLASS_MRID))
                 .build();
     }
 

@@ -22,6 +22,7 @@ import lombok.experimental.UtilityClass;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
 /**
  * Class containing CGMES 3.0 DiagramLayout Profile {@link Resource resources}, {@link Property
@@ -68,6 +69,16 @@ public class DL {
     public final Property belongsToGluePoint =
             ResourceFactory.createProperty(
                     constructDLNamespacedTerm("DiagramObjectPoint.DiagramObjectGluePoint"));
+
+    /**
+     * Not part of the DiagramLayout profile. An edge connects two identified objects, but {@link
+     * #belongsToIdentifiedObject} can only reference one of them, so this references the other: the
+     * super class of an inheritance edge, or the inverse end of an association edge. Without it,
+     * the inheritance edges of a class with several super classes (possible in merged diagrams)
+     * could not be told apart.
+     */
+    public final Property otherClass =
+            ResourceFactory.createProperty(RDFA.URI + "DiagramObject.otherClass");
 
     // OBJECTS
     public final Resource diagramType =
