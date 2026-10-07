@@ -325,6 +325,8 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         return new ArrayList<>(refs.values());
     }
 
+    /*TODO RENDERING: SEHR WICHTIG: BEND POINTS AUCH IN RENDERING VON MERGED VIEW UND CO EINBAUEN
+    merged view benutzt iwie extra rendering, muss das separat beachten*/
     private List<EdgeDTO> assembleMergedEdges(
             Map<String, MergedFacadeClass> mergedClasses, RenderingLayoutData layoutData) {
         var edges = new ArrayList<EdgeDTO>();
@@ -725,6 +727,9 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         return superClassDTOs;
     }
 
+    // TODO RENDERING: SEHR WICHTIG: später an DL bringen, dummy daten entfernen, javadoc anpassen
+    // TODO RENDERING: hier später anpassen iwie dass er die layoutdaten mitbekommt, und iwie
+    // für beide inheritance und assoc edges vereinheitlichen idfk
     private List<EdgeDTO> assembleEdgeDTOList(RenderContext renderContext) {
         List<EdgeDTO> edgeDTOList = new ArrayList<>();
         edgeDTOList.addAll(assembleInheritanceEdgeDTOList(renderContext));
