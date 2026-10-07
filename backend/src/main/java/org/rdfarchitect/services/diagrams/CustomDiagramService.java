@@ -36,6 +36,7 @@ import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
+import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
 import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutReconciler;
 import org.rdfarchitect.services.dl.update.edgelayout.EdgeResolver;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
@@ -63,6 +64,7 @@ public class CustomDiagramService
 
     private final DatabasePort databasePort;
     private final ListGraphsUseCase listGraphsUseCase;
+    private final SyncDiagramLayoutUseCase syncDiagramLayoutUseCase;
 
     @Override
     public List<CustomDiagramDTO> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
@@ -213,12 +215,9 @@ public class CustomDiagramService
 
     @Override
     public void deleteCustomDatasetDiagram(String datasetName, String diagramId) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
-            var removed = transaction.diagrams().remove(UUID.fromString(diagramId));
-            transaction.commit(
-                    ChangeDescriptions.actionOn(
-                            "Deleted", "diagram", ChangeDescriptions.diagramName(removed)));
-        }
+        var diagrams = databasePort.getDatasetDiagrams(datasetName);
+        diagrams.remove(UUID.fromString(diagramId));
+        syncDiagramLayoutUseCase.syncDatasetDiagramLayout(datasetName);
     }
 
     @Override
@@ -237,11 +236,19 @@ public class CustomDiagramService
         var diagram =
                 new CustomDiagram(
                         diagramDTO.getDiagramId(), diagramDTO.getName(), diagramDTO.getClasses());
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
-            transaction.diagrams().put(UUID.fromString(diagramId), diagram);
-            transaction.commit(
-                    ChangeDescriptions.actionOn(
-                            "Updated", "diagram", ChangeDescriptions.diagramName(diagram)));
+        var diagrams = databasePort.getDatasetDiagrams(datasetName);
+        diagrams.put(UUID.fromString(diagramId), diagram);
+        syncDiagramLayoutUseCase.syncDatasetDiagramLayout(datasetName);
+    }
+
+    @Override
+    public void removeFromCustomDatasetDiagram(String datasetName, String diagramId, UUID classId) {
+        var diagrams = databasePort.getDatasetDiagrams(datasetName);
+        var diagram = diagrams.get(UUID.fromString(diagramId));
+        if (diagram != null) {
+            var classes = diagram.getClasses();
+            classes.removeIf(c -> c.getUuid().equals(classId));
+            diagram.setClasses(classes);
         }
     }
 
@@ -300,6 +307,7 @@ public class CustomDiagramService
                     ChangeDescriptions.actionOn(
                             "Deleted", "diagram", ChangeDescriptions.diagramName(removed)));
         }
+        syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
     }
 
     @Override
@@ -328,6 +336,7 @@ public class CustomDiagramService
                     ChangeDescriptions.actionOn(
                             "Updated", "diagram", ChangeDescriptions.diagramName(diagram)));
         }
+        syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
     }
 
     @Override
