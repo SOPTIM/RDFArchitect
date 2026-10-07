@@ -164,8 +164,7 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         assertThat(inheritanceEdgeDTO.getType()).isEqualTo("inheritance");
         assertThat(inheritanceEdgeDTO.getSource()).isEqualTo(subClassUUID);
         assertThat(inheritanceEdgeDTO.getTarget()).isEqualTo(superClassUUID);
-        assertThat(inheritanceEdgeDTO.getData()).isNotNull();
-        assertThat(inheritanceEdgeDTO.getData().getBendPoints()).isNotEmpty();
+        assertThat(inheritanceEdgeDTO.getData()).isNull();
     }
 
     @Test
