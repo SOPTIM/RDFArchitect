@@ -20,7 +20,11 @@ package org.rdfarchitect.services.diagrams;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import org.apache.jena.graph.Graph;
+import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.sparql.graph.GraphFactory;
+import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.CustomDiagramDTO;
@@ -30,6 +34,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.select.ListGraphsUseCase;
 
 import java.util.ArrayList;
@@ -222,10 +227,68 @@ class CustomDiagramsServiceTest {
         assertThat(datasetDiagram.getClasses()).isEmpty();
     }
 
+    @Test
+    void removeFromGraphDiagram_namesClassAndDiagramInTheChangeLogWithoutUuids() {
+        var classId = UUID.randomUUID();
+        var diagramId = UUID.randomUUID();
+        var diagram = new CustomDiagram(diagramId, "Overview", new ArrayList<>());
+        var map = new ConcurrentHashMap<UUID, CustomDiagram>();
+        map.put(diagramId, diagram);
+
+        var graph = mockGraph(map, graphWithClass(classId, "Breaker"));
+        when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
+
+        service.removeFromCustomGraphDiagram(graphIdentifier, diagramId.toString(), classId);
+
+        verify(graph).commit("removed class \"Breaker\" from diagram \"Overview\"");
+    }
+
+    @Test
+    void removeFromAllDiagrams_classAlreadyGone_leavesItUnnamedInTheChangeLog() {
+        var classId = UUID.randomUUID();
+        var graph = mockGraph(new ConcurrentHashMap<>());
+        when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
+        when(databasePort.getDatasetDiagrams("dataset")).thenReturn(new ConcurrentHashMap<>());
+
+        service.removeFromAllDiagrams(graphIdentifier, classId);
+
+        verify(graph).commit("removed class from all diagrams");
+    }
+
+    @Test
+    void deleteCustomGraphDiagram_namesTheDiagramInTheChangeLogWithoutItsUuid() {
+        var diagramId = UUID.randomUUID();
+        var map = new ConcurrentHashMap<UUID, CustomDiagram>();
+        map.put(diagramId, new CustomDiagram(diagramId, "Overview", new ArrayList<>()));
+
+        var graph = mockGraph(map);
+        when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
+
+        service.deleteCustomGraphDiagram(graphIdentifier, diagramId.toString());
+
+        verify(graph).commit("deleted diagram \"Overview\"");
+    }
+
     private GraphContext mockGraph(ConcurrentHashMap<UUID, CustomDiagram> diagrams) {
+        return mockGraph(diagrams, GraphFactory.createDefaultGraph());
+    }
+
+    private GraphContext mockGraph(
+            ConcurrentHashMap<UUID, CustomDiagram> diagrams, Graph rdfGraph) {
         GraphContext graph = mock(GraphContext.class);
         when(graph.begin(any(ReadWrite.class))).thenReturn(graph);
         when(graph.getCustomDiagrams()).thenReturn(diagrams);
+        when(graph.getRdfGraph()).thenReturn(rdfGraph);
         return graph;
+    }
+
+    /** A graph holding a single labelled class, the way the changelog messages look it up. */
+    private Graph graphWithClass(UUID classId, String label) {
+        var rdfGraph = GraphFactory.createDefaultGraph();
+        var classNode = NodeFactory.createURI("http://example.org#" + label);
+        rdfGraph.add(classNode, RDFS.label.asNode(), NodeFactory.createLiteralString(label));
+        rdfGraph.add(
+                classNode, RDFA.uuid.asNode(), NodeFactory.createLiteralString(classId.toString()));
+        return rdfGraph;
     }
 }

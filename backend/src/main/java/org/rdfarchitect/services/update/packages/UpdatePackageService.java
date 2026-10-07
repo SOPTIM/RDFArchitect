@@ -23,6 +23,8 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
@@ -91,7 +93,7 @@ public class UpdatePackageService
                     graph,
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     newPackage);
-            ctx.commit("Replaced package " + packageDTO.getUuid());
+            ctx.commit("Replaced package " + packageDTO.getLabel());
         }
 
         replaceDiagramUseCase.replaceDiagram(
@@ -101,14 +103,33 @@ public class UpdatePackageService
     @Override
     public void deletePackage(GraphIdentifier graphIdentifier, UUID packageUUID) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var packageName = findPackageName(ctx.getRdfGraph(), packageUUID);
             CIMUpdates.deletePackage(
                     ctx.getRdfGraph(),
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     packageUUID);
-            ctx.commit("Deleted package " + packageUUID);
+            ctx.commit(
+                    packageName.isEmpty() ? "Deleted package" : "Deleted package " + packageName);
         }
 
         deletePackageLayoutDataUseCase.deletePackageLayoutData(graphIdentifier, packageUUID);
+    }
+
+    /**
+     * Names a package for the changelog message: its label, or its IRI when it carries no label (as
+     * referenced-only packages do). Returns an empty name when the package is not part of the
+     * graph, so that naming it never fails the deletion itself.
+     */
+    private String findPackageName(Graph graph, UUID packageUUID) {
+        Resource resource;
+        try {
+            resource = CIMResourceUtils.findResourceForUuid(graph, packageUUID);
+        } catch (IllegalStateException e) {
+            return "";
+        }
+        return resource.hasProperty(RDFS.label)
+                ? CIMResourceUtils.findLabelForResource(resource)
+                : resource.getURI();
     }
 
     private void assertNoClassWithSameIri(Graph graph, CIMPackage newPackage) {
