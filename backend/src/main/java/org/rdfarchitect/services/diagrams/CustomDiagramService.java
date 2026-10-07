@@ -29,11 +29,12 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
-import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutReconciler;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeResolver;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
 import org.rdfarchitect.services.rendering.CIMProfileModels;
 import org.rdfarchitect.services.select.ListGraphsUseCase;
@@ -133,7 +134,7 @@ public class CustomDiagramService
             }
         }
         if (doLayout) {
-            doDiagramLayout(diagramLayout, crossProfileDiagramUUID, mergeMap);
+            doDiagramLayout(diagramLayout, crossProfileDiagramUUID, mergeMap, profiles);
         }
         return new CrossProfileDiagramDTO(
                 crossProfileDiagramUUID, new ArrayList<>(mergeMap.values()));
@@ -142,7 +143,8 @@ public class CustomDiagramService
     private static void doDiagramLayout(
             DiagramLayout diagramLayout,
             UUID crossProfileDiagramUUID,
-            Map<String, MergedClassDTO> mergeMap) {
+            Map<String, MergedClassDTO> mergeMap,
+            List<CIMProfileModel> profiles) {
 
         var model = diagramLayout.getDiagramLayoutModel();
         DiagramLayoutServiceUtils.insertAllDiagramObjectStyles(model);
@@ -158,18 +160,22 @@ public class CustomDiagramService
                         .map(MRID::getUuid)
                         .collect(Collectors.toSet());
 
+        var createdClassLayoutData = false;
         for (var merged : mergeMap.values()) {
             if (!existingClassUUIDs.contains(merged.getUuid())) {
-                var doMRID =
-                        DiagramLayoutServiceUtils.insertDiagramObject(
-                                model,
-                                crossProfileDiagramUUID,
-                                merged.getClassUri(),
-                                merged.getUuid(),
-                                DiagramObjectStyle.CLASS);
-                DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                        model, crossProfileDiagramUUID, doMRID);
+                DiagramLayoutServiceUtils.insertClassLayoutData(
+                        model,
+                        crossProfileDiagramUUID,
+                        merged.getClassUri(),
+                        merged.getUuid(),
+                        0,
+                        0);
+                createdClassLayoutData = true;
             }
+        }
+        if (createdClassLayoutData) {
+            EdgeLayoutReconciler.reconcileEdges(
+                    model, crossProfileDiagramUUID, EdgeResolver.forMergedProfiles(profiles));
         }
     }
 

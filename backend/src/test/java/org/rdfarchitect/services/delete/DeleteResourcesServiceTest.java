@@ -44,6 +44,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.GraphWithContextTransactional;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.services.dl.update.edgelayout.SyncEdgeLayoutUseCase;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -87,6 +88,7 @@ class DeleteResourcesServiceTest {
             UUID.fromString("bc0bc228-f5cd-5925-ab6b-4bfe83ef9b3e");
 
     @Mock private DatabasePort databasePort;
+    @Mock private SyncEdgeLayoutUseCase syncEdgeLayoutUseCase;
 
     @InjectMocks private DeleteResourcesService service;
 

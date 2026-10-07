@@ -23,7 +23,7 @@ import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.api.dto.dl.BendPointDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
+import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
@@ -34,77 +34,60 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class UpdateEdgeLayoutDataService
-        implements CreateEdgeLayoutDataUseCase,
-                DeleteEdgeLayoutDataUseCase,
-                UpdateBendPointsUseCase {
+public class UpdateEdgeLayoutDataService implements SyncEdgeLayoutUseCase, UpdateBendPointsUseCase {
 
     private final DatabasePort databasePort;
 
-    // TODO RENDERING: SEHR WICHTIG: END POINTS SIND NOCH AUßEN VOR: also im updateBendPoints unten
-    // hab ich die
-    // noch nicht eingebaut, weil hier das API design noch sehr offen war. also ob ich end points
-    // über diese methode mache oder iwie anders
-
     @Override
-    public void createEdgeLayoutData(
-            GraphIdentifier graphIdentifier,
-            UUID diagramUUID,
-            UUID identifiedObjectUUID,
-            String edgeName,
-            DiagramObjectStyle style) {
+    public void syncEdgeLayout(GraphIdentifier graphIdentifier) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
-            DiagramLayoutServiceUtils.insertDiagramObject(
-                    diagramLayoutModel, diagramUUID, edgeName, identifiedObjectUUID, style);
-            ctx.commit();
-        }
-    }
-
-    @Override
-    public void deleteEdgeLayoutData(
-            GraphIdentifier graphIdentifier, UUID diagramUUID, UUID identifiedObjectUUID) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
-            var edgeDO =
-                    DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
-                            diagramLayoutModel,
-                            diagramUUID,
-                            identifiedObjectUUID,
-                            DiagramObjectStyle.INHERITANCE,
-                            DiagramObjectStyle.ASSOCIATION);
-            if (edgeDO != null) {
-                DiagramLayoutServiceUtils.deleteEdgeLayoutData(
-                        diagramLayoutModel, edgeDO.getMRID());
+            var edgeResolver = EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph());
+            for (var diagramMRID : DLObjectFetcher.fetchDiagramMRIDs(diagramLayoutModel)) {
+                EdgeLayoutReconciler.reconcileEdges(
+                        diagramLayoutModel, diagramMRID.getUuid(), edgeResolver);
             }
             ctx.commit();
         }
+
+        var datasetName = graphIdentifier.datasetName();
+        var datasetLayoutModel =
+                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
+        var mergedDiagramMRIDs = DLObjectFetcher.fetchDiagramMRIDs(datasetLayoutModel);
+        if (mergedDiagramMRIDs.isEmpty()) {
+            return;
+        }
+        var mergedEdgeResolver = EdgeResolver.forDataset(databasePort, datasetName);
+        for (var diagramMRID : mergedDiagramMRIDs) {
+            EdgeLayoutReconciler.reconcileEdges(
+                    datasetLayoutModel, diagramMRID.getUuid(), mergedEdgeResolver);
+        }
     }
 
+    // TODO RENDERING: SEHR WICHTIG: END POINTS SIND NOCH AUßEN VOR: also im updateBendPoints unten
+    // hab ich die noch nicht eingebaut, weil hier das API design noch sehr offen war. also ob ich
+    // end points über diese methode mache oder iwie anders
     @Override
     public void updateBendPoints(
             GraphIdentifier graphIdentifier,
             UUID diagramUUID,
-            UUID identifiedObjectUUID,
+            EdgeKey edge,
             List<BendPointDTO> bendPoints) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             var edgeDO =
-                    DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
-                            diagramLayoutModel,
-                            diagramUUID,
-                            identifiedObjectUUID,
-                            DiagramObjectStyle.INHERITANCE,
-                            DiagramObjectStyle.ASSOCIATION);
+                    DLObjectFetcher.fetchDiagramEdgeDOs(diagramLayoutModel, new MRID(diagramUUID))
+                            .stream()
+                            .filter(diagramObject -> edge.equals(EdgeKey.of(diagramObject)))
+                            .findFirst()
+                            .orElse(null);
             if (edgeDO == null) {
                 return;
             }
 
-            var existingPoints =
-                    DLObjectFetcher.fetchDOPsForDO(diagramLayoutModel, edgeDO.getMRID());
-            existingPoints.forEach(
-                    dop -> DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, dop.getMRID()));
-
+            for (var point : DLObjectFetcher.fetchDOPsForDO(diagramLayoutModel, edgeDO.getMRID())) {
+                DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, point.getMRID());
+            }
             for (var bendPoint : bendPoints) {
                 DiagramLayoutServiceUtils.insertBendPoint(
                         diagramLayoutModel,
