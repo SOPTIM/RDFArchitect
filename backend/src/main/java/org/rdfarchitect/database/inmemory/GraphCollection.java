@@ -26,6 +26,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 /**
  * Which graphs a workspace contains, under which URI.
@@ -98,6 +99,19 @@ class GraphCollection extends SnapshotParticipant<Map<String, GraphWithContext>>
         return after.entrySet().stream()
                 .filter(entry -> !existing.contains(entry.getValue()))
                 .map(Map.Entry::getKey)
+                .toList();
+    }
+
+    /**
+     * A URI is affected when it no longer stands for the same graph: it was created, deleted, or
+     * renamed — and a rename affects both the URI it left and the one it moved to.
+     */
+    @Override
+    protected List<String> describeAffectedGraphs(
+            Map<String, GraphWithContext> before, Map<String, GraphWithContext> after) {
+        return Stream.concat(before.keySet().stream(), after.keySet().stream())
+                .distinct()
+                .filter(graphUri -> before.get(graphUri) != after.get(graphUri))
                 .toList();
     }
 }

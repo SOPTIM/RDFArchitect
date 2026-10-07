@@ -19,6 +19,7 @@ package org.rdfarchitect.rdf.graph.wrapper;
 
 import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
+import org.rdfarchitect.models.changelog.CapturedState;
 import org.rdfarchitect.models.changelog.ChangeLogParticipant;
 
 import java.util.ArrayDeque;
@@ -55,6 +56,9 @@ public abstract class SnapshotParticipant<S>
 
     /** What the most recent committed version brought into existence. */
     private List<String> lastAdditions = List.of();
+
+    /** Which graphs the most recent committed version reached. */
+    private List<String> lastAffectedGraphs = List.of();
 
     protected SnapshotParticipant(WorkspaceTransactionContext txnContext) {
         this.txnContext = txnContext;
@@ -93,6 +97,26 @@ public abstract class SnapshotParticipant<S>
      */
     public List<String> additionsOfLastVersion() {
         return lastAdditions;
+    }
+
+    /**
+     * Names the graphs a change reached, so that the changelog can show it under each of them.
+     *
+     * <p>Only worth answering where a participant the workspace owns is really about individual
+     * graphs — the set of graphs is, because creating, deleting and renaming one is the change a
+     * graph's own changelog must not be missing. The default reports none.
+     *
+     * @param before the state the commit started from
+     * @param after the state it produced
+     * @return the URIs of the graphs the change reached
+     */
+    protected List<String> describeAffectedGraphs(S before, S after) {
+        return List.of();
+    }
+
+    /** Returns the graphs the most recent version of this participant reached. */
+    public List<String> affectedGraphsOfLastVersion() {
+        return lastAffectedGraphs;
     }
 
     /**
@@ -135,6 +159,7 @@ public abstract class SnapshotParticipant<S>
         preTransactionState = null;
         pastStates.push(after);
         lastAdditions = describeAdditions(before, after);
+        lastAffectedGraphs = describeAffectedGraphs(before, after);
     }
 
     @Override
@@ -149,6 +174,23 @@ public abstract class SnapshotParticipant<S>
     @Override
     public boolean hasChanges() {
         return preTransactionState != null && !preTransactionState.equals(snapshot());
+    }
+
+    @Override
+    public CapturedState capture(int versionsBack) {
+        var captured = stateAt(versionsBack);
+        return () -> {
+            beginChange();
+            restore(captured);
+        };
+    }
+
+    /**
+     * Returns a committed state without stepping to it. The states are kept whole, so looking one
+     * up is a read.
+     */
+    private S stateAt(int versionsBack) {
+        return RetainedVersions.at(pastStates, versionsBack);
     }
 
     @Override
@@ -191,5 +233,6 @@ public abstract class SnapshotParticipant<S>
         pastStates.pop();
         pastStates.push(newest);
         lastAdditions = List.of();
+        lastAffectedGraphs = List.of();
     }
 }
