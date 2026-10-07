@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -71,7 +72,7 @@ class QueryClassServiceTest {
                         .setFile(file)
                         .setGraphName(graphIdentifier.graphUri())
                         .build();
-        databasePort.createGraph(graphIdentifier, graphSource.graph());
+        createGraph(graphIdentifier, graphSource.graph());
     }
 
     @Test
@@ -113,18 +114,32 @@ class QueryClassServiceTest {
 
     /** Referencing a uri that nothing defines makes it a referenced only resource with a uuid. */
     private UUID addReferencedOnlyResource(String label) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             ctx.getRdfGraph()
                     .add(
                             NodeFactory.createURI(PREFIX + "class.associatedClass"),
                             RDFS.range.asNode(),
                             NodeFactory.createURI(PREFIX + label));
-            ctx.commit("referenced only resource");
+            transaction.commit("referenced only resource");
         }
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             return UUID.fromString(
                     model.getResource(PREFIX + label).getProperty(RDFA.uuid).getString());
+        }
+    }
+
+    /** Creates a workspace and a graph in it, the way an upload does. */
+    private void createGraph(GraphIdentifier identifier, Graph graph) {
+        databasePort.createWorkspaceIfAbsent(identifier.datasetName());
+        try (var transaction =
+                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.createGraph(identifier.graphUri(), graph);
+            transaction.commit("created graph %s".formatted(identifier.graphUri()));
         }
     }
 }

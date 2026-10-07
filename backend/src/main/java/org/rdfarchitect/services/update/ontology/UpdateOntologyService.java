@@ -46,7 +46,9 @@ public class UpdateOntologyService
     @Override
     public void createOntology(GraphIdentifier graphIdentifier, OntologyDTO ontologyDTO) {
         expandOntologyIris(graphIdentifier.datasetName(), ontologyDTO);
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
@@ -70,9 +72,9 @@ public class UpdateOntologyService
             if (pm.getNsURIPrefix(OWL2.getURI()) == null) {
                 pm.setNsPrefix("owl", OWL2.getURI());
             }
-            databasePort.setPrefixMapping(graphIdentifier.datasetName(), pm);
+            transaction.setPrefixes(pm);
 
-            ctx.commit("Created Ontology");
+            transaction.commit("Created Ontology");
         }
     }
 
@@ -80,7 +82,9 @@ public class UpdateOntologyService
     @Override
     public void replaceOntology(GraphIdentifier graphIdentifier, OntologyDTO ontologyDTO) {
         expandOntologyIris(graphIdentifier.datasetName(), ontologyDTO);
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
@@ -93,18 +97,20 @@ public class UpdateOntologyService
                 }
             }
             new OntologyFacade(model).replaceOntology(ontologyDTO);
-            ctx.commit("Replaced Ontology");
+            transaction.commit("Replaced Ontology");
         }
     }
 
     // DELETE
     @Override
     public void deleteOntology(GraphIdentifier graphIdentifier) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             new OntologyFacade(model).deleteOntology();
-            ctx.commit("Deleted Ontology");
+            transaction.commit("Deleted Ontology");
         }
     }
 

@@ -23,6 +23,7 @@
         showDialog = $bindable(),
         size = "w-full max-w-md",
         onkeydown,
+        onOpenChange,
         title,
         description,
         children,
@@ -30,7 +31,7 @@
     } = $props();
 </script>
 
-<BitsUiAlertDialog.Root bind:open={showDialog}>
+<BitsUiAlertDialog.Root bind:open={showDialog} {onOpenChange}>
     <BitsUiAlertDialog.Portal>
         <BitsUiAlertDialog.Overlay
             class="bg-dialog-backlight fixed inset-0 z-50"

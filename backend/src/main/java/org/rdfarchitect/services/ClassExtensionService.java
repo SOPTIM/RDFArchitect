@@ -63,10 +63,13 @@ public class ClassExtensionService implements ClassExtensionUseCase {
         for (var classUUID : classUUIDs) {
             var located = locateClassUseCase.locate(datasetName, classUUID);
             var sourceGraph = new GraphIdentifier(datasetName, located.graphUri());
-            try (var ctx = databasePort.getGraphWithContext(sourceGraph).begin(ReadWrite.READ)) {
+            try (var transaction =
+                    databasePort.beginTransaction(sourceGraph.datasetName(), ReadWrite.READ)) {
+                var ctx = transaction.graph(sourceGraph.graphUri());
                 stubsBySourceUUID.put(
                         classUUID,
-                        fetchStubbedClassCopy(sourceGraph, located.classUUID().toString()));
+                        fetchStubbedClassCopy(
+                                ctx.getRdfGraph(), sourceGraph, located.classUUID().toString()));
                 if (withInheritance) {
                     superClassStubs.addAll(
                             fetchStubbedSuperClasses(ctx.getRdfGraph(), located.classUUID()));
@@ -93,10 +96,11 @@ public class ClassExtensionService implements ClassExtensionUseCase {
         return results;
     }
 
-    private CIMClass fetchStubbedClassCopy(GraphIdentifier graphIdentifier, String classUUID) {
+    private CIMClass fetchStubbedClassCopy(
+            Graph graph, GraphIdentifier graphIdentifier, String classUUID) {
         var cimObjectFetcher =
                 new CIMObjectFetcher(
-                        databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
+                        graph,
                         graphIdentifier.graphUri(),
                         databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
@@ -143,8 +147,9 @@ public class ClassExtensionService implements ClassExtensionUseCase {
     private Set<String> insertStubs(
             GraphIdentifier newGraphIdentifier, Collection<CIMClass> stubs) {
         var insertedUris = new LinkedHashSet<String>();
-        try (var ctx =
-                databasePort.getGraphWithContext(newGraphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(newGraphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(newGraphIdentifier.graphUri());
             var newGraph = ctx.getRdfGraph();
             var labels = new ArrayList<String>();
             for (var stub : stubs) {
@@ -158,7 +163,7 @@ public class ClassExtensionService implements ClassExtensionUseCase {
             if (insertedUris.isEmpty()) {
                 return insertedUris;
             }
-            ctx.commit(
+            transaction.commit(
                     "Added "
                             + String.join(", ", labels)
                             + " to graph "
@@ -175,7 +180,9 @@ public class ClassExtensionService implements ClassExtensionUseCase {
     private Map<String, TargetIdentifiers> readTargetIdentifiers(
             GraphIdentifier newGraphIdentifier, Collection<CIMClass> stubs) {
         var identifiers = new LinkedHashMap<String, TargetIdentifiers>();
-        try (var ctx = databasePort.getGraphWithContext(newGraphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(newGraphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(newGraphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             for (var stub : stubs) {
                 var uri = stub.getUri().toString();

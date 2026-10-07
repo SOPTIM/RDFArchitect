@@ -19,6 +19,7 @@ package org.rdfarchitect.cim.data.CIMCollectionConverter;
 
 import static org.assertj.core.api.Assertions.*;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
@@ -86,17 +87,19 @@ class GraphToCIMCollectionConverterServiceNoFilterTest {
 
     private void addFileGraphToDatabase(String fileName) throws IOException {
         if (!database.containsGraph(graphIdentifier)) {
-            database.createGraph(graphIdentifier, GraphFactory.createDefaultGraph());
+            createGraph(database, graphIdentifier, GraphFactory.createDefaultGraph());
         }
         var graph = GraphFactory.createDefaultGraph();
         InputStream in = Files.newInputStream(Path.of(fileName));
         Lang lang = fileName.endsWith(".rdf") ? Lang.RDFXML : Lang.TTL;
         RDFDataMgr.read(graph, in, lang);
-        try (var ctx = database.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                database.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             for (var triple : graph.find().toList()) {
                 ctx.getRdfGraph().add(triple);
             }
-            ctx.commit();
+            transaction.commit("test change");
         }
     }
 
@@ -379,5 +382,14 @@ class GraphToCIMCollectionConverterServiceNoFilterTest {
         assertThat(association2.getMultiplicity().getUri())
                 .isEqualTo(new URI(prefixMapping.get("cims") + "M:1"));
         assertThat(association2.getInverseRoleName().getUri()).isEqualTo(association1.getUri());
+    }
+
+    /** Creates a workspace and a graph in it, the way an upload does. */
+    private static void createGraph(InMemoryDatabase port, GraphIdentifier id, Graph graph) {
+        port.createWorkspaceIfAbsent(id.datasetName());
+        try (var transaction = port.beginTransaction(id.datasetName(), ReadWrite.WRITE)) {
+            transaction.createGraph(id.graphUri(), graph);
+            transaction.commit("created graph %s".formatted(id.graphUri()));
+        }
     }
 }

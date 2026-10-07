@@ -23,6 +23,7 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -34,6 +35,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.TestRDFUtils;
 
@@ -41,7 +43,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-class GraphWithContextCollectionTest {
+class WorkspaceTest {
+
+    private static final String WORKSPACE = "workspace";
 
     private List<Graph> exampleGraphs;
 
@@ -74,10 +78,10 @@ class GraphWithContextCollectionTest {
     @Test
     void constructor_noArgs_returnsEmptyCollection() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
 
         // Act
-        int size = collection.listGraphUris().size();
+        int size = workspace.listGraphUris().size();
 
         // Assert
         assertThat(size).isZero();
@@ -86,11 +90,10 @@ class GraphWithContextCollectionTest {
     @Test
     void constructor_emptyDataset_returnsEmptyCollection() {
         // Arrange
-        GraphWithContextCollection collection =
-                new GraphWithContextCollection(DatasetFactory.create());
+        Workspace workspace = new Workspace(WORKSPACE, DatasetFactory.create());
 
         // Act
-        int size = collection.listGraphUris().size();
+        int size = workspace.listGraphUris().size();
 
         // Assert
         assertThat(size).isZero();
@@ -111,20 +114,20 @@ class GraphWithContextCollectionTest {
                 "http://example.org/graph3",
                 ModelFactory.createModelForGraph(exampleGraphs.get(2)));
 
-        GraphWithContextCollection collection = new GraphWithContextCollection(dataset);
+        Workspace workspace = new Workspace(WORKSPACE, dataset);
 
         // Act
-        List<String> graphUris = collection.listGraphUris();
+        List<String> graphUris = workspace.listGraphUris();
         int size = graphUris.size();
 
         // Assert
         assertThat(size).isEqualTo(3);
         for (String uri : graphUris) {
-            var graphWithCtx = collection.getGraphWithContext(uri);
-            try (var ctx = graphWithCtx.begin(ReadWrite.READ)) {
+            try (var transaction = workspace.begin(ReadWrite.READ)) {
+                var ctx = transaction.graph(uri);
                 assertThat(ctx).isNotNull();
                 assertThat(ctx.getRdfGraph().find().toList()).hasSize(9);
-                assertThat(ctx.transactionMode()).isEqualTo(ReadWrite.READ);
+                assertThat(transaction.mode()).isEqualTo(ReadWrite.READ);
             }
         }
     }
@@ -138,19 +141,19 @@ class GraphWithContextCollectionTest {
         model.add(TestRDFUtils.triple("b b b"));
         model.add(TestRDFUtils.triple("c c c"));
 
-        GraphWithContextCollection collection = new GraphWithContextCollection(dataset);
+        Workspace workspace = new Workspace(WORKSPACE, dataset);
 
         // Act
-        List<String> graphUris = collection.listGraphUris();
+        List<String> graphUris = workspace.listGraphUris();
         int size = graphUris.size();
 
         // Assert
         assertThat(size).isEqualTo(1);
-        var graphWithCtx = collection.getGraphWithContext(DEFAULT_GRAPH_NAME);
-        try (var ctx = graphWithCtx.begin(ReadWrite.READ)) {
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            var ctx = transaction.graph(DEFAULT_GRAPH_NAME);
             assertThat(ctx).isNotNull();
             assertThat(ctx.getRdfGraph().find().toList()).hasSize(3);
-            assertThat(ctx.transactionMode()).isEqualTo(ReadWrite.READ);
+            assertThat(transaction.mode()).isEqualTo(ReadWrite.READ);
         }
     }
 
@@ -158,84 +161,83 @@ class GraphWithContextCollectionTest {
     @EnumSource(ReadWrite.class)
     void begin_existingGraphUri_returnsGraphRewindable(ReadWrite mode) {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
 
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
-        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
-        var graphWithCtx = collection.getGraphWithContext("http://example.org/graph1");
-        try (var ctx = graphWithCtx.begin(mode)) {
+        try (var transaction = workspace.begin(mode)) {
+            var ctx = transaction.graph("http://example.org/graph1");
             // Assert
             assertThat(ctx).isNotNull();
-            assertThat(ctx.isInTransaction()).isTrue();
             assertThat(ctx.getRdfGraph().isIsomorphicWith(exampleGraphs.get(1))).isTrue();
-            assertThat(ctx.transactionMode()).isEqualTo(mode);
+            assertThat(transaction.mode()).isEqualTo(mode);
         }
     }
 
     @Test
     void begin_nonExistingDefaultGraphUri_returnsEmptyDefaultGraph() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
 
         // Act
-        var graphWithCtx = collection.getGraphWithContext(DEFAULT_GRAPH_NAME);
-        try (var ctx = graphWithCtx.begin(ReadWrite.READ)) {
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            var ctx = transaction.graph(DEFAULT_GRAPH_NAME);
             // Assert
             assertThat(ctx).isNotNull();
-            assertThat(ctx.isInTransaction()).isTrue();
             assertThat(ctx.getRdfGraph().find().toList()).isEmpty();
-            assertThat(ctx.transactionMode()).isEqualTo(ReadWrite.READ);
+            assertThat(transaction.mode()).isEqualTo(ReadWrite.READ);
         }
     }
 
     @Test
     void begin_nonExistingNamedGraphUri_throwsException() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
 
         // Act/Assert
-        assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> collection.getGraphWithContext("http://example.org/nonexistent"))
-                .withMessage("Graph URI http://example.org/nonexistent does not exist.");
+        assertThatExceptionOfType(ResourceNotFoundException.class)
+                .isThrownBy(() -> workspace.getGraphWithContext("http://example.org/nonexistent"))
+                .withMessageContaining("Graph URI http://example.org/nonexistent does not exist.");
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"", "foo", "bar", "otherInvalidUri"})
     void begin_invalidUri_throwsException(String graphUri) {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
 
         // Act/Assert
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> collection.getGraphWithContext(graphUri))
+                .isThrownBy(() -> workspace.getGraphWithContext(graphUri))
                 .withMessage("Graph Uri " + graphUri + " is not a valid URI");
     }
 
     @Test
     void begin_readThenEndThenBeginWrite_allowsWriteAfterReadEnds() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph());
-        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
-        var graphWithCtx = collection.getGraphWithContext("http://example.org/graph1");
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act - begin READ, end it, then begin WRITE
-        try (var readCtx = graphWithCtx.begin(ReadWrite.READ)) {
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            var readCtx = transaction.graph("http://example.org/graph1");
             assertThat(readCtx.getRdfGraph().find().toList()).hasSize(9);
         }
-        try (var writeCtx = graphWithCtx.begin(ReadWrite.WRITE)) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            var writeCtx = transaction.graph("http://example.org/graph1");
             // Assert
             assertThat(writeCtx).isNotNull();
-            assertThat(writeCtx.isInTransaction()).isTrue();
-            assertThat(writeCtx.transactionMode()).isEqualTo(ReadWrite.WRITE);
+            assertThat(transaction.mode()).isEqualTo(ReadWrite.WRITE);
             writeCtx.getRdfGraph().add(TestRDFUtils.triple("a a d"));
-            writeCtx.commit("add triple");
+            transaction.commit("add triple");
         }
 
         // Verify the write persisted
-        try (var verifyCtx = graphWithCtx.begin(ReadWrite.READ)) {
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            var verifyCtx = transaction.graph("http://example.org/graph1");
             assertThat(verifyCtx.getRdfGraph().find().toList()).hasSize(10);
         }
     }
@@ -243,23 +245,23 @@ class GraphWithContextCollectionTest {
     @Test
     void begin_writeCommitThenRead_seesCommittedChanges() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph());
-        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
-        var graphWithCtx = collection.getGraphWithContext("http://example.org/graph1");
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act - begin WRITE, commit changes, end, then begin READ
-        try (var writeCtx = graphWithCtx.begin(ReadWrite.WRITE)) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            var writeCtx = transaction.graph("http://example.org/graph1");
             writeCtx.getRdfGraph().add(TestRDFUtils.triple("a a d"));
             writeCtx.getRdfGraph().add(TestRDFUtils.triple("a a e"));
-            writeCtx.commit("add two triples");
+            transaction.commit("add two triples");
         }
 
         // Assert - READ sees the committed changes
-        try (var readCtx = graphWithCtx.begin(ReadWrite.READ)) {
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            var readCtx = transaction.graph("http://example.org/graph1");
             assertThat(readCtx).isNotNull();
-            assertThat(readCtx.isInTransaction()).isTrue();
-            assertThat(readCtx.transactionMode()).isEqualTo(ReadWrite.READ);
+            assertThat(transaction.mode()).isEqualTo(ReadWrite.READ);
             assertThat(readCtx.getRdfGraph().find().toList()).hasSize(11);
         }
     }
@@ -274,18 +276,17 @@ class GraphWithContextCollectionTest {
             })
     void create_validName_returnsGraphRewindable(String graphUri) {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
 
         // Act
-        collection.create(graphUri, exampleGraphs.getFirst());
-        var graphWithCtx = collection.getGraphWithContext(graphUri);
-        try (var ctx = graphWithCtx.begin(ReadWrite.READ)) {
+        createGraph(workspace, graphUri, exampleGraphs.getFirst());
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            var ctx = transaction.graph(graphUri);
             // Assert
             assertThat(ctx).isNotNull();
-            assertThat(ctx.isInTransaction()).isTrue();
             assertThat(ctx.getRdfGraph().isIsomorphicWith(exampleGraphs.get(1))).isTrue();
-            assertThat(ctx.transactionMode()).isEqualTo(ReadWrite.READ);
+            assertThat(transaction.mode()).isEqualTo(ReadWrite.READ);
         }
     }
 
@@ -293,43 +294,43 @@ class GraphWithContextCollectionTest {
     @ValueSource(strings = {"", "foo", "bar", "otherInvalidUri"})
     void create_invalidUri_throwsException(String graphUri) {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph());
 
         // Act/Assert
         var firstGraph = exampleGraphs.getFirst();
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> collection.create(graphUri, firstGraph));
+                .isThrownBy(() -> createGraph(workspace, graphUri, firstGraph));
     }
 
     @Test
     void remove_existingGraphUri_removesGraph() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph());
-        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
-        collection.remove("http://example.org/graph1");
+        deleteGraph(workspace, "http://example.org/graph1");
 
         // Assert
-        assertThat(collection.listGraphUris()).isEmpty();
+        assertThat(workspace.listGraphUris()).isEmpty();
     }
 
     @Test
     void rename_existingGraphUri_keepsContentUnderNewUri() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
-        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
-        collection.rename("http://example.org/graph1", "http://example.org/graph2");
+        renameGraph(workspace, "http://example.org/graph1", "http://example.org/graph2");
 
         // Assert
-        assertThat(collection.listGraphUris()).containsExactly("http://example.org/graph2");
-        try (var ctx =
-                collection.getGraphWithContext("http://example.org/graph2").begin(ReadWrite.READ)) {
+        assertThat(workspace.listGraphUris()).containsExactly("http://example.org/graph2");
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            var ctx = transaction.graph("http://example.org/graph2");
             assertThat(ctx.getRdfGraph().isIsomorphicWith(exampleGraphs.get(1))).isTrue();
         }
     }
@@ -337,9 +338,9 @@ class GraphWithContextCollectionTest {
     @Test
     void rename_updatesGraphUriInCustomDiagrams() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph());
-        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
         var diagramId = UUID.randomUUID();
         var classUuid = UUID.randomUUID();
         var diagram = new CustomDiagram(diagramId);
@@ -348,132 +349,152 @@ class GraphWithContextCollectionTest {
                         new ClassInDiagram(classUuid, new URI("http://example.org/graph1")),
                         new ClassInDiagram(
                                 UUID.randomUUID(), new URI("http://example.org/other"))));
-        collection.getCustomDiagrams().put(diagramId, diagram);
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.diagrams().put(diagramId, diagram);
+            transaction.commit("added a diagram");
+        }
 
         // Act
-        collection.rename("http://example.org/graph1", "http://example.org/graph2");
+        renameGraph(workspace, "http://example.org/graph1", "http://example.org/graph2");
 
         // Assert
-        assertThat(collection.getCustomDiagrams().get(diagramId).getClasses())
-                .extracting(entry -> entry.getGraphUri().toString())
-                .containsExactly("http://example.org/graph2", "http://example.org/other");
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            assertThat(transaction.diagrams().get(diagramId).getClasses())
+                    .extracting(entry -> entry.getGraphUri().toString())
+                    .containsExactly("http://example.org/graph2", "http://example.org/other");
+        }
     }
 
     @Test
     void rename_updatesGraphUriInSchemaScopedCustomDiagrams() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
-        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
-        collection.create("http://example.org/other", exampleGraphs.get(1));
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
+        createGraph(workspace, "http://example.org/other", exampleGraphs.get(1));
         var ownDiagramId = UUID.randomUUID();
         var ownDiagram = new CustomDiagram(ownDiagramId);
         ownDiagram.setClasses(
                 List.of(
                         new ClassInDiagram(
                                 UUID.randomUUID(), new URI("http://example.org/graph1"))));
-        collection
-                .getGraphWithContext("http://example.org/graph1")
-                .getCustomDiagrams()
-                .put(ownDiagramId, ownDiagram);
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            transaction
+                    .graph("http://example.org/graph1")
+                    .getCustomDiagrams()
+                    .put(ownDiagramId, ownDiagram);
+        }
         var foreignDiagramId = UUID.randomUUID();
         var foreignDiagram = new CustomDiagram(foreignDiagramId);
         foreignDiagram.setClasses(
                 List.of(
                         new ClassInDiagram(
                                 UUID.randomUUID(), new URI("http://example.org/graph1"))));
-        collection
-                .getGraphWithContext("http://example.org/other")
-                .getCustomDiagrams()
-                .put(foreignDiagramId, foreignDiagram);
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            transaction
+                    .graph("http://example.org/other")
+                    .getCustomDiagrams()
+                    .put(foreignDiagramId, foreignDiagram);
+        }
 
         // Act
-        collection.rename("http://example.org/graph1", "http://example.org/graph2");
+        renameGraph(workspace, "http://example.org/graph1", "http://example.org/graph2");
 
         // Assert
-        assertThat(
-                        collection
-                                .getGraphWithContext("http://example.org/graph2")
-                                .getCustomDiagrams()
-                                .get(ownDiagramId)
-                                .getClasses())
-                .extracting(entry -> entry.getGraphUri().toString())
-                .containsExactly("http://example.org/graph2");
-        assertThat(
-                        collection
-                                .getGraphWithContext("http://example.org/other")
-                                .getCustomDiagrams()
-                                .get(foreignDiagramId)
-                                .getClasses())
-                .extracting(entry -> entry.getGraphUri().toString())
-                .containsExactly("http://example.org/graph2");
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            assertThat(
+                            transaction
+                                    .graph("http://example.org/graph2")
+                                    .getCustomDiagrams()
+                                    .get(ownDiagramId)
+                                    .getClasses())
+                    .extracting(entry -> entry.getGraphUri().toString())
+                    .containsExactly("http://example.org/graph2");
+            assertThat(
+                            transaction
+                                    .graph("http://example.org/other")
+                                    .getCustomDiagrams()
+                                    .get(foreignDiagramId)
+                                    .getClasses())
+                    .extracting(entry -> entry.getGraphUri().toString())
+                    .containsExactly("http://example.org/graph2");
+        }
     }
 
     @Test
     void rename_movesCrossProfileColorToNewUri() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph());
-        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
-        collection.getCrossProfileDiagramInfo().setColor("http://example.org/graph1", "#123456");
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.crossProfileInfo().setColor("http://example.org/graph1", "#123456");
+            transaction.commit("assigned a colour");
+        }
 
         // Act
-        collection.rename("http://example.org/graph1", "http://example.org/graph2");
+        renameGraph(workspace, "http://example.org/graph1", "http://example.org/graph2");
 
         // Assert
-        var info = collection.getCrossProfileDiagramInfo();
-        assertThat(info.getColor("http://example.org/graph2")).isEqualTo("#123456");
-        assertThat(info.getColor("http://example.org/graph1")).isNull();
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            var info = transaction.crossProfileInfo();
+            assertThat(info.getColor("http://example.org/graph2")).isEqualTo("#123456");
+            assertThat(info.getColor("http://example.org/graph1")).isNull();
+        }
     }
 
     @Test
     void rename_nonExistingGraphUri_throwsException() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
 
         // Act/Assert
-        assertThatExceptionOfType(IllegalArgumentException.class)
+        assertThatExceptionOfType(ResourceNotFoundException.class)
                 .isThrownBy(
                         () ->
-                                collection.rename(
-                                        "http://example.org/missing", "http://example.org/graph2"));
+                                renameGraph(
+                                        workspace,
+                                        "http://example.org/missing",
+                                        "http://example.org/graph2"));
     }
 
     @Test
     void rename_alreadyTakenGraphUri_throwsException() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
-        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
-        collection.create("http://example.org/graph2", exampleGraphs.get(1));
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
+        createGraph(workspace, "http://example.org/graph2", exampleGraphs.get(1));
 
         // Act/Assert
         assertThatExceptionOfType(ResourceConflictException.class)
                 .isThrownBy(
                         () ->
-                                collection.rename(
-                                        "http://example.org/graph1", "http://example.org/graph2"));
+                                renameGraph(
+                                        workspace,
+                                        "http://example.org/graph1",
+                                        "http://example.org/graph2"));
     }
 
     @Test
     void remove_nonExistingGraphUri_doesNothing() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
 
         // Act
-        collection.remove("http://example.org/nonexistent");
+        deleteGraph(workspace, "http://example.org/nonexistent");
 
         // Assert
-        assertThat(collection.listGraphUris()).isEmpty();
+        assertThat(workspace.listGraphUris()).isEmpty();
     }
 
     @Test
     void listGraphUris_emptyCollection_returnsEmptyList() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
 
         // Act
-        List<String> graphUris = collection.listGraphUris();
+        List<String> graphUris = workspace.listGraphUris();
 
         // Assert
         assertThat(graphUris).isEmpty();
@@ -482,14 +503,14 @@ class GraphWithContextCollectionTest {
     @Test
     void listGraphUris_nonEmptyCollection_returnsListWithGraphUris() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph(), createExampleGraph());
-        collection.create("http://example.org/graph1", exampleGraphs.get(0));
-        collection.create("http://example.org/graph2", exampleGraphs.get(1));
-        collection.create("http://example.org/graph3", exampleGraphs.get(2));
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.get(0));
+        createGraph(workspace, "http://example.org/graph2", exampleGraphs.get(1));
+        createGraph(workspace, "http://example.org/graph3", exampleGraphs.get(2));
 
         // Act
-        List<String> graphUris = collection.listGraphUris();
+        List<String> graphUris = workspace.listGraphUris();
 
         // Assert
         assertThat(graphUris)
@@ -502,11 +523,10 @@ class GraphWithContextCollectionTest {
     @Test
     void listGraphUris_emptyDataset_returnsEmptyList() {
         // Arrange
-        GraphWithContextCollection collection =
-                new GraphWithContextCollection(DatasetFactory.create());
+        Workspace workspace = new Workspace(WORKSPACE, DatasetFactory.create());
 
         // Act
-        List<String> graphUris = collection.listGraphUris();
+        List<String> graphUris = workspace.listGraphUris();
 
         // Assert
         assertThat(graphUris).isEmpty();
@@ -515,10 +535,10 @@ class GraphWithContextCollectionTest {
     @Test
     void getPrefixMapping_emptyCollection_returnsEmptyPrefixMapping() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
 
         // Act
-        var prefixes = collection.getPrefixMapping();
+        var prefixes = workspace.getPrefixMapping();
 
         // Assert
         assertThat(prefixes.getNsPrefixMap()).isEmpty();
@@ -527,14 +547,14 @@ class GraphWithContextCollectionTest {
     @Test
     void getPrefixMapping_nonEmptyCollection_returnsEmptyPrefixMapping() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
+        Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph(), createExampleGraph());
-        collection.create("http://example.org/graph1", exampleGraphs.get(0));
-        collection.create("http://example.org/graph2", exampleGraphs.get(1));
-        collection.create("http://example.org/graph3", exampleGraphs.get(2));
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.get(0));
+        createGraph(workspace, "http://example.org/graph2", exampleGraphs.get(1));
+        createGraph(workspace, "http://example.org/graph3", exampleGraphs.get(2));
 
         // Act
-        var prefixes = collection.getPrefixMapping();
+        var prefixes = workspace.getPrefixMapping();
 
         // Assert
         assertThat(prefixes.getNsPrefixMap()).isEmpty();
@@ -543,11 +563,10 @@ class GraphWithContextCollectionTest {
     @Test
     void getPrefixMapping_datasetWithEmptyPrefixMapping_returnsEmptyPrefixMapping() {
         // Arrange
-        GraphWithContextCollection collection =
-                new GraphWithContextCollection(DatasetFactory.create());
+        Workspace workspace = new Workspace(WORKSPACE, DatasetFactory.create());
 
         // Act
-        var prefixes = collection.getPrefixMapping();
+        var prefixes = workspace.getPrefixMapping();
 
         // Assert
         assertThat(prefixes.getNsPrefixMap()).isEmpty();
@@ -558,10 +577,10 @@ class GraphWithContextCollectionTest {
         // Arrange
         var dataset = DatasetFactory.create();
         dataset.getDefaultModel().setNsPrefix("ex", "http://example.org/");
-        GraphWithContextCollection collection = new GraphWithContextCollection(dataset);
+        Workspace workspace = new Workspace(WORKSPACE, dataset);
 
         // Act
-        var prefixes = collection.getPrefixMapping();
+        var prefixes = workspace.getPrefixMapping();
 
         // Assert
         assertThat(prefixes.getNsPrefixMap())
@@ -575,10 +594,10 @@ class GraphWithContextCollectionTest {
         dataset.getDefaultModel().setNsPrefix("ex", "http://example.org/");
         dataset.getDefaultModel().setNsPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
         dataset.getDefaultModel().setNsPrefix("rdfs", "http://www.w3.org/2000/01/rdf-schema#");
-        GraphWithContextCollection collection = new GraphWithContextCollection(dataset);
+        Workspace workspace = new Workspace(WORKSPACE, dataset);
 
         // Act
-        var prefixes = collection.getPrefixMapping();
+        var prefixes = workspace.getPrefixMapping();
 
         // Assert
         assertThat(prefixes.getNsPrefixMap())
@@ -608,10 +627,10 @@ class GraphWithContextCollectionTest {
                 ModelFactory.createModelForGraph(exampleGraphs.get(1)));
         dataset.getNamedModel("http://example.org/graph2")
                 .setNsPrefix("xsd", "http://www.w3.org/2001/XMLSchema#");
-        GraphWithContextCollection collection = new GraphWithContextCollection(dataset);
+        Workspace workspace = new Workspace(WORKSPACE, dataset);
 
         // Act
-        var prefixes = collection.getPrefixMapping();
+        var prefixes = workspace.getPrefixMapping();
 
         // Assert
         assertThat(prefixes.getNsPrefixMap())
@@ -625,18 +644,18 @@ class GraphWithContextCollectionTest {
     @Test
     void setPrefixMapping_modifyPrefixMapping_hasNoChangeOnCollection() {
         // Arrange
-        var collection = new GraphWithContextCollection();
+        var workspace = new Workspace(WORKSPACE);
         var initialPrefixes = new PrefixMappingImpl();
         initialPrefixes.setNsPrefix("ex", "http://example.org/");
         initialPrefixes.setNsPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-        collection.setPrefixMapping(initialPrefixes);
+        setPrefixes(workspace, initialPrefixes);
 
         // Act
         initialPrefixes.setNsPrefix("rdfs", "http://www.w3.org/2000/01/rdf-schema#");
         initialPrefixes.removeNsPrefix("ex");
 
         // Assert
-        var prefixes = collection.getPrefixMapping();
+        var prefixes = workspace.getPrefixMapping();
         assertThat(prefixes.getNsPrefixMap())
                 .containsExactlyInAnyOrderEntriesOf(
                         Map.of(
@@ -647,48 +666,48 @@ class GraphWithContextCollectionTest {
     @Test
     void setPrefixMapping_emptyPrefixMapping_setsNoPrefixes() {
         // Arrange
-        var collection = new GraphWithContextCollection();
+        var workspace = new Workspace(WORKSPACE);
         var newPrefixes = new PrefixMappingImpl();
 
         // Act
-        collection.setPrefixMapping(newPrefixes);
+        setPrefixes(workspace, newPrefixes);
 
         // Assert
-        var prefixes = collection.getPrefixMapping();
+        var prefixes = workspace.getPrefixMapping();
         assertThat(prefixes.getNsPrefixMap()).isEmpty();
     }
 
     @Test
     void setPrefixMapping_emptyPrefixMappingIntoNonEmptyGraph_deletesPrefixes() {
         // Arrange
-        var collection = new GraphWithContextCollection();
+        var workspace = new Workspace(WORKSPACE);
         var initialPrefixes = new PrefixMappingImpl();
         initialPrefixes.setNsPrefix("ex", "http://example.org/");
         initialPrefixes.setNsPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-        collection.setPrefixMapping(initialPrefixes);
+        setPrefixes(workspace, initialPrefixes);
         var newPrefixes = new PrefixMappingImpl();
 
         // Act
-        collection.setPrefixMapping(newPrefixes);
+        setPrefixes(workspace, newPrefixes);
 
         // Assert
-        var prefixes = collection.getPrefixMapping();
+        var prefixes = workspace.getPrefixMapping();
         assertThat(prefixes.getNsPrefixMap()).isEmpty();
     }
 
     @Test
     void setPrefixMapping_nonEmptyPrefixMapping_setsPrefixes() {
         // Arrange
-        var collection = new GraphWithContextCollection();
+        var workspace = new Workspace(WORKSPACE);
         var newPrefixes = new PrefixMappingImpl();
         newPrefixes.setNsPrefix("ex", "http://example.org/");
         newPrefixes.setNsPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
 
         // Act
-        collection.setPrefixMapping(newPrefixes);
+        setPrefixes(workspace, newPrefixes);
 
         // Assert
-        var prefixes = collection.getPrefixMapping();
+        var prefixes = workspace.getPrefixMapping();
         assertThat(prefixes.getNsPrefixMap())
                 .containsExactlyInAnyOrderEntriesOf(
                         Map.of(
@@ -699,24 +718,52 @@ class GraphWithContextCollectionTest {
     @Test
     void setPrefixMapping_nonEmptyPrefixMappingIntoNonEmptyGraph_overridesPrefixes() {
         // Arrange
-        var collection = new GraphWithContextCollection();
+        var workspace = new Workspace(WORKSPACE);
         var initialPrefixes = new PrefixMappingImpl();
         initialPrefixes.setNsPrefix("ex", "http://example.org/");
         initialPrefixes.setNsPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-        collection.setPrefixMapping(initialPrefixes);
+        setPrefixes(workspace, initialPrefixes);
         var newPrefixes = new PrefixMappingImpl();
         newPrefixes.setNsPrefix("rdfs", "http://www.w3.org/2000/01/rdf-schema#");
         newPrefixes.setNsPrefix("owl", "http://www.w3.org/2002/07/owl#");
 
         // Act
-        collection.setPrefixMapping(newPrefixes);
+        setPrefixes(workspace, newPrefixes);
 
         // Assert
-        var prefixes = collection.getPrefixMapping();
+        var prefixes = workspace.getPrefixMapping();
         assertThat(prefixes.getNsPrefixMap())
                 .containsExactlyInAnyOrderEntriesOf(
                         Map.of(
                                 "rdfs", "http://www.w3.org/2000/01/rdf-schema#",
                                 "owl", "http://www.w3.org/2002/07/owl#"));
+    }
+
+    private static void createGraph(Workspace workspace, String graphUri, Graph graph) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.createGraph(graphUri, graph);
+            transaction.commit("created graph %s".formatted(graphUri));
+        }
+    }
+
+    private static void renameGraph(Workspace workspace, String oldGraphUri, String newGraphUri) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.renameGraph(oldGraphUri, newGraphUri);
+            transaction.commit("renamed graph %s".formatted(oldGraphUri));
+        }
+    }
+
+    private static void deleteGraph(Workspace workspace, String graphUri) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.deleteGraph(graphUri);
+            transaction.commit("deleted graph %s".formatted(graphUri));
+        }
+    }
+
+    private static void setPrefixes(Workspace workspace, PrefixMapping prefixMapping) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.setPrefixes(prefixMapping);
+            transaction.commit("changed the namespace prefixes");
+        }
     }
 }

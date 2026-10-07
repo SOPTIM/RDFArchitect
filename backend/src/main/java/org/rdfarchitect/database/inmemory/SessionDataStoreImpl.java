@@ -30,58 +30,53 @@ import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.exception.database.ResourceNotFoundException;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
+import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphSourceBuilderImpl;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Class that provides {@link GraphContext} instances belonging to a session. Write actions on this
- * class are irreversible. Closing the provided {@link GraphContext} instances is mandatory.
+ * Holds the workspaces of one session. Contents are reachable only through a {@link
+ * WorkspaceTransaction}, which must be closed by the caller.
  */
 public class SessionDataStoreImpl implements SessionDataStore {
 
-    private final ConcurrentHashMap<String, GraphWithContextCollection> graphCollections =
-            new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Workspace> workspaces = new ConcurrentHashMap<>();
 
     // lock to prohibit dirty reads/writes
     private final ReentrantLock lock = new ReentrantLock();
 
     @Override
     public void createDataset(String datasetName) {
+        createDatasetIfAbsent(datasetName);
+    }
+
+    @Override
+    public boolean createDatasetIfAbsent(String datasetName) {
         lock.lock();
         try {
-            createDatasetIfAbsent(datasetName);
+            return workspaces.putIfAbsent(datasetName, new Workspace(datasetName)) == null;
         } finally {
             lock.unlock();
         }
-    }
-
-    private void createDatasetIfAbsent(String datasetName) {
-        graphCollections.putIfAbsent(datasetName, new GraphWithContextCollection());
     }
 
     @Override
     public void deleteDataset(String datasetName) {
         lock.lock();
         try {
-            if (!graphCollections.containsKey(datasetName)) {
-                return;
-            }
-            graphCollections.get(datasetName).clear();
-            graphCollections.remove(datasetName);
+            workspaces.remove(datasetName);
         } finally {
             lock.unlock();
         }
@@ -95,24 +90,11 @@ public class SessionDataStoreImpl implements SessionDataStore {
                 return;
             }
             assertThatDatasetExists(oldDatasetName);
-            if (graphCollections.containsKey(newDatasetName)) {
+            if (workspaces.containsKey(newDatasetName)) {
                 throw new ResourceConflictException(
                         "Dataset " + newDatasetName + " already exists");
             }
-            graphCollections.put(newDatasetName, graphCollections.remove(oldDatasetName));
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri) {
-        lock.lock();
-        try {
-            assertThatGraphExists(graphIdentifier);
-            graphCollections
-                    .get(graphIdentifier.datasetName())
-                    .rename(graphIdentifier.graphUri(), newGraphUri);
+            workspaces.put(newDatasetName, workspaces.remove(oldDatasetName));
         } finally {
             lock.unlock();
         }
@@ -122,81 +104,71 @@ public class SessionDataStoreImpl implements SessionDataStore {
     public List<String> listDatasets() {
         lock.lock();
         try {
-            return new ArrayList<>(graphCollections.keySet());
+            return new ArrayList<>(workspaces.keySet());
         } finally {
             lock.unlock();
         }
     }
 
     @Override
-    public GraphContext getGraphWithContext(GraphIdentifier graphIdentifier) {
-        lock.lock();
-        try {
-            createDatasetIfAbsent(graphIdentifier.datasetName());
-            return graphCollections
-                    .get(graphIdentifier.datasetName())
-                    .getGraphWithContext(graphIdentifier.graphUri());
-        } finally {
-            lock.unlock();
-        }
+    public WorkspaceTransaction beginTransaction(String workspaceName, ReadWrite mode) {
+        return workspace(workspaceName).begin(mode);
     }
 
     @Override
-    public Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            return graphCollections.get(datasetName).getCustomDiagrams();
-        } finally {
-            lock.unlock();
-        }
+    public boolean canUndo(String workspaceName) {
+        return workspace(workspaceName).canUndo();
     }
 
     @Override
-    public DiagramLayout getDatasetDiagramLayout(String datasetName) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            return graphCollections.get(datasetName).getDiagramLayout();
-        } finally {
-            lock.unlock();
-        }
+    public WorkspaceChangeLogEntry pendingUndo(String workspaceName) {
+        return workspace(workspaceName).pendingUndo();
     }
 
     @Override
-    public CrossProfileDiagramInfo getCrossProfileDiagramInfo(String datasetName) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            return graphCollections.get(datasetName).getCrossProfileDiagramInfo();
-        } finally {
-            lock.unlock();
-        }
+    public boolean canRedo(String workspaceName) {
+        return workspace(workspaceName).canRedo();
     }
 
     @Override
-    public void create(GraphIdentifier graphIdentifier, Graph newGraph) {
-        lock.lock();
-        try {
-            createDatasetIfAbsent(graphIdentifier.datasetName());
-            graphCollections
-                    .get(graphIdentifier.datasetName())
-                    .create(graphIdentifier.graphUri(), newGraph);
-        } finally {
-            lock.unlock();
-        }
+    public WorkspaceHistoryStep undo(String workspaceName) {
+        return workspace(workspaceName).undo();
     }
 
     @Override
-    public void remove(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.datasetName();
-        final String graphUri = graphIdentifier.graphUri();
+    public WorkspaceHistoryStep redo(String workspaceName) {
+        return workspace(workspaceName).redo();
+    }
+
+    @Override
+    public void restoreToVersion(String workspaceName, UUID versionId) {
+        workspace(workspaceName).restoreToVersion(versionId);
+    }
+
+    @Override
+    public List<WorkspaceChangeLogEntry> listChanges(String workspaceName) {
+        return workspace(workspaceName).getChangeHistory();
+    }
+
+    private Workspace workspace(String workspaceName) {
+        var workspace = findWorkspace(workspaceName);
+        if (workspace == null) {
+            throw new ResourceNotFoundException("Workspace " + workspaceName + " does not exist");
+        }
+        return workspace;
+    }
+
+    /**
+     * Looks a workspace up, or returns {@code null} where the session holds none under that name.
+     *
+     * <p>The lock guards the set of workspaces, not their contents, and is released before the
+     * workspace is touched: a caller inside a transaction already holds that workspace's own lock,
+     * so holding both here would invert the order and deadlock.
+     */
+    private Workspace findWorkspace(String workspaceName) {
         lock.lock();
         try {
-            if (!graphCollections.containsKey(datasetName)) {
-                return;
-            }
-            graphCollections.get(datasetName).remove(graphUri);
+            return workspaces.get(workspaceName);
         } finally {
             lock.unlock();
         }
@@ -204,50 +176,21 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public boolean containsGraph(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.datasetName();
-        final String graphUri = graphIdentifier.graphUri();
-        lock.lock();
-        try {
-            return graphCollections.containsKey(datasetName)
-                    && graphCollections.get(datasetName).listGraphUris().contains(graphUri);
-        } finally {
-            lock.unlock();
-        }
+        var workspace = findWorkspace(graphIdentifier.datasetName());
+        return workspace != null && workspace.listGraphUris().contains(graphIdentifier.graphUri());
     }
 
     @Override
     public List<String> listGraphUris(String datasetName) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            return graphCollections.get(datasetName).listGraphUris();
-        } finally {
-            lock.unlock();
-        }
+        return workspace(datasetName).listGraphUris();
     }
 
     @Override
     public PrefixMappingReadOnly getPrefixMapping(String datasetName) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            return graphCollections.get(datasetName).getPrefixMapping();
-        } catch (DataAccessException _) {
-            return new PrefixMappingReadOnly(PrefixMapping.Factory.create());
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public void setPrefixMapping(String datasetName, PrefixMapping newPrefixes) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            graphCollections.get(datasetName).setPrefixMapping(newPrefixes);
-        } finally {
-            lock.unlock();
-        }
+        var workspace = findWorkspace(datasetName);
+        return workspace == null
+                ? new PrefixMappingReadOnly(PrefixMapping.Factory.create())
+                : workspace.getPrefixMapping();
     }
 
     @Override
@@ -255,27 +198,21 @@ public class SessionDataStoreImpl implements SessionDataStore {
             DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier) {
         final String datasetName = graphIdentifier.datasetName();
         final String graphUri = graphIdentifier.graphUri();
-        lock.lock();
-        try {
-            assertThatGraphExists(graphIdentifier);
-            try (var ctx = getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-                var graphSource =
-                        new GraphSourceBuilderImpl()
-                                .setGraph(ctx.getRdfGraph())
-                                .setGraphName(graphUri)
-                                .build();
-                databaseConnection.insertGraph(graphSource, datasetName);
-            }
-        } finally {
-            lock.unlock();
+        assertThatGraphExists(graphIdentifier);
+        try (var transaction = beginTransaction(datasetName, ReadWrite.READ)) {
+            var graphSource =
+                    new GraphSourceBuilderImpl()
+                            .setGraph(transaction.graph(graphUri).getRdfGraph())
+                            .setGraphName(graphUri)
+                            .build();
+            databaseConnection.insertGraph(graphSource, datasetName);
         }
     }
 
     private void clearGraphCollections() {
         lock.lock();
         try {
-            graphCollections.values().forEach(GraphWithContextCollection::clear);
-            graphCollections.clear();
+            workspaces.clear();
         } finally {
             lock.unlock();
         }
@@ -290,7 +227,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
             for (var datasetName : datasetNames) {
                 if (!datasetName.startsWith(SNAPSHOT_PREFIX)) {
                     var dataset = fetchDataset(databaseConnection, datasetName);
-                    graphCollections.put(datasetName, new GraphWithContextCollection(dataset));
+                    workspaces.put(datasetName, new Workspace(datasetName, dataset));
                 }
             }
         } finally {
@@ -305,7 +242,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
             var matchingDataset = findSnapshotName(databaseConnection.listDatasets(), base64Token);
             if (matchingDataset != null) {
                 var dataset = fetchDataset(databaseConnection, matchingDataset);
-                graphCollections.put(matchingDataset, new GraphWithContextCollection(dataset));
+                workspaces.put(matchingDataset, new Workspace(matchingDataset, dataset));
             }
         } finally {
             lock.unlock();
@@ -383,35 +320,17 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public boolean isReadOnly(String datasetName) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            return graphCollections.get(datasetName).isReadOnly();
-        } finally {
-            lock.unlock();
-        }
+        return workspace(datasetName).isReadOnly();
     }
 
     @Override
     public void enableEditing(String datasetName) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            graphCollections.get(datasetName).setReadOnly(false);
-        } finally {
-            lock.unlock();
-        }
+        workspace(datasetName).setReadOnly(false);
     }
 
     @Override
     public void disableEditing(String datasetName) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            graphCollections.get(datasetName).setReadOnly(true);
-        } finally {
-            lock.unlock();
-        }
+        workspace(datasetName).setReadOnly(true);
     }
 
     /**
@@ -421,8 +340,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
      * @throws DataAccessException if the dataset does not exist.
      */
     private void assertThatDatasetExists(String datasetName) {
-        if (!graphCollections.containsKey(datasetName)) {
-            throw new DataAccessException("Dataset " + datasetName + " does not exist");
+        if (!workspaces.containsKey(datasetName)) {
+            throw new ResourceNotFoundException("Workspace " + datasetName + " does not exist");
         }
     }
 
@@ -436,10 +355,9 @@ public class SessionDataStoreImpl implements SessionDataStore {
     private void assertThatGraphExists(GraphIdentifier graphIdentifier) {
         final String datasetName = graphIdentifier.datasetName();
         final String graphUri = graphIdentifier.graphUri();
-        assertThatDatasetExists(datasetName);
-        if (!graphCollections.get(datasetName).listGraphUris().contains(graphUri)) {
-            throw new DataAccessException(
-                    "Graph " + graphUri + " does not exist in dataset " + datasetName);
+        if (!workspace(datasetName).listGraphUris().contains(graphUri)) {
+            throw new ResourceNotFoundException(
+                    "Graph " + graphUri + " does not exist in workspace " + datasetName);
         }
     }
 }

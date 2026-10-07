@@ -21,8 +21,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.vocabulary.RDF;
@@ -75,7 +77,7 @@ class ClassExtensionServiceTest {
                         .setFile(sourceFile)
                         .setGraphName(sourceGraphId.graphUri())
                         .build();
-        databasePort.createGraph(sourceGraphId, sourceGraphSource.graph());
+        createGraph(sourceGraphId, sourceGraphSource.graph());
 
         var targetFile = readMultipartFileFromFile(PATH, "class-extension-target-with-core.ttl");
         var targetGraphSource =
@@ -83,7 +85,7 @@ class ClassExtensionServiceTest {
                         .setFile(targetFile)
                         .setGraphName(targetGraphId.graphUri())
                         .build();
-        databasePort.createGraph(targetGraphId, targetGraphSource.graph());
+        createGraph(targetGraphId, targetGraphSource.graph());
 
         // act
         var results =
@@ -97,107 +99,103 @@ class ClassExtensionServiceTest {
         var cims = "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#";
         var rdfa = "http://example.org#uuid";
 
-        try (var sourceCtx = databasePort.getGraphWithContext(sourceGraphId).begin(ReadWrite.READ);
-                var targetCtx =
-                        databasePort.getGraphWithContext(targetGraphId).begin(ReadWrite.WRITE)) {
+        // Read one after the other: a thread may only be inside one workspace at a time.
+        var sourceModel = copyOf(sourceGraphId);
+        var targetModel = copyOf(targetGraphId);
+        var targetGraph = targetModel.getGraph();
 
-            var sourceGraph = sourceCtx.getRdfGraph();
-            var sourceModel = ModelFactory.createModelForGraph(sourceGraph);
-            var targetGraph = targetCtx.getRdfGraph();
-            var targetModel = ModelFactory.createModelForGraph(targetGraph);
-            // class exists in target
-            assertThat(
-                            targetGraph.contains(
-                                    NodeFactory.createURI(ex + "Child"),
-                                    RDF.type.asNode(),
-                                    RDFS.Class.asNode()))
-                    .isTrue();
+        // class exists in target
+        assertThat(
+                        targetGraph.contains(
+                                NodeFactory.createURI(ex + "Child"),
+                                RDF.type.asNode(),
+                                RDFS.Class.asNode()))
+                .isTrue();
 
-            // superclass relation exists => superclass copied/usable
-            assertThat(
-                            targetGraph.contains(
-                                    NodeFactory.createURI(ex + "Child"),
-                                    RDFS.subClassOf.asNode(),
-                                    NodeFactory.createURI(ex + "Base")))
-                    .isTrue();
+        // superclass relation exists => superclass copied/usable
+        assertThat(
+                        targetGraph.contains(
+                                NodeFactory.createURI(ex + "Child"),
+                                RDFS.subClassOf.asNode(),
+                                NodeFactory.createURI(ex + "Base")))
+                .isTrue();
 
-            // superclass exists in target graph
-            assertThat(
-                            targetGraph.contains(
-                                    NodeFactory.createURI(ex + "Base"),
-                                    RDF.type.asNode(),
-                                    RDFS.Class.asNode()))
-                    .isTrue();
+        // superclass exists in target graph
+        assertThat(
+                        targetGraph.contains(
+                                NodeFactory.createURI(ex + "Base"),
+                                RDF.type.asNode(),
+                                RDFS.Class.asNode()))
+                .isTrue();
 
-            // UUID changed for copied class
-            var sourceUuid =
-                    sourceModel
-                            .getProperty(
-                                    sourceModel.getResource(ex + "Child"),
-                                    sourceModel.createProperty(rdfa))
-                            .getString();
+        // UUID changed for copied class
+        var sourceUuid =
+                sourceModel
+                        .getProperty(
+                                sourceModel.getResource(ex + "Child"),
+                                sourceModel.createProperty(rdfa))
+                        .getString();
 
-            var targetUuid =
-                    targetModel
-                            .getProperty(
-                                    targetModel.getResource(ex + "Child"),
-                                    targetModel.createProperty(rdfa))
-                            .getString();
+        var targetUuid =
+                targetModel
+                        .getProperty(
+                                targetModel.getResource(ex + "Child"),
+                                targetModel.createProperty(rdfa))
+                        .getString();
 
-            assertThat(targetUuid).isNotBlank();
-            assertThat(targetUuid).isNotEqualTo(sourceUuid);
+        assertThat(targetUuid).isNotBlank();
+        assertThat(targetUuid).isNotEqualTo(sourceUuid);
 
-            // UUID changed for copied superclass
-            var sourceBaseUuid =
-                    sourceModel
-                            .getProperty(
-                                    sourceModel.getResource(ex + "Base"),
-                                    sourceModel.createProperty(rdfa))
-                            .getString();
+        // UUID changed for copied superclass
+        var sourceBaseUuid =
+                sourceModel
+                        .getProperty(
+                                sourceModel.getResource(ex + "Base"),
+                                sourceModel.createProperty(rdfa))
+                        .getString();
 
-            var targetBaseUuid =
-                    targetModel
-                            .getProperty(
-                                    targetModel.getResource(ex + "Base"),
-                                    targetModel.createProperty(rdfa))
-                            .getString();
+        var targetBaseUuid =
+                targetModel
+                        .getProperty(
+                                targetModel.getResource(ex + "Base"),
+                                targetModel.createProperty(rdfa))
+                        .getString();
 
-            assertThat(targetBaseUuid).isNotBlank();
-            assertThat(targetBaseUuid).isNotEqualTo(sourceBaseUuid);
+        assertThat(targetBaseUuid).isNotBlank();
+        assertThat(targetBaseUuid).isNotEqualTo(sourceBaseUuid);
 
-            // concrete stereotype removed from copied class
-            assertThat(
-                            targetGraph.contains(
-                                    NodeFactory.createURI(ex + "Child"),
-                                    NodeFactory.createURI(cims + "stereotype"),
-                                    NodeFactory.createURI(
-                                            "http://iec.ch/TC57/NonStandard/UML#concrete")))
-                    .isFalse();
+        // concrete stereotype removed from copied class
+        assertThat(
+                        targetGraph.contains(
+                                NodeFactory.createURI(ex + "Child"),
+                                NodeFactory.createURI(cims + "stereotype"),
+                                NodeFactory.createURI(
+                                        "http://iec.ch/TC57/NonStandard/UML#concrete")))
+                .isFalse();
 
-            // copied class keeps the package it belongs to in the source graph
-            assertThat(
-                            targetGraph.contains(
-                                    NodeFactory.createURI(ex + "Child"),
-                                    NodeFactory.createURI(cims + "belongsToCategory"),
-                                    NodeFactory.createURI(ex + "SourcePackage")))
-                    .isTrue();
+        // copied class keeps the package it belongs to in the source graph
+        assertThat(
+                        targetGraph.contains(
+                                NodeFactory.createURI(ex + "Child"),
+                                NodeFactory.createURI(cims + "belongsToCategory"),
+                                NodeFactory.createURI(ex + "SourcePackage")))
+                .isTrue();
 
-            // copied superclass keeps its package as well
-            assertThat(
-                            targetGraph.contains(
-                                    NodeFactory.createURI(ex + "Base"),
-                                    NodeFactory.createURI(cims + "belongsToCategory"),
-                                    NodeFactory.createURI(ex + "SourcePackage")))
-                    .isTrue();
+        // copied superclass keeps its package as well
+        assertThat(
+                        targetGraph.contains(
+                                NodeFactory.createURI(ex + "Base"),
+                                NodeFactory.createURI(cims + "belongsToCategory"),
+                                NodeFactory.createURI(ex + "SourcePackage")))
+                .isTrue();
 
-            // the package of the target graph is left alone
-            assertThat(
-                            targetGraph.contains(
-                                    NodeFactory.createURI(ex + "Child"),
-                                    NodeFactory.createURI(cims + "belongsToCategory"),
-                                    NodeFactory.createURI(ex + "CorePackage")))
-                    .isFalse();
-        }
+        // the package of the target graph is left alone
+        assertThat(
+                        targetGraph.contains(
+                                NodeFactory.createURI(ex + "Child"),
+                                NodeFactory.createURI(cims + "belongsToCategory"),
+                                NodeFactory.createURI(ex + "CorePackage")))
+                .isFalse();
     }
 
     @Test
@@ -213,7 +211,7 @@ class ClassExtensionServiceTest {
                         .setFile(sourceFile)
                         .setGraphName(sourceGraphId.graphUri())
                         .build();
-        databasePort.createGraph(sourceGraphId, sourceGraphSource.graph());
+        createGraph(sourceGraphId, sourceGraphSource.graph());
 
         // target already contains Base class with existing UUID; should not be replaced
         var targetFile =
@@ -223,13 +221,15 @@ class ClassExtensionServiceTest {
                         .setFile(targetFile)
                         .setGraphName(targetGraphId.graphUri())
                         .build();
-        databasePort.createGraph(targetGraphId, targetGraphSource.graph());
+        createGraph(targetGraphId, targetGraphSource.graph());
 
         var ex = "http://example.org#";
         var rdfa = "http://example.org#uuid";
 
         String existingBaseUuidBefore;
-        try (var ctx = databasePort.getGraphWithContext(targetGraphId).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(targetGraphId.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(targetGraphId.graphUri());
             var targetModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             existingBaseUuidBefore =
                     targetModel
@@ -247,7 +247,9 @@ class ClassExtensionServiceTest {
         // assert
         assertThat(results).hasSize(1);
 
-        try (var ctx = databasePort.getGraphWithContext(targetGraphId).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(targetGraphId.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(targetGraphId.graphUri());
             var targetGraph = ctx.getRdfGraph();
             var targetModel = ModelFactory.createModelForGraph(targetGraph);
             // class got added
@@ -302,7 +304,7 @@ class ClassExtensionServiceTest {
                         .setFile(sourceFile)
                         .setGraphName(sourceGraphId.graphUri())
                         .build();
-        databasePort.createGraph(sourceGraphId, sourceGraphSource.graph());
+        createGraph(sourceGraphId, sourceGraphSource.graph());
 
         var targetFile = readMultipartFileFromFile(PATH, "class-extension-target-no-core.ttl");
         var targetGraphSource =
@@ -310,7 +312,7 @@ class ClassExtensionServiceTest {
                         .setFile(targetFile)
                         .setGraphName(targetGraphId.graphUri())
                         .build();
-        databasePort.createGraph(targetGraphId, targetGraphSource.graph());
+        createGraph(targetGraphId, targetGraphSource.graph());
 
         // act
         var results =
@@ -324,7 +326,9 @@ class ClassExtensionServiceTest {
         var cimsBelongsToCategory =
                 "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#belongsToCategory";
 
-        try (var ctx = databasePort.getGraphWithContext(targetGraphId).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(targetGraphId.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(targetGraphId.graphUri());
             var targetGraph = ctx.getRdfGraph();
             var targetModel = ModelFactory.createModelForGraph(targetGraph);
 
@@ -373,7 +377,9 @@ class ClassExtensionServiceTest {
         assertThat(result.sourceClassUUID()).isEqualTo(UUID.fromString(classUuid));
         assertThat(result.created()).isTrue();
 
-        try (var ctx = databasePort.getGraphWithContext(targetGraphId).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(targetGraphId.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(targetGraphId.graphUri());
             var targetGraph = ctx.getRdfGraph();
             var targetModel = ModelFactory.createModelForGraph(targetGraph);
 
@@ -458,6 +464,26 @@ class ClassExtensionServiceTest {
                         .setFile(file)
                         .setGraphName(graphIdentifier.graphUri())
                         .build();
-        databasePort.createGraph(graphIdentifier, graphSource.graph());
+        createGraph(graphIdentifier, graphSource.graph());
+    }
+
+    private Model copyOf(GraphIdentifier identifier) {
+        try (var transaction =
+                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
+            return ModelFactory.createDefaultModel()
+                    .add(
+                            ModelFactory.createModelForGraph(
+                                    transaction.graph(identifier.graphUri()).getRdfGraph()));
+        }
+    }
+
+    /** Creates a workspace and a graph in it, the way an upload does. */
+    private void createGraph(GraphIdentifier identifier, Graph graph) {
+        databasePort.createWorkspaceIfAbsent(identifier.datasetName());
+        try (var transaction =
+                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.createGraph(identifier.graphUri(), graph);
+            transaction.commit("created graph %s".formatted(identifier.graphUri()));
+        }
     }
 }

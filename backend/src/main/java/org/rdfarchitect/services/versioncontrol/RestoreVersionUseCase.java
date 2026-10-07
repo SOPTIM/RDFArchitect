@@ -17,17 +17,15 @@
 
 package org.rdfarchitect.services.versioncontrol;
 
-import org.rdfarchitect.database.GraphIdentifier;
-
 import java.util.UUID;
 
 public interface RestoreVersionUseCase {
 
     /**
-     * Restores a specific version of the graph for the graph provided through the graph identifier.
+     * Rolls the workspace back to a specific version, undoing every change made after it.
      *
-     * @param graphIdentifier The identifier of the graph to restore.
-     * @param versionId The unique identifier of the version to restore.
+     * @param workspaceName the workspace to operate on
+     * @param versionId the change to restore to
      */
-    void restoreVersion(GraphIdentifier graphIdentifier, UUID versionId);
+    void restoreVersion(String workspaceName, UUID versionId);
 }
