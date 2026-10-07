@@ -35,4 +35,25 @@ public class ChangeLogEntryDTO {
 
     /** The graphs this change touched, so the editor can offer to go where it landed. */
     private List<String> affectedGraphUris;
+
+    /**
+     * The graphs a restore held to one graph would take this change back in. Narrower than {@link
+     * #getAffectedGraphUris()}: creating, deleting and renaming a graph is recorded against the set
+     * of graphs, which a restore held to a graph leaves alone, so a question about such a restore
+     * must not promise to undo it.
+     */
+    private List<String> restorableGraphUris;
+
+    /**
+     * Whether an undo has stepped over this change, so that it lies ahead of the workspace rather
+     * than behind it. A redo brings it back.
+     */
+    private boolean undone;
+
+    /**
+     * The kinds of data this change touched — {@code rdf}, {@code shacl}, {@code dl} and the like —
+     * named as {@link ContextDeltaDTO#getContextName()} names them. Answered even for a change that
+     * carries no delta, such as deleting a graph, which a filter would otherwise lose.
+     */
+    private List<String> affectedKinds;
 }

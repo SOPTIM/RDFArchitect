@@ -287,16 +287,14 @@ class TransactionCoordinator {
         }
         var id = identify.apply(participant);
         var lastDelta = participant instanceof DeltaSource r ? r.getLastDelta() : null;
-        var additions =
-                participant instanceof SnapshotParticipant<?> snapshot
-                        ? snapshot.additionsOfLastVersion()
-                        : List.<String>of();
+        var snapshot = participant instanceof SnapshotParticipant<?> s ? s : null;
         versions.add(
                 new ParticipantVersion(
                         id,
                         rewindable,
                         lastDelta != null ? lastDelta.getVersionId() : null,
-                        additions));
+                        snapshot != null ? snapshot.additionsOfLastVersion() : List.of(),
+                        snapshot != null ? snapshot.affectedGraphsOfLastVersion() : List.of()));
         if (lastDelta != null) {
             deltas.add(
                     new ContextDelta(

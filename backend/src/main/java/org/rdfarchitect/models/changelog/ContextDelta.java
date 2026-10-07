@@ -20,7 +20,6 @@ package org.rdfarchitect.models.changelog;
 import org.apache.jena.graph.Graph;
 
 import java.lang.ref.WeakReference;
-import java.util.Locale;
 
 /**
  * What one participant changed in a commit, for display in the changelog.
@@ -38,11 +37,22 @@ public record ContextDelta(
 
     /** Returns the kind of data that changed, named the way the changelog shows it. */
     public String contextName() {
-        return participant.kind().name().toLowerCase(Locale.ROOT);
+        return participant.kindName();
     }
 
     /** Returns the graph this delta belongs to, or {@code null} for workspace-wide data. */
     public String graphUri() {
         return participant.scope();
+    }
+
+    /**
+     * Returns the same delta seen under a different identifier, for an entry rendered with the
+     * participants identified as they stand now rather than as they stood when it was recorded.
+     *
+     * @param currentId the identifier the participant has now
+     * @return the delta under {@code currentId}
+     */
+    public ContextDelta identifiedAs(ParticipantId currentId) {
+        return new ContextDelta(currentId, additions, deletions);
     }
 }

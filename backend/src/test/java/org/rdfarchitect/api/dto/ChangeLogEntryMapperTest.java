@@ -26,8 +26,11 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
+import org.rdfarchitect.models.changelog.CapturedState;
+import org.rdfarchitect.models.changelog.ChangeLogParticipant;
 import org.rdfarchitect.models.changelog.ContextDelta;
 import org.rdfarchitect.models.changelog.ParticipantId;
+import org.rdfarchitect.models.changelog.ParticipantVersion;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
@@ -84,9 +87,38 @@ class ChangeLogEntryMapperTest {
                                 ParticipantId.ofGraph(ParticipantId.Kind.RDF, GRAPH_URI),
                                 new WeakReference<>(delta.getAdditions()),
                                 new WeakReference<>(delta.getDeletions())));
+        var participant =
+                ParticipantVersion.of(
+                        ParticipantId.ofGraph(ParticipantId.Kind.RDF, GRAPH_URI),
+                        new UnsteppableParticipant(),
+                        UUID.randomUUID());
         changeLogEntry =
                 new WorkspaceChangeLogEntry(
-                        CHANGE_ID, TIMESTAMP, MESSAGE, List.of(), contextDeltas);
+                        CHANGE_ID, TIMESTAMP, MESSAGE, List.of(participant), contextDeltas, false);
+    }
+
+    /** Stands in for a participant where only what the entry says about it is under test. */
+    private record UnsteppableParticipant() implements ChangeLogParticipant {
+
+        @Override
+        public CapturedState capture(int versionsBack) {
+            return () -> {};
+        }
+
+        @Override
+        public void undo() {}
+
+        @Override
+        public void redo() {}
+
+        @Override
+        public void discardOldestVersion() {}
+
+        @Override
+        public void discardRedoHistory() {}
+
+        @Override
+        public void foldLastVersionIntoPrevious() {}
     }
 
     @Test
@@ -110,6 +142,34 @@ class ChangeLogEntryMapperTest {
                 () -> assertThat(contextDelta.getDeletions()).hasSize(1),
                 () -> assertThat(deletion.getSubject()).isEqualTo(SUB),
                 () -> assertThat(deletion.getPredicate()).isEqualTo(PRED),
-                () -> assertThat(deletion.getObject()).isEqualTo(DELETED));
+                () -> assertThat(deletion.getObject()).isEqualTo(DELETED),
+                () -> assertThat(dto.getAffectedKinds()).containsExactly("rdf"),
+                () -> assertThat(dto.getAffectedGraphUris()).containsExactly(GRAPH_URI),
+                () -> assertThat(dto.getRestorableGraphUris()).containsExactly(GRAPH_URI));
+    }
+
+    @Test
+    void toDTO_whatBecameOfAGraphIsShownThereButNotRestorableThere() {
+        var createdGraph =
+                new ParticipantVersion(
+                        ParticipantId.ofWorkspace(ParticipantId.Kind.GRAPHS),
+                        new UnsteppableParticipant(),
+                        UUID.randomUUID(),
+                        List.of(GRAPH_URI),
+                        List.of(GRAPH_URI));
+        var entry =
+                new WorkspaceChangeLogEntry(
+                        UUID.randomUUID(),
+                        TIMESTAMP,
+                        "created a graph",
+                        List.of(createdGraph),
+                        List.of(),
+                        false);
+
+        var dto = changeLogEntryMapper.toDTO(entry);
+
+        assertAll(
+                () -> assertThat(dto.getAffectedGraphUris()).containsExactly(GRAPH_URI),
+                () -> assertThat(dto.getRestorableGraphUris()).isEmpty());
     }
 }

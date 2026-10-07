@@ -33,15 +33,20 @@ import java.util.UUID;
  * @param additions what this version brought into existence and undoing it would remove again,
  *     recorded here rather than asked of the participant later, which would answer for its newest
  *     version instead of this one
+ * @param affectedGraphs the graphs a workspace-scoped participant reached, for the one case where
+ *     workspace-wide data is really about individual graphs: the set of graphs. Empty for a
+ *     graph-scoped participant, whose graph {@link #id()} already names.
  */
 public record ParticipantVersion(
         ParticipantId id,
         ChangeLogParticipant participant,
         UUID versionId,
-        List<String> additions) {
+        List<String> additions,
+        List<String> affectedGraphs) {
 
     public ParticipantVersion {
         additions = List.copyOf(additions);
+        affectedGraphs = List.copyOf(affectedGraphs);
     }
 
     /**
@@ -54,6 +59,17 @@ public record ParticipantVersion(
      */
     public static ParticipantVersion of(
             ParticipantId id, ChangeLogParticipant participant, UUID versionId) {
-        return new ParticipantVersion(id, participant, versionId, List.of());
+        return new ParticipantVersion(id, participant, versionId, List.of(), List.of());
+    }
+
+    /**
+     * Returns the same version seen under a different identifier, for an entry rendered with the
+     * participants identified as they stand now rather than as they stood when it was recorded.
+     *
+     * @param currentId the identifier the participant has now
+     * @return the version under {@code currentId}
+     */
+    public ParticipantVersion identifiedAs(ParticipantId currentId) {
+        return new ParticipantVersion(currentId, participant, versionId, additions, affectedGraphs);
     }
 }

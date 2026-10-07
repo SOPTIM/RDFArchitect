@@ -34,6 +34,7 @@ import {
     canUndo as sdkCanUndo,
     canRedo as sdkCanRedo,
     getPendingUndo as sdkPendingUndo,
+    restoreVersion as sdkRestore,
 } from "../api/generated";
 import { type ChangeLogEntryDTO } from "../api/generated/types.gen";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
@@ -48,12 +49,32 @@ type State = { byWorkspace: Map<string, WorkspaceFlags> };
 
 type Direction = "undo" | "redo";
 
+/** A move through the history, including the one that is not a single step. */
+type Move = Direction | "restore";
+
+/** What the backend answers a move with. */
+type MoveData = {
+    change?: ChangeLogEntryDTO;
+    canUndo?: boolean;
+    canRedo?: boolean;
+};
+
+/**
+ * What a move leaves the caller with: whether it failed, and whether it moved
+ * anything at all — a move that did not is not something to reload for.
+ */
+type MoveResult = {
+    error: unknown;
+    skipped?: boolean;
+    cancelled?: boolean;
+};
+
 const LOG = "[versionControlStore]";
 
 export const versionControlStore = createVersionControlStore();
 
 const WORDING: Record<
-    Direction,
+    Move,
     {
         successTitle: string;
         failureTitle: string;
@@ -72,6 +93,12 @@ const WORDING: Record<
         failureTitle: "Redo failed",
         failureText: "Could not redo the change.",
         unnamedChange: "The last change was restored.",
+    },
+    restore: {
+        successTitle: "Version restored",
+        failureTitle: "Restore failed",
+        failureText: "Could not restore the selected version.",
+        unnamedChange: "The selected version was restored.",
     },
 };
 
@@ -167,18 +194,22 @@ function createVersionControlStore() {
     }
 
     async function doUndo(workspace?: string) {
-        return runStep(workspace, "undo");
+        return runMove(() => step(workspace, "undo"));
     }
 
     async function doRedo(workspace?: string) {
-        return runStep(workspace, "redo");
+        return runMove(() => step(workspace, "redo"));
     }
 
-    async function runStep(
-        workspace: string | undefined,
-        direction: Direction,
-    ) {
-        // Told apart from a step that ran, so that a press which did nothing
+    /**
+     * Runs a move through the history, with the pause that keeps the next one
+     * from starting before this one has settled.
+     *
+     * Every kind of move goes through here, so that a restore and the undo
+     * after it are held apart the same way two undos are.
+     */
+    async function runMove(perform: () => Promise<MoveResult>) {
+        // Told apart from a move that ran, so that a press which did nothing
         // does not reload the editor for nothing.
         if (running || Date.now() - lastStepEndedAt < MIN_STEP_INTERVAL_MS) {
             return { error: null, skipped: true };
@@ -186,30 +217,59 @@ function createVersionControlStore() {
         running = true;
         let cancelled = false;
         try {
-            const result = await step(workspace, direction);
+            const result = await perform();
             cancelled = !!result.cancelled;
             return result;
         } finally {
             running = false;
-            // Declining is not a step; the next press is a fresh decision.
+            // Declining is not a move; the next press is a fresh decision.
             if (!cancelled) lastStepEndedAt = Date.now();
         }
     }
 
+    /** Reports a move that could not be attempted at all. */
+    function cannotStart(move: Move, message: string): MoveResult {
+        console.error(`${LOG} ${move} failed`, message);
+        toastStore.error(WORDING[move].failureTitle, message);
+        return { error: message };
+    }
+
+    /** Reports a move the backend refused. */
+    function refused(move: Move, error: unknown): MoveResult {
+        console.error(`${LOG} ${move} failed`, error);
+        toastStore.error(WORDING[move].failureTitle, WORDING[move].failureText);
+        return { error };
+    }
+
+    /**
+     * Records where a move left the workspace and says what it did.
+     *
+     * A move reaches the whole workspace, so what it changed may sit in a
+     * graph the user is not looking at, which is why the whole workspace is
+     * invalidated rather than the graph in view.
+     */
+    function landed(
+        move: Move,
+        target: string,
+        data: MoveData | undefined,
+    ): MoveResult {
+        announce(move, data?.change);
+        applyMoveResult(target, data);
+        return { error: null };
+    }
+
     /**
      * A step through the workspace history. Undo and redo differ only in which
-     * endpoint they call and what they are called in a message, so they share
-     * everything that matters: an undone change can sit in any graph of the
-     * workspace, which is why the whole workspace is invalidated rather than
-     * the graph the user happens to be looking at.
+     * endpoint they call, what they are called in a message, and whether
+     * anything is asked first.
      */
-    async function step(workspace: string | undefined, direction: Direction) {
+    async function step(
+        workspace: string | undefined,
+        direction: Direction,
+    ): Promise<MoveResult> {
         const target = resolveWorkspace(workspace);
         if (!target) {
-            const message = `No ${direction} target selected.`;
-            console.error(`${LOG} ${direction} failed`, message);
-            toastStore.error(WORDING[direction].failureTitle, message);
-            return { error: message };
+            return cannotStart(direction, `No ${direction} target selected.`);
         }
         if (direction === "undo" && !(await confirmedIfDestructive(target))) {
             // Skipped too: nothing moved, so there is nothing to reload for.
@@ -217,20 +277,64 @@ function createVersionControlStore() {
         }
         const call = direction === "undo" ? sdkUndo : sdkRedo;
         const { data, error } = await call({ path: { datasetName: target } });
-        if (error) {
-            console.error(`${LOG} ${direction} failed`, error);
-            toastStore.error(
-                WORDING[direction].failureTitle,
-                WORDING[direction].failureText,
-            );
-            return { error };
-        }
-        announce(direction, data?.change);
+        return error
+            ? refused(direction, error)
+            : landed(direction, target, data);
+    }
 
+    /**
+     * Puts the workspace back the way a recorded version left it.
+     *
+     * Not a step through the history but a change of its own, so it ends up
+     * here all the same: it can move anything in the workspace, which is what
+     * decides what has to be reloaded and what the user has to be told.
+     *
+     * @param changeId the version to restore to
+     * @param graphUris the graphs to put back, or empty for the whole workspace
+     * @param workspace the workspace to act on, or the selected one
+     */
+    async function restore(
+        changeId: string,
+        graphUris: string[] = [],
+        workspace?: string,
+    ) {
+        return runMove(async () => {
+            const target = resolveWorkspace(workspace);
+            if (!target) {
+                return cannotStart("restore", "No workspace selected.");
+            }
+            const { data, error } = await sdkRestore({
+                path: { datasetName: target },
+                body: { versionId: changeId, graphUris },
+            });
+            if (error) return refused("restore", error);
+            // A restore that covers nothing which has changed since writes no
+            // change at all. Saying it restored something would be a lie, and
+            // reloading for it would be work for nothing.
+            if (!data?.change) {
+                toastStore.info(
+                    "Nothing to restore",
+                    "The workspace is already at that version.",
+                );
+                return { error: null, skipped: true };
+            }
+            return landed("restore", target, data);
+        });
+    }
+
+    /**
+     * Reloads what a move may have changed and records where it left the
+     * history.
+     *
+     * The move says that itself, so there is nothing left to ask: two fewer
+     * requests, and no window in which another request could move the workspace
+     * on between the move and the question.
+     */
+    function applyMoveResult(
+        target: string,
+        data: { canUndo?: boolean; canRedo?: boolean } | undefined,
+    ) {
         invalidateWorkspace(target);
-        // The step says where it left the history, so there is nothing left to
-        // ask: two fewer requests, and no window in which another request could
-        // move the workspace on between the step and the question.
         store.update(s =>
             setFlags(s, target, {
                 canUndo: {
@@ -243,26 +347,22 @@ function createVersionControlStore() {
                 },
             }),
         );
-        return { error: null };
     }
 
     /**
-     * Says what was undone or redone, and where.
+     * Says what the move did, and where.
      *
-     * Undo reaches the whole workspace, so what it took back may sit in a graph the user is not
+     * A move reaches the whole workspace, so what it changed may sit in a graph the user is not
      * looking at — or in its SHACL shapes rather than its schema. Without saying so, the editor
      * would appear unchanged and the change would look lost.
      */
-    function announce(
-        direction: Direction,
-        entry: ChangeLogEntryDTO | undefined,
-    ) {
+    function announce(move: Move, entry: ChangeLogEntryDTO | undefined) {
         const elsewhere = (entry?.affectedGraphUris ?? []).filter(
             graph => graph !== editorState.selectedGraph.getValue(),
         );
         toastStore.info(
-            WORDING[direction].successTitle,
-            describe(direction, entry, elsewhere),
+            WORDING[move].successTitle,
+            describe(move, entry, elsewhere),
         );
     }
 
@@ -309,6 +409,7 @@ function createVersionControlStore() {
         canRedo,
         undo: doUndo,
         redo: doRedo,
+        restore,
     };
 }
 
@@ -320,11 +421,11 @@ function resolveWorkspace(workspace?: string) {
  * What the change did, and where it landed if that is somewhere the user is not looking.
  */
 function describe(
-    direction: Direction,
+    move: Move,
     entry: ChangeLogEntryDTO | undefined,
     elsewhere: string[],
 ): string {
-    const what = entry?.message ?? WORDING[direction].unnamedChange;
+    const what = entry?.message ?? WORDING[move].unnamedChange;
     if (elsewhere.length === 0) return what;
     return elsewhere.length === 1
         ? `${what} in ${shortName(elsewhere[0])}`

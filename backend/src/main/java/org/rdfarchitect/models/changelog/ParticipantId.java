@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.models.changelog;
 
+import java.util.Locale;
+
 /**
  * Describes what a transaction participant represents, so that a changelog entry can state which
  * part of the workspace a commit touched without holding on to the participant itself.
@@ -69,5 +71,15 @@ public record ParticipantId(Kind kind, String scope) {
     /** Returns whether this participant belongs to a single graph rather than to the workspace. */
     public boolean isGraphScoped() {
         return scope != null;
+    }
+
+    /**
+     * Returns what to call this participant's kind of data outside the backend — {@code rdf},
+     * {@code shacl}, {@code dl} and the like. Named here rather than at each place that shows it,
+     * so that a changelog entry and the deltas it carries cannot come to name the same kind
+     * differently and defeat a filter that matches on both.
+     */
+    public String kindName() {
+        return kind.name().toLowerCase(Locale.ROOT);
     }
 }

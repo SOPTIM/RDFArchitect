@@ -20,6 +20,7 @@ package org.rdfarchitect.models.changelog;
 import org.rdfarchitect.exception.graph.GraphVersionControlException;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -191,19 +192,33 @@ public class WorkspaceChangeLog {
     }
 
     /**
-     * Rolls back to the given change, undoing everything recorded after it.
+     * A recorded change together with everything committed after it.
      *
-     * @param changeId the change to restore to
+     * @param change the change that was measured from
+     * @param after the commits recorded after it, newest first — what restoring to {@code change}
+     *     has to take back
+     */
+    public record HistorySince(
+            WorkspaceChangeLogEntry change, List<WorkspaceChangeLogEntry> after) {}
+
+    /**
+     * Returns a recorded change and the commits that followed it. The two are answered together
+     * because a restore needs both and the history has to be walked only once to find them.
+     *
+     * @param changeId the change to measure from
+     * @return the change and the commits recorded after it, newest first
      * @throws GraphVersionControlException if no such change is recorded
      */
-    public void restoreTo(UUID changeId) {
-        if (undoStack.stream().noneMatch(entry -> entry.changeId().equals(changeId))) {
-            throw new GraphVersionControlException(
-                    "Version " + changeId + " not found in the history.");
+    public HistorySince historySince(UUID changeId) {
+        var after = new ArrayList<WorkspaceChangeLogEntry>();
+        for (var entry : undoStack) {
+            if (entry.changeId().equals(changeId)) {
+                return new HistorySince(entry, List.copyOf(after));
+            }
+            after.add(entry);
         }
-        while (!undoStack.element().changeId().equals(changeId)) {
-            undo();
-        }
+        throw new GraphVersionControlException(
+                "Version " + changeId + " not found in the history.");
     }
 
     /**

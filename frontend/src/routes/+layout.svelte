@@ -58,6 +58,12 @@
     /** @type {{children?: import("svelte").Snippet}} */
     let { children } = $props();
 
+    /**
+     * What to call a page in the toolbar. Only for pages that are laid out like the editor and
+     * would otherwise be mistaken for it; the editor itself puts its search there instead.
+     */
+    const PAGE_TITLES = { "/changelog": "Changelog" };
+
     let canUndo = $state(false);
     let canRedo = $state(false);
     let menubarValue = $state(undefined);
@@ -67,6 +73,8 @@
     let isLeftAltPressed = false;
 
     let selectedWorkspace = $derived(editorState.selectedWorkspace.getValue());
+
+    let pageTitle = $derived(PAGE_TITLES[page.url.pathname] ?? "");
 
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
@@ -253,7 +261,9 @@
     >
         {#if page.url.pathname !== "/"}
             <nav
-                class="toolbar-surface text-default-text flex h-12 min-h-12 w-full items-center"
+                class="toolbar-surface text-default-text flex h-12 min-h-12 w-full items-center {pageTitle
+                    ? 'toolbar-surface--named'
+                    : ''}"
             >
                 <!-- Left -->
                 <div class="w-1/3">
@@ -287,6 +297,10 @@
                     {#if page.url.pathname === "/mainpage"}
                         <div class="w-full">
                             <Searchbar />
+                        </div>
+                    {:else if pageTitle}
+                        <div class="w-full text-center text-sm font-semibold">
+                            {pageTitle}
                         </div>
                     {/if}
                 </div>

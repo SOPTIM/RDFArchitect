@@ -343,6 +343,12 @@
             },
             "type" : "array"
           },
+          "affectedKinds" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "changeId" : {
             "type" : "string"
           },
@@ -361,8 +367,17 @@
             },
             "type" : "array"
           },
+          "restorableGraphUris" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "timestamp" : {
             "type" : "string"
+          },
+          "undone" : {
+            "type" : "boolean"
           }
         },
         "type" : "object"
@@ -1800,6 +1815,12 @@
       },
       "RestoreVersionDTO" : {
         "properties" : {
+          "graphUris" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "versionId" : {
             "type" : "string"
           }
@@ -8541,7 +8562,7 @@
     },
     "/api/datasets/{datasetName}/restore" : {
       "post" : {
-        "description" : "restores the graph to the state specified by the version id",
+        "description" : "Puts the workspace back the way the given version left it, recorded as a new change. The scope can hold the restore to certain graphs; leaving it out restores the whole workspace.",
         "operationId" : "restoreVersion",
         "parameters" : [
           {
@@ -8580,14 +8601,14 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "string"
+                  "$ref" : "#/components/schemas/HistoryStepDTO"
                 }
               }
             },
             "description" : "OK"
           }
         },
-        "summary" : "restore ",
+        "summary" : "restore a version",
         "tags" : [
           "workspace"
         ]
