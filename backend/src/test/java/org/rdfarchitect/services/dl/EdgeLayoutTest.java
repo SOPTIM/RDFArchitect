@@ -27,6 +27,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
+import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.api.dto.dl.BendPointDTO;
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
@@ -47,6 +48,7 @@ import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSource
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.diagrams.CustomDiagramService;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
+import org.rdfarchitect.services.dl.update.SyncDiagramLayoutService;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.dl.update.edgelayout.EdgeKey;
 import org.rdfarchitect.services.dl.update.edgelayout.UpdateEdgeLayoutDataService;
@@ -139,6 +141,7 @@ class EdgeLayoutTest {
     private DatabasePort databasePort;
     private UpdateClassLayoutService classLayoutService;
     private UpdateEdgeLayoutDataService edgeLayoutService;
+    private SyncDiagramLayoutService syncDiagramLayoutService;
     private GraphIdentifier graphOne;
 
     @BeforeEach
@@ -148,6 +151,7 @@ class EdgeLayoutTest {
         classLayoutService =
                 new UpdateClassLayoutService(databasePort, Mappers.getMapper(PackageMapper.class));
         edgeLayoutService = new UpdateEdgeLayoutDataService(databasePort);
+        syncDiagramLayoutService = new SyncDiagramLayoutService(databasePort);
         graphOne = addGraph(GRAPH_ONE, SCHEMA_ONE);
     }
 
@@ -212,7 +216,7 @@ class EdgeLayoutTest {
                     sub.addProperty(
                             RDFS.subClassOf, model.getResource("http://example.com#OtherSuper"));
                 });
-        edgeLayoutService.syncEdgeLayout(graphOne);
+        syncDiagramLayoutService.syncDiagramLayout(graphOne);
 
         assertThat(edgesOf(PACKAGE))
                 .containsExactlyInAnyOrder(
@@ -241,7 +245,7 @@ class EdgeLayoutTest {
                     model.removeAll(model.getResource("http://example.com#Sub.target"), null, null);
                     model.removeAll(model.getResource("http://example.com#Target.sub"), null, null);
                 });
-        edgeLayoutService.syncEdgeLayout(graphOne);
+        syncDiagramLayoutService.syncDiagramLayout(graphOne);
 
         assertThat(edgesOf(PACKAGE)).containsExactly(EdgeKey.inheritance(SUB, SUPER));
         assertThat(DLObjectFetcher.fetchDiagramLabelDOs(graphLayout(), PACKAGE)).isEmpty();
@@ -267,6 +271,42 @@ class EdgeLayoutTest {
 
         assertThat(edgesOf(diagramUUID))
                 .containsExactly(EdgeKey.association(SUB_TO_TARGET, TARGET_TO_SUB));
+    }
+
+    @Test
+    void replacingACustomDiagramWithoutAClass_dropsItsLayoutData() {
+        var customDiagramService =
+                new CustomDiagramService(
+                        databasePort, datasetName -> List.of(), syncDiagramLayoutService);
+        var diagramUUID = UUID.randomUUID();
+        customDiagramService.replaceCustomGraphDiagram(
+                graphOne, diagramUUID.toString(), customDiagram(diagramUUID, SUB, SUPER, TARGET));
+        classLayoutService.updateClassPositions(
+                graphOne, diagramUUID, positions(SUB, SUPER, TARGET));
+
+        customDiagramService.replaceCustomGraphDiagram(
+                graphOne, diagramUUID.toString(), customDiagram(diagramUUID, SUB, TARGET));
+
+        assertThat(classesOf(diagramUUID)).containsExactlyInAnyOrder(SUB, TARGET);
+        assertThat(edgesOf(diagramUUID))
+                .containsExactly(EdgeKey.association(SUB_TO_TARGET, TARGET_TO_SUB));
+    }
+
+    @Test
+    void deletingACustomDiagram_deletesItsLayoutData() {
+        var customDiagramService =
+                new CustomDiagramService(
+                        databasePort, datasetName -> List.of(), syncDiagramLayoutService);
+        var diagramUUID = UUID.randomUUID();
+        customDiagramService.replaceCustomGraphDiagram(
+                graphOne, diagramUUID.toString(), customDiagram(diagramUUID, SUB, SUPER));
+        classLayoutService.updateClassPositions(graphOne, diagramUUID, positions(SUB, SUPER));
+
+        customDiagramService.deleteCustomGraphDiagram(graphOne, diagramUUID.toString());
+
+        assertThat(DLObjectFetcher.fetchDiagramMRIDs(graphLayout()))
+                .doesNotContain(new MRID(diagramUUID));
+        assertThat(DLObjectFetcher.fetchAllDOs(graphLayout(), SUB)).isEmpty();
     }
 
     @Test
@@ -305,7 +345,9 @@ class EdgeLayoutTest {
 
     @Test
     void crossProfileDiagram_gluesItsClassesAndCreatesTheirEdges() {
-        var customDiagramService = new CustomDiagramService(databasePort, datasetName -> List.of());
+        var customDiagramService =
+                new CustomDiagramService(
+                        databasePort, datasetName -> List.of(), syncDiagramLayoutService);
 
         var crossProfileDiagram =
                 customDiagramService.getCrossProfileDiagram(
@@ -382,6 +424,20 @@ class EdgeLayoutTest {
         bendPoint.setYPosition(y);
         bendPoint.setSequenceNumber(sequenceNumber);
         return bendPoint;
+    }
+
+    private static CustomDiagramDTO customDiagram(UUID diagramUUID, UUID... classUUIDs) {
+        var classes = new ArrayList<ClassInDiagram>();
+        for (var classUUID : classUUIDs) {
+            classes.add(classInGraphOne(classUUID));
+        }
+        return new CustomDiagramDTO(diagramUUID, "custom", classes);
+    }
+
+    private Set<UUID> classesOf(UUID diagramUUID) {
+        return DLObjectFetcher.fetchDiagramClassDOs(graphLayout(), new MRID(diagramUUID)).stream()
+                .map(classDO -> classDO.getBelongsToIdentifiedObject().getUuid())
+                .collect(Collectors.toSet());
     }
 
     private static ClassInDiagram classInGraphOne(UUID classUUID) {

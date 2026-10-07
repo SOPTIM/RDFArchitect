@@ -33,6 +33,7 @@ import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
+import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
 import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutReconciler;
 import org.rdfarchitect.services.dl.update.edgelayout.EdgeResolver;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
@@ -60,6 +61,7 @@ public class CustomDiagramService
 
     private final DatabasePort databasePort;
     private final ListGraphsUseCase listGraphsUseCase;
+    private final SyncDiagramLayoutUseCase syncDiagramLayoutUseCase;
 
     @Override
     public List<CustomDiagramDTO> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
@@ -183,6 +185,7 @@ public class CustomDiagramService
     public void deleteCustomDatasetDiagram(String datasetName, String diagramId) {
         var diagrams = databasePort.getDatasetDiagrams(datasetName);
         diagrams.remove(UUID.fromString(diagramId));
+        syncDiagramLayoutUseCase.syncDatasetDiagramLayout(datasetName);
     }
 
     @Override
@@ -203,6 +206,7 @@ public class CustomDiagramService
                         diagramDTO.getDiagramId(), diagramDTO.getName(), diagramDTO.getClasses());
         var diagrams = databasePort.getDatasetDiagrams(datasetName);
         diagrams.put(UUID.fromString(diagramId), diagram);
+        syncDiagramLayoutUseCase.syncDatasetDiagramLayout(datasetName);
     }
 
     @Override
@@ -222,6 +226,7 @@ public class CustomDiagramService
             ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
             ctx.commit("deleted diagram %s".formatted(diagramId));
         }
+        syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
     }
 
     @Override
@@ -246,6 +251,7 @@ public class CustomDiagramService
             ctx.getCustomDiagrams().put(UUID.fromString(diagramId), diagram);
             ctx.commit("replaced diagram %s".formatted(diagramId));
         }
+        syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
     }
 
     @Override

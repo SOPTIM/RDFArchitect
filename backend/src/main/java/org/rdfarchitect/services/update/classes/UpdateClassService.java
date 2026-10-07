@@ -38,11 +38,11 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.diagrams.RemoveFromCustomDiagramUseCase;
+import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CrossProfileDiagramLayoutUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUseCase;
-import org.rdfarchitect.services.dl.update.edgelayout.SyncEdgeLayoutUseCase;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -62,7 +62,7 @@ public class UpdateClassService
     private final DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase;
     private final RemoveFromCustomDiagramUseCase removeFromCustomDiagramUseCase;
     private final CrossProfileDiagramLayoutUseCase crossProfileDiagramLayoutUseCase;
-    private final SyncEdgeLayoutUseCase syncEdgeLayoutUseCase;
+    private final SyncDiagramLayoutUseCase syncDiagramLayoutUseCase;
 
     public UpdateClassService(
             DatabasePort databasePort,
@@ -74,7 +74,7 @@ public class UpdateClassService
             @Value("${attributes.newValuesBlankNode:false}") boolean newValuesAsBlankNode,
             CrossProfileDiagramLayoutUseCase crossProfileDiagramLayoutUseCase,
             RemoveFromCustomDiagramUseCase removeFromCustomDiagramUseCase,
-            SyncEdgeLayoutUseCase syncEdgeLayoutUseCase) {
+            SyncDiagramLayoutUseCase syncDiagramLayoutUseCase) {
         this.databasePort = databasePort;
         this.classMapper = classMapper;
         this.packageMapper = packageMapper;
@@ -84,7 +84,7 @@ public class UpdateClassService
         this.newValuesAsBlankNode = newValuesAsBlankNode;
         this.crossProfileDiagramLayoutUseCase = crossProfileDiagramLayoutUseCase;
         this.removeFromCustomDiagramUseCase = removeFromCustomDiagramUseCase;
-        this.syncEdgeLayoutUseCase = syncEdgeLayoutUseCase;
+        this.syncDiagramLayoutUseCase = syncDiagramLayoutUseCase;
     }
 
     @Override
@@ -127,7 +127,7 @@ public class UpdateClassService
                     graphIdentifier.datasetName(), oldMergedUuid, newMergedUuid, newClassUri);
         }
 
-        syncEdgeLayoutUseCase.syncEdgeLayout(graphIdentifier);
+        syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
     }
 
     @Override
@@ -153,7 +153,7 @@ public class UpdateClassService
 
         createClassLayoutDataUseCase.createClassLayoutData(
                 graphIdentifier, packageDTO, className, newClassUUID, classLayoutPosition);
-        syncEdgeLayoutUseCase.syncEdgeLayout(graphIdentifier);
+        syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
 
         return newClassUUID;
     }
@@ -198,6 +198,6 @@ public class UpdateClassService
 
         deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, classUUID);
         removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, classUUID);
-        syncEdgeLayoutUseCase.syncEdgeLayout(graphIdentifier);
+        syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
     }
 }

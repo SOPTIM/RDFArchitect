@@ -51,14 +51,15 @@ import org.rdfarchitect.services.GetRenderingDataService;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.diagrams.CustomDiagramService;
 import org.rdfarchitect.services.dl.select.QueryDiagramLayoutService;
+import org.rdfarchitect.services.dl.update.SyncDiagramLayoutService;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.dl.update.edgelayout.EdgeKey;
-import org.rdfarchitect.services.dl.update.edgelayout.UpdateEdgeLayoutDataService;
 import org.rdfarchitect.services.rendering.CIMProfileModels;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterService;
 import org.rdfarchitect.services.rendering.svelteflow.RenderCIMFacadeCollectionSvelteFlowService;
 import org.rdfarchitect.services.update.classes.UpdateClassService;
 import org.rdfarchitect.services.update.classes.associations.AssociationsService;
+import org.rdfarchitect.services.update.graph.DeleteGraphService;
 import org.rdfarchitect.services.update.graph.ImportGraphsService;
 import org.rdfarchitect.services.update.graph.ImportProgressListener;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -104,8 +105,9 @@ class EdgeLayoutConsistencyTest {
     private GetRenderingDataService renderingDataService;
     private RenderMergedDiagramSvelteFlowService mergedRenderingService;
     private UpdateClassLayoutService classLayoutService;
-    private UpdateEdgeLayoutDataService edgeLayoutService;
+    private SyncDiagramLayoutService syncDiagramLayoutService;
     private UpdateClassService classService;
+    private CustomDiagramService customDiagramService;
     private AssociationsService associationsService;
     private GraphIdentifier equipment;
 
@@ -115,7 +117,10 @@ class EdgeLayoutConsistencyTest {
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         var renderer = new RenderCIMFacadeCollectionSvelteFlowService();
         var layoutQueries = new QueryDiagramLayoutService(databasePort);
-        var customDiagramService = new CustomDiagramService(databasePort, datasetName -> List.of());
+        syncDiagramLayoutService = new SyncDiagramLayoutService(databasePort);
+        customDiagramService =
+                new CustomDiagramService(
+                        databasePort, datasetName -> List.of(), syncDiagramLayoutService);
         renderingDataService =
                 new GetRenderingDataService(
                         databasePort, renderer, datasetName -> List.of(), layoutQueries);
@@ -127,7 +132,6 @@ class EdgeLayoutConsistencyTest {
                         renderer,
                         datasetName -> List.of());
         classLayoutService = new UpdateClassLayoutService(databasePort, packageMapper);
-        edgeLayoutService = new UpdateEdgeLayoutDataService(databasePort);
         classService =
                 new UpdateClassService(
                         databasePort,
@@ -139,9 +143,10 @@ class EdgeLayoutConsistencyTest {
                         false,
                         classLayoutService,
                         customDiagramService,
-                        edgeLayoutService);
+                        syncDiagramLayoutService);
         associationsService =
-                new AssociationsService(databasePort, associationPairMapper, edgeLayoutService);
+                new AssociationsService(
+                        databasePort, associationPairMapper, syncDiagramLayoutService);
         equipment = importProfile(EQUIPMENT);
     }
 
@@ -180,7 +185,7 @@ class EdgeLayoutConsistencyTest {
                     model.removeAll(subClass, RDFS.subClassOf, null);
                     subClass.addProperty(RDFS.subClassOf, model.getResource(superClassUri));
                 });
-        edgeLayoutService.syncEdgeLayout(equipment);
+        syncDiagramLayoutService.syncDiagramLayout(equipment);
 
         assertAllPackagesConsistent();
         assertThat(edgesOf(packageOf("ACLineSegment")))
@@ -223,6 +228,27 @@ class EdgeLayoutConsistencyTest {
         assertThat(DLObjectFetcher.fetchDiagramEdgeDOs(model, new MRID(diagramUUID))).isNotEmpty();
     }
 
+    @Test
+    void deletingAProfile_dropsItsClassesFromTheCrossProfileDiagram() {
+        var steadyStateHypothesis = importProfile(STEADY_STATE_HYPOTHESIS);
+        var diagramUUID =
+                databasePort.getCrossProfileDiagramInfo(DATASET).getCrossProfileDiagramUUID();
+        var rendering = (SvelteFlowDTO) mergedRenderingService.renderCrossProfileDiagram(DATASET);
+        classLayoutService.updateClassPositions(DATASET, diagramUUID, positionsOf(rendering));
+        var model = databasePort.getDatasetDiagramLayout(DATASET).getDiagramLayoutModel();
+        var classesBefore = DLObjectFetcher.fetchDiagramClassDOs(model, new MRID(diagramUUID));
+
+        new DeleteGraphService(databasePort, syncDiagramLayoutService)
+                .deleteGraph(steadyStateHypothesis);
+
+        var renderingAfter =
+                (SvelteFlowDTO) mergedRenderingService.renderCrossProfileDiagram(DATASET);
+        assertConsistent(model, diagramUUID, renderingAfter, mergedAssociationEndpoints());
+        assertThat(DLObjectFetcher.fetchDiagramClassDOs(model, new MRID(diagramUUID)))
+                .hasSameSizeAs(renderingAfter.getNodes())
+                .hasSizeLessThan(classesBefore.size());
+    }
+
     private GraphIdentifier importProfile(String fileName) {
         byte[] content;
         try {
@@ -256,12 +282,11 @@ class EdgeLayoutConsistencyTest {
     }
 
     /**
-     * Checks a diagram against its rendering. Only classes that are rendered and have layout data
-     * in the diagram are compared: classes rendered without layout data (e.g. an external class
-     * that newly relates to the package) have no edge diagram objects yet, and classes that keep
-     * their layout data while no longer rendered keep their edges invisibly. Between the compared
-     * classes the edge diagram objects are exactly the rendered edges. Additionally every edge
-     * diagram object references both of its identified objects and every class point is glued.
+     * Checks a diagram against its unfiltered rendering: only classes the diagram shows have layout
+     * data, and between the classes with layout data the edge diagram objects are exactly the
+     * rendered edges. Classes rendered without layout data (e.g. an external class that newly
+     * relates to the package) have no edge diagram objects yet. Additionally every edge diagram
+     * object references both of its identified objects and every class point is glued.
      *
      * @param associationEndpoints the classes every association end connects, as identified in the
      *     diagram
@@ -278,8 +303,10 @@ class EdgeLayoutConsistencyTest {
         var comparedClasses =
                 classDOs.stream()
                         .map(classDO -> classDO.getBelongsToIdentifiedObject().getUuid())
-                        .filter(renderedNodes::contains)
                         .collect(Collectors.toSet());
+        assertThat(comparedClasses)
+                .as("class layout data of classes diagram %s does not show", diagramUUID)
+                .isSubsetOf(renderedNodes);
 
         var renderedEdges =
                 rendering.getEdges().stream()
