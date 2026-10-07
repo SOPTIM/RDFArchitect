@@ -21,13 +21,18 @@
     import { v4 as uuidv4 } from "uuid";
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import FileDropZone from "$lib/components/FileDropZone.svelte";
     import ImportProgressPanel from "$lib/components/ImportProgressPanel.svelte";
     import NamespacePrefixComparison from "$lib/components/NamespacePrefixComparison.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
-    import { supportedRDFMediaTypes } from "$lib/utils/fileUtils";
+    import {
+        isSupportedGraphFile,
+        isZipFile,
+        supportedRDFMediaTypes,
+    } from "$lib/utils/fileUtils";
     import { ImportProgress } from "$lib/utils/importProgress.svelte.js";
 
     import {
@@ -35,7 +40,12 @@
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
 
-    let { showDialog = $bindable(), lockedWorkspaceName } = $props();
+    let {
+        showDialog = $bindable(),
+        lockedWorkspaceName,
+        droppedItems = null,
+        forNewWorkspace = false,
+    } = $props();
 
     const DEFAULT_WORKSPACE_NAME = "default";
     const POLL_INTERVAL_MS = 300;
@@ -52,7 +62,6 @@
     const fileInputId = `actual-file-input-${uniqueId}`;
     let workspaceNameUserInput = $state("");
     let files = $state([]);
-    let dragActive = $state(false);
     let fileInputValue = $state("");
     let rejectedFiles = $state([]);
 
@@ -105,8 +114,12 @@
 
     async function onOpen() {
         clearInputs();
-        workspaceNameUserInput =
-            lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
+        workspaceNameUserInput = forNewWorkspace
+            ? ""
+            : (lockedWorkspaceName ?? editorState.selectedWorkspace.getValue());
+        if (droppedItems) {
+            addFiles(droppedItems.files, droppedItems.directoryNames);
+        }
 
         const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
         for (const workspace of workspaces) {
@@ -126,7 +139,6 @@
     function clearInputs() {
         workspaceNameUserInput = "";
         files = [];
-        dragActive = false;
         fileInputValue = "";
         rejectedFiles = [];
         modifiableWorkspaces = [];
@@ -160,20 +172,6 @@
         return `${GRAPH_NAMESPACE_URI}${sanitized}`;
     }
 
-    function isZipFile(fileName) {
-        return fileName.toLowerCase().endsWith(".zip");
-    }
-
-    function isSupportedGraphFile(fileName) {
-        if (!fileName) {
-            return false;
-        }
-        const lowered = fileName.toLowerCase();
-        return supportedFileExtensions.some(extension =>
-            lowered.endsWith(extension.toLowerCase()),
-        );
-    }
-
     function ensureGraphNamespaceUri(graphUri, fallbackName) {
         const trimmed = graphUri?.trim();
         if (!trimmed) {
@@ -185,8 +183,8 @@
         return `${GRAPH_NAMESPACE_URI}${trimmed}`;
     }
 
-    function addFiles(newFiles) {
-        rejectedFiles = [];
+    function addFiles(newFiles, directoryNames = []) {
+        rejectedFiles = directoryNames.map(name => `${name} (folder)`);
         const mappedFiles = Array.from(newFiles)
             .map(file => {
                 if (!isZipFile(file.name) && !isSupportedGraphFile(file.name)) {
@@ -220,13 +218,6 @@
         files = files.map((entry, idx) =>
             idx === index ? { ...entry, graphUri } : entry,
         );
-    }
-
-    function handleDrop(event) {
-        dragActive = false;
-        if (event.dataTransfer?.files?.length) {
-            addFiles(event.dataTransfer.files);
-        }
     }
 
     function getUserInputWorkspaceName() {
@@ -474,12 +465,13 @@
                         <option value={workspaceName}>{workspaceName}</option>
                     {/each}
                 </datalist>
-
-                {#if isWorkspaceReadOnly(workspaceNameUserInput)}
-                    <div class="text-red mt-1 mb-1 h-6 text-sm">
-                        Cannot import into read-only workspace
-                    </div>
-                {/if}
+            {/if}
+            <!-- Also when the workspace is fixed: the disabled Import button is otherwise the only
+                 hint that this workspace takes nothing. -->
+            {#if isWorkspaceReadOnly(workspaceNameUserInput)}
+                <div class="text-red mt-1 mb-1 h-6 text-sm">
+                    Cannot import into read-only workspace
+                </div>
             {/if}
             <div class="mt-4">
                 <input
@@ -494,21 +486,10 @@
                     }}
                     bind:value={fileInputValue}
                 />
-                <div
-                    class={`border-border hover:border-blue flex w-full flex-col rounded border-2 border-dashed px-4 py-6 transition-colors  ${dragActive ? "border-blue bg-blue/10" : "bg-window-background"}`}
-                    role="group"
-                    ondragover={event => {
-                        event.preventDefault();
-                        dragActive = true;
-                    }}
-                    ondragleave={event => {
-                        event.preventDefault();
-                        dragActive = false;
-                    }}
-                    ondrop={event => {
-                        event.preventDefault();
-                        handleDrop(event);
-                    }}
+                <FileDropZone
+                    class="hover:border-blue flex w-full flex-col px-4 py-6"
+                    onFiles={items =>
+                        addFiles(items.files, items.directoryNames)}
                 >
                     <div
                         class="flex flex-col items-start space-y-2 md:flex-row md:items-center md:space-y-0 md:space-x-3"
@@ -537,13 +518,15 @@
                         <b>{allowedFileExtensions}</b>
                         . In ZIP files, schemas must be located at the root level;
                         folders are ignored.
+                        <br />
+                        Dropped folders are skipped; pack them into a ZIP.
                     </p>
                     {#if rejectedFiles.length > 0}
                         <div
                             class="bg-red-background text-red-text border-red-border mt-3 rounded border px-3 py-2 text-xs"
                         >
                             <p class="font-semibold">
-                                Skipped unsupported files:
+                                Skipped, these will not be imported:
                             </p>
                             <ul class="list-disc pl-5">
                                 {#each rejectedFiles as fileName}
@@ -552,7 +535,7 @@
                             </ul>
                         </div>
                     {/if}
-                </div>
+                </FileDropZone>
 
                 {#if files.length > 0}
                     <div class="mt-3 max-h-[55vh] space-y-2 overflow-y-auto">

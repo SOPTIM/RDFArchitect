@@ -20,6 +20,12 @@
     import { Fa } from "svelte-fa";
 
     import {
+        dragHasFiles,
+        endFileDrag,
+        extractDroppedItems,
+        fileDragState,
+    } from "$lib/fileDragState.svelte.js";
+    import {
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
@@ -27,18 +33,64 @@
     import { workspaceState } from "$lib/workspaceState.svelte.js";
 
     import WorkspaceTab from "./WorkspaceTab.svelte";
+    import ImportDialog from "../../ImportDialog.svelte";
     import NewWorkspaceDialog from "../../NewWorkspaceDialog.svelte";
+    import { acceptSchemaDrop } from "../schemaDrop.js";
 
     let showNewWorkspaceDialog = $state(false);
+    let showImportDialog = $state(false);
+    let droppedItems = $state(null);
+    let draggedOver = $state(false);
 
     let workspaces = $state([]);
     const activeWorkspace = $derived(editorState.selectedWorkspace.getValue());
+    const newWorkspaceClasses = $derived(
+        !fileDragState.active
+            ? ""
+            : draggedOver
+              ? "relative z-40 bg-lightblue text-blue"
+              : "relative z-40 bg-window-background",
+    );
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
         workspaces = await workspaceStore.getWorkspaces();
         await workspaceState.load();
     });
+
+    function handleDragOver(event) {
+        if (!dragHasFiles(event)) {
+            return;
+        }
+        event.preventDefault();
+        draggedOver = true;
+    }
+
+    function handleDragLeave(event) {
+        if (event.currentTarget.contains(event.relatedTarget)) {
+            return;
+        }
+        draggedOver = false;
+    }
+
+    /** Imports what was dropped into a workspace that the import itself brings into existence. */
+    function handleDrop(event) {
+        if (!dragHasFiles(event)) {
+            return;
+        }
+        event.preventDefault();
+        draggedOver = false;
+        endFileDrag();
+
+        const accepted = acceptSchemaDrop(
+            extractDroppedItems(event.dataTransfer),
+        );
+        if (!accepted) {
+            return;
+        }
+        droppedItems = accepted;
+        showImportDialog = true;
+    }
 </script>
 
 <div
@@ -55,10 +107,15 @@
     {/each}
     <button
         type="button"
-        class="hover:bg-nav-hover-background focus-visible:outline-button-default-background text-nav-text mb-[0.1rem] ml-1 h-[2rem] w-[2rem] cursor-pointer rounded-lg text-[0.8rem] transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2"
+        class={`hover:bg-nav-hover-background focus-visible:outline-button-default-background text-nav-text mb-[0.1rem] ml-1 h-[2rem] w-[2rem] cursor-pointer rounded-lg text-[0.8rem] transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 ${newWorkspaceClasses}`}
         aria-label="New Workspace"
-        title="New Workspace"
+        title={fileDragState.active
+            ? "Import into a new workspace"
+            : "New Workspace"}
         onclick={() => (showNewWorkspaceDialog = true)}
+        ondragover={handleDragOver}
+        ondragleave={handleDragLeave}
+        ondrop={handleDrop}
     >
         <Fa icon={faPlus} />
     </button>
@@ -67,4 +124,10 @@
 <NewWorkspaceDialog
     bind:showDialog={showNewWorkspaceDialog}
     existingNames={workspaces.map(ws => ws.label)}
+/>
+
+<ImportDialog
+    bind:showDialog={showImportDialog}
+    {droppedItems}
+    forNewWorkspace
 />

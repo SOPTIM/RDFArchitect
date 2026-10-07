@@ -77,6 +77,14 @@
     .no-scrollbar::-webkit-scrollbar {
         display: none;
     }
+
+    /*
+     * Dims everything around the element instead of the element itself, following its own rounded
+     * corners. Used by the drop zone, where only what lies inside the dashed outline stays lit.
+     */
+    .drag-cutout {
+        box-shadow: 0 0 0 9999px var(--color-drag-scrim);
+    }
 }
 
 /* still works despite the warning
@@ -85,6 +93,9 @@ https://tailwindcss.com/docs/colors#using-a-custom-palette
 @theme {
     --color-*: initial;
     --color-dialog-backlight: rgba(0, 0, 0, 0.5);
+    /* Dims what cannot take a dropped file. Weaker than the dialog backlight: it points somewhere
+       else, it does not block. Tinted rather than black, which over a light surface only greys. */
+    --color-drag-scrim: rgba(20, 22, 43, 0.2);
 
     /* soptim colors */
     --color-soptim-blau: #009ee0;

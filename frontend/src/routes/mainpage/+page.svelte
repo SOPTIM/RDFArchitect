@@ -17,6 +17,7 @@
 
 <script>
     import { onMount } from "svelte";
+    import { fade } from "svelte/transition";
     import { Pane, Splitpanes } from "svelte-splitpanes";
     import { validate } from "uuid";
 
@@ -25,6 +26,7 @@
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { extendSourceRequest } from "$lib/extendSourceRequest.svelte.js";
+    import { fileDragState } from "$lib/fileDragState.svelte.js";
     import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
@@ -155,6 +157,16 @@
                 <PackageWindow />
             </Pane>
         </Splitpanes>
+    {/if}
+
+    {#if fileDragState.active}
+        <!-- Dims everything that takes no files. The drop zones and the workspace tabs, which
+             switch the editor while dragging, lift themselves above it. -->
+        <div
+            class="bg-drag-scrim pointer-events-none fixed inset-0 z-30 backdrop-blur-[2px]"
+            in:fade={{ duration: 120 }}
+            out:fade={{ duration: 80 }}
+        ></div>
     {/if}
 </div>
 

@@ -53,6 +53,14 @@ public interface SessionDataStore {
     void createDataset(String datasetName);
 
     /**
+     * Creates the dataset unless the session already holds one under that name.
+     *
+     * @param datasetName The name of the Dataset to be created.
+     * @return whether this call was the one that created it
+     */
+    boolean createDatasetIfAbsent(String datasetName);
+
+    /**
      * Deletes a complete Dataset with all containing graphs. Waits for ongoing transactions on
      * individual graphs before deleting.
      *
