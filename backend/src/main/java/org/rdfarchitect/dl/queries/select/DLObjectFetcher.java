@@ -30,6 +30,7 @@ import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.DLQuerySolutionParser;
 import org.rdfarchitect.dl.queries.DLQueryVars;
+import org.rdfarchitect.dl.rdf.resources.DL;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -83,6 +84,33 @@ public class DLObjectFetcher {
                 return diagram;
             }
             return null;
+        }
+    }
+
+    /**
+     * Fetches the MRIDs of all {@link Diagram Diagrams} in a model.
+     *
+     * @param diagramLayout the model from where the diagrams will be fetched
+     * @return the MRIDs of the diagrams
+     */
+    public List<MRID> fetchDiagramMRIDs(Model diagramLayout) {
+        var query =
+                QUERY_PREFIXES
+                        + """
+                  SELECT ?diagramMRID
+                  WHERE {
+                      ?diagramMRID rdf:type cim:Diagram .
+                  }
+                  """;
+
+        try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
+            var results = qexec.execSelect();
+            List<MRID> diagramMRIDs = new ArrayList<>();
+            while (results.hasNext()) {
+                var parser = new DLQuerySolutionParser(results.next());
+                diagramMRIDs.add(parser.getMRID(DLQueryVars.DIAGRAM_MRID));
+            }
+            return diagramMRIDs;
         }
     }
 
@@ -310,6 +338,54 @@ public class DLObjectFetcher {
     }
 
     /**
+     * Fetches the edge {@link DiagramObject DiagramObjects} (inheritances and associations) of a
+     * diagram, including the {@link DiagramObject#getOtherClass() other class} each edge connects.
+     *
+     * @param diagramLayout the model from where the object(s) will be fetched
+     * @param diagramMRID the MRID of the diagram whose edges are fetched
+     * @return a list of edge {@link DiagramObject DiagramObjects}
+     */
+    public List<DiagramObject> fetchDiagramEdgeDOs(Model diagramLayout, MRID diagramMRID) {
+        var query =
+                QUERY_PREFIXES
+                        + """
+                  SELECT ?doMRID ?doName ?ioMRID ?otherClassMRID ?styleName
+                  WHERE {
+                      ?doMRID rdf:type cim:DiagramObject ;
+                            cim:DiagramObject.DiagramObjectStyle ?styleMRID ;
+                            cim:IdentifiedObject.name ?doName ;
+                            cim:DiagramObject.Diagram ?diagramMRID ;
+                            cim:DiagramObject.IdentifiedObject ?ioMRID .
+                      OPTIONAL { ?doMRID <OTHER_CLASS> ?otherClassMRID . }
+                      STYLE_NAME_JOIN
+
+                      FILTER(STR(?diagramMRID) = "DIAGRAM_MRID")
+                      STYLE_FILTER
+                  }
+                  """
+                                .replace("OTHER_CLASS", DL.otherClass.getURI())
+                                .replace("DIAGRAM_MRID", diagramMRID.getFullMRID())
+                                .replace(
+                                        "STYLE_FILTER",
+                                        styleFilter(
+                                                true,
+                                                DiagramObjectStyle.INHERITANCE,
+                                                DiagramObjectStyle.ASSOCIATION))
+                                .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
+
+        try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
+            var results = qexec.execSelect();
+            List<DiagramObject> diagramObjects = new ArrayList<>();
+            while (results.hasNext()) {
+                var diagramObject = DLObjectFactory.createDiagramObject(results.next());
+                diagramObject.setBelongsToDiagram(diagramMRID);
+                diagramObjects.add(diagramObject);
+            }
+            return diagramObjects;
+        }
+    }
+
+    /**
      * Fetches a list of all {@link DiagramObject DiagramObjects} for a given identified object
      * UUID.
      *
@@ -526,7 +602,12 @@ public class DLObjectFetcher {
                   }
                   """
                         .replace("DIAGRAM_MRID", new MRID(diagramUUID).getFullMRID())
-                        .replace("STYLE_FILTER", styleFilter(false, DiagramObjectStyle.CLASS));
+                        .replace(
+                                "STYLE_FILTER",
+                                styleFilter(
+                                        true,
+                                        DiagramObjectStyle.MULTIPLICITY,
+                                        DiagramObjectStyle.ASSOCIATION_LABEL));
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
             var results = qexec.execSelect();
@@ -626,7 +707,12 @@ public class DLObjectFetcher {
                       STYLE_FILTER
                   }
                   """
-                        .replace("STYLE_FILTER", styleFilter(false, DiagramObjectStyle.CLASS))
+                        .replace(
+                                "STYLE_FILTER",
+                                styleFilter(
+                                        true,
+                                        DiagramObjectStyle.MULTIPLICITY,
+                                        DiagramObjectStyle.ASSOCIATION_LABEL))
                         .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
 
         try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {

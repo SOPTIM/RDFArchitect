@@ -105,6 +105,11 @@ public class DLUpdates {
                                     .getMRID()
                                     .getFullMRID()));
         }
+        if (diagramObject.getOtherClass() != null) {
+            newDiagramObject.addProperty(
+                    DL.otherClass,
+                    ResourceFactory.createResource(diagramObject.getOtherClass().getFullMRID()));
+        }
 
         model.add(newDiagramObject.listProperties());
     }
