@@ -19,6 +19,7 @@ package org.rdfarchitect.services.shacl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -36,6 +37,7 @@ import org.rdfarchitect.database.inmemory.GraphWithContextTransactional;
 import org.rdfarchitect.exception.database.InvalidContentException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
+import org.rdfarchitect.exception.database.StaleWriteException;
 import org.rdfarchitect.shacl.dto.ShapesDocumentInfo;
 
 import java.nio.charset.StandardCharsets;
@@ -132,6 +134,43 @@ class SHACLDocumentServiceTest {
         service.replaceShapesDocumentText(GRAPH, created.getId(), TURTLE);
 
         assertThat(service.getShapesDocumentText(GRAPH, created.getId())).isEqualTo(TURTLE);
+    }
+
+    @Test
+    void aSaveMadeToTheStoredTextIsWritten() {
+        var created = createTurtleDocument("eq.ttl");
+        var read = service.getShapesDocumentText(GRAPH, created.getId());
+
+        service.replaceShapesDocumentText(
+                GRAPH, created.getId(), read + "# mine\n", SHACLDocumentUseCase.revisionOf(read));
+
+        assertThat(service.getShapesDocumentText(GRAPH, created.getId())).endsWith("# mine\n");
+    }
+
+    @Test
+    void aSaveMadeToTextThatHasSinceChangedIsRefused() {
+        var created = createTurtleDocument("eq.ttl");
+        var read = service.getShapesDocumentText(GRAPH, created.getId());
+        // Someone else saves in the meantime — another tab, or an undo.
+        service.replaceShapesDocumentText(GRAPH, created.getId(), read + "# theirs\n");
+
+        assertThatThrownBy(
+                        () ->
+                                service.replaceShapesDocumentText(
+                                        GRAPH,
+                                        created.getId(),
+                                        read + "# mine\n",
+                                        SHACLDocumentUseCase.revisionOf(read)))
+                .isInstanceOf(StaleWriteException.class)
+                .hasMessageContaining("eq.ttl");
+        assertThat(service.getShapesDocumentText(GRAPH, created.getId())).endsWith("# theirs\n");
+    }
+
+    @Test
+    void revisionIsTheHexSha256OfTheUtf8Text() {
+        // The client computes this from the text it read, so both sides must agree byte for byte.
+        assertThat(SHACLDocumentUseCase.revisionOf("ä"))
+                .isEqualTo("33e6d73fee82904c8d7afb78de1154d1e8dc2a0edb08120e63df5b9385c2d9cc");
     }
 
     @Test

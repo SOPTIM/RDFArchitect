@@ -21,6 +21,10 @@ import org.apache.jena.riot.Lang;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.shacl.dto.ShapesDocumentInfo;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,7 +59,38 @@ public interface SHACLDocumentUseCase {
     String getShapesDocumentText(GraphIdentifier graphIdentifier, UUID documentId);
 
     /** Replaces the document's content with {@code turtle}, keeping the text verbatim. */
-    void replaceShapesDocumentText(GraphIdentifier graphIdentifier, UUID documentId, String turtle);
+    default void replaceShapesDocumentText(
+            GraphIdentifier graphIdentifier, UUID documentId, String turtle) {
+        replaceShapesDocumentText(graphIdentifier, documentId, turtle, null);
+    }
+
+    /**
+     * Replaces the document's content with {@code turtle}, provided it still holds the text the
+     * caller read.
+     *
+     * @param expectedRevision {@link #revisionOf} the text the edit was made to, or {@code null} to
+     *     write regardless
+     * @throws org.rdfarchitect.exception.database.StaleWriteException when the document has changed
+     *     since — in another tab, or by an undo — and writing would discard that change unseen
+     */
+    void replaceShapesDocumentText(
+            GraphIdentifier graphIdentifier,
+            UUID documentId,
+            String turtle,
+            String expectedRevision);
+
+    /**
+     * Names one version of a document's text: the lowercase hex SHA-256 of its UTF-8 bytes, as
+     * {@link #getShapesDocumentText} returns it. A client can compute it from the text it read.
+     */
+    static String revisionOf(String text) {
+        try {
+            var digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(text.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
     /**
      * Changes a document's metadata. Any {@code null} argument leaves that field alone.

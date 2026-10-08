@@ -9124,6 +9124,15 @@
               "format" : "uuid",
               "type" : "string"
             }
+          },
+          {
+            "description" : "Lowercase hex SHA-256 of the UTF-8 text the edit was made to, as read from this document. When given, the write is refused if the document has changed since.",
+            "in" : "query",
+            "name" : "expectedRevision",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
           }
         ],
         "requestBody" : {
@@ -9173,6 +9182,26 @@
               }
             },
             "description" : "No constraints document with this id in the graph."
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The workspace is read-only."
+          },
+          "412" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The document no longer holds the text expectedRevision names."
           }
         },
         "summary" : "replace constraints document content",

@@ -45,6 +45,7 @@ import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.InvalidContentException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
+import org.rdfarchitect.exception.database.StaleWriteException;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.merge.ModelResourceExclusiveMerge;
@@ -164,21 +165,36 @@ public class SHACLStoringService
     @Override
     public String getShapesDocumentText(GraphIdentifier graphIdentifier, UUID documentId) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var document = requireDocument(ctx, documentId);
-            // Authoritative text, unless the document has none (a snapshot written before texts
-            // were stored carries only the triples) — then it is re-derived from the shapes.
-            return document.getRawText() != null
-                    ? document.getRawText()
-                    : serialiseToTurtle(ModelFactory.createModelForGraph(document.getGraph()));
+            return textOf(requireDocument(ctx, documentId));
         }
+    }
+
+    /**
+     * Authoritative text, unless the document has none (a snapshot written before texts were stored
+     * carries only the triples) — then it is re-derived from the shapes.
+     */
+    private static String textOf(ShapesDocument document) {
+        return document.getRawText() != null
+                ? document.getRawText()
+                : serialiseToTurtle(ModelFactory.createModelForGraph(document.getGraph()));
     }
 
     @Override
     public void replaceShapesDocumentText(
-            GraphIdentifier graphIdentifier, UUID documentId, String turtle) {
+            GraphIdentifier graphIdentifier,
+            UUID documentId,
+            String turtle,
+            String expectedRevision) {
         assertEditable(graphIdentifier);
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var document = requireDocument(ctx, documentId);
+            if (expectedRevision != null
+                    && !expectedRevision.equalsIgnoreCase(
+                            SHACLDocumentUseCase.revisionOf(textOf(document)))) {
+                throw new StaleWriteException(
+                        "\"%s\" has changed since it was opened. Saving would discard that change."
+                                .formatted(document.getName()));
+            }
             // Saving what is already stored changes nothing, and an entry for it in the history
             // would be an undo step that does nothing.
             if (storedTurtle(turtle).equals(document.getRawText())) {

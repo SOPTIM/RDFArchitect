@@ -42,15 +42,6 @@ export const VALIDATION_DEBOUNCE_MS = 500;
 const READ_ONLY =
     "This workspace is read-only, so its constraints cannot be changed.";
 
-/**
- * The id of the shapes RDFArchitect derives from the schema itself.
- *
- * Not a document: nothing stores it, and it is rebuilt from the classes every time it is asked
- * for. It sits in the list anyway because the list is where someone looks for "what constrains
- * this schema", and the generated rules are most of the answer — reading them beside an imported
- * file is what makes a conformance report legible. A plain string, so it can never collide with a
- * document's UUID.
- */
 export const GENERATED_ID = "generated";
 
 /** What the generated entry is called in the list. */
@@ -64,6 +55,29 @@ const NO_FINDINGS = {
     infoCount: 0,
     findings: [],
 };
+
+/**
+ * The id of the shapes RDFArchitect derives from the schema itself.
+ *
+ * Not a document: nothing stores it, and it is rebuilt from the classes every time it is asked
+ * for. It sits in the list anyway because the list is where someone looks for "what constrains
+ * this schema", and the generated rules are most of the answer — reading them beside an imported
+ * file is what makes a conformance report legible. A plain string, so it can never collide with a
+ * document's UUID.
+ */
+/**
+ * Names one version of a document's text the way the backend does: the lowercase hex SHA-256 of
+ * its UTF-8 bytes. Sent with a save so the server can refuse one made to text it no longer holds.
+ */
+export async function revisionOf(text) {
+    const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(text),
+    );
+    return Array.from(new Uint8Array(digest), byte =>
+        byte.toString(16).padStart(2, "0"),
+    ).join("");
+}
 
 /**
  * The part of a failed response worth showing someone.
@@ -376,6 +390,27 @@ export class ShapesWorkbench {
         }
     }
 
+    /**
+     * Replaces the buffer with the open document as it is stored now, throwing the unsaved edits
+     * away. The answer to a save refused because the document changed elsewhere.
+     *
+     * @returns whether the stored text was read
+     */
+    async loadStored() {
+        const documentId = this.selectedId;
+        if (documentId === null || documentId === GENERATED_ID) {
+            return false;
+        }
+        const selection = this.#selection;
+        const text = await this.#readText(documentId);
+        if (selection !== this.#selection || text === null) {
+            return false;
+        }
+        this.#replaceBuffer(text);
+        this.#textReady = true;
+        return true;
+    }
+
     /** The stored text of any of the graph's documents, or null when it could not be read. */
     async textOf(documentId) {
         return this.#readText(documentId);
@@ -419,7 +454,11 @@ export class ShapesWorkbench {
      *     for the usual case is the line and column where the Turtle stopped parsing. A message
      *     that only says "could not be saved" leaves the user with nowhere to look.
      */
-    async save() {
+    /**
+     * @param {{ overwrite?: boolean }} [options] `overwrite` writes even when the document has
+     *     changed since it was read — the user's answer to a refused save, never the default.
+     */
+    async save({ overwrite = false } = {}) {
         if (this.showingGenerated) {
             return {
                 saved: false,
@@ -442,7 +481,7 @@ export class ShapesWorkbench {
             // and on a large file make the user wait for one.
             return { saved: true, reason: null, unchanged: true };
         }
-        const run = this.#write();
+        const run = this.#write(overwrite);
         this.#saveInFlight = run;
         try {
             return await run;
@@ -451,7 +490,7 @@ export class ShapesWorkbench {
         }
     }
 
-    async #write() {
+    async #write(overwrite) {
         if (!this.selectedId || !this.#textReady) {
             return { saved: false, reason: null };
         }
@@ -465,17 +504,27 @@ export class ShapesWorkbench {
             // What is sent is what becomes saved. Reading the buffer again after the request would
             // mark whatever was typed while it was on its way as saved, though it never was.
             const sent = this.text;
+            // Names the text this edit was made to, so a document saved meanwhile — in another
+            // tab, or rewound by an undo while this buffer held edits — is not overwritten unseen.
+            const expectedRevision = overwrite
+                ? undefined
+                : await revisionOf(this.savedText);
             // A document that has been emptied still has to be sent as something, or the
             // endpoint's plain-string body arrives absent and Spring rejects the request.
-            const { error } = await replaceShapesDocumentText({
+            const { error, response } = await replaceShapesDocumentText({
                 ...this.#requestOptions,
                 path: { ...this.path, documentId },
+                query: expectedRevision ? { expectedRevision } : undefined,
                 body: sent === "" ? " " : sent,
                 bodySerializer: null,
                 headers: { "Content-Type": "text/plain" },
             });
             if (error) {
-                return { saved: false, reason: reasonFrom(error) };
+                return {
+                    saved: false,
+                    reason: reasonFrom(error),
+                    stale: response?.status === 412,
+                };
             }
             if (this.bufferKey === bufferKey) {
                 this.savedText = sent;

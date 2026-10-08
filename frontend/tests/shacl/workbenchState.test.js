@@ -20,6 +20,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
     GENERATED_ID,
     ShapesWorkbench,
+    revisionOf,
 } from "$lib/shacl/workbenchState.svelte.js";
 
 const EQ = "eq-document-id";
@@ -262,6 +263,68 @@ describe("editing and saving", () => {
         const put = server.requests.find(entry => entry.method === "PUT");
         expect(put.contentType).toBe("text/plain");
         expect(put.body).toBe(edited);
+    });
+
+    test("names the text it was edited from, so a stale save can be refused", async () => {
+        await workbench.load();
+        workbench.text = `${SHAPES}# edited\n`;
+        server.requests.length = 0;
+
+        await workbench.save();
+
+        const put = server.requests.find(entry => entry.method === "PUT");
+        expect(put.query.get("expectedRevision")).toBe(
+            await revisionOf(SHAPES),
+        );
+    });
+
+    test("reports a save refused because the document changed elsewhere", async () => {
+        await workbench.load();
+        workbench.text = `${SHAPES}# mine\n`;
+        const answer = server.respond;
+        server.respond = (entry, url) =>
+            entry.method === "PUT"
+                ? new Response(
+                      JSON.stringify({ status: 412, detail: "changed since" }),
+                      {
+                          status: 412,
+                          headers: { "content-type": "application/json" },
+                      },
+                  )
+                : answer(entry, url);
+
+        const result = await workbench.save();
+
+        expect(result).toMatchObject({ saved: false, stale: true });
+        expect(workbench.dirty).toBe(true);
+    });
+
+    test("overwrites without naming a revision when asked to", async () => {
+        await workbench.load();
+        workbench.text = `${SHAPES}# mine\n`;
+        server.requests.length = 0;
+
+        await workbench.save({ overwrite: true });
+
+        const put = server.requests.find(entry => entry.method === "PUT");
+        expect(put.query.has("expectedRevision")).toBe(false);
+    });
+
+    test("can throw the edits away for the stored version", async () => {
+        await workbench.load();
+        workbench.text = `${SHAPES}# mine\n`;
+        server.texts[EQ] = `${SHAPES}# theirs\n`;
+
+        expect(await workbench.loadStored()).toBe(true);
+
+        expect(workbench.text).toBe(`${SHAPES}# theirs\n`);
+        expect(workbench.dirty).toBe(false);
+    });
+
+    test("revisions are the hex SHA-256 of the UTF-8 text, as the backend computes them", async () => {
+        expect(await revisionOf("ä")).toBe(
+            "33e6d73fee82904c8d7afb78de1154d1e8dc2a0edb08120e63df5b9385c2d9cc",
+        );
     });
 
     test("does not write a document that has not changed", async () => {

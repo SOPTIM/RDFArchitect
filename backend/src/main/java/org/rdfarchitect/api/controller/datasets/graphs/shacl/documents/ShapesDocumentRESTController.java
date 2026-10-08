@@ -108,7 +108,12 @@ public class ShapesDocumentRESTController {
                         description = "The content is not valid Turtle."),
                 @ApiResponse(
                         responseCode = "404",
-                        description = "No constraints document with this id in the graph.")
+                        description = "No constraints document with this id in the graph."),
+                @ApiResponse(responseCode = "409", description = "The workspace is read-only."),
+                @ApiResponse(
+                        responseCode = "412",
+                        description =
+                                "The document no longer holds the text expectedRevision names.")
             })
     // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
     // body would reach Jena with its surrounding quotes and fail to parse.
@@ -129,6 +134,13 @@ public class ShapesDocumentRESTController {
                     String graphURI,
             @Parameter(description = "The id of the constraints document.") @PathVariable
                     UUID documentId,
+            @Parameter(
+                            description =
+                                    "Lowercase hex SHA-256 of the UTF-8 text the edit was made to, as"
+                                            + " read from this document. When given, the write is"
+                                            + " refused if the document has changed since.")
+                    @RequestParam(required = false)
+                    String expectedRevision,
             @Parameter(description = "The SHACL shapes in Turtle syntax.") @RequestBody
                     String turtle) {
         logger.info(
@@ -139,7 +151,7 @@ public class ShapesDocumentRESTController {
                 originURL);
 
         shaclDocumentUseCase.replaceShapesDocumentText(
-                graphIdentifier(datasetName, graphURI), documentId, turtle);
+                graphIdentifier(datasetName, graphURI), documentId, turtle, expectedRevision);
         return Response.SUCCESS;
     }
 

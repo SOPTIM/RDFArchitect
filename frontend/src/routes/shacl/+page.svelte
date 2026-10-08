@@ -27,6 +27,7 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { guardUnsavedChanges } from "$lib/eventhandling/unsavedChanges.js";
@@ -84,6 +85,8 @@
     /** Resolved when the user has answered the unsaved-changes dialog. */
     let pendingSwitch = $state(null);
     let showUnsavedDialog = $state(false);
+    let showStaleDialog = $state(false);
+    let staleReason = $state(null);
 
     /**
      * Set while a navigation the user has already agreed to is being re-issued, so the guard
@@ -304,12 +307,14 @@
     }
 
     /** Saves the open document. Returns whether it was written, which the switch dialog needs. */
-    async function save() {
+    async function save({ overwrite = false } = {}) {
         // A field typed in and saved straight away — with Ctrl+S, or by clicking Save — still has
         // its edit on the way to the buffer. Saving first would write the document without it and
         // then show it coming back as an unsaved change.
         await formView?.settle();
-        const { saved, reason, unchanged } = await workbench.save();
+        const { saved, reason, unchanged, stale } = await workbench.save({
+            overwrite,
+        });
         if (saved && unchanged) {
             return true;
         }
@@ -324,6 +329,13 @@
             forceReloadTrigger.trigger();
             toastStore.success("Constraints saved");
             return true;
+        }
+        if (stale) {
+            // Not an error to report and forget: both versions are worth something, and only the
+            // user knows which to keep.
+            staleReason = reason;
+            showStaleDialog = true;
+            return false;
         }
         // The reason is almost always a syntax error with a line and column. Saying only that the
         // save failed leaves the user hunting for something the server already located.
@@ -580,7 +592,7 @@
             {/if}
             <div class="ml-auto h-8 w-32 shrink-0">
                 <ButtonControl
-                    callOnClick={save}
+                    callOnClick={() => save()}
                     disabled={!workbench.dirty ||
                         workbench.saving ||
                         workbench.readOnly}
@@ -720,6 +732,32 @@
     {/if}
 </div>
 
+<ActionDialog
+    bind:showDialog={showStaleDialog}
+    title="Changed elsewhere"
+    secondaryLabel="Load the stored version"
+    onSecondary={async () => {
+        showStaleDialog = false;
+        if (await workbench.loadStored()) {
+            toastStore.success("Loaded the stored version");
+        }
+    }}
+    primaryLabel="Overwrite"
+    primaryVariant="danger"
+    onPrimary={() => save({ overwrite: true })}
+>
+    <div class="space-y-2 px-3 py-3">
+        <p class="text-default-text text-sm leading-relaxed">
+            {staleReason ??
+                "This document has changed since it was opened, in another tab or by an undo."}
+        </p>
+        <p class="text-default-text text-sm leading-relaxed">
+            Overwrite it with your version, or load the stored one and lose your
+            unsaved changes. Closing this keeps both: your changes stay in the
+            editor, unsaved.
+        </p>
+    </div>
+</ActionDialog>
 <DiscardCancelConfirmDialog
     bind:showDialog={showUnsavedDialog}
     onCancel={() => answerSwitch(false)}
