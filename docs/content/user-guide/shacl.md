@@ -111,6 +111,8 @@ Shapes are checked against the live CIM schema of the whole workspace: do the cl
 
 The check spans *every* schema in the workspace, not only the one the document belongs to. Official ENTSO-E cross-profile constraints files reference terms from neighbouring profiles on purpose, and checking against a single profile would report all of those as unknown.
 
+A term in a namespace that *no* profile in the workspace uses cannot be checked at all, so it is reported as information rather than as an error. Official NC files rely on this: they name each class under every CIM namespace in use (`cim16`, `CIM100` and the current one) so that one file validates data of any of those versions. A misspelt term is still an error, because a misspelling stays in a namespace the workspace knows.
+
 A document with problems still saves. Validation is a report, not a gate — you could not otherwise use the editor to finish a half-written file. Turtle that does not *parse* is the exception: there is nothing to store, and the message tells you the line and column where the parser stopped.
 
 ## Viewing SHACL at class level

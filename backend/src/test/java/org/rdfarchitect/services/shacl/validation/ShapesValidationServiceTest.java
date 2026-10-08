@@ -203,6 +203,59 @@ class ShapesValidationServiceTest {
                                         .isEqualTo(ShapesValidationFinding.Severity.WARNING));
     }
 
+    /** A value-type list naming each type under two CIM versions, as official NC files do. */
+    private static String typeListWith(String entries) {
+        return """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix cim16: <http://iec.ch/TC57/2013/CIM-schema-cim16#> .
+                @prefix ex:  <http://ex.org/shapes#> .
+
+                ex:TerminalShape
+                    a sh:NodeShape ;
+                    sh:targetClass cim:Terminal ;
+                    sh:property [
+                        sh:path ( cim:Terminal.sequenceNumber rdf:type ) ;
+                        sh:in ( %s ) ;
+                    ] .
+                """
+                .formatted(entries);
+    }
+
+    @Test
+    void aTypeOfAnotherCimVersionIsInformationNotAnError() {
+        var report =
+                service.validateTurtle(
+                        GRAPH,
+                        "nc.ttl",
+                        typeListWith("cim:ACLineSegment cim16:ACLineSegment"),
+                        null);
+
+        assertThat(findings(report.getDocuments()))
+                .filteredOn(finding -> finding.getTerm() != null)
+                .filteredOn(finding -> finding.getTerm().contains("cim16"))
+                .isNotEmpty()
+                .allSatisfy(
+                        finding ->
+                                assertThat(finding.getSeverity())
+                                        .isEqualTo(ShapesValidationFinding.Severity.INFO));
+    }
+
+    @Test
+    void aMisspeltTypeInTheSchemasOwnNamespaceStaysAnError() {
+        var report =
+                service.validateTurtle(GRAPH, "typo.ttl", typeListWith("cim:ACLineSegmnet"), null);
+
+        assertThat(findings(report.getDocuments()))
+                .filteredOn(finding -> finding.getTerm() != null)
+                .filteredOn(finding -> finding.getTerm().endsWith("ACLineSegmnet"))
+                .anySatisfy(
+                        finding ->
+                                assertThat(finding.getSeverity())
+                                        .isEqualTo(ShapesValidationFinding.Severity.ERROR));
+    }
+
     @Test
     void anUnknownTermUsedElsewhereTooStaysAnError() {
         var shapes =

@@ -287,6 +287,7 @@ public class ShapesValidationService implements ShapesValidationUseCase {
         var result = api.validateShacl(shapes, scope);
 
         var positions = new SourcePositions(rawText, shapes.getPrefixMapping());
+        var known = KnownNamespaces.of(api.schemaIndex());
         var findings = new LinkedHashSet<ShapesValidationFinding>();
         result.shapeAnnotations()
                 .forEach(
@@ -297,10 +298,13 @@ public class ShapesValidationService implements ShapesValidationUseCase {
                                             ShapesValidationFinding.Source.SHAPE,
                                             positions.locate(
                                                     annotation.term(), annotation.locationHint()));
-                            findings.add(
-                                    isUnknownPermittedValue(shapes, annotation)
-                                            ? asPermittedValue(finding)
-                                            : finding);
+                            if (isTypeOfAnotherVocabulary(annotation, known)) {
+                                findings.add(asTypeOfAnotherVocabulary(finding));
+                            } else if (isUnknownPermittedValue(shapes, annotation)) {
+                                findings.add(asPermittedValue(finding));
+                            } else {
+                                findings.add(finding);
+                            }
                         });
         result.embeddedResults()
                 .forEach(
@@ -338,6 +342,38 @@ public class ShapesValidationService implements ShapesValidationUseCase {
                 && term != null
                 && term.isURI()
                 && onlyListedInShIn(shapes, term);
+    }
+
+    /**
+     * Whether the finding is about a term in a namespace no profile of the workspace uses.
+     *
+     * <p>Official NC constraints name each type under every CIM namespace in use — {@code cim16},
+     * {@code CIM100} and the current one, in {@code sh:targetClass}, {@code sh:class} and {@code
+     * sh:in} alike — so the same file validates data of either version. Only one of those can be in
+     * the workspace, and every other spelling came back as an error: 868 of them on the
+     * EquipmentReliability files. The workspace has no way to check a vocabulary it does not hold,
+     * so such a term is reported as information. A misspelt term is still an error, because a
+     * misspelling stays in a namespace the workspace declares.
+     */
+    private static boolean isTypeOfAnotherVocabulary(
+            SparqlValidationAnnotation annotation, KnownNamespaces known) {
+        var term = annotation.term();
+        return annotation.code().name().startsWith("UNKNOWN_")
+                && annotation.severity() == SparqlValidationSeverity.ERROR
+                && term != null
+                && term.isURI()
+                && !known.declares(term);
+    }
+
+    private static ShapesValidationFinding asTypeOfAnotherVocabulary(
+            ShapesValidationFinding finding) {
+        return finding.toBuilder()
+                .severity(ShapesValidationFinding.Severity.INFO)
+                .message(
+                        finding.getMessage()
+                                + " No profile in the workspace uses its namespace — often another"
+                                + " CIM version's spelling of a class — so it cannot be checked.")
+                .build();
     }
 
     private static boolean onlyListedInShIn(Graph shapes, Node term) {
