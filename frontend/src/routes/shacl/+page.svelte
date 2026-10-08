@@ -309,7 +309,10 @@
         // its edit on the way to the buffer. Saving first would write the document without it and
         // then show it coming back as an unsaved change.
         await formView?.settle();
-        const { saved, reason } = await workbench.save();
+        const { saved, reason, unchanged } = await workbench.save();
+        if (saved && unchanged) {
+            return true;
+        }
         if (saved) {
             // A save moves the schema graph's version, so the terms and hovers cached against the
             // old one are describing a schema that no longer exists — and so does a comparison.
@@ -558,7 +561,9 @@
             >
                 Constraints — {selectedWorkspace} / {schemaName}
             </h1>
-            {#if workbench.dirty}
+            {#if workbench.saving}
+                <span class="text-text-subtle shrink-0 text-xs">saving…</span>
+            {:else if workbench.dirty}
                 <span class="text-orange shrink-0 text-xs">
                     unsaved changes
                 </span>
@@ -582,7 +587,7 @@
                 >
                     <span class="flex items-center gap-2">
                         <Fa icon={faFloppyDisk} />
-                        Save
+                        {workbench.saving ? "Saving…" : "Save"}
                     </span>
                 </ButtonControl>
             </div>

@@ -253,14 +253,40 @@ describe("editing and saving", () => {
         // The endpoint takes a plain String @RequestBody, which Spring reads as-is: a serialized
         // body arrives at Jena with its quotes and escapes and fails to parse.
         await workbench.load();
-        workbench.text = SHAPES;
+        const edited = `${SHAPES}# "quoted" and \\escaped\n`;
+        workbench.text = edited;
         server.requests.length = 0;
 
         await workbench.save();
 
         const put = server.requests.find(entry => entry.method === "PUT");
         expect(put.contentType).toBe("text/plain");
-        expect(put.body).toBe(SHAPES);
+        expect(put.body).toBe(edited);
+    });
+
+    test("does not write a document that has not changed", async () => {
+        await workbench.load();
+        server.requests.length = 0;
+
+        expect(await workbench.save()).toEqual({
+            saved: true,
+            reason: null,
+            unchanged: true,
+        });
+        expect(server.requests).toEqual([]);
+    });
+
+    test("says it is saving while the write is on its way", async () => {
+        await workbench.load();
+        workbench.text = `${SHAPES}# edited\n`;
+        const gate = holdRequests(entry => entry.method === "PUT");
+
+        const saving = workbench.save();
+        await vi.waitFor(() => expect(workbench.saving).toBe(true));
+        gate.release();
+        await saving;
+
+        expect(workbench.saving).toBe(false);
     });
 
     test("re-reads the documents and revalidates after a save", async () => {

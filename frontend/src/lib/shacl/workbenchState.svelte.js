@@ -437,6 +437,10 @@ export class ShapesWorkbench {
             if (!this.dirty) {
                 return { saved: true, reason: null };
             }
+        } else if (this.selectedId && this.#textReady && !this.dirty) {
+            // Nothing to write. Sending it anyway would announce a save that changed nothing,
+            // and on a large file make the user wait for one.
+            return { saved: true, reason: null, unchanged: true };
         }
         const run = this.#write();
         this.#saveInFlight = run;
