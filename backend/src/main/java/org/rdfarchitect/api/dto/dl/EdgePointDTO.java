@@ -47,9 +47,9 @@ public class EdgePointDTO {
     private float yPosition;
 
     /**
-     * Whether the point is glued to the border of a class. Only the first and the last point of an
-     * edge can be end points.
+     * The side of an end point, {@code source} or {@code target}: the point is glued to the border
+     * of the source or the target class of the edge. Null for a bend point.
      */
-    @JsonProperty("endPoint")
-    private boolean endPoint;
+    @JsonProperty("side")
+    private String side;
 }

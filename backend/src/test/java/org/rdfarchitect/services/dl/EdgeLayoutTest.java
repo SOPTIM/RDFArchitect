@@ -82,6 +82,8 @@ class EdgeLayoutTest {
     private static final String DATASET = "ds";
     private static final String GRAPH_ONE = "http://example.com/one";
     private static final String GRAPH_TWO = "http://example.com/two";
+    private static final String SOURCE_SIDE = "source";
+    private static final String TARGET_SIDE = "target";
 
     private static final UUID PACKAGE = UUID.fromString("0a0a0a0a-0000-4000-8000-000000000001");
     private static final UUID SUB = UUID.fromString("0a0a0a0a-0000-4000-8000-000000000002");
@@ -199,7 +201,7 @@ class EdgeLayoutTest {
         edgeLayoutService.updateEdgeLayouts(
                 graphOne,
                 PACKAGE,
-                List.of(inheritanceLayout(point("a", 10, 20, false), point("b", 30, 40, false))));
+                List.of(inheritanceLayout(point("a", 10, 20), point("b", 30, 40))));
         var edgeMRID = edgeDO(PACKAGE, edge).getMRID();
 
         layoutClasses(SUB, SUPER);
@@ -215,7 +217,7 @@ class EdgeLayoutTest {
         layoutClasses(SUB, SUPER, OTHER_SUPER, TARGET);
         var oldEdge = EdgeKey.inheritance(SUB, SUPER);
         edgeLayoutService.updateEdgeLayouts(
-                graphOne, PACKAGE, List.of(inheritanceLayout(point("a", 10, 20, false))));
+                graphOne, PACKAGE, List.of(inheritanceLayout(point("a", 10, 20))));
         var oldEdgeMRID = edgeDO(PACKAGE, oldEdge).getMRID();
 
         editSchema(
@@ -244,9 +246,9 @@ class EdgeLayoutTest {
                         PACKAGE,
                         List.of(
                                 inheritanceLayout(
-                                        point("s", 0, 0, true),
-                                        point("m", 50, 50, false),
-                                        point("t", 100, 100, true))));
+                                        point("s", 0, 0, SOURCE_SIDE),
+                                        point("m", 50, 50),
+                                        point("t", 100, 100, TARGET_SIDE))));
 
         assertThat(newPointIds)
                 .extracting(EdgePointIdDTO::getClientId)
@@ -268,6 +270,20 @@ class EdgeLayoutTest {
     }
 
     @Test
+    void anEndPointIsGluedByItsSide_evenIfTheEdgeHasNoEndPointAtTheOtherSide() {
+        layoutClasses(SUB, SUPER);
+
+        edgeLayoutService.updateEdgeLayouts(
+                graphOne,
+                PACKAGE,
+                List.of(inheritanceLayout(point("m", 50, 50), point("t", 100, 100, TARGET_SIDE))));
+
+        assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER)))
+                .extracting(DiagramObjectPoint::getBelongsToGluePoint)
+                .containsExactly(null, gluePointOfClass(SUPER));
+    }
+
+    @Test
     void savingAgainWithTheStoredIds_keepsThePointsAndMovesOnlyTheChangedOne() {
         layoutClasses(SUB, SUPER);
         var ids =
@@ -277,9 +293,9 @@ class EdgeLayoutTest {
                                 PACKAGE,
                                 List.of(
                                         inheritanceLayout(
-                                                point("s", 0, 0, true),
-                                                point("m", 50, 50, false),
-                                                point("t", 100, 100, true)))));
+                                                point("s", 0, 0, SOURCE_SIDE),
+                                                point("m", 50, 50),
+                                                point("t", 100, 100, TARGET_SIDE)))));
 
         var newPointIds =
                 edgeLayoutService.updateEdgeLayouts(
@@ -287,9 +303,9 @@ class EdgeLayoutTest {
                         PACKAGE,
                         List.of(
                                 inheritanceLayout(
-                                        point(ids.get(0), 0, 0, true),
-                                        point(ids.get(1), 70, 20, false),
-                                        point(ids.get(2), 100, 100, true))));
+                                        point(ids.get(0), 0, 0, SOURCE_SIDE),
+                                        point(ids.get(1), 70, 20),
+                                        point(ids.get(2), 100, 100, TARGET_SIDE))));
 
         assertThat(newPointIds).isEmpty();
         var points = pointsOf(EdgeKey.inheritance(SUB, SUPER));
@@ -311,8 +327,7 @@ class EdgeLayoutTest {
                                 PACKAGE,
                                 List.of(
                                         inheritanceLayout(
-                                                point("a", 10, 10, false),
-                                                point("b", 30, 30, false)))));
+                                                point("a", 10, 10), point("b", 30, 30)))));
 
         var newPointIds =
                 edgeLayoutService.updateEdgeLayouts(
@@ -320,9 +335,9 @@ class EdgeLayoutTest {
                         PACKAGE,
                         List.of(
                                 inheritanceLayout(
-                                        point(ids.get(0), 10, 10, false),
-                                        point("new", 20, 20, false),
-                                        point(ids.get(1), 30, 30, false))));
+                                        point(ids.get(0), 10, 10),
+                                        point("new", 20, 20),
+                                        point(ids.get(1), 30, 30))));
 
         assertThat(newPointIds).extracting(EdgePointIdDTO::getClientId).containsExactly("new");
         var points = pointsOf(EdgeKey.inheritance(SUB, SUPER));
@@ -344,11 +359,10 @@ class EdgeLayoutTest {
                                 PACKAGE,
                                 List.of(
                                         inheritanceLayout(
-                                                point("a", 10, 10, false),
-                                                point("b", 30, 30, false)))));
+                                                point("a", 10, 10), point("b", 30, 30)))));
 
         edgeLayoutService.updateEdgeLayouts(
-                graphOne, PACKAGE, List.of(inheritanceLayout(point(ids.get(1), 30, 30, false))));
+                graphOne, PACKAGE, List.of(inheritanceLayout(point(ids.get(1), 30, 30))));
         assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER)))
                 .extracting(point -> point.getMRID().getUuid().toString())
                 .containsExactly(ids.get(1));
@@ -375,9 +389,9 @@ class EdgeLayoutTest {
                                                 SUB_TO_TARGET,
                                                 TARGET,
                                                 SUB,
-                                                point("atTarget", 0, 0, true),
-                                                point("between", 50, 50, false),
-                                                point("atSub", 100, 100, true)))));
+                                                point("atTarget", 0, 0, SOURCE_SIDE),
+                                                point("between", 50, 50),
+                                                point("atSub", 100, 100, TARGET_SIDE)))));
 
         var edge = EdgeKey.association(SUB_TO_TARGET, TARGET_TO_SUB);
         assertThat(pointsOf(edge))
@@ -398,9 +412,9 @@ class EdgeLayoutTest {
                                         TARGET_TO_SUB,
                                         SUB,
                                         TARGET,
-                                        point(ids.get(2), 100, 100, true),
-                                        point(ids.get(1), 50, 50, false),
-                                        point(ids.get(0), 0, 0, true))));
+                                        point(ids.get(2), 100, 100, SOURCE_SIDE),
+                                        point(ids.get(1), 50, 50),
+                                        point(ids.get(0), 0, 0, TARGET_SIDE))));
 
         assertThat(newPointIds).isEmpty();
         assertThat(pointsOf(edge))
@@ -413,7 +427,7 @@ class EdgeLayoutTest {
         layoutClasses(SUB);
 
         edgeLayoutService.updateEdgeLayouts(
-                graphOne, PACKAGE, List.of(inheritanceLayout(point("a", 10, 10, false))));
+                graphOne, PACKAGE, List.of(inheritanceLayout(point("a", 10, 10))));
 
         assertThat(classesOf(PACKAGE)).containsExactlyInAnyOrder(SUB, SUPER);
         var superClassDO =
@@ -440,14 +454,14 @@ class EdgeLayoutTest {
                                         OTHER_SUPER,
                                         SUB,
                                         OTHER_SUPER,
-                                        point("a", 10, 10, false)),
+                                        point("a", 10, 10)),
                                 edgeLayout(
                                         "inheritance",
                                         null,
                                         SUPER,
                                         SUB,
                                         SUPER,
-                                        point("b", 10, 10, false))));
+                                        point("b", 10, 10))));
 
         assertThat(newPointIds).isEmpty();
         assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER))).isEmpty();
@@ -458,7 +472,9 @@ class EdgeLayoutTest {
         var diagramLayout = new DiagramLayoutDTO();
         diagramLayout.setClasses(positions(SUB, SUPER));
         diagramLayout.setEdges(
-                List.of(inheritanceLayout(point("s", 0, 50, true), point("t", 100, 50, true))));
+                List.of(
+                        inheritanceLayout(
+                                point("s", 0, 50, SOURCE_SIDE), point("t", 100, 50, TARGET_SIDE))));
 
         var newPointIds =
                 new UpdateDiagramLayoutService(databasePort)
@@ -484,7 +500,7 @@ class EdgeLayoutTest {
                                 merged("Super"),
                                 merged("Sub"),
                                 merged("Super"),
-                                point("a", 10, 10, false))));
+                                point("a", 10, 10))));
 
         var newPointIds =
                 new UpdateDiagramLayoutService(databasePort)
@@ -736,8 +752,12 @@ class EdgeLayoutTest {
         return edgeLayout;
     }
 
-    private static EdgePointDTO point(String id, float x, float y, boolean endPoint) {
-        return new EdgePointDTO(id, x, y, endPoint);
+    private static EdgePointDTO point(String id, float x, float y) {
+        return new EdgePointDTO(id, x, y, null);
+    }
+
+    private static EdgePointDTO point(String id, float x, float y, String side) {
+        return new EdgePointDTO(id, x, y, side);
     }
 
     private static List<String> idsOf(List<EdgePointIdDTO> newPointIds) {
