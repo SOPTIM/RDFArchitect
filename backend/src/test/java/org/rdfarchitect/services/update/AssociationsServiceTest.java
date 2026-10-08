@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
@@ -41,6 +42,7 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
+import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
 import org.rdfarchitect.services.update.classes.associations.AssociationsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -78,7 +80,9 @@ class AssociationsServiceTest {
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
-        associationsService = new AssociationsService(databasePort, associationPairMapper);
+        associationsService =
+                new AssociationsService(
+                        databasePort, associationPairMapper, mock(SyncDiagramLayoutUseCase.class));
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(readMultipartFileFromFile(PATH, "class.ttl"))

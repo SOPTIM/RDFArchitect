@@ -17,19 +17,31 @@
 
 import { editorState, multiSelectState } from "$lib/sharedState.svelte.js";
 
+import {
+    findBendPointAtPosition,
+    getBendPoints,
+    getInnerBendPoints,
+    isEndPoint,
+} from "./bendPointOperations.js";
+import { EDGE_INTERACTION_CONFIG } from "./edgeInteractionConfig.js";
 import { propertyContextMenu } from "./propertyInteraction.svelte.js";
 
 export class ContextMenuController {
     #paneRequest = $state(null);
     #classRequest = $state(null);
+    #edgeRequest = $state(null);
     #contextMenuClass = $state(null);
 
     #getSvelteFlow;
     #getIsReadOnly;
+    #getEdges;
+    #selectEdge;
 
-    constructor({ getSvelteFlow, getIsReadOnly }) {
+    constructor({ getSvelteFlow, getIsReadOnly, getEdges, selectEdge }) {
         this.#getSvelteFlow = getSvelteFlow;
         this.#getIsReadOnly = getIsReadOnly;
+        this.#getEdges = getEdges ?? (() => []);
+        this.#selectEdge = selectEdge ?? (() => {});
     }
 
     get paneRequest() {
@@ -40,6 +52,10 @@ export class ContextMenuController {
         return this.#classRequest;
     }
 
+    get edgeRequest() {
+        return this.#edgeRequest;
+    }
+
     get contextMenuClass() {
         return this.#contextMenuClass;
     }
@@ -47,6 +63,7 @@ export class ContextMenuController {
     close() {
         this.#paneRequest = null;
         this.#classRequest = null;
+        this.#edgeRequest = null;
         propertyContextMenu.close();
     }
 
@@ -93,8 +110,48 @@ export class ContextMenuController {
         };
     }
 
-    handleEdgeContextMenu({ event }) {
+    handleEdgeContextMenu({ event, edge }) {
         this.#consumeEvent(event);
+
+        const edgeId = edge?.id;
+        if (!edgeId) {
+            return;
+        }
+
+        this.#selectEdge(edgeId);
+
+        const svelteFlow = this.#getSvelteFlow();
+        const flowPosition = svelteFlow
+            ? svelteFlow.screenToFlowPosition(
+                  { x: event.clientX, y: event.clientY },
+                  { snapToGrid: false },
+              )
+            : { x: 0, y: 0 };
+
+        const currentEdge = this.#getEdges().find(e => e.id === edgeId) ?? edge;
+        const allPoints = getBendPoints(currentEdge);
+        const middleBendPoints = getInnerBendPoints(allPoints);
+
+        const zoom = svelteFlow?.getViewport?.().zoom ?? 1;
+        const hitRadius =
+            EDGE_INTERACTION_CONFIG.pointHitRadiusPx / (zoom || 1);
+        const hitPoint = findBendPointAtPosition(
+            allPoints,
+            flowPosition,
+            hitRadius,
+        );
+
+        const hitIsEndPoint = hitPoint ? isEndPoint(hitPoint) : false;
+
+        this.#edgeRequest = {
+            x: event.clientX,
+            y: event.clientY,
+            edgeId,
+            flowPosition,
+            hitBendPointId: hitIsEndPoint ? null : (hitPoint?.id ?? null),
+            hitEndPointId: hitIsEndPoint ? hitPoint.id : null,
+            bendPointCount: middleBendPoints.length,
+        };
     }
 
     handleNodeContextMenu({ event, node }) {

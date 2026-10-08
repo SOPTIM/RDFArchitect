@@ -29,7 +29,6 @@ import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
-import org.rdfarchitect.services.dl.update.ReplaceDiagramUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;

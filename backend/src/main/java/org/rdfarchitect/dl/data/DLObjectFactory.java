@@ -22,6 +22,7 @@ import lombok.experimental.UtilityClass;
 import org.apache.jena.query.QuerySolution;
 import org.rdfarchitect.dl.data.dto.Diagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
+import org.rdfarchitect.dl.data.dto.DiagramObjectGluePoint;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
@@ -67,6 +68,7 @@ public class DLObjectFactory {
                         DiagramObjectStyle.byName(parser.getName(DLQueryVars.STYLE_NAME)))
                 .belongsToDiagram(parser.getMRID(DLQueryVars.DIAGRAM_MRID))
                 .belongsToIdentifiedObject(parser.getMRID(DLQueryVars.IO_MRID))
+                .otherClass(parser.getMRID(DLQueryVars.OTHER_CLASS_MRID))
                 .build();
     }
 
@@ -83,6 +85,22 @@ public class DLObjectFactory {
                 .mRID(parser.getMRID(DLQueryVars.DOP_MRID))
                 .position(parser.getXYZPosition())
                 .belongsToDiagramObject(parser.getMRID(DLQueryVars.DO_MRID))
+                .sequenceNumber(parser.getSequenceNumber())
+                .belongsToGluePoint(parser.getMRID(DLQueryVars.GLUE_POINT_MRID))
+                .build();
+    }
+
+    /**
+     * Creates a {@link DiagramObjectGluePoint} from a given query solution.
+     *
+     * @param querySolution {@link QuerySolution} with results bound to variables from {@link
+     *     DLQueryVars}.
+     * @return {@link DiagramObjectGluePoint}
+     */
+    public static DiagramObjectGluePoint createDiagramObjectGluePoint(QuerySolution querySolution) {
+        var parser = new DLQuerySolutionParser(querySolution);
+        return DiagramObjectGluePoint.builder()
+                .mRID(parser.getMRID(DLQueryVars.GLUE_POINT_MRID))
                 .build();
     }
 }

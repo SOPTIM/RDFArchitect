@@ -29,6 +29,7 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.SuperClassDTO;
+import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;
@@ -39,6 +40,7 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
+import org.rdfarchitect.services.rendering.DiagramClassSelection;
 import org.rdfarchitect.services.rendering.RenderCIMFacadeCollectionUseCase;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -73,8 +75,6 @@ public class RenderCIMFacadeCollectionSvelteFlowService
     private static final String INHERITANCE_EDGE_TYPE = "inheritance";
     private static final String ASSOCIATION_EDGE_TYPE = "association";
 
-    private static final String DEFAULT_PACKAGE = "default";
-
     private static final Comparator<AttributeDTO> MERGED_ATTRIBUTE_ORDER =
             Comparator.comparing(
                             AttributeDTO::getGraphUri,
@@ -95,7 +95,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             List<CIMProfileModel> otherProfiles,
             String primaryColor,
             String primaryKeyword) {
-        var selection = selectClasses(cimModel, filter);
+        var selection = DiagramClassSelection.select(cimModel, filter);
         if (selection.classes().isEmpty()) {
             return createEmptyDiagram();
         }
@@ -325,16 +325,20 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         return new ArrayList<>(refs.values());
     }
 
+    /**
+     * Assembles the inheritance and association edges between the merged classes, with the points
+     * stored for them in the diagram under their merged UUIDs.
+     */
     private List<EdgeDTO> assembleMergedEdges(
             Map<String, MergedFacadeClass> mergedClasses, RenderingLayoutData layoutData) {
         var edges = new ArrayList<EdgeDTO>();
-        edges.addAll(assembleMergedInheritanceEdges(mergedClasses));
+        edges.addAll(assembleMergedInheritanceEdges(mergedClasses, layoutData));
         edges.addAll(assembleMergedAssociationEdges(mergedClasses, layoutData));
         return edges;
     }
 
     private List<EdgeDTO> assembleMergedInheritanceEdges(
-            Map<String, MergedFacadeClass> mergedClasses) {
+            Map<String, MergedFacadeClass> mergedClasses, RenderingLayoutData layoutData) {
         var edges = new ArrayList<EdgeDTO>();
         for (var merged : mergedClasses.values()) {
             for (var ref : collectSuperClassRefs(merged)) {
@@ -348,7 +352,19 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                 .type(INHERITANCE_EDGE_TYPE)
                                 .source(merged.uuid())
                                 .target(superClass.uuid())
-                                .data(null)
+                                .data(
+                                        EdgeDataDTO.builder()
+                                                .sourceObject(merged.uuid())
+                                                .targetObject(superClass.uuid())
+                                                .bendPoints(
+                                                        SvelteFlowEdgePoints.forEdge(
+                                                                layoutData,
+                                                                DiagramObjectStyle.INHERITANCE,
+                                                                merged.uuid(),
+                                                                superClass.uuid(),
+                                                                merged.uuid(),
+                                                                superClass.uuid()))
+                                                .build())
                                 .build());
             }
         }
@@ -386,8 +402,13 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                             association),
                                     layoutData);
 
+                    var sourceObject =
+                            CrossProfileUtils.mergedUuid(association.getUri().toString());
+                    var targetObject = CrossProfileUtils.mergedUuid(inverse.getUri().toString());
                     var edgeData =
                             EdgeDataDTO.builder()
+                                    .sourceObject(sourceObject)
+                                    .targetObject(targetObject)
                                     .sourceMultiplicityLabel(labels.sourceMultiplicityLabel())
                                     .targetMultiplicityLabel(labels.targetMultiplicityLabel())
                                     .sourceAssociationLabel(labels.sourceAssociationLabel())
@@ -400,6 +421,14 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                     .graphUri(source.graphUri())
                                     .graphKeyword(source.keyword())
                                     .color(source.color())
+                                    .bendPoints(
+                                            SvelteFlowEdgePoints.forEdge(
+                                                    layoutData,
+                                                    DiagramObjectStyle.ASSOCIATION,
+                                                    sourceObject,
+                                                    targetObject,
+                                                    merged.uuid(),
+                                                    target.uuid()))
                                     .build();
                     edges.add(
                             EdgeDTO.builder()
@@ -417,84 +446,6 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
     private SvelteFlowDTO createEmptyDiagram() {
         return SvelteFlowDTO.builder().nodes(List.of()).edges(List.of()).build();
-    }
-
-    private SelectedClasses selectClasses(ICIMModelFacade cimModel, GraphFilter filter) {
-        var classes = new LinkedHashMap<String, ICIMClass>();
-
-        if (filter.getAllowedUUIDs() != null) {
-            for (var allowedUUID : filter.getAllowedUUIDs()) {
-                var cimClass = cimModel.getCIMClass(UUID.fromString(allowedUUID));
-                if (cimClass != null) {
-                    classes.put(cimClass.getUri().toString(), cimClass);
-                }
-            }
-            return new SelectedClasses(classes, Set.of());
-        }
-
-        var category = cimModel.getCIMClassCategory(resolvePackageUUID(filter));
-        if (category == null) {
-            return new SelectedClasses(classes, Set.of());
-        }
-        for (var cimClass : category.getClasses()) {
-            classes.put(cimClass.getUri().toString(), cimClass);
-        }
-
-        if (!filter.isIncludeRelationsToExternalPackages()) {
-            return new SelectedClasses(classes, Set.of());
-        }
-
-        var packageUris = Set.copyOf(classes.keySet());
-        addExternallyRelatedClasses(filter, classes);
-        var outsidePackageUris =
-                classes.keySet().stream()
-                        .filter(uri -> !packageUris.contains(uri))
-                        .collect(Collectors.toSet());
-
-        return new SelectedClasses(classes, outsidePackageUris);
-    }
-
-    private UUID resolvePackageUUID(GraphFilter filter) {
-        if (filter.getPackageUUID() == null || filter.getPackageUUID().equals(DEFAULT_PACKAGE)) {
-            return null;
-        }
-        return UUID.fromString(filter.getPackageUUID());
-    }
-
-    private void addExternallyRelatedClasses(GraphFilter filter, Map<String, ICIMClass> classes) {
-        if (!filter.isIncludeAssociations() && !filter.isIncludeInheritance()) {
-            return;
-        }
-        var classesInPackage = List.copyOf(classes.values());
-
-        if (filter.isIncludeAssociations()) {
-            for (var cimClass : classesInPackage) {
-                for (var association : cimClass.getAssociations()) {
-                    if (association.isRenderable()) {
-                        addExternallyRelatedClass(classes, association.getRange());
-                    }
-                }
-            }
-        }
-
-        if (filter.isIncludeInheritance()) {
-            for (var cimClass : classesInPackage) {
-                for (var superClass : cimClass.getSuperClasses()) {
-                    addExternallyRelatedClass(classes, superClass);
-                }
-                for (var subClass : cimClass.getSubClasses()) {
-                    addExternallyRelatedClass(classes, subClass);
-                }
-            }
-        }
-    }
-
-    private void addExternallyRelatedClass(Map<String, ICIMClass> classes, ICIMClass cimClass) {
-        var uri = cimClass.getUri().toString();
-        if (cimClass.getUuid() == null || classes.containsKey(uri)) {
-            return;
-        }
-        classes.put(uri, cimClass);
     }
 
     private List<NodeDTO> assembleNodeDTOList(RenderContext renderContext) {
@@ -725,6 +676,10 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         return superClassDTOs;
     }
 
+    /**
+     * Assembles the inheritance and association edges between the rendered classes, with the points
+     * stored for them in the diagram, see {@link SvelteFlowEdgePoints}.
+     */
     private List<EdgeDTO> assembleEdgeDTOList(RenderContext renderContext) {
         List<EdgeDTO> edgeDTOList = new ArrayList<>();
         edgeDTOList.addAll(assembleInheritanceEdgeDTOList(renderContext));
@@ -750,7 +705,19 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                 .type(INHERITANCE_EDGE_TYPE)
                                 .source(cimClass.getUuid())
                                 .target(superClass.getUuid())
-                                .data(null)
+                                .data(
+                                        EdgeDataDTO.builder()
+                                                .sourceObject(cimClass.getUuid())
+                                                .targetObject(superClass.getUuid())
+                                                .bendPoints(
+                                                        SvelteFlowEdgePoints.forEdge(
+                                                                renderContext.layoutingData(),
+                                                                DiagramObjectStyle.INHERITANCE,
+                                                                cimClass.getUuid(),
+                                                                superClass.getUuid(),
+                                                                cimClass.getUuid(),
+                                                                superClass.getUuid()))
+                                                .build())
                                 .build());
             }
         }
@@ -799,12 +766,22 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                         layoutData);
         var edgeDataDTO =
                 EdgeDataDTO.builder()
+                        .sourceObject(from.getUuid())
+                        .targetObject(to.getUuid())
                         .sourceMultiplicityLabel(labels.sourceMultiplicityLabel())
                         .targetMultiplicityLabel(labels.targetMultiplicityLabel())
                         .sourceAssociationLabel(labels.sourceAssociationLabel())
                         .targetAssociationLabel(labels.targetAssociationLabel())
                         .useToAssociation(getAssociationUsedValue(from.getAssociationUsed()))
                         .useFromAssociation(getAssociationUsedValue(to.getAssociationUsed()))
+                        .bendPoints(
+                                SvelteFlowEdgePoints.forEdge(
+                                        layoutData,
+                                        DiagramObjectStyle.ASSOCIATION,
+                                        from.getUuid(),
+                                        to.getUuid(),
+                                        sourceClass.getUuid(),
+                                        from.getRange().getUuid()))
                         .build();
 
         return EdgeDTO.builder()
@@ -857,9 +834,6 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         void collect(
                 List<T> target, ICIMClass cimClass, String graphUri, String keyword, String color);
     }
-
-    private record SelectedClasses(
-            Map<String, ICIMClass> classes, Set<String> outsidePackageUris) {}
 
     private record RenderContext(
             List<ICIMClass> classes,

@@ -15,6 +15,8 @@
   -
   -->
 
+<!--TODO DIE INHERITANCE PFEILSPITZE SPITZER MACHEN! gleiches problem wie bei der assoc edge früher, die ist vorne iwie stumpf. fix das svg da iwie-->
+
 <svg class="pointer-events-none absolute h-0 w-0 overflow-hidden">
     <defs>
         <marker
@@ -29,15 +31,15 @@
             <path
                 d="M0,0 L20,6 L0,12 Z"
                 fill="white"
-                style="stroke: var(--color-inheritance-edge); stroke-width: 1"
+                style="stroke: context-stroke; stroke-width: 1"
             />
         </marker>
         <marker
             id="associationTo"
-            viewBox="0 0 10 10"
+            viewBox="0 0 11 10"
             refX="10"
             refY="5"
-            markerWidth="10"
+            markerWidth="11"
             markerHeight="10"
             orient="auto"
         >
@@ -45,10 +47,10 @@
         </marker>
         <marker
             id="associationFrom"
-            viewBox="0 0 10 10"
+            viewBox="-1 0 11 10"
             refX="0"
             refY="5"
-            markerWidth="10"
+            markerWidth="11"
             markerHeight="10"
             orient="auto"
         >

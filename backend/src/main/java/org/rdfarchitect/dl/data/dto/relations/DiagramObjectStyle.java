@@ -30,7 +30,9 @@ import java.util.UUID;
 public enum DiagramObjectStyle {
     CLASS("class"),
     MULTIPLICITY("multiplicity"),
-    ASSOCIATION_LABEL("associationLabel");
+    ASSOCIATION_LABEL("associationLabel"),
+    ASSOCIATION("association"),
+    INHERITANCE("inheritance");
 
     private final String styleName;
     private final MRID mRID;
@@ -42,6 +44,15 @@ public enum DiagramObjectStyle {
 
     public String getStyleName() {
         return styleName;
+    }
+
+    /**
+     * Whether diagram objects of this style are labels, i.e. texts placed next to an edge.
+     *
+     * @return true for the label styles
+     */
+    public boolean isLabel() {
+        return this == MULTIPLICITY || this == ASSOCIATION_LABEL;
     }
 
     public MRID getMRID() {

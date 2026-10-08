@@ -15,20 +15,24 @@
  *
  */
 
-package org.rdfarchitect.services.dl.update;
+package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 
-import org.rdfarchitect.database.GraphIdentifier;
+import lombok.Builder;
+import lombok.Data;
 
-import java.util.UUID;
+/** DTO representing a single bend point or end point of a SvelteFlow edge. */
+@Data
+@Builder
+public class BendPointDTO {
 
-public interface ReplaceDiagramUseCase {
+    /** The mRID of the point, sent back unchanged when the layout of the edge is saved. */
+    private String id;
+
+    private PositionDTO position;
 
     /**
-     * Replaces the diagram with a new diagram created using the values in the parameters
-     *
-     * @param graphIdentifier the identifier of the graph
-     * @param packageUUID the UUID of the package identifying the diagram
-     * @param packageName the name of the new diagram
+     * The side of an end point, {@code source} or {@code target}: the point is glued to the border
+     * of the source or the target class of the edge. Null for a bend point.
      */
-    void replaceDiagram(GraphIdentifier graphIdentifier, UUID packageUUID, String packageName);
+    private String side;
 }

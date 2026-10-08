@@ -32,4 +32,8 @@ public class DiagramObjectPoint {
     private XYZPosition position;
 
     private MRID belongsToDiagramObject;
+
+    private Integer sequenceNumber;
+
+    private MRID belongsToGluePoint;
 }
