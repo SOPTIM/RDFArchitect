@@ -854,10 +854,10 @@
       },
       "EdgePointDTO" : {
         "properties" : {
-          "endPoint" : {
-            "type" : "boolean"
-          },
           "id" : {
+            "type" : "string"
+          },
+          "side" : {
             "type" : "string"
           },
           "xPosition" : {

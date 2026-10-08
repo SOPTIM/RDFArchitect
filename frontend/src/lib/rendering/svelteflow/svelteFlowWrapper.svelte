@@ -29,8 +29,6 @@
     import { SvelteMap } from "svelte/reactivity";
 
     import {
-        updateClassPositions,
-        updateDatasetClassPositions,
         updateDatasetLabelPositions,
         updateLabelPositions,
     } from "$lib/api/generated/index.ts";
@@ -91,6 +89,7 @@
         DIAGRAM_SELECTION_CONTEXT,
         DiagramSelectionController,
     } from "./interaction/diagramSelection.svelte.js";
+    import { EdgeLayoutPersistence } from "./interaction/edgeLayoutPersistence.js";
     import { labelHighlight } from "./interaction/labelHighlight.svelte.js";
     import {
         clearHeldModifiers,
@@ -149,6 +148,17 @@
         nodeOrder: nodeOrderCtrl,
     });
 
+    const edgeLayouts = new EdgeLayoutPersistence({
+        getEdges: () => edges,
+        setEdges: value => (edges = value),
+        getTarget: () => ({
+            datasetName: editorState.selectedWorkspace.getValue(),
+            graphURI: editorState.selectedGraph.getValue(),
+            diagramUUID: editorState.selectedDiagram.getProperty("id"),
+        }),
+        isReadOnly: () => isWorkspaceReadOnly ?? false,
+    });
+
     // svelte-ignore state_referenced_locally
     let nodes = $state.raw([...inputNodes]);
     // svelte-ignore state_referenced_locally
@@ -198,6 +208,11 @@
 
     $effect(() => {
         syncLabelNodes(nodes, edges);
+    });
+
+    $effect(() => {
+        const currentEdges = edges;
+        untrack(() => edgeLayouts.track(currentEdges));
     });
 
     $effect(() => {
@@ -265,6 +280,7 @@
         el.addEventListener("pointermove", onContainerPointerMove, true);
         el.addEventListener("click", onContainerClick, true);
         el.addEventListener("contextmenu", onContainerContextMenu, true);
+        window.addEventListener("pagehide", saveEdgeLayoutsOnPageHide);
 
         const unregisterAddBendPoint = shortcutStore.register(
             "diagram-add-bend-point-at-cursor",
@@ -282,12 +298,14 @@
             el.removeEventListener("pointermove", onContainerPointerMove, true);
             el.removeEventListener("click", onContainerClick, true);
             el.removeEventListener("contextmenu", onContainerContextMenu, true);
+            window.removeEventListener("pagehide", saveEdgeLayoutsOnPageHide);
             unregisterAddBendPoint();
             unregisterDeleteBendPoint();
         };
     });
 
     onDestroy(() => {
+        edgeLayouts.dispose();
         eventStack.removeEvent(selection.escapeClearSelection);
         if (selectionZFrame !== null) {
             cancelAnimationFrame(selectionZFrame);
@@ -297,6 +315,10 @@
     /*TODO REFACTOR: SEHR WICHTIG: AM ENDE AUFRÄUMEN
         bend point code vllt auslagern, andere sachen, etc
         es muss ja nicht alles hier im svelteFlowWrapper liegen*/
+
+    function saveEdgeLayoutsOnPageHide() {
+        edgeLayouts.saveAll({ keepalive: true });
+    }
 
     function onContainerPointerDown(event) {
         selection.notifyPointerDown();
@@ -426,7 +448,9 @@
         nodeOrderCtrl.sync(nextNodes);
         nodes = nodeOrderCtrl.applyZIndices(nextNodes);
         selectionZKey = selectionContentKey(selectedNodeIdSet());
-        edges = decorateEdges(inputEdges);
+        const nextEdges = decorateEdges(inputEdges);
+        edgeLayouts.load(nextEdges);
+        edges = nextEdges;
         resetDiagramSyncState(nextHasDefaultLayout);
     }
 
@@ -478,6 +502,7 @@
     }
 
     function handleNodeDragStart({ nodes: draggedNodes }) {
+        edgeLayouts.beginNodeDrag();
         lastDragPositions.clear();
         for (const node of draggedNodes) {
             lastDragPositions.set(node.id, {
@@ -674,7 +699,11 @@
         persistLabelPositions(movedLabels);
     }
 
-    /** Drops the manual placement of every label, so they return to their default placement. */
+    /**
+     * Drops the manual placement of every label, so they return to their default placement.
+     *
+     * @returns the label positions to save for the labels that were placed manually
+     */
     function resetLabelPositions() {
         const resetLabels = [];
         for (const { label } of collectLabels(edges)) {
@@ -690,7 +719,7 @@
                 ),
             );
         }
-        persistLabelPositions(resetLabels);
+        return resetLabels;
     }
 
     function persistLabelPositions(labelPositionDTOList) {
@@ -733,14 +762,17 @@
         const movedClasses = movedNodes.filter(
             node => node.type !== LABEL_NODE_TYPE,
         );
-        if (movedClasses.length === 0) {
-            return;
-        }
-        updateNodePositions(movedClasses);
-        persistManuallyPlacedLabelsOf(movedClasses);
+        edgeLayouts.saveDiagramLayout({
+            classes: toClassPositionDTOs(movedClasses),
+            labels: manuallyPlacedLabelsOf(movedClasses),
+        });
     }
 
-    function persistManuallyPlacedLabelsOf(movedClassNodes) {
+    /**
+     * The positions of the manually placed labels of the edges of the moved classes, which move
+     * along with their anchor.
+     */
+    function manuallyPlacedLabelsOf(movedClassNodes) {
         const movedClassIds = new Set(movedClassNodes.map(node => node.id));
         const rebuilt = buildLabelNodes(
             nodes,
@@ -769,44 +801,16 @@
                 ),
             );
         }
-        if (affectedLabels.length > 0) {
-            persistLabelPositions(affectedLabels);
-        }
+        return affectedLabels;
     }
 
-    function updateNodePositions(movedNodes) {
-        let classPositionDTOList = [];
-        for (const node of movedNodes) {
-            const classPositionDTO = {
-                classUUID: node.id,
-                xPosition: node.position.x,
-                yPosition: node.position.y,
-                zPosition: nodeOrderCtrl.rankOf(node.id),
-            };
-            classPositionDTOList.push(classPositionDTO);
-        }
-
-        const diagramUUID = editorState.selectedDiagram.getProperty("id");
-        if (!diagramUUID || classPositionDTOList.length === 0) return;
-
-        if (editorState.selectedGraph.getValue()) {
-            updateClassPositions({
-                path: {
-                    datasetName: editorState.selectedWorkspace.getValue(),
-                    graphURI: editorState.selectedGraph.getValue(),
-                    diagramUUID: diagramUUID,
-                },
-                body: classPositionDTOList,
-            });
-        } else {
-            updateDatasetClassPositions({
-                path: {
-                    datasetName: editorState.selectedWorkspace.getValue(),
-                    diagramUUID: diagramUUID,
-                },
-                body: classPositionDTOList,
-            });
-        }
+    function toClassPositionDTOs(classNodesToSave) {
+        return classNodesToSave.map(node => ({
+            classUUID: node.id,
+            xPosition: node.position.x,
+            yPosition: node.position.y,
+            zPosition: nodeOrderCtrl.rankOf(node.id),
+        }));
     }
     function selectOnlyEdge(edgeId) {
         edges = edges.map(edge => ({
@@ -999,14 +1003,16 @@
         if (!isLoading) isLoading = true;
         layouted = true;
         try {
-            const { nodes: layoutedNodes, layoutedEdges } = await layoutDiagram(
-                nodes,
-                edges,
+            const [{ nodes: layoutedNodes, layoutedEdges }] = await Promise.all(
+                [layoutDiagram(nodes, edges), refreshReadOnlyState()],
             );
             nodes = [...layoutedNodes];
             applyLayoutedEdges(layoutedEdges);
-            updateNodePositions(classNodes);
-            resetLabelPositions();
+            edgeLayouts.saveDiagramLayout({
+                classes: toClassPositionDTOs(classNodes),
+                labels: resetLabelPositions(),
+                allEdges: true,
+            });
             syncLabelNodes(nodes, edges);
             await tick();
             await fitViewIncludingBendPoints();

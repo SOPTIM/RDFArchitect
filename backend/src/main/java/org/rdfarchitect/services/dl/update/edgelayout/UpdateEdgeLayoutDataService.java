@@ -50,6 +50,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
 
+    private static final String SOURCE_SIDE = "source";
+    private static final String TARGET_SIDE = "target";
+
     private final DatabasePort databasePort;
 
     @Override
@@ -97,8 +100,8 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
      *   <li>any other point is new and stored under an mRID of its own, which is returned for the
      *       id it was sent with
      *   <li>stored points that are not sent anymore are deleted
-     *   <li>the first and the last point are glued to the glue point of the source and the target
-     *       class if they are end points
+     *   <li>an end point is glued to the glue point of the source or the target class, depending on
+     *       its side
      * </ul>
      *
      * The sequence numbers count from the side of the identified object of the edge diagram object,
@@ -211,12 +214,8 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
             EdgeLayoutDTO edge,
             Map<UUID, MRID> gluePoints) {
         var points = new ArrayList<>(Objects.requireNonNullElse(edge.getPoints(), List.of()));
-        var firstClass = edge.getSourceClass();
-        var lastClass = edge.getTargetClass();
         if (!edge.getSourceObject().equals(edgeDO.getBelongsToIdentifiedObject().getUuid())) {
             Collections.reverse(points);
-            firstClass = edge.getTargetClass();
-            lastClass = edge.getSourceClass();
         }
 
         var storedPoints = new LinkedHashMap<String, DiagramObjectPoint>();
@@ -226,15 +225,13 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
         }
 
         var newPointIds = new ArrayList<EdgePointIdDTO>();
-        var lastIndex = points.size() - 1;
         for (var index = 0; index < points.size(); index++) {
             var point = points.get(index);
-            MRID gluePoint = null;
-            if (point.isEndPoint() && index == 0) {
-                gluePoint = gluePointOf(diagramLayoutModel, diagramUUID, firstClass, gluePoints);
-            } else if (point.isEndPoint() && index == lastIndex) {
-                gluePoint = gluePointOf(diagramLayoutModel, diagramUUID, lastClass, gluePoints);
-            }
+            var gluedClass = classOfSide(edge, point.getSide());
+            var gluePoint =
+                    gluedClass != null
+                            ? gluePointOf(diagramLayoutModel, diagramUUID, gluedClass, gluePoints)
+                            : null;
 
             var storedPoint = point.getId() != null ? storedPoints.remove(point.getId()) : null;
             if (storedPoint == null) {
@@ -251,6 +248,21 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
             DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, removedPoint.getMRID());
         }
         return newPointIds;
+    }
+
+    /**
+     * The class an end point of the given side is glued to.
+     *
+     * @return the source or the target class of the edge, or null for a bend point
+     */
+    private static UUID classOfSide(EdgeLayoutDTO edge, String side) {
+        if (SOURCE_SIDE.equals(side)) {
+            return edge.getSourceClass();
+        }
+        if (TARGET_SIDE.equals(side)) {
+            return edge.getTargetClass();
+        }
+        return null;
     }
 
     private static void insertPoint(
