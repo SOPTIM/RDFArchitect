@@ -68,6 +68,13 @@
 
     const totals = $derived(workbench.totals);
 
+    /**
+     * Whether the panel takes the height it was given. With nothing to list it shrinks to its one
+     * line instead: a fixed share of the window spent on "nothing to report" was taken from the
+     * editor, which on a laptop screen left it a few hundred pixels.
+     */
+    const sized = $derived(expanded && problems.length > 0);
+
     // Navigating away mid-drag would otherwise leave the handlers writing height into a component
     // that is gone, holding its DOM alive with them.
     $effect(() => () => stopResize?.());
@@ -133,9 +140,9 @@
 <div
     bind:this={panel}
     class="border-border bg-window-background flex min-h-0 shrink-0 flex-col border-t"
-    style={expanded ? `height: ${height}px` : undefined}
+    style={sized ? `height: ${height}px` : undefined}
 >
-    {#if expanded}
+    {#if sized}
         <!--
           The window-splitter pattern: a separator that takes focus so the panel can be sized from
           the keyboard as well as dragged. Svelte's a11y rules only know the static separator, which

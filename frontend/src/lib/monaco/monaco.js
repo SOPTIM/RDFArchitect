@@ -138,6 +138,7 @@ function importContributions() {
         import("monaco-editor/editor/contrib/lineSelection/browser/lineSelection.js"),
         import("monaco-editor/editor/contrib/linesOperations/browser/linesOperations.js"),
         import("monaco-editor/editor/contrib/multicursor/browser/multicursor.js"),
+        import("monaco-editor/editor/contrib/placeholderText/browser/placeholderText.contribution.js"),
         import("monaco-editor/editor/contrib/smartSelect/browser/smartSelect.js"),
         import("monaco-editor/editor/contrib/suggest/browser/suggestController.js"),
         import("monaco-editor/editor/contrib/tokenization/browser/tokenization.js"),

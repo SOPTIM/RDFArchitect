@@ -206,7 +206,7 @@ describe("ProblemsPanel", () => {
     }
 
     test("dragging the handle upwards makes the panel taller", () => {
-        const panel = render(ProblemsPanel, { workbench: fakeWorkbench() });
+        const panel = render(ProblemsPanel, { workbench: withFindings() });
         flushSync();
         giveRoom(panel);
         const before = parseInt(sized(panel).style.height, 10);
@@ -222,7 +222,7 @@ describe("ProblemsPanel", () => {
     });
 
     test("the drag stops once the pointer is released", () => {
-        const panel = render(ProblemsPanel, { workbench: fakeWorkbench() });
+        const panel = render(ProblemsPanel, { workbench: withFindings() });
         flushSync();
         giveRoom(panel);
 
@@ -238,7 +238,7 @@ describe("ProblemsPanel", () => {
     });
 
     test("the arrow keys size it too, and neither direction runs away", () => {
-        const panel = render(ProblemsPanel, { workbench: fakeWorkbench() });
+        const panel = render(ProblemsPanel, { workbench: withFindings() });
         flushSync();
         giveRoom(panel);
         const before = parseInt(sized(panel).style.height, 10);
@@ -260,6 +260,14 @@ describe("ProblemsPanel", () => {
         flushSync();
         // Still tall enough to read the header and a finding.
         expect(parseInt(sized(panel).style.height, 10)).toBe(120);
+    });
+
+    test("with nothing to report it takes only the room its one line needs", () => {
+        const panel = render(ProblemsPanel, { workbench: fakeWorkbench() });
+        flushSync();
+
+        expect(handle(panel)).toBeNull();
+        expect(sized(panel).style.height).toBe("");
     });
 
     test("collapsing gives the space back and takes the handle away", () => {

@@ -57,6 +57,21 @@ const NO_FINDINGS = {
 };
 
 /**
+ * The document the workbench opens when none is chosen: the first that holds anything.
+ *
+ * Every graph has a default document, first in the list and usually empty, which cannot be
+ * deleted. Opening it put an empty editor in front of the user even when an imported file was
+ * right below it.
+ */
+function firstToOpen(documents) {
+    return (
+        documents.find(document => (document.tripleCount ?? 0) > 0)?.id ??
+        documents[0]?.id ??
+        null
+    );
+}
+
+/**
  * The id of the shapes RDFArchitect derives from the schema itself.
  *
  * Not a document: nothing stores it, and it is rebuilt from the classes every time it is asked
@@ -674,7 +689,7 @@ export class ShapesWorkbench {
             !this.showingGenerated &&
             !this.documents.some(document => document.id === this.selectedId)
         ) {
-            this.selectedId = this.documents[0]?.id ?? null;
+            this.selectedId = firstToOpen(this.documents);
         }
     }
 

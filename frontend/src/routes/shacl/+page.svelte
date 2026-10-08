@@ -689,7 +689,10 @@
                                         findings={workbench.findings}
                                         {termSource}
                                         readOnly={workbench.editorReadOnly}
-                                        onSave={save}
+                                        placeholder={workbench.editorReadOnly
+                                            ? undefined
+                                            : "Empty document — write shapes in Turtle here, or add one in the Form view."}
+                                        onSave={() => save()}
                                         onchange={onTextChanged}
                                         onshowinform={showInForm}
                                     />

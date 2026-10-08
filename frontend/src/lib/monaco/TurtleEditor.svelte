@@ -46,6 +46,8 @@
          * own; without one, every new value is an undoable edit to the text before it.
          */
         documentKey = undefined,
+        /** Shown while the text is empty, to say what the box is for. */
+        placeholder = undefined,
     } = $props();
 
     // All four are $state because the effects below key off them: the editor is created when
@@ -99,6 +101,7 @@
                     language: TURTLE_LANGUAGE_ID,
                     theme: resolveThemeName(),
                     readOnly,
+                    placeholder,
                     automaticLayout: true,
                     fontSize: 13,
                     minimap: { enabled: !autoGrow },
@@ -219,7 +222,7 @@
     });
 
     $effect(() => {
-        editor?.updateOptions({ readOnly });
+        editor?.updateOptions({ readOnly, placeholder });
     });
 
     // Completion and hover answer only for a model that has been given a schema to answer from,

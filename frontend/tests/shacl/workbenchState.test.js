@@ -227,6 +227,29 @@ describe("loading", () => {
         expect(workbench.loading).toBe(false);
     });
 
+    test("opens the first document with content, not the empty default before it", async () => {
+        server.documents = [
+            { ...server.documents[0], order: 0, tripleCount: 0 },
+            { ...server.documents[1], order: 1 },
+        ];
+
+        await workbench.load();
+
+        expect(workbench.documents[0].id).toBe(CUSTOM);
+        expect(workbench.selectedId).toBe(EQ);
+    });
+
+    test("opens the first document when every one is empty", async () => {
+        server.documents = server.documents.map(document => ({
+            ...document,
+            tripleCount: 0,
+        }));
+
+        await workbench.load();
+
+        expect(workbench.selectedId).toBe(workbench.documents[0].id);
+    });
+
     test("reports a listing failure instead of showing an empty workbench", async () => {
         server.respond = () => new Response("nope", { status: 500 });
 
