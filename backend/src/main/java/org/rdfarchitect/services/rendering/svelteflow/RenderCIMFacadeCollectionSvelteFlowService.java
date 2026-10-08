@@ -349,7 +349,11 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                 .type(INHERITANCE_EDGE_TYPE)
                                 .source(merged.uuid())
                                 .target(superClass.uuid())
-                                .data(null)
+                                .data(
+                                        EdgeDataDTO.builder()
+                                                .sourceObject(merged.uuid())
+                                                .targetObject(superClass.uuid())
+                                                .build())
                                 .build());
             }
         }
@@ -389,6 +393,12 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
                     var edgeData =
                             EdgeDataDTO.builder()
+                                    .sourceObject(
+                                            CrossProfileUtils.mergedUuid(
+                                                    association.getUri().toString()))
+                                    .targetObject(
+                                            CrossProfileUtils.mergedUuid(
+                                                    inverse.getUri().toString()))
                                     .sourceMultiplicityLabel(labels.sourceMultiplicityLabel())
                                     .targetMultiplicityLabel(labels.targetMultiplicityLabel())
                                     .sourceAssociationLabel(labels.sourceAssociationLabel())
@@ -676,7 +686,11 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                 .type(INHERITANCE_EDGE_TYPE)
                                 .source(cimClass.getUuid())
                                 .target(superClass.getUuid())
-                                .data(null)
+                                .data(
+                                        EdgeDataDTO.builder()
+                                                .sourceObject(cimClass.getUuid())
+                                                .targetObject(superClass.getUuid())
+                                                .build())
                                 .build());
             }
         }
@@ -725,6 +739,8 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                         layoutData);
         var edgeDataDTO =
                 EdgeDataDTO.builder()
+                        .sourceObject(from.getUuid())
+                        .targetObject(to.getUuid())
                         .sourceMultiplicityLabel(labels.sourceMultiplicityLabel())
                         .targetMultiplicityLabel(labels.targetMultiplicityLabel())
                         .sourceAssociationLabel(labels.sourceAssociationLabel())

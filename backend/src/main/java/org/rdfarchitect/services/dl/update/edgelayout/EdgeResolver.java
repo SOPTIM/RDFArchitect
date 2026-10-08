@@ -33,7 +33,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Derives from the schema which edges connect the classes of a diagram. Mirrors the edges the
@@ -93,6 +95,18 @@ public interface EdgeResolver {
     static EdgeResolver forDataset(DatabasePort databasePort, String datasetName) {
         return forMergedProfiles(
                 CIMProfileModels.loadAll(databasePort, Map.of(), datasetName, null));
+    }
+
+    /**
+     * Creates a resolver only once it is needed and then keeps it, for callers that may not need
+     * one at all, since creating a resolver for a dataset reads every graph of the dataset.
+     *
+     * @param factory creates the resolver
+     * @return a supplier creating the resolver on its first call
+     */
+    static Supplier<EdgeResolver> lazily(Supplier<EdgeResolver> factory) {
+        var resolver = new AtomicReference<EdgeResolver>();
+        return () -> resolver.updateAndGet(existing -> existing != null ? existing : factory.get());
     }
 
     /**

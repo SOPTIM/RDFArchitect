@@ -83,7 +83,16 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
      * stored text in sync with the model and makes a reset (an entry without an offset) fall out of
      * the same code path.
      */
-    private void applyLabelPositions(
+    /**
+     * Places or resets the given labels of a diagram, inside a transaction the caller holds. A
+     * label with a position replaces the stored one, a label without position is reset to its
+     * default place by deleting the stored one.
+     *
+     * @param diagramLayoutModel the diagram layout holding the diagram
+     * @param diagramUUID the UUID of the diagram
+     * @param labelPositions the labels to place or reset
+     */
+    public static void applyLabelPositions(
             Model diagramLayoutModel, UUID diagramUUID, List<LabelPositionDTO> labelPositions) {
         if (labelPositions.isEmpty()) {
             return;
@@ -94,7 +103,7 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
         var existingLabelsByKey = existingLabelsByKey(diagramLayoutModel, diagramUUID);
         for (var labelPosition : labelPositions) {
             var style = DiagramObjectStyle.byName(labelPosition.getKind());
-            if (style == null || style == DiagramObjectStyle.CLASS) {
+            if (style == null || !style.isLabel()) {
                 continue;
             }
             var labelKey = new LabelKey(labelPosition.getIdentifiedObjectUUID(), style);
@@ -119,7 +128,7 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
      * Fetches every existing label of the diagram in one query instead of one {@code fetchLabelDO}
      * query per label being applied.
      */
-    private Map<LabelKey, DiagramObject> existingLabelsByKey(
+    private static Map<LabelKey, DiagramObject> existingLabelsByKey(
             Model diagramLayoutModel, UUID diagramUUID) {
         Map<LabelKey, DiagramObject> byKey = new HashMap<>();
         for (var label : DLObjectFetcher.fetchDiagramLabelDOs(diagramLayoutModel, diagramUUID)) {

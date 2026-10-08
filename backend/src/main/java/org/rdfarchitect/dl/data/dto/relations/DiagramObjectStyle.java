@@ -46,6 +46,15 @@ public enum DiagramObjectStyle {
         return styleName;
     }
 
+    /**
+     * Whether diagram objects of this style are labels, i.e. texts placed next to an edge.
+     *
+     * @return true for the label styles
+     */
+    public boolean isLabel() {
+        return this == MULTIPLICITY || this == ASSOCIATION_LABEL;
+    }
+
     public MRID getMRID() {
         return mRID;
     }

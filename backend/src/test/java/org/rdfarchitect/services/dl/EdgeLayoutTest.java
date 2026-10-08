@@ -28,8 +28,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.api.dto.CustomDiagramDTO;
-import org.rdfarchitect.api.dto.dl.BendPointDTO;
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
+import org.rdfarchitect.api.dto.dl.DiagramLayoutDTO;
+import org.rdfarchitect.api.dto.dl.EdgeLayoutDTO;
+import org.rdfarchitect.api.dto.dl.EdgePointDTO;
+import org.rdfarchitect.api.dto.dl.EdgePointIdDTO;
+import org.rdfarchitect.api.dto.dl.LabelPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
@@ -39,6 +43,7 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
+import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
@@ -49,9 +54,11 @@ import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.diagrams.CustomDiagramService;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.rdfarchitect.services.dl.update.SyncDiagramLayoutService;
+import org.rdfarchitect.services.dl.update.UpdateDiagramLayoutService;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.dl.update.edgelayout.EdgeKey;
 import org.rdfarchitect.services.dl.update.edgelayout.UpdateEdgeLayoutDataService;
+import org.rdfarchitect.services.dl.update.labellayout.UpdateLabelLayoutService;
 import org.rdfarchitect.services.rendering.CIMProfileModels;
 import org.springframework.mock.web.MockMultipartFile;
 
@@ -189,8 +196,10 @@ class EdgeLayoutTest {
     void movingClasses_keepsTheEdgeDiagramObjectAndItsBendPoints() {
         layoutClasses(SUB, SUPER, OTHER_SUPER, TARGET);
         var edge = EdgeKey.inheritance(SUB, SUPER);
-        edgeLayoutService.updateBendPoints(
-                graphOne, PACKAGE, edge, List.of(bendPoint(10, 20, 0), bendPoint(30, 40, 1)));
+        edgeLayoutService.updateEdgeLayouts(
+                graphOne,
+                PACKAGE,
+                List.of(inheritanceLayout(point("a", 10, 20, false), point("b", 30, 40, false))));
         var edgeMRID = edgeDO(PACKAGE, edge).getMRID();
 
         layoutClasses(SUB, SUPER);
@@ -205,8 +214,8 @@ class EdgeLayoutTest {
     void changingTheSuperClass_replacesTheInheritanceEdge() {
         layoutClasses(SUB, SUPER, OTHER_SUPER, TARGET);
         var oldEdge = EdgeKey.inheritance(SUB, SUPER);
-        edgeLayoutService.updateBendPoints(
-                graphOne, PACKAGE, oldEdge, List.of(bendPoint(10, 20, 0)));
+        edgeLayoutService.updateEdgeLayouts(
+                graphOne, PACKAGE, List.of(inheritanceLayout(point("a", 10, 20, false))));
         var oldEdgeMRID = edgeDO(PACKAGE, oldEdge).getMRID();
 
         editSchema(
@@ -223,6 +232,294 @@ class EdgeLayoutTest {
                         EdgeKey.inheritance(SUB, OTHER_SUPER),
                         EdgeKey.association(SUB_TO_TARGET, TARGET_TO_SUB));
         assertThat(DLObjectFetcher.fetchDOPsForDO(graphLayout(), oldEdgeMRID)).isEmpty();
+    }
+
+    @Test
+    void savingAnEdge_storesItsPointsInOrderAndGluesItsEndPoints() {
+        layoutClasses(SUB, SUPER);
+
+        var newPointIds =
+                edgeLayoutService.updateEdgeLayouts(
+                        graphOne,
+                        PACKAGE,
+                        List.of(
+                                inheritanceLayout(
+                                        point("s", 0, 0, true),
+                                        point("m", 50, 50, false),
+                                        point("t", 100, 100, true))));
+
+        assertThat(newPointIds)
+                .extracting(EdgePointIdDTO::getClientId)
+                .containsExactly("s", "m", "t");
+        var points = pointsOf(EdgeKey.inheritance(SUB, SUPER));
+        assertThat(points)
+                .extracting(point -> point.getMRID().getUuid().toString())
+                .containsExactlyElementsOf(
+                        newPointIds.stream().map(EdgePointIdDTO::getId).toList());
+        assertThat(points)
+                .extracting(DiagramObjectPoint::getSequenceNumber)
+                .containsExactly(0, 1, 2);
+        assertThat(points)
+                .extracting(point -> point.getPosition().getX())
+                .containsExactly(0F, 50F, 100F);
+        assertThat(points)
+                .extracting(DiagramObjectPoint::getBelongsToGluePoint)
+                .containsExactly(gluePointOfClass(SUB), null, gluePointOfClass(SUPER));
+    }
+
+    @Test
+    void savingAgainWithTheStoredIds_keepsThePointsAndMovesOnlyTheChangedOne() {
+        layoutClasses(SUB, SUPER);
+        var ids =
+                idsOf(
+                        edgeLayoutService.updateEdgeLayouts(
+                                graphOne,
+                                PACKAGE,
+                                List.of(
+                                        inheritanceLayout(
+                                                point("s", 0, 0, true),
+                                                point("m", 50, 50, false),
+                                                point("t", 100, 100, true)))));
+
+        var newPointIds =
+                edgeLayoutService.updateEdgeLayouts(
+                        graphOne,
+                        PACKAGE,
+                        List.of(
+                                inheritanceLayout(
+                                        point(ids.get(0), 0, 0, true),
+                                        point(ids.get(1), 70, 20, false),
+                                        point(ids.get(2), 100, 100, true))));
+
+        assertThat(newPointIds).isEmpty();
+        var points = pointsOf(EdgeKey.inheritance(SUB, SUPER));
+        assertThat(points)
+                .extracting(point -> point.getMRID().getUuid().toString())
+                .containsExactlyElementsOf(ids);
+        assertThat(points)
+                .extracting(point -> point.getPosition().getX())
+                .containsExactly(0F, 70F, 100F);
+    }
+
+    @Test
+    void insertingAPoint_keepsTheStoredPointsAndShiftsTheFollowingSequenceNumbers() {
+        layoutClasses(SUB, SUPER);
+        var ids =
+                idsOf(
+                        edgeLayoutService.updateEdgeLayouts(
+                                graphOne,
+                                PACKAGE,
+                                List.of(
+                                        inheritanceLayout(
+                                                point("a", 10, 10, false),
+                                                point("b", 30, 30, false)))));
+
+        var newPointIds =
+                edgeLayoutService.updateEdgeLayouts(
+                        graphOne,
+                        PACKAGE,
+                        List.of(
+                                inheritanceLayout(
+                                        point(ids.get(0), 10, 10, false),
+                                        point("new", 20, 20, false),
+                                        point(ids.get(1), 30, 30, false))));
+
+        assertThat(newPointIds).extracting(EdgePointIdDTO::getClientId).containsExactly("new");
+        var points = pointsOf(EdgeKey.inheritance(SUB, SUPER));
+        assertThat(points)
+                .extracting(point -> point.getMRID().getUuid().toString())
+                .containsExactly(ids.get(0), newPointIds.getFirst().getId(), ids.get(1));
+        assertThat(points)
+                .extracting(DiagramObjectPoint::getSequenceNumber)
+                .containsExactly(0, 1, 2);
+    }
+
+    @Test
+    void pointsThatAreNotSentAnymore_areDeleted() {
+        layoutClasses(SUB, SUPER);
+        var ids =
+                idsOf(
+                        edgeLayoutService.updateEdgeLayouts(
+                                graphOne,
+                                PACKAGE,
+                                List.of(
+                                        inheritanceLayout(
+                                                point("a", 10, 10, false),
+                                                point("b", 30, 30, false)))));
+
+        edgeLayoutService.updateEdgeLayouts(
+                graphOne, PACKAGE, List.of(inheritanceLayout(point(ids.get(1), 30, 30, false))));
+        assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER)))
+                .extracting(point -> point.getMRID().getUuid().toString())
+                .containsExactly(ids.get(1));
+
+        edgeLayoutService.updateEdgeLayouts(graphOne, PACKAGE, List.of(inheritanceLayout()));
+        assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER))).isEmpty();
+    }
+
+    @Test
+    void anAssociationSavedFromEitherSide_isStoredInTheSameOrder() {
+        layoutClasses(SUB, TARGET);
+        assertThat(EdgeKey.association(SUB_TO_TARGET, TARGET_TO_SUB).identifiedObject())
+                .isEqualTo(SUB_TO_TARGET);
+
+        var ids =
+                idsOf(
+                        edgeLayoutService.updateEdgeLayouts(
+                                graphOne,
+                                PACKAGE,
+                                List.of(
+                                        edgeLayout(
+                                                "association",
+                                                TARGET_TO_SUB,
+                                                SUB_TO_TARGET,
+                                                TARGET,
+                                                SUB,
+                                                point("atTarget", 0, 0, true),
+                                                point("between", 50, 50, false),
+                                                point("atSub", 100, 100, true)))));
+
+        var edge = EdgeKey.association(SUB_TO_TARGET, TARGET_TO_SUB);
+        assertThat(pointsOf(edge))
+                .extracting(point -> point.getPosition().getX())
+                .containsExactly(100F, 50F, 0F);
+        assertThat(pointsOf(edge))
+                .extracting(DiagramObjectPoint::getBelongsToGluePoint)
+                .containsExactly(gluePointOfClass(SUB), null, gluePointOfClass(TARGET));
+
+        var newPointIds =
+                edgeLayoutService.updateEdgeLayouts(
+                        graphOne,
+                        PACKAGE,
+                        List.of(
+                                edgeLayout(
+                                        "association",
+                                        SUB_TO_TARGET,
+                                        TARGET_TO_SUB,
+                                        SUB,
+                                        TARGET,
+                                        point(ids.get(2), 100, 100, true),
+                                        point(ids.get(1), 50, 50, false),
+                                        point(ids.get(0), 0, 0, true))));
+
+        assertThat(newPointIds).isEmpty();
+        assertThat(pointsOf(edge))
+                .extracting(point -> point.getMRID().getUuid().toString())
+                .containsExactly(ids.get(2), ids.get(1), ids.get(0));
+    }
+
+    @Test
+    void savingAnEdgeOfAClassWithoutLayoutData_createsTheClassLayoutDataAt00() {
+        layoutClasses(SUB);
+
+        edgeLayoutService.updateEdgeLayouts(
+                graphOne, PACKAGE, List.of(inheritanceLayout(point("a", 10, 10, false))));
+
+        assertThat(classesOf(PACKAGE)).containsExactlyInAnyOrder(SUB, SUPER);
+        var superClassDO =
+                DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                        graphLayout(), PACKAGE, SUPER, DiagramObjectStyle.CLASS);
+        var superClassPoint = DLObjectFetcher.fetchDOPForDO(graphLayout(), superClassDO.getMRID());
+        assertThat(superClassPoint.getPosition().getX()).isZero();
+        assertThat(superClassPoint.getPosition().getY()).isZero();
+        assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER))).hasSize(1);
+    }
+
+    @Test
+    void edgesThatAreNotPartOfTheSchema_areIgnored() {
+        layoutClasses(SUB, SUPER, OTHER_SUPER, TARGET);
+
+        var newPointIds =
+                edgeLayoutService.updateEdgeLayouts(
+                        graphOne,
+                        PACKAGE,
+                        List.of(
+                                edgeLayout(
+                                        "inheritance",
+                                        SUB,
+                                        OTHER_SUPER,
+                                        SUB,
+                                        OTHER_SUPER,
+                                        point("a", 10, 10, false)),
+                                edgeLayout(
+                                        "inheritance",
+                                        null,
+                                        SUPER,
+                                        SUB,
+                                        SUPER,
+                                        point("b", 10, 10, false))));
+
+        assertThat(newPointIds).isEmpty();
+        assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER))).isEmpty();
+    }
+
+    @Test
+    void diagramLayout_storesClassesBeforeTheEdgesBetweenThem() {
+        var diagramLayout = new DiagramLayoutDTO();
+        diagramLayout.setClasses(positions(SUB, SUPER));
+        diagramLayout.setEdges(
+                List.of(inheritanceLayout(point("s", 0, 50, true), point("t", 100, 50, true))));
+
+        var newPointIds =
+                new UpdateDiagramLayoutService(databasePort)
+                        .updateDiagramLayout(graphOne, PACKAGE, diagramLayout);
+
+        assertThat(classesOf(PACKAGE)).containsExactlyInAnyOrder(SUB, SUPER);
+        assertThat(newPointIds).extracting(EdgePointIdDTO::getClientId).containsExactly("s", "t");
+        assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER)))
+                .extracting(DiagramObjectPoint::getBelongsToGluePoint)
+                .containsExactly(gluePointOfClass(SUB), gluePointOfClass(SUPER));
+    }
+
+    @Test
+    void mergedDiagramLayout_storesTheEdgesUnderTheMergedUuids() {
+        var diagramUUID = UUID.randomUUID();
+        var diagramLayout = new DiagramLayoutDTO();
+        diagramLayout.setClasses(positions(merged("Sub"), merged("Super")));
+        diagramLayout.setEdges(
+                List.of(
+                        edgeLayout(
+                                "inheritance",
+                                merged("Sub"),
+                                merged("Super"),
+                                merged("Sub"),
+                                merged("Super"),
+                                point("a", 10, 10, false))));
+
+        var newPointIds =
+                new UpdateDiagramLayoutService(databasePort)
+                        .updateDiagramLayout(DATASET, diagramUUID, diagramLayout);
+
+        assertThat(newPointIds).hasSize(1);
+        var edgeDO =
+                DLObjectFetcher.fetchDiagramEdgeDOs(datasetLayout(), new MRID(diagramUUID)).stream()
+                        .filter(
+                                diagramObject ->
+                                        EdgeKey.inheritance(merged("Sub"), merged("Super"))
+                                                .equals(EdgeKey.of(diagramObject)))
+                        .findFirst()
+                        .orElseThrow();
+        assertThat(DLObjectFetcher.fetchDOPsForDO(datasetLayout(), edgeDO.getMRID())).hasSize(1);
+    }
+
+    @Test
+    void labelPositionsOfAnEdgeKind_areIgnored() {
+        layoutClasses(SUB, SUPER, OTHER_SUPER, TARGET);
+        var label = new LabelPositionDTO();
+        label.setIdentifiedObjectUUID(SUB_TO_TARGET);
+        label.setKind("association");
+        label.setX(5F);
+        label.setY(5F);
+
+        new UpdateLabelLayoutService(databasePort)
+                .updateLabelPositions(graphOne, PACKAGE, List.of(label));
+
+        assertThat(DLObjectFetcher.fetchDiagramEdgeDOs(graphLayout(), new MRID(PACKAGE)))
+                .hasSize(2);
+        assertThat(edgesOf(PACKAGE))
+                .containsExactlyInAnyOrder(
+                        EdgeKey.inheritance(SUB, SUPER),
+                        EdgeKey.association(SUB_TO_TARGET, TARGET_TO_SUB));
     }
 
     @Test
@@ -418,12 +715,44 @@ class EdgeLayoutTest {
         return positions;
     }
 
-    private static BendPointDTO bendPoint(float x, float y, int sequenceNumber) {
-        var bendPoint = new BendPointDTO();
-        bendPoint.setXPosition(x);
-        bendPoint.setYPosition(y);
-        bendPoint.setSequenceNumber(sequenceNumber);
-        return bendPoint;
+    private static EdgeLayoutDTO inheritanceLayout(EdgePointDTO... points) {
+        return edgeLayout("inheritance", SUB, SUPER, SUB, SUPER, points);
+    }
+
+    private static EdgeLayoutDTO edgeLayout(
+            String kind,
+            UUID sourceObject,
+            UUID targetObject,
+            UUID sourceClass,
+            UUID targetClass,
+            EdgePointDTO... points) {
+        var edgeLayout = new EdgeLayoutDTO();
+        edgeLayout.setKind(kind);
+        edgeLayout.setSourceObject(sourceObject);
+        edgeLayout.setTargetObject(targetObject);
+        edgeLayout.setSourceClass(sourceClass);
+        edgeLayout.setTargetClass(targetClass);
+        edgeLayout.setPoints(List.of(points));
+        return edgeLayout;
+    }
+
+    private static EdgePointDTO point(String id, float x, float y, boolean endPoint) {
+        return new EdgePointDTO(id, x, y, endPoint);
+    }
+
+    private static List<String> idsOf(List<EdgePointIdDTO> newPointIds) {
+        return newPointIds.stream().map(EdgePointIdDTO::getId).toList();
+    }
+
+    private List<DiagramObjectPoint> pointsOf(EdgeKey edge) {
+        return DLObjectFetcher.fetchDOPsForDO(graphLayout(), edgeDO(PACKAGE, edge).getMRID());
+    }
+
+    private MRID gluePointOfClass(UUID classUUID) {
+        var classDO =
+                DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                        graphLayout(), PACKAGE, classUUID, DiagramObjectStyle.CLASS);
+        return DLObjectFetcher.fetchGluePointForDO(graphLayout(), classDO.getMRID()).getMRID();
     }
 
     private static CustomDiagramDTO customDiagram(UUID diagramUUID, UUID... classUUIDs) {
