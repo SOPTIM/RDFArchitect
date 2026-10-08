@@ -35,6 +35,9 @@ import org.rdfarchitect.api.dto.dl.EdgePointDTO;
 import org.rdfarchitect.api.dto.dl.EdgePointIdDTO;
 import org.rdfarchitect.api.dto.dl.LabelPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
+import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.sub.BendPointDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDTO;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
@@ -45,21 +48,25 @@ import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
+import org.rdfarchitect.dl.data.dto.relations.EdgeKey;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.rdf.resources.DL;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
+import org.rdfarchitect.services.GetRenderingDataService;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.diagrams.CustomDiagramService;
+import org.rdfarchitect.services.dl.select.QueryDiagramLayoutService;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.rdfarchitect.services.dl.update.SyncDiagramLayoutService;
 import org.rdfarchitect.services.dl.update.UpdateDiagramLayoutService;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
-import org.rdfarchitect.services.dl.update.edgelayout.EdgeKey;
 import org.rdfarchitect.services.dl.update.edgelayout.UpdateEdgeLayoutDataService;
 import org.rdfarchitect.services.dl.update.labellayout.UpdateLabelLayoutService;
 import org.rdfarchitect.services.rendering.CIMProfileModels;
+import org.rdfarchitect.services.rendering.svelteflow.RenderCIMFacadeCollectionSvelteFlowService;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.nio.charset.StandardCharsets;
@@ -468,6 +475,98 @@ class EdgeLayoutTest {
     }
 
     @Test
+    void renderedEdges_carryTheStoredPoints_andSendingThemBackChangesNothing() {
+        layoutClasses(SUB, SUPER);
+        var ids =
+                idsOf(
+                        edgeLayoutService.updateEdgeLayouts(
+                                graphOne,
+                                PACKAGE,
+                                List.of(
+                                        inheritanceLayout(
+                                                point("s", 0, 0, SOURCE_SIDE),
+                                                point("m", 50, 50),
+                                                point("t", 100, 100, TARGET_SIDE)))));
+
+        var bendPoints = renderedEdge(EdgeKey.inheritance(SUB, SUPER)).getData().getBendPoints();
+
+        assertThat(bendPoints).extracting(BendPointDTO::getId).containsExactlyElementsOf(ids);
+        assertThat(bendPoints)
+                .extracting(point -> point.getPosition().getX())
+                .containsExactly(0D, 50D, 100D);
+        assertThat(bendPoints)
+                .extracting(BendPointDTO::getSide)
+                .containsExactly(SOURCE_SIDE, null, TARGET_SIDE);
+
+        var sentBack =
+                bendPoints.stream()
+                        .map(
+                                point ->
+                                        point(
+                                                point.getId(),
+                                                (float) point.getPosition().getX(),
+                                                (float) point.getPosition().getY(),
+                                                point.getSide()))
+                        .toArray(EdgePointDTO[]::new);
+        assertThat(
+                        edgeLayoutService.updateEdgeLayouts(
+                                graphOne, PACKAGE, List.of(inheritanceLayout(sentBack))))
+                .isEmpty();
+        assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER)))
+                .extracting(point -> point.getMRID().getUuid().toString())
+                .containsExactlyElementsOf(ids);
+    }
+
+    @Test
+    void moreThanTenPoints_keepTheirOrder() {
+        layoutClasses(SUB, SUPER);
+        var points = new EdgePointDTO[12];
+        var expectedX = new ArrayList<Float>();
+        for (var i = 0; i < points.length; i++) {
+            points[i] = point("p" + i, i * 10F, 0);
+            expectedX.add(i * 10F);
+        }
+
+        edgeLayoutService.updateEdgeLayouts(graphOne, PACKAGE, List.of(inheritanceLayout(points)));
+
+        assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER)))
+                .extracting(point -> point.getPosition().getX())
+                .containsExactlyElementsOf(expectedX);
+        assertThat(renderedEdge(EdgeKey.inheritance(SUB, SUPER)).getData().getBendPoints())
+                .extracting(point -> (float) point.getPosition().getX())
+                .containsExactlyElementsOf(expectedX);
+    }
+
+    @Test
+    void anAssociationSavedFromTheOtherSide_isRenderedInTheDirectionItIsDrawn() {
+        layoutClasses(SUB, TARGET);
+        edgeLayoutService.updateEdgeLayouts(
+                graphOne,
+                PACKAGE,
+                List.of(
+                        edgeLayout(
+                                "association",
+                                TARGET_TO_SUB,
+                                SUB_TO_TARGET,
+                                TARGET,
+                                SUB,
+                                point("atTarget", 0, 0, SOURCE_SIDE),
+                                point("between", 50, 50),
+                                point("atSub", 100, 100, TARGET_SIDE))));
+
+        var edge = renderedEdge(EdgeKey.association(SUB_TO_TARGET, TARGET_TO_SUB));
+
+        var expectedX =
+                SUB.equals(edge.getSource()) ? List.of(100D, 50D, 0D) : List.of(0D, 50D, 100D);
+        assertThat(edge.getData().getBendPoints())
+                .extracting(point -> point.getPosition().getX())
+                .containsExactlyElementsOf(expectedX);
+        assertThat(edge.getData().getBendPoints())
+                .extracting(BendPointDTO::getSide)
+                .containsExactly(SOURCE_SIDE, null, TARGET_SIDE);
+    }
+
+    @Test
     void diagramLayout_storesClassesBeforeTheEdgesBetweenThem() {
         var diagramLayout = new DiagramLayoutDTO();
         diagramLayout.setClasses(positions(SUB, SUPER));
@@ -758,6 +857,30 @@ class EdgeLayoutTest {
 
     private static EdgePointDTO point(String id, float x, float y, String side) {
         return new EdgePointDTO(id, x, y, side);
+    }
+
+    private EdgeDTO renderedEdge(EdgeKey key) {
+        var filter = new GraphFilter(true);
+        filter.setIncludePropertiesFromOtherProfiles(false);
+        filter.setPackageUUID(PACKAGE.toString());
+        var rendering =
+                (SvelteFlowDTO)
+                        new GetRenderingDataService(
+                                        databasePort,
+                                        new RenderCIMFacadeCollectionSvelteFlowService(),
+                                        datasetName -> List.of(),
+                                        new QueryDiagramLayoutService(databasePort))
+                                .getRenderingData(graphOne, filter, PACKAGE);
+        return rendering.getEdges().stream()
+                .filter(
+                        edge ->
+                                key.equals(
+                                        EdgeKey.of(
+                                                DiagramObjectStyle.byName(edge.getType()),
+                                                edge.getData().getSourceObject(),
+                                                edge.getData().getTargetObject())))
+                .findFirst()
+                .orElseThrow();
     }
 
     private static List<String> idsOf(List<EdgePointIdDTO> newPointIds) {
