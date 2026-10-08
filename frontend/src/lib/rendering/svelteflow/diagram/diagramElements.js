@@ -15,16 +15,19 @@
  *
  */
 
+import { LABEL_NODE_TYPE } from "./labelNodes.js";
+
 export const EDGE_Z_INDEX = -1;
 
 const offsetEdgeIdCache = new WeakMap();
 
 export function hasDefaultNodeLayout(diagramNodes) {
+    const classNodes = diagramNodes.filter(
+        node => node.type !== LABEL_NODE_TYPE,
+    );
     return (
-        diagramNodes.length > 0 &&
-        diagramNodes.every(
-            node => node.position.x === 0 && node.position.y === 0,
-        )
+        classNodes.length > 0 &&
+        classNodes.every(node => node.position.x === 0 && node.position.y === 0)
     );
 }
 

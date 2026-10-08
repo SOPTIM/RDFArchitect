@@ -154,6 +154,12 @@
           "prefix" : {
             "type" : "string"
           },
+          "stereotypes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "uuid" : {
             "format" : "uuid",
             "type" : "string"
@@ -199,8 +205,11 @@
           "multiplicity" : {
             "$ref" : "#/components/schemas/CIMSMultiplicity"
           },
-          "stereotype" : {
-            "type" : "string"
+          "stereotypes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           },
           "uri" : {
             "$ref" : "#/components/schemas/URI"
@@ -519,6 +528,9 @@
             "type" : "string"
           },
           "keyword" : {
+            "type" : "string"
+          },
+          "label" : {
             "type" : "string"
           },
           "present" : {
@@ -937,39 +949,37 @@
         },
         "type" : "object"
       },
-      "GraphBulkImportResponse" : {
-        "properties" : {
-          "failedImports" : {
-            "items" : {
-              "type" : "string"
-            },
-            "type" : "array"
-          },
-          "importedGraphUris" : {
-            "items" : {
-              "type" : "string"
-            },
-            "type" : "array"
-          },
-          "message" : {
-            "type" : "string"
-          },
-          "warnings" : {
-            "items" : {
-              "$ref" : "#/components/schemas/ImportWarning"
-            },
-            "type" : "array"
-          }
-        },
-        "type" : "object"
-      },
       "GraphDTO" : {
         "properties" : {
+          "description" : {
+            "type" : "string"
+          },
           "keyword" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "ontologyHeader" : {
+            "type" : "boolean"
+          },
+          "profileClassIri" : {
+            "type" : "string"
+          },
+          "profileClassUuid" : {
             "type" : "string"
           },
           "uri" : {
             "$ref" : "#/components/schemas/URI"
+          },
+          "versionInfo" : {
+            "type" : "string"
+          },
+          "versionIris" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -1062,6 +1072,100 @@
         },
         "type" : "object"
       },
+      "ImportFileStatus" : {
+        "properties" : {
+          "fileName" : {
+            "type" : "string"
+          },
+          "graphUri" : {
+            "type" : "string"
+          },
+          "index" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sizeBytes" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "state" : {
+            "enum" : [
+              "PENDING",
+              "RUNNING",
+              "IMPORTED",
+              "FAILED",
+              "SKIPPED"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ImportJobCreatedResponse" : {
+        "properties" : {
+          "jobId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ImportJobStatus" : {
+        "properties" : {
+          "datasetName" : {
+            "type" : "string"
+          },
+          "errorMessage" : {
+            "type" : "string"
+          },
+          "failedImports" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "files" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ImportFileStatus"
+            },
+            "type" : "array"
+          },
+          "importedGraphUris" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "jobId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "prefixComparison" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PrefixComparison"
+            },
+            "type" : "array"
+          },
+          "state" : {
+            "enum" : [
+              "RUNNING",
+              "SCANNING_PREFIXES",
+              "AWAITING_PREFIX_RESOLUTION",
+              "COMPLETED",
+              "CANCELLED",
+              "FAILED"
+            ],
+            "type" : "string"
+          },
+          "warnings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ImportWarning"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "ImportWarning" : {
         "properties" : {
           "fileName" : {
@@ -1072,6 +1176,52 @@
               "type" : "string"
             },
             "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "IssueOccurrenceDTO" : {
+        "properties" : {
+          "classUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "graphUri" : {
+            "type" : "string"
+          },
+          "keyword" : {
+            "type" : "string"
+          },
+          "packageUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "uuid" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "value" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "LabelPositionDTO" : {
+        "properties" : {
+          "identifiedObjectUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "x" : {
+            "format" : "float",
+            "type" : "number"
+          },
+          "y" : {
+            "format" : "float",
+            "type" : "number"
           }
         },
         "type" : "object"
@@ -1412,6 +1562,62 @@
             "type" : "string"
           },
           "memberName" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PrefixBinding" : {
+        "properties" : {
+          "fileNames" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "iri" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PrefixComparison" : {
+        "properties" : {
+          "contested" : {
+            "type" : "boolean"
+          },
+          "imported" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PrefixBinding"
+            },
+            "type" : "array"
+          },
+          "prefix" : {
+            "type" : "string"
+          },
+          "workspace" : {
+            "$ref" : "#/components/schemas/PrefixBinding"
+          }
+        },
+        "type" : "object"
+      },
+      "PrefixResolutionDTO" : {
+        "properties" : {
+          "action" : {
+            "enum" : [
+              "KEEP",
+              "RENAME",
+              "DROP"
+            ],
+            "type" : "string"
+          },
+          "iri" : {
+            "type" : "string"
+          },
+          "newPrefix" : {
+            "type" : "string"
+          },
+          "prefix" : {
             "type" : "string"
           }
         },
@@ -1864,31 +2070,6 @@
               "$ref" : "#/components/schemas/RenameCandidateSemanticResourceChange"
             },
             "type" : "array"
-          },
-          "modified" : {
-            "items" : {
-              "oneOf" : [
-                {
-                  "$ref" : "#/components/schemas/SemanticResourceChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticAssociationChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticAttributeChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticClassChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticEnumEntryChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticPackageChange"
-                }
-              ]
-            },
-            "type" : "array"
           }
         },
         "type" : "object"
@@ -1904,12 +2085,6 @@
           "deletedAndRenamed" : {
             "items" : {
               "$ref" : "#/components/schemas/RenameCandidateSemanticAssociationChange"
-            },
-            "type" : "array"
-          },
-          "modified" : {
-            "items" : {
-              "$ref" : "#/components/schemas/SemanticAssociationChange"
             },
             "type" : "array"
           }
@@ -1929,12 +2104,6 @@
               "$ref" : "#/components/schemas/RenameCandidateSemanticAttributeChange"
             },
             "type" : "array"
-          },
-          "modified" : {
-            "items" : {
-              "$ref" : "#/components/schemas/SemanticAttributeChange"
-            },
-            "type" : "array"
           }
         },
         "type" : "object"
@@ -1950,12 +2119,6 @@
           "deletedAndRenamed" : {
             "items" : {
               "$ref" : "#/components/schemas/RenameCandidateSemanticEnumEntryChange"
-            },
-            "type" : "array"
-          },
-          "modified" : {
-            "items" : {
-              "$ref" : "#/components/schemas/SemanticEnumEntryChange"
             },
             "type" : "array"
           }
@@ -2126,39 +2289,6 @@
         },
         "type" : "object"
       },
-      "SchemaValidationIssueDTO" : {
-        "properties" : {
-          "message" : {
-            "type" : "string"
-          },
-          "resourceUri" : {
-            "type" : "string"
-          },
-          "severity" : {
-            "enum" : [
-              "ERROR",
-              "WARNING",
-              "INFO"
-            ],
-            "type" : "string"
-          }
-        },
-        "type" : "object"
-      },
-      "SchemaValidationReportDTO" : {
-        "properties" : {
-          "issues" : {
-            "items" : {
-              "$ref" : "#/components/schemas/SchemaValidationIssueDTO"
-            },
-            "type" : "array"
-          },
-          "valid" : {
-            "type" : "boolean"
-          }
-        },
-        "type" : "object"
-      },
       "SearchFilter" : {
         "description" : "The scope where the search is performed.",
         "properties" : {
@@ -2273,11 +2403,17 @@
               "dataType" : {
                 "type" : "string"
               },
+              "dataTypesEquivalent" : {
+                "type" : "boolean"
+              },
               "defaultValue" : {
                 "type" : "string"
               },
               "forceDefaultValue" : {
                 "type" : "boolean"
+              },
+              "oldDataType" : {
+                "type" : "string"
               },
               "optional" : {
                 "type" : "boolean"
@@ -2291,52 +2427,76 @@
         ]
       },
       "SemanticClassChange" : {
-        "allOf" : [
-          {
-            "$ref" : "#/components/schemas/SemanticResourceChange"
-          },
-          {
-            "properties" : {
-              "associationRenameCandidates" : {
-                "items" : {
-                  "$ref" : "#/components/schemas/RenameCandidateSemanticAssociationChange"
-                },
-                "type" : "array"
-              },
-              "associations" : {
-                "items" : {
-                  "$ref" : "#/components/schemas/SemanticAssociationChange"
-                },
-                "type" : "array"
-              },
-              "attributeRenameCandidates" : {
-                "items" : {
-                  "$ref" : "#/components/schemas/RenameCandidateSemanticAttributeChange"
-                },
-                "type" : "array"
-              },
-              "attributes" : {
-                "items" : {
-                  "$ref" : "#/components/schemas/SemanticAttributeChange"
-                },
-                "type" : "array"
-              },
-              "enumEntries" : {
-                "items" : {
-                  "$ref" : "#/components/schemas/SemanticEnumEntryChange"
-                },
-                "type" : "array"
-              },
-              "enumEntryRenameCandidates" : {
-                "items" : {
-                  "$ref" : "#/components/schemas/RenameCandidateSemanticEnumEntryChange"
-                },
-                "type" : "array"
-              }
+        "properties" : {
+          "associationRenameCandidates" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RenameCandidateSemanticAssociationChange"
             },
-            "type" : "object"
+            "type" : "array"
+          },
+          "associations" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticAssociationChange"
+            },
+            "type" : "array"
+          },
+          "attributeRenameCandidates" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RenameCandidateSemanticAttributeChange"
+            },
+            "type" : "array"
+          },
+          "attributes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticAttributeChange"
+            },
+            "type" : "array"
+          },
+          "changes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticFieldChange"
+            },
+            "type" : "array"
+          },
+          "comment" : {
+            "type" : "string"
+          },
+          "enumEntries" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticEnumEntryChange"
+            },
+            "type" : "array"
+          },
+          "enumEntryRenameCandidates" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RenameCandidateSemanticEnumEntryChange"
+            },
+            "type" : "array"
+          },
+          "iri" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "oldIRI" : {
+            "type" : "string"
+          },
+          "semanticResourceChangeType" : {
+            "enum" : [
+              "ADD",
+              "ADDED_FROM_INHERITANCE",
+              "DELETE",
+              "DELETED_FROM_INHERITANCE",
+              "CHANGE",
+              "RENAME",
+              "INHERITS_CHANGE",
+              "INDIRECT_CHANGE"
+            ],
+            "type" : "string"
           }
-        ]
+        },
+        "type" : "object"
       },
       "SemanticEnumEntryChange" : {
         "allOf" : [
@@ -2369,6 +2529,7 @@
               "LABEL_CHANGE",
               "COMMENT_CHANGE",
               "SUPERCLASS_CHANGE",
+              "SUPERCLASS_RENAME",
               "BELONGS_TO_CATEGORY_CHANGE",
               "DATATYPE_CHANGE",
               "DATATYPE_RENAME",
@@ -2381,6 +2542,8 @@
               "DOMAIN_CHANGE",
               "DOMAIN_RENAME",
               "TARGET_CHANGE",
+              "POTENTIALLY_INVALID_TARGET",
+              "TARGET_RENAME",
               "ASSOCIATION_USED_CHANGE",
               "DEFAULT_VALUE_CHANGE",
               "FIXED_VALUE_CHANGE"
@@ -2422,6 +2585,9 @@
             },
             "type" : "array"
           },
+          "comment" : {
+            "type" : "string"
+          },
           "iri" : {
             "type" : "string"
           },
@@ -2438,7 +2604,9 @@
               "DELETE",
               "DELETED_FROM_INHERITANCE",
               "CHANGE",
-              "RENAME"
+              "RENAME",
+              "INHERITS_CHANGE",
+              "INDIRECT_CHANGE"
             ],
             "type" : "string"
           },
@@ -2449,6 +2617,14 @@
         "required" : [
           "type"
         ],
+        "type" : "object"
+      },
+      "SessionDTO" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          }
+        },
         "type" : "object"
       },
       "ShapeEditRequest" : {
@@ -2781,6 +2957,58 @@
           },
           "suffix" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ValidationIssueDTO" : {
+        "properties" : {
+          "kind" : {
+            "enum" : [
+              "RULE",
+              "INFRASTRUCTURE"
+            ],
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "occurrences" : {
+            "items" : {
+              "$ref" : "#/components/schemas/IssueOccurrenceDTO"
+            },
+            "type" : "array"
+          },
+          "resourceUri" : {
+            "type" : "string"
+          },
+          "ruleId" : {
+            "type" : "string"
+          },
+          "ruleLabel" : {
+            "type" : "string"
+          },
+          "severity" : {
+            "enum" : [
+              "ERROR",
+              "WARNING",
+              "INFO"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ValidationReportDTO" : {
+        "properties" : {
+          "issues" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ValidationIssueDTO"
+            },
+            "type" : "array"
+          },
+          "valid" : {
+            "type" : "boolean"
           }
         },
         "type" : "object"
@@ -3727,10 +3955,10 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/content" : {
-      "put" : {
-        "description" : "Replace or insert one or more rdf graphs for the dataset. Accepts multiple files and/or zip archives containing several graph files.",
-        "operationId" : "replaceGraphs",
+    "/api/datasets/{datasetName}/graphs/content/imports" : {
+      "post" : {
+        "description" : "Starts a background import of one or more rdf graphs into the dataset. Accepts multiple files and/or zip archives containing several graph files, and returns the id of the job to poll for progress.",
+        "operationId" : "startImport",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -3787,18 +4015,197 @@
           }
         },
         "responses" : {
+          "202" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobCreatedResponse"
+                }
+              }
+            },
+            "description" : "Import started"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobCreatedResponse"
+                }
+              }
+            },
+            "description" : "An import is already running for this session"
+          }
+        },
+        "summary" : "Start importing multiple graphs",
+        "tags" : [
+          "graph"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/content/imports/{jobId}" : {
+      "delete" : {
+        "description" : "Asks a running import to stop after the file it is currently importing. The graphs imported up to that point are kept.",
+        "operationId" : "cancelImport",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the import job.",
+            "in" : "path",
+            "name" : "jobId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "204" : {
+            "description" : "Cancellation requested"
+          },
+          "404" : {
+            "description" : "No such import job"
+          }
+        },
+        "summary" : "Cancel an import",
+        "tags" : [
+          "graph"
+        ]
+      },
+      "get" : {
+        "description" : "Returns the progress of a running import and the result of a finished one, including the graphs that were imported, the files that failed and any warnings.",
+        "operationId" : "getImportStatus",
+        "parameters" : [
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the import job.",
+            "in" : "path",
+            "name" : "jobId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
           "200" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/GraphBulkImportResponse"
+                  "$ref" : "#/components/schemas/ImportJobStatus"
                 }
               }
             },
             "description" : "OK"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobStatus"
+                }
+              }
+            },
+            "description" : "No such import job"
           }
         },
-        "summary" : "Replace/Insert multiple graphs",
+        "summary" : "Get the progress of an import",
+        "tags" : [
+          "graph"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/content/imports/{jobId}/prefix-resolutions" : {
+      "put" : {
+        "description" : "Hands an import that is waiting for namespace prefix decisions the decisions it asked for and lets it go on. A contested namespace left out of the request is imported without a prefix, leaving the prefixes of the dataset as they are.",
+        "operationId" : "resolvePrefixConflicts",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the import job.",
+            "in" : "path",
+            "name" : "jobId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "description" : "What to do with each contested namespace binding.",
+                "items" : {
+                  "$ref" : "#/components/schemas/PrefixResolutionDTO"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Import continues"
+          },
+          "400" : {
+            "description" : "Invalid namespace prefix"
+          },
+          "404" : {
+            "description" : "No such import job"
+          },
+          "409" : {
+            "description" : "The import is not waiting for decisions"
+          }
+        },
+        "summary" : "Resolve the namespace prefix conflicts of an import",
         "tags" : [
           "graph"
         ]
@@ -6579,6 +6986,83 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}/labels" : {
+      "put" : {
+        "description" : "Updates the offsets for all the labels provided in the request body. Labels without an offset are reset to their default placement.",
+        "operationId" : "updateLabelPositions",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The UUID of the package or custom diagram being updated.",
+            "in" : "path",
+            "name" : "diagramUUID",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "items" : {
+                  "$ref" : "#/components/schemas/LabelPositionDTO"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "description" : "The DTO with necessary information for label reposition",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "updates label positions",
+        "tags" : [
+          "diagram",
+          "layout",
+          "label"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/ontology" : {
       "delete" : {
         "description" : "Deletes the currently stored ontology.",
@@ -7276,7 +7760,7 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/rename" : {
       "post" : {
-        "description" : "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. If a new keyword is given, it replaces the dcat:keyword of the profile header.",
+        "description" : "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. The profile header is left untouched: what a schema is called on screen is read from there and is edited in the ontology editor.",
         "operationId" : "renameGraph",
         "parameters" : [
           {
@@ -7312,15 +7796,6 @@
             "in" : "query",
             "name" : "newGraphURI",
             "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The display name to store as dcat:keyword in the profile header.",
-            "in" : "query",
-            "name" : "newKeyword",
-            "required" : false,
             "schema" : {
               "type" : "string"
             }
@@ -9462,6 +9937,58 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/validate-workspace" : {
+      "get" : {
+        "description" : "Validates a schema against the other schemas of its workspace and returns the issues that involve the schema.",
+        "operationId" : "validateSchemaInWorkspace",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ValidationReportDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Validate schema in workspace",
+        "tags" : [
+          "graph"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/validate/{cgmesVersion}" : {
       "get" : {
         "description" : "Validates the RDFS schema of a graph for completeness, including the profile header.",
@@ -9513,7 +10040,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/SchemaValidationReportDTO"
+                  "$ref" : "#/components/schemas/ValidationReportDTO"
                 }
               }
             },
@@ -9643,6 +10170,74 @@
           "diagram",
           "layout",
           "class"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/layout/{diagramUUID}/labels" : {
+      "put" : {
+        "description" : "Updates the offsets for all the labels provided in the request body. Labels without an offset are reset to their default placement.",
+        "operationId" : "updateDatasetLabelPositions",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The UUID of the package or custom diagram being updated.",
+            "in" : "path",
+            "name" : "diagramUUID",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "items" : {
+                  "$ref" : "#/components/schemas/LabelPositionDTO"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "description" : "The DTO with necessary information for label reposition",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "updates label positions on dataset level",
+        "tags" : [
+          "diagram",
+          "layout",
+          "label"
         ]
       }
     },
@@ -9979,6 +10574,49 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/validate-workspace" : {
+      "get" : {
+        "description" : "Validates that the schemas of a workspace are compatible with each other.",
+        "operationId" : "validateWorkspace",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ValidationReportDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Validate workspace",
+        "tags" : [
+          "dataset"
+        ]
+      }
+    },
     "/api/datasets/{targetDatasetName}/graphs/{targetGraphURI}/paste" : {
       "post" : {
         "description" : "Create copies of one or more previously copied classes in the target graph. A referenced data type listed in referencesToCopy also brings the data types its own attributes need.",
@@ -10105,6 +10743,82 @@
         "summary" : "preview paste",
         "tags" : [
           "paste-rest-controller"
+        ]
+      }
+    },
+    "/api/migrations/changes" : {
+      "get" : {
+        "description" : "returns final changes in migration to be displayed for review",
+        "operationId" : "getMigrationChanges",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/SemanticResourceChange"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "migration changes overview",
+        "tags" : [
+          "migration"
+        ]
+      },
+      "post" : {
+        "description" : "Confirms the migration changes including potentially added comments",
+        "operationId" : "confirmMigrationChanges",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "description" : "The updated class renamings",
+                "items" : {
+                  "$ref" : "#/components/schemas/SemanticClassChange"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "summary" : "confirm migration changes",
+        "tags" : [
+          "migration"
         ]
       }
     },
@@ -10258,6 +10972,16 @@
             "required" : false,
             "schema" : {
               "type" : "string"
+            }
+          },
+          {
+            "description" : "Whether to ignore prefixes in the comparison and rename detection. Defaults to false.",
+            "in" : "query",
+            "name" : "ignorePrefixes",
+            "required" : false,
+            "schema" : {
+              "default" : false,
+              "type" : "boolean"
             }
           }
         ],
@@ -10475,6 +11199,78 @@
         ]
       }
     },
+    "/api/migrations/report" : {
+      "get" : {
+        "description" : "Generates a migration script based on the previously computed migration actions and the shacl shapes of the new schema.",
+        "operationId" : "generateMigrationReport",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "Type of the migration report to generate. Can be either SUMMARY or DETAILED.",
+            "in" : "query",
+            "name" : "reportType",
+            "required" : false,
+            "schema" : {
+              "default" : "SUMMARY",
+              "enum" : [
+                "SUMMARY",
+                "DETAILED"
+              ],
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The CGMES version of the original schema",
+            "in" : "query",
+            "name" : "originalCGMESVersion",
+            "required" : false,
+            "schema" : {
+              "default" : "V3_0",
+              "enum" : [
+                "V2_4_15",
+                "V3_0"
+              ],
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The CGMES version of the updated schema",
+            "in" : "query",
+            "name" : "updatedCGMESVersion",
+            "required" : false,
+            "schema" : {
+              "default" : "V3_0",
+              "enum" : [
+                "V2_4_15",
+                "V3_0"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/zip" : { }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "generate migration script",
+        "tags" : [
+          "migration"
+        ]
+      }
+    },
     "/api/ontology-fields" : {
       "get" : {
         "description" : "Get a list of all known ontology fields.",
@@ -10615,6 +11411,26 @@
         "tags" : [
           "session"
         ]
+      },
+      "get" : {
+        "description" : "The id of the session this request belongs to. Workspaces live in a session, so a tool that wants to read the very workspaces a browser is editing has to address that session — the app hands this id to an embedding host (see the embedded-session handshake) which passes it on to that tool. The id is the session cookie's value and therefore grants full access to the session: treat it as a credential.",
+        "operationId" : "getSession",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SessionDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Current session",
+        "tags" : [
+          "session"
+        ]
       }
     },
     "/api/snapshots" : {
@@ -10737,7 +11553,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
+            "multipart/form-data" : {
               "schema" : {
                 "properties" : {
                   "file" : {
@@ -10759,7 +11575,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/SchemaValidationReportDTO"
+                  "$ref" : "#/components/schemas/ValidationReportDTO"
                 }
               }
             },

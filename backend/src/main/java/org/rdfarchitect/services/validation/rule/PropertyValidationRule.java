@@ -22,8 +22,8 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO.Severity;
+import org.rdfarchitect.api.dto.validation.ValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationSeverity;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMAttributeUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
@@ -35,14 +35,12 @@ import java.util.List;
 public class PropertyValidationRule implements ValidationRule {
 
     @Override
-    public void validate(
-            Model model, List<SchemaValidationIssueDTO> issues, CGMESVersion cgmesVersion) {
+    public void validate(Model model, List<ValidationIssueDTO> issues, CGMESVersion cgmesVersion) {
         model.listSubjectsWithProperty(RDF.type, RDF.Property)
                 .forEach(property -> validateProperty(model, property, issues));
     }
 
-    private void validateProperty(
-            Model model, Resource property, List<SchemaValidationIssueDTO> issues) {
+    private void validateProperty(Model model, Resource property, List<ValidationIssueDTO> issues) {
         var uri = property.getURI();
 
         validateRDFSLabel(property, issues, uri);
@@ -66,11 +64,11 @@ public class PropertyValidationRule implements ValidationRule {
     }
 
     private void validateRDFSDomain(
-            Resource property, List<SchemaValidationIssueDTO> issues, String uri) {
+            Resource property, List<ValidationIssueDTO> issues, String uri) {
         if (!property.hasProperty(RDFS.domain)) {
             issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.ERROR)
+                    ValidationIssueDTO.builder()
+                            .severity(ValidationSeverity.ERROR)
                             .resourceUri(uri)
                             .message("Property is missing rdfs:domain.")
                             .build());
@@ -78,11 +76,11 @@ public class PropertyValidationRule implements ValidationRule {
     }
 
     private void validateCIMSMultiplicity(
-            Resource property, List<SchemaValidationIssueDTO> issues, String uri) {
+            Resource property, List<ValidationIssueDTO> issues, String uri) {
         if (!property.hasProperty(CIMS.multiplicity)) {
             issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.ERROR)
+                    ValidationIssueDTO.builder()
+                            .severity(ValidationSeverity.ERROR)
                             .resourceUri(uri)
                             .message("Property is missing cims:multiplicity.")
                             .build());
@@ -90,14 +88,14 @@ public class PropertyValidationRule implements ValidationRule {
     }
 
     private void validateIsAttributeOrAssociation(
-            List<SchemaValidationIssueDTO> issues,
+            List<ValidationIssueDTO> issues,
             boolean isAttribute,
             boolean isAssociation,
             String uri) {
         if (!isAttribute && !isAssociation) {
             issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.WARNING)
+                    ValidationIssueDTO.builder()
+                            .severity(ValidationSeverity.WARNING)
                             .resourceUri(uri)
                             .message(
                                     "Property is neither an attribute nor an association. It may be"
@@ -106,7 +104,7 @@ public class PropertyValidationRule implements ValidationRule {
         }
     }
 
-    private void validateAttribute(Resource attribute, List<SchemaValidationIssueDTO> issues) {
+    private void validateAttribute(Resource attribute, List<ValidationIssueDTO> issues) {
         var uri = attribute.getURI();
         if (validateAttributeHasDatatype(attribute, issues, uri)) {
             return;
@@ -115,11 +113,11 @@ public class PropertyValidationRule implements ValidationRule {
     }
 
     private static boolean validateAttributeHasDatatype(
-            Resource attribute, List<SchemaValidationIssueDTO> issues, String uri) {
+            Resource attribute, List<ValidationIssueDTO> issues, String uri) {
         if (!attribute.hasProperty(CIMS.datatype) && !attribute.hasProperty(RDFS.range)) {
             issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.ERROR)
+                    ValidationIssueDTO.builder()
+                            .severity(ValidationSeverity.ERROR)
                             .resourceUri(uri)
                             .message("Attribute is missing cims:dataType or rdfs:range.")
                             .build());
@@ -128,8 +126,7 @@ public class PropertyValidationRule implements ValidationRule {
         return false;
     }
 
-    private void validateAttributeDatatype(
-            Resource attribute, List<SchemaValidationIssueDTO> issues) {
+    private void validateAttributeDatatype(Resource attribute, List<ValidationIssueDTO> issues) {
         var uri = attribute.getURI();
 
         boolean datatypeExists =
@@ -141,8 +138,8 @@ public class PropertyValidationRule implements ValidationRule {
         if (!datatypeExists) {
             var referencedDatatype = resolveReferencedDatatypeUri(attribute);
             issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.ERROR)
+                    ValidationIssueDTO.builder()
+                            .severity(ValidationSeverity.ERROR)
                             .resourceUri(uri)
                             .message(
                                     "Attribute references a datatype that does not exist or is not a"
@@ -174,13 +171,13 @@ public class PropertyValidationRule implements ValidationRule {
         return null;
     }
 
-    private void validateAssociation(Resource association, List<SchemaValidationIssueDTO> issues) {
+    private void validateAssociation(Resource association, List<ValidationIssueDTO> issues) {
         var uri = association.getURI();
 
         if (!association.hasProperty(RDFS.range)) {
             issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.ERROR)
+                    ValidationIssueDTO.builder()
+                            .severity(ValidationSeverity.ERROR)
                             .resourceUri(uri)
                             .message("Association is missing rdfs:range (target class).")
                             .build());
@@ -190,14 +187,14 @@ public class PropertyValidationRule implements ValidationRule {
     }
 
     private void validateAssociationTargetExists(
-            Resource association, List<SchemaValidationIssueDTO> issues) {
+            Resource association, List<ValidationIssueDTO> issues) {
         var uri = association.getURI();
         var rangeObject = association.getProperty(RDFS.range).getObject();
 
         if (!rangeObject.isResource()) {
             issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.ERROR)
+                    ValidationIssueDTO.builder()
+                            .severity(ValidationSeverity.ERROR)
                             .resourceUri(uri)
                             .message("Association target (rdfs:range) is not a resource.")
                             .build());
@@ -207,8 +204,8 @@ public class PropertyValidationRule implements ValidationRule {
         var targetClass = rangeObject.asResource();
         if (!targetClass.hasProperty(RDF.type, RDFS.Class)) {
             issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.ERROR)
+                    ValidationIssueDTO.builder()
+                            .severity(ValidationSeverity.ERROR)
                             .resourceUri(uri)
                             .message(
                                     "Association target class does not exist: <"

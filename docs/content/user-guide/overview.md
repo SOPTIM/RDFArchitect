@@ -35,7 +35,7 @@ Classes complete the hierarchy shown in the navigation tree: *"Workspace → Gra
 6. **[SHACL — constraints](./shacl)**.
 7. **[Reviewing changes](./history)** — changelog, undo, restore.
 8. **[Comparing schemas](./comparing-schemas)**.
-9. **[Schema migration](./migration)** — the five-step wizard.
+9. **[Schema migration](./migration)** — the seven-step wizard and the migration report.
 10. **[Sharing and exporting](./sharing-and-exporting)**.
 11. **[Read-only mode](./read-only-mode)**.
 12. **[Search & tips](./search-and-tips)**.

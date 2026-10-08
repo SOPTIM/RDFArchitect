@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
@@ -794,6 +795,170 @@ class InheritanceChangeHandlerTest {
 
             // New derived classes should not get properties added
             assertThat(newDerivedChange.getAttributes()).isEmpty();
+        }
+    }
+
+    @Nested
+    class InheritanceChainTest {
+
+        /**
+         * A class is reached both through its own changed super class and as a deriving class of
+         * every changed class above it, so a chain of super class changes used to report each
+         * inherited property once per level.
+         */
+        @Test
+        void processInheritanceChanges_chainOfSuperclassChanges_addsInheritedPropertyOnce() {
+            declareUnrelatedClasses(oldModel);
+            var oldBase = oldModel.getResource(PREFIX + "Base");
+            declareAttribute(oldModel, oldBase, "Base.baseProperty");
+
+            declareChain(newModel);
+            var newBase = newModel.getResource(PREFIX + "Base");
+            declareAttribute(newModel, newBase, "Base.baseProperty");
+
+            allClassChanges.add(superclassChange("Derived", "Middle"));
+            allClassChanges.add(superclassChange("Middle", "Base"));
+
+            InheritanceChangeHandler.processInheritanceChanges(
+                    allClassChanges, newModel, oldModel, classRenames);
+
+            assertThat(inheritedAttributes(PREFIX + "Derived", PREFIX + "Base.baseProperty"))
+                    .singleElement()
+                    .satisfies(
+                            attr ->
+                                    assertThat(attr.getSemanticResourceChangeType())
+                                            .isEqualTo(
+                                                    SemanticResourceChangeType
+                                                            .ADDED_FROM_INHERITANCE));
+            assertThat(inheritedAttributes(PREFIX + "Middle", PREFIX + "Base.baseProperty"))
+                    .hasSize(1);
+        }
+
+        @Test
+        void processInheritanceChanges_chainOfSuperclassChanges_removesInheritedPropertyOnce() {
+            declareChain(oldModel);
+            var oldBase = oldModel.getResource(PREFIX + "Base");
+            declareAttribute(oldModel, oldBase, "Base.baseProperty");
+
+            declareUnrelatedClasses(newModel);
+            var newBase = newModel.getResource(PREFIX + "Base");
+            declareAttribute(newModel, newBase, "Base.baseProperty");
+
+            allClassChanges.add(superclassChange("Derived", "Middle"));
+            allClassChanges.add(superclassChange("Middle", "Base"));
+
+            InheritanceChangeHandler.processInheritanceChanges(
+                    allClassChanges, newModel, oldModel, classRenames);
+
+            assertThat(inheritedAttributes(PREFIX + "Derived", PREFIX + "Base.baseProperty"))
+                    .singleElement()
+                    .satisfies(
+                            attr ->
+                                    assertThat(attr.getSemanticResourceChangeType())
+                                            .isEqualTo(
+                                                    SemanticResourceChangeType
+                                                            .DELETED_FROM_INHERITANCE));
+            assertThat(inheritedAttributes(PREFIX + "Middle", PREFIX + "Base.baseProperty"))
+                    .hasSize(1);
+        }
+
+        @Test
+        void processInheritanceChanges_chainOfSuperclassChanges_addsInheritedAssociationOnce() {
+            declareUnrelatedClasses(oldModel);
+            var oldBase = oldModel.getResource(PREFIX + "Base");
+            declareAssociation(oldModel, oldBase, "Base.baseAssociation");
+
+            declareChain(newModel);
+            var newBase = newModel.getResource(PREFIX + "Base");
+            declareAssociation(newModel, newBase, "Base.baseAssociation");
+
+            allClassChanges.add(superclassChange("Derived", "Middle"));
+            allClassChanges.add(superclassChange("Middle", "Base"));
+
+            InheritanceChangeHandler.processInheritanceChanges(
+                    allClassChanges, newModel, oldModel, classRenames);
+
+            assertThat(
+                            classChange(PREFIX + "Derived").getAssociations().stream()
+                                    .filter(a -> a.getIri().equals(PREFIX + "Base.baseAssociation"))
+                                    .toList())
+                    .hasSize(1);
+        }
+
+        /** Derived -&gt; Middle -&gt; Base, all concrete. */
+        private void declareChain(Model model) {
+            declareUnrelatedClasses(model);
+            model.getResource(PREFIX + "Derived")
+                    .addProperty(RDFS.subClassOf, model.getResource(PREFIX + "Middle"));
+            model.getResource(PREFIX + "Middle")
+                    .addProperty(RDFS.subClassOf, model.getResource(PREFIX + "Base"));
+        }
+
+        private void declareUnrelatedClasses(Model model) {
+            for (var name : List.of("Base", "Middle", "Derived")) {
+                var cls = model.createResource(PREFIX + name);
+                cls.addProperty(RDF.type, RDFS.Class);
+                cls.addProperty(RDFS.label, model.createLiteral(name));
+                cls.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+            }
+        }
+
+        private void declareAttribute(Model model, Resource domain, String name) {
+            var attribute = model.createResource(PREFIX + name);
+            attribute.addProperty(RDF.type, RDF.Property);
+            attribute.addProperty(RDFS.label, model.createLiteral(name));
+            attribute.addProperty(RDFS.domain, domain);
+            attribute.addProperty(
+                    CIMS.datatype, model.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            attribute.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:1..1"));
+            attribute.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
+        }
+
+        private void declareAssociation(Model model, Resource domain, String name) {
+            var association = model.createResource(PREFIX + name);
+            association.addProperty(RDF.type, RDF.Property);
+            association.addProperty(RDFS.label, model.createLiteral(name));
+            association.addProperty(RDFS.domain, domain);
+            association.addProperty(RDFS.range, domain);
+            association.addProperty(CIMS.associationUsed, "No");
+            association.addProperty(
+                    CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:0..1"));
+            association.addProperty(
+                    CIMS.inverseRoleName, model.createResource(PREFIX + name + ".inverse"));
+        }
+
+        private SemanticClassChange superclassChange(String classLabel, String newSuperClass) {
+            var classChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + classLabel)
+                            .label(classLabel)
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .attributes(new ArrayList<>())
+                            .associations(new ArrayList<>())
+                            .enumEntries(new ArrayList<>())
+                            .build();
+            classChange
+                    .getChanges()
+                    .add(
+                            new SemanticFieldChange(
+                                    SemanticFieldChangeType.SUPERCLASS_CHANGE,
+                                    null,
+                                    PREFIX + newSuperClass));
+            return classChange;
+        }
+
+        private SemanticClassChange classChange(String iri) {
+            return allClassChanges.stream()
+                    .filter(c -> c.getIri().equals(iri))
+                    .findFirst()
+                    .orElseThrow();
+        }
+
+        private List<SemanticAttributeChange> inheritedAttributes(
+                String classIri, String attributeIri) {
+            return classChange(classIri).getAttributes().stream()
+                    .filter(a -> a.getIri().equals(attributeIri))
+                    .toList();
         }
     }
 }

@@ -25,8 +25,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -35,22 +33,11 @@ public class DatasetSessionListener implements HttpSessionListener {
 
     private final DatabasePort databasePort;
     private final DatabaseConnection databaseConnection;
-    private final CreateDiagramLayoutUseCase createDiagramLayoutUseCase;
 
     @Override
     public void sessionCreated(HttpSessionEvent event) {
         SessionContext.setSessionId(event.getSession().getId());
         databasePort.fetchFromDatabase(databaseConnection);
-        createDiagramLayoutsForAllGraphs();
         SessionContext.clear();
-    }
-
-    private void createDiagramLayoutsForAllGraphs() {
-        for (var datasetName : databasePort.listDatasets()) {
-            for (var graphUri : databasePort.listGraphUris(datasetName)) {
-                createDiagramLayoutUseCase.createDiagramLayout(
-                        new GraphIdentifier(datasetName, graphUri));
-            }
-        }
     }
 }

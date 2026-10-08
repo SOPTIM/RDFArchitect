@@ -4,4 +4,4 @@ DELETE {
 WHERE {
     ?instance ?property ?value .
     ?instance a ?domain .
-}
+};

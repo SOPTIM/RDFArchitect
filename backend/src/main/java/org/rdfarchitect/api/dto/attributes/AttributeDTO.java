@@ -24,6 +24,7 @@ import lombok.NoArgsConstructor;
 
 import org.rdfarchitect.api.dto.DataTypeDTO;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -36,6 +37,7 @@ public class AttributeDTO {
     private String label;
     private String prefix;
     private String domain;
+    private List<String> stereotypes;
     private String multiplicity;
     private DataTypeDTO dataType;
     private String comment;

@@ -1,6 +1,6 @@
 ---
 title: Read-Only Mode
-sidebar_position: 12
+sidebar_position: 13
 ---
 
 # Read-Only Mode

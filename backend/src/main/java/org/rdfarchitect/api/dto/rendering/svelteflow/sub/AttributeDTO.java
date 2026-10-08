@@ -20,10 +20,14 @@ package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.UUID;
+
 /** DTO representing an attribute used in the SvelteFlow node data DTO. */
 @Data
 @Builder
 public class AttributeDTO {
+
+    private UUID uuid;
 
     private String label;
     private String type;

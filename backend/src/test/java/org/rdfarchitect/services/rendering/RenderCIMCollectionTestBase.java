@@ -122,7 +122,7 @@ class RenderCIMCollectionTestBase {
                                 new RDFSDomain(
                                         new URI(URI_PREFIX + "class1"), new RDFSLabel("class1")))
                         .multiplicity(new CIMSMultiplicity(URI_PREFIX + "M:1"))
-                        .stereotype(new CIMSStereotype(CIMStereotypes.attribute.getURI()))
+                        .stereotypes(List.of(new CIMSStereotype(CIMStereotypes.attribute.getURI())))
                         .build();
 
         cimCollection.getAttributes().add(attribute);

@@ -27,3 +27,14 @@ export const CONCRETE_STEREOTYPE =
 export const ENUMERATION_STEREOTYPE =
     "http://iec.ch/TC57/NonStandard/UML#enumeration";
 export const RDFS_NAMESPACE_URI = "http://www.w3.org/2000/01/rdf-schema#";
+
+/**
+ * The stereotype that marks a property as an attribute. It is set by the
+ * backend for every attribute and must not be edited or removed as long as it
+ * was not modified/added manually. A row a user has explicitly added (even
+ * with this same value) stays editable, since it is then a distinct, modified
+ * entry.
+ * @type {string}
+ */
+export const ATTRIBUTE_STEREOTYPE =
+    "http://iec.ch/TC57/NonStandard/UML#attribute";

@@ -333,15 +333,20 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         var sourceUUID = renderContext.uriToUUIDMap.get(from.getDomain().getUri().toString());
         var targetUUID = renderContext.uriToUUIDMap.get(from.getRange().getUri().toString());
 
-        var fromMultiplicity = extractMultiplicityString(from.getMultiplicity());
-        var toMultiplicity = extractMultiplicityString(to.getMultiplicity());
+        var layoutData = renderContext.layoutingData();
         var useToAssociation = getAssociationUsedValue(from.getAssociationUsed());
         var useFromAssociation = getAssociationUsedValue(to.getAssociationUsed());
 
+        var labels =
+                SvelteFlowLabels.forAssociation(
+                        associationEnd(to), associationEnd(from), layoutData);
+
         var edgeDataDTO =
                 EdgeDataDTO.builder()
-                        .toMultiplicity(toMultiplicity)
-                        .fromMultiplicity(fromMultiplicity)
+                        .sourceMultiplicityLabel(labels.sourceMultiplicityLabel())
+                        .targetMultiplicityLabel(labels.targetMultiplicityLabel())
+                        .sourceAssociationLabel(labels.sourceAssociationLabel())
+                        .targetAssociationLabel(labels.targetAssociationLabel())
                         .useToAssociation(useToAssociation)
                         .useFromAssociation(useFromAssociation)
                         .build();
@@ -353,6 +358,20 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                 .target(targetUUID)
                 .data(edgeDataDTO)
                 .build();
+    }
+
+    /**
+     * The labels of one association end, which are drawn at the class the association points to.
+     *
+     * @param association the association end
+     * @return the end together with the texts of its labels
+     */
+    private SvelteFlowLabels.AssociationEnd associationEnd(CIMAssociation association) {
+        return new SvelteFlowLabels.AssociationEnd(
+                association.getUuid(),
+                association.getUuid(),
+                extractMultiplicityString(association.getMultiplicity()),
+                association.getLabel() == null ? null : association.getLabel().getValue());
     }
 
     /**

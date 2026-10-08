@@ -24,13 +24,18 @@
         useNodesInitialized,
         useSvelteFlow,
     } from "@xyflow/svelte";
-    import { onDestroy, onMount, tick, untrack } from "svelte";
+    import { onDestroy, onMount, setContext, tick, untrack } from "svelte";
+    import { SvelteMap } from "svelte/reactivity";
 
     import {
         updateClassPositions,
         updateDatasetClassPositions,
+        updateDatasetLabelPositions,
+        updateLabelPositions,
     } from "$lib/api/generated/index.ts";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { renderOptions } from "$lib/renderOptions.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -40,18 +45,42 @@
 
     import AssociationEdge from "./components/AssociationEdge.svelte";
     import ClassNode from "./components/ClassNode.svelte";
+    import DiagramLabelNode from "./components/DiagramLabelNode.svelte";
     import EdgeMarkers from "./components/EdgeMarkers.svelte";
     import InheritanceEdge from "./components/InheritanceEdge.svelte";
     import SvelteFlowClassContextMenu from "./components/SvelteFlowClassContextMenu.svelte";
     import SvelteFlowPaneContextMenu from "./components/SvelteFlowPaneContextMenu.svelte";
+    import SvelteFlowPropertyContextMenu from "./components/SvelteFlowPropertyContextMenu.svelte";
     import {
         decorateEdges,
         hasDefaultNodeLayout,
     } from "./diagram/diagramElements.js";
+    import {
+        buildLabelNodes,
+        clampToAnchor,
+        collectLabels,
+        hasManualPlacement,
+        LABEL_NODE_TYPE,
+        labelNodeId,
+        labelNodesChanged,
+    } from "./diagram/labelNodes.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
-    import { DiagramSelectionController } from "./interaction/diagramSelection.svelte.js";
+    import {
+        DIAGRAM_SELECTION_CONTEXT,
+        DiagramSelectionController,
+    } from "./interaction/diagramSelection.svelte.js";
+    import { labelHighlight } from "./interaction/labelHighlight.svelte.js";
+    import {
+        clearHeldModifiers,
+        heldModifiers,
+        syncHeldModifiers,
+    } from "./interaction/modifierKeys.svelte.js";
     import { NodeOrderController } from "./interaction/nodeOrder.svelte.js";
     import { PanController } from "./interaction/panController.svelte.js";
+    import {
+        propertyContextMenu,
+        propertySelection,
+    } from "./interaction/propertyInteraction.svelte.js";
     import { getLayoutedNodes } from "./layout/elkLayout.js";
 
     let {
@@ -63,6 +92,7 @@
 
     const nodeTypes = {
         class: ClassNode,
+        label: DiagramLabelNode,
     };
     const edgeTypes = {
         association: AssociationEdge,
@@ -109,6 +139,14 @@
 
     let selectionZFrame = null;
     let boxSelecting = false;
+    let labelPositions = new SvelteMap();
+    // Memorizes edge-intersection geometry per class pair, so dragging one class does not
+    // recompute the placement of every other edge in the diagram.
+    let labelPlacementCache = new Map();
+    let labelDragActive = false;
+    let classNodes = $derived(
+        nodes.filter(node => node.type !== LABEL_NODE_TYPE),
+    );
     let hasDefaultLayout = $derived(hasDefaultNodeLayout(nodes));
     let applyLayout = $derived(
         nodesInit.current && !layouted && hasDefaultLayout,
@@ -124,6 +162,10 @@
     $effect(() => {
         forceReloadTrigger.subscribe();
         applyAutoLayoutIfNeeded();
+    });
+
+    $effect(() => {
+        syncLabelNodes(nodes, edges);
     });
 
     $effect(() => {
@@ -155,6 +197,7 @@
     $effect(() => {
         multiSelectState.subscribe();
         editorState.selectedClass.subscribe();
+        selection.hasClearableSelection();
         untrack(keepEscapeHandlerOnTop);
     });
 
@@ -222,6 +265,9 @@
             return;
         }
         lastSelectedDiagramId = diagramId;
+        labelHighlight.clear();
+        propertySelection.clear();
+        contextMenus.close();
         pan.clearBoxMode();
         multiSelectState.clear();
     }
@@ -248,12 +294,12 @@
 
     function keepEscapeHandlerOnTop() {
         eventStack.removeEvent(selection.escapeClearSelection);
-        if (multiSelectState.getSelected().length === 0) {
+        if (!selection.hasClearableSelection()) {
             return;
         }
         eventStack.addEvent(selection.escapeClearSelection);
         tick().then(() => {
-            if (multiSelectState.getSelected().length === 0) {
+            if (!selection.hasClearableSelection()) {
                 return;
             }
             eventStack.removeEvent(selection.escapeClearSelection);
@@ -261,7 +307,16 @@
         });
     }
 
+    function openClassFromMenu(classUuid) {
+        const node = classNodes.find(candidate => candidate.id === classUuid);
+        if (node) {
+            selection.openClass(node);
+        }
+    }
+
     function syncDiagramElements() {
+        labelPositions = new SvelteMap();
+        labelPlacementCache = new Map();
         const nextNodes = [...inputNodes];
         const nextHasDefaultLayout = hasDefaultNodeLayout(nextNodes);
 
@@ -318,8 +373,192 @@
         });
     }
 
-    function handleNodeMove(nodeMoveEvent) {
-        updateNodePositions(nodeMoveEvent.nodes);
+    /**
+     * Rebuilds the label nodes whenever the classes they are anchored to move. Skipped while a
+     * label itself is being dragged, which would otherwise pull it back to its stored offset.
+     */
+    function syncLabelNodes(currentNodes, currentEdges) {
+        if (labelDragActive) {
+            return;
+        }
+        const nextLabelNodes = buildLabelNodes(
+            currentNodes,
+            currentEdges,
+            labelPositions,
+            labelPlacementCache,
+            renderOptions.get("showAssociationLabels"),
+        );
+        if (!labelNodesChanged(currentNodes, nextLabelNodes)) {
+            return;
+        }
+        nodes = [
+            ...currentNodes.filter(node => node.type !== LABEL_NODE_TYPE),
+            ...nextLabelNodes,
+        ];
+    }
+
+    /**
+     * Holds a dragged label within its maximum distance from the anchor point. SvelteFlow can only
+     * constrain a node to a rectangle, so the radial limit is applied per drag event instead.
+     *
+     * This relies on the drag event firing after SvelteFlow has written its own position, so that
+     * the clamped one is what the frame ends on. The drag itself keeps following the pointer
+     * unclamped, which is what lets the label pick it up again on the way back in.
+     */
+    function clampDraggedLabels(draggedNodes) {
+        const clampedById = new Map();
+        for (const dragged of draggedNodes) {
+            if (dragged.type !== LABEL_NODE_TYPE) {
+                continue;
+            }
+            const clamped = clampToAnchor(
+                dragged.position,
+                dragged.data.anchorPoint,
+            );
+            if (clamped !== dragged.position) {
+                clampedById.set(dragged.id, clamped);
+            }
+        }
+        if (clampedById.size === 0) {
+            return;
+        }
+        nodes = nodes.map(node =>
+            clampedById.has(node.id)
+                ? { ...node, position: clampedById.get(node.id) }
+                : node,
+        );
+    }
+
+    function toLabelPositionDTO(identifiedObjectUUID, kind, position) {
+        return {
+            identifiedObjectUUID,
+            kind,
+            x: position?.x ?? null,
+            y: position?.y ?? null,
+        };
+    }
+
+    function handleLabelMove(movedLabelNodes) {
+        const movedLabels = [];
+        for (const labelNode of movedLabelNodes) {
+            const position = clampToAnchor(
+                labelNode.position,
+                labelNode.data.anchorPoint,
+            );
+            const delta = {
+                x: position.x - labelNode.data.anchorPoint.x,
+                y: position.y - labelNode.data.anchorPoint.y,
+            };
+            labelPositions.set(labelNode.id, delta);
+            movedLabels.push(
+                toLabelPositionDTO(
+                    labelNode.data.identifiedObjectUUID,
+                    labelNode.data.kind,
+                    position,
+                ),
+            );
+        }
+        persistLabelPositions(movedLabels);
+    }
+
+    /** Drops the manual placement of every label, so they return to their default placement. */
+    function resetLabelPositions() {
+        const resetLabels = [];
+        for (const { label } of collectLabels(edges)) {
+            if (!hasManualPlacement(label, labelPositions)) {
+                continue;
+            }
+            labelPositions.set(labelNodeId(label), null);
+            resetLabels.push(
+                toLabelPositionDTO(
+                    label.identifiedObjectUUID,
+                    label.kind,
+                    null,
+                ),
+            );
+        }
+        persistLabelPositions(resetLabels);
+    }
+
+    function persistLabelPositions(labelPositionDTOList) {
+        const diagramUUID = editorState.selectedDiagram.getProperty("id");
+        if (!diagramUUID || labelPositionDTOList.length === 0) {
+            return;
+        }
+
+        if (editorState.selectedGraph.getValue()) {
+            updateLabelPositions({
+                path: {
+                    datasetName: editorState.selectedWorkspace.getValue(),
+                    graphURI: editorState.selectedGraph.getValue(),
+                    diagramUUID: diagramUUID,
+                },
+                body: labelPositionDTOList,
+            });
+        } else {
+            updateDatasetLabelPositions({
+                path: {
+                    datasetName: editorState.selectedWorkspace.getValue(),
+                    diagramUUID: diagramUUID,
+                },
+                body: labelPositionDTOList,
+            });
+        }
+    }
+
+    function handleNodeMove(nodeMoveEvent, isLabelDrag) {
+        const movedNodes = nodeMoveEvent.nodes ?? [];
+        if (isLabelDrag) {
+            const movedLabels = movedNodes.filter(
+                node => node.type === LABEL_NODE_TYPE,
+            );
+            if (movedLabels.length > 0) {
+                handleLabelMove(movedLabels);
+            }
+            return;
+        }
+        const movedClasses = movedNodes.filter(
+            node => node.type !== LABEL_NODE_TYPE,
+        );
+        if (movedClasses.length === 0) {
+            return;
+        }
+        updateNodePositions(movedClasses);
+        persistManuallyPlacedLabelsOf(movedClasses);
+    }
+
+    function persistManuallyPlacedLabelsOf(movedClassNodes) {
+        const movedClassIds = new Set(movedClassNodes.map(node => node.id));
+        const rebuilt = buildLabelNodes(
+            nodes,
+            edges,
+            labelPositions,
+            labelPlacementCache,
+        );
+        const rebuiltById = new Map(rebuilt.map(node => [node.id, node]));
+
+        const affectedLabels = [];
+        for (const { label, sourceId, targetId } of collectLabels(edges)) {
+            const edgeAffected =
+                movedClassIds.has(sourceId) || movedClassIds.has(targetId);
+            if (!edgeAffected || !hasManualPlacement(label, labelPositions)) {
+                continue;
+            }
+            const labelNode = rebuiltById.get(labelNodeId(label));
+            if (!labelNode) {
+                continue;
+            }
+            affectedLabels.push(
+                toLabelPositionDTO(
+                    label.identifiedObjectUUID,
+                    label.kind,
+                    labelNode.position,
+                ),
+            );
+        }
+        if (affectedLabels.length > 0) {
+            persistLabelPositions(affectedLabels);
+        }
     }
 
     function updateNodePositions(movedNodes) {
@@ -335,7 +574,7 @@
         }
 
         const diagramUUID = editorState.selectedDiagram.getProperty("id");
-        if (!diagramUUID) return;
+        if (!diagramUUID || classPositionDTOList.length === 0) return;
 
         if (editorState.selectedGraph.getValue()) {
             updateClassPositions({
@@ -360,37 +599,69 @@
     export async function applyELKLayout() {
         if (!isLoading) isLoading = true;
         layouted = true;
-        const layoutedNodes = await getLayoutedNodes(nodes, edges);
-        nodes = [...layoutedNodes];
-        updateNodePositions(nodes);
-        await svelteFlowAPI.svelteFlow.fitView();
-        isLoading = false;
+        try {
+            const layoutedNodes = await getLayoutedNodes(classNodes, edges);
+            nodes = [...layoutedNodes];
+            updateNodePositions(nodes);
+            resetLabelPositions();
+            syncLabelNodes(nodes, edges);
+            await svelteFlowAPI.svelteFlow.fitView();
+        } catch (error) {
+            // The diagram keeps the positions it has; leaving the spinner up would only look
+            // like a layout that never finishes.
+            console.error("Laying out the diagram failed:", error);
+            toastStore.error(
+                "Layout failed",
+                "The diagram could not be laid out automatically.",
+            );
+        } finally {
+            isLoading = false;
+        }
     }
+
+    setContext(DIAGRAM_SELECTION_CONTEXT, selection);
 </script>
 
 <svelte:window
-    onkeydown={e => pan.syncModifierKeys(e)}
-    onkeyup={e => pan.syncModifierKeys(e)}
-    onblur={() => pan.clearModifiers()}
+    onkeydown={syncHeldModifiers}
+    onkeyup={syncHeldModifiers}
+    onblur={clearHeldModifiers}
 />
 
 <div
     bind:this={containerEl}
-    class={`relative h-full w-full ${pan.panningActive ? "ctrl-panning" : ""}`}
+    class="diagram-canvas relative h-full w-full"
+    class:ctrl-panning={pan.panningActive}
+    class:box-selecting={boxSelecting}
 >
     <SvelteFlow
         bind:nodes
         bind:edges
         {nodeTypes}
         {edgeTypes}
-        nodesDraggable={!isWorkspaceReadOnly && !pan.shiftHeld && !pan.ctrlHeld}
+        nodesDraggable={!isWorkspaceReadOnly &&
+            !heldModifiers.shiftKey &&
+            !heldModifiers.ctrlKey &&
+            !heldModifiers.metaKey}
         fitView
         elementsSelectable={true}
         nodesFocusable={false}
         zIndexMode={"manual"}
-        onnodeclick={e => selection.handleNodeClick(e)}
-        onnodecontextmenu={e => contextMenus.handleNodeContextMenu(e)}
-        onpaneclick={() => contextMenus.close()}
+        onnodeclick={e => {
+            if (e.node?.type === LABEL_NODE_TYPE) {
+                return;
+            }
+            selection.handleNodeClick(e);
+        }}
+        onnodecontextmenu={e => {
+            if (e.node?.type !== LABEL_NODE_TYPE) {
+                contextMenus.handleNodeContextMenu(e);
+            }
+        }}
+        onpaneclick={() => {
+            contextMenus.close();
+            propertySelection.clear();
+        }}
         onpanecontextmenu={e => contextMenus.handlePaneContextMenu(e)}
         onedgecontextmenu={e => contextMenus.handleEdgeContextMenu(e)}
         onselectionchange={e => selection.handleSelectionChange(e)}
@@ -402,13 +673,29 @@
             selection.handleSelectionEnd();
             applySelectionZIndices();
         }}
-        onnodedragstart={({ node }) => {
+        onnodedragstart={e => {
+            // Dragging a label makes SvelteFlow clear the selection, because label nodes are not
+            // selectable. Announcing the drag keeps the class selection from following along.
             selection.notifyNodeDragStart();
-            nodeOrderCtrl.bringToFrontTemporarily(node?.id);
+            if (e.targetNode?.type === LABEL_NODE_TYPE) {
+                labelDragActive = true;
+                return;
+            }
+            nodeOrderCtrl.bringToFrontTemporarily(e.targetNode?.id);
+        }}
+        onnodedrag={e => {
+            if (labelDragActive) {
+                clampDraggedLabels(e.nodes ?? []);
+            }
         }}
         onnodedragstop={e => {
+            const wasLabelDrag = labelDragActive;
+            labelDragActive = false;
             selection.notifyNodeDragStop();
-            handleNodeMove(e);
+            handleNodeMove(e, wasLabelDrag);
+            if (wasLabelDrag) {
+                syncLabelNodes(nodes, edges);
+            }
         }}
         selectionMode={"partial"}
         selectionOnDrag={true}
@@ -417,6 +704,7 @@
         connectionMode={"loose"}
         multiSelectionKey={"Shift"}
         deleteKeyCode={null}
+        zoomOnDoubleClick={false}
         minZoom={0.1}
         maxZoom={5}
     >
@@ -430,7 +718,7 @@
         lockedWorkspaceName={editorState.selectedWorkspace.getValue()}
         lockedGraphUri={editorState.selectedGraph.getValue()}
         lockedPackage={editorState.selectedDiagram.getProperty("id")}
-        classes={nodes.map(node => ({
+        classes={classNodes.map(node => ({
             id: node.id,
             graphUri: node.data?.graphUri,
         }))}
@@ -444,11 +732,17 @@
         workspaceName={editorState.selectedWorkspace.getValue()}
         graphUri={editorState.selectedGraph.getValue()}
         nodeOrder={nodeOrderCtrl.nodeOrder}
-        nodeCount={nodes.length}
+        nodeCount={classNodes.length}
         onClose={() => contextMenus.close()}
+        onOpenClass={openClassFromMenu}
         onMoveClass={e => nodeOrderCtrl.moveClass(e)}
         onSetLayer={e => nodeOrderCtrl.setLayer(e)}
         onPersistLayer={e => nodeOrderCtrl.persistLayer(e)}
+    />
+    <SvelteFlowPropertyContextMenu
+        request={propertyContextMenu.request}
+        readOnly={isWorkspaceReadOnly}
+        onClose={() => propertyContextMenu.close()}
     />
 </div>
 
@@ -458,9 +752,20 @@
         display: none;
     }
 
-    .ctrl-panning :global(.svelte-flow__pane),
-    .ctrl-panning :global(.svelte-flow__node) {
+    .diagram-canvas :global(.svelte-flow__pane.selection) {
+        cursor: default;
+    }
+
+    .diagram-canvas.ctrl-panning :global(.svelte-flow__pane),
+    .diagram-canvas.ctrl-panning :global(.svelte-flow__node),
+    .diagram-canvas.ctrl-panning :global(.svelte-flow__node *) {
         cursor: grabbing;
+    }
+
+    .diagram-canvas.box-selecting :global(.svelte-flow__pane),
+    .diagram-canvas.box-selecting :global(.svelte-flow__node),
+    .diagram-canvas.box-selecting :global(.svelte-flow__node *) {
+        cursor: crosshair;
     }
 
     :global(.svelte-flow__selection) {

@@ -17,6 +17,7 @@
 
 import { writable } from "svelte/store";
 
+import { graphStore } from "./graphStore";
 import { type GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./storeLogging";
 import { type AsyncSlot, createEmptySlot, type Result } from "./storeTypes";
@@ -68,7 +69,7 @@ function createOntologyStore() {
         return { ...state, byGraph };
     }
 
-    function patchGraphDto(
+    function patchOntology(
         workspaceName: string,
         graphURI: string,
         patch: Partial<OntologyDto>,
@@ -158,7 +159,10 @@ function createOntologyStore() {
 
         const entries = data ?? [];
 
-        patchGraphDto(workspaceName, graphURI, { entries });
+        // Deliberately not cached. These are entries the schema *could* state, for the caller to
+        // offer; the ontology is what it does state. Writing them into the cache invented one for
+        // a graph that has none — with no uuid and no namespace — and the next reader saved that
+        // back, which the backend rejects.
 
         console.log(
             `${LOG_PREFIX} Generated ${entries.length} ontology entries for workspace="${workspaceName}", graph="${graphURI}"`,
@@ -196,7 +200,10 @@ function createOntologyStore() {
         }
 
         // No DTO returned from server -> patch local cache with what we sent.
-        patchGraphDto(workspaceName, graphURI, newOntology);
+        patchOntology(workspaceName, graphURI, newOntology);
+        // The header names the schema in the navigation, and that name is read from the graph
+        // list, not from here — so the list has to be refetched or the tree stays stale.
+        graphStore.invalidateWorkspace(workspaceName);
 
         console.log(
             `${LOG_PREFIX} Created ontology for workspace="${workspaceName}", graph="${graphURI}"`,
@@ -230,7 +237,9 @@ function createOntologyStore() {
         }
 
         // No DTO returned from server -> patch local cache with the new state.
-        patchGraphDto(workspaceName, graphURI, newOntology);
+        patchOntology(workspaceName, graphURI, newOntology);
+        // See createOntologyForGraph: the navigation reads the name and badge from the graph list.
+        graphStore.invalidateWorkspace(workspaceName);
 
         console.log(
             `${LOG_PREFIX} Replaced ontology for workspace="${workspaceName}", graph="${graphURI}"`,

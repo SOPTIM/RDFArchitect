@@ -17,6 +17,7 @@
 <script>
     import { getContext } from "svelte";
 
+    import { claimFocus } from "$lib/actions/claimFocus.js";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
@@ -25,6 +26,7 @@
     import { mapReactiveEnumEntryToEnumEntryDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactiveEnumEntry } from "$lib/models/reactive/models/reactive-enum-entry.svelte.js";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
+    import { FocusField } from "$lib/propertyEditorRequest.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
     import { classStore } from "$lib/stores/classStore.ts";
@@ -37,6 +39,7 @@
         enumEntry = $bindable(),
         enumEntries,
         targetClass = null,
+        focusField = null,
     } = $props();
 
     let classEditorContext = $state();
@@ -158,7 +161,7 @@
             </div>
 
             <!-- LABEL -->
-            <div>
+            <div use:claimFocus={focusField === FocusField.LABEL}>
                 <TextEditControl
                     label="Label:"
                     placeholder="enum entry label..."

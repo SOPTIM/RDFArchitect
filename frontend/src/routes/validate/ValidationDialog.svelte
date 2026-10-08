@@ -23,7 +23,12 @@
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { CGMESVersion } from "$lib/models/cgmes-constants.js";
-    import { editorState, validationState } from "$lib/sharedState.svelte.js";
+    import {
+        editorState,
+        validationState,
+        validationContext,
+        ValidationKind,
+    } from "$lib/sharedState.svelte.js";
 
     import { goto } from "$app/navigation";
 
@@ -104,7 +109,7 @@
             case ValidationMode.FILE:
                 response = await validateFile({
                     path: { cgmesVersion: cgmesVersion },
-                    body: file,
+                    body: { file },
                 });
                 break;
             case ValidationMode.STORED:
@@ -130,6 +135,9 @@
             return;
         }
 
+        validationState.context.updateValue(
+            validationContext(ValidationKind.SCHEMA),
+        );
         validationState.result.updateValue(response.data);
         await goto("/validate");
     }

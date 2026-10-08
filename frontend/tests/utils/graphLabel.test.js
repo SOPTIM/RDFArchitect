@@ -17,52 +17,141 @@
 
 import { describe, expect, test } from "vitest";
 
-import { graphLabel, graphLabelOf, graphUri } from "$lib/utils/graph-label.js";
+import {
+    graphLabel,
+    graphLabelOf,
+    graphLabeller,
+    graphTooltip,
+    graphUri,
+} from "$lib/utils/graph-label.js";
 
-const EQUIPMENT = {
-    keyword: "Equipment",
-    uri: { prefix: "http://iec.ch/TC57/ns/CIM/", suffix: "EquipmentProfile" },
+/** A CGMES 3.0 profile, which names and versions itself. */
+const CURRENT = {
+    uri: { prefix: "http://example.org/graphs/", suffix: "Equipment" },
+    keyword: "EQ",
+    label: "Core Equipment Vocabulary",
+    description: "The core equipment profile.",
+    versionIris: ["http://iec.ch/TC57/ns/CIM/CoreEquipment-EU/3.0"],
+    versionInfo: "3.0.0",
 };
 
-const UNNAMED = {
-    uri: { prefix: "http://example.org/", suffix: "Topology" },
+/** A CGMES 2.4.15 profile, which has a name but no version. */
+const LEGACY = {
+    uri: { prefix: "http://example.org/graphs/", suffix: "EquipmentCore" },
+    keyword: "EQ",
+    label: "EquipmentProfile",
+    versionIris: ["http://entsoe.eu/CIM/EquipmentCore/3/1"],
 };
 
-describe("graphLabel", () => {
-    test("names a schema by its dcat:keyword", () => {
-        expect(graphLabel(EQUIPMENT)).toBe("Equipment");
+/** A graph that is no CIM profile at all. */
+const PLAIN = {
+    uri: { prefix: "http://example.org/graphs/", suffix: "Notes" },
+};
+
+describe("graphUri", () => {
+    test("joins the prefix and suffix the backend splits a URI into", () => {
+        expect(graphUri(CURRENT)).toBe("http://example.org/graphs/Equipment");
     });
 
-    test("falls back to the tail of the URI", () => {
-        expect(graphLabel(UNNAMED)).toBe("Topology");
-    });
-
-    test("treats an empty keyword as no keyword", () => {
-        expect(graphLabel({ ...UNNAMED, keyword: "" })).toBe("Topology");
+    test("accepts a bare URI, so a locked graph can be passed in as is", () => {
+        expect(graphUri("http://example.org/graphs/Equipment")).toBe(
+            "http://example.org/graphs/Equipment",
+        );
     });
 });
 
-describe("graphUri", () => {
-    test("joins the prefix and the suffix the backend splits", () => {
-        expect(graphUri(EQUIPMENT)).toBe(
-            "http://iec.ch/TC57/ns/CIM/EquipmentProfile",
+describe("graphLabel", () => {
+    test("prefers the name the profile gives itself", () => {
+        expect(graphLabel(CURRENT)).toBe("Core Equipment Vocabulary");
+    });
+
+    test("falls back to the keyword when the profile has no name", () => {
+        expect(graphLabel({ ...CURRENT, label: null })).toBe("EQ");
+    });
+
+    test("falls back to the URI suffix when the graph is no profile", () => {
+        expect(graphLabel(PLAIN)).toBe("Notes");
+    });
+});
+
+describe("graphLabeller", () => {
+    test("leaves an unambiguous name alone", () => {
+        const nameOf = graphLabeller([CURRENT, LEGACY, PLAIN]);
+
+        expect(nameOf(CURRENT)).toBe("Core Equipment Vocabulary");
+        expect(nameOf(PLAIN)).toBe("Notes");
+    });
+
+    test("appends the graph name where two schemas read alike", () => {
+        const core = { ...LEGACY };
+        const coreOperation = {
+            ...LEGACY,
+            uri: {
+                prefix: "http://example.org/graphs/",
+                suffix: "EquipmentCoreOperation",
+            },
+        };
+
+        const nameOf = graphLabeller([core, coreOperation]);
+
+        expect(nameOf(core)).toBe("EquipmentProfile (EquipmentCore)");
+        expect(nameOf(coreOperation)).toBe(
+            "EquipmentProfile (EquipmentCoreOperation)",
         );
     });
 
-    test("accepts a URI that is already a string", () => {
-        expect(graphUri("http://example.org/Topology")).toBe(
-            "http://example.org/Topology",
+    test("does not repeat a name that already is the URI suffix", () => {
+        const one = { uri: { prefix: "http://a.example/", suffix: "Notes" } };
+        const two = { uri: { prefix: "http://b.example/", suffix: "Notes" } };
+
+        expect(graphLabeller([one, two])(one)).toBe("Notes");
+    });
+});
+
+describe("graphTooltip", () => {
+    test("names the profile version and what the schema is for", () => {
+        expect(graphTooltip(CURRENT)).toBe(
+            [
+                "Version 3.0.0",
+                "http://iec.ch/TC57/ns/CIM/CoreEquipment-EU/3.0",
+                "The core equipment profile.",
+            ].join("\n"),
         );
+    });
+
+    test("says nothing about a version a profile has nowhere to write", () => {
+        expect(graphTooltip(LEGACY)).toBe(
+            "http://entsoe.eu/CIM/EquipmentCore/3/1",
+        );
+    });
+
+    test("leaves out the graph URI, which the reader never chose", () => {
+        expect(graphTooltip(CURRENT)).not.toContain(
+            "http://example.org/graphs/Equipment",
+        );
+    });
+
+    test("falls back to the graph for one that says nothing about itself", () => {
+        expect(graphTooltip(PLAIN)).toBe("http://example.org/graphs/Notes");
     });
 });
 
 describe("graphLabelOf", () => {
-    const graphs = [EQUIPMENT, UNNAMED];
+    test("names the graph with the URI as the labeller would", () => {
+        const twin = {
+            ...LEGACY,
+            uri: { prefix: "http://example.org/graphs/", suffix: "Twin" },
+        };
 
-    test("finds the graph by its full URI", () => {
         expect(
-            graphLabelOf(graphs, "http://iec.ch/TC57/ns/CIM/EquipmentProfile"),
-        ).toBe("Equipment");
+            graphLabelOf(
+                [CURRENT, LEGACY, twin],
+                "http://example.org/graphs/Equipment",
+            ),
+        ).toBe("Core Equipment Vocabulary");
+        expect(
+            graphLabelOf([LEGACY, twin], "http://example.org/graphs/Twin"),
+        ).toBe("EquipmentProfile (Twin)");
     });
 
     // The list is fetched, so callers ask before it arrives; an approximate name beats a gap.

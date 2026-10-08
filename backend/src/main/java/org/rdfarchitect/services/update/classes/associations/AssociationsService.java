@@ -19,10 +19,9 @@ package org.rdfarchitect.services.update.classes.associations;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.arq.querybuilder.UpdateBuilder;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.update.UpdateAction;
 import org.apache.jena.update.UpdateExecutionFactory;
-import org.apache.jena.update.UpdateRequest;
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.api.dto.association.AssociationPairMapper;
 import org.rdfarchitect.database.DatabasePort;
@@ -65,7 +64,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                         cimAssociationPair);
 
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            UpdateAction.execute(new UpdateRequest().add(update.build()), ctx.getRdfGraph());
+            executeOnGraph(ctx, graphIdentifier, update);
             ctx.commit(
                     buildAssociationMessage("Created", ctx, associationPair, cimAssociationPair));
         }
@@ -83,11 +82,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                         cimAssociationPair);
 
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            UpdateExecutionFactory.create(
-                            update.buildRequest(),
-                            SessionDataStore.wrapGraphInDataset(
-                                    ctx.getRdfGraph(), graphIdentifier.graphUri()))
-                    .execute();
+            executeOnGraph(ctx, graphIdentifier, update);
             ctx.commit(
                     buildAssociationMessage("Replaced", ctx, associationPair, cimAssociationPair));
         }
@@ -112,12 +107,25 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
             var classResource = CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), classUUID);
             var classLabel = CIMResourceUtils.findLabelForResource(classResource);
 
-            UpdateAction.execute(new UpdateRequest().add(update.build()), ctx.getRdfGraph());
+            executeOnGraph(ctx, graphIdentifier, update);
 
             ctx.commit(
                     "Replaced all associations for class \"%s\" (%s)"
                             .formatted(classLabel, classUUID));
         }
+    }
+
+    /**
+     * Executes an update built for {@code graphIdentifier} on that graph. The builders in {@link
+     * CIMUpdates} scope their operations with {@code WITH <graphUri>}, so the update has to run
+     * against a dataset that knows the graph under that name — targeting the graph directly would
+     * write into a named graph nobody holds and silently drop the change.
+     */
+    private void executeOnGraph(
+            GraphContext ctx, GraphIdentifier graphIdentifier, UpdateBuilder update) {
+        var dataset =
+                SessionDataStore.wrapGraphInDataset(ctx.getRdfGraph(), graphIdentifier.graphUri());
+        UpdateExecutionFactory.create(update.buildRequest(), dataset).execute();
     }
 
     private String buildAssociationMessage(

@@ -22,9 +22,11 @@
         faRightLeft,
         faFileShield,
         faCircleCheck,
+        faListCheck,
     } from "@fortawesome/free-solid-svg-icons";
     import { onDestroy, onMount } from "svelte";
 
+    import { validateWorkspaceAndShowResult } from "$lib/actions/validationActions.js";
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import {
@@ -120,6 +122,13 @@
             altText="Ctrl+Shift+D"
         >
             Validate Schema
+        </Menubar.Item.Button>
+        <Menubar.Item.Button
+            onSelect={() => validateWorkspaceAndShowResult(selectedWorkspace)}
+            disabled={!selectedWorkspace}
+            faIcon={faListCheck}
+        >
+            Validate Workspace
         </Menubar.Item.Button>
         <Menubar.Item.Button
             onSelect={() => goto("/shacl")}

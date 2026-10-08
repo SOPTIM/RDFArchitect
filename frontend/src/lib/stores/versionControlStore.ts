@@ -21,6 +21,7 @@ import { editorState } from "../sharedState.svelte.js";
 import { classStore } from "./classStore";
 import { datatypesStore } from "./datatypesStore";
 import { customDiagramStore } from "./diagramStore";
+import { graphStore } from "./graphStore";
 import { ontologyStore } from "./ontologyStore";
 import { packageStore } from "./packageStore";
 import { loadSlot, makeGraphKey } from "./storeHelpers";
@@ -172,6 +173,7 @@ function createVersionControlStore() {
         classStore.invalidateGraph(targets.workspace, targets.graph);
         ontologyStore.invalidateGraph(targets.workspace, targets.graph);
         customDiagramStore.invalidateWorkspace(targets.workspace);
+        graphStore.invalidateWorkspace(targets.workspace);
         packageStore.invalidateGraph(targets.workspace, targets.graph);
         datatypesStore.invalidateGraph(targets.workspace, targets.graph);
         await refresh(targets.workspace, targets.graph);
@@ -199,6 +201,7 @@ function createVersionControlStore() {
         packageStore.invalidateGraph(targets.workspace, targets.graph);
         ontologyStore.invalidateGraph(targets.workspace, targets.graph);
         customDiagramStore.invalidateWorkspace(targets.workspace);
+        graphStore.invalidateWorkspace(targets.workspace);
         await refresh(targets.workspace, targets.graph);
         return { error: null };
     }

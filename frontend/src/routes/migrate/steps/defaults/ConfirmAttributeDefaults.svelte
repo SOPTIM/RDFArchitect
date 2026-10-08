@@ -15,94 +15,105 @@
   -->
 
 <script>
-    import { faCaretDown } from "@fortawesome/free-solid-svg-icons";
+    import {
+        faCaretDown,
+        faTriangleExclamation,
+    } from "@fortawesome/free-solid-svg-icons";
     import { CollapsibleCard } from "svelte-collapsible";
     import { Fa } from "svelte-fa";
 
+    import ButtonControl from "$lib/components/ButtonControl.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
+    import { URI } from "$lib/models/dto/index.ts";
+    import {
+        allowsDefaultValueInput,
+        canKeepExistingValues,
+        describeAttributeChange,
+        isDefaultValueMissing,
+        keepsExistingValues,
+        requiresDefaultValue,
+        skipsInitialization,
+    } from "$lib/utils/migrationUtils.js";
 
     let { classes, disableNext = $bindable(), isLoading } = $props();
 
+    /** Every attribute this step asks a default value for, across all classes. */
+    let requiredAttributes = $derived(
+        classes.flatMap(cls =>
+            (cls.attributes ?? []).filter(requiresDefaultValue),
+        ),
+    );
+
+    /** Those of them that still block the step, so they can be pointed out and counted. */
+    let openAttributes = $derived(
+        requiredAttributes.filter(isDefaultValueMissing),
+    );
+
+    let openClassLabels = $derived(
+        classes
+            .filter(cls => openAttributeCount(cls) > 0)
+            .map(cls => cls.classLabel),
+    );
+
+    let skippedCount = $derived(
+        requiredAttributes.filter(
+            attribute => attribute.noDefaultValue === true,
+        ).length,
+    );
+
     $effect(() => {
-        let allRequirementsMet = classes.every(
-            cls =>
-                cls.attributes
-                    ?.filter(attr => requiresInput(attr))
-                    .every(
-                        attr =>
-                            attr.defaultValue &&
-                            attr.defaultValue.trim().length > 0,
-                    ) ?? true,
-        );
-        disableNext = !allRequirementsMet;
+        disableNext = openAttributes.length > 0;
     });
 
-    function getChangeType(attribute) {
-        if (attribute.semanticResourceChangeType === "ADD") {
-            if (attribute.optional === true) {
-                return "Attribute added (optional)";
-            } else {
-                return "Attribute added (required)";
-            }
-        }
-        if (attribute.semanticResourceChangeType === "ADDED_FROM_INHERITANCE") {
-            return "Attribute newly inherited";
-        }
-        if (
-            attribute.changes?.some(
-                c => c.semanticFieldChangeType === "DATATYPE_CHANGE",
-            )
-        ) {
-            return "Data type changed";
-        }
-        if (
-            attribute.changes?.some(
-                c => c.semanticFieldChangeType === "MADE_REQUIRED",
-            )
-        ) {
-            return "Made required";
-        }
-        return "other";
-    }
-
-    function allowsInput(attribute) {
-        return (
-            attribute.semanticResourceChangeType === "ADD" ||
-            attribute.semanticResourceChangeType === "ADDED_FROM_INHERITANCE" ||
-            (attribute.semanticResourceChangeType !== "DELETE" &&
-                (attribute.changes?.some(
-                    c => c.semanticFieldChangeType === "MADE_REQUIRED",
-                ) ||
-                    attribute.changes?.some(
-                        c => c.semanticFieldChangeType === "DATATYPE_CHANGE",
-                    )))
-        );
-    }
-
-    function requiresInput(attribute) {
-        return (
-            (attribute.semanticResourceChangeType === "ADD" &&
-                !attribute.optional) ||
-            (attribute.semanticResourceChangeType ===
-                "ADDED_FROM_INHERITANCE" &&
-                !attribute.optional) ||
-            (attribute.semanticResourceChangeType === "CHANGE" &&
-                (attribute.changes?.some(
-                    c => c.semanticFieldChangeType === "MADE_REQUIRED",
-                ) ||
-                    attribute.changes?.some(
-                        c => c.semanticFieldChangeType === "DATATYPE_CHANGE",
-                    )))
-        );
+    function shorten(iri) {
+        return iri ? new URI(iri).suffix : "";
     }
 
     function isDisabled(attribute) {
-        return !(requiresInput(attribute) || attribute.forceDefaultValue);
+        if (keepsExistingValues(attribute) || skipsInitialization(attribute)) {
+            return true;
+        }
+        return !(
+            requiresDefaultValue(attribute) || attribute.forceDefaultValue
+        );
     }
 
     function hasAttributes(cls) {
-        return cls.attributes && cls.attributes.some(attr => allowsInput(attr));
+        return (
+            cls.attributes &&
+            cls.attributes.some(attr => allowsDefaultValueInput(attr))
+        );
+    }
+
+    function openAttributeCount(cls) {
+        return (cls.attributes ?? []).filter(isDefaultValueMissing).length;
+    }
+
+    /**
+     * Waiving the default value also drops the one that was filled in - the backend only knows the
+     * choice by the missing value and would otherwise initialize the attribute after all.
+     */
+    function setSkipInitialization(attribute, skip) {
+        attribute.noDefaultValue = skip;
+        if (skip) {
+            attribute.defaultValue = "";
+        }
+    }
+
+    /** Waives the default value for every attribute at once, instead of row by row. */
+    function skipAllInitializations() {
+        for (const attribute of requiredAttributes) {
+            setSkipInitialization(attribute, true);
+        }
+    }
+
+    function clearAllSkippedInitializations() {
+        for (const cls of classes) {
+            for (const attribute of cls.attributes ?? []) {
+                attribute.noDefaultValue = false;
+            }
+        }
     }
 </script>
 
@@ -117,7 +128,38 @@
         <span class="text-red font-semibold">*</span>
         . New Attributes and their set default values will be instantiated on all
         existing instances of the class and its deriving classes.
+        <br />
+        Where a data type changed, both the old and the new one are shown. Tick
+        <span class="font-semibold">Equivalent</span>
+        if the two are interchangeable for that attribute - all existing values are
+        then kept as they are and no default value is needed.
+        <br />
+        Tick
+        <span class="font-semibold">Don't Init</span>
+        where no default value can be given - the attribute is then left uninitialized
+        and the migration continues without it.
     </InfoBox>
+
+    {#if openAttributes.length > 0}
+        <div
+            class="border-red-border bg-red-background text-red-text flex items-start space-x-2 rounded-lg border p-4"
+            role="alert"
+        >
+            <Fa icon={faTriangleExclamation} class="mt-0.5" />
+            <div class="text-sm leading-relaxed">
+                <span class="font-semibold">
+                    {openAttributes.length}
+                    {openAttributes.length === 1 ? "attribute" : "attributes"} still
+                    {openAttributes.length === 1 ? "needs" : "need"} a default value
+                </span>
+                <br />
+                Fill in a default value or tick
+                <span class="font-semibold">Don't Init</span>
+                for every attribute marked in red to continue:
+                {openClassLabels.join(", ")}.
+            </div>
+        </div>
+    {/if}
 
     {#if !isLoading && (classes.length === 0 || !classes.some(hasAttributes))}
         <EmptyStateCard
@@ -125,12 +167,46 @@
             description="There are no attributes that require default values in this migration."
         />
     {:else}
+        {#if requiredAttributes.length > 0}
+            <div class="flex items-center justify-end space-x-2">
+                <div class="h-8 w-44">
+                    <ButtonControl
+                        title="Leave every attribute that requires a default value uninitialized"
+                        disabled={skippedCount === requiredAttributes.length}
+                        callOnClick={skipAllInitializations}
+                    >
+                        Don't Init All
+                    </ButtonControl>
+                </div>
+                <div class="h-8 w-44">
+                    <ButtonControl
+                        variant="contrast"
+                        title="Clear Don't Init for every attribute"
+                        disabled={skippedCount === 0}
+                        callOnClick={clearAllSkippedInitializations}
+                    >
+                        Clear Don't Init
+                    </ButtonControl>
+                </div>
+            </div>
+        {/if}
+
         {#each classes as cls}
             {#if hasAttributes(cls)}
                 <div class="space-y-4">
                     <CollapsibleCard>
-                        <h2 slot="header" class="mb-3 text-lg font-semibold">
-                            {cls.classLabel}
+                        <h2
+                            slot="header"
+                            class="mb-3 flex items-center space-x-2 text-lg font-semibold"
+                        >
+                            <span>{cls.classLabel}</span>
+                            {#if openAttributeCount(cls) > 0}
+                                <span
+                                    class="border-red-border bg-red-background text-red-text rounded-full border px-2 py-0.5 text-xs font-medium"
+                                >
+                                    {openAttributeCount(cls)} open
+                                </span>
+                            {/if}
                             <Fa icon={faCaretDown} />
                         </h2>
                         <div
@@ -162,9 +238,19 @@
                                                     Data Type
                                                 </th>
                                                 <th
+                                                    class="w-1/6 px-4 py-2 text-center font-medium"
+                                                >
+                                                    Equivalent
+                                                </th>
+                                                <th
                                                     class="w-1/3 px-4 py-2 font-medium"
                                                 >
                                                     Default Value
+                                                </th>
+                                                <th
+                                                    class="w-1/6 px-4 py-2 text-center font-medium"
+                                                >
+                                                    Don't Init
                                                 </th>
                                                 <th
                                                     class="w-1/6 px-4 py-2 text-center font-medium"
@@ -174,12 +260,18 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {#each cls.attributes as attribute}
-                                                {#if allowsInput(attribute)}
-                                                    <tr>
+                                            {#each cls.attributes as attribute (attribute.iri)}
+                                                {#if allowsDefaultValueInput(attribute)}
+                                                    <tr
+                                                        class={isDefaultValueMissing(
+                                                            attribute,
+                                                        )
+                                                            ? "bg-red-background"
+                                                            : ""}
+                                                    >
                                                         <td class="px-3 py-2">
                                                             {attribute.label}
-                                                            {#if requiresInput(attribute)}
+                                                            {#if requiresDefaultValue(attribute)}
                                                                 <span
                                                                     class="text-red"
                                                                 >
@@ -188,17 +280,53 @@
                                                             {/if}
                                                         </td>
                                                         <td class="px-3 py-2">
-                                                            {getChangeType(
+                                                            {describeAttributeChange(
                                                                 attribute,
                                                             )}
                                                         </td>
-                                                        <td class="px-3 py-2">
-                                                            {attribute.dataType}
+                                                        <td
+                                                            class="px-3 py-2"
+                                                            title={attribute.oldDataType
+                                                                ? `${attribute.oldDataType} \u2192 ${attribute.dataType}`
+                                                                : attribute.dataType}
+                                                        >
+                                                            {#if attribute.oldDataType}
+                                                                <span
+                                                                    class="line-through"
+                                                                >
+                                                                    {shorten(
+                                                                        attribute.oldDataType,
+                                                                    )}
+                                                                </span>
+                                                                &rarr;
+                                                                {shorten(
+                                                                    attribute.dataType,
+                                                                )}
+                                                            {:else}
+                                                                {shorten(
+                                                                    attribute.dataType,
+                                                                )}
+                                                            {/if}
+                                                        </td>
+                                                        <td class="text-center">
+                                                            {#if canKeepExistingValues(attribute)}
+                                                                <input
+                                                                    type="checkbox"
+                                                                    class="text-button-default-text bg-default-background checked:bg-button-default-background disabled:bg-button-disabled-background mx-2 h-4 w-4 rounded border-none disabled:cursor-not-allowed"
+                                                                    title="The old and the new data type are interchangeable for this attribute - keep all existing values"
+                                                                    bind:checked={
+                                                                        attribute.dataTypesEquivalent
+                                                                    }
+                                                                />
+                                                            {/if}
                                                         </td>
                                                         <td class="px-3 py-2">
                                                             {#if attribute.allowedValues && attribute.allowedValues.length > 0}
                                                                 <select
-                                                                    class="border-border text-default-text focus:border-blue w-full rounded-md border bg-white px-2 py-1 text-sm placeholder-gray-400 outline-none focus:border-2 disabled:cursor-not-allowed"
+                                                                    class={`${isDefaultValueMissing(attribute) ? "border-red border-2" : "border-border"} text-default-text focus:border-blue w-full rounded-md border bg-white px-2 py-1 text-sm placeholder-gray-400 outline-none focus:border-2 disabled:cursor-not-allowed`}
+                                                                    aria-invalid={isDefaultValueMissing(
+                                                                        attribute,
+                                                                    )}
                                                                     disabled={isDisabled(
                                                                         attribute,
                                                                     )}
@@ -225,14 +353,36 @@
                                                             {:else}
                                                                 <input
                                                                     type="text"
-                                                                    class="border-border text-default-text focus:border-blue w-full rounded-md border bg-white px-2 py-1 text-sm placeholder-gray-400 outline-none focus:border-2 disabled:cursor-not-allowed"
+                                                                    class={`${isDefaultValueMissing(attribute) ? "border-red border-2" : "border-border"} text-default-text focus:border-blue w-full rounded-md border bg-white px-2 py-1 text-sm placeholder-gray-400 outline-none focus:border-2 disabled:cursor-not-allowed`}
                                                                     placeholder="..."
+                                                                    aria-invalid={isDefaultValueMissing(
+                                                                        attribute,
+                                                                    )}
                                                                     disabled={isDisabled(
                                                                         attribute,
                                                                     )}
                                                                     bind:value={
                                                                         attribute.defaultValue
                                                                     }
+                                                                />
+                                                            {/if}
+                                                        </td>
+                                                        <td class="text-center">
+                                                            {#if requiresDefaultValue(attribute)}
+                                                                <input
+                                                                    type="checkbox"
+                                                                    class="text-button-default-text bg-default-background checked:bg-button-default-background disabled:bg-button-disabled-background mx-2 h-4 w-4 rounded border-none disabled:cursor-not-allowed"
+                                                                    title="Continue without a default value - this attribute is left uninitialized"
+                                                                    checked={skipsInitialization(
+                                                                        attribute,
+                                                                    )}
+                                                                    onchange={event =>
+                                                                        setSkipInitialization(
+                                                                            attribute,
+                                                                            event
+                                                                                .currentTarget
+                                                                                .checked,
+                                                                        )}
                                                                 />
                                                             {/if}
                                                         </td>

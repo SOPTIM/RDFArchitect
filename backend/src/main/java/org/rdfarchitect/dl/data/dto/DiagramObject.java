@@ -17,18 +17,22 @@
 
 package org.rdfarchitect.dl.data.dto;
 
-import lombok.Builder;
 import lombok.Data;
+import lombok.experimental.SuperBuilder;
 
+import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 
 @Data
-@Builder(toBuilder = true)
+@SuperBuilder(toBuilder = true)
 public class DiagramObject {
 
     private MRID mRID;
 
+    /** The display name, only carried by objects that stand for a named resource. */
     private String name;
+
+    private DiagramObjectStyle belongsToDiagramObjectStyle;
 
     private MRID belongsToDiagram;
 

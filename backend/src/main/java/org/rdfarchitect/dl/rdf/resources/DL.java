@@ -45,6 +45,10 @@ public class DL {
             ResourceFactory.createProperty(
                     constructDLNamespacedTerm("DiagramObjectPoint.DiagramObject"));
 
+    public final Property belongsToDiagramObjectStyle =
+            ResourceFactory.createProperty(
+                    constructDLNamespacedTerm("DiagramObject.DiagramObjectStyle"));
+
     public final Property xPosition =
             ResourceFactory.createProperty(
                     constructDLNamespacedTerm("DiagramObjectPoint.xPosition"));
@@ -63,6 +67,9 @@ public class DL {
 
     public final Resource diagramObjectType =
             ResourceFactory.createResource(constructDLNamespacedTerm("DiagramObject"));
+
+    public final Resource diagramObjectStyleType =
+            ResourceFactory.createResource(constructDLNamespacedTerm("DiagramObjectStyle"));
 
     public final Resource diagramObjectPointType =
             ResourceFactory.createResource(constructDLNamespacedTerm("DiagramObjectPoint"));

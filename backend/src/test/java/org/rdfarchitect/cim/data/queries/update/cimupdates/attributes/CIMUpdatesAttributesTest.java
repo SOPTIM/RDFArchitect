@@ -67,6 +67,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
      */
     private CIMAttribute attributePrimitive;
 
+    private CIMAttribute attributeMultipleStereotypes;
+
     @BeforeEach
     void setUpAttributeEnvironment() {
         CIMAttribute baseAttribute =
@@ -78,7 +80,7 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                 new RDFSDomain(
                                         new URI(CLASS_URI), new RDFSLabel(CLASS_LABEL, "en")))
                         .multiplicity(new CIMSMultiplicity(MULTIPLICITY_URI))
-                        .stereotype(new CIMSStereotype(CIMStereotypes.attribute.getURI()))
+                        .stereotypes(List.of(new CIMSStereotype(CIMStereotypes.attribute.getURI())))
                         .dataType(
                                 new CIMSDataType(
                                         new URI(CLASS_URI),
@@ -97,6 +99,13 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                         .dataType(
                                 new CIMSPrimitiveDataType(
                                         new URI(CLASS_URI), new RDFSLabel(CLASS_LABEL, "en")))
+                        .build();
+        attributeMultipleStereotypes =
+                baseAttribute.toBuilder()
+                        .stereotypes(
+                                List.of(
+                                        new CIMSStereotype(CIMStereotypes.attribute.getURI()),
+                                        new CIMSStereotype("http://example.org#custom")))
                         .build();
     }
 
@@ -512,6 +521,84 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                 assertThat(literalTriples).hasSize(1);
                 assertThat(literalTriples.getFirst().getObject().getLiteralLexicalForm())
                         .isEqualTo(IS_FIXED_VALUE);
+            }
+        }
+
+        @Test
+        void replaceAttribute_multipleStereotypes_insertsAllStereotypeTriples() {
+            addGraphFromFile(ATTRIBUTE_FILE_PATH);
+
+            executeUpdateBuiltAgainstTestGraph(
+                    g ->
+                            CIMUpdates.replaceAttribute(
+                                    g,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    GRAPH_URI,
+                                    attributeMultipleStereotypes,
+                                    false));
+
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+                assertThat(
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.attribute.asNode()))
+                        .isTrue();
+                assertThat(
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.stereotype.asNode(),
+                                                NodeFactory.createURI("http://example.org#custom")))
+                        .isTrue();
+                assertThat(
+                                ctx.getRdfGraph()
+                                        .find(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.stereotype.asNode(),
+                                                Node.ANY)
+                                        .toList())
+                        .hasSize(2);
+            }
+        }
+
+        @Test
+        void replaceAttribute_fromMultipleToSingleStereotype_removesObsoleteStereotypeTriples() {
+            addGraphFromFile(ATTRIBUTE_FILE_PATH);
+            executeUpdateBuiltAgainstTestGraph(
+                    g ->
+                            CIMUpdates.replaceAttribute(
+                                    g,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    GRAPH_URI,
+                                    attributeMultipleStereotypes,
+                                    false));
+
+            executeUpdateBuiltAgainstTestGraph(
+                    g ->
+                            CIMUpdates.replaceAttribute(
+                                    g,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    GRAPH_URI,
+                                    attributeRequired,
+                                    false));
+
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+                assertThat(
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.stereotype.asNode(),
+                                                NodeFactory.createURI("http://example.org#custom")))
+                        .isFalse();
+                assertThat(
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.attribute.asNode()))
+                        .isTrue();
             }
         }
     }

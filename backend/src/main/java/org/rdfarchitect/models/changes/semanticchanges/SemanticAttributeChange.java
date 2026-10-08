@@ -31,9 +31,9 @@ import java.util.List;
 
 /**
  * Object collecting all relevant information about a change to an attribute. Includes fields for
- * specifying default values for data migration. dataType, primitiveDataType, optional will be
- * populated automatically when assigning default values, while forceDefaultValue and defaultValue
- * can be set by the user.
+ * specifying default values for data migration. dataType, oldDataType, primitiveDataType, optional
+ * will be populated automatically when assigning default values, while forceDefaultValue,
+ * dataTypesEquivalent and defaultValue can be set by the user.
  */
 @Data
 @SuperBuilder
@@ -43,6 +43,9 @@ public final class SemanticAttributeChange extends SemanticResourceChange {
 
     private String dataType;
 
+    /** The datatype before the change, so both can be compared when a datatype changed. */
+    private String oldDataType;
+
     private String primitiveDataType;
 
     private String defaultValue;
@@ -50,6 +53,13 @@ public final class SemanticAttributeChange extends SemanticResourceChange {
     private boolean optional;
 
     private boolean forceDefaultValue = false;
+
+    /**
+     * Set by the user to declare the old and the new datatype interchangeable for this attribute.
+     * Existing values are then kept as they are instead of being converted or replaced by a default
+     * value.
+     */
+    private boolean dataTypesEquivalent = false;
 
     @Builder.Default private List<String> allowedValues = new ArrayList<>();
 
@@ -61,10 +71,12 @@ public final class SemanticAttributeChange extends SemanticResourceChange {
     public SemanticAttributeChange(SemanticAttributeChange other) {
         super(other);
         dataType = other.getDataType();
+        oldDataType = other.getOldDataType();
         primitiveDataType = other.getPrimitiveDataType();
         defaultValue = other.getDefaultValue();
         optional = other.isOptional();
         forceDefaultValue = other.isForceDefaultValue();
+        dataTypesEquivalent = other.isDataTypesEquivalent();
         allowedValues = new ArrayList<>(other.getAllowedValues());
     }
 

@@ -17,6 +17,7 @@
 <script>
     import { getContext } from "svelte";
 
+    import { claimFocus } from "$lib/actions/claimFocus.js";
     import NumberInputControl from "$lib/components/NumberInputControl.svelte";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
@@ -27,17 +28,21 @@
     import { mapReactiveAttributeToAttributeDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
+    import { ATTRIBUTE_STEREOTYPE } from "$lib/models/stereotype-constants.js";
+    import { FocusField } from "$lib/propertyEditorRequest.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     import { saveApiAttributeToBackend } from "./save-attribute-to-backend.js";
     import { resolveSaveTarget } from "../resolve-save-target.js";
+    import AttributeStereotypes from "./AttributeStereotypes.svelte";
 
     let {
         showDialog = $bindable(),
         attribute = $bindable(),
         attributes,
         targetClass = null,
+        focusField = null,
     } = $props();
 
     let classEditorContext = $state();
@@ -56,6 +61,7 @@
             isNewAttribute = true;
             attribute = new ReactiveAttribute({
                 namespace: classEditorContext.reactiveClass.namespace.value,
+                stereotypes: [ATTRIBUTE_STEREOTYPE],
             });
             attributes.appendClass(attribute);
         } else {
@@ -161,7 +167,7 @@
             </div>
 
             <!-- LABEL -->
-            <div>
+            <div use:claimFocus={focusField === FocusField.LABEL}>
                 <TextEditControl
                     label="Label:"
                     placeholder="attribute label..."
@@ -177,6 +183,12 @@
                 <ViolationMessages violations={attribute.label.violations} />
             </div>
 
+            <!-- STEREOTYPES -->
+            <div>
+                <AttributeStereotypes
+                    attributeStereotypes={attribute.stereotypes}
+                />
+            </div>
             <!-- DATATYPE -->
             <div>
                 <SearchableSelect

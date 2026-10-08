@@ -23,6 +23,7 @@ import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.ClassSchemaOccurrenceDTO;
 import org.rdfarchitect.api.dto.ClassStubDTO;
+import org.rdfarchitect.api.dto.GraphDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMClass;
@@ -31,11 +32,12 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
-import org.rdfarchitect.services.rendering.CIMProfileModels;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -49,17 +51,30 @@ public class ClassSchemaOccurrenceService implements ListClassSchemaOccurrencesU
     public List<ClassSchemaOccurrenceDTO> listSchemaOccurrences(
             String datasetName, String classUUID) {
         var classUri = locateClassUseCase.locate(datasetName, classUUID).classUri();
-        var keywords = CIMProfileModels.keywordsByGraphUri(listGraphsUseCase, datasetName);
+        var schemas = schemasByGraphUri(datasetName);
 
         var occurrences = new ArrayList<ClassSchemaOccurrenceDTO>();
         for (var graphUri : databasePort.listGraphUris(datasetName)) {
-            occurrences.add(occurrenceIn(datasetName, graphUri, keywords.get(graphUri), classUri));
+            occurrences.add(occurrenceIn(datasetName, graphUri, schemas.get(graphUri), classUri));
         }
         return occurrences;
     }
 
+    /** The schemas of the dataset as the schema pickers know them, by graph URI. */
+    private Map<String, GraphDTO> schemasByGraphUri(String datasetName) {
+        var schemas = new HashMap<String, GraphDTO>();
+        for (var graph : listGraphsUseCase.listGraphs(datasetName)) {
+            if (graph.getUri() != null) {
+                schemas.put(graph.getUri().toString(), graph);
+            }
+        }
+        return schemas;
+    }
+
     private ClassSchemaOccurrenceDTO occurrenceIn(
-            String datasetName, String graphUri, String keyword, String classUri) {
+            String datasetName, String graphUri, GraphDTO schema, String classUri) {
+        var keyword = schema == null ? null : schema.getKeyword();
+        var label = schema == null ? null : schema.getLabel();
         var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             var graph = ctx.getRdfGraph();
@@ -67,11 +82,12 @@ public class ClassSchemaOccurrenceService implements ListClassSchemaOccurrencesU
             var resource = model.getResource(classUri);
             if (!CIMResourceUtils.containsClass(graph, new URI(classUri))
                     || !resource.hasProperty(RDFA.uuid)) {
-                return new ClassSchemaOccurrenceDTO(graphUri, keyword, false, null, null);
+                return new ClassSchemaOccurrenceDTO(graphUri, keyword, label, false, null, null);
             }
             return new ClassSchemaOccurrenceDTO(
                     graphUri,
                     keyword,
+                    label,
                     true,
                     CIMResourceUtils.findUuidForResource(resource),
                     stubOf(new CIMClass(graphUri, model, resource)));

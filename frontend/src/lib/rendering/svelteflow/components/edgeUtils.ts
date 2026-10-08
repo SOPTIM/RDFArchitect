@@ -15,7 +15,17 @@
  *
  */
 
-import { type InternalNode } from "@xyflow/svelte";
+import { type InternalNode, type Node } from "@xyflow/svelte";
+
+/**
+ * Edge endpoints are read from the rendered internal nodes inside an edge component and from the
+ * plain nodes when label nodes are laid out, which position themselves relative to an endpoint.
+ */
+type EdgeEndpointNode = Node & Partial<Pick<InternalNode, "internals">>;
+
+function nodePosition(node: EdgeEndpointNode) {
+    return node.internals?.positionAbsolute ?? node.position ?? { x: 0, y: 0 };
+}
 
 /**
  * Calculates the intersection point between a line (from the target to the node center)
@@ -24,15 +34,12 @@ import { type InternalNode } from "@xyflow/svelte";
  * See: https://svelteflow.dev/examples/nodes/easy-connect
  */
 function getNodeIntersection(
-    intersectionNode: InternalNode,
-    targetNode: InternalNode,
+    intersectionNode: EdgeEndpointNode,
+    targetNode: EdgeEndpointNode,
     offsetY: number = 0,
 ) {
-    const intersectionPos = intersectionNode.internals.positionAbsolute || {
-        x: 0,
-        y: 0,
-    };
-    const targetPos = targetNode.internals.positionAbsolute || { x: 0, y: 0 };
+    const intersectionPos = nodePosition(intersectionNode);
+    const targetPos = nodePosition(targetNode);
 
     const w = (intersectionNode.measured.width ?? 0) / 2;
     const h = (intersectionNode.measured.height ?? 0) / 2;
@@ -41,6 +48,14 @@ function getNodeIntersection(
     const y2 = intersectionPos.y + h;
     const x1 = targetPos.x + (targetNode.measured.width ?? 0) / 2;
     const y1 = targetPos.y + (targetNode.measured.height ?? 0) / 2 + offsetY;
+
+    // Two classes share a centre for as long as a diagram has not been laid out, where every
+    // class still sits at (0,0), and again whenever one is dropped on top of another. There is
+    // no border intersection to compute then, and the formula below would turn 0 * Infinity
+    // into NaN — which travels on into the edge path and the placement of its labels.
+    if (w === 0 || h === 0 || (x1 === x2 && y1 === y2)) {
+        return { x: x2, y: y2 };
+    }
 
     const xx1 = (x1 - x2) / (2 * w) - (y1 - y2) / (2 * h);
     const yy1 = (x1 - x2) / (2 * w) + (y1 - y2) / (2 * h);
@@ -96,8 +111,8 @@ function getLabelOffsets(sx: number, sy: number, tx: number, ty: number) {
  * Contains the start/end points of the edge as well as the calculated label positions.
  */
 export function getEdgeParams(
-    source: InternalNode,
-    target: InternalNode,
+    source: EdgeEndpointNode,
+    target: EdgeEndpointNode,
     offsetY: number = 0,
 ) {
     const sourceIntersection = getNodeIntersection(source, target);

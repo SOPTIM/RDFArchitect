@@ -31,8 +31,7 @@ import java.util.UUID;
 /**
  * Resolution helpers for classes that are merged across the profiles of a dataset. A merged class
  * has no uuid of its own in any graph and is keyed by the uuid {@link
- * org.rdfarchitect.services.diagrams.CrossProfileUtils#mergedClassUuid(String)} derives from its
- * IRI.
+ * org.rdfarchitect.services.diagrams.CrossProfileUtils#mergedUuid(String)} derives from its IRI.
  */
 public final class MergedClasses {
 

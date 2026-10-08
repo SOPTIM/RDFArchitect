@@ -26,6 +26,7 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.services.schemamigration.ChangeObjectTestBuilder;
 
 import java.util.List;
@@ -344,8 +345,8 @@ class SimilarityCalculatorTest {
                                     List.of(
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "0..1",
-                                                    "0..1")))
+                                                    CIMS.namespace + "M:0..1",
+                                                    CIMS.namespace + "M:0..1")))
                             .build();
 
             var added =
@@ -356,8 +357,8 @@ class SimilarityCalculatorTest {
                                     List.of(
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "0..1",
-                                                    "0..1")))
+                                                    CIMS.namespace + "M:0..1",
+                                                    CIMS.namespace + "M:0..1")))
                             .build();
 
             var similarity = SimilarityCalculator.calculateSimilarity(added, deleted);
@@ -410,12 +411,12 @@ class SimilarityCalculatorTest {
                                                     "Float"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "1..1",
-                                                    "1..1"),
+                                                    CIMS.namespace + "M:1..1",
+                                                    CIMS.namespace + "M:1..1"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.DEFAULT_VALUE_CHANGE,
-                                                    "0.0",
-                                                    "0.0")))
+                                                    CIMS.namespace + "M:0.0",
+                                                    CIMS.namespace + "M:0.0")))
                             .build();
 
             var added =
@@ -430,12 +431,12 @@ class SimilarityCalculatorTest {
                                                     "Float"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "1..1",
-                                                    "1..1"),
+                                                    CIMS.namespace + "M:1..1",
+                                                    CIMS.namespace + "M:1..1"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.DEFAULT_VALUE_CHANGE,
-                                                    "0.0",
-                                                    "0.0")))
+                                                    CIMS.namespace + "M:0.0",
+                                                    CIMS.namespace + "M:0.0")))
                             .build();
 
             var similarity = SimilarityCalculator.calculateSimilarity(added, deleted);
@@ -519,8 +520,8 @@ class SimilarityCalculatorTest {
                                     List.of(
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "0..*",
-                                                    "0..*")))
+                                                    CIMS.namespace + "M:0..*",
+                                                    CIMS.namespace + "M:0..*")))
                             .build();
 
             var added =
@@ -531,8 +532,8 @@ class SimilarityCalculatorTest {
                                     List.of(
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "0..*",
-                                                    "0..*")))
+                                                    CIMS.namespace + "M:0..*",
+                                                    CIMS.namespace + "M:0..*")))
                             .build();
 
             var similarity = SimilarityCalculator.calculateSimilarity(added, deleted);
@@ -554,8 +555,8 @@ class SimilarityCalculatorTest {
                                                     "Equipment"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "0..*",
-                                                    "0..*"),
+                                                    CIMS.namespace + "M:0..*",
+                                                    CIMS.namespace + "M:0..*"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.ASSOCIATION_USED_CHANGE,
                                                     "true",
@@ -574,8 +575,8 @@ class SimilarityCalculatorTest {
                                                     "Equipment"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "0..*",
-                                                    "0..*"),
+                                                    CIMS.namespace + "M:0..*",
+                                                    CIMS.namespace + "M:0..*"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.ASSOCIATION_USED_CHANGE,
                                                     "true",

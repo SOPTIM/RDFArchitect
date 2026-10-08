@@ -23,6 +23,7 @@ import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.dl.data.dto.Diagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
+import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
@@ -69,6 +70,7 @@ public class DiagramLayoutServiceUtils {
                 DiagramObject.builder()
                         .mRID(diagramObjectMRID)
                         .name(className)
+                        .belongsToDiagramObjectStyle(DiagramObjectStyle.CLASS)
                         .belongsToDiagram(new MRID(packageUUID))
                         .belongsToIdentifiedObject(new MRID(classUUID))
                         .build();
@@ -121,5 +123,52 @@ public class DiagramLayoutServiceUtils {
                         .belongsToDiagramObject(diagramObjectMRID)
                         .build();
         DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);
+    }
+
+    /**
+     * Helper method for creating and inserting a label {@link DiagramObject} together with its
+     * point into a given model.
+     *
+     * @param diagramLayoutModel the model into which the label is inserted
+     * @param diagramUUID the UUID of the diagram the label belongs to
+     * @param identifiedObjectUUID the UUID of the CIM resource the label is anchored to
+     * @param style the style of the label
+     * @param x the x position of the label
+     * @param y the y position of the label
+     * @return the mRID of the created label diagram object
+     */
+    public MRID insertLabel(
+            Model diagramLayoutModel,
+            UUID diagramUUID,
+            UUID identifiedObjectUUID,
+            DiagramObjectStyle style,
+            float x,
+            float y) {
+        var labelMRID = new MRID(UUID.randomUUID());
+        DLUpdates.insertDiagramObject(
+                diagramLayoutModel,
+                DiagramObject.builder()
+                        .mRID(labelMRID)
+                        .name(style.getStyleName())
+                        .belongsToDiagramObjectStyle(style)
+                        .belongsToDiagram(new MRID(diagramUUID))
+                        .belongsToIdentifiedObject(new MRID(identifiedObjectUUID))
+                        .build());
+        insertDiagramObjectPoint(diagramLayoutModel, labelMRID, diagramUUID, x, y);
+        return labelMRID;
+    }
+
+    /**
+     * Inserts every {@link DiagramObjectStyle} this application uses. Deciding which styles exist
+     * is specific to how this application uses the DiagramLayout profile, so that decision lives
+     * here rather than in {@link DLUpdates}, which only knows how to insert one style at a time and
+     * stays agnostic of how many kinds of style the application defines.
+     *
+     * @param diagramLayoutModel the model into which the styles are inserted
+     */
+    public void insertAllDiagramObjectStyles(Model diagramLayoutModel) {
+        for (var style : DiagramObjectStyle.values()) {
+            DLUpdates.insertDiagramObjectStyle(diagramLayoutModel, style);
+        }
     }
 }

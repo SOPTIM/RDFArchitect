@@ -189,11 +189,14 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
 
         // Assert
         var associationEdgeDTO = result.getEdges().getFirst();
+        var data = associationEdgeDTO.getData();
         assertThat(result.getEdges()).hasSize(1);
-        assertThat(associationEdgeDTO.getData().getFromMultiplicity()).isEqualTo("0...n");
-        assertThat(associationEdgeDTO.getData().getToMultiplicity()).isEqualTo("1...1");
-        assertThat(associationEdgeDTO.getData().isUseFromAssociation()).isFalse();
-        assertThat(associationEdgeDTO.getData().isUseToAssociation()).isTrue();
+        assertThat(data.getSourceMultiplicityLabel().getText()).isEqualTo("1...1");
+        assertThat(data.getSourceAssociationLabel().getText()).isEqualTo("class2.class1");
+        assertThat(data.getTargetMultiplicityLabel().getText()).isEqualTo("0...n");
+        assertThat(data.getTargetAssociationLabel().getText()).isEqualTo("class1.class2");
+        assertThat(data.isUseFromAssociation()).isFalse();
+        assertThat(data.isUseToAssociation()).isTrue();
     }
 
     @Test

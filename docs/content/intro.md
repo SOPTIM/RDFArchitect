@@ -32,7 +32,7 @@ If you are new to RDFArchitect, start with **[Getting Started](/getting-started)
 - **Generate SHACL** automatically from the schema, and manage imported SHACL alongside it.
 - **Track changes** with an edit changelog, undo/redo, and the ability to restore any previous state.
 - **Compare** two versions of a profile and see a structured list of additions, removals, and modifications.
-- **Migrate** instance data between profile versions by generating a reviewable **SPARQL UPDATE script** through a guided wizard.
+- **Migrate** instance data between profile versions by generating a reviewable **SPARQL UPDATE script** through a guided wizard, together with a **Markdown migration report** documenting every change and the decisions behind it.
 - **Share** a complete, read-only, navigable view of a profile via a single URL — no downloads, no tooling required by the recipient.
 
 ## Architecture, briefly

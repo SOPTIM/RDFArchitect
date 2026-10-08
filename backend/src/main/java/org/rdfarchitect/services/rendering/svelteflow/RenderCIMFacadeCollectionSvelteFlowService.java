@@ -20,6 +20,7 @@ package org.rdfarchitect.services.rendering.svelteflow;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.sub.AssociationDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.AttributeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDataDTO;
@@ -29,7 +30,6 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.SuperClassDTO;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMAssociation;
-import org.rdfarchitect.models.cim.data.dto.facade.ICIMAttribute;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
@@ -153,7 +153,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         for (var merged : renderedClasses.values()) {
             nodes.add(assembleMergedNode(merged, mergedClasses, layoutData));
         }
-        var edges = assembleMergedEdges(renderedClasses);
+        var edges = assembleMergedEdges(renderedClasses, layoutData);
 
         return SvelteFlowDTO.builder().nodes(nodes).edges(edges).build();
     }
@@ -188,7 +188,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                         new MergedFacadeClass(
                                                 classUri,
                                                 cimClass.getLabel().getValue(),
-                                                CrossProfileUtils.mergedClassUuid(classUri),
+                                                CrossProfileUtils.mergedUuid(classUri),
                                                 new ArrayList<>()));
                 entry.sources()
                         .add(
@@ -255,7 +255,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         for (var source : merged.sources()) {
             addAttributeDTOs(
                     attributes,
-                    source.cimClass().getAttributes(),
+                    source.cimClass(),
                     source.graphUri(),
                     source.keyword(),
                     source.color());
@@ -267,15 +267,12 @@ public class RenderCIMFacadeCollectionSvelteFlowService
     private List<EnumEntryDTO> mergedEnumEntries(MergedFacadeClass merged) {
         var enumEntries = new ArrayList<EnumEntryDTO>();
         for (var source : merged.sources()) {
-            for (var enumEntry : source.cimClass().getEnumEntries()) {
-                enumEntries.add(
-                        EnumEntryDTO.builder()
-                                .label(enumEntry.getLabel().getValue())
-                                .graphUri(source.graphUri())
-                                .graphKeyword(source.keyword())
-                                .color(source.color())
-                                .build());
-            }
+            addEnumEntryDTOs(
+                    enumEntries,
+                    source.cimClass(),
+                    source.graphUri(),
+                    source.keyword(),
+                    source.color());
         }
         enumEntries.sort(MERGED_ENUM_ENTRY_ORDER);
         return enumEntries;
@@ -328,10 +325,11 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         return new ArrayList<>(refs.values());
     }
 
-    private List<EdgeDTO> assembleMergedEdges(Map<String, MergedFacadeClass> mergedClasses) {
+    private List<EdgeDTO> assembleMergedEdges(
+            Map<String, MergedFacadeClass> mergedClasses, RenderingLayoutData layoutData) {
         var edges = new ArrayList<EdgeDTO>();
         edges.addAll(assembleMergedInheritanceEdges(mergedClasses));
-        edges.addAll(assembleMergedAssociationEdges(mergedClasses));
+        edges.addAll(assembleMergedAssociationEdges(mergedClasses, layoutData));
         return edges;
     }
 
@@ -358,7 +356,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
     }
 
     private List<EdgeDTO> assembleMergedAssociationEdges(
-            Map<String, MergedFacadeClass> mergedClasses) {
+            Map<String, MergedFacadeClass> mergedClasses, RenderingLayoutData layoutData) {
         var edges = new ArrayList<EdgeDTO>();
         var handledAssociationUris = new HashSet<String>();
         for (var merged : mergedClasses.values()) {
@@ -376,13 +374,24 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     var inverse = association.getInverseAssociation();
                     handledAssociationUris.add(association.getUri().toString());
                     handledAssociationUris.add(inverse.getUri().toString());
+                    var labels =
+                            SvelteFlowLabels.forAssociation(
+                                    associationEnd(
+                                            CrossProfileUtils.mergedUuid(
+                                                    inverse.getUri().toString()),
+                                            inverse),
+                                    associationEnd(
+                                            CrossProfileUtils.mergedUuid(
+                                                    association.getUri().toString()),
+                                            association),
+                                    layoutData);
+
                     var edgeData =
                             EdgeDataDTO.builder()
-                                    .fromMultiplicity(
-                                            extractMultiplicityString(
-                                                    association.getMultiplicity()))
-                                    .toMultiplicity(
-                                            extractMultiplicityString(inverse.getMultiplicity()))
+                                    .sourceMultiplicityLabel(labels.sourceMultiplicityLabel())
+                                    .targetMultiplicityLabel(labels.targetMultiplicityLabel())
+                                    .sourceAssociationLabel(labels.sourceAssociationLabel())
+                                    .targetAssociationLabel(labels.targetAssociationLabel())
                                     .useToAssociation(
                                             getAssociationUsedValue(
                                                     association.getAssociationUsed()))
@@ -529,6 +538,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                         : null)
                         .stereotypes(getClassStereotypes(cimClass))
                         .attributes(getClassAttributes(renderContext, cimClass))
+                        .associations(getClassAssociations(renderContext, cimClass))
                         .enumEntries(getClassEnumEntries(renderContext, cimClass))
                         .superClasses(getClassSuperClasses(renderContext, cimClass))
                         .build();
@@ -541,61 +551,99 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                 .build();
     }
 
+    /**
+     * Collects the properties of a class, and, while merging is enabled, those the other profiles
+     * define for the same class, each tagged with the profile it comes from.
+     */
+    private <T> List<T> collectProperties(
+            RenderContext renderContext, ICIMClass cimClass, PropertyCollector<T> collector) {
+        List<T> properties = new ArrayList<>();
+        if (!renderContext.filter().isIncludePropertiesFromOtherProfiles()) {
+            collector.collect(properties, cimClass, null, null, null);
+            return properties;
+        }
+
+        collector.collect(
+                properties,
+                cimClass,
+                renderContext.primaryGraphUri(),
+                renderContext.primaryKeyword(),
+                renderContext.primaryColor());
+
+        for (var profile : renderContext.otherProfiles()) {
+            var match = profile.classByUri().get(cimClass.getUri().toString());
+            if (match == null) {
+                continue;
+            }
+            collector.collect(
+                    properties, match, profile.graphUri(), profile.keyword(), profile.color());
+        }
+        return properties;
+    }
+
     private List<AttributeDTO> getClassAttributes(RenderContext renderContext, ICIMClass cimClass) {
         if (!renderContext.filter().isIncludeAttributes()) {
             return List.of();
         }
-
-        boolean merge = renderContext.filter().isIncludePropertiesFromOtherProfiles();
-        String ownGraphUri = merge ? renderContext.primaryGraphUri() : null;
-        String ownKeyword = merge ? renderContext.primaryKeyword() : null;
-        String ownColor = merge ? renderContext.primaryColor() : null;
-
-        List<AttributeDTO> attributeDTOs = new ArrayList<>();
-        addAttributeDTOs(
-                attributeDTOs, cimClass.getAttributes(), ownGraphUri, ownKeyword, ownColor);
-
-        if (merge) {
-            for (var profile : renderContext.otherProfiles()) {
-                var match = profile.classByUri().get(cimClass.getUri().toString());
-                if (match == null) {
-                    continue;
-                }
-                addAttributeDTOs(
-                        attributeDTOs,
-                        match.getAttributes(),
-                        profile.graphUri(),
-                        profile.keyword(),
-                        profile.color());
-            }
-        }
-        return attributeDTOs;
+        return collectProperties(renderContext, cimClass, this::addAttributeDTOs);
     }
 
     private void addAttributeDTOs(
             List<AttributeDTO> target,
-            List<ICIMAttribute> cimAttributes,
+            ICIMClass cimClass,
             String graphUri,
             String keyword,
             String color) {
-        for (var cimAttribute : cimAttributes) {
+        for (var cimAttribute : cimClass.getAttributes()) {
             if (!cimAttribute.isRenderable()) {
                 continue;
             }
-            target.add(toAttributeDTO(cimAttribute, graphUri, keyword, color));
+            target.add(
+                    AttributeDTO.builder()
+                            .uuid(cimAttribute.getUuid())
+                            .label(cimAttribute.getLabel().getValue())
+                            .type(cimAttribute.getDataType().getLabel().getValue())
+                            .multiplicity(extractMultiplicityString(cimAttribute.getMultiplicity()))
+                            .graphUri(graphUri)
+                            .graphKeyword(keyword)
+                            .color(color)
+                            .build());
         }
     }
 
-    private AttributeDTO toAttributeDTO(
-            ICIMAttribute cimAttribute, String graphUri, String keyword, String color) {
-        return AttributeDTO.builder()
-                .label(cimAttribute.getLabel().getValue())
-                .type(cimAttribute.getDataType().getLabel().getValue())
-                .multiplicity(extractMultiplicityString(cimAttribute.getMultiplicity()))
-                .graphUri(graphUri)
-                .graphKeyword(keyword)
-                .color(color)
-                .build();
+    /**
+     * The association ends of a class rendered as text inside its node. This is independent of
+     * {@link GraphFilter#isIncludeAssociations()}, which controls whether the associations are
+     * drawn as edges.
+     */
+    private List<AssociationDTO> getClassAssociations(
+            RenderContext renderContext, ICIMClass cimClass) {
+        return collectProperties(renderContext, cimClass, this::addAssociationDTOs);
+    }
+
+    private void addAssociationDTOs(
+            List<AssociationDTO> target,
+            ICIMClass cimClass,
+            String graphUri,
+            String keyword,
+            String color) {
+        for (var cimAssociation : cimClass.getAssociations()) {
+            if (!cimAssociation.isRenderable()) {
+                continue;
+            }
+            var label = cimAssociation.getLabelOrNull();
+            target.add(
+                    AssociationDTO.builder()
+                            .uuid(cimAssociation.getUuid())
+                            .label(label == null ? null : label.getValue())
+                            .rangeLabel(cimAssociation.getRange().getLabel().getValue())
+                            .multiplicity(
+                                    extractMultiplicityString(cimAssociation.getMultiplicity()))
+                            .graphUri(graphUri)
+                            .graphKeyword(keyword)
+                            .color(color)
+                            .build());
+        }
     }
 
     private List<String> getClassStereotypes(ICIMClass cimClass) {
@@ -630,41 +678,25 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         if (!renderContext.filter().isIncludeEnumEntries()) {
             return List.of();
         }
+        return collectProperties(renderContext, cimClass, this::addEnumEntryDTOs);
+    }
 
-        boolean merge = renderContext.filter().isIncludePropertiesFromOtherProfiles();
-        String ownGraphUri = merge ? renderContext.primaryGraphUri() : null;
-        String ownKeyword = merge ? renderContext.primaryKeyword() : null;
-        String ownColor = merge ? renderContext.primaryColor() : null;
-
-        List<EnumEntryDTO> enumEntries = new ArrayList<>();
+    private void addEnumEntryDTOs(
+            List<EnumEntryDTO> target,
+            ICIMClass cimClass,
+            String graphUri,
+            String keyword,
+            String color) {
         for (var cimEnumEntry : cimClass.getEnumEntries()) {
-            enumEntries.add(
+            target.add(
                     EnumEntryDTO.builder()
+                            .uuid(cimEnumEntry.getUuid())
                             .label(cimEnumEntry.getLabel().getValue())
-                            .graphUri(ownGraphUri)
-                            .graphKeyword(ownKeyword)
-                            .color(ownColor)
+                            .graphUri(graphUri)
+                            .graphKeyword(keyword)
+                            .color(color)
                             .build());
         }
-
-        if (merge) {
-            for (var profile : renderContext.otherProfiles()) {
-                var match = profile.classByUri().get(cimClass.getUri().toString());
-                if (match == null) {
-                    continue;
-                }
-                for (var cimEnumEntry : match.getEnumEntries()) {
-                    enumEntries.add(
-                            EnumEntryDTO.builder()
-                                    .label(cimEnumEntry.getLabel().getValue())
-                                    .graphUri(profile.graphUri())
-                                    .graphKeyword(profile.keyword())
-                                    .color(profile.color())
-                                    .build());
-                }
-            }
-        }
-        return enumEntries;
     }
 
     private List<SuperClassDTO> getClassSuperClasses(
@@ -684,6 +716,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                             .uuid(superClass.getUuid())
                             .label(superClass.getLabel().getValue())
                             .attributes(getClassAttributes(renderContext, superClass))
+                            .associations(getClassAssociations(renderContext, superClass))
                             .enumEntries(getClassEnumEntries(renderContext, superClass))
                             .build());
             queue.addAll(superClass.getSuperClasses());
@@ -743,7 +776,8 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                 }
                 var to = from.getInverseAssociation();
 
-                associationEdgeDTOList.add(assembleAssociationEdgeDTO(cimClass, from, to));
+                associationEdgeDTOList.add(
+                        assembleAssociationEdgeDTO(renderContext, cimClass, from, to));
 
                 handledAssociationUris.add(from.getUri().toString());
                 handledAssociationUris.add(to.getUri().toString());
@@ -753,11 +787,22 @@ public class RenderCIMFacadeCollectionSvelteFlowService
     }
 
     private EdgeDTO assembleAssociationEdgeDTO(
-            ICIMClass sourceClass, ICIMAssociation from, ICIMAssociation to) {
+            RenderContext renderContext,
+            ICIMClass sourceClass,
+            ICIMAssociation from,
+            ICIMAssociation to) {
+        var layoutData = renderContext.layoutingData();
+        var labels =
+                SvelteFlowLabels.forAssociation(
+                        associationEnd(to.getUuid(), to),
+                        associationEnd(from.getUuid(), from),
+                        layoutData);
         var edgeDataDTO =
                 EdgeDataDTO.builder()
-                        .fromMultiplicity(extractMultiplicityString(from.getMultiplicity()))
-                        .toMultiplicity(extractMultiplicityString(to.getMultiplicity()))
+                        .sourceMultiplicityLabel(labels.sourceMultiplicityLabel())
+                        .targetMultiplicityLabel(labels.targetMultiplicityLabel())
+                        .sourceAssociationLabel(labels.sourceAssociationLabel())
+                        .targetAssociationLabel(labels.targetAssociationLabel())
                         .useToAssociation(getAssociationUsedValue(from.getAssociationUsed()))
                         .useFromAssociation(getAssociationUsedValue(to.getAssociationUsed()))
                         .build();
@@ -769,6 +814,25 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                 .target(from.getRange().getUuid())
                 .data(edgeDataDTO)
                 .build();
+    }
+
+    /**
+     * The labels of one association end, which are drawn at the class the association points to.
+     * The label is read leniently, because an association end without one is still rendered, just
+     * without its label.
+     *
+     * @param uuid the UUID the labels of this end are stored under, which is the merged UUID in a
+     *     merged diagram rather than the UUID of the association end itself
+     * @param association the association end
+     * @return the end together with the texts of its labels
+     */
+    private SvelteFlowLabels.AssociationEnd associationEnd(UUID uuid, ICIMAssociation association) {
+        var label = association.getLabelOrNull();
+        return new SvelteFlowLabels.AssociationEnd(
+                uuid,
+                association.getUuid(),
+                extractMultiplicityString(association.getMultiplicity()),
+                label == null ? null : label.getValue());
     }
 
     private String extractMultiplicityString(CIMSMultiplicity multiplicity) {
@@ -784,6 +848,14 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     throw new IllegalArgumentException(
                             "Unexpected associationUsed value: " + associationUsedValue);
         };
+    }
+
+    /** Adds the properties of one class to the list rendered inside a class node. */
+    @FunctionalInterface
+    private interface PropertyCollector<T> {
+
+        void collect(
+                List<T> target, ICIMClass cimClass, String graphUri, String keyword, String color);
     }
 
     private record SelectedClasses(

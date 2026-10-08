@@ -19,12 +19,15 @@ package org.rdfarchitect.services.validation;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
-import org.rdfarchitect.api.dto.validation.SchemaValidationReportDTO;
+import org.rdfarchitect.api.dto.validation.ValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationReportDTO;
+import org.rdfarchitect.api.dto.validation.ValidationSeverity;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -37,10 +40,10 @@ public class SchemaValidationReportToMarkdownService
     private static final String NO_RESOURCE_LABEL = "General";
 
     @Override
-    public String convertToMarkdown(SchemaValidationReportDTO report) {
+    public String convertToMarkdown(ValidationReportDTO report, String title) {
         var sb = new StringBuilder();
 
-        sb.append("# Schema Validation Report").append(NEW_LINE).append(NEW_LINE);
+        sb.append("# ").append(title).append(NEW_LINE).append(NEW_LINE);
         sb.append("Errors and warnings found during schema validation, grouped by affected ")
                 .append("resource. Issues with severity INFO are omitted.")
                 .append(NEW_LINE)
@@ -60,17 +63,13 @@ public class SchemaValidationReportToMarkdownService
                 issues.stream()
                         .filter(
                                 issue ->
-                                        issue.getSeverity()
-                                                        == SchemaValidationIssueDTO.Severity.ERROR
+                                        issue.getSeverity() == ValidationSeverity.ERROR
                                                 || issue.getSeverity()
-                                                        == SchemaValidationIssueDTO.Severity
-                                                                .WARNING)
-                        .collect(Collectors.groupingBy(SchemaValidationIssueDTO::getSeverity));
+                                                        == ValidationSeverity.WARNING)
+                        .collect(Collectors.groupingBy(ValidationIssueDTO::getSeverity));
 
-        var errors =
-                relevantIssues.getOrDefault(SchemaValidationIssueDTO.Severity.ERROR, List.of());
-        var warnings =
-                relevantIssues.getOrDefault(SchemaValidationIssueDTO.Severity.WARNING, List.of());
+        var errors = relevantIssues.getOrDefault(ValidationSeverity.ERROR, List.of());
+        var warnings = relevantIssues.getOrDefault(ValidationSeverity.WARNING, List.of());
 
         if (errors.isEmpty() && warnings.isEmpty()) {
             sb.append("No errors or warnings found.").append(NEW_LINE);
@@ -90,18 +89,19 @@ public class SchemaValidationReportToMarkdownService
         return sb.toString();
     }
 
-    private void appendSection(
-            StringBuilder sb, String title, List<SchemaValidationIssueDTO> issues) {
+    private void appendSection(StringBuilder sb, String title, List<ValidationIssueDTO> issues) {
         if (issues.isEmpty()) {
             return;
         }
 
         sb.append("## ").append(title).append(NEW_LINE).append(NEW_LINE);
 
-        var byResource =
-                issues.stream()
-                        .collect(Collectors.groupingBy(SchemaValidationIssueDTO::getResourceUri));
-
+        var byResource = new HashMap<String, List<ValidationIssueDTO>>();
+        issues.forEach(
+                issue ->
+                        byResource
+                                .computeIfAbsent(issue.getResourceUri(), k -> new ArrayList<>())
+                                .add(issue));
         var sortedResourceUris =
                 byResource.keySet().stream()
                         .sorted(Comparator.nullsFirst(Comparator.naturalOrder()))

@@ -19,7 +19,7 @@
     import { editorState } from "$lib/sharedState.svelte.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
-    import { graphLabel, graphUri } from "$lib/utils/graph-label.js";
+    import { graphLabeller, graphUri } from "$lib/utils/graph-label.js";
 
     const SELECT =
         "border-border bg-input-default-background text-default-text h-9 w-full rounded border px-2 text-sm";
@@ -50,9 +50,10 @@
             if (!live) {
                 return;
             }
+            const nameOf = graphLabeller(graphs);
             schemas = (graphs ?? []).map(graph => ({
                 uri: graphUri(graph),
-                label: graphLabel(graph),
+                label: nameOf(graph),
             }));
         });
         return () => (live = false);

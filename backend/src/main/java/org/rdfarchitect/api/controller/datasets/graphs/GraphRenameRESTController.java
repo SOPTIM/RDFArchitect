@@ -50,7 +50,7 @@ public class GraphRenameRESTController {
     @Operation(
             summary = "Rename graph",
             description =
-                    "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. If a new keyword is given, it replaces the dcat:keyword of the profile header.",
+                    "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. The profile header is left untouched: what a schema is called on screen is read from there and is edited in the ontology editor.",
             tags = {"graph"},
             responses = {
                 @ApiResponse(responseCode = "200"),
@@ -69,12 +69,7 @@ public class GraphRenameRESTController {
             @Parameter(description = "The url encoded uri of the graph.") @PathVariable
                     String graphURI,
             @Parameter(description = "The url encoded uri to rename the graph to.") @RequestParam
-                    String newGraphURI,
-            @Parameter(
-                            description =
-                                    "The display name to store as dcat:keyword in the profile header.")
-                    @RequestParam(required = false)
-                    String newKeyword) {
+                    String newGraphURI) {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/rename\" from \"{}\".",
                 datasetName,
@@ -85,9 +80,7 @@ public class GraphRenameRESTController {
         var extendedNewGraphURI = expandURIUseCase.expandUri(datasetName, newGraphURI);
 
         renameGraphUseCase.renameGraph(
-                new GraphIdentifier(datasetName, extendedGraphURI),
-                extendedNewGraphURI,
-                newKeyword);
+                new GraphIdentifier(datasetName, extendedGraphURI), extendedNewGraphURI);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/rename\" to \"{}\".",

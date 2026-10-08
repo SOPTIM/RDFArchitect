@@ -53,6 +53,14 @@
 
     let pointerHandled = false;
 
+    /**
+     * Everything the entry has to say on hover. An entry that shows a shortened IRI next to a
+     * `title` means both, so they are joined: letting one win silently dropped the other.
+     */
+    const hoverText = $derived(
+        [...new Set([highlightLabel, title].filter(Boolean))].join("\n"),
+    );
+
     function isInteractiveTarget(event) {
         return (
             event.target.type === "checkbox" ||
@@ -122,7 +130,7 @@
     type="button"
     class={`nav-entry nav-entry--level-${level} ${isSelected ? "is-selected" : ""} ${ancestorSelected ? "is-ancestor-selected" : ""} ${classOpen ? "is-class-open" : ""} ${disabled ? "is-disabled" : ""}`}
     {disabled}
-    title={highlightLabel || title}
+    title={hoverText || undefined}
     onpointerdown={handlePointerDown}
     onclick={handleClick}
     {...restProps}

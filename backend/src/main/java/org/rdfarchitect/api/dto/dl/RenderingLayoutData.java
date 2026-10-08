@@ -21,6 +21,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
+import org.rdfarchitect.dl.queries.select.DLObjectFetcher.LabelKey;
 
 import java.util.Map;
 import java.util.UUID;
@@ -34,4 +35,6 @@ import java.util.UUID;
 public class RenderingLayoutData {
 
     Map<UUID, DiagramObjectPoint> classLayoutingData;
+
+    Map<LabelKey, DiagramObjectPoint> labelLayoutingData;
 }

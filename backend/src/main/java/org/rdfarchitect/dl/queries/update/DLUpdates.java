@@ -25,6 +25,7 @@ import org.apache.jena.vocabulary.RDF;
 import org.rdfarchitect.dl.data.dto.Diagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
+import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.rdf.resources.CIM;
@@ -48,11 +49,37 @@ public class DLUpdates {
         insertDiagram(model, diagram);
     }
 
+    /**
+     * Deletes a diagram together with every diagram object that belongs to it, regardless of style,
+     * cascading each one down to its point. Mirrors the existing {@link
+     * #deleteDiagramObjectCascade} pattern one level up, so a diagram deletion no longer has to be
+     * assembled from several loops at the call site.
+     *
+     * @param model the model from which the diagram is removed
+     * @param diagramMRID the mRID of the diagram to remove
+     */
+    public void deleteDiagramCascade(Model model, MRID diagramMRID) {
+        for (var diagramObject : DLObjectFetcher.fetchDiagramDOs(model, diagramMRID)) {
+            deleteDiagramObjectCascade(model, diagramObject.getMRID());
+        }
+        deleteDiagram(model, diagramMRID);
+    }
+
     public void deleteDiagram(Model model, MRID diagramMRID) {
         deleteBase(model, diagramMRID);
     }
 
+    /**
+     * Inserts a diagram object together with the style that says what it stands for.
+     *
+     * @param model the model into which the diagram object is inserted
+     * @param diagramObject the diagram object to insert
+     */
     public void insertDiagramObject(Model model, DiagramObject diagramObject) {
+        if (diagramObject.getBelongsToDiagramObjectStyle() != null) {
+            insertDiagramObjectStyle(model, diagramObject.getBelongsToDiagramObjectStyle());
+        }
+
         var newDiagramObject = model.createResource(diagramObject.getMRID().getFullMRID());
 
         newDiagramObject.addProperty(RDF.type, DL.diagramObjectType);
@@ -66,7 +93,37 @@ public class DLUpdates {
                 ResourceFactory.createResource(
                         diagramObject.getBelongsToIdentifiedObject().getFullMRID()));
 
+        if (diagramObject.getBelongsToDiagramObjectStyle() != null) {
+            newDiagramObject.addProperty(
+                    DL.belongsToDiagramObjectStyle,
+                    ResourceFactory.createResource(
+                            diagramObject
+                                    .getBelongsToDiagramObjectStyle()
+                                    .getMRID()
+                                    .getFullMRID()));
+        }
+
         model.add(newDiagramObject.listProperties());
+    }
+
+    /**
+     * Inserts a style unless the model already holds it. Styles are shared by every diagram object
+     * of their kind and are addressed by an mRID derived from their name, so inserting one twice
+     * would only repeat the triples it already has.
+     *
+     * @param model the model into which the style is inserted
+     * @param style the style to insert
+     */
+    public void insertDiagramObjectStyle(Model model, DiagramObjectStyle style) {
+        var styleResource = model.getResource(style.getMRID().getFullMRID());
+        if (model.contains(styleResource, RDF.type, DL.diagramObjectStyleType)) {
+            return;
+        }
+        styleResource.addProperty(RDF.type, DL.diagramObjectStyleType);
+        styleResource.addProperty(
+                CIM.ioName, ResourceFactory.createPlainLiteral(style.getStyleName()));
+
+        model.add(styleResource.listProperties());
     }
 
     public void updateDiagramObjectName(Model model, DiagramObject diagramObject, String name) {
@@ -77,10 +134,19 @@ public class DLUpdates {
         resource.addProperty(CIM.ioName, name);
     }
 
+    /**
+     * Deletes a diagram object together with its point, if it has one. Objects that are placed by
+     * an offset carry no point, so the point is optional here.
+     *
+     * @param model the model from which the diagram object is removed
+     * @param doMRID the mRID of the diagram object to remove
+     */
     public void deleteDiagramObjectCascade(Model model, MRID doMRID) {
         DiagramObjectPoint dop = DLObjectFetcher.fetchDOPForDO(model, doMRID);
         deleteDiagramObject(model, doMRID);
-        deleteDiagramObjectPoint(model, dop.getMRID());
+        if (dop != null) {
+            deleteDiagramObjectPoint(model, dop.getMRID());
+        }
     }
 
     public void deleteDiagramObject(Model model, MRID doMRID) {

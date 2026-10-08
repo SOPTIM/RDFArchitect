@@ -107,7 +107,7 @@
         if (file) {
             response = await validateFile({
                 path: { cgmesVersion: cgmesVersion },
-                body: file,
+                body: { file },
             });
         } else if (workspace && graph) {
             response = await validateSchema({

@@ -25,8 +25,11 @@ import lombok.Data;
 @Builder
 public class EdgeDataDTO {
 
-    private String toMultiplicity;
-    private String fromMultiplicity;
+    private EdgeLabelDTO sourceMultiplicityLabel;
+    private EdgeLabelDTO targetMultiplicityLabel;
+    private EdgeLabelDTO sourceAssociationLabel;
+    private EdgeLabelDTO targetAssociationLabel;
+
     private boolean useToAssociation;
     private boolean useFromAssociation;
     private String graphUri;

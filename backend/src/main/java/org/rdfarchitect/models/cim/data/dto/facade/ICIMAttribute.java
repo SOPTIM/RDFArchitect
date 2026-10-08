@@ -23,6 +23,8 @@ import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 
+import java.util.List;
+
 public interface ICIMAttribute extends ICIMResource {
 
     ICIMClass getDomain();
@@ -45,7 +47,7 @@ public interface ICIMAttribute extends ICIMResource {
      */
     CIMSDataType.Type getDataTypeKind();
 
-    CIMSStereotype getStereotype();
+    List<CIMSStereotype> getStereotypes();
 
     CIMSIsFixed getFixed();
 

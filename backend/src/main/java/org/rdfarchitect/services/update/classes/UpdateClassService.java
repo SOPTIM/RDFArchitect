@@ -117,8 +117,8 @@ public class UpdateClassService
 
         String newClassUri = newClass.getPrefix() + newClass.getLabel();
         if (!oldClassUri.equals(newClassUri)) {
-            var oldMergedUuid = CrossProfileUtils.mergedClassUuid(oldClassUri);
-            var newMergedUuid = CrossProfileUtils.mergedClassUuid(newClassUri);
+            var oldMergedUuid = CrossProfileUtils.mergedUuid(oldClassUri);
+            var newMergedUuid = CrossProfileUtils.mergedUuid(newClassUri);
             crossProfileDiagramLayoutUseCase.migrateLayoutToNewClassUri(
                     graphIdentifier.datasetName(), oldMergedUuid, newMergedUuid, newClassUri);
         }

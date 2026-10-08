@@ -53,6 +53,24 @@ public class CIMPropertyUtils {
     }
 
     /**
+     * Checks whether an association can be instantiated. An association that is not used carries no
+     * instance data, so nothing about it has to be migrated.
+     *
+     * @param property the association to check
+     * @return true if the association is used, false if it is not or does not say
+     */
+    public boolean isAssociationUsed(Resource property) {
+        if (property == null) {
+            return false;
+        }
+        var statement = property.getProperty(CIMS.associationUsed);
+        if (statement == null || !statement.getObject().isLiteral()) {
+            return false;
+        }
+        return CIMS.yes.getString().equals(statement.getString());
+    }
+
+    /**
      * Checks whether a property is an attribute or not
      *
      * @param property the property to check

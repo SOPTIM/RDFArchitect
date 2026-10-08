@@ -5,4 +5,4 @@ WHERE {
     ?instance a ?domain .
 
     <mapping>
-}
+};

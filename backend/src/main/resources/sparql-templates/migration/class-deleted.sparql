@@ -4,4 +4,4 @@ DELETE {
 WHERE {
     ?instance a ?deletedClass .
     ?instance ?p ?o .
-}
+};

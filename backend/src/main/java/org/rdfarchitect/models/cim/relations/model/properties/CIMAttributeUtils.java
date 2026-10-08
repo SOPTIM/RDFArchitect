@@ -104,7 +104,8 @@ public class CIMAttributeUtils {
      */
     public boolean hasEnumAttribute(Resource attribute) {
         if (!CIMPropertyUtils.isAttribute(attribute)
-                || !(attribute.hasProperty(RDFS.range) || attribute.hasProperty(CIMS.datatype))) {
+                || !attribute.hasProperty(RDFS.range)
+                || attribute.hasProperty(CIMS.datatype)) {
             return false;
         }
         var datatype = attribute.getProperty(RDFS.range).getResource();

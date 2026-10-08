@@ -20,8 +20,9 @@ package org.rdfarchitect.services.validation;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
-import org.rdfarchitect.api.dto.validation.SchemaValidationReportDTO;
+import org.rdfarchitect.api.dto.validation.ValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationReportDTO;
+import org.rdfarchitect.api.dto.validation.ValidationSeverity;
 
 import java.util.List;
 
@@ -29,88 +30,94 @@ public class MarkdownConversionTest extends SchemaValidationTestBase {
 
     @Test
     void convertToMarkdown_emptyIssues_reportsNoIssues() {
-        var report = SchemaValidationReportDTO.builder().valid(true).issues(List.of()).build();
+        var report = ValidationReportDTO.builder().valid(true).issues(List.of()).build();
+        var title = "Schema Validation Report";
 
-        var markdown = markdownService.convertToMarkdown(report);
+        var markdown = markdownService.convertToMarkdown(report, title);
 
-        assertThat(markdown).contains("# Schema Validation Report");
-        assertThat(markdown).contains("**Status:** Valid");
-        assertThat(markdown).contains("No issues found.");
+        assertThat(markdown)
+                .contains("# Schema Validation Report")
+                .contains("**Status:** Valid")
+                .contains("No issues found.");
     }
 
     @Test
     void convertToMarkdown_onlyInfoIssues_omitsThemAndReportsNoErrorsOrWarnings() {
+        var title = "Schema Validation Report";
         var report =
-                SchemaValidationReportDTO.builder()
+                ValidationReportDTO.builder()
                         .valid(true)
                         .issues(
                                 List.of(
-                                        SchemaValidationIssueDTO.builder()
-                                                .severity(SchemaValidationIssueDTO.Severity.INFO)
+                                        ValidationIssueDTO.builder()
+                                                .severity(ValidationSeverity.INFO)
                                                 .resourceUri(NS + "Ontology")
                                                 .message(
                                                         "Optional profile header field is not set: <x>")
                                                 .build()))
                         .build();
 
-        var markdown = markdownService.convertToMarkdown(report);
+        var markdown = markdownService.convertToMarkdown(report, title);
 
-        assertThat(markdown).contains("No errors or warnings found.");
-        assertThat(markdown).doesNotContain("Optional profile header field is not set");
+        assertThat(markdown)
+                .contains("No errors or warnings found.")
+                .doesNotContain("Optional profile header field is not set");
     }
 
     @Test
     void convertToMarkdown_errorAndWarning_rendersBothSections() {
+        var title = "Schema Validation Report";
         var report =
-                SchemaValidationReportDTO.builder()
+                ValidationReportDTO.builder()
                         .valid(false)
                         .issues(
                                 List.of(
-                                        SchemaValidationIssueDTO.builder()
-                                                .severity(SchemaValidationIssueDTO.Severity.ERROR)
+                                        ValidationIssueDTO.builder()
+                                                .severity(ValidationSeverity.ERROR)
                                                 .resourceUri(NS + "ClassA")
                                                 .message("Class is missing rdfs:label.")
                                                 .build(),
-                                        SchemaValidationIssueDTO.builder()
-                                                .severity(SchemaValidationIssueDTO.Severity.WARNING)
+                                        ValidationIssueDTO.builder()
+                                                .severity(ValidationSeverity.WARNING)
                                                 .resourceUri(NS + "ClassB")
                                                 .message("Class is missing rdfs:comment.")
                                                 .build(),
-                                        SchemaValidationIssueDTO.builder()
-                                                .severity(SchemaValidationIssueDTO.Severity.INFO)
+                                        ValidationIssueDTO.builder()
+                                                .severity(ValidationSeverity.INFO)
                                                 .resourceUri(NS + "Ontology")
                                                 .message(
                                                         "Optional profile header field is not set: <x>")
                                                 .build()))
                         .build();
 
-        var markdown = markdownService.convertToMarkdown(report);
+        var markdown = markdownService.convertToMarkdown(report, title);
 
-        assertThat(markdown).contains("**Status:** Invalid");
-        assertThat(markdown).contains("**Errors:** 1 | **Warnings:** 1");
-        assertThat(markdown).contains("## Errors");
-        assertThat(markdown).contains("## Warnings");
-        assertThat(markdown).contains("Class is missing rdfs:label.");
-        assertThat(markdown).contains("Class is missing rdfs:comment.");
-        // INFO must not appear.
-        assertThat(markdown).doesNotContain("Optional profile header field is not set");
+        assertThat(markdown)
+                .contains("**Status:** Invalid")
+                .contains("**Errors:** 1 | **Warnings:** 1")
+                .contains("## Errors")
+                .contains("## Warnings")
+                .contains("Class is missing rdfs:label.")
+                .contains("Class is missing rdfs:comment.")
+                .doesNotContain("Optional profile header field is not set"); // INFO must not appear
     }
 
     @Test
     void convertToMarkdown_pipeInMessage_isKeptAsIs() {
+        var title = "Schema Validation Report";
         var report =
-                SchemaValidationReportDTO.builder()
+                ValidationReportDTO.builder()
                         .valid(false)
                         .issues(
                                 List.of(
-                                        SchemaValidationIssueDTO.builder()
-                                                .severity(SchemaValidationIssueDTO.Severity.ERROR)
+                                        ValidationIssueDTO.builder()
+                                                .severity(ValidationSeverity.ERROR)
                                                 .resourceUri(NS + "ClassA")
                                                 .message("value a | value b")
                                                 .build()))
                         .build();
 
-        var markdown = markdownService.convertToMarkdown(report);
+        var markdown = markdownService.convertToMarkdown(report, title);
 
         // No table is used anymore, so pipes no longer need escaping.
         assertThat(markdown).contains("value a | value b");
