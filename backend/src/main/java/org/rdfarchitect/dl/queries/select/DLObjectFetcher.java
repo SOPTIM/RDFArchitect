@@ -27,6 +27,7 @@ import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectGluePoint;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
+import org.rdfarchitect.dl.data.dto.relations.EdgeKey;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.DLQuerySolutionParser;
 import org.rdfarchitect.dl.queries.DLQueryVars;
@@ -34,6 +35,7 @@ import org.rdfarchitect.dl.rdf.resources.DL;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +51,15 @@ public class DLObjectFetcher {
             PREFIX  rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
             PREFIX  cim:    <http://iec.ch/TC57/CIM100#>
             """;
+
+    /**
+     * Orders points by their sequence number. The sequence number is stored as a plain literal, so
+     * SPARQL would order it as text and put 10 before 2.
+     */
+    private static final Comparator<DiagramObjectPoint> BY_SEQUENCE_NUMBER =
+            Comparator.comparing(
+                    DiagramObjectPoint::getSequenceNumber,
+                    Comparator.nullsLast(Comparator.naturalOrder()));
 
     /**
      * Fetches the {@link Diagram} corresponding to the provided package UUID
@@ -227,7 +238,6 @@ public class DLObjectFetcher {
 
                             FILTER(STR(?doMRID) = "DO_MRID")
                         }
-                        ORDER BY ?sequenceNumber
                         """
                                 .replace("DO_MRID", doMRID.getFullMRID());
 
@@ -241,6 +251,7 @@ public class DLObjectFetcher {
                 dop.setBelongsToDiagramObject(doMRID);
                 diagramObjectPoints.add(dop);
             }
+            diagramObjectPoints.sort(BY_SEQUENCE_NUMBER);
             return diagramObjectPoints;
         }
     }
@@ -382,6 +393,156 @@ public class DLObjectFetcher {
                 diagramObjects.add(diagramObject);
             }
             return diagramObjects;
+        }
+    }
+
+    /**
+     * The points of an edge diagram object, ordered by their sequence number, i.e. starting at the
+     * side of the identified object of the diagram object.
+     *
+     * @param identifiedObject the identified object of the edge diagram object
+     * @param points the points of the edge
+     */
+    public record EdgePoints(MRID identifiedObject, List<EdgePoint> points) {}
+
+    /**
+     * A point of an edge together with the class it is glued to, if it is an end point.
+     *
+     * @param point the point
+     * @param gluedClass the identified object of the class diagram object owning the glue point the
+     *     point references, or null for a bend point
+     */
+    public record EdgePoint(DiagramObjectPoint point, MRID gluedClass) {}
+
+    /**
+     * Fetches the points of all edges of a diagram that have points, keyed by their edge.
+     *
+     * @param diagramLayout the model from where the points will be fetched
+     * @param diagramUUID the diagram whose edges are fetched
+     * @return the points per edge, edges without points are left out
+     */
+    public Map<EdgeKey, EdgePoints> fetchEdgePoints(Model diagramLayout, UUID diagramUUID) {
+        var diagramMRID = new MRID(diagramUUID);
+        var query =
+                QUERY_PREFIXES
+                        + """
+                  SELECT ?doMRID ?ioMRID ?otherClassMRID ?styleName ?dopMRID ?xPosition
+                         ?yPosition ?sequenceNumber ?gluePointMRID
+                  WHERE {
+                      ?doMRID rdf:type cim:DiagramObject ;
+                            cim:DiagramObject.DiagramObjectStyle ?styleMRID ;
+                            cim:DiagramObject.Diagram ?diagramMRID ;
+                            cim:DiagramObject.IdentifiedObject ?ioMRID ;
+                            <OTHER_CLASS> ?otherClassMRID .
+                      STYLE_NAME_JOIN
+
+                      ?dopMRID rdf:type cim:DiagramObjectPoint ;
+                            cim:DiagramObjectPoint.DiagramObject ?doMRID ;
+                            cim:DiagramObjectPoint.xPosition ?xPosition ;
+                            cim:DiagramObjectPoint.yPosition ?yPosition .
+                      OPTIONAL {
+                        ?dopMRID cim:DiagramObjectPoint.sequenceNumber ?sequenceNumber
+                      }
+                      OPTIONAL {
+                        ?dopMRID cim:DiagramObjectPoint.DiagramObjectGluePoint ?gluePointMRID
+                      }
+
+                      FILTER(STR(?diagramMRID) = "DIAGRAM_MRID")
+                      STYLE_FILTER
+                  }
+                  """
+                                .replace("OTHER_CLASS", DL.otherClass.getURI())
+                                .replace("DIAGRAM_MRID", diagramMRID.getFullMRID())
+                                .replace(
+                                        "STYLE_FILTER",
+                                        styleFilter(
+                                                true,
+                                                DiagramObjectStyle.INHERITANCE,
+                                                DiagramObjectStyle.ASSOCIATION))
+                                .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
+
+        Map<EdgeKey, MRID> identifiedObjects = new HashMap<>();
+        Map<EdgeKey, MRID> edgeDOMRIDs = new HashMap<>();
+        Map<EdgeKey, List<DiagramObjectPoint>> pointsPerEdge = new HashMap<>();
+        try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
+            var results = qexec.execSelect();
+            while (results.hasNext()) {
+                var querySolution = results.next();
+                var edgeDO = DLObjectFactory.createDiagramObject(querySolution);
+                var key = EdgeKey.of(edgeDO);
+                if (key == null
+                        || !edgeDO.getMRID()
+                                .equals(edgeDOMRIDs.computeIfAbsent(key, k -> edgeDO.getMRID()))) {
+                    continue;
+                }
+                identifiedObjects.put(key, edgeDO.getBelongsToIdentifiedObject());
+                pointsPerEdge
+                        .computeIfAbsent(key, k -> new ArrayList<>())
+                        .add(DLObjectFactory.createDiagramObjectPoint(querySolution));
+            }
+        }
+
+        var classesByGluePoint = fetchClassesByGluePoint(diagramLayout, diagramMRID);
+        Map<EdgeKey, EdgePoints> resultMap = new HashMap<>();
+        for (var entry : pointsPerEdge.entrySet()) {
+            var points = entry.getValue();
+            points.sort(BY_SEQUENCE_NUMBER);
+            var edgePoints = new ArrayList<EdgePoint>();
+            for (var point : points) {
+                var gluePoint = point.getBelongsToGluePoint();
+                edgePoints.add(
+                        new EdgePoint(
+                                point,
+                                gluePoint != null ? classesByGluePoint.get(gluePoint) : null));
+            }
+            resultMap.put(
+                    entry.getKey(),
+                    new EdgePoints(identifiedObjects.get(entry.getKey()), edgePoints));
+        }
+        return resultMap;
+    }
+
+    /**
+     * Fetches the classes of a diagram by the glue point their diagram object point references.
+     *
+     * @param diagramLayout the model from where the classes will be fetched
+     * @param diagramMRID the diagram whose classes are fetched
+     * @return the identified object of the class diagram object per glue point
+     */
+    private Map<MRID, MRID> fetchClassesByGluePoint(Model diagramLayout, MRID diagramMRID) {
+        var query =
+                QUERY_PREFIXES
+                        + """
+                  SELECT ?gluePointMRID ?ioMRID
+                  WHERE {
+                      ?doMRID rdf:type cim:DiagramObject ;
+                            cim:DiagramObject.DiagramObjectStyle ?styleMRID ;
+                            cim:DiagramObject.Diagram ?diagramMRID ;
+                            cim:DiagramObject.IdentifiedObject ?ioMRID .
+
+                      ?dopMRID rdf:type cim:DiagramObjectPoint ;
+                            cim:DiagramObjectPoint.DiagramObject ?doMRID ;
+                            cim:DiagramObjectPoint.DiagramObjectGluePoint ?gluePointMRID .
+
+                      FILTER(STR(?diagramMRID) = "DIAGRAM_MRID")
+                      STYLE_FILTER
+                  }
+                  """
+                                .replace("DIAGRAM_MRID", diagramMRID.getFullMRID())
+                                .replace(
+                                        "STYLE_FILTER",
+                                        styleFilter(true, DiagramObjectStyle.CLASS));
+
+        try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
+            var results = qexec.execSelect();
+            Map<MRID, MRID> classesByGluePoint = new HashMap<>();
+            while (results.hasNext()) {
+                var parser = new DLQuerySolutionParser(results.next());
+                classesByGluePoint.putIfAbsent(
+                        parser.getMRID(DLQueryVars.GLUE_POINT_MRID),
+                        parser.getMRID(DLQueryVars.IO_MRID));
+            }
+            return classesByGluePoint;
         }
     }
 

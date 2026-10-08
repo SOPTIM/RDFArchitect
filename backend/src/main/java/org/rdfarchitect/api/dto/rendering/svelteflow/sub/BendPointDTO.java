@@ -25,7 +25,14 @@ import lombok.Data;
 @Builder
 public class BendPointDTO {
 
+    /** The mRID of the point, sent back unchanged when the layout of the edge is saved. */
     private String id;
+
     private PositionDTO position;
-    private boolean isEndPoint;
+
+    /**
+     * The side of an end point, {@code source} or {@code target}: the point is glued to the border
+     * of the source or the target class of the edge. Null for a bend point.
+     */
+    private String side;
 }

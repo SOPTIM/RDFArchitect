@@ -166,6 +166,7 @@
     let isWorkspaceReadOnly = $state();
     let containerEl;
     let lastCursorPosition = null;
+    let deleteBrushActive = false;
 
     let lastSelectedDiagramId = null;
 
@@ -281,6 +282,8 @@
         el.addEventListener("click", onContainerClick, true);
         el.addEventListener("contextmenu", onContainerContextMenu, true);
         window.addEventListener("pagehide", saveEdgeLayoutsOnPageHide);
+        window.addEventListener("keyup", stopDeleteBrush);
+        window.addEventListener("blur", stopDeleteBrush);
 
         const unregisterAddBendPoint = shortcutStore.register(
             "diagram-add-bend-point-at-cursor",
@@ -299,6 +302,8 @@
             el.removeEventListener("click", onContainerClick, true);
             el.removeEventListener("contextmenu", onContainerContextMenu, true);
             window.removeEventListener("pagehide", saveEdgeLayoutsOnPageHide);
+            window.removeEventListener("keyup", stopDeleteBrush);
+            window.removeEventListener("blur", stopDeleteBrush);
             unregisterAddBendPoint();
             unregisterDeleteBendPoint();
         };
@@ -327,6 +332,13 @@
 
     function onContainerPointerMove(event) {
         lastCursorPosition = { x: event.clientX, y: event.clientY };
+        if (!deleteBrushActive) {
+            return;
+        }
+        stopDeleteBrush(event);
+        if (deleteBrushActive && !isWorkspaceReadOnly) {
+            deleteBendPointUnderCursor();
+        }
     }
 
     function onContainerClick(event) {
@@ -937,10 +949,12 @@
         return { flowPosition, hitRadius: baseHitRadiusPx / (zoom || 1) };
     }
 
-    // Ctrl+Q: creates a bend point on the edge closest to the cursor. Selects that
-    // edge if it was not selected yet.
-    function addBendPointAtCursor() {
-        if (isWorkspaceReadOnly) return;
+    /**
+     * Ctrl+Q: creates a bend point on the edge closest to the cursor. Selects that edge if it was
+     * not selected yet. Holding the keys creates no further points, one press creates one point.
+     */
+    function addBendPointAtCursor(event) {
+        if (isWorkspaceReadOnly || event?.repeat) return;
         const context = cursorFlowContext(
             EDGE_INTERACTION_CONFIG.edgeHitRadiusPx,
         );
@@ -958,10 +972,33 @@
         });
     }
 
-    // Ctrl+Shift+Q: deletes the bend or end point under the cursor, across all
-    // edges. Selects the affected edge if it was not selected yet.
+    /**
+     * Ctrl+Shift+Q: deletes the bend or end point under the cursor. While the keys are held it
+     * works like a brush: every point the cursor passes over is deleted, until Q, Ctrl or Shift is
+     * released.
+     */
     function deleteBendPointAtCursor() {
         if (isWorkspaceReadOnly) return;
+        deleteBrushActive = true;
+        deleteBendPointUnderCursor();
+    }
+
+    function stopDeleteBrush(event) {
+        if (
+            event.type === "blur" ||
+            event.code === "KeyQ" ||
+            !event.shiftKey ||
+            !(event.ctrlKey || event.metaKey)
+        ) {
+            deleteBrushActive = false;
+        }
+    }
+
+    /**
+     * Deletes the bend or end point under the cursor, across all edges. Selects the affected edge
+     * if it was not selected yet.
+     */
+    function deleteBendPointUnderCursor() {
         const context = cursorFlowContext(
             EDGE_INTERACTION_CONFIG.pointHitRadiusPx,
         );
@@ -1029,9 +1066,10 @@
         }
     }
 
-    // Applies ELK's computed routing to the association edges. Source/target
-    // points become sided end points, interior points become bend points.
-    // Inheritance edges are skipped until they move to the shared routing.
+    /**
+     * Applies the routing ELK computed to the inheritance and association edges. Source and
+     * target points become sided end points, interior points become bend points.
+     */
     function applyLayoutedEdges(layoutedEdges) {
         const tolerance = EDGE_INTERACTION_CONFIG.collinearBendPointTolerancePx;
         edges = edges.map(edge => {

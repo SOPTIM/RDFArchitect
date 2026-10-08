@@ -25,12 +25,12 @@ import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectGluePoint;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
+import org.rdfarchitect.dl.data.dto.relations.EdgeKey;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
-import org.rdfarchitect.services.dl.update.edgelayout.EdgeKey;
 
 import java.util.Set;
 import java.util.UUID;
