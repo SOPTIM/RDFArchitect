@@ -18,7 +18,10 @@
 import { flushSync, mount, unmount } from "svelte";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { ConformanceView } from "$lib/shacl/conformanceState.svelte.js";
+import {
+    ConformanceView,
+    foldFindings,
+} from "$lib/shacl/conformanceState.svelte.js";
 
 import ConformanceReportView from "../../src/routes/shacl/workbench/ConformanceReportView.svelte";
 
@@ -88,6 +91,44 @@ function viewFor(server) {
 vi.mock("$lib/config/runtime", () => ({
     PUBLIC_BACKEND_URL: "http://backend.test",
 }));
+
+describe("foldFindings", () => {
+    const inherited = targetClass => ({
+        kind: "DIFFERENT",
+        targetClass: `${CIM}${targetClass}`,
+        path: `${CIM}RotatingMachineDynamics.damping`,
+        schemaSays: "1..1, xsd:float",
+        documentSays: "1..1",
+        message: "Both can be satisfied, but they do not say the same thing.",
+        statedIn: ["official.ttl"],
+    });
+
+    test("folds one rule stated on many subclasses into one finding", () => {
+        const folded = foldFindings([
+            inherited("SynchronousMachineSimplified"),
+            inherited("AsynchronousMachineUserDefined"),
+            inherited("SynchronousMachineDetailed"),
+        ]);
+
+        expect(folded).toHaveLength(1);
+        expect(folded[0].targetClasses).toEqual([
+            `${CIM}SynchronousMachineSimplified`,
+            `${CIM}AsynchronousMachineUserDefined`,
+            `${CIM}SynchronousMachineDetailed`,
+        ]);
+    });
+
+    test("keeps apart findings that would read differently", () => {
+        const folded = foldFindings([
+            inherited("A"),
+            { ...inherited("B"), documentSays: "0..1" },
+            { ...inherited("C"), statedIn: ["other.ttl"] },
+            { ...inherited("D"), kind: "CONTRADICTED" },
+        ]);
+
+        expect(folded).toHaveLength(4);
+    });
+});
 
 describe("ConformanceView", () => {
     let server;
@@ -187,6 +228,25 @@ describe("ConformanceReportView", () => {
         });
 
         expect(view.textContent).toContain("Read together: official.ttl");
+    });
+
+    test("lists a rule stated on many classes once, naming them", () => {
+        const many = ["A", "B", "C", "D", "E"].map(name => ({
+            ...REPORT.findings[1],
+            targetClass: `${CIM}${name}`,
+        }));
+        const view = render({
+            conformance: conformance({
+                report: { ...REPORT, findings: many },
+            }),
+            documentId: DOCUMENT,
+            prefixes: { cim: CIM },
+        });
+
+        expect(view.querySelectorAll("li")).toHaveLength(1);
+        expect(view.textContent).toContain(
+            "cim:A, cim:B, cim:C and 2 more · cim:ACLineSegment.r",
+        );
     });
 
     test("offers the comparison before it has been run", () => {

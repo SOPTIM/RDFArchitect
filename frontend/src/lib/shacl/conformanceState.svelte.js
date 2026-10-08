@@ -73,6 +73,40 @@ export function conformanceKind(kind) {
 }
 
 /**
+ * Folds findings that say the same thing about the same property into one, naming every class.
+ *
+ * Official files state an inherited property again on every concrete subclass, so one rule the
+ * schema puts on `AsynchronousMachineDynamics` came back as 22 identical findings, one per subclass,
+ * burying the other findings under a single question. They are kept apart by kind, property,
+ * both readings and the documents stating them: only findings that would read alike are merged.
+ *
+ * @returns {Array<object>} findings in their first-seen order, each with `targetClasses`
+ */
+export function foldFindings(findings) {
+    const folded = new Map();
+    for (const finding of findings ?? []) {
+        const key = JSON.stringify([
+            finding.kind,
+            finding.path,
+            finding.message,
+            finding.schemaSays,
+            finding.documentSays,
+            finding.statedIn ?? [],
+        ]);
+        const existing = folded.get(key);
+        if (existing) {
+            existing.targetClasses.push(finding.targetClass);
+        } else {
+            folded.set(key, {
+                ...finding,
+                targetClasses: [finding.targetClass],
+            });
+        }
+    }
+    return [...folded.values()];
+}
+
+/**
  * Whether the graph's constraints still agree with the schema they describe.
  *
  * The question is about the graph, not about one file. Official constraints arrive split across

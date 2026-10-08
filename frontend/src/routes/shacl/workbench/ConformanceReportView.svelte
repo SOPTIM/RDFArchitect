@@ -43,6 +43,7 @@
     import {
         conformanceKind,
         conformanceVerdict,
+        foldFindings,
     } from "$lib/shacl/conformanceState.svelte.js";
     import { writeTerm } from "$lib/shacl/turtleTerms.js";
 
@@ -101,6 +102,9 @@
         },
     };
 
+    /** How many classes a folded finding is about, once listed in full, then counted. */
+    const CLASSES_SHOWN = 3;
+
     const report = $derived(
         conformance.reportedOn === documentId ? conformance.report : null,
     );
@@ -130,10 +134,22 @@
             }
             byKind.get(finding.kind).push(finding);
         }
-        return [...byKind.entries()].sort(
-            (a, b) => conformanceKind(a[0]).order - conformanceKind(b[0]).order,
-        );
+        return [...byKind.entries()]
+            .map(([kind, findings]) => [kind, foldFindings(findings)])
+            .sort(
+                (a, b) =>
+                    conformanceKind(a[0]).order - conformanceKind(b[0]).order,
+            );
     });
+
+    function classesOf(finding) {
+        const names = finding.targetClasses.map(short);
+        if (names.length <= CLASSES_SHOWN) {
+            return names.join(", ");
+        }
+        const more = names.length - CLASSES_SHOWN;
+        return `${names.slice(0, CLASSES_SHOWN).join(", ")} and ${more} more`;
+    }
 
     function short(iri) {
         if (!iri) {
@@ -258,14 +274,17 @@
                                 </span>
                             </h3>
                             <ul class="flex flex-col gap-2">
-                                {#each findings as finding (finding.targetClass + finding.path)}
+                                {#each findings as finding, index (index)}
                                     <li
                                         class={`rounded border p-3 ${style.card}`}
                                     >
                                         <p
                                             class="text-default-text font-mono text-xs break-all"
+                                            title={finding.targetClasses
+                                                .map(short)
+                                                .join("\n")}
                                         >
-                                            {short(finding.targetClass)} · {short(
+                                            {classesOf(finding)} · {short(
                                                 finding.path,
                                             )}
                                         </p>
