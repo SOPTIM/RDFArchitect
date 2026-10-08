@@ -49,11 +49,11 @@ public class EdgeLayoutDTO {
     @JsonProperty("targetObject")
     private UUID targetObject;
 
-    /** The class the edge starts at, the first point is glued to it if it is an end point. */
+    /** The class the edge starts at, the end point on the source side is glued to it. */
     @JsonProperty("sourceClass")
     private UUID sourceClass;
 
-    /** The class the edge ends at, the last point is glued to it if it is an end point. */
+    /** The class the edge ends at, the end point on the target side is glued to it. */
     @JsonProperty("targetClass")
     private UUID targetClass;
 
