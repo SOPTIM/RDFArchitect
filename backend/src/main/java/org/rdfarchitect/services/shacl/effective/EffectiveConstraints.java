@@ -310,8 +310,24 @@ public final class EffectiveConstraints {
 
     private static String term(String iri, PrefixMapping prefixes) {
         var shortened = prefixes.shortForm(iri);
+        if (shortened.equals(iri)) {
+            shortened = STANDARD.shortForm(iri);
+        }
         return shortened.equals(iri) ? "<" + iri + ">" : shortened;
     }
+
+    /**
+     * The vocabularies a constraint is written in, for a workspace whose prefixes do not bind them.
+     * Most do not: a schema declares {@code cim:}, not {@code sh:} or {@code xsd:}, and {@code
+     * <http://www.w3.org/ns/shacl#IRI>} reads far worse than {@code sh:IRI}.
+     */
+    private static final PrefixMapping STANDARD =
+            PrefixMapping.Factory.create()
+                    .setNsPrefix("sh", "http://www.w3.org/ns/shacl#")
+                    .setNsPrefix("xsd", "http://www.w3.org/2001/XMLSchema#")
+                    .setNsPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+                    .setNsPrefix("rdfs", "http://www.w3.org/2000/01/rdf-schema#")
+                    .lock();
 
     private static Constraint read(Graph shapes, Node property) {
         var in = listOf(shapes, property, Shacl.IN);
