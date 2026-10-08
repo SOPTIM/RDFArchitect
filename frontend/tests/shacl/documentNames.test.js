@@ -17,7 +17,10 @@
 
 import { describe, expect, test } from "vitest";
 
-import { uniqueDocumentName } from "$lib/shacl/documentNames.js";
+import {
+    downloadNameOf,
+    uniqueDocumentName,
+} from "$lib/shacl/documentNames.js";
 
 describe("uniqueDocumentName", () => {
     test("keeps the file's own name when nothing has taken it", () => {
@@ -44,7 +47,33 @@ describe("uniqueDocumentName", () => {
         ).toBe("eq.ttl (4)");
     });
 
+    test("treats a name differing only in case as taken, as the server does", () => {
+        expect(uniqueDocumentName(["EQ.ttl"], "eq.TTL")).toBe("eq.TTL (2)");
+        expect(uniqueDocumentName(["eq.ttl", "EQ.TTL (2)"], "eq.ttl")).toBe(
+            "eq.ttl (3)",
+        );
+    });
+
     test("copes with no documents at all", () => {
         expect(uniqueDocumentName(undefined, "eq.ttl")).toBe("eq.ttl");
+    });
+});
+
+describe("downloadNameOf", () => {
+    test("keeps a Turtle file's name", () => {
+        expect(downloadNameOf("EQ-Con-Simple-SHACL.ttl")).toBe(
+            "EQ-Con-Simple-SHACL.ttl",
+        );
+    });
+
+    test("names a converted import as the Turtle it now is", () => {
+        expect(downloadNameOf("61970-301_EQ-Con-Complex-SHACL.rdf")).toBe(
+            "61970-301_EQ-Con-Complex-SHACL.ttl",
+        );
+        expect(downloadNameOf("shapes.NT")).toBe("shapes.ttl");
+    });
+
+    test("adds the extension to a name without one", () => {
+        expect(downloadNameOf("my rules")).toBe("my rules.ttl");
     });
 });

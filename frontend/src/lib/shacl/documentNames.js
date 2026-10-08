@@ -24,15 +24,43 @@
  * be distinguished rather than rejected.
  */
 
-/** The wanted name, or the first free `name (n)` after it. */
+/**
+ * The wanted name, or the first free `name (n)` after it.
+ *
+ * Compared without regard to case, as the backend compares them: `EQ.ttl` and `eq.ttl` read as one
+ * name and collide as file names on export, so the server refuses the second, and a name this
+ * offered as free was answered with a conflict.
+ */
+
+/** Extensions of the RDF syntaxes an import converts to Turtle. */
+const CONVERTED_EXTENSION = /\.(rdf|xml|owl|nt)$/i;
+
+/** Extensions Turtle is already written under. */
+const TURTLE_EXTENSION = /\.(ttl|shacl|n3)$/i;
 export function uniqueDocumentName(existingNames, wanted) {
-    const taken = new Set(existingNames ?? []);
-    if (!taken.has(wanted)) {
+    const taken = new Set(
+        (existingNames ?? []).map(name => name.toLowerCase()),
+    );
+    const isTaken = name => taken.has(name.toLowerCase());
+    if (!isTaken(wanted)) {
         return wanted;
     }
     let suffix = 2;
-    while (taken.has(`${wanted} (${suffix})`)) {
+    while (isTaken(`${wanted} (${suffix})`)) {
         suffix += 1;
     }
     return `${wanted} (${suffix})`;
+}
+
+/**
+ * The file name a document downloads as.
+ *
+ * What is stored is always Turtle — an RDF/XML or N-Triples import is converted once, on the way
+ * in — so a document named after such a file is saved as `.ttl` rather than as `.rdf.ttl`.
+ */
+export function downloadNameOf(name) {
+    if (TURTLE_EXTENSION.test(name)) {
+        return name;
+    }
+    return `${name.replace(CONVERTED_EXTENSION, "")}.ttl`;
 }

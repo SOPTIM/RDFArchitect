@@ -36,7 +36,10 @@
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { uniqueDocumentName } from "$lib/shacl/documentNames.js";
+    import {
+        downloadNameOf,
+        uniqueDocumentName,
+    } from "$lib/shacl/documentNames.js";
     import {
         severityMeta,
         summarise,
@@ -151,10 +154,11 @@
             );
             return;
         }
-        const name = /\.(ttl|shacl|n3)$/i.test(document.name)
-            ? document.name
-            : `${document.name}${TURTLE.fileExtension}`;
-        saveFile(new Blob([text], { type: TURTLE.mimeType }), name, TURTLE);
+        saveFile(
+            new Blob([text], { type: TURTLE.mimeType }),
+            downloadNameOf(document.name),
+            TURTLE,
+        );
     }
 
     function askDelete(document) {
