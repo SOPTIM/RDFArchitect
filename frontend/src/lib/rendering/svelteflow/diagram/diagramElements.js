@@ -42,11 +42,9 @@ function decorateEdge(edge) {
 }
 
 /**
- * Normalizes edge data coming from the backend. Bend points arrive with a nested
- * position ({ id, position: { x, y, z }, isEndPoint }) and are flattened to the
- * shape used throughout the frontend ({ id, x, y, isEndPoint }). The end point
- * flag may arrive as `isEndPoint` or, depending on Jackson serialization, as
- * `endPoint`; it is preserved so downstream isEndPoint checks keep working.
+ * Normalizes edge data coming from the backend. Points arrive with a nested
+ * position ({ id, position: { x, y, z }, side }) and are flattened to the shape
+ * used throughout the frontend, see {@link flattenBendPoint}.
  */
 function normalizeEdgeData(data) {
     if (!data) {
@@ -62,19 +60,23 @@ function normalizeEdgeData(data) {
 }
 
 /**
- * Flattens a single bend point from the backend's nested position shape to the
- * flat { id, x, y, isEndPoint } shape. Points that are already flat (e.g. created
- * in the frontend during interaction) are returned unchanged.
+ * Flattens a single point from the backend's nested position shape to the shape
+ * the frontend creates points in: { id, x, y } for a bend point and
+ * { id, x, y, isEndPoint, side } for an end point, which the backend marks with
+ * the side of the class it is glued to. Points that are already flat (e.g.
+ * created in the frontend during interaction) are returned unchanged.
  */
 function flattenBendPoint(point) {
     if (!point || !point.position) {
         return point;
     }
-    const isEndPoint = point.isEndPoint === true || point.endPoint === true;
-    return {
+    const flatPoint = {
         id: point.id,
         x: point.position.x,
         y: point.position.y,
-        isEndPoint,
     };
+    if (!point.side) {
+        return flatPoint;
+    }
+    return { ...flatPoint, isEndPoint: true, side: point.side };
 }

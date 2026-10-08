@@ -20,6 +20,7 @@ package org.rdfarchitect.services.dl.update.edgelayout;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.dl.data.dto.relations.EdgeKey;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;

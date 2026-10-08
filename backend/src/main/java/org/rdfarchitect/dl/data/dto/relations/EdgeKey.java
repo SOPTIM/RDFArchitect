@@ -15,10 +15,9 @@
  *
  */
 
-package org.rdfarchitect.services.dl.update.edgelayout;
+package org.rdfarchitect.dl.data.dto.relations;
 
 import org.rdfarchitect.dl.data.dto.DiagramObject;
-import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 
 import java.util.UUID;
 

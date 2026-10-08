@@ -29,6 +29,7 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.SuperClassDTO;
+import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;
@@ -324,18 +325,20 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         return new ArrayList<>(refs.values());
     }
 
-    /*TODO RENDERING: SEHR WICHTIG: BEND POINTS AUCH IN RENDERING VON MERGED VIEW UND CO EINBAUEN
-    merged view benutzt iwie extra rendering, muss das separat beachten*/
+    /**
+     * Assembles the inheritance and association edges between the merged classes, with the points
+     * stored for them in the diagram under their merged UUIDs.
+     */
     private List<EdgeDTO> assembleMergedEdges(
             Map<String, MergedFacadeClass> mergedClasses, RenderingLayoutData layoutData) {
         var edges = new ArrayList<EdgeDTO>();
-        edges.addAll(assembleMergedInheritanceEdges(mergedClasses));
+        edges.addAll(assembleMergedInheritanceEdges(mergedClasses, layoutData));
         edges.addAll(assembleMergedAssociationEdges(mergedClasses, layoutData));
         return edges;
     }
 
     private List<EdgeDTO> assembleMergedInheritanceEdges(
-            Map<String, MergedFacadeClass> mergedClasses) {
+            Map<String, MergedFacadeClass> mergedClasses, RenderingLayoutData layoutData) {
         var edges = new ArrayList<EdgeDTO>();
         for (var merged : mergedClasses.values()) {
             for (var ref : collectSuperClassRefs(merged)) {
@@ -353,6 +356,14 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                         EdgeDataDTO.builder()
                                                 .sourceObject(merged.uuid())
                                                 .targetObject(superClass.uuid())
+                                                .bendPoints(
+                                                        SvelteFlowEdgePoints.forEdge(
+                                                                layoutData,
+                                                                DiagramObjectStyle.INHERITANCE,
+                                                                merged.uuid(),
+                                                                superClass.uuid(),
+                                                                merged.uuid(),
+                                                                superClass.uuid()))
                                                 .build())
                                 .build());
             }
@@ -391,14 +402,13 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                             association),
                                     layoutData);
 
+                    var sourceObject =
+                            CrossProfileUtils.mergedUuid(association.getUri().toString());
+                    var targetObject = CrossProfileUtils.mergedUuid(inverse.getUri().toString());
                     var edgeData =
                             EdgeDataDTO.builder()
-                                    .sourceObject(
-                                            CrossProfileUtils.mergedUuid(
-                                                    association.getUri().toString()))
-                                    .targetObject(
-                                            CrossProfileUtils.mergedUuid(
-                                                    inverse.getUri().toString()))
+                                    .sourceObject(sourceObject)
+                                    .targetObject(targetObject)
                                     .sourceMultiplicityLabel(labels.sourceMultiplicityLabel())
                                     .targetMultiplicityLabel(labels.targetMultiplicityLabel())
                                     .sourceAssociationLabel(labels.sourceAssociationLabel())
@@ -411,6 +421,14 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                     .graphUri(source.graphUri())
                                     .graphKeyword(source.keyword())
                                     .color(source.color())
+                                    .bendPoints(
+                                            SvelteFlowEdgePoints.forEdge(
+                                                    layoutData,
+                                                    DiagramObjectStyle.ASSOCIATION,
+                                                    sourceObject,
+                                                    targetObject,
+                                                    merged.uuid(),
+                                                    target.uuid()))
                                     .build();
                     edges.add(
                             EdgeDTO.builder()
@@ -658,9 +676,10 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         return superClassDTOs;
     }
 
-    // TODO RENDERING: SEHR WICHTIG: später an DL bringen, dummy daten entfernen, javadoc anpassen
-    // TODO RENDERING: hier später anpassen iwie dass er die layoutdaten mitbekommt, und iwie
-    // für beide inheritance und assoc edges vereinheitlichen idfk
+    /**
+     * Assembles the inheritance and association edges between the rendered classes, with the points
+     * stored for them in the diagram, see {@link SvelteFlowEdgePoints}.
+     */
     private List<EdgeDTO> assembleEdgeDTOList(RenderContext renderContext) {
         List<EdgeDTO> edgeDTOList = new ArrayList<>();
         edgeDTOList.addAll(assembleInheritanceEdgeDTOList(renderContext));
@@ -690,6 +709,14 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                         EdgeDataDTO.builder()
                                                 .sourceObject(cimClass.getUuid())
                                                 .targetObject(superClass.getUuid())
+                                                .bendPoints(
+                                                        SvelteFlowEdgePoints.forEdge(
+                                                                renderContext.layoutingData(),
+                                                                DiagramObjectStyle.INHERITANCE,
+                                                                cimClass.getUuid(),
+                                                                superClass.getUuid(),
+                                                                cimClass.getUuid(),
+                                                                superClass.getUuid()))
                                                 .build())
                                 .build());
             }
@@ -747,6 +774,14 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                         .targetAssociationLabel(labels.targetAssociationLabel())
                         .useToAssociation(getAssociationUsedValue(from.getAssociationUsed()))
                         .useFromAssociation(getAssociationUsedValue(to.getAssociationUsed()))
+                        .bendPoints(
+                                SvelteFlowEdgePoints.forEdge(
+                                        layoutData,
+                                        DiagramObjectStyle.ASSOCIATION,
+                                        from.getUuid(),
+                                        to.getUuid(),
+                                        sourceClass.getUuid(),
+                                        from.getRange().getUuid()))
                         .build();
 
         return EdgeDTO.builder()

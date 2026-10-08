@@ -61,6 +61,8 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
                                 diagramLayoutModel, resolvedDiagramId))
                 .labelLayoutingData(
                         DLObjectFetcher.fetchLabelPositions(diagramLayoutModel, resolvedDiagramId))
+                .edgeLayoutingData(
+                        DLObjectFetcher.fetchEdgePoints(diagramLayoutModel, resolvedDiagramId))
                 .build();
     }
 }

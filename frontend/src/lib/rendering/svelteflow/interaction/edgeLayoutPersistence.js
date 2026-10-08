@@ -22,7 +22,12 @@ import {
     updateEdgeLayouts,
 } from "$lib/api/generated/index.ts";
 
-import { getSourceEndPoint, getTargetEndPoint } from "./bendPointOperations.js";
+import {
+    dissolveCollinearBendPoints,
+    getSourceEndPoint,
+    getTargetEndPoint,
+} from "./bendPointOperations.js";
+import { EDGE_INTERACTION_CONFIG } from "./edgeInteractionConfig.js";
 
 /**
  * The layout of an edge as the backend stores it: the full, ordered list of its points from the
@@ -123,6 +128,9 @@ function requestDiagramLayout(target, diagramLayout) {
  * While classes are dragged, the end points of their edges move along; those edges are saved
  * together with the classes once the drag ends.
  *
+ * Before an edge is saved, its unnecessary bend points are dissolved, in the shown edge as well, so
+ * a bend point that was created but never moved off the line is not stored.
+ *
  * Changes are detected by the identity of the points array of an edge, which every edit replaces.
  * The requests of an edge are sent one after another, so the mRIDs the backend returns for new
  * points are known before the edge is sent again.
@@ -211,7 +219,7 @@ export class EdgeLayoutPersistence {
                 [...this.#unsavedEdges]
                     .filter(([, unsaved]) => unsaved.target === this.#target)
                     .map(([edgeId]) => edgeId),
-            ).map(unsaved => unsaved.edge);
+            ).map(unsaved => this.#withoutUnnecessaryBendPoints(unsaved.edge));
         }
         if (
             this.#isReadOnly() ||
@@ -285,7 +293,9 @@ export class EdgeLayoutPersistence {
             if (!edgesByTarget.has(target)) {
                 edgesByTarget.set(target, []);
             }
-            edgesByTarget.get(target).push(edge);
+            edgesByTarget
+                .get(target)
+                .push(this.#withoutUnnecessaryBendPoints(edge));
         }
         for (const [target, edges] of edgesByTarget) {
             const send = () =>
@@ -302,6 +312,42 @@ export class EdgeLayoutPersistence {
                     send,
                 );
             }
+        }
+    }
+
+    /**
+     * The edge without its unnecessary bend points. If the edge is still shown with the points it
+     * is saved with, the shown edge loses them too.
+     */
+    #withoutUnnecessaryBendPoints(edge) {
+        const points = edge.data?.bendPoints ?? [];
+        const dissolved = dissolveCollinearBendPoints(
+            points,
+            EDGE_INTERACTION_CONFIG.collinearBendPointTolerancePx,
+        );
+        if (dissolved === points) {
+            return edge;
+        }
+        if (this.#savedPoints.get(edge.id) === points) {
+            this.#savedPoints.set(edge.id, dissolved);
+        }
+        if (!this.#disposed) {
+            this.#replaceShownPoints(edge.id, points, dissolved);
+        }
+        return { ...edge, data: { ...edge.data, bendPoints: dissolved } };
+    }
+
+    #replaceShownPoints(edgeId, points, nextPoints) {
+        let changed = false;
+        const edges = this.#getEdges().map(edge => {
+            if (edge.id !== edgeId || edge.data?.bendPoints !== points) {
+                return edge;
+            }
+            changed = true;
+            return { ...edge, data: { ...edge.data, bendPoints: nextPoints } };
+        });
+        if (changed) {
+            this.#setEdges(edges);
         }
     }
 
