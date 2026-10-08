@@ -65,10 +65,14 @@ public class ShapesDocument {
      * @param sourceFileName file the document was uploaded from, or {@code null}
      * @param enabled whether the shapes take part in validation and combined export
      * @param order position in the graph's document list, and the merge order for export
-     * @param rawText verbatim source text, or {@code null} when only the triples are known
+     * @param rawText verbatim source text, or {@code null} when only the triples are known; kept
+     *     deflated, since every version in the history holds one
      */
     public record State(
-            String name, String sourceFileName, boolean enabled, int order, String rawText) {}
+            String name, String sourceFileName, boolean enabled, int order, StoredText rawText) {}
+
+    /** A version's text, inflated, and which stored text it came from. */
+    private record Inflated(StoredText source, String text) {}
 
     @Getter private final UUID id;
 
@@ -78,6 +82,13 @@ public class ShapesDocument {
     @Getter private final RDFGraphDelta graph;
 
     private final VersionedValue<State> state;
+
+    /**
+     * The text of the version last read or written. Reads far outnumber versions — validation, the
+     * editor and the class dialogs all ask for it — so the current text is inflated once rather
+     * than on every read. Only this one copy is kept whole; the history holds deflated text.
+     */
+    private volatile Inflated inflated;
 
     /** A document outside any context, whose metadata is not versioned. */
     public ShapesDocument(UUID id, String name, Origin origin, RDFGraphDelta graph) {
@@ -121,7 +132,17 @@ public class ShapesDocument {
 
     /** Verbatim source text; see the class comment on why this is authoritative. */
     public String getRawText() {
-        return state.get().rawText();
+        var stored = state.get().rawText();
+        if (stored == null) {
+            return null;
+        }
+        var cached = inflated;
+        if (cached != null && cached.source() == stored) {
+            return cached.text();
+        }
+        var text = stored.text();
+        inflated = new Inflated(stored, text);
+        return text;
     }
 
     public void setName(String name) {
@@ -146,6 +167,10 @@ public class ShapesDocument {
 
     public void setRawText(String rawText) {
         var s = state.get();
-        state.set(new State(s.name(), s.sourceFileName(), s.enabled(), s.order(), rawText));
+        var stored = StoredText.of(rawText);
+        state.set(new State(s.name(), s.sourceFileName(), s.enabled(), s.order(), stored));
+        if (stored != null) {
+            inflated = new Inflated(stored, rawText);
+        }
     }
 }
