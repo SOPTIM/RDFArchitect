@@ -57,8 +57,12 @@ public class SHACLCustomShapeRESTController {
     @Operation(
             summary = "Replace/Insert shacl shape",
             description =
-                    "Replace or insert a shacl shape from a shacl graph with the given triples in a valid turtle syntax.",
+                    "Replace or insert a shacl shape in the graph's default constraints document. "
+                            + "Superseded by PUT /shacl/documents/{documentId}: this rewrites the "
+                            + "default document's text from its triples, so its comments and "
+                            + "ordering are lost.",
             tags = {"shacl"},
+            deprecated = true,
             responses = {@ApiResponse(responseCode = "200")})
     // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
     // body would reach Jena with its surrounding quotes and fail to parse.
@@ -108,8 +112,11 @@ public class SHACLCustomShapeRESTController {
             summary = "delete a shacl shape",
             description =
                     "Delete a shacl shape from the graph's default constraints document. Shapes in "
-                            + "other documents are edited through /shacl/documents/{documentId}.",
+                            + "other documents are edited through /shacl/documents/{documentId}. "
+                            + "Superseded by PUT /shacl/documents/{documentId}, like the other "
+                            + "/shacl/custom writes.",
             tags = {"shacl"},
+            deprecated = true,
             responses = {
                 @ApiResponse(responseCode = "200"),
                 @ApiResponse(

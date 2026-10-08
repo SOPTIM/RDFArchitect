@@ -8418,7 +8418,8 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom/{shaclShapeURI}" : {
       "delete" : {
-        "description" : "Delete a shacl shape from the graph's default constraints document. Shapes in other documents are edited through /shacl/documents/{documentId}.",
+        "deprecated" : true,
+        "description" : "Delete a shacl shape from the graph's default constraints document. Shapes in other documents are edited through /shacl/documents/{documentId}. Superseded by PUT /shacl/documents/{documentId}, like the other /shacl/custom writes.",
         "operationId" : "deleteShape",
         "parameters" : [
           {
@@ -8487,7 +8488,8 @@
         ]
       },
       "put" : {
-        "description" : "Replace or insert a shacl shape from a shacl graph with the given triples in a valid turtle syntax.",
+        "deprecated" : true,
+        "description" : "Replace or insert a shacl shape in the graph's default constraints document. Superseded by PUT /shacl/documents/{documentId}: this rewrites the default document's text from its triples, so its comments and ordering are lost.",
         "operationId" : "replaceShape",
         "parameters" : [
           {
