@@ -400,14 +400,12 @@ class EdgeLayoutConsistencyTest {
         return CrossProfileUtils.mergedUuid(uri);
     }
 
+    /** The key of a rendered edge, as the frontend sends it back when saving the edge. */
     private static EdgeKey keyOf(EdgeDTO edge) {
-        if ("inheritance".equals(edge.getType())) {
-            return EdgeKey.inheritance(edge.getSource(), edge.getTarget());
-        }
-        var data = edge.getData();
-        return EdgeKey.association(
-                data.getTargetMultiplicityLabel().getIdentifiedObjectUUID(),
-                data.getSourceMultiplicityLabel().getIdentifiedObjectUUID());
+        return EdgeKey.of(
+                DiagramObjectStyle.byName(edge.getType()),
+                edge.getData().getSourceObject(),
+                edge.getData().getTargetObject());
     }
 
     private SvelteFlowDTO renderPackage(UUID packageUUID) {

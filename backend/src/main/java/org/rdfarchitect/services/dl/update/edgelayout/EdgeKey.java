@@ -57,6 +57,25 @@ public record EdgeKey(DiagramObjectStyle style, UUID identifiedObject, UUID othe
     }
 
     /**
+     * The key of an edge given by its type and the two identified objects it connects, in either
+     * order for associations.
+     *
+     * @param style {@link DiagramObjectStyle#INHERITANCE} or {@link DiagramObjectStyle#ASSOCIATION}
+     * @param sourceObject the sub class, or one of the association ends
+     * @param targetObject the super class, or the other association end
+     * @return the key, or null if the style is no edge style
+     */
+    public static EdgeKey of(DiagramObjectStyle style, UUID sourceObject, UUID targetObject) {
+        if (style == DiagramObjectStyle.INHERITANCE) {
+            return inheritance(sourceObject, targetObject);
+        }
+        if (style == DiagramObjectStyle.ASSOCIATION) {
+            return association(sourceObject, targetObject);
+        }
+        return null;
+    }
+
+    /**
      * The key of an edge diagram object as stored in the diagram layout.
      *
      * @param diagramObject an edge diagram object
@@ -69,13 +88,9 @@ public record EdgeKey(DiagramObjectStyle style, UUID identifiedObject, UUID othe
         if (identifiedObject == null || otherClass == null) {
             return null;
         }
-        var style = diagramObject.getBelongsToDiagramObjectStyle();
-        if (style == DiagramObjectStyle.INHERITANCE) {
-            return inheritance(identifiedObject.getUuid(), otherClass.getUuid());
-        }
-        if (style == DiagramObjectStyle.ASSOCIATION) {
-            return association(identifiedObject.getUuid(), otherClass.getUuid());
-        }
-        return null;
+        return of(
+                diagramObject.getBelongsToDiagramObjectStyle(),
+                identifiedObject.getUuid(),
+                otherClass.getUuid());
     }
 }
