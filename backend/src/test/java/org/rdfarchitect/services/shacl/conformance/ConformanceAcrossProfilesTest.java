@@ -82,20 +82,16 @@ class ConformanceAcrossProfilesTest {
         assertThat(report.getCompared()).isGreaterThan(600);
         assertThat(report.getContradictedCount()).isZero();
         assertThat(report.getDifferentCount()).isZero();
-        // What remains is not the schema failing to see a loaded class: NC files also target the
-        // CIM16 classes, for older data, and classes of NC profiles not loaded here.
+        // NC files also target the CIM16 classes, for older data. No schema here uses that
+        // namespace, so there is nothing to compare them with, and they are not reported as
+        // classes the schema is missing.
         assertThat(report.getFindings())
                 .filteredOn(finding -> finding.getKind() == ConformanceFinding.Kind.NOT_IN_SCHEMA)
                 .noneSatisfy(
                         finding ->
                                 assertThat(finding.getTargetClass())
                                         .startsWith("http://iec.ch/TC57/CIM100#"))
-                .filteredOn(finding -> finding.getTargetClass().contains("cim16"))
-                .isNotEmpty()
-                .allSatisfy(
-                        finding ->
-                                assertThat(finding.getMessage())
-                                        .contains("no schema in the workspace declares it"));
+                .noneSatisfy(finding -> assertThat(finding.getTargetClass()).contains("cim16"));
     }
 
     @Test

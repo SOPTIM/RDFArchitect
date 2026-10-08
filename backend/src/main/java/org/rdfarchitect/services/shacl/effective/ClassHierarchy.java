@@ -26,6 +26,7 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 
 import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -87,6 +88,11 @@ public final class ClassHierarchy {
     /** Whether the schema declares {@code name} as a class. */
     public boolean declares(String name) {
         return classes.contains(name);
+    }
+
+    /** Every class the schema declares. */
+    public Set<String> declared() {
+        return Collections.unmodifiableSet(classes);
     }
 
     /** Whether the schema declares any class at all, i.e. whether {@link #declares} can say no. */

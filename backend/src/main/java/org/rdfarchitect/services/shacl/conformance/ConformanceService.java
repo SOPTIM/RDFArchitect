@@ -177,10 +177,14 @@ public class ConformanceService implements ConformanceUseCase {
                             });
         }
 
-        var asserted = EffectiveConstraints.of(documentShapes);
+        var schema = impliedFor(graphIdentifier, targetedClasses(documentShapes.values()));
+        var asserted =
+                OtherVocabularies.leaveOut(
+                        EffectiveConstraints.of(documentShapes),
+                        schema.hierarchy(),
+                        schema.properties());
         var stated = new HashSet<>(asserted.constraints().keySet());
         stated.addAll(asserted.advisory().keySet());
-        var schema = impliedFor(graphIdentifier, targetedClasses(documentShapes.values()));
 
         // Everything the workspace implies for a stated key is compared; only this graph's own
         // properties are expected to be covered.
