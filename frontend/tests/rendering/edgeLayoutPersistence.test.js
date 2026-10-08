@@ -312,4 +312,21 @@ describe("EdgeLayoutPersistence", () => {
         persistence.track(state.edges);
         expect(updateEdgeLayouts).toHaveBeenCalledTimes(1);
     });
+
+    test("dissolves a bend point that was never moved off the line before saving", async () => {
+        const shown = edge("e");
+        const { state, persistence, show } = persistenceFor([shown]);
+        const source = createEndPoint(0, 0, "source");
+        const target = createEndPoint(100, 100, "target");
+
+        show([withPoints(shown, [source, createBendPoint(50, 52), target])]);
+        await settle();
+
+        expect(
+            sentEdges(updateEdgeLayouts)[0].points.map(point => point.id),
+        ).toEqual([source.id, target.id]);
+        expect(state.edges[0].data.bendPoints).toEqual([source, target]);
+        persistence.track(state.edges);
+        expect(updateEdgeLayouts).toHaveBeenCalledTimes(1);
+    });
 });
