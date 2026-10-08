@@ -21,7 +21,10 @@ import static org.rdfarchitect.database.snapshots.SnapshotUtils.constructSnapsho
 import static org.rdfarchitect.database.snapshots.SnapshotUtils.generateBase64Token;
 
 import org.apache.jena.graph.Graph;
+import org.apache.jena.query.Dataset;
+import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.rdfarchitect.database.DatabasePort;
@@ -40,15 +43,22 @@ import java.util.concurrent.ConcurrentMap;
  * {@link SnapshotPort} adapter that keeps snapshots in process memory instead of a Fuseki server.
  * Snapshots are shared across sessions (the map is global, unlike the session-scoped workspaces)
  * but do not survive a backend restart.
+ *
+ * <p>A snapshot is held in the layout {@link FusekiSnapshotAdapter} writes — each schema graph,
+ * plus the graphs {@link ShapesDocumentGraphs} makes of its constraints documents — and is loaded
+ * through the same path a Fuseki snapshot is, so both stores bring back the same workspace.
  */
 public class InMemorySnapshotAdapter implements SnapshotPort {
+
+    private static final String DEFAULT_GRAPH_NAME = "default";
 
     private final DatabasePort databasePort;
 
     private final ConcurrentMap<String, StoredSnapshot> snapshots = new ConcurrentHashMap<>();
 
+    /** Graphs by name, never handed out: every fetch loads copies, so one share serves many. */
     private record StoredSnapshot(
-            String snapshotName, Map<String, Graph> graphsByUri, PrefixMapping prefixMapping) {}
+            String snapshotName, Map<String, Graph> graphsByName, PrefixMapping prefixMapping) {}
 
     public InMemorySnapshotAdapter(DatabasePort databasePort) {
         this.databasePort = databasePort;
@@ -63,14 +73,14 @@ public class InMemorySnapshotAdapter implements SnapshotPort {
         var base64Token = generateBase64Token();
         var snapshotName = constructSnapshotName(datasetName, base64Token);
 
-        var graphsByUri = new LinkedHashMap<String, Graph>();
+        var graphsByName = new LinkedHashMap<String, Graph>();
         for (var graphUri : databasePort.listGraphUris(datasetName)) {
-            graphsByUri.put(graphUri, copyGraph(new GraphIdentifier(datasetName, graphUri)));
+            copyGraph(new GraphIdentifier(datasetName, graphUri), graphsByName);
         }
         var prefixMapping =
                 new PrefixMappingImpl().setNsPrefixes(databasePort.getPrefixMapping(datasetName));
 
-        snapshots.put(base64Token, new StoredSnapshot(snapshotName, graphsByUri, prefixMapping));
+        snapshots.put(base64Token, new StoredSnapshot(snapshotName, graphsByName, prefixMapping));
         return base64Token;
     }
 
@@ -80,12 +90,7 @@ public class InMemorySnapshotAdapter implements SnapshotPort {
         if (snapshot == null) {
             throw new SnapshotException("Snapshot with token " + base64Token + " does not exist");
         }
-        for (var entry : snapshot.graphsByUri().entrySet()) {
-            databasePort.createGraph(
-                    new GraphIdentifier(snapshot.snapshotName(), entry.getKey()),
-                    GraphUtils.deepCopy(entry.getValue()));
-        }
-        databasePort.setPrefixMapping(snapshot.snapshotName(), snapshot.prefixMapping());
+        databasePort.restoreDataset(snapshot.snapshotName(), datasetOf(snapshot));
     }
 
     @Override
@@ -93,11 +98,34 @@ public class InMemorySnapshotAdapter implements SnapshotPort {
         return snapshots.containsKey(base64Token);
     }
 
-    private Graph copyGraph(GraphIdentifier graphIdentifier) {
+    /** Adds the schema graph and its constraints documents, as copies, to {@code graphsByName}. */
+    private void copyGraph(GraphIdentifier graphIdentifier, Map<String, Graph> graphsByName) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             var copiedGraph = GraphUtils.deepCopy(ctx.getRdfGraph());
             GraphUtils.removeUUIDs(copiedGraph);
-            return copiedGraph;
+            graphsByName.put(graphIdentifier.graphUri(), copiedGraph);
+            graphsByName.putAll(
+                    ShapesDocumentGraphs.of(
+                            graphIdentifier.graphUri(), ctx.getShapesDocuments().values()));
         }
+    }
+
+    private static Dataset datasetOf(StoredSnapshot snapshot) {
+        var dataset = DatasetFactory.createGeneral();
+        dataset.getPrefixMapping().setNsPrefixes(snapshot.prefixMapping());
+        snapshot.graphsByName()
+                .forEach(
+                        (name, graph) -> {
+                            var model =
+                                    ModelFactory.createModelForGraph(GraphUtils.deepCopy(graph));
+                            // The dataset's default graph is listed by this name, and is read back
+                            // from the default model, as when a snapshot comes from Fuseki.
+                            if (DEFAULT_GRAPH_NAME.equals(name)) {
+                                dataset.setDefaultModel(model);
+                            } else {
+                                dataset.addNamedModel(name, model);
+                            }
+                        });
+        return dataset;
     }
 }

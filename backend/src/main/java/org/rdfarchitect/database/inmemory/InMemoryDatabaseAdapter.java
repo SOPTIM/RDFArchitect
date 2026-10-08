@@ -20,6 +20,7 @@ package org.rdfarchitect.database.inmemory;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
+import org.apache.jena.query.Dataset;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
@@ -131,6 +132,11 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     @Override
     public void fetchSnapshot(DatabaseConnection databaseConnection, String base64Token) {
         database.fetchSnapshot(databaseConnection, base64Token);
+    }
+
+    @Override
+    public void restoreDataset(String datasetName, Dataset dataset) {
+        database.restoreDataset(datasetName, dataset);
     }
 
     @Override

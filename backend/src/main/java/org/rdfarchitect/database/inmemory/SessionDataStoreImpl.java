@@ -347,9 +347,18 @@ public class SessionDataStoreImpl implements SessionDataStore {
         try {
             var matchingDataset = findSnapshotName(databaseConnection.listDatasets(), base64Token);
             if (matchingDataset != null) {
-                var dataset = fetchDataset(databaseConnection, matchingDataset);
-                graphCollections.put(matchingDataset, new GraphWithContextCollection(dataset));
+                restoreDataset(matchingDataset, fetchDataset(databaseConnection, matchingDataset));
             }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public void restoreDataset(String datasetName, Dataset dataset) {
+        lock.lock();
+        try {
+            graphCollections.put(datasetName, new GraphWithContextCollection(dataset));
         } finally {
             lock.unlock();
         }

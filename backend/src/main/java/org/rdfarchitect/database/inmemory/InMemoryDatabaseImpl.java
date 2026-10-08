@@ -20,6 +20,7 @@ package org.rdfarchitect.database.inmemory;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
+import org.apache.jena.query.Dataset;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -204,6 +205,11 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     @Override
     public void fetchSnapshot(DatabaseConnection databaseConnection, String base64Token) {
         getOrCreateSessionDataStore().fetchSnapshot(databaseConnection, base64Token);
+    }
+
+    @Override
+    public void restoreDataset(String datasetName, Dataset dataset) {
+        getOrCreateSessionDataStore().restoreDataset(datasetName, dataset);
     }
 
     @Override

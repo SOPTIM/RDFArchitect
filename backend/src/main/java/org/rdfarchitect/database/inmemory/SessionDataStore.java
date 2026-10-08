@@ -206,6 +206,19 @@ public interface SessionDataStore {
     void fetchSnapshot(DatabaseConnection databaseConnection, String base64Token);
 
     /**
+     * Loads {@code dataset} as the dataset {@code datasetName}, replacing one of that name.
+     *
+     * <p>The dataset is read in the layout a snapshot is stored in: the schema graphs, plus the
+     * shapes and metadata graphs {@link org.rdfarchitect.database.snapshots.ShapesDocumentGraphs}
+     * writes, which are routed back to the graphs owning them. The loaded dataset starts out
+     * read-only.
+     *
+     * @param datasetName literal dataset name
+     * @param dataset the dataset to load; its graphs are taken over, not copied
+     */
+    void restoreDataset(String datasetName, Dataset dataset);
+
+    /**
      * Checks if a dataset is currently set to read-only.
      *
      * @param datasetName The name of the dataset.
