@@ -62,7 +62,7 @@
 
 ### @sveltejs/kit
 - **Package:** @sveltejs/kit
-- **Version:** 2.70.3
+- **Version:** 3.0.0
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
