@@ -21,11 +21,24 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
+import java.util.UUID;
 
 /** DTO representing the specific data object in a SvelteFlow edge. */
 @Data
 @Builder
 public class EdgeDataDTO {
+
+    /**
+     * Identifies the edge for its layout data together with {@link #targetObject}: the sub class of
+     * an inheritance or the association end whose domain is the source of the edge. In merged
+     * diagrams this is the merged UUID. Sent back unchanged when the layout of the edge is saved.
+     */
+    private UUID sourceObject;
+
+    /**
+     * The super class of an inheritance or the inverse association end, see {@link #sourceObject}.
+     */
+    private UUID targetObject;
 
     private EdgeLabelDTO sourceMultiplicityLabel;
     private EdgeLabelDTO targetMultiplicityLabel;

@@ -22,16 +22,23 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
+/**
+ * Layout data of several kinds of elements of a diagram that a single user action changed together,
+ * e.g. the classes and edges after moving classes or after the automatic layout. Every part is
+ * optional and only the elements sent are updated.
+ */
 @Data
 @NoArgsConstructor
-public class BendPointDTO {
+public class DiagramLayoutDTO {
 
-    @JsonProperty("xPosition")
-    private float xPosition;
+    @JsonProperty("classes")
+    private List<ClassPositionDTO> classes;
 
-    @JsonProperty("yPosition")
-    private float yPosition;
+    @JsonProperty("edges")
+    private List<EdgeLayoutDTO> edges;
 
-    @JsonProperty("sequenceNumber")
-    private int sequenceNumber;
+    @JsonProperty("labels")
+    private List<LabelPositionDTO> labels;
 }

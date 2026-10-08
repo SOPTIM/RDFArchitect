@@ -143,30 +143,59 @@ public class DiagramLayoutServiceUtils {
     }
 
     /**
-     * Helper method for creating and inserting a bend point {@link DiagramObjectPoint} for an edge.
-     * Bend points carry a sequence number instead of a z position and, unless they are end points,
-     * no glue point reference.
+     * Helper method for creating and inserting a point {@link DiagramObjectPoint} of an edge. Edge
+     * points carry a sequence number instead of a z position and, unless they are end points, no
+     * glue point reference.
      *
      * @param diagramLayoutModel the model into which the diagram object point is inserted
-     * @param edgeDoMRID the mRID of the edge diagram object the bend point belongs to
-     * @param xPosition the x position of the bend point
-     * @param yPosition the y position of the bend point
-     * @param sequenceNumber the position of the bend point within the edge's point chain
+     * @param pointMRID the mRID of the point
+     * @param edgeDoMRID the mRID of the edge diagram object the point belongs to
+     * @param xPosition the x position of the point
+     * @param yPosition the y position of the point
+     * @param sequenceNumber the position of the point within the edge's point chain
+     * @param gluePointMRID the glue point of the class an end point is glued to, or null for a bend
+     *     point
      */
-    public void insertBendPoint(
+    public void insertEdgePoint(
             Model diagramLayoutModel,
+            MRID pointMRID,
             MRID edgeDoMRID,
             float xPosition,
             float yPosition,
-            int sequenceNumber) {
-        var bendPoint =
+            int sequenceNumber,
+            MRID gluePointMRID) {
+        var point =
                 DiagramObjectPoint.builder()
-                        .mRID(new MRID(UUID.randomUUID()))
+                        .mRID(pointMRID)
                         .position(new XYZPosition(xPosition, yPosition, null))
                         .belongsToDiagramObject(edgeDoMRID)
                         .sequenceNumber(sequenceNumber)
+                        .belongsToGluePoint(gluePointMRID)
                         .build();
-        DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, bendPoint);
+        DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, point);
+    }
+
+    /**
+     * Resolves the glue point of a class diagram object, the point end points of edges are glued
+     * to. A class point without glue point, created before glue points existed, gets one.
+     *
+     * @param diagramLayoutModel the model holding the class diagram object
+     * @param classDoMRID the mRID of the class diagram object
+     * @return the mRID of the glue point, or null if the class diagram object has no point
+     */
+    public MRID resolveClassGluePoint(Model diagramLayoutModel, MRID classDoMRID) {
+        var classPoint = DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, classDoMRID);
+        if (classPoint == null) {
+            return null;
+        }
+        if (classPoint.getBelongsToGluePoint() != null) {
+            return classPoint.getBelongsToGluePoint();
+        }
+        var gluePointMRID = insertDiagramObjectGluePoint(diagramLayoutModel);
+        DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, classPoint.getMRID());
+        classPoint.setBelongsToGluePoint(gluePointMRID);
+        DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, classPoint);
+        return gluePointMRID;
     }
 
     /**

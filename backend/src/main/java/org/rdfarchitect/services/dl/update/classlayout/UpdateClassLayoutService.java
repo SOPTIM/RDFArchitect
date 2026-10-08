@@ -168,12 +168,13 @@ public class UpdateClassLayoutService
     }
 
     /**
-     * Moves the classes of a diagram, creating the layout data of classes that have none yet.
+     * Moves the classes of a diagram, creating the layout data of classes that have none yet,
+     * inside a transaction the caller holds.
      *
      * @return whether layout data was created for a class, in which case the classes may have
      *     gained edges in the diagram
      */
-    private boolean applyClassPositions(
+    public static boolean applyClassPositions(
             Model diagramLayoutModel,
             UUID diagramUUID,
             List<ClassPositionDTO> classPositionDTOList) {
@@ -217,7 +218,7 @@ public class UpdateClassLayoutService
      *
      * @param zPosition the stacking order to apply, or {@code null} to keep the current one.
      */
-    private void moveClassDOPPosition(
+    private static void moveClassDOPPosition(
             Model diagramLayoutModel,
             DiagramObject diagramObject,
             UUID diagramUUID,
@@ -256,7 +257,7 @@ public class UpdateClassLayoutService
      * Resolves the glue point mRID for a class diagram object, reusing the existing glue point or
      * creating a new one if the class does not have one yet.
      */
-    private MRID resolveGluePointMRID(Model diagramLayoutModel, MRID diagramObjectMRID) {
+    private static MRID resolveGluePointMRID(Model diagramLayoutModel, MRID diagramObjectMRID) {
         var gluePoint = DLObjectFetcher.fetchGluePointForDO(diagramLayoutModel, diagramObjectMRID);
         return gluePoint != null
                 ? gluePoint.getMRID()
