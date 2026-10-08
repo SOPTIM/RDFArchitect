@@ -55,6 +55,11 @@
                 uri: graphUri(graph),
                 label: nameOf(graph),
             }));
+            // As with a single workspace: a choice of one is not a choice, and leaving it unmade
+            // greyed out the button for no reason.
+            if (schemas.length === 1) {
+                schema = schemas[0].uri;
+            }
         });
         return () => (live = false);
     });
