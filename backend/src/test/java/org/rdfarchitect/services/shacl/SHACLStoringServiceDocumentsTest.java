@@ -18,11 +18,13 @@
 package org.rdfarchitect.services.shacl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -32,6 +34,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.database.inmemory.GraphWithContextTransactional;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.rdf.TestRDFUtils;
 
 import java.nio.charset.StandardCharsets;
@@ -49,12 +52,13 @@ class SHACLStoringServiceDocumentsTest {
             new GraphIdentifier("cgmes", "http://example.org/EQ");
 
     private GraphWithContextTransactional context;
+    private DatabasePort databasePort;
     private SHACLStoringService service;
 
     @BeforeEach
     void setUp() {
         context = new GraphWithContextTransactional(GraphFactory.createDefaultGraph());
-        var databasePort = mock(DatabasePort.class);
+        databasePort = mock(DatabasePort.class);
         when(databasePort.getGraphWithContext(any(GraphIdentifier.class))).thenReturn(context);
         when(databasePort.getPrefixMapping(any())).thenReturn(PrefixMapping.Factory.create());
         service = new SHACLStoringService(databasePort);
@@ -143,5 +147,35 @@ class SHACLStoringServiceDocumentsTest {
                         .toString(StandardCharsets.UTF_8);
 
         assertThat(exported).contains("MineShape").doesNotContain("EqShape");
+    }
+
+    @Test
+    void readOnlyWorkspace_refusesEveryWriteToItsDocuments() {
+        var document = givenDocument("official.ttl", "<urn:s> <urn:p> <urn:o>", true);
+        var id = document.getId();
+        when(databasePort.isReadOnly("cgmes")).thenReturn(true);
+
+        assertThatThrownBy(
+                        () ->
+                                service.createShapesDocument(
+                                        GRAPH_IDENTIFIER, "new.ttl", null, "", Lang.TURTLE))
+                .isInstanceOf(ResourceConflictException.class)
+                .hasMessageContaining("read-only");
+        assertThatThrownBy(() -> service.replaceShapesDocumentText(GRAPH_IDENTIFIER, id, ""))
+                .isInstanceOf(ResourceConflictException.class);
+        assertThatThrownBy(() -> service.updateShapesDocument(GRAPH_IDENTIFIER, id, "x", false, 0))
+                .isInstanceOf(ResourceConflictException.class);
+        assertThatThrownBy(() -> service.deleteShapesDocument(GRAPH_IDENTIFIER, id))
+                .isInstanceOf(ResourceConflictException.class);
+
+        var documents = service.listShapesDocuments(GRAPH_IDENTIFIER);
+        assertThat(documents).hasSize(2);
+        assertThat(documents)
+                .anySatisfy(
+                        info -> {
+                            assertThat(info.getName()).isEqualTo("official.ttl");
+                            assertThat(info.isEnabled()).isTrue();
+                            assertThat(info.getTripleCount()).isEqualTo(1);
+                        });
     }
 }

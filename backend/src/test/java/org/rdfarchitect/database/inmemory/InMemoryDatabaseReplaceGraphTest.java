@@ -59,6 +59,8 @@ class InMemoryDatabaseReplaceGraphTest {
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
         databasePort.createGraph(GRAPH, schema("Terminal"));
+        // A new workspace starts read-only, as an imported one does.
+        databasePort.enableEditing(DATASET);
         documents = new SHACLStoringService(databasePort);
     }
 

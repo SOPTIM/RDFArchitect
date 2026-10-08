@@ -145,6 +145,7 @@ public class SHACLStoringService
             String sourceFileName,
             String content,
             Lang lang) {
+        assertEditable(graphIdentifier);
         var requestedName = name == null ? null : validName(name);
         var parsed = parse(content, lang);
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
@@ -175,6 +176,7 @@ public class SHACLStoringService
     @Override
     public void replaceShapesDocumentText(
             GraphIdentifier graphIdentifier, UUID documentId, String turtle) {
+        assertEditable(graphIdentifier);
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var document = requireDocument(ctx, documentId);
             // Saving what is already stored changes nothing, and an entry for it in the history
@@ -194,6 +196,7 @@ public class SHACLStoringService
             String name,
             Boolean enabled,
             Integer order) {
+        assertEditable(graphIdentifier);
         var newName = name == null ? null : validName(name);
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var document = requireDocument(ctx, documentId);
@@ -231,6 +234,7 @@ public class SHACLStoringService
 
     @Override
     public void deleteShapesDocument(GraphIdentifier graphIdentifier, UUID documentId) {
+        assertEditable(graphIdentifier);
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var document = requireDocument(ctx, documentId);
             if (GraphContext.DEFAULT_SHAPES_DOCUMENT_ID.equals(documentId)) {
@@ -242,6 +246,21 @@ public class SHACLStoringService
             }
             ctx.removeShapesDocument(documentId);
             ctx.commit("Delete constraints \"%s\"".formatted(document.getName()));
+        }
+    }
+
+    /**
+     * Refuses a write to a read-only workspace.
+     *
+     * <p>The workbench checks the flag too, but it is a client: anything else talking to these
+     * endpoints — a second tab that has not noticed the switch, a script — would otherwise change a
+     * workspace the user has frozen.
+     */
+    private void assertEditable(GraphIdentifier graphIdentifier) {
+        if (databasePort.isReadOnly(graphIdentifier.datasetName())) {
+            throw new ResourceConflictException(
+                    "The workspace \"%s\" is read-only. Enable editing to change its constraints."
+                            .formatted(graphIdentifier.datasetName()));
         }
     }
 
