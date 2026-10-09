@@ -36,6 +36,14 @@
     let variantClass = $derived(variants[variant] ?? variants.default);
 
     let xPadding = $derived(Math.floor((height - 1) / 2));
+
+    // Sized with Tailwind's own spacing unit rather than an `h-${height}` class: Tailwind only
+    // generates classes it finds written out in the source, so a height no file happened to spell
+    // literally rendered the button at its content's height. `h-10` disappeared that way with the
+    // last file that used it, and the import dialog's remove buttons shrank.
+    let sizeStyle = $derived(
+        `height: calc(var(--spacing) * ${height}); padding-inline: calc(var(--spacing) * ${xPadding});`,
+    );
 </script>
 
 <button
@@ -46,10 +54,11 @@
         justify-center
         overflow-hidden
         rounded
-        px-${xPadding} font-normal
+        font-normal
         whitespace-nowrap
-        shadow-xs transition-colors disabled:cursor-not-allowed h-${height}
+        shadow-xs transition-colors disabled:cursor-not-allowed
     `}
+    style={sizeStyle}
     onclick={callOnClick}
     {disabled}
     {title}
