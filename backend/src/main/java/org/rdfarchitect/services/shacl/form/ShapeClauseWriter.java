@@ -678,7 +678,7 @@ final class ShapeClauseWriter {
      */
     private static String respell(String written, String value, PrefixMapping prefixes) {
         if (written.isEmpty() || (written.charAt(0) != '"' && written.charAt(0) != '\'')) {
-            return value;
+            return ShapeModelReader.isBareNumber(written) ? asBareLike(written, value) : value;
         }
         var quote = String.valueOf(written.charAt(0));
         var delimiter = written.startsWith(quote.repeat(3)) ? quote.repeat(3) : quote;
@@ -700,6 +700,55 @@ final class ShapeClauseWriter {
             }
         }
         return delimiter + value + written.substring(closes);
+    }
+
+    /**
+     * {@code value} written as the same kind of Turtle number as {@code written}.
+     *
+     * <p>A bare number has no datatype to keep but the one its spelling implies — {@code 0.5} is an
+     * {@code xsd:decimal}, {@code 1e3} an {@code xsd:double} — so writing the value as typed would
+     * turn either into an integer. Widening is spelled out ({@code 1} becomes {@code 1.0} or {@code
+     * 1e0}); a value the kind cannot hold is refused, as it is for a quoted literal.
+     */
+    private static String asBareLike(String written, String value) {
+        var kind = BareNumber.of(written);
+        var given = BareNumber.of(value);
+        if (given == kind) {
+            return value;
+        }
+        if (kind == BareNumber.DOUBLE) {
+            return value + "e0";
+        }
+        if (kind == BareNumber.DECIMAL && given == BareNumber.INTEGER) {
+            return value + ".0";
+        }
+        throw new ResourceConflictException(
+                "\""
+                        + value
+                        + "\" is not a valid xsd:"
+                        + kind.datatype
+                        + ", which is the datatype the document writes this value in.");
+    }
+
+    /** The three numbers Turtle writes bare, by the datatype each stands for. */
+    private enum BareNumber {
+        INTEGER("integer"),
+        DECIMAL("decimal"),
+        DOUBLE("double");
+
+        private final String datatype;
+
+        BareNumber(String datatype) {
+            this.datatype = datatype;
+        }
+
+        /** Which one {@code lexical}, already known to be a bare number, is. */
+        static BareNumber of(String lexical) {
+            if (lexical.indexOf('e') >= 0 || lexical.indexOf('E') >= 0) {
+                return DOUBLE;
+            }
+            return lexical.indexOf('.') >= 0 ? DECIMAL : INTEGER;
+        }
     }
 
     private static String applyAddition(

@@ -21,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.shacl.dto.NodeShapeModel;
 import org.rdfarchitect.shacl.dto.PropertyShapeModel;
@@ -123,6 +125,56 @@ class ShapeValueFieldsTest {
 
         assertThat(edited).contains("sh:maxInclusive 42");
         assertThat(service.parse(edited).getParseError()).isNull();
+    }
+
+    /** A rule whose minimum is written as the bare Turtle number {@code written}. */
+    private static String bareMinimum(String written) {
+        return """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://example.org/shapes#> .
+
+                ex:S a sh:NodeShape ;
+                     sh:property [ sh:path cim:X.v ; sh:minInclusive %s ] .
+                """
+                .formatted(written);
+    }
+
+    /**
+     * A bare number's datatype is in how it is written — {@code 0.5} is a decimal, {@code 1e3} a
+     * double — so the new value is written the same way rather than as typed, which would turn
+     * either into an integer nobody asked for.
+     */
+    @ParameterizedTest
+    @CsvSource({
+        "0.5, 1, 1.0",
+        "0.5, -2.25, -2.25",
+        "1e3, 5, 5e0",
+        "1e3, 2.5, 2.5e0",
+        "1.5E2, 7E1, 7E1",
+        "3, 4, 4",
+    })
+    void editingABareNumberKeepsTheKindOfNumberItWas(
+            String written, String typed, String expected) {
+        var turtle = bareMinimum(written);
+        var shape = shapeIn(turtle);
+        shape.getProperties().get(0).setMinInclusive(typed);
+
+        var edited = service.apply(edit(turtle, shape)).getTurtle();
+
+        assertThat(edited).isEqualTo(bareMinimum(expected));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"3, 2.5", "3, 1e3", "0.5, 1e3"})
+    void aBareNumberIsNotGivenAValueItsDatatypeCannotHold(String written, String typed) {
+        var turtle = bareMinimum(written);
+        var shape = shapeIn(turtle);
+        shape.getProperties().get(0).setMinInclusive(typed);
+
+        assertThatExceptionOfType(ResourceConflictException.class)
+                .isThrownBy(() -> service.apply(edit(turtle, shape)))
+                .withMessageContaining("is not a valid xsd:");
     }
 
     @Test

@@ -29,6 +29,7 @@ import org.rdfarchitect.services.shacl.ShapesTurtleParser;
 import org.rdfarchitect.shacl.dto.NodeShapeModel;
 import org.rdfarchitect.shacl.dto.PropertyShapeModel;
 
+import java.math.BigDecimal;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.HashMap;
@@ -170,17 +171,17 @@ final class EditCheck {
                     Map.entry("maxCount", PropertyShapeModel::getMaxCount),
                     Map.entry("allowedValues", rule -> list(rule.getAllowedValues())),
                     Map.entry("hasValue", rule -> text(rule.getHasValue())),
-                    Map.entry("minInclusive", rule -> blank(rule.getMinInclusive())),
-                    Map.entry("maxInclusive", rule -> blank(rule.getMaxInclusive())),
-                    Map.entry("minExclusive", rule -> blank(rule.getMinExclusive())),
-                    Map.entry("maxExclusive", rule -> blank(rule.getMaxExclusive())),
+                    Map.entry("minInclusive", rule -> number(rule.getMinInclusive())),
+                    Map.entry("maxInclusive", rule -> number(rule.getMaxInclusive())),
+                    Map.entry("minExclusive", rule -> number(rule.getMinExclusive())),
+                    Map.entry("maxExclusive", rule -> number(rule.getMaxExclusive())),
                     Map.entry("minLength", PropertyShapeModel::getMinLength),
                     Map.entry("maxLength", PropertyShapeModel::getMaxLength),
                     Map.entry("pattern", rule -> text(rule.getPattern())),
                     Map.entry("flags", rule -> text(rule.getFlags())),
                     Map.entry("severity", rule -> blank(rule.getSeverity())),
                     Map.entry("message", rule -> text(rule.getMessage())),
-                    Map.entry("order", rule -> blank(rule.getOrder())),
+                    Map.entry("order", rule -> number(rule.getOrder())),
                     Map.entry("group", rule -> blank(rule.getGroup())),
                     Map.entry("deactivated", PropertyShapeModel::getDeactivated));
 
@@ -236,6 +237,22 @@ final class EditCheck {
     /** The form writes blank and absent alike, so they compare alike. */
     private static String blank(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    /**
+     * A number field by the value it holds. A bare number is written in the kind of number the
+     * document already used, so {@code 1} can come back as {@code 1.0} or {@code 1e0}.
+     */
+    private static Object number(String value) {
+        var lexical = blank(value);
+        if (lexical == null) {
+            return null;
+        }
+        try {
+            return new BigDecimal(lexical).stripTrailingZeros();
+        } catch (NumberFormatException _) {
+            return lexical;
+        }
     }
 
     private static String text(String value) {
