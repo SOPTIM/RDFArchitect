@@ -227,35 +227,6 @@ public class GraphWithContextTransactional implements GraphContext {
         }
     }
 
-    @Override
-    public ShapesDocument ensureDefaultShapesDocument(String name) {
-        synchronized (shapesDocumentsLock) {
-            var registered = shapesDocuments.get(DEFAULT_SHAPES_DOCUMENT_ID);
-            if (registered == null) {
-                return addShapesDocument(
-                        DEFAULT_SHAPES_DOCUMENT_ID, name, ShapesDocument.Origin.AUTHORED);
-            }
-            var document = registered.document();
-            if (documentIds.get().contains(DEFAULT_SHAPES_DOCUMENT_ID)) {
-                return document;
-            }
-            // Deleted, but kept while an undo can still bring it back. Reusing it as a new, empty
-            // document keeps one participant per id; a second one would never be pruned.
-            var graph = document.getGraph();
-            graph.find().toList().forEach(graph::delete);
-            graph.getPrefixMapping().clearNsPrefixMap();
-            document.setName(name);
-            document.setSourceFileName(null);
-            document.setEnabled(true);
-            document.setOrder(nextOrder());
-            document.setRawText(null);
-            var ids = new ArrayList<>(documentIds.get());
-            ids.add(DEFAULT_SHAPES_DOCUMENT_ID);
-            documentIds.set(List.copyOf(ids));
-            return document;
-        }
-    }
-
     /**
      * Whether a seed is the default document of a snapshot taken while every graph had one, with
      * nothing in it. Restoring it would bring back the empty file a graph no longer starts with.

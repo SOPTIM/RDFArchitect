@@ -25,8 +25,6 @@ import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.RiotException;
@@ -54,7 +52,6 @@ import org.rdfarchitect.services.shacl.form.ShapeBlockLocator;
 import org.rdfarchitect.shacl.PropertyShapeToClassAssigner;
 import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 import org.rdfarchitect.shacl.SHACLShapesFetcher;
-import org.rdfarchitect.shacl.ShapeClosure;
 import org.rdfarchitect.shacl.dto.CustomAndGeneratedTuple;
 import org.rdfarchitect.shacl.dto.NodeShape;
 import org.rdfarchitect.shacl.dto.PropertyShape;
@@ -86,33 +83,15 @@ import java.util.stream.Collectors;
 /**
  * Stores and reads the sets of SHACL shapes belonging to a graph.
  *
- * <p>Reads span every enabled {@link ShapesDocument} (see {@code readEnabledShapes}); the
- * shape-level and property-level writes still target the graph's default document, which is what
- * the endpoints predating multiple documents address.
- *
- * <p>That asymmetry is why {@link #updateClassSHACL}, {@link #updatePropertyShacl}, {@link
- * #replaceSHACLShape} and {@link #deleteSHACLShape} are deprecated and no longer reached from the
- * UI. Editing a rule that came from an imported document could not remove it — it is not in the
- * default document — so the edit was <em>added</em> beside the original, and SHACL being
- * conjunctive the two then contradicted each other. Write through {@link
- * #replaceShapesDocumentText}, which addresses one document and keeps its text authoritative.
- *
- * <p>All four still have endpoints, so all four re-record the default document's {@code rawText}
- * from its triples before committing. Without that they would leave the stored text describing the
- * graph as it was before the edit, and since {@link #getShapesDocumentText} prefers that text, the
- * workbench would show the edit as never having happened and undo it on the next save. Re-recording
- * costs the document its comments and its ordering, which is the other half of why these paths are
- * superseded rather than merely older.
+ * <p>Reads span every enabled {@link ShapesDocument} (see {@code readEnabledShapes}). Writes
+ * address one document at a time, through {@link #replaceShapesDocumentText}, which keeps that
+ * document's text authoritative.
  */
 @RequiredArgsConstructor
 public class SHACLStoringService
-        implements SHACLInsertUseCase,
-                SHACLExportUseCase,
+        implements SHACLExportUseCase,
                 SHACLGetClassRelationsUseCase,
                 SHACLGetShapeUseCase,
-                SHACLReplaceShapeUseCase,
-                SHACLDeleteShapeUseCase,
-                SHACLUpdateUseCase,
                 SHACLDocumentUseCase {
 
     private static final Logger logger = LoggerFactory.getLogger(SHACLStoringService.class);
@@ -419,7 +398,6 @@ public class SHACLStoringService
                 .origin(document.getOrigin())
                 .enabled(document.isEnabled())
                 .order(document.getOrder())
-                .isDefault(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID.equals(document.getId()))
                 .tripleCount(document.getGraph().size())
                 .nodeShapeCount(counts.nodeShapes())
                 .propertyShapeCount(counts.propertyShapes())
@@ -540,41 +518,6 @@ public class SHACLStoringService
                             }
                         });
         union.add(model);
-    }
-
-    @Override
-    public void replaceCustomSHACLGraph(GraphIdentifier graphIdentifier, Graph shacl) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var document = defaultDocumentForWriting(ctx);
-            var newModel = ModelFactory.createModelForGraph(GraphUtils.normalizeBlankNodes(shacl));
-            // This path receives an already-parsed graph, so there is no user-authored text to
-            // preserve; the serialised form is the best available source for the editor.
-            writeContent(document, newModel, null, null);
-
-            ctx.commit("Replace custom SHACL");
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>Deprecated: answers with the default document alone, because that is the one {@link
-     * #replaceCustomSHACLGraph} writes. Answering with every enabled document made a read, edit and
-     * write back copy the other documents' shapes into the default one.
-     */
-    @Override
-    public ByteArrayOutputStream exportCustomSHACLGraph(
-            GraphIdentifier graphIdentifier, RDFFormat format) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = defaultDocumentModel(ctx);
-            try (var outStream = new ByteArrayOutputStream()) {
-                customSHACL.write(outStream, format.getLang().getName());
-                return outStream;
-            } catch (Exception e) {
-                logger.warn("Error while writing SHACL graph to output stream", e);
-                return new ByteArrayOutputStream();
-            }
-        }
     }
 
     @Override
@@ -963,195 +906,5 @@ public class SHACLStoringService
                             customSHACL, ModelFactory.createModelForGraph(ctx.getRdfGraph()));
             return shaclToClassAssigner.getPropertyShapes(classUUID);
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>Deprecated: writes the default document alone and reformats it. See this class's
-     * documentation for why, and write through {@link #replaceShapesDocumentText} instead.
-     */
-    @Override
-    public void deleteSHACLShape(GraphIdentifier graphIdentifier, String shaclShapeURI) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var customSHACL = defaultDocumentModel(ctx);
-            var deleteModel = ModelFactory.createDefaultModel();
-            copySHACLShapeToNewModel(
-                    customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
-            if (deleteModel.isEmpty()) {
-                throw new ResourceNotFoundException(
-                        "The graph's default constraints document has no shape "
-                                + shaclShapeURI
-                                + ". Shapes in other documents are edited in those documents.");
-            }
-            customSHACL.remove(deleteModel);
-            recordDefaultDocumentText(ctx);
-            ctx.commit("Delete SHACL shape");
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>Deprecated: writes the default document alone and reformats it. See this class's
-     * documentation for why, and write through {@link #replaceShapesDocumentText} instead.
-     */
-    @Override
-    public void replaceSHACLShape(
-            GraphIdentifier graphIdentifier, String shaclShapeURI, String shaclToInsert) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var customSHACL =
-                    ModelFactory.createModelForGraph(defaultDocumentForWriting(ctx).getGraph());
-            Model insertModel = parseTriplesToModel(shaclToInsert);
-            Model deleteModel = ModelFactory.createDefaultModel();
-            copySHACLShapeToNewModel(
-                    customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
-            customSHACL.remove(deleteModel);
-            customSHACL.add(insertModel);
-            recordDefaultDocumentText(ctx);
-            ctx.commit("Replace SHACL shape");
-        }
-    }
-
-    private Model parseTriplesToModel(String triples) {
-        if (triples.trim().isEmpty()) {
-            return ModelFactory.createDefaultModel();
-        }
-        Model model = ModelFactory.createDefaultModel();
-        try (StringReader reader = new StringReader(triples)) {
-            return model.read(reader, null, "TURTLE");
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>Deprecated: writes the default document alone and reformats it. See this class's
-     * documentation for why, and write through {@link #replaceShapesDocumentText} instead.
-     */
-    @Override
-    public void updateClassSHACL(
-            GraphIdentifier graphIdentifier, UUID classUUID, String ttlShaclString) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var customSHACL =
-                    ModelFactory.createModelForGraph(defaultDocumentForWriting(ctx).getGraph());
-            var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
-            var insertModel = parseTriplesToModel(ttlShaclString);
-            var deleteModel = getClassShaclModel(ontologyModel, customSHACL, classUUID);
-
-            customSHACL.remove(deleteModel);
-            customSHACL.clearNsPrefixMap();
-            customSHACL.setNsPrefixes(insertModel);
-            customSHACL.add(insertModel);
-            recordDefaultDocumentText(ctx);
-            ctx.commit("Update class SHACL");
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * <p>Deprecated: writes the default document alone and reformats it. See this class's
-     * documentation for why, and write through {@link #replaceShapesDocumentText} instead.
-     */
-    @Override
-    public void updatePropertyShacl(
-            GraphIdentifier graphIdentifier, UUID propertyUUID, String ttlShaclString) {
-        var insertModel = parseTriplesToModel(ttlShaclString);
-
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var customSHACL =
-                    ModelFactory.createModelForGraph(defaultDocumentForWriting(ctx).getGraph());
-            var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
-
-            var customPropertyShapes =
-                    getCustomPropertyShapesOfProperty(ontologyModel, customSHACL, propertyUUID);
-
-            var deleteModel = ModelFactory.createDefaultModel();
-            for (var propertyShape : customPropertyShapes) {
-                copySHACLShapeToNewModel(
-                        customSHACL,
-                        deleteModel,
-                        ResourceFactory.createResource(propertyShape.getId()));
-            }
-            customSHACL.remove(deleteModel);
-            customSHACL.clearNsPrefixMap();
-            customSHACL.setNsPrefixes(insertModel);
-            customSHACL.add(insertModel);
-            recordDefaultDocumentText(ctx);
-            ctx.commit("Update property SHACL");
-        }
-    }
-
-    /**
-     * The document the superseded write paths edit, created on their first write. A graph does not
-     * start with one, so a user who never calls them never sees it.
-     */
-    private static ShapesDocument defaultDocumentForWriting(GraphContext ctx) {
-        return ctx.ensureDefaultShapesDocument(freeDefaultName(ctx));
-    }
-
-    /** The default document's shapes, or none when the graph has no default document. */
-    private static Model defaultDocumentModel(GraphContext ctx) {
-        var document = ctx.getShapesDocuments().get(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
-        return document == null
-                ? ModelFactory.createDefaultModel()
-                : ModelFactory.createModelForGraph(document.getGraph());
-    }
-
-    /**
-     * Re-derives the default document's text from the triples now in its graph.
-     *
-     * <p>For the superseded write paths only, which edit that graph directly. {@link
-     * #getShapesDocumentText} answers from the stored text whenever there is one, so leaving it
-     * behind makes the edit invisible to the editor and lets the next save write the pre-edit text
-     * back over it. These paths have no user-authored text to preserve — they were handed triples —
-     * so the serialised graph is the best source there is.
-     */
-    private static void recordDefaultDocumentText(GraphContext ctx) {
-        var document = defaultDocumentForWriting(ctx);
-        document.setRawText(
-                serialiseToTurtle(ModelFactory.createModelForGraph(document.getGraph())));
-    }
-
-    /**
-     * Get all shacl shapes related to a class as a model.
-     *
-     * @param ontologyModel the ontology model
-     * @param customSHACL the model containing the custom SHACL shapes
-     * @param classUUID the class uuid
-     * @return a model containing all SHACL shapes related to the class
-     */
-    private Model getClassShaclModel(Model ontologyModel, Model customSHACL, UUID classUUID) {
-        var classUri =
-                ontologyModel
-                        .listSubjectsWithProperty(
-                                RDFA.uuid, ontologyModel.createLiteral(classUUID.toString()))
-                        .next()
-                        .getURI();
-        var nodeShapes = new SHACLShapesFetcher(customSHACL).getNodeShapesOfClass(classUri);
-        var propertyShapeWrappers =
-                new PropertyShapeToClassAssigner(customSHACL, ontologyModel)
-                        .getPropertyShapes(classUUID);
-        // get all shape uris to remove
-        var shapesToRemove = new ArrayList<String>();
-        for (var nodeShape : nodeShapes) {
-            shapesToRemove.add(nodeShape.getId());
-        }
-        for (var propertyShapeWrapper : propertyShapeWrappers) {
-            for (var propertyShape : propertyShapeWrapper.getPropertyShapes()) {
-                shapesToRemove.add(propertyShape.getId());
-            }
-        }
-        Model deleteModel = ModelFactory.createDefaultModel();
-        for (var shapeToRemove : shapesToRemove) {
-            copySHACLShapeToNewModel(
-                    customSHACL, deleteModel, ResourceFactory.createResource(shapeToRemove));
-        }
-        return deleteModel;
-    }
-
-    private void copySHACLShapeToNewModel(Model originalModel, Model newModel, Resource subject) {
-        ShapeClosure.copy(originalModel, newModel, subject);
     }
 }

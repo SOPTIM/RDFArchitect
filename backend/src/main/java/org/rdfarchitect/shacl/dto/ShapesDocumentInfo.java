@@ -48,9 +48,6 @@ public class ShapesDocumentInfo {
 
     private int order;
 
-    /** Whether this is the document the pre-document SHACL endpoints read and write. */
-    private boolean isDefault;
-
     /** Number of triples the document holds, so the UI can show an empty document as empty. */
     private long tripleCount;
 

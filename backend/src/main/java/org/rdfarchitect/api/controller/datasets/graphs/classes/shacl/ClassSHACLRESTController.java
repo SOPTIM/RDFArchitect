@@ -23,21 +23,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLGetClassRelationsUseCase;
-import org.rdfarchitect.services.shacl.SHACLUpdateUseCase;
 import org.rdfarchitect.shacl.dto.CustomAndGeneratedTuple;
 import org.rdfarchitect.shacl.dto.SHACLToClassRelations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -54,8 +49,6 @@ public class ClassSHACLRESTController {
     private final ExpandURIUseCase expandURIUseCase;
 
     private final SHACLGetClassRelationsUseCase shaclGetClassRelationsUseCase;
-
-    private final SHACLUpdateUseCase shaclUpdateUseCase;
 
     @Operation(
             summary = "Get SHACL related to a class",
@@ -98,60 +91,5 @@ public class ClassSHACLRESTController {
                 classUUID,
                 originURL);
         return res;
-    }
-
-    @Operation(
-            summary = "Replace or insert SHACL",
-            description =
-                    "Replace or insert SHACL rules related to a class. "
-                            + "Superseded by PUT /shacl/documents/{documentId}. Writes land in "
-                            + "the graph's *default* shapes document whichever "
-                            + "document the rule came from, and rewrite that "
-                            + "document's text from its triples — so its comments "
-                            + "and ordering are lost.",
-            tags = {"shacl"},
-            deprecated = true,
-            responses = {@ApiResponse(responseCode = "200")})
-    // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
-    // body would reach Jena with its surrounding quotes and fail to parse.
-    @PutMapping(
-            path = "/custom",
-            consumes = {MediaType.TEXT_PLAIN_VALUE, "text/turtle"})
-    public String putSHACL(
-            @Parameter(description = "The name/url of the inquirer.")
-                    @RequestHeader(
-                            value = HttpHeaders.ORIGIN,
-                            required = false,
-                            defaultValue = "unknown")
-                    String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
-            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
-            @Parameter(description = "The SHACL shapes to be inserted.") @RequestBody
-                    String shaclString) {
-        logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl\" from \"{}\".",
-                datasetName,
-                graphURI,
-                classUUID,
-                originURL);
-
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
-        shaclUpdateUseCase.updateClassSHACL(
-                graphIdentifier, UUID.fromString(classUUID), shaclString);
-
-        logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl\" to \"{}\".",
-                datasetName,
-                graphURI,
-                classUUID,
-                originURL);
-        return Response.SUCCESS;
     }
 }

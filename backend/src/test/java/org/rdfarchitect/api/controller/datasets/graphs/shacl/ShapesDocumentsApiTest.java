@@ -35,7 +35,6 @@ import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.api.controller.datasets.graphs.shacl.custom.SHACLCustomShapeRESTController;
 import org.rdfarchitect.api.controller.datasets.graphs.shacl.documents.ShapesDocumentRESTController;
 import org.rdfarchitect.api.controller.datasets.graphs.shacl.documents.ShapesDocumentsRESTController;
 import org.rdfarchitect.api.controller.datasets.graphs.shacl.export.SHACLSelectionExportRESTController;
@@ -105,9 +104,7 @@ class ShapesDocumentsApiTest {
                 MockMvcBuilders.standaloneSetup(
                                 new ShapesDocumentsRESTController(expandURIUseCase, service),
                                 new ShapesDocumentRESTController(expandURIUseCase, service),
-                                new SHACLSelectionExportRESTController(expandURIUseCase, service),
-                                new SHACLCustomShapeRESTController(
-                                        expandURIUseCase, service, service))
+                                new SHACLSelectionExportRESTController(expandURIUseCase, service))
                         .setControllerAdvice(new GenericExceptionHandler())
                         .build();
     }
@@ -123,7 +120,6 @@ class ShapesDocumentsApiTest {
 
     private UUID onlyUploadedDocument() {
         return service.listShapesDocuments(new GraphIdentifier("cgmes", GRAPH_URI)).stream()
-                .filter(document -> !document.isDefault())
                 .map(ShapesDocumentInfo::getId)
                 .findFirst()
                 .orElseThrow();
@@ -311,15 +307,6 @@ class ShapesDocumentsApiTest {
     @Test
     void aGraphStartsWithoutAnyDocument() throws Exception {
         mockMvc.perform(get(DOCUMENTS)).andExpect(status().isOk()).andExpect(content().json("[]"));
-    }
-
-    @Test
-    void deletingAShapeTheDefaultDocumentDoesNotHoldIsNotFound() throws Exception {
-        // The shape exists, in another document — which this deprecated endpoint never writes.
-        givenDocument("eq.ttl", SHAPES);
-
-        mockMvc.perform(delete(BASE + "/custom/http%3A%2F%2Fexample.org%2FLineShape"))
-                .andExpect(status().isNotFound());
     }
 
     // -------------------------------------------------------------------------

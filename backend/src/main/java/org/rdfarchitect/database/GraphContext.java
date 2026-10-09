@@ -57,16 +57,16 @@ public interface GraphContext extends Transactional, VersionControl {
     DiagramLayoutDelta getDiagramLayout();
 
     /**
-     * Id of the document the superseded single-graph SHACL endpoints read and write.
+     * Id under which the single shapes graph of a snapshot taken before documents existed is
+     * restored.
      *
-     * <p>Reserved and fixed so that it survives a snapshot round-trip and so the single shapes
-     * graph of a session created before documents existed always migrates to the same place. A
-     * graph does not start with it: it exists only once one of those endpoints wrote to it, or a
-     * snapshot carried one with content, and it can be deleted like any other document.
+     * <p>Reserved and fixed so that such a graph always migrates to the same place. A graph does
+     * not start with this document; it is restored only when the snapshot gave it content, and it
+     * can be deleted like any other document.
      */
     UUID DEFAULT_SHAPES_DOCUMENT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
-    /** Name given to the default document when nothing else holds it. */
+    /** Name given to that migrated document when the snapshot names none. */
     String DEFAULT_SHAPES_DOCUMENT_NAME = "custom.ttl";
 
     /**
@@ -92,16 +92,6 @@ public interface GraphContext extends Transactional, VersionControl {
      * content, so undoing the commit brings the document back with its shapes, text and metadata.
      */
     void removeShapesDocument(UUID documentId);
-
-    /**
-     * The default document, created when the graph has none.
-     *
-     * <p>Only for writers that predate multiple documents per graph. Must be called in a write
-     * transaction; undoing the commit takes a document created here away again.
-     *
-     * @param name the name to give the document if it has to be created
-     */
-    ShapesDocument ensureDefaultShapesDocument(String name);
 
     ChangeLog getChangeLog();
 

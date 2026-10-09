@@ -18,15 +18,11 @@
 package org.rdfarchitect.config;
 
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.services.shacl.SHACLDeleteShapeUseCase;
 import org.rdfarchitect.services.shacl.SHACLDocumentUseCase;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.rdfarchitect.services.shacl.SHACLGetClassRelationsUseCase;
 import org.rdfarchitect.services.shacl.SHACLGetShapeUseCase;
-import org.rdfarchitect.services.shacl.SHACLInsertUseCase;
-import org.rdfarchitect.services.shacl.SHACLReplaceShapeUseCase;
 import org.rdfarchitect.services.shacl.SHACLStoringService;
-import org.rdfarchitect.services.shacl.SHACLUpdateUseCase;
 import org.rdfarchitect.services.shacl.conformance.ConformanceService;
 import org.rdfarchitect.services.shacl.conformance.ConformanceUseCase;
 import org.rdfarchitect.services.shacl.form.ShapeFormService;
@@ -43,11 +39,6 @@ import org.springframework.context.annotation.Configuration;
 public class SHACLCustomConfig {
 
     @Bean
-    public SHACLInsertUseCase shaclInsertUseCase(DatabasePort databasePort) {
-        return new SHACLStoringService(databasePort);
-    }
-
-    @Bean
     public SHACLGetClassRelationsUseCase shaclGetClassRelationsUseCase(DatabasePort databasePort) {
         return new SHACLStoringService(databasePort);
     }
@@ -58,22 +49,7 @@ public class SHACLCustomConfig {
     }
 
     @Bean
-    public SHACLReplaceShapeUseCase shaclReplaceShapeUseCase(DatabasePort databasePort) {
-        return new SHACLStoringService(databasePort);
-    }
-
-    @Bean
     public SHACLExportUseCase shaclExportUseCase(DatabasePort databasePort) {
-        return new SHACLStoringService(databasePort);
-    }
-
-    @Bean
-    public SHACLDeleteShapeUseCase shaclDeleteShapeUseCase(DatabasePort databasePort) {
-        return new SHACLStoringService(databasePort);
-    }
-
-    @Bean
-    public SHACLUpdateUseCase shaclUpdateUseCase(DatabasePort databasePort) {
         return new SHACLStoringService(databasePort);
     }
 

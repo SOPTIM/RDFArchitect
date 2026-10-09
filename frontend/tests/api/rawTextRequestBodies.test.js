@@ -20,11 +20,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
     createShapesDocument,
     createSnapshot,
-    putShacl,
-    replaceAssociationShacl,
-    replaceAttributeShacl,
-    replaceGraphWithGraphString,
-    replaceShape,
     replaceShapesDocumentText,
     validateShapesText,
 } from "../../src/lib/api/generated";
@@ -48,31 +43,9 @@ ex:Shape a sh:NodeShape .
 `;
 
 const GRAPH = { datasetName: "cgmes", graphURI: "http://example.org/EQ" };
-const CLASS = { ...GRAPH, classUUID: "a-class" };
 
 const OPERATIONS = [
     ["createSnapshot", createSnapshot, {}],
-    ["putShacl", putShacl, { path: CLASS }],
-    [
-        "replaceGraphWithGraphString",
-        replaceGraphWithGraphString,
-        { path: GRAPH },
-    ],
-    [
-        "replaceShape",
-        replaceShape,
-        { path: { ...GRAPH, shaclShapeURI: "http://example.org/Shape" } },
-    ],
-    [
-        "replaceAttributeShacl",
-        replaceAttributeShacl,
-        { path: { ...CLASS, attributeUUID: "an-attribute" } },
-    ],
-    [
-        "replaceAssociationShacl",
-        replaceAssociationShacl,
-        { path: { ...CLASS, associationUUID: "an-association" } },
-    ],
     [
         "createShapesDocument",
         createShapesDocument,

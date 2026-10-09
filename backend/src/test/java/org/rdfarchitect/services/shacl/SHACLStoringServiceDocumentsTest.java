@@ -129,24 +129,8 @@ class SHACLStoringServiceDocumentsTest {
 
     @Test
     void graphWithoutAnyImportedDocumentExportsNoShapes() {
-        // Only the default document exists, and it is empty.
+        // A graph starts with no documents.
         assertThat(exportedCustomShapes()).doesNotContain("targetClass");
-    }
-
-    @Test
-    void theDeprecatedCustomExportReadsBackWhatItsReplaceWrites() {
-        // PUT /shacl/custom replaces the default document alone. Answering the GET with every
-        // enabled document made read, edit, write back copy the other documents into it.
-        givenDocument("eq.ttl", "EqShape targetClass ACLineSegment", true);
-        var mine = GraphFactory.createDefaultGraph();
-        mine.add(TestRDFUtils.triple("MineShape targetClass Terminal"));
-        service.replaceCustomSHACLGraph(GRAPH_IDENTIFIER, mine);
-
-        var exported =
-                service.exportCustomSHACLGraph(GRAPH_IDENTIFIER, RDFFormat.TURTLE)
-                        .toString(StandardCharsets.UTF_8);
-
-        assertThat(exported).contains("MineShape").doesNotContain("EqShape");
     }
 
     @Test

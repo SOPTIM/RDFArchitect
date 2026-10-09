@@ -26,15 +26,6 @@ import java.io.ByteArrayOutputStream;
 public interface SHACLExportUseCase {
 
     /**
-     * Export the custom SHACL graph for a given graph identifier.
-     *
-     * @param graphIdentifier The identifier of the graph to export SHACL for.
-     * @param format The format to export the SHACL graph in.
-     * @return A ByteArrayOutputStream containing the exported SHACL graph.
-     */
-    ByteArrayOutputStream exportCustomSHACLGraph(GraphIdentifier graphIdentifier, RDFFormat format);
-
-    /**
      * Export the generated SHACL graph for a given graph identifier with a specific shape URI.
      *
      * @param graphIdentifier The identifier of the graph to export SHACL for.

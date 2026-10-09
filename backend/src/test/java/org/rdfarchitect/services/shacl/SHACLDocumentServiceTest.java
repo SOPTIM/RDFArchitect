@@ -30,7 +30,6 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.database.inmemory.GraphWithContextTransactional;
@@ -88,21 +87,6 @@ class SHACLDocumentServiceTest {
     @Test
     void newGraphHasNoDocuments() {
         assertThat(service.listShapesDocuments(GRAPH)).isEmpty();
-    }
-
-    @Test
-    void aSupersededWriteCreatesTheDefaultDocument() {
-        service.replaceSHACLShape(GRAPH, "http://example.org/S", TURTLE);
-
-        assertThat(service.listShapesDocuments(GRAPH))
-                .singleElement()
-                .satisfies(
-                        info -> {
-                            assertThat(info.getId())
-                                    .isEqualTo(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
-                            assertThat(info.isDefault()).isTrue();
-                            assertThat(info.getTripleCount()).isPositive();
-                        });
     }
 
     @Test
@@ -237,15 +221,6 @@ class SHACLDocumentServiceTest {
         var created = createTurtleDocument("eq.ttl");
 
         service.deleteShapesDocument(GRAPH, created.getId());
-
-        assertThat(service.listShapesDocuments(GRAPH)).isEmpty();
-    }
-
-    @Test
-    void theDefaultDocumentCanBeDeleted() {
-        service.replaceSHACLShape(GRAPH, "http://example.org/S", TURTLE);
-
-        service.deleteShapesDocument(GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
 
         assertThat(service.listShapesDocuments(GRAPH)).isEmpty();
     }

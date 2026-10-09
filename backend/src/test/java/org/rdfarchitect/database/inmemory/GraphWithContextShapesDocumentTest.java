@@ -29,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.ShapesDocument;
+import org.rdfarchitect.database.ShapesDocumentSeed;
 import org.rdfarchitect.models.changelog.ContextDelta;
 import org.rdfarchitect.rdf.TestRDFUtils;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
@@ -138,64 +139,47 @@ class GraphWithContextShapesDocumentTest {
     // -------------------------------------------------------------------------
 
     @Test
+    void anEmptyMigratedDocumentIsNotRestored() {
+        // Snapshots taken while every graph had an empty custom.ttl still carry it.
+        var restored =
+                new GraphWithContextTransactional(
+                        GraphFactory.createDefaultGraph(),
+                        List.of(seed(GraphFactory.createDefaultGraph(), "")));
+
+        assertThat(restored.getShapesDocuments()).isEmpty();
+    }
+
+    @Test
+    void aMigratedDocumentWithShapesIsRestoredAndCanBeDeleted() {
+        var shapes = GraphFactory.createDefaultGraph();
+        shapes.add(shape);
+        ctx =
+                new GraphWithContextTransactional(
+                        GraphFactory.createDefaultGraph(), List.of(seed(shapes, "# mine")));
+
+        assertThat(documentContains(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, shape)).isTrue();
+        inWriteTransaction(
+                () -> ctx.removeShapesDocument(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID), "delete");
+        assertThat(documentExists(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID)).isFalse();
+    }
+
+    private static ShapesDocumentSeed seed(Graph shapes, String text) {
+        return new ShapesDocumentSeed(
+                GraphContext.DEFAULT_SHAPES_DOCUMENT_ID,
+                GraphContext.DEFAULT_SHAPES_DOCUMENT_NAME,
+                null,
+                ShapesDocument.Origin.AUTHORED,
+                true,
+                0,
+                text,
+                shapes);
+    }
+
+    @Test
     void aGraphStartsWithoutDocuments() {
         // The generated shapes are what a graph starts with; an empty file nobody asked for only
         // stood in the way, and could not be deleted.
         assertThat(ctx.getShapesDocuments()).isEmpty();
-    }
-
-    @Test
-    void theDefaultDocumentIsCreatedOnceWhenFirstWritten() {
-        var created = new ShapesDocument[2];
-        inWriteTransaction(
-                () -> {
-                    created[0] = ctx.ensureDefaultShapesDocument("custom.ttl");
-                    created[1] = ctx.ensureDefaultShapesDocument("ignored.ttl");
-                },
-                "legacy write");
-
-        assertThat(created[0]).isSameAs(created[1]);
-        assertThat(ctx.getShapesDocuments())
-                .containsOnlyKeys(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
-        assertThat(document(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID).getName())
-                .isEqualTo("custom.ttl");
-
-        ctx.undo();
-        assertThat(documentExists(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID)).isFalse();
-    }
-
-    @Test
-    void theDefaultDocumentCanBeDeletedAndComesBackEmpty() {
-        inWriteTransaction(
-                () -> {
-                    var document = ctx.ensureDefaultShapesDocument("custom.ttl");
-                    document.getGraph().add(shape);
-                    document.setRawText("# old");
-                },
-                "legacy write");
-        inWriteTransaction(
-                () -> ctx.removeShapesDocument(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID), "delete");
-        assertThat(documentExists(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID)).isFalse();
-
-        inWriteTransaction(() -> ctx.ensureDefaultShapesDocument("again.ttl"), "legacy write");
-
-        ctx.begin(ReadWrite.READ);
-        try {
-            var again = document(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
-            assertThat(again.getName()).isEqualTo("again.ttl");
-            assertThat(again.getGraph().isEmpty()).isTrue();
-            assertThat(again.getRawText()).isNull();
-        } finally {
-            ctx.end();
-        }
-
-        // Undoing the recreation brings back the deletion, and undoing that the old content.
-        ctx.undo();
-        assertThat(documentExists(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID)).isFalse();
-        ctx.undo();
-        assertThat(documentContains(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, shape)).isTrue();
-        assertThat(document(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID).getName())
-                .isEqualTo("custom.ttl");
     }
 
     // -------------------------------------------------------------------------
