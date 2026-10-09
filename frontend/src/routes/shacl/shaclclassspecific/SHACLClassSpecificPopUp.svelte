@@ -18,7 +18,6 @@
 <script>
     import { faFileShield } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
-    import { Pane, Splitpanes } from "svelte-splitpanes";
 
     import { getShaclRelatedToClass } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
@@ -33,10 +32,9 @@
     import { SchemaTermSource } from "$lib/shacl/schemaTermSource.svelte.js";
     import { parsePrefixes } from "$lib/shacl/turtleTerms.js";
     import { selectSchemaOf, workbenchHref } from "$lib/shacl/workbenchLink.js";
-    import { ClassType, editorState } from "$lib/sharedState.svelte.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     import ClassConstraintsView from "./ClassConstraintsView.svelte";
-    import ClassReferencedVia from "./ClassReferencedVia.svelte";
 
     import { goto } from "$app/navigation";
 
@@ -133,16 +131,6 @@
         const first = firstDocumentOf({ custom: customShacl });
         openInWorkbench(first?.documentId ?? null, first?.line ?? null);
     }
-
-    function goToClass(classUUID) {
-        editorState.selectedClassWorkspace.updateValue(workspaceName);
-        editorState.selectedClassGraph.updateValue(graphUri);
-        editorState.selectedClass.updateValue({
-            type: ClassType.SINGLE_CLASS,
-            id: classUUID,
-        });
-        showDialog = false;
-    }
 </script>
 
 <ActionDialog
@@ -178,29 +166,17 @@
                 <LoadingSpinner />
             </div>
         {:else}
-            <Splitpanes theme="opencgmes-theme" class="flex min-h-0 flex-1">
-                <Pane size={75} minSize={45}>
-                    {#key fetchKey}
-                        <ClassConstraintsView
-                            custom={customShacl}
-                            generated={generatedShacl}
-                            {termSource}
-                            {prefixes}
-                            onopen={openInWorkbench}
-                        />
-                    {/key}
-                </Pane>
-                <Pane size={25} minSize={15} maxSize={45}>
-                    <div class="h-full min-h-0 pl-2">
-                        <ClassReferencedVia
-                            {workspaceName}
-                            {graphUri}
-                            classUUID={reactiveClass.uuid.value}
-                            onClickOnClass={goToClass}
-                        />
-                    </div>
-                </Pane>
-            </Splitpanes>
+            <div class="min-h-0 flex-1">
+                {#key fetchKey}
+                    <ClassConstraintsView
+                        custom={customShacl}
+                        generated={generatedShacl}
+                        {termSource}
+                        {prefixes}
+                        onopen={openInWorkbench}
+                    />
+                {/key}
+            </div>
         {/if}
     </div>
 </ActionDialog>

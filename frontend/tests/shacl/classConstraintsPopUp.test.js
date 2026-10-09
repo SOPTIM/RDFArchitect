@@ -166,32 +166,11 @@ describe("SHACLClassSpecificPopUp", () => {
         expect(editorState.selectedGraph.getValue()).toBe(GRAPH);
     });
 
-    test("asks for references in the dialog's own schema", async () => {
+    test("shows the class's constraints without a references sidebar", async () => {
         await render();
+        await vi.waitFor(() => expect(button("mine.ttl")).toBeTruthy());
 
-        await vi.waitFor(() =>
-            expect(api.getClassesReferencingThisClass).toHaveBeenCalledWith({
-                path: {
-                    datasetName: WORKSPACE,
-                    graphURI: GRAPH,
-                    classUUID: "class-uuid",
-                },
-            }),
-        );
-    });
-
-    test("says the references could not be read rather than that there are none", async () => {
-        api.getClassesReferencingThisClass.mockResolvedValue({
-            error: { detail: "boom" },
-        });
-
-        await render();
-
-        await vi.waitFor(() =>
-            expect(dialog().textContent).toContain("could not be read"),
-        );
-        expect(dialog().textContent).not.toContain(
-            "Nothing references this class",
-        );
+        expect(dialog().textContent).not.toContain("Referenced");
+        expect(api.getClassesReferencingThisClass).not.toHaveBeenCalled();
     });
 });

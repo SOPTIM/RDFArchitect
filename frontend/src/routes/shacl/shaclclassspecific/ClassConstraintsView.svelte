@@ -138,7 +138,7 @@
             {#if nodeShapes.length > 0}
                 <div class="border-border mb-2 border-b pb-2">
                     <button
-                        class="text-default-text w-fit cursor-pointer text-sm font-semibold hover:underline"
+                        class="text-default-text flex w-fit cursor-pointer items-center gap-1.5 text-sm font-semibold hover:underline"
                         onclick={() => (showClassRules = !showClassRules)}
                     >
                         <Fa
