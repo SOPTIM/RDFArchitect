@@ -55,6 +55,11 @@ public class VersionedValue<T> implements TransactionParticipant {
         return current;
     }
 
+    /** The value as last committed, whatever the running transaction has set since. */
+    public T committed() {
+        return past.getFirst();
+    }
+
     public void set(T value) {
         current = Objects.requireNonNull(value);
     }

@@ -47,6 +47,8 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -119,7 +121,12 @@ public class GraphWithContextTransactional implements GraphContext {
     private final AtomicInteger stepsSinceNamedCommit = new AtomicInteger(0);
 
     /** The name is read at commit time, so a renamed document is labelled by its new name. */
-    private record NamedRewindable(Supplier<String> name, Rewindable rewindable) {}
+    /**
+     * A participant the changelog reports on, under a name the user reads.
+     *
+     * @param documentId the shapes document it holds, or {@code null} for the schema graph
+     */
+    private record NamedRewindable(Supplier<String> name, Rewindable rewindable, UUID documentId) {}
 
     private record RegisteredDocument(
             ShapesDocument document, VersionedValue<ShapesDocument.State> state) {}
@@ -156,7 +163,7 @@ public class GraphWithContextTransactional implements GraphContext {
         this.graphParticipants.add(rdfGraph);
         this.valueParticipants.add(documentIds);
         this.valueParticipants.add(shapesVersion);
-        this.coreRewindables.add(new NamedRewindable(() -> "rdf", rdfGraph));
+        this.coreRewindables.add(new NamedRewindable(() -> "rdf", rdfGraph, null));
         // Created up front, exactly as the single shapes graph used to be, so that reading a
         // graph's SHACL never has the side effect of adding a transaction participant.
         addShapesDocument(
@@ -297,7 +304,7 @@ public class GraphWithContextTransactional implements GraphContext {
                 DEFAULT_SHAPES_DOCUMENT_ID.equals(id)
                         ? () -> "shacl"
                         : () -> "shacl:" + document.getName();
-        coreRewindables.add(new NamedRewindable(contextName, graph));
+        coreRewindables.add(new NamedRewindable(contextName, graph, id));
         return document;
     }
 
@@ -348,6 +355,25 @@ public class GraphWithContextTransactional implements GraphContext {
                 valueParticipants.remove(registered.state());
                 coreRewindables.removeIf(nr -> nr.rewindable() == graph);
             }
+        }
+    }
+
+    /**
+     * What each document the running transaction takes out of the list holds, copied: its graph
+     * stays as it was, so its own delta would report nothing removed.
+     */
+    private Map<UUID, Graph> removedDocumentContents() {
+        synchronized (shapesDocumentsLock) {
+            var removed = new HashSet<>(documentIds.committed());
+            removed.removeAll(documentIds.get());
+            var contents = new HashMap<UUID, Graph>();
+            for (var id : removed) {
+                var registered = shapesDocuments.get(id);
+                if (registered != null) {
+                    contents.put(id, GraphUtils.deepCopy(registered.document().getGraph()));
+                }
+            }
+            return contents;
         }
     }
 
@@ -445,6 +471,7 @@ public class GraphWithContextTransactional implements GraphContext {
         changeLog.clearRedo();
 
         markShapesDocumentsChange();
+        var removed = removedDocumentContents();
         // Commit graph participants to capture their deltas. Every participant commits, whether or
         // not it changed, so their version counters stay aligned for undo.
         graphParticipants.forEach(RDFGraphDelta::commit);
@@ -461,13 +488,23 @@ public class GraphWithContextTransactional implements GraphContext {
                         .map(
                                 nr -> {
                                     var delta = nr.rewindable().getLastDelta();
+                                    // Removing a document leaves its graph as it was, so its
+                                    // own delta is empty and the entry said nothing was taken
+                                    // away. What a delete removes is everything it held.
+                                    var deletions =
+                                            nr.documentId() != null
+                                                            && removed.containsKey(nr.documentId())
+                                                    ? removed.get(nr.documentId())
+                                                    : delta.getDeletions();
                                     return new ContextDelta(
                                             nr.name().get(),
                                             new WeakReference<>(delta.getAdditions()),
-                                            new WeakReference<>(delta.getDeletions()));
+                                            new WeakReference<>(deletions));
                                 })
                         .toList();
-        changeLog.push(new ChangeLogEntry(message, steps, contextDeltas));
+        changeLog.push(
+                new ChangeLogEntry(message, steps, contextDeltas)
+                        .retaining(List.copyOf(removed.values())));
         changeLog.commit();
         logger.debug("Context committed with message: {}", message);
     }

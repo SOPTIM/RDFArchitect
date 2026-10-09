@@ -17,7 +17,14 @@
 
 package org.rdfarchitect.models.changelog;
 
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+
+import org.apache.jena.graph.Graph;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,11 +39,27 @@ public class ChangeLogEntry {
     private int steps;
     private List<ContextDelta> contextDeltas;
 
+    /**
+     * Graphs only this entry refers to, held so its weak references stay valid: what a delete
+     * removed is a copy no version history keeps, unlike the deltas the other contexts report.
+     */
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Graph> retained = List.of();
+
     public ChangeLogEntry(String message, int steps, List<ContextDelta> contextDeltas) {
         this.changeId = UUID.randomUUID();
         this.timestamp = LocalDateTime.now();
         this.message = message;
         this.steps = steps;
         this.contextDeltas = contextDeltas;
+    }
+
+    /** Keeps {@code graphs} alive for as long as this entry is. */
+    public ChangeLogEntry retaining(List<Graph> graphs) {
+        this.retained = List.copyOf(graphs);
+        return this;
     }
 }

@@ -84,6 +84,23 @@ class SHACLDocumentHistoryTest {
         return service.listShapesDocuments(GRAPH).stream().map(ShapesDocumentInfo::getId).toList();
     }
 
+    @Test
+    void theChangelogEntryOfADeleteListsWhatTheDocumentHeld() {
+        var id = create("terminal.ttl", FIRST);
+
+        service.deleteShapesDocument(GRAPH, id);
+
+        var deleted =
+                history().getFirst().getContextDeltas().stream()
+                        .filter(delta -> delta.contextName().equals("shacl:terminal.ttl"))
+                        .findFirst()
+                        .orElseThrow()
+                        .deletions()
+                        .get();
+        assertThat(deleted).isNotNull();
+        assertThat(deleted.size()).isEqualTo(2);
+    }
+
     private List<ChangeLogEntry> history() {
         try (var ctx = context.begin(ReadWrite.READ)) {
             return ctx.getChangeLog().getUndoHistory();

@@ -20,4 +20,13 @@
         <Method name="createShapesDocument"/>
         <Bug pattern="THROWS_METHOD_THROWS_RUNTIMEEXCEPTION"/>
     </Match>
+    <!--
+        Held only to keep the graphs a changelog entry's weak references point at alive: a deleted
+        constraints document's triples, which no version history retains. Never read on purpose.
+    -->
+    <Match>
+        <Class name="org.rdfarchitect.models.changelog.ChangeLogEntry"/>
+        <Field name="retained"/>
+        <Bug pattern="URF_UNREAD_FIELD"/>
+    </Match>
 </FindBugsFilter>
