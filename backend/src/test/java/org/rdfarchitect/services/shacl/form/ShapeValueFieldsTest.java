@@ -158,6 +158,22 @@ class ShapeValueFieldsTest {
                 .withMessageContaining("is not a number");
     }
 
+    @Test
+    void aNegativeCountOrLengthIsRefused() {
+        var shape = shapeIn(SHAPES);
+        shape.getProperties().get(0).setMaxCount(-1);
+
+        assertThatExceptionOfType(ResourceConflictException.class)
+                .isThrownBy(() -> service.apply(edit(SHAPES, shape)))
+                .withMessageContaining("negative");
+
+        var other = shapeIn(SHAPES);
+        other.getProperties().get(0).setMinLength(-3);
+
+        assertThatExceptionOfType(ResourceConflictException.class)
+                .isThrownBy(() -> service.apply(edit(SHAPES, other)));
+    }
+
     // -------------------------------------------------------------------------
     // sh:order
     // -------------------------------------------------------------------------

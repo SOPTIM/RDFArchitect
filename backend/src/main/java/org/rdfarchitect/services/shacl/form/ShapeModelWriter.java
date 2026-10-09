@@ -230,8 +230,22 @@ final class ShapeModelWriter {
         return value == null || value.isEmpty() ? null : quote(value);
     }
 
+    /**
+     * A count or a length — every whole-number field the form has. SHACL requires those to be
+     * non-negative, and {@code sh:maxCount -1} parses, so it would be written and only found out by
+     * whatever reads the shapes next.
+     */
     static String number(Integer value) {
-        return value == null ? null : value.toString();
+        if (value == null) {
+            return null;
+        }
+        if (value < 0) {
+            throw new ResourceConflictException(
+                    value
+                            + " is negative; a count or a length cannot be, so the form will not"
+                            + " write it.");
+        }
+        return value.toString();
     }
 
     /**
