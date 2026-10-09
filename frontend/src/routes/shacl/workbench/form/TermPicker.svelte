@@ -147,10 +147,12 @@
             onpick(null);
             return;
         }
+        // A bare name is how people type a class — `ACLineSegment`, not `cim:ACLineSegment` — and
+        // refusing it when exactly one offered term is called that only sent them to the list.
         const iri =
             resolveTerm(typed, prefixes) ??
             absoluteIri(typed) ??
-            (literals ? onlyTermNamed(typed) : null);
+            onlyTermNamed(typed);
         if (iri) {
             onpick(iri);
             return;
@@ -167,7 +169,7 @@
     }
 
     /**
-     * The one offered term with this local name, for a value typed without its prefix.
+     * The one offered term with this local name, for a term typed without its prefix.
      *
      * `WindingConnection.D` is how people write an enum value, and the document needs the term.
      * Only taken when exactly one term is called that, so a string that merely resembles one is

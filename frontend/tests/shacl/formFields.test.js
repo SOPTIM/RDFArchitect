@@ -295,6 +295,33 @@ describe("picking a term", () => {
         expect(onpick).toHaveBeenCalledWith("http://other.org/Thing.name");
     });
 
+    test("a name typed without its prefix is the one term called that", () => {
+        const { onpick } = picker({ kind: "CLASS" });
+
+        commit(target.querySelector("input"), "Terminal");
+
+        expect(onpick).toHaveBeenCalledWith(`${CIM}Terminal`);
+    });
+
+    test("a bare name two terms share is not guessed at", () => {
+        const { onpick } = picker({
+            kind: "CLASS",
+            terms: [
+                ...TERMS,
+                {
+                    kind: "CLASS",
+                    iri: "http://other.org/ns#Terminal",
+                    namespace: "http://other.org/ns#",
+                    localName: "Terminal",
+                },
+            ],
+        });
+
+        commit(target.querySelector("input"), "Terminal");
+
+        expect(onpick).not.toHaveBeenCalled();
+    });
+
     test("something that is not a term at all is refused, not written", () => {
         // It used to go straight into sh:path, where a phrase with a space in it was written as
         // `<a phrase>` and the document stopped parsing.
