@@ -19,6 +19,7 @@
     import {
         faFileShield,
         faFloppyDisk,
+        faLock,
     } from "@fortawesome/free-solid-svg-icons";
     import { untrack } from "svelte";
     import { Fa } from "svelte-fa";
@@ -573,6 +574,20 @@
             >
                 Constraints — {selectedWorkspace} / {schemaName}
             </h1>
+            {#if workbench.readOnly}
+                <!--
+                  Said here as well as by the disabled controls: a buffer with edits in it can
+                  become unsaveable when the workspace is switched to read-only, and a greyed-out
+                  Save button alone does not say why.
+                -->
+                <span
+                    class="text-text-subtle border-border flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-xs"
+                    title="The workspace is read-only. Enable editing to change its constraints."
+                >
+                    <Fa icon={faLock} />
+                    read-only
+                </span>
+            {/if}
             {#if workbench.saving}
                 <span class="text-text-subtle shrink-0 text-xs">saving…</span>
             {:else if workbench.dirty}
