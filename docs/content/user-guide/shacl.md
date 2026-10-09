@@ -143,4 +143,4 @@ A **read-only** workspace cannot take an import: the menu entry and its shortcut
 
 What is ticked to begin with is what validation uses: the documents that are switched on. A document that is switched off is labelled so and can still be ticked — off means "takes no part in validation", not "cannot be exported". The generated shapes are only ticked when the schema has no constraints documents; next to an official constraints file they restate most of it in other words, so ticking both repeats most rules in the file.
 
-Exporting **one document on its own, as TTL**, gives back its text exactly as it is stored — comments and ordering included — the same file the workbench's **download** saves. Any other combination is merged and written out afresh, which keeps what the shapes say but not how the files spelled it.
+Exporting **one document on its own, as TTL** — ticking empty documents beside it does not count — gives back its text exactly as it is stored — comments and ordering included — the same file the workbench's **download** saves. Any other combination is merged and written out afresh, which keeps what the shapes say but not how the files spelled it.

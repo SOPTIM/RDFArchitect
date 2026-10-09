@@ -449,8 +449,19 @@ public class SHACLStoringService
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             var ids = Set.copyOf(documentIds == null ? List.<UUID>of() : documentIds);
             ids.forEach(id -> requireDocument(ctx, id));
-            if (ids.size() == 1 && !includeGenerated && Lang.TURTLE.equals(format.getLang())) {
-                var rawText = requireDocument(ctx, ids.iterator().next()).getRawText();
+            // Documents with no triples add nothing to a merge, so they do not stop the one that
+            // does from coming back as written. The export dialog ticks every enabled document,
+            // and the graph's default one is nearly always empty: counting it re-serialised every
+            // imported file on its default export, dropping its comments and ordering.
+            var contributing =
+                    ids.stream()
+                            .map(id -> requireDocument(ctx, id))
+                            .filter(document -> !document.getGraph().isEmpty())
+                            .toList();
+            if (contributing.size() == 1
+                    && !includeGenerated
+                    && Lang.TURTLE.equals(format.getLang())) {
+                var rawText = contributing.getFirst().getRawText();
                 if (rawText != null) {
                     var out = new ByteArrayOutputStream();
                     out.writeBytes(rawText.getBytes(StandardCharsets.UTF_8));

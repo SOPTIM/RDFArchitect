@@ -321,6 +321,21 @@ class SHACLDocumentServiceTest {
     }
 
     @Test
+    void anEmptyDocumentTickedAlongsideDoesNotStopAFileComingBackAsWritten() {
+        var eq = createTurtleDocument("eq.ttl");
+
+        var exported =
+                service.exportSelectedSHACLGraph(
+                                GRAPH,
+                                RDFFormat.TURTLE,
+                                List.of(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, eq.getId()),
+                                false)
+                        .toString(StandardCharsets.UTF_8);
+
+        assertThat(exported).isEqualTo(TURTLE);
+    }
+
+    @Test
     void exportingNothingProducesAnEmptyDocumentRatherThanFailing() {
         var exported =
                 service.exportSelectedSHACLGraph(GRAPH, RDFFormat.TURTLE, List.of(), false)
