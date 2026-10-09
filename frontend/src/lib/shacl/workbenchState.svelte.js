@@ -56,12 +56,31 @@ const NO_FINDINGS = {
     findings: [],
 };
 
+const UNICODE_SPACE = /[\p{Zs}\u2028\u2029]/u;
+
 /**
- * What Java's `String.isBlank` counts as blank, which is what the server tests — not `trim`'s
- * idea of it: Java keeps the no-break spaces as content.
+ * Whether Java's `String.isBlank` — what the server tests — calls `text` blank. Not `trim`'s idea
+ * of it: Java's `Character.isWhitespace` keeps the no-break spaces as content, and counts the
+ * information separators U+001C–U+001F as space.
  */
-const JAVA_BLANK =
-    /^(?:(?![\u00A0\u2007\u202F])[\p{Zs}\u2028\u2029\t\n\v\f\r\u001C-\u001F])*$/u;
+function isJavaBlank(text) {
+    for (const character of text) {
+        const code = character.codePointAt(0);
+        if ((code >= 0x09 && code <= 0x0d) || (code >= 0x1c && code <= 0x1f)) {
+            continue;
+        }
+        if (
+            UNICODE_SPACE.test(character) &&
+            code !== 0x00a0 &&
+            code !== 0x2007 &&
+            code !== 0x202f
+        ) {
+            continue;
+        }
+        return false;
+    }
+    return true;
+}
 
 /**
  * The document the workbench opens when none is chosen: the first that holds anything, and the
@@ -103,7 +122,7 @@ export async function revisionOf(text) {
  * A revision has to name that, or a save after emptying a document reads as made to stale text.
  */
 function storedForm(text) {
-    return JAVA_BLANK.test(text) ? "" : text;
+    return isJavaBlank(text) ? "" : text;
 }
 
 /**
