@@ -24,19 +24,22 @@
  * be distinguished rather than rejected.
  */
 
-/**
- * The wanted name, or the first free `name (n)` after it.
- *
- * Compared without regard to case, as the backend compares them: `EQ.ttl` and `eq.ttl` read as one
- * name and collide as file names on export, so the server refuses the second, and a name this
- * offered as free was answered with a conflict.
- */
-
 /** Extensions of the RDF syntaxes an import converts to Turtle. */
 const CONVERTED_EXTENSION = /\.(rdf|xml|owl|nt)$/i;
 
 /** Extensions Turtle is already written under. */
 const TURTLE_EXTENSION = /\.(ttl|shacl|n3)$/i;
+
+/**
+ * The wanted name, or the first free `name (n).ext` after it.
+ *
+ * The number goes before the extension, so the copy is still a `.ttl` file — `eq.ttl (2)` was
+ * downloaded as `eq.ttl (2).ttl`.
+ *
+ * Compared without regard to case, as the backend compares them: `EQ.ttl` and `eq.ttl` read as one
+ * name and collide as file names on export, so the server refuses the second, and a name this
+ * offered as free was answered with a conflict.
+ */
 export function uniqueDocumentName(existingNames, wanted) {
     const taken = new Set(
         (existingNames ?? []).map(name => name.toLowerCase()),
@@ -45,11 +48,14 @@ export function uniqueDocumentName(existingNames, wanted) {
     if (!isTaken(wanted)) {
         return wanted;
     }
+    const dot = wanted.lastIndexOf(".");
+    const [stem, extension] =
+        dot > 0 ? [wanted.slice(0, dot), wanted.slice(dot)] : [wanted, ""];
     let suffix = 2;
-    while (isTaken(`${wanted} (${suffix})`)) {
+    while (isTaken(`${stem} (${suffix})${extension}`)) {
         suffix += 1;
     }
-    return `${wanted} (${suffix})`;
+    return `${stem} (${suffix})${extension}`;
 }
 
 /**

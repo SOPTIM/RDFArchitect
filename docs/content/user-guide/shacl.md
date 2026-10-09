@@ -133,7 +133,7 @@ A similar dialog at class level answers the same question for a whole class, and
 
 ## Importing custom SHACL
 
-**File → Import → Constraints (SHACL)** (`Ctrl+Shift+I`) uploads a SHACL file into a schema of your choice — the selected one to begin with — as a new document named after the file. The workbench's import button does the same thing without leaving it. Importing a file whose name is already taken adds a `(2)` rather than replacing anything. Supported formats are TTL, RDF/XML and N-Triples; TTL is recommended, and is the only one that preserves the file's text exactly.
+**File → Import → Constraints (SHACL)** (`Ctrl+Shift+I`) uploads a SHACL file into a schema of your choice — the selected one to begin with — as a new document named after the file. The workbench's import button does the same thing without leaving it. Importing a file whose name is already taken adds a number before the extension (`eq (2).ttl`) rather than replacing anything. Supported formats are TTL, RDF/XML and N-Triples; TTL is recommended, and is the only one that preserves the file's text exactly.
 
 A **read-only** workspace cannot take an import: the menu entry and its shortcut are disabled while one is selected, the dialog does not offer read-only workspaces, and an import aimed at one is refused.
 

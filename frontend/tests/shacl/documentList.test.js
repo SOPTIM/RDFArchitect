@@ -277,7 +277,7 @@ describe("DocumentList", () => {
 
         await vi.waitFor(() =>
             expect(workbench.create).toHaveBeenCalledWith(
-                "constraints.ttl (2)",
+                "constraints (2).ttl",
                 "",
             ),
         );

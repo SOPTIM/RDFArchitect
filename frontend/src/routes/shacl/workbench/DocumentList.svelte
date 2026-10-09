@@ -113,7 +113,7 @@
         }
     }
 
-    /** The backend rejects a duplicate name, so a second "eq.ttl" becomes "eq.ttl (2)". */
+    /** The backend rejects a duplicate name, so a second "eq.ttl" becomes "eq (2).ttl". */
     function uniqueName(name) {
         return uniqueDocumentName(
             workbench.documents.map(document => document.name),

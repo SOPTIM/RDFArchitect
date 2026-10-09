@@ -35,22 +35,22 @@ describe("uniqueDocumentName", () => {
     });
 
     test("distinguishes a second copy rather than colliding", () => {
-        expect(uniqueDocumentName(["eq.ttl"], "eq.ttl")).toBe("eq.ttl (2)");
+        expect(uniqueDocumentName(["eq.ttl"], "eq.ttl")).toBe("eq (2).ttl");
     });
 
     test("keeps counting past a suffix that is also taken", () => {
         expect(
             uniqueDocumentName(
-                ["eq.ttl", "eq.ttl (2)", "eq.ttl (3)"],
+                ["eq.ttl", "eq (2).ttl", "eq (3).ttl"],
                 "eq.ttl",
             ),
-        ).toBe("eq.ttl (4)");
+        ).toBe("eq (4).ttl");
     });
 
     test("treats a name differing only in case as taken, as the server does", () => {
-        expect(uniqueDocumentName(["EQ.ttl"], "eq.TTL")).toBe("eq.TTL (2)");
-        expect(uniqueDocumentName(["eq.ttl", "EQ.TTL (2)"], "eq.ttl")).toBe(
-            "eq.ttl (3)",
+        expect(uniqueDocumentName(["EQ.ttl"], "eq.TTL")).toBe("eq (2).TTL");
+        expect(uniqueDocumentName(["eq.ttl", "EQ (2).TTL"], "eq.ttl")).toBe(
+            "eq (3).ttl",
         );
     });
 
