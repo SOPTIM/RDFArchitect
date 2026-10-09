@@ -53,4 +53,13 @@ public class ShapesDocumentInfo {
 
     /** Number of triples the document holds, so the UI can show an empty document as empty. */
     private long tripleCount;
+
+    /** Node shapes the document declares — what it applies to. */
+    private int nodeShapeCount;
+
+    /** Property shapes, named and inline — the rules on individual properties. */
+    private int propertyShapeCount;
+
+    /** SPARQL constraints, which the form has no fields for. */
+    private int sparqlConstraintCount;
 }

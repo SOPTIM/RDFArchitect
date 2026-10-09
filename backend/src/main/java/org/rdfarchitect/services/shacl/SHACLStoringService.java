@@ -418,6 +418,7 @@ public class SHACLStoringService
     }
 
     private static ShapesDocumentInfo toInfo(ShapesDocument document) {
+        var counts = ShapeCounts.of(document.getGraph());
         return ShapesDocumentInfo.builder()
                 .id(document.getId())
                 .name(document.getName())
@@ -427,6 +428,9 @@ public class SHACLStoringService
                 .order(document.getOrder())
                 .isDefault(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID.equals(document.getId()))
                 .tripleCount(document.getGraph().size())
+                .nodeShapeCount(counts.nodeShapes())
+                .propertyShapeCount(counts.propertyShapes())
+                .sparqlConstraintCount(counts.sparqlConstraints())
                 .build();
     }
 

@@ -56,11 +56,11 @@
                 </h3>
                 <dl class="text-default-text space-y-1">
                     <div class="flex gap-2">
-                        <dt class="text-text-subtle w-24 shrink-0">Name</dt>
+                        <dt class="text-text-subtle w-32 shrink-0">Name</dt>
                         <dd class="min-w-0 break-words">{document.name}</dd>
                     </div>
                     <div class="flex items-center gap-2">
-                        <dt class="text-text-subtle w-24 shrink-0">Origin</dt>
+                        <dt class="text-text-subtle w-32 shrink-0">Origin</dt>
                         <dd>
                             <Badge
                                 text={document.origin === "IMPORTED"
@@ -74,18 +74,42 @@
                     </div>
                     {#if document.sourceFileName}
                         <div class="flex gap-2">
-                            <dt class="text-text-subtle w-24 shrink-0">File</dt>
+                            <dt class="text-text-subtle w-32 shrink-0">File</dt>
                             <dd class="min-w-0 break-all">
                                 {document.sourceFileName}
                             </dd>
                         </div>
                     {/if}
+                    <!--
+                      What the document holds, not only how big it is: 9,931 triples says little
+                      until it reads as 145 node shapes and 572 property shapes.
+                    -->
                     <div class="flex gap-2">
-                        <dt class="text-text-subtle w-24 shrink-0">Triples</dt>
+                        <dt class="text-text-subtle w-32 shrink-0">
+                            Node shapes
+                        </dt>
+                        <dd>{document.nodeShapeCount ?? 0}</dd>
+                    </div>
+                    <div class="flex gap-2">
+                        <dt class="text-text-subtle w-32 shrink-0">
+                            Property shapes
+                        </dt>
+                        <dd>{document.propertyShapeCount ?? 0}</dd>
+                    </div>
+                    {#if document.sparqlConstraintCount}
+                        <div class="flex gap-2">
+                            <dt class="text-text-subtle w-32 shrink-0">
+                                SPARQL constraints
+                            </dt>
+                            <dd>{document.sparqlConstraintCount}</dd>
+                        </div>
+                    {/if}
+                    <div class="flex gap-2">
+                        <dt class="text-text-subtle w-32 shrink-0">Triples</dt>
                         <dd>{document.tripleCount ?? 0}</dd>
                     </div>
                     <div class="flex gap-2">
-                        <dt class="text-text-subtle w-24 shrink-0">
+                        <dt class="text-text-subtle w-32 shrink-0">
                             Validation
                         </dt>
                         <dd>
@@ -101,11 +125,11 @@
                 <h3
                     class="text-text-subtle mb-1 text-xs font-semibold uppercase"
                 >
-                    Shapes ({nodeShapes.length})
+                    Node shapes ({nodeShapes.length})
                 </h3>
                 {#if nodeShapes.length === 0}
                     <p class="text-text-subtle italic">
-                        No shapes found in this document.
+                        No node shapes in this document.
                     </p>
                 {:else}
                     <ul class="flex flex-col">

@@ -2695,6 +2695,10 @@
           "name" : {
             "type" : "string"
           },
+          "nodeShapeCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "order" : {
             "format" : "int32",
             "type" : "integer"
@@ -2706,8 +2710,16 @@
             ],
             "type" : "string"
           },
+          "propertyShapeCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "sourceFileName" : {
             "type" : "string"
+          },
+          "sparqlConstraintCount" : {
+            "format" : "int32",
+            "type" : "integer"
           },
           "tripleCount" : {
             "format" : "int64",

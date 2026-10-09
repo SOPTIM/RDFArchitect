@@ -312,6 +312,9 @@ eq:ACLineSegmentShape
                     origin: "IMPORTED",
                     sourceFileName: "61970-301_Equipment-SHACL.ttl",
                     tripleCount: 51,
+                    nodeShapeCount: 1,
+                    propertyShapeCount: 7,
+                    sparqlConstraintCount: 2,
                     enabled: true,
                 },
             }),
@@ -322,7 +325,9 @@ eq:ACLineSegmentShape
         expect(panel.textContent).toContain("61970-301_Equipment-SHACL.ttl");
         expect(panel.textContent).toContain("51");
         expect(panel.textContent).toContain("Takes part");
-        expect(panel.textContent).toContain("Shapes (1)");
+        expect(panel.textContent).toContain("Node shapes (1)");
+        expect(panel.textContent).toMatch(/Property shapes\s*7/);
+        expect(panel.textContent).toMatch(/SPARQL constraints\s*2/);
         expect(panel.textContent).toContain("eq:ACLineSegmentShape");
         expect(panel.textContent).toContain("targets cim:ACLineSegment");
         expect(panel.textContent).toContain("http://example.org/EQ/1.0");
