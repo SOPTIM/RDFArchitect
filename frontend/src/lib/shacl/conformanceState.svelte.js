@@ -113,17 +113,20 @@ export function foldFindings(findings) {
  * several documents, so the comparison reads every enabled one; the open document is only what
  * decides when the question gets asked.
  *
- * Answered on demand rather than continuously: the comparison generates shapes for the whole
- * schema, which is far more work than validating a document, and the question is one a modeller
- * asks at a moment they choose.
+ * Answered when the schema check is opened rather than continuously: the comparison generates
+ * shapes for the whole schema, which is far more work than validating a document, so it is asked
+ * once per document and kept until a save could change the answer.
  */
 export class ConformanceView {
-    /** @type {import("$lib/api/generated").ConformanceReport | null} */
-    report = $state(null);
+    /**
+     * The last report per document, so switching to another document and back shows its result
+     * again instead of asking for a comparison that was already made.
+     */
+    reports = $state({});
     running = $state(false);
     error = $state(null);
-    /** The document the report describes, so a stale one is not shown for another. */
-    reportedOn = $state(null);
+    /** The document a failed comparison was about, so showing it again does not retry in a loop. */
+    failedOn = $state(null);
 
     #datasetName;
     #graphUri;
@@ -133,6 +136,28 @@ export class ConformanceView {
         this.#datasetName = datasetName;
         this.#graphUri = graphUri;
         this.#requestOptions = requestOptions;
+    }
+
+    /** The comparison last made for `documentId`, or null when there is none. */
+    reportFor(documentId) {
+        return documentId ? (this.reports[documentId] ?? null) : null;
+    }
+
+    /**
+     * Compares `documentId` unless its result is already known — what opening the schema check
+     * does, so the answer is there without a click. A comparison that failed is not retried until
+     * asked for again.
+     */
+    ensure(documentId) {
+        if (
+            !documentId ||
+            this.running ||
+            this.reports[documentId] ||
+            this.failedOn === documentId
+        ) {
+            return null;
+        }
+        return this.run(documentId);
     }
 
     async run(documentId) {
@@ -152,21 +177,25 @@ export class ConformanceView {
             if (error) {
                 this.error =
                     "The document could not be compared with the schema.";
+                this.failedOn = documentId;
                 return null;
             }
-            this.report = data;
-            this.reportedOn = documentId;
+            this.reports = { ...this.reports, [documentId]: data };
             this.error = null;
+            this.failedOn = null;
             return data;
         } finally {
             this.running = false;
         }
     }
 
-    /** Drops a report that no longer describes what is on screen. */
+    /**
+     * Drops every report. Each comparison reads all of the graph's enabled documents, so a save
+     * to any of them, or a change to the schema, can change the answer for every one.
+     */
     forget() {
-        this.report = null;
-        this.reportedOn = null;
+        this.reports = {};
         this.error = null;
+        this.failedOn = null;
     }
 }

@@ -144,8 +144,7 @@ describe("ConformanceView", () => {
 
         expect(server.requests[0].path).toMatch(/\/shacl\/conformance$/);
         expect(server.requests[0].documentId).toBe(DOCUMENT);
-        expect(view.report.agreeing).toBe(1341);
-        expect(view.reportedOn).toBe(DOCUMENT);
+        expect(view.reportFor(DOCUMENT).agreeing).toBe(1341);
     });
 
     test("does nothing without a document", async () => {
@@ -161,15 +160,40 @@ describe("ConformanceView", () => {
         expect(view.error).toBe(
             "The document could not be compared with the schema.",
         );
-        expect(view.report).toBeNull();
+        expect(view.reportFor(DOCUMENT)).toBeNull();
+        expect(view.failedOn).toBe(DOCUMENT);
+    });
+
+    test("keeps each document's report, so switching back does not ask again", async () => {
+        await view.run(DOCUMENT);
+        await view.run("other-document");
+
+        expect(view.reportFor(DOCUMENT)).not.toBeNull();
+        expect(view.reportFor("other-document")).not.toBeNull();
+        expect(await view.ensure(DOCUMENT)).toBeNull();
+        expect(server.requests).toHaveLength(2);
+    });
+
+    test("ensuring compares a document not compared yet", async () => {
+        await view.ensure(DOCUMENT);
+
+        expect(server.requests).toHaveLength(1);
+        expect(view.reportFor(DOCUMENT)).not.toBeNull();
+    });
+
+    test("ensuring does not retry a comparison that failed", async () => {
+        server.status = 500;
+        await view.ensure(DOCUMENT);
+        await view.ensure(DOCUMENT);
+
+        expect(server.requests).toHaveLength(1);
     });
 
     test("forgetting drops the report, so another document is not shown the wrong answer", async () => {
         await view.run(DOCUMENT);
         view.forget();
 
-        expect(view.report).toBeNull();
-        expect(view.reportedOn).toBeNull();
+        expect(view.reportFor(DOCUMENT)).toBeNull();
     });
 });
 
@@ -191,11 +215,16 @@ describe("ConformanceReportView", () => {
         target = null;
     });
 
-    const conformance = (overrides = {}) => ({
-        report: REPORT,
-        reportedOn: DOCUMENT,
+    const conformance = ({
+        report = REPORT,
+        reportedOn = DOCUMENT,
+        ...overrides
+    } = {}) => ({
         running: false,
         error: null,
+        failedOn: null,
+        reportFor: id => (id && id === reportedOn ? report : null),
+        ensure: vi.fn(),
         run: vi.fn(),
         forget: vi.fn(),
         ...overrides,
@@ -387,5 +416,22 @@ describe("ConformanceReportView", () => {
         flushSync();
 
         expect(state.run).toHaveBeenCalledWith(DOCUMENT);
+    });
+
+    test("compares on opening, without a click", () => {
+        const state = conformance({ report: null, reportedOn: null });
+        render({ conformance: state, documentId: DOCUMENT });
+        flushSync();
+
+        expect(state.ensure).toHaveBeenCalledWith(DOCUMENT);
+    });
+
+    test("shows a document's own report, not the last one made", () => {
+        const view = render({
+            conformance: conformance({ reportedOn: "other-document" }),
+            documentId: DOCUMENT,
+        });
+
+        expect(view.textContent).toContain("Compare with the schema");
     });
 });

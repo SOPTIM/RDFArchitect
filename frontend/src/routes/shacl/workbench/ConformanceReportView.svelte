@@ -105,8 +105,9 @@
     /** How many classes a folded finding is about, once listed in full, then counted. */
     const CLASSES_SHOWN = 3;
 
-    const report = $derived(
-        conformance.reportedOn === documentId ? conformance.report : null,
+    const report = $derived(conformance.reportFor(documentId));
+    const error = $derived(
+        conformance.failedOn === documentId ? conformance.error : null,
     );
 
     const verdict = $derived(conformanceVerdict(report));
@@ -140,6 +141,11 @@
                 (a, b) =>
                     conformanceKind(a[0]).order - conformanceKind(b[0]).order,
             );
+    });
+
+    // Opening the check, or another document while it is open, answers without a click.
+    $effect(() => {
+        conformance.ensure(documentId);
     });
 
     function classesOf(finding) {
@@ -207,11 +213,11 @@
             <div class="flex h-full items-center justify-center">
                 <LoadingSpinner />
             </div>
-        {:else if conformance.error}
+        {:else if error}
             <p
                 class="bg-red-background border-red-border text-red-text rounded border p-3 text-sm"
             >
-                {conformance.error}
+                {error}
             </p>
         {:else if !report}
             <div class="flex h-full items-center justify-center">
