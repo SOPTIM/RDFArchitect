@@ -262,12 +262,12 @@ describe("ProblemsPanel", () => {
         expect(parseInt(sized(panel).style.height, 10)).toBe(120);
     });
 
-    test("with nothing to report it takes only the room its one line needs", () => {
+    test("can be sized with nothing to report, so a size chosen by hand stays", () => {
         const panel = render(ProblemsPanel, { workbench: fakeWorkbench() });
         flushSync();
 
-        expect(handle(panel)).toBeNull();
-        expect(sized(panel).style.height).toBe("");
+        expect(handle(panel)).not.toBeNull();
+        expect(sized(panel).style.height).not.toBe("");
     });
 
     test("collapsing gives the space back and takes the handle away", () => {

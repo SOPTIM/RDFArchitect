@@ -48,7 +48,7 @@
     const STEP = 24;
 
     /** The panel's height while it is expanded. Collapsed, the header sizes itself. */
-    let height = $state(260);
+    let height = $state(200);
     let panel = $state(null);
 
     /** Unbinds the listeners of the drag in progress, or null when none is. */
@@ -69,11 +69,13 @@
     const totals = $derived(workbench.totals);
 
     /**
-     * Whether the panel takes the height it was given. With nothing to list it shrinks to its one
-     * line instead: a fixed share of the window spent on "nothing to report" was taken from the
-     * editor, which on a laptop screen left it a few hundred pixels.
+     * Whether the panel takes the height it was given: whenever it is open, findings or not.
+     *
+     * Shrinking it to one line while there was nothing to report took the handle away with it, so
+     * a panel sized by hand jumped back the moment the last finding was fixed and the next one
+     * typed, and the size had to be found again.
      */
-    const sized = $derived(expanded && problems.length > 0);
+    const sized = $derived(expanded);
 
     // Navigating away mid-drag would otherwise leave the handlers writing height into a component
     // that is gone, holding its DOM alive with them.
