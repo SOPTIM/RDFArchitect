@@ -36,6 +36,8 @@ In a **read-only** workspace the workbench reads and validates as usual, but not
 
 Unsaved changes are not thrown away quietly. Opening another document, following a finding to the file it came from, or leaving the workbench altogether — including the editor's own Ctrl+click, the browser's back button, and closing the tab — asks first, and offers to save.
 
+A save is also refused rather than allowed to overwrite a change it has not seen. If the document was changed since you opened it — saved from another tab, or rewound by an undo while you had edits — the workbench says so and lets you choose: **Overwrite** it with your version, or **Load the stored version** and drop your edits. Closing the dialog keeps your edits in the editor, unsaved.
+
 ### Turtle view
 
 The document as text, with syntax highlighting that extends into the SPARQL inside `sh:select`, and squiggles under whatever validation objects to. `Ctrl+S` saves; `F8` walks from one problem to the next; hovering a marker shows the message.
