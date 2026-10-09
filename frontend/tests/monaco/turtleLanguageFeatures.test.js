@@ -139,6 +139,36 @@ describe("following a term", () => {
         expect(definition.uri.query).toBe(PACKAGE_UUID);
     });
 
+    test("the whole prefixed name is one link, not one per word", async () => {
+        // Monaco's words stop at ":" and ".", so without a range of its own the link was drawn
+        // under "cim", "Class" and "property" separately.
+        const text = `@prefix cim: <${CIM}> .\nex:S sh:path cim:ACLineSegment.r .\n`;
+        const model = fakeModel(text);
+        attachTermSource(
+            model,
+            fakeSource({
+                iri: `${CIM}ACLineSegment.r`,
+                graphUri: GRAPH,
+                classUUID: CLASS_UUID,
+                packageUUID: PACKAGE_UUID,
+            }),
+        );
+        onOpenClass(vi.fn());
+        const start = text.split("\n")[1].indexOf("cim:") + 1;
+
+        const definition = await registered.definition.provideDefinition(
+            model,
+            { lineNumber: 2, column: start + 6 },
+        );
+
+        expect(definition.originSelectionRange).toEqual({
+            startLineNumber: 2,
+            endLineNumber: 2,
+            startColumn: start,
+            endColumn: start + "cim:ACLineSegment.r".length,
+        });
+    });
+
     test("hands the graph, the class and the package to the handler", async () => {
         const model = fakeModel();
         attachTermSource(

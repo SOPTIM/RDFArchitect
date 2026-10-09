@@ -329,6 +329,15 @@ export function registerTurtleLanguageFeatures(monaco, languageId) {
             if (!term) {
                 return null;
             }
+            // The whole term is the link. Without it Monaco underlines the word under the
+            // pointer, and its words stop at ":" and ".", so `cim:Class.property` read as three
+            // links — "cim", "Class" and "property" — all going to the same place.
+            const originSelectionRange = {
+                startLineNumber: position.lineNumber,
+                endLineNumber: position.lineNumber,
+                startColumn: term.startColumn,
+                endColumn: term.endColumn,
+            };
             const local = localDefinitionLine(
                 model.getValue(),
                 term.iri,
@@ -338,6 +347,7 @@ export function registerTurtleLanguageFeatures(monaco, languageId) {
             // still know the term, as it does when a class is described where it is declared.
             if (local !== null && local !== position.lineNumber) {
                 return {
+                    originSelectionRange,
                     uri: model.uri,
                     range: {
                         startLineNumber: local,
@@ -375,6 +385,7 @@ export function registerTurtleLanguageFeatures(monaco, languageId) {
                 );
             }
             return {
+                originSelectionRange,
                 uri,
                 range: {
                     startLineNumber: 1,
