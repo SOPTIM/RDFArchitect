@@ -33,6 +33,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.shacl.effective.ClassHierarchy;
 import org.rdfarchitect.services.shacl.effective.EffectiveConstraints;
@@ -260,7 +261,12 @@ public class ConformanceService implements ConformanceUseCase {
         var ownClasses = ClassHierarchy.of(own);
 
         // This graph's own statements, then everything else the workspace says — except about
-        // the properties this graph declares, which it defines for itself.
+        // the properties this graph declares, which it defines for itself, and about whether its
+        // own classes are abstract. Profiles disagree on that: SteadyStateHypothesis marks
+        // cim:Equipment concrete, Equipment does not, and taking SSH's word held the Equipment
+        // constraints to account for rules on an abstract class no official file states.
+        var ownClassUris = ownClassesOf(own);
+        var stereotype = CIMS.stereotype.asNode();
         var union = copyOf(own);
         for (String graphUri : databasePort.listGraphUris(graphIdentifier.datasetName())) {
             if (graphUri.equals(graphIdentifier.graphUri())) {
@@ -271,8 +277,13 @@ public class ConformanceService implements ConformanceUseCase {
                     .forEachRemaining(
                             triple -> {
                                 var subject = triple.getSubject();
-                                if (!(subject.isURI()
-                                        && ownProperties.contains(subject.getURI()))) {
+                                var ownProperty =
+                                        subject.isURI() && ownProperties.contains(subject.getURI());
+                                var ownClassStereotype =
+                                        subject.isURI()
+                                                && stereotype.equals(triple.getPredicate())
+                                                && ownClassUris.contains(subject.getURI());
+                                if (!ownProperty && !ownClassStereotype) {
                                     union.add(triple);
                                 }
                             });
@@ -293,7 +304,7 @@ public class ConformanceService implements ConformanceUseCase {
         return new Implied(
                 EffectiveConstraints.of(shapes),
                 ClassHierarchy.of(union),
-                ownClassesOf(own),
+                ownClassUris,
                 ownProperties,
                 subjectsOf(union, RDFS.domain.asNode()));
     }

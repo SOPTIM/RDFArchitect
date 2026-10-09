@@ -137,6 +137,34 @@ class ConformanceAcrossProfilesTest {
         assertThat(second).isEqualTo(first);
     }
 
+    @Test
+    void aClassIsAbstractOrNotAsTheCheckedProfileSaysNotAsAnotherDoes() {
+        // SteadyStateHypothesis marks cim:Equipment concrete; Equipment does not. Taking SSH's word
+        // expected the Equipment constraints to state rules on the abstract class itself.
+        var eq = new GraphIdentifier(DATASET, "http://ex.org/EQ");
+        var id =
+                documents
+                        .createShapesDocument(
+                                eq,
+                                "eq.ttl",
+                                null,
+                                read(
+                                        LIBRARY
+                                                + "CGMES/CurrentRelease/SHACL/TTL/"
+                                                + "61970-600-2_Equipment-AP-Con-Simple-SHACL.ttl"),
+                                Lang.TURTLE)
+                        .getId();
+
+        var report = service.compare(eq, id);
+
+        assertThat(report.getFindings())
+                .noneMatch(
+                        finding ->
+                                finding.getTargetClass()
+                                        .equals("http://iec.ch/TC57/CIM100#Equipment"));
+        assertThat(report.getMissingInDocumentCount()).isZero();
+    }
+
     private ConformanceReport compareOfficial(String profile) {
         var graph =
                 load("http://ex.org/" + profile, NC + "RDFS/" + profile + "-AP-Voc-RDFS2020.rdf");
