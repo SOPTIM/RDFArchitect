@@ -22,6 +22,7 @@ import org.apache.jena.vocabulary.RDF;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,9 @@ final class ShapeSource {
     private final PrefixMapping prefixes;
     private final Map<String, SubjectSource> bySubject;
 
+    /** See {@link ShapeBlockLocator#shadowedNamespaces}. */
+    private final Map<String, String> shadowedNamespaces;
+
     /** Where each line begins, so an offset can be turned into a line number by bisection. */
     private final int[] lineStarts;
 
@@ -55,6 +59,7 @@ final class ShapeSource {
         this.turtle = turtle;
         this.prefixes = prefixes;
         this.bySubject = bySubject;
+        this.shadowedNamespaces = ShapeBlockLocator.shadowedNamespaces(turtle);
         this.lineStarts = lineStarts(turtle);
     }
 
@@ -112,6 +117,21 @@ final class ShapeSource {
 
     PrefixMapping prefixes() {
         return prefixes;
+    }
+
+    /**
+     * The prefix {@code iri} was most likely written with while that prefix stood for another
+     * namespace than it ends up with, or {@code null}. Such a name is one the scanner cannot find.
+     */
+    String shadowingPrefix(String iri) {
+        if (iri == null) {
+            return null;
+        }
+        return shadowedNamespaces.entrySet().stream()
+                .filter(entry -> iri.startsWith(entry.getKey()))
+                .max(Comparator.comparingInt(entry -> entry.getKey().length()))
+                .map(Map.Entry::getValue)
+                .orElse(null);
     }
 
     /** How the document writes this subject, or {@code null} when it does not write it at all. */

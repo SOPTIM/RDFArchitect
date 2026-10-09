@@ -291,7 +291,7 @@ final class ShapeModelReader {
         var clauses = written == null ? List.<ClauseLocator.Clause>of() : written.clauses();
         var byPredicate = source.byPredicate(clauses);
         var rules = readRules(reading, shape, clauses);
-        var unwritable = locatable(written, "shape");
+        var unwritable = locatable(written, shape.getURI(), source, "shape");
 
         return NodeShapeModel.builder()
                 .iri(shape.getURI())
@@ -369,7 +369,18 @@ final class ShapeModelReader {
      * written against a {@code @base}, or nested inside another shape — would have been appended,
      * defining it a second time.
      */
-    private static String locatable(ShapeSource.SubjectSource written, String what) {
+    private static String locatable(
+            ShapeSource.SubjectSource written, String iri, ShapeSource source, String what) {
+        var shadowing = written == null ? source.shadowingPrefix(iri) : null;
+        if (shadowing != null) {
+            return "The document binds the prefix "
+                    + shadowing
+                    + ": to more than one namespace, and the form reads every name with the last"
+                    + " of them, so it cannot find where this "
+                    + what
+                    + " is written. Edit it in the Turtle view, or give each namespace a prefix of"
+                    + " its own.";
+        }
         if (written == null) {
             return "This "
                     + what
@@ -606,7 +617,12 @@ final class ShapeModelReader {
         // references it, so what decides whether it can be written is that statement.
         var effective =
                 lock.editable() && property.isURI()
-                        ? Lock.of(locatable(source.forSubject(property.getURI()), "rule"))
+                        ? Lock.of(
+                                locatable(
+                                        source.forSubject(property.getURI()),
+                                        property.getURI(),
+                                        source,
+                                        "rule"))
                         : lock;
         var clauses = clausesOf(property, written, source);
         return PropertyShapeModel.builder()

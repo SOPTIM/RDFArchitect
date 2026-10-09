@@ -367,4 +367,74 @@ class ShapeFormEditSafetyTest {
                 .flatExtracting(NodeShapeModel::getProperties)
                 .allSatisfy(inline -> assertThat(inline.getUsedBy()).isNull());
     }
+
+    // -------------------------------------------------------------------------
+    // A prefix bound twice
+    // -------------------------------------------------------------------------
+
+    /**
+     * Turtle binds a prefix from its declaration onwards, so {@code ex:A} means one thing before a
+     * second {@code @prefix ex:} and another after it. The form reads names with the document's
+     * last bindings, so it cannot find a shape written under an earlier one — and it has to say
+     * that, not send the user looking for a duplicate that is not there.
+     */
+    private static final String REBOUND =
+            PREFIXES
+                    + """
+                    ex:Early a sh:NodeShape ;
+                        sh:targetClass cim:ACLineSegment ;
+                        sh:property [ sh:path cim:ACLineSegment.r ; sh:minCount 1 ] .
+
+                    @prefix ex: <http://example.org/later#> .
+
+                    ex:Late a sh:NodeShape ;
+                        sh:targetClass cim:Terminal .
+                    """;
+
+    @Test
+    void aShapeWrittenUnderAPrefixBoundAgainLaterSaysSo() {
+        var early = shapeNamed(REBOUND, EX + "Early");
+
+        assertThat(early.getEditable()).isFalse();
+        assertThat(early.getReadOnlyReason())
+                .contains("prefix ex:")
+                .contains("more than one namespace")
+                .doesNotContain("statement of its own");
+    }
+
+    @Test
+    void aShapeWrittenUnderThePrefixsLastBindingStaysEditable() {
+        var late = shapeNamed(REBOUND, "http://example.org/later#Late");
+
+        assertThat(late.getEditable()).isTrue();
+    }
+
+    @Test
+    void anEditUsingAPrefixBoundAgainLaterIsWrittenRightOrNotAtAll() {
+        // The subject is a full IRI, so the shape is found; its target is written with the
+        // prefix's first binding, which the form would read with the second.
+        var turtle =
+                PREFIXES
+                        + """
+                        <http://example.org/full#S> a sh:NodeShape ;
+                            sh:targetClass ex:Target .
+
+                        @prefix ex: <http://example.org/later#> .
+                        """;
+        var shape = shapeNamed(turtle, "http://example.org/full#S");
+        if (!Boolean.TRUE.equals(shape.getEditable())) {
+            return;
+        }
+        shape.setTargetClasses(List.of(EX + "Target", CIM + "Terminal"));
+
+        String edited;
+        try {
+            edited = service.apply(edit(turtle, shape)).getTurtle();
+        } catch (ResourceConflictException refused) {
+            return;
+        }
+
+        assertThat(shapeNamed(edited, "http://example.org/full#S").getTargetClasses())
+                .containsExactlyInAnyOrder(EX + "Target", CIM + "Terminal");
+    }
 }

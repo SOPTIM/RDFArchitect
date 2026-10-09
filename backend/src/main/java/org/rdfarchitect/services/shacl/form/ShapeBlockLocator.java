@@ -23,11 +23,13 @@ import org.apache.jena.shared.impl.PrefixMappingImpl;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
 
 /**
@@ -144,6 +146,37 @@ public final class ShapeBlockLocator {
      */
     static PrefixMapping prefixesBefore(String turtle, int offset) {
         var mapping = new PrefixMappingImpl();
+        forEachPrefix(turtle, offset, mapping::setNsPrefix);
+        return mapping;
+    }
+
+    /**
+     * The namespaces a prefix stood for before the document bound it to another one, each with that
+     * prefix.
+     *
+     * <p>Names are read with the document's last binding of each prefix, so a name written while
+     * one of these held means something else to the scanner than to the parser. A namespace the
+     * prefix is bound to again at the end is not among them: its names read right.
+     */
+    static Map<String, String> shadowedNamespaces(String turtle) {
+        var current = new HashMap<String, String>();
+        var shadowed = new LinkedHashMap<String, String>();
+        forEachPrefix(
+                turtle,
+                Integer.MAX_VALUE,
+                (prefix, namespace) -> {
+                    var previous = current.put(prefix, namespace);
+                    if (previous != null && !previous.equals(namespace)) {
+                        shadowed.putIfAbsent(previous, prefix);
+                    }
+                });
+        shadowed.entrySet().removeIf(entry -> entry.getKey().equals(current.get(entry.getValue())));
+        return shadowed;
+    }
+
+    /** Every prefix declared in front of {@code offset}, in order, with its resolved namespace. */
+    private static void forEachPrefix(
+            String turtle, int offset, BiConsumer<String, String> declared) {
         String base = null;
         for (Statement directive : scan(turtle)) {
             if (directive.start() >= offset) {
@@ -161,15 +194,14 @@ public final class ShapeBlockLocator {
                 }
                 continue;
             }
-            var declared = PREFIX.matcher(text);
-            if (declared.find()) {
-                var namespace = resolve(base, declared.group(2));
+            var prefix = PREFIX.matcher(text);
+            if (prefix.find()) {
+                var namespace = resolve(base, prefix.group(2));
                 if (namespace != null) {
-                    mapping.setNsPrefix(declared.group(1), namespace);
+                    declared.accept(prefix.group(1), namespace);
                 }
             }
         }
-        return mapping;
     }
 
     /**
