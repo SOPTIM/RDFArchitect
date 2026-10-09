@@ -39,6 +39,9 @@ const DOCUMENTS = [
     },
 ];
 
+/** The props every ActionDialog was given, so a test can call its handlers. */
+const dialogs = vi.hoisted(() => []);
+
 let mounted = null;
 let target = null;
 
@@ -103,6 +106,12 @@ function button(row, label) {
         candidate => candidate.getAttribute("aria-label") === label,
     );
 }
+
+vi.mock("$lib/dialog/ActionDialog.svelte", () => ({
+    default: function ActionDialogStub(_anchor, props) {
+        dialogs.push(props);
+    },
+}));
 
 vi.mock("$lib/config/runtime", () => ({
     PUBLIC_BACKEND_URL: "http://backend.test",
@@ -191,6 +200,18 @@ describe("DocumentList", () => {
 
         expect(button(rows[0], "Delete")).toBeDefined();
         expect(button(rows[1], "Delete")).toBeUndefined();
+    });
+
+    test("closing the delete dialog is not refused", () => {
+        // ActionDialog stays open when onClose returns a falsy value other than undefined, and
+        // the handler used to return the null it assigned: the close button turned the title
+        // into "Delete document?" and left the dialog open.
+        render({ workbench: fakeWorkbench() });
+        const deleteDialog = dialogs.find(props =>
+            props.primaryLabel?.startsWith("Delete"),
+        );
+
+        expect(deleteDialog.onClose()).toBeUndefined();
     });
 
     test("renaming replaces the label with an input and commits on Enter", async () => {

@@ -477,7 +477,11 @@
 
 <ActionDialog
     bind:showDialog={showDeleteDialog}
-    onClose={() => (pendingDelete = null)}
+    onClose={() => {
+        // Returns nothing on purpose: ActionDialog keeps itself open when onClose returns a
+        // falsy value, and an arrow returning this assignment returned null.
+        pendingDelete = null;
+    }}
     size="w-full max-w-lg"
     primaryLabel="Delete Document"
     onPrimary={confirmDelete}
