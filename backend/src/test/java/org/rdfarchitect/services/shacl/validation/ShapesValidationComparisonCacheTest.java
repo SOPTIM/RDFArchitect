@@ -27,7 +27,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
@@ -68,6 +67,7 @@ class ShapesValidationComparisonCacheTest {
 
     private SHACLStoringService documents;
     private ShapesValidationService service;
+    private UUID custom;
 
     @BeforeEach
     void setUp() {
@@ -78,6 +78,7 @@ class ShapesValidationComparisonCacheTest {
         databasePort.createGraph(GRAPH, schema);
         documents = new SHACLStoringService(databasePort);
         service = new ShapesValidationService(databasePort, new SchemaIndexCache(databasePort));
+        custom = documents.createShapesDocument(GRAPH, "custom.ttl", null, "", Lang.TURTLE).getId();
     }
 
     @AfterEach
@@ -96,13 +97,12 @@ class ShapesValidationComparisonCacheTest {
 
     @Test
     void switchingADocumentOffIsNoticed() {
-        documents.replaceShapesDocumentText(GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, SHAPES);
+        documents.replaceShapesDocumentText(GRAPH, custom, SHAPES);
         var draft =
                 documents.createShapesDocument(GRAPH, "draft.ttl", null, "", Lang.TURTLE).getId();
         assertThat(bufferCollides(draft)).isTrue();
 
-        documents.updateShapesDocument(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, null, false, null);
+        documents.updateShapesDocument(GRAPH, custom, null, false, null);
 
         assertThat(bufferCollides(draft)).isFalse();
     }
@@ -111,7 +111,7 @@ class ShapesValidationComparisonCacheTest {
     void undoingADocumentChangeIsNoticed() {
         var draft =
                 documents.createShapesDocument(GRAPH, "draft.ttl", null, "", Lang.TURTLE).getId();
-        documents.replaceShapesDocumentText(GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, SHAPES);
+        documents.replaceShapesDocumentText(GRAPH, custom, SHAPES);
         assertThat(bufferCollides(draft)).isTrue();
 
         databasePort.getGraphWithContext(GRAPH).undo();

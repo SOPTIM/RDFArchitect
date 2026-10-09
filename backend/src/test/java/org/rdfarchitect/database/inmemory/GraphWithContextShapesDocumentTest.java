@@ -138,17 +138,64 @@ class GraphWithContextShapesDocumentTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void getCustomSHACL_readsTheDefaultDocument() {
-        ctx.begin(ReadWrite.READ);
-        var first = ctx.getCustomSHACL();
-        var second = ctx.getCustomSHACL();
-        ctx.end();
+    void aGraphStartsWithoutDocuments() {
+        // The generated shapes are what a graph starts with; an empty file nobody asked for only
+        // stood in the way, and could not be deleted.
+        assertThat(ctx.getShapesDocuments()).isEmpty();
+    }
 
-        assertThat(first).isSameAs(second);
+    @Test
+    void theDefaultDocumentIsCreatedOnceWhenFirstWritten() {
+        var created = new ShapesDocument[2];
+        inWriteTransaction(
+                () -> {
+                    created[0] = ctx.ensureDefaultShapesDocument("custom.ttl");
+                    created[1] = ctx.ensureDefaultShapesDocument("ignored.ttl");
+                },
+                "legacy write");
+
+        assertThat(created[0]).isSameAs(created[1]);
         assertThat(ctx.getShapesDocuments())
                 .containsOnlyKeys(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
-        assertThat(ctx.getShapesDocuments().get(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID).getName())
-                .isEqualTo(GraphContext.DEFAULT_SHAPES_DOCUMENT_NAME);
+        assertThat(document(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID).getName())
+                .isEqualTo("custom.ttl");
+
+        ctx.undo();
+        assertThat(documentExists(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID)).isFalse();
+    }
+
+    @Test
+    void theDefaultDocumentCanBeDeletedAndComesBackEmpty() {
+        inWriteTransaction(
+                () -> {
+                    var document = ctx.ensureDefaultShapesDocument("custom.ttl");
+                    document.getGraph().add(shape);
+                    document.setRawText("# old");
+                },
+                "legacy write");
+        inWriteTransaction(
+                () -> ctx.removeShapesDocument(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID), "delete");
+        assertThat(documentExists(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID)).isFalse();
+
+        inWriteTransaction(() -> ctx.ensureDefaultShapesDocument("again.ttl"), "legacy write");
+
+        ctx.begin(ReadWrite.READ);
+        try {
+            var again = document(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
+            assertThat(again.getName()).isEqualTo("again.ttl");
+            assertThat(again.getGraph().isEmpty()).isTrue();
+            assertThat(again.getRawText()).isNull();
+        } finally {
+            ctx.end();
+        }
+
+        // Undoing the recreation brings back the deletion, and undoing that the old content.
+        ctx.undo();
+        assertThat(documentExists(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID)).isFalse();
+        ctx.undo();
+        assertThat(documentContains(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, shape)).isTrue();
+        assertThat(document(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID).getName())
+                .isEqualTo("custom.ttl");
     }
 
     // -------------------------------------------------------------------------
@@ -183,14 +230,12 @@ class GraphWithContextShapesDocumentTest {
                 },
                 "import");
 
-        // The default document is created with the graph, so it leads the list.
         assertThat(ctx.getShapesDocuments().values())
                 .extracting(ShapesDocument::getName)
-                .containsExactly(
-                        GraphContext.DEFAULT_SHAPES_DOCUMENT_NAME, "first.ttl", "second.ttl");
+                .containsExactly("first.ttl", "second.ttl");
         assertThat(ctx.getShapesDocuments().values())
                 .extracting(ShapesDocument::getOrder)
-                .containsExactly(0, 1, 2);
+                .containsExactly(0, 1);
     }
 
     @Test
@@ -221,7 +266,7 @@ class GraphWithContextShapesDocumentTest {
                 .filteredOn(document -> "third.ttl".equals(document.getName()))
                 .singleElement()
                 .extracting(ShapesDocument::getOrder)
-                .isEqualTo(3);
+                .isEqualTo(2);
     }
 
     @Test
@@ -416,7 +461,7 @@ class GraphWithContextShapesDocumentTest {
         assertThat(document(id).getRawText()).isEqualTo("# eq.ttl");
         assertThat(document(id).getName()).isEqualTo("eq.ttl");
         assertThat(document(id).isEnabled()).isTrue();
-        assertThat(document(id).getOrder()).isEqualTo(1);
+        assertThat(document(id).getOrder()).isZero();
 
         ctx.redo();
 

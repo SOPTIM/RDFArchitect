@@ -27,6 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.apache.jena.riot.Lang;
@@ -39,7 +40,6 @@ import org.rdfarchitect.api.controller.datasets.graphs.shacl.documents.ShapesDoc
 import org.rdfarchitect.api.controller.datasets.graphs.shacl.documents.ShapesDocumentsRESTController;
 import org.rdfarchitect.api.controller.datasets.graphs.shacl.export.SHACLSelectionExportRESTController;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.GraphWithContextTransactional;
 import org.rdfarchitect.exception.handlers.GenericExceptionHandler;
@@ -151,7 +151,7 @@ class ShapesDocumentsApiTest {
                                 assertThat(result.getResponse().getContentAsString())
                                         .contains("Turtle"));
 
-        assertThat(service.listShapesDocuments(new GraphIdentifier("cgmes", GRAPH_URI))).hasSize(1);
+        assertThat(service.listShapesDocuments(new GraphIdentifier("cgmes", GRAPH_URI))).isEmpty();
     }
 
     @Test
@@ -309,9 +309,8 @@ class ShapesDocumentsApiTest {
     }
 
     @Test
-    void theDefaultDocumentCannotBeDeleted() throws Exception {
-        mockMvc.perform(delete(DOCUMENTS + "/" + GraphContext.DEFAULT_SHAPES_DOCUMENT_ID))
-                .andExpect(status().isConflict());
+    void aGraphStartsWithoutAnyDocument() throws Exception {
+        mockMvc.perform(get(DOCUMENTS)).andExpect(status().isOk()).andExpect(content().json("[]"));
     }
 
     @Test

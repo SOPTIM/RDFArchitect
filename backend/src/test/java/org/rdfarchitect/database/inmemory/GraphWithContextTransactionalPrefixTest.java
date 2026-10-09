@@ -19,22 +19,36 @@ package org.rdfarchitect.database.inmemory;
 
 import static org.assertj.core.api.Assertions.*;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.database.ShapesDocument;
+
+import java.util.UUID;
 
 class GraphWithContextTransactionalPrefixTest {
 
     private static final String FOO_URI = "http://example.org/foo#";
 
     private GraphWithContextTransactional ctx;
+    private UUID documentId;
 
     @BeforeEach
     void setUp() {
         ctx = new GraphWithContextTransactional(GraphFactory.createDefaultGraph());
+        try (var _ = ctx.begin(ReadWrite.WRITE)) {
+            documentId =
+                    ctx.createShapesDocument("shapes.ttl", ShapesDocument.Origin.AUTHORED).getId();
+            ctx.commit("create document");
+        }
+    }
+
+    private Graph shapes() {
+        return ctx.getShapesDocuments().get(documentId).getGraph();
     }
 
     @AfterEach
@@ -47,13 +61,13 @@ class GraphWithContextTransactionalPrefixTest {
     @Test
     void commit_customShaclPrefix_isVisibleInSubsequentReadTransaction() {
         try (var _ = ctx.begin(ReadWrite.WRITE)) {
-            var model = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var model = ModelFactory.createModelForGraph(shapes());
             model.setNsPrefix("foo", FOO_URI);
             ctx.commit("set prefix");
         }
 
         try (var _ = ctx.begin(ReadWrite.READ)) {
-            var model = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var model = ModelFactory.createModelForGraph(shapes());
             assertThat(model.getNsPrefixURI("foo")).isEqualTo(FOO_URI);
         }
     }
@@ -61,7 +75,7 @@ class GraphWithContextTransactionalPrefixTest {
     @Test
     void commit_onlyPrefixChange_isRecordedAsUndoableStep() {
         try (var _ = ctx.begin(ReadWrite.WRITE)) {
-            ModelFactory.createModelForGraph(ctx.getCustomSHACL()).setNsPrefix("foo", FOO_URI);
+            ModelFactory.createModelForGraph(shapes()).setNsPrefix("foo", FOO_URI);
             ctx.commit("set prefix");
         }
 
@@ -73,14 +87,14 @@ class GraphWithContextTransactionalPrefixTest {
     @Test
     void undo_revertsCustomShaclPrefix() {
         try (var _ = ctx.begin(ReadWrite.WRITE)) {
-            ModelFactory.createModelForGraph(ctx.getCustomSHACL()).setNsPrefix("foo", FOO_URI);
+            ModelFactory.createModelForGraph(shapes()).setNsPrefix("foo", FOO_URI);
             ctx.commit("set prefix");
         }
 
         ctx.undo();
 
         try (var _ = ctx.begin(ReadWrite.READ)) {
-            var model = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var model = ModelFactory.createModelForGraph(shapes());
             assertThat(model.getNsPrefixURI("foo")).isNull();
         }
     }
@@ -88,7 +102,7 @@ class GraphWithContextTransactionalPrefixTest {
     @Test
     void redo_reappliesCustomShaclPrefix() {
         try (var _ = ctx.begin(ReadWrite.WRITE)) {
-            ModelFactory.createModelForGraph(ctx.getCustomSHACL()).setNsPrefix("foo", FOO_URI);
+            ModelFactory.createModelForGraph(shapes()).setNsPrefix("foo", FOO_URI);
             ctx.commit("set prefix");
         }
         ctx.undo();
@@ -96,7 +110,7 @@ class GraphWithContextTransactionalPrefixTest {
         ctx.redo();
 
         try (var _ = ctx.begin(ReadWrite.READ)) {
-            var model = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var model = ModelFactory.createModelForGraph(shapes());
             assertThat(model.getNsPrefixURI("foo")).isEqualTo(FOO_URI);
         }
     }

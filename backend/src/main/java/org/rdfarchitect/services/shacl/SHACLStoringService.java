@@ -253,13 +253,6 @@ public class SHACLStoringService
         assertEditable(graphIdentifier);
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var document = requireDocument(ctx, documentId);
-            if (GraphContext.DEFAULT_SHAPES_DOCUMENT_ID.equals(documentId)) {
-                // Refusing here rather than letting the context's guard surface as a server error:
-                // asking to delete it is a client mistake, not a fault.
-                throw new ResourceConflictException(
-                        "The graph's default constraints document cannot be deleted. "
-                                + "Replace its content with an empty document instead.");
-            }
             ctx.removeShapesDocument(documentId);
             ctx.commit("Delete constraints \"%s\"".formatted(document.getName()));
         }
@@ -552,7 +545,7 @@ public class SHACLStoringService
     @Override
     public void replaceCustomSHACLGraph(GraphIdentifier graphIdentifier, Graph shacl) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var document = ctx.getShapesDocuments().get(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
+            var document = defaultDocumentForWriting(ctx);
             var newModel = ModelFactory.createModelForGraph(GraphUtils.normalizeBlankNodes(shacl));
             // This path receives an already-parsed graph, so there is no user-authored text to
             // preserve; the serialised form is the best available source for the editor.
@@ -573,7 +566,7 @@ public class SHACLStoringService
     public ByteArrayOutputStream exportCustomSHACLGraph(
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = defaultDocumentModel(ctx);
             try (var outStream = new ByteArrayOutputStream()) {
                 customSHACL.write(outStream, format.getLang().getName());
                 return outStream;
@@ -981,7 +974,7 @@ public class SHACLStoringService
     @Override
     public void deleteSHACLShape(GraphIdentifier graphIdentifier, String shaclShapeURI) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL = defaultDocumentModel(ctx);
             var deleteModel = ModelFactory.createDefaultModel();
             copySHACLShapeToNewModel(
                     customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
@@ -1007,7 +1000,8 @@ public class SHACLStoringService
     public void replaceSHACLShape(
             GraphIdentifier graphIdentifier, String shaclShapeURI, String shaclToInsert) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL =
+                    ModelFactory.createModelForGraph(defaultDocumentForWriting(ctx).getGraph());
             Model insertModel = parseTriplesToModel(shaclToInsert);
             Model deleteModel = ModelFactory.createDefaultModel();
             copySHACLShapeToNewModel(
@@ -1039,7 +1033,8 @@ public class SHACLStoringService
     public void updateClassSHACL(
             GraphIdentifier graphIdentifier, UUID classUUID, String ttlShaclString) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL =
+                    ModelFactory.createModelForGraph(defaultDocumentForWriting(ctx).getGraph());
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             var insertModel = parseTriplesToModel(ttlShaclString);
             var deleteModel = getClassShaclModel(ontologyModel, customSHACL, classUUID);
@@ -1065,7 +1060,8 @@ public class SHACLStoringService
         var insertModel = parseTriplesToModel(ttlShaclString);
 
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var customSHACL =
+                    ModelFactory.createModelForGraph(defaultDocumentForWriting(ctx).getGraph());
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
 
             var customPropertyShapes =
@@ -1088,6 +1084,22 @@ public class SHACLStoringService
     }
 
     /**
+     * The document the superseded write paths edit, created on their first write. A graph does not
+     * start with one, so a user who never calls them never sees it.
+     */
+    private static ShapesDocument defaultDocumentForWriting(GraphContext ctx) {
+        return ctx.ensureDefaultShapesDocument(freeDefaultName(ctx));
+    }
+
+    /** The default document's shapes, or none when the graph has no default document. */
+    private static Model defaultDocumentModel(GraphContext ctx) {
+        var document = ctx.getShapesDocuments().get(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
+        return document == null
+                ? ModelFactory.createDefaultModel()
+                : ModelFactory.createModelForGraph(document.getGraph());
+    }
+
+    /**
      * Re-derives the default document's text from the triples now in its graph.
      *
      * <p>For the superseded write paths only, which edit that graph directly. {@link
@@ -1097,7 +1109,7 @@ public class SHACLStoringService
      * so the serialised graph is the best source there is.
      */
     private static void recordDefaultDocumentText(GraphContext ctx) {
-        var document = ctx.getShapesDocuments().get(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
+        var document = defaultDocumentForWriting(ctx);
         document.setRawText(
                 serialiseToTurtle(ModelFactory.createModelForGraph(document.getGraph())));
     }

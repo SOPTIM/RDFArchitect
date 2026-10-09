@@ -30,7 +30,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.shacl.SHACLStoringService;
 
@@ -85,8 +84,9 @@ class InMemoryDatabaseReplaceGraphTest {
         var created =
                 documents.createShapesDocument(GRAPH, "eq.ttl", "EQ.ttl", SHAPES, Lang.TURTLE);
         documents.updateShapesDocument(GRAPH, created.getId(), null, false, null);
-        documents.replaceShapesDocumentText(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, SHAPES + "\n# default\n");
+        var other =
+                documents.createShapesDocument(
+                        GRAPH, "other.ttl", null, SHAPES + "\n# other\n", Lang.TURTLE);
 
         databasePort.replaceGraph(GRAPH, schema("Switch"));
 
@@ -106,11 +106,8 @@ class InMemoryDatabaseReplaceGraphTest {
             assertThat(document.getGraph().isEmpty()).isFalse();
             assertThat(document.getGraph().getPrefixMapping().getNsPrefixURI("ex"))
                     .isEqualTo("http://ex.org/EQ#");
-            assertThat(
-                            ctx.getShapesDocuments()
-                                    .get(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID)
-                                    .getRawText())
-                    .endsWith("# default\n");
+            assertThat(ctx.getShapesDocuments().get(other.getId()).getRawText())
+                    .endsWith("# other\n");
         }
     }
 

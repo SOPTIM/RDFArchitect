@@ -57,17 +57,14 @@ const NO_FINDINGS = {
 };
 
 /**
- * The document the workbench opens when none is chosen: the first that holds anything.
- *
- * Every graph has a default document, first in the list and usually empty, which cannot be
- * deleted. Opening it put an empty editor in front of the user even when an imported file was
- * right below it.
+ * The document the workbench opens when none is chosen: the first that holds anything, and the
+ * generated shapes when the graph has no document at all — which is how every graph starts.
  */
 function firstToOpen(documents) {
     return (
         documents.find(document => (document.tripleCount ?? 0) > 0)?.id ??
         documents[0]?.id ??
-        null
+        GENERATED_ID
     );
 }
 

@@ -211,18 +211,13 @@ public class ShapesDocumentRESTController {
 
     @Operation(
             summary = "delete a constraints document",
-            description =
-                    "Deletes a set of SHACL shapes. The graph's default document cannot be deleted, "
-                            + "only emptied.",
+            description = "Deletes a set of SHACL shapes.",
             tags = {"shacl"},
             responses = {
                 @ApiResponse(responseCode = "200"),
                 @ApiResponse(
                         responseCode = "404",
-                        description = "No constraints document with this id in the graph."),
-                @ApiResponse(
-                        responseCode = "409",
-                        description = "The default document cannot be deleted.")
+                        description = "No constraints document with this id in the graph.")
             })
     @DeleteMapping
     public String deleteShapesDocument(

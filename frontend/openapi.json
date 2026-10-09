@@ -8840,7 +8840,7 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/documents/{documentId}" : {
       "delete" : {
-        "description" : "Deletes a set of SHACL shapes. The graph's default document cannot be deleted, only emptied.",
+        "description" : "Deletes a set of SHACL shapes.",
         "operationId" : "deleteShapesDocument",
         "parameters" : [
           {
@@ -8902,16 +8902,6 @@
               }
             },
             "description" : "No constraints document with this id in the graph."
-          },
-          "409" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
-            },
-            "description" : "The default document cannot be deleted."
           }
         },
         "summary" : "delete a constraints document",

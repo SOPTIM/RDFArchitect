@@ -22,7 +22,6 @@ import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.models.changelog.ChangeLog;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
-import org.rdfarchitect.rdf.graph.wrapper.RDFGraphDelta;
 
 import java.util.Map;
 import java.util.UUID;
@@ -58,14 +57,16 @@ public interface GraphContext extends Transactional, VersionControl {
     DiagramLayoutDelta getDiagramLayout();
 
     /**
-     * Id of the document {@link #getCustomSHACL()} reads and writes.
+     * Id of the document the superseded single-graph SHACL endpoints read and write.
      *
      * <p>Reserved and fixed so that it survives a snapshot round-trip and so the single shapes
-     * graph of a session created before documents existed always migrates to the same place.
+     * graph of a session created before documents existed always migrates to the same place. A
+     * graph does not start with it: it exists only once one of those endpoints wrote to it, or a
+     * snapshot carried one with content, and it can be deleted like any other document.
      */
     UUID DEFAULT_SHAPES_DOCUMENT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
 
-    /** Name given to the default document. */
+    /** Name given to the default document when nothing else holds it. */
     String DEFAULT_SHAPES_DOCUMENT_NAME = "custom.ttl";
 
     /**
@@ -93,12 +94,14 @@ public interface GraphContext extends Transactional, VersionControl {
     void removeShapesDocument(UUID documentId);
 
     /**
-     * The default document's shapes.
+     * The default document, created when the graph has none.
      *
-     * <p>Kept for callers that predate multiple documents per graph; it creates the default
-     * document on first use so it never returns {@code null}.
+     * <p>Only for writers that predate multiple documents per graph. Must be called in a write
+     * transaction; undoing the commit takes a document created here away again.
+     *
+     * @param name the name to give the document if it has to be created
      */
-    RDFGraphDelta getCustomSHACL();
+    ShapesDocument ensureDefaultShapesDocument(String name);
 
     ChangeLog getChangeLog();
 

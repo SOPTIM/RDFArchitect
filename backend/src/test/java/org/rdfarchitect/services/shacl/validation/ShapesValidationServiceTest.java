@@ -28,7 +28,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
@@ -91,6 +90,7 @@ class ShapesValidationServiceTest {
 
     private SHACLStoringService documents;
     private ShapesValidationService service;
+    private UUID custom;
 
     @BeforeEach
     void setUp() {
@@ -101,6 +101,7 @@ class ShapesValidationServiceTest {
         databasePort.createGraph(GRAPH, schema);
         documents = new SHACLStoringService(databasePort);
         service = new ShapesValidationService(databasePort, new SchemaIndexCache(databasePort));
+        custom = documents.createShapesDocument(GRAPH, "custom.ttl", null, "", Lang.TURTLE).getId();
     }
 
     @AfterEach
@@ -115,8 +116,7 @@ class ShapesValidationServiceTest {
 
     @Test
     void shapesOverKnownTermsReportNoError() {
-        documents.replaceShapesDocumentText(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+        documents.replaceShapesDocumentText(GRAPH, custom, VALID_SHAPES);
 
         var report = service.validateShapes(GRAPH, null);
 
@@ -127,8 +127,7 @@ class ShapesValidationServiceTest {
                 .singleElement()
                 .satisfies(
                         result -> {
-                            assertThat(result.getDocumentId())
-                                    .isEqualTo(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
+                            assertThat(result.getDocumentId()).isEqualTo(custom);
                             assertThat(result.isValid()).isTrue();
                         });
     }
@@ -136,7 +135,7 @@ class ShapesValidationServiceTest {
     @Test
     void anUnknownClassIsReportedAtItsLineAndColumn() {
         var shapes = VALID_SHAPES.replace("cim:ACLineSegment ;", "cim:ACLineSegmentt ;");
-        documents.replaceShapesDocumentText(GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, shapes);
+        documents.replaceShapesDocumentText(GRAPH, custom, shapes);
 
         var report = service.validateShapes(GRAPH, null);
 
@@ -160,7 +159,7 @@ class ShapesValidationServiceTest {
     @Test
     void anUnknownPropertyIsReported() {
         var shapes = VALID_SHAPES.replace("ACLineSegment.length", "ACLineSegment.lenght");
-        documents.replaceShapesDocumentText(GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, shapes);
+        documents.replaceShapesDocumentText(GRAPH, custom, shapes);
 
         var report = service.validateShapes(GRAPH, null);
 
@@ -371,8 +370,7 @@ class ShapesValidationServiceTest {
                 VALID_SHAPES
                         .replace("cim:ACLineSegment ;", "cim:Nonsense ;")
                         .replace("ex:ACLineSegmentShape", "ex:OtherShape");
-        documents.replaceShapesDocumentText(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+        documents.replaceShapesDocumentText(GRAPH, custom, VALID_SHAPES);
         var second = documents.createShapesDocument(GRAPH, "extra.ttl", null, broken, Lang.TURTLE);
 
         var report = service.validateShapes(GRAPH, null);
@@ -383,10 +381,7 @@ class ShapesValidationServiceTest {
                 .singleElement()
                 .satisfies(result -> assertThat(result.getErrorCount()).isPositive());
         assertThat(report.getDocuments())
-                .filteredOn(
-                        result ->
-                                result.getDocumentId()
-                                        .equals(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID))
+                .filteredOn(result -> result.getDocumentId().equals(custom))
                 .singleElement()
                 .satisfies(result -> assertThat(result.isValid()).isTrue());
     }
@@ -448,8 +443,7 @@ class ShapesValidationServiceTest {
 
     @Test
     void oneShapeIriInTwoDocumentsIsReportedInBoth() {
-        documents.replaceShapesDocumentText(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+        documents.replaceShapesDocumentText(GRAPH, custom, VALID_SHAPES);
         var second =
                 documents.createShapesDocument(GRAPH, "copy.ttl", null, VALID_SHAPES, Lang.TURTLE);
 
@@ -501,8 +495,7 @@ class ShapesValidationServiceTest {
                         sh:maxCount 0 ;
                     ] .
                 """;
-        documents.replaceShapesDocumentText(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+        documents.replaceShapesDocumentText(GRAPH, custom, VALID_SHAPES);
         documents.createShapesDocument(GRAPH, "tighter.ttl", null, tighter, Lang.TURTLE);
 
         var report = service.validateShapes(GRAPH, null);
@@ -537,8 +530,7 @@ class ShapesValidationServiceTest {
                         sh:maxCount 0 ;
                     ] .
                 """;
-        documents.replaceShapesDocumentText(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+        documents.replaceShapesDocumentText(GRAPH, custom, VALID_SHAPES);
         documents.createShapesDocument(GRAPH, "off.ttl", null, deactivated, Lang.TURTLE);
 
         var report = service.validateShapes(GRAPH, null);
@@ -583,8 +575,7 @@ class ShapesValidationServiceTest {
                         sh:maxCount "many" ;
                     ] .
                 """;
-        documents.replaceShapesDocumentText(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+        documents.replaceShapesDocumentText(GRAPH, custom, VALID_SHAPES);
         documents.createShapesDocument(GRAPH, "tighter.ttl", null, tighter, Lang.TURTLE);
         documents.createShapesDocument(GRAPH, "vague.ttl", null, malformed, Lang.TURTLE);
 
@@ -622,8 +613,7 @@ class ShapesValidationServiceTest {
                         sh:maxCount 1 ;
                     ] .
                 """;
-        documents.replaceShapesDocumentText(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, selfContradictory);
+        documents.replaceShapesDocumentText(GRAPH, custom, selfContradictory);
 
         var report = service.validateShapes(GRAPH, null);
 
@@ -636,8 +626,7 @@ class ShapesValidationServiceTest {
     void twoDatatypesOnOnePathAreReported() {
         var stringShape = datatypeShapes("http://www.w3.org/2001/XMLSchema#string", "ex:First");
         var intShape = datatypeShapes("http://www.w3.org/2001/XMLSchema#integer", "ex:Second");
-        documents.replaceShapesDocumentText(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, stringShape);
+        documents.replaceShapesDocumentText(GRAPH, custom, stringShape);
         documents.createShapesDocument(GRAPH, "second.ttl", null, intShape, Lang.TURTLE);
 
         var report = service.validateShapes(GRAPH, null);
@@ -655,8 +644,7 @@ class ShapesValidationServiceTest {
     @Test
     void complementaryConstraintsInTwoDocumentsAreNotAConflict() {
         var datatypeOnly = datatypeShapes("http://www.w3.org/2001/XMLSchema#string", "ex:Other");
-        documents.replaceShapesDocumentText(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+        documents.replaceShapesDocumentText(GRAPH, custom, VALID_SHAPES);
         documents.createShapesDocument(GRAPH, "datatype.ttl", null, datatypeOnly, Lang.TURTLE);
 
         var report = service.validateShapes(GRAPH, null);
@@ -684,8 +672,7 @@ class ShapesValidationServiceTest {
 
     @Test
     void unsavedTextThatCollidesWithAnotherDocumentIsReported() {
-        documents.replaceShapesDocumentText(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+        documents.replaceShapesDocumentText(GRAPH, custom, VALID_SHAPES);
         var edited =
                 documents.createShapesDocument(GRAPH, "draft.ttl", null, "", Lang.TURTLE).getId();
 
@@ -704,8 +691,7 @@ class ShapesValidationServiceTest {
 
     @Test
     void unsavedTextWithoutADocumentIdIsCheckedOnItsOwn() {
-        documents.replaceShapesDocumentText(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+        documents.replaceShapesDocumentText(GRAPH, custom, VALID_SHAPES);
 
         var report = service.validateTurtle(GRAPH, "draft.ttl", VALID_SHAPES, null);
 
@@ -716,8 +702,7 @@ class ShapesValidationServiceTest {
 
     @Test
     void anIdNoStoredDocumentHasIsComparedAgainstEverythingStored() {
-        documents.replaceShapesDocumentText(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+        documents.replaceShapesDocumentText(GRAPH, custom, VALID_SHAPES);
 
         var report = service.validateTurtle(GRAPH, "new.ttl", VALID_SHAPES, UUID.randomUUID());
 
@@ -728,8 +713,7 @@ class ShapesValidationServiceTest {
 
     @Test
     void askingForOneDocumentStillReportsItsConflictsWithTheOthers() {
-        documents.replaceShapesDocumentText(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, VALID_SHAPES);
+        documents.replaceShapesDocumentText(GRAPH, custom, VALID_SHAPES);
         var second =
                 documents.createShapesDocument(GRAPH, "copy.ttl", null, VALID_SHAPES, Lang.TURTLE);
 

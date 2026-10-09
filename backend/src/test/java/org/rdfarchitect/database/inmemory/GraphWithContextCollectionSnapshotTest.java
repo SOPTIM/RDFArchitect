@@ -27,6 +27,7 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.database.snapshots.ShapesDocumentMetadata;
 import org.rdfarchitect.database.snapshots.ShapesGraphNaming;
@@ -76,10 +77,13 @@ class GraphWithContextCollectionSnapshotTest {
 
     private static boolean customSHACLHasTargetClass(GraphWithContextTransactional context) {
         try (var ctx = context.begin(ReadWrite.READ)) {
-            return ModelFactory.createModelForGraph(ctx.getCustomSHACL())
-                    .contains(
-                            ResourceFactory.createResource(GRAPH_URI + "#ACLineSegmentShape"),
-                            ResourceFactory.createProperty(SHACL_NS + "targetClass"));
+            var document = ctx.getShapesDocuments().get(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
+            return document != null
+                    && ModelFactory.createModelForGraph(document.getGraph())
+                            .contains(
+                                    ResourceFactory.createResource(
+                                            GRAPH_URI + "#ACLineSegmentShape"),
+                                    ResourceFactory.createProperty(SHACL_NS + "targetClass"));
         }
     }
 
@@ -98,14 +102,14 @@ class GraphWithContextCollectionSnapshotTest {
     }
 
     @Test
-    void graphWithoutShapesLoadsWithAnEmptyCustomSHACL() {
+    void graphWithoutShapesLoadsWithoutDocuments() {
         var dataset = DatasetFactory.createGeneral();
         dataset.addNamedModel(GRAPH_URI, schemaModel());
 
         var collection = new GraphWithContextCollection(dataset);
 
         try (var ctx = collection.getGraphWithContext(GRAPH_URI).begin(ReadWrite.READ)) {
-            assertThat(ctx.getCustomSHACL().isEmpty()).isTrue();
+            assertThat(ctx.getShapesDocuments()).isEmpty();
         }
     }
 

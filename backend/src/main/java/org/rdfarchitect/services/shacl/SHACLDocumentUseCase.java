@@ -105,11 +105,8 @@ public interface SHACLDocumentUseCase {
             Integer order);
 
     /**
-     * Deletes a document. The default document cannot be deleted, only cleared.
-     *
-     * <p>Destructive and <strong>not undoable</strong>: which documents exist is not part of the
-     * graph's version history, so an undo restores a deleted document's neighbours but not the
-     * document. Confirm before calling.
+     * Deletes a document, the default document included. Which documents exist is versioned with
+     * their content, so an undo brings it back.
      */
     void deleteShapesDocument(GraphIdentifier graphIdentifier, UUID documentId);
 }

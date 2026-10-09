@@ -752,11 +752,6 @@ class GraphWithContextTransactionalTest {
     }
 
     @Test
-    void getCustomSHACL_returnsNonNull() {
-        assertThat(ctx.getCustomSHACL()).isNotNull();
-    }
-
-    @Test
     void getChangeLog_initialState_isEmpty() {
         try (var _ = ctx.begin(ReadWrite.READ)) {
             assertThat(ctx.getChangeLog().getUndoHistory()).size().isEqualTo(1);

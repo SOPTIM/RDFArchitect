@@ -164,13 +164,8 @@ public class GraphWithContextTransactional implements GraphContext {
         this.valueParticipants.add(documentIds);
         this.valueParticipants.add(shapesVersion);
         this.coreRewindables.add(new NamedRewindable(() -> "rdf", rdfGraph, null));
-        // Created up front, exactly as the single shapes graph used to be, so that reading a
-        // graph's SHACL never has the side effect of adding a transaction participant.
-        addShapesDocument(
-                DEFAULT_SHAPES_DOCUMENT_ID,
-                DEFAULT_SHAPES_DOCUMENT_NAME,
-                ShapesDocument.Origin.AUTHORED);
         shapesSeeds.stream()
+                .filter(seed -> !isEmptyDefault(seed))
                 .sorted(Comparator.comparingInt(ShapesDocumentSeed::order))
                 .forEach(this::restoreShapesDocument);
         commit("imported graph");
@@ -233,23 +228,49 @@ public class GraphWithContextTransactional implements GraphContext {
     }
 
     @Override
-    public RDFGraphDelta getCustomSHACL() {
+    public ShapesDocument ensureDefaultShapesDocument(String name) {
         synchronized (shapesDocumentsLock) {
-            return shapesDocuments.get(DEFAULT_SHAPES_DOCUMENT_ID).document().getGraph();
+            var registered = shapesDocuments.get(DEFAULT_SHAPES_DOCUMENT_ID);
+            if (registered == null) {
+                return addShapesDocument(
+                        DEFAULT_SHAPES_DOCUMENT_ID, name, ShapesDocument.Origin.AUTHORED);
+            }
+            var document = registered.document();
+            if (documentIds.get().contains(DEFAULT_SHAPES_DOCUMENT_ID)) {
+                return document;
+            }
+            // Deleted, but kept while an undo can still bring it back. Reusing it as a new, empty
+            // document keeps one participant per id; a second one would never be pruned.
+            var graph = document.getGraph();
+            graph.find().toList().forEach(graph::delete);
+            graph.getPrefixMapping().clearNsPrefixMap();
+            document.setName(name);
+            document.setSourceFileName(null);
+            document.setEnabled(true);
+            document.setOrder(nextOrder());
+            document.setRawText(null);
+            var ids = new ArrayList<>(documentIds.get());
+            ids.add(DEFAULT_SHAPES_DOCUMENT_ID);
+            documentIds.set(List.copyOf(ids));
+            return document;
         }
     }
 
     /**
+     * Whether a seed is the default document of a snapshot taken while every graph had one, with
+     * nothing in it. Restoring it would bring back the empty file a graph no longer starts with.
+     */
+    private static boolean isEmptyDefault(ShapesDocumentSeed seed) {
+        return DEFAULT_SHAPES_DOCUMENT_ID.equals(seed.id())
+                && seed.graph().isEmpty()
+                && (seed.rawText() == null || seed.rawText().isBlank());
+    }
+
+    /**
      * Puts a document back as storage described it, reusing its id so links to it survive a reload.
-     *
-     * <p>The default document already exists, so a seed for it fills the existing one instead of
-     * adding a second.
      */
     private void restoreShapesDocument(ShapesDocumentSeed seed) {
-        var document =
-                DEFAULT_SHAPES_DOCUMENT_ID.equals(seed.id())
-                        ? shapesDocuments.get(DEFAULT_SHAPES_DOCUMENT_ID).document()
-                        : addShapesDocument(seed.id(), seed.name(), seed.origin());
+        var document = addShapesDocument(seed.id(), seed.name(), seed.origin());
         document.setName(seed.name());
         document.setSourceFileName(seed.sourceFileName());
         document.setEnabled(seed.enabled());
@@ -320,10 +341,6 @@ public class GraphWithContextTransactional implements GraphContext {
 
     @Override
     public void removeShapesDocument(UUID documentId) {
-        if (DEFAULT_SHAPES_DOCUMENT_ID.equals(documentId)) {
-            throw new IllegalArgumentException(
-                    "The default shapes document cannot be removed; clear its content instead.");
-        }
         synchronized (shapesDocumentsLock) {
             var ids = new ArrayList<>(documentIds.get());
             if (ids.remove(documentId)) {

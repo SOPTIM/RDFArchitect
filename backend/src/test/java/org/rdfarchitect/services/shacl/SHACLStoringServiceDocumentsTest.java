@@ -168,10 +168,9 @@ class SHACLStoringServiceDocumentsTest {
         assertThatThrownBy(() -> service.deleteShapesDocument(GRAPH_IDENTIFIER, id))
                 .isInstanceOf(ResourceConflictException.class);
 
-        var documents = service.listShapesDocuments(GRAPH_IDENTIFIER);
-        assertThat(documents).hasSize(2);
-        assertThat(documents)
-                .anySatisfy(
+        assertThat(service.listShapesDocuments(GRAPH_IDENTIFIER))
+                .singleElement()
+                .satisfies(
                         info -> {
                             assertThat(info.getName()).isEqualTo("official.ttl");
                             assertThat(info.isEnabled()).isTrue();

@@ -86,7 +86,14 @@ class SHACLDocumentServiceTest {
     }
 
     @Test
-    void newGraphOffersOnlyTheDefaultDocument() {
+    void newGraphHasNoDocuments() {
+        assertThat(service.listShapesDocuments(GRAPH)).isEmpty();
+    }
+
+    @Test
+    void aSupersededWriteCreatesTheDefaultDocument() {
+        service.replaceSHACLShape(GRAPH, "http://example.org/S", TURTLE);
+
         assertThat(service.listShapesDocuments(GRAPH))
                 .singleElement()
                 .satisfies(
@@ -94,7 +101,7 @@ class SHACLDocumentServiceTest {
                             assertThat(info.getId())
                                     .isEqualTo(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
                             assertThat(info.isDefault()).isTrue();
-                            assertThat(info.getTripleCount()).isZero();
+                            assertThat(info.getTripleCount()).isPositive();
                         });
     }
 
@@ -106,7 +113,7 @@ class SHACLDocumentServiceTest {
         assertThat(created.getTripleCount()).isPositive();
         assertThat(service.listShapesDocuments(GRAPH))
                 .extracting(ShapesDocumentInfo::getName)
-                .containsExactly(GraphContext.DEFAULT_SHAPES_DOCUMENT_NAME, "eq.ttl");
+                .containsExactly("eq.ttl");
     }
 
     @Test
@@ -215,15 +222,14 @@ class SHACLDocumentServiceTest {
         var first = createTurtleDocument("first.ttl");
         createTurtleDocument("second.ttl");
 
-        service.updateShapesDocument(GRAPH, first.getId(), null, null, 2);
+        service.updateShapesDocument(GRAPH, first.getId(), null, null, 1);
 
         assertThat(service.listShapesDocuments(GRAPH))
                 .extracting(ShapesDocumentInfo::getOrder)
-                .containsExactly(0, 1, 2);
+                .containsExactly(0, 1);
         assertThat(service.listShapesDocuments(GRAPH))
                 .extracting(ShapesDocumentInfo::getName)
-                .containsExactly(
-                        GraphContext.DEFAULT_SHAPES_DOCUMENT_NAME, "second.ttl", "first.ttl");
+                .containsExactly("second.ttl", "first.ttl");
     }
 
     @Test
@@ -232,18 +238,16 @@ class SHACLDocumentServiceTest {
 
         service.deleteShapesDocument(GRAPH, created.getId());
 
-        assertThat(service.listShapesDocuments(GRAPH))
-                .extracting(ShapesDocumentInfo::getName)
-                .containsExactly(GraphContext.DEFAULT_SHAPES_DOCUMENT_NAME);
+        assertThat(service.listShapesDocuments(GRAPH)).isEmpty();
     }
 
     @Test
-    void deletingTheDefaultDocumentIsRefusedAsAClientError() {
-        assertThatExceptionOfType(ResourceConflictException.class)
-                .isThrownBy(
-                        () ->
-                                service.deleteShapesDocument(
-                                        GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID));
+    void theDefaultDocumentCanBeDeleted() {
+        service.replaceSHACLShape(GRAPH, "http://example.org/S", TURTLE);
+
+        service.deleteShapesDocument(GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID);
+
+        assertThat(service.listShapesDocuments(GRAPH)).isEmpty();
     }
 
     @Test
@@ -255,7 +259,7 @@ class SHACLDocumentServiceTest {
                         () ->
                                 service.replaceShapesDocumentText(
                                         GRAPH,
-                                        GraphContext.DEFAULT_SHAPES_DOCUMENT_ID,
+                                        createTurtleDocument("broken.ttl").getId(),
                                         "@prefix sh: <http://www.w3.org/ns/shacl#> .\n\n"
                                                 + "ex:Broken a sh:NodeShape .\n"))
                 .satisfies(
@@ -270,9 +274,10 @@ class SHACLDocumentServiceTest {
     void shapesThatViolateTheSchemaAreStillSaved() {
         // Validation findings are a report, not a gate: a half-finished document has to be
         // storable or the editor cannot be used to finish it.
+        var draft = createTurtleDocument("draft.ttl");
         service.replaceShapesDocumentText(
                 GRAPH,
-                GraphContext.DEFAULT_SHAPES_DOCUMENT_ID,
+                draft.getId(),
                 """
                 @prefix sh:  <http://www.w3.org/ns/shacl#> .
                 @prefix cim: <http://iec.ch/TC57/CIM100#> .
@@ -282,8 +287,7 @@ class SHACLDocumentServiceTest {
                     sh:targetClass cim:NoSuchClass .
                 """);
 
-        assertThat(service.getShapesDocumentText(GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID))
-                .contains("cim:NoSuchClass");
+        assertThat(service.getShapesDocumentText(GRAPH, draft.getId())).contains("cim:NoSuchClass");
     }
 
     @Test
@@ -322,14 +326,12 @@ class SHACLDocumentServiceTest {
 
     @Test
     void anEmptyDocumentTickedAlongsideDoesNotStopAFileComingBackAsWritten() {
+        var empty = service.createShapesDocument(GRAPH, "empty.ttl", null, "", Lang.TURTLE);
         var eq = createTurtleDocument("eq.ttl");
 
         var exported =
                 service.exportSelectedSHACLGraph(
-                                GRAPH,
-                                RDFFormat.TURTLE,
-                                List.of(GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, eq.getId()),
-                                false)
+                                GRAPH, RDFFormat.TURTLE, List.of(empty.getId(), eq.getId()), false)
                         .toString(StandardCharsets.UTF_8);
 
         assertThat(exported).isEqualTo(TURTLE);

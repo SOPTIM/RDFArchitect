@@ -27,7 +27,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
@@ -39,6 +38,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 /**
@@ -81,6 +81,7 @@ class ShapesValidationAgainstEntsoeProfilesTest {
 
     private SHACLStoringService documents;
     private ShapesValidationService service;
+    private UUID custom;
 
     @BeforeAll
     static void loadProfiles() throws IOException {
@@ -123,10 +124,10 @@ class ShapesValidationAgainstEntsoeProfilesTest {
      * a constraints file would collide with the next test's on every shape IRI.
      */
     private void clearShapesDocuments() {
-        documents.listShapesDocuments(GRAPH).stream()
-                .filter(info -> !info.isDefault())
+        documents
+                .listShapesDocuments(GRAPH)
                 .forEach(info -> documents.deleteShapesDocument(GRAPH, info.getId()));
-        documents.replaceShapesDocumentText(GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, "");
+        custom = documents.createShapesDocument(GRAPH, "custom.ttl", null, "", Lang.TURTLE).getId();
     }
 
     @Test
@@ -153,8 +154,7 @@ class ShapesValidationAgainstEntsoeProfilesTest {
 
     @Test
     void anOfficialConstraintsFileReportsNoError() {
-        documents.replaceShapesDocumentText(
-                GRAPH, GraphContext.DEFAULT_SHAPES_DOCUMENT_ID, read(CLEAN_COMPLEX));
+        documents.replaceShapesDocumentText(GRAPH, custom, read(CLEAN_COMPLEX));
 
         var report = service.validateShapes(GRAPH, null);
 

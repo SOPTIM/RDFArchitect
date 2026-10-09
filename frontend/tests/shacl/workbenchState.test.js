@@ -250,6 +250,16 @@ describe("loading", () => {
         expect(workbench.selectedId).toBe(workbench.documents[0].id);
     });
 
+    test("opens the generated shapes when the graph has no document", async () => {
+        server.documents = [];
+
+        await workbench.load();
+
+        expect(workbench.selectedId).toBe(GENERATED_ID);
+        expect(workbench.text).toContain("generated from the schema");
+        expect(workbench.editorReadOnly).toBe(true);
+    });
+
     test("reports a listing failure instead of showing an empty workbench", async () => {
         server.respond = () => new Response("nope", { status: 500 });
 
@@ -662,6 +672,18 @@ describe("the document list", () => {
 
         expect(await workbench.remove(EQ)).toBe(true);
         expect(workbench.selectedId).toBe(CUSTOM);
+    });
+
+    test("deleting the last document opens the generated shapes", async () => {
+        server.documents = server.documents.filter(
+            document => document.id === EQ,
+        );
+        await workbench.load();
+        server.documents = [];
+
+        expect(await workbench.remove(EQ)).toBe(true);
+        expect(workbench.selectedId).toBe(GENERATED_ID);
+        expect(workbench.text).toContain("generated from the schema");
     });
 
     test("deleting the open document loads the text of the one it opens", async () => {
