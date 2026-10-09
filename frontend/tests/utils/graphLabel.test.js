@@ -19,6 +19,7 @@ import { describe, expect, test } from "vitest";
 
 import {
     graphLabel,
+    graphLabelOf,
     graphLabeller,
     graphTooltip,
     graphUri,
@@ -132,5 +133,31 @@ describe("graphTooltip", () => {
 
     test("falls back to the graph for one that says nothing about itself", () => {
         expect(graphTooltip(PLAIN)).toBe("http://example.org/graphs/Notes");
+    });
+});
+
+describe("graphLabelOf", () => {
+    test("names the graph with the URI as the labeller would", () => {
+        const twin = {
+            ...LEGACY,
+            uri: { prefix: "http://example.org/graphs/", suffix: "Twin" },
+        };
+
+        expect(
+            graphLabelOf(
+                [CURRENT, LEGACY, twin],
+                "http://example.org/graphs/Equipment",
+            ),
+        ).toBe("Core Equipment Vocabulary");
+        expect(
+            graphLabelOf([LEGACY, twin], "http://example.org/graphs/Twin"),
+        ).toBe("EquipmentProfile (Twin)");
+    });
+
+    // The list is fetched, so callers ask before it arrives; an approximate name beats a gap.
+    test("falls back to the URI's tail while the list is still unknown", () => {
+        expect(graphLabelOf(null, "http://example.org/Diagram")).toBe(
+            "Diagram",
+        );
     });
 });

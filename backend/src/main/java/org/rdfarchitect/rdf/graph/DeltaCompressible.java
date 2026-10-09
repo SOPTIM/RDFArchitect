@@ -122,6 +122,14 @@ public class DeltaCompressible extends CompositionBase {
         return prefixMapping.hasChanges();
     }
 
+    /**
+     * Whether this delta records nothing over its base, in which case reading it is reading the
+     * base.
+     */
+    public boolean isUnchanged() {
+        return additions.isEmpty() && deletions.isEmpty() && !hasPrefixChanges();
+    }
+
     @Override
     public void close() {
         super.close();

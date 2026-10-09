@@ -96,3 +96,15 @@ export function graphTooltip(graph) {
     }
     return lines.filter(Boolean).join("\n");
 }
+
+/**
+ * The name of the graph with `uri` among `graphs`, as `graphLabeller` would give it.
+ *
+ * Falls back to the URI's tail for a graph that is not in the list — the list is fetched, so a
+ * caller can be asking before it has arrived, and a heading is better with an approximate name
+ * than with an empty space that fills in later.
+ */
+export function graphLabelOf(graphs, uri) {
+    const match = (graphs ?? []).find(graph => graphUri(graph) === uri);
+    return match ? graphLabeller(graphs)(match) : uriSuffix(uri);
+}

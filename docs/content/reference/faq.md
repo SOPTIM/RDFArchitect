@@ -82,7 +82,7 @@ Keeping them separate means you can see where a given constraint came from, and 
 
 ### Can I edit custom SHACL in RDFArchitect?
 
-Yes. Open **View → View Constraints (SHACL)** and edit the **Custom** tab. Generated SHACL is read-only because it is derived from the current graph.
+Yes. Open **View → Constraints (SHACL)** and edit any of the graph's constraints documents in the workbench. Generated SHACL is read-only because it is derived from the current graph.
 
 ### How do I validate instance data against the SHACL RDFArchitect produces?
 

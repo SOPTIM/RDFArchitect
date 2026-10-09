@@ -56,6 +56,21 @@ public interface SHACLExportUseCase {
     ByteArrayOutputStream exportCombinedSHACLGraph(
             GraphIdentifier graphIdentifier, RDFFormat format);
 
+    /**
+     * Exports a chosen set of constraints documents, optionally with the generated shapes.
+     *
+     * <p>Named documents are exported whether or not they are enabled: disabling a document says it
+     * takes no part in validation, while asking for it here says the user wants it in this file.
+     *
+     * @param documentIds the documents to include, in the graph's own order
+     * @param includeGenerated whether the shapes derived from the schema are merged in as well
+     */
+    ByteArrayOutputStream exportSelectedSHACLGraph(
+            GraphIdentifier graphIdentifier,
+            RDFFormat format,
+            java.util.Collection<java.util.UUID> documentIds,
+            boolean includeGenerated);
+
     ByteArrayOutputStream exportGeneratedSHACLGraph(Graph graph, RDFFormat format);
 
     /**

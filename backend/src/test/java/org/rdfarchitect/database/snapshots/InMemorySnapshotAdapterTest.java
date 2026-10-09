@@ -31,11 +31,15 @@ import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.ShapesDocument;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.SnapshotException;
+
+import java.util.UUID;
 
 class InMemorySnapshotAdapterTest {
 
@@ -47,6 +51,16 @@ class InMemorySnapshotAdapterTest {
                     NodeFactory.createURI("http://example.com/ACLineSegment"),
                     RDF.type.asNode(),
                     RDFS.Class.asNode());
+
+    private static final Triple SHAPE_TRIPLE =
+            Triple.create(
+                    NodeFactory.createURI("http://example.com/ACLineSegmentShape"),
+                    RDF.type.asNode(),
+                    NodeFactory.createURI("http://www.w3.org/ns/shacl#NodeShape"));
+
+    private static final String SHAPE_TEXT =
+            "# kept as written\n<http://example.com/ACLineSegmentShape> a"
+                    + " <http://www.w3.org/ns/shacl#NodeShape> .\n";
 
     private DatabasePort databasePort;
     private InMemorySnapshotAdapter adapter;
@@ -150,6 +164,75 @@ class InMemorySnapshotAdapterTest {
         assertEquals(
                 "http://example.com/",
                 databasePort.getPrefixMapping(snapshotName).getNsPrefixURI("ex"));
+    }
+
+    @Test
+    void fetchSnapshot_bringsBackTheConstraintsDocuments() {
+        SessionContext.setSessionId("session-a");
+        createSampleDataset();
+        UUID importedId;
+        UUID emptyId;
+        try (var ctx = sampleContext(DATASET).begin(ReadWrite.WRITE)) {
+            var imported = ctx.createShapesDocument("official.ttl", ShapesDocument.Origin.IMPORTED);
+            imported.getGraph().add(SHAPE_TRIPLE);
+            imported.setRawText(SHAPE_TEXT);
+            imported.setSourceFileName("official.ttl");
+            imported.setEnabled(false);
+            importedId = imported.getId();
+            emptyId = ctx.createShapesDocument("draft.ttl", ShapesDocument.Origin.AUTHORED).getId();
+            ctx.commit("add constraints");
+        }
+        var token = adapter.createSnapshot(DATASET);
+
+        SessionContext.setSessionId("session-b");
+        adapter.fetchSnapshot(token);
+
+        var snapshotName = SnapshotUtils.constructSnapshotName(DATASET, token);
+        try (var ctx = sampleContext(snapshotName).begin(ReadWrite.READ)) {
+            var documents = ctx.getShapesDocuments();
+            var imported = documents.get(importedId);
+            assertNotNull(imported, "an imported document must survive a share");
+            assertEquals("official.ttl", imported.getName());
+            assertEquals(SHAPE_TEXT, imported.getRawText());
+            assertFalse(imported.isEnabled());
+            assertTrue(imported.getGraph().contains(SHAPE_TRIPLE));
+            assertEquals(
+                    "draft.ttl",
+                    documents.get(emptyId).getName(),
+                    "an empty document has no graph of its own, but is still a document");
+        }
+    }
+
+    @Test
+    void fetchSnapshot_twice_givesEachLoadItsOwnCopyOfTheDocuments() {
+        SessionContext.setSessionId("session-a");
+        createSampleDataset();
+        UUID documentId;
+        try (var ctx = sampleContext(DATASET).begin(ReadWrite.WRITE)) {
+            var document = ctx.createShapesDocument("official.ttl", ShapesDocument.Origin.IMPORTED);
+            document.getGraph().add(SHAPE_TRIPLE);
+            documentId = document.getId();
+            ctx.commit("add constraints");
+        }
+        var token = adapter.createSnapshot(DATASET);
+        var snapshotName = SnapshotUtils.constructSnapshotName(DATASET, token);
+
+        SessionContext.setSessionId("session-b");
+        adapter.fetchSnapshot(token);
+        try (var ctx = sampleContext(snapshotName).begin(ReadWrite.WRITE)) {
+            ctx.getShapesDocuments().get(documentId).getGraph().clear();
+            ctx.commit("empty it");
+        }
+
+        SessionContext.setSessionId("session-c");
+        adapter.fetchSnapshot(token);
+        try (var ctx = sampleContext(snapshotName).begin(ReadWrite.READ)) {
+            assertTrue(ctx.getShapesDocuments().get(documentId).getGraph().contains(SHAPE_TRIPLE));
+        }
+    }
+
+    private GraphContext sampleContext(String datasetName) {
+        return databasePort.getGraphWithContext(new GraphIdentifier(datasetName, GRAPH_URI));
     }
 
     private void createSampleDataset() {

@@ -26,8 +26,8 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.api.controller.Response;
+import org.rdfarchitect.api.controller.datasets.graphs.shacl.SHACLFileResponse;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.graph.source.implementations.GraphFileSourceImpl;
 import org.rdfarchitect.rdf.graph.source.implementations.GraphStringSourceImpl;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -48,11 +48,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.AbstractMap;
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom")
@@ -70,8 +66,12 @@ public class SHACLCustomContentRestController {
 
     @Operation(
             summary = "Replace/Insert shacl",
-            description = "Replace or insert a shacl graph stored in a file",
+            description =
+                    "Replace or insert a shacl graph stored in a file. Superseded by POST "
+                            + "/shacl/documents/file, which adds a file as its own document instead of "
+                            + "replacing the graph's default one.",
             tags = {"graph"},
+            deprecated = true,
             responses = {@ApiResponse(responseCode = "200")})
     @PutMapping(path = "/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public String replaceGraphWithFile(
@@ -113,10 +113,17 @@ public class SHACLCustomContentRestController {
 
     @Operation(
             summary = "Replace/Insert shacl",
-            description = "Replace or insert a shacl graph stored in a Turtle String",
+            description =
+                    "Replace or insert a shacl graph stored in a Turtle String. Superseded by PUT "
+                            + "/shacl/documents/{documentId}, which addresses one document explicitly.",
             tags = {"graph"},
+            deprecated = true,
             responses = {@ApiResponse(responseCode = "200")})
-    @PutMapping("/string")
+    // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
+    // body would reach Jena with its surrounding quotes and fail to parse.
+    @PutMapping(
+            path = "/string",
+            consumes = {MediaType.TEXT_PLAIN_VALUE, "text/turtle"})
     public String replaceGraphWithGraphString(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
@@ -155,7 +162,11 @@ public class SHACLCustomContentRestController {
 
     @Operation(
             summary = "export shacl",
-            description = "Export the rdf-shacl graph",
+            description =
+                    "Export the graph's default constraints document, the one PUT /shacl/custom "
+                            + "writes. Superseded by GET /shacl/documents/{documentId} and "
+                            + "/shacl/export/file.",
+            deprecated = true,
             tags = {"shacl"},
             responses = {
                 @ApiResponse(
@@ -170,7 +181,7 @@ public class SHACLCustomContentRestController {
     @GetMapping("/file")
     public ResponseEntity<byte[]> getCustomSHACLAsFile(
             @Parameter(description = "The requested Datatype.", hidden = true)
-                    @RequestHeader("Accept")
+                    @RequestHeader(value = HttpHeaders.ACCEPT, required = false)
                     String acceptHeader,
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
@@ -192,13 +203,13 @@ public class SHACLCustomContentRestController {
                 originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var format = getRdfFormat(acceptHeader);
+        var format = SHACLFileResponse.rdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 shaclExportUseCase.exportCustomSHACLGraph(
                         new GraphIdentifier(datasetName, extendedGraphURI), format);
-        var body = buildResponseEntity(extendedGraphURI, format, outStream);
+        var body = SHACLFileResponse.of(extendedGraphURI, format, outStream);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/file\" to \"{}\".",
@@ -210,7 +221,10 @@ public class SHACLCustomContentRestController {
 
     @Operation(
             summary = "export shacl",
-            description = "Export the rdf-shacl graph as String",
+            description =
+                    "Export the graph's default constraints document as Turtle, the one PUT "
+                            + "/shacl/custom writes. Superseded by GET /shacl/documents/{documentId}.",
+            deprecated = true,
             tags = {"shacl"},
             responses = {
                 @ApiResponse(
@@ -254,38 +268,5 @@ public class SHACLCustomContentRestController {
                 graphURI,
                 originURL);
         return shaclString;
-    }
-
-    private ResponseEntity<byte[]> buildResponseEntity(
-            String extendedGraphURI, RDFFormat format, ByteArrayOutputStream outStream) {
-        // add suggested file name to response
-        var fileName = "shacl";
-        if (!extendedGraphURI.equals("default")) {
-            fileName = new URI(extendedGraphURI + "-shacl").getSuffix();
-        }
-        fileName += "." + format.getLang().getFileExtensions().getFirst();
-
-        var headers = new HttpHeaders();
-        headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));
-        return ResponseEntity.ok()
-                .headers(headers)
-                .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
-                .body(outStream.toByteArray());
-    }
-
-    private final Map<String, RDFFormat> supportedFormats =
-            Map.ofEntries(
-                    new AbstractMap.SimpleEntry<>("text/turtle", RDFFormat.TURTLE),
-                    new AbstractMap.SimpleEntry<>("application/rdf+xml", RDFFormat.RDFXML),
-                    new AbstractMap.SimpleEntry<>("application/rdf+json", RDFFormat.RDFJSON),
-                    new AbstractMap.SimpleEntry<>("application/n-triples", RDFFormat.NTRIPLES));
-
-    private RDFFormat getRdfFormat(String acceptHeader) {
-        for (var entry : supportedFormats.entrySet()) {
-            if (acceptHeader.contains(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-        throw new IllegalArgumentException("unsupported Media Type");
     }
 }

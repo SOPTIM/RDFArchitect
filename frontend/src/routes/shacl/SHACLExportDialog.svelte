@@ -16,7 +16,18 @@
   -->
 
 <script>
-    import ButtonControl from "$lib/components/ButtonControl.svelte";
+    /**
+     * Exports a chosen set of a graph's constraints as one file.
+     *
+     * A graph holds several constraints documents, so which of them belongs in an export is a
+     * question only the user can answer. The dialog asks it directly instead of offering three
+     * fixed combinations whose names — "generate", "custom", "combined" — said nothing about which
+     * documents they covered.
+     */
+
+    import { listShapesDocuments } from "$lib/api/generated/index.ts";
+    import Badge from "$lib/components/Badge.svelte";
+    import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import GraphExport from "$lib/GraphExport.svelte";
@@ -28,63 +39,177 @@
         lockedGraphUri,
     } = $props();
 
-    const [first, second, ...rest] = supportedRDFMediaTypes;
-    const reorderedSupportedRDFMediaTypes = [second, first, ...rest];
-
-    let exportMode = $state("generate");
+    /** Turtle first: it is what constraints are written and read in, including every official file. */
+    const mediaTypes = [
+        ...supportedRDFMediaTypes.filter(
+            type => type.mimeType === "text/turtle",
+        ),
+        ...supportedRDFMediaTypes.filter(
+            type => type.mimeType !== "text/turtle",
+        ),
+    ];
 
     let disablePrimary = $state(false);
     let shaclExportDialog = $state(null);
+
+    let documents = $state([]);
+    /** Ids of the documents to include, kept as a set so the checkboxes stay independent. */
+    let selected = $state(new Set());
+    let includeGenerated = $state(true);
+    let loadFailed = $state(false);
+    /** Identifies the newest listing, so an earlier one that answers later is dropped. */
+    let loadingFor = null;
+
+    let nothingChosen = $derived(!includeGenerated && selected.size === 0);
+
     let onPrimary = $derived(
-        shaclExportDialog
-            ? () =>
-                  shaclExportDialog.handleExport(
-                      (workspaceName, graphURI) =>
-                          PUBLIC_BACKEND_URL +
-                          "/api/datasets/" +
-                          encodeURIComponent(workspaceName) +
-                          "/graphs/" +
-                          encodeURIComponent(graphURI) +
-                          "/shacl/" +
-                          exportMode +
-                          "/file",
-                  )
+        shaclExportDialog && !nothingChosen
+            ? () => shaclExportDialog.handleExport(exportUrl)
             : null,
     );
 
-    function toggleGeneratedOrCustom() {
-        if (exportMode === "generate") {
-            exportMode = "custom";
-        } else if (exportMode === "custom") {
-            exportMode = "combined";
-        } else {
-            exportMode = "generate";
+    /**
+     * Loads the graph's documents whenever the selection changes.
+     *
+     * What is ticked to begin with is what validation uses: the documents that are switched on.
+     * The generated shapes are only ticked when there are no documents — next to an official
+     * constraints file they restate most of it in other words, which doubles every rule in the
+     * export.
+     */
+    async function loadDocuments(workspaceName, graphUri) {
+        // The selection can change again while a listing is in flight, and the older request may
+        // answer last. Its documents belong to the graph that is no longer chosen, and exporting
+        // would ask the new graph for ids it has never heard of — which it skips in silence.
+        const load = {};
+        loadingFor = load;
+        if (!workspaceName || !graphUri) {
+            documents = [];
+            selected = new Set();
+            includeGenerated = true;
+            return;
         }
-        console.log(exportMode);
+        const { data, error } = await listShapesDocuments({
+            path: { datasetName: workspaceName, graphURI: graphUri },
+        });
+        if (loadingFor !== load) {
+            return;
+        }
+        loadFailed = !!error;
+        documents = error
+            ? []
+            : [...(data ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        selected = new Set(
+            documents
+                .filter(document => document.enabled)
+                .map(document => document.id),
+        );
+        includeGenerated = documents.length === 0;
+    }
+
+    function toggle(documentId, include) {
+        const next = new Set(selected);
+        if (include) {
+            next.add(documentId);
+        } else {
+            next.delete(documentId);
+        }
+        selected = next;
+    }
+
+    function exportUrl(workspaceName, graphURI) {
+        const query = [...selected].map(
+            id => `documentId=${encodeURIComponent(id)}`,
+        );
+        query.push(`includeGenerated=${includeGenerated}`);
+        return (
+            PUBLIC_BACKEND_URL +
+            "/api/datasets/" +
+            encodeURIComponent(workspaceName) +
+            "/graphs/" +
+            encodeURIComponent(graphURI) +
+            "/shacl/export/file?" +
+            query.join("&")
+        );
     }
 </script>
 
 <ActionDialog
     bind:showDialog
     primaryLabel="Export"
-    {disablePrimary}
+    disablePrimary={disablePrimary || nothingChosen}
     {onPrimary}
     title="Export Constraints (SHACL)"
 >
-    <div class="h-10 w-24">
-        <ButtonControl callOnClick={toggleGeneratedOrCustom}>
-            {exportMode}
-        </ButtonControl>
-    </div>
     {#key showDialog}
         <GraphExport
             bind:this={shaclExportDialog}
             bind:showDialog
             bind:disablePrimary
-            bind:onSubmit={onPrimary}
             {lockedWorkspaceName}
             {lockedGraphUri}
-            supportedMediaTypes={reorderedSupportedRDFMediaTypes}
+            supportedMediaTypes={mediaTypes}
+            onselection={loadDocuments}
         />
     {/key}
+
+    <div class="mt-3">
+        <p class="text-default-text mb-1 block">Include:</p>
+        <div class="border-border max-h-64 overflow-y-auto rounded border p-2">
+            <CheckBoxEditControl
+                label="Generated shapes (derived from the schema)"
+                value={includeGenerated}
+                labelFirst={false}
+                callOnInputTrue={() => (includeGenerated = true)}
+                callOnInputFalse={() => (includeGenerated = false)}
+            />
+
+            {#if loadFailed}
+                <p class="text-red-text mt-2 text-sm">
+                    The constraints documents could not be listed.
+                </p>
+            {:else if documents.length === 0}
+                <p class="text-text-subtle mt-2 text-sm italic">
+                    This schema has no constraints documents.
+                </p>
+            {:else}
+                {#each documents as document (document.id)}
+                    <div class="mt-1 flex items-center gap-2">
+                        <CheckBoxEditControl
+                            label={document.name}
+                            value={selected.has(document.id)}
+                            labelFirst={false}
+                            callOnInputTrue={() => toggle(document.id, true)}
+                            callOnInputFalse={() => toggle(document.id, false)}
+                        />
+                        <span class="text-text-subtle text-xs">
+                            {document.tripleCount ?? 0} triples
+                        </span>
+                        {#if !document.enabled}
+                            <!--
+                              Switched off means "takes no part in validation", not "cannot be
+                              exported" — so it can still be ticked, it just is not by default.
+                            -->
+                            <Badge text="Switched off" variant="muted" />
+                        {/if}
+                        {#if document.origin === "IMPORTED"}
+                            <Badge text="Imported" variant="external" />
+                        {/if}
+                    </div>
+                {/each}
+            {/if}
+        </div>
+        {#if documents.length > 0}
+            <p class="text-text-subtle mt-1 text-sm">
+                Ticked to begin with: the documents that are switched on. The
+                generated shapes restate the schema and would repeat most of
+                what the documents say, so they are left out unless you tick
+                them.
+            </p>
+        {/if}
+        {#if nothingChosen}
+            <p class="text-text-subtle mt-1 text-sm">
+                Pick at least one thing to export.
+            </p>
+        {/if}
+    </div>
 </ActionDialog>

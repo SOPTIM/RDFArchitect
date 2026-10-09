@@ -148,8 +148,27 @@ public class GraphUtils {
         return n.isBlank() ? NodeFactory.createBlankNode(hashes.get(n)) : n;
     }
 
+    /**
+     * Refines every blank node's label from its neighbours' until the labels stop changing.
+     *
+     * <p>Each node's edges are collected once up front. Scanning every triple for every node on
+     * every pass was quadratic, and an official constraints file — tens of thousands of blank nodes
+     * in its property shapes and {@code sh:in} lists — took minutes to save.
+     */
     private static Map<Node, String> computeBlankNodeHashes(
             List<Triple> triples, Set<Node> blankNodes) {
+        var edges = new HashMap<Node, List<Edge>>();
+        for (var t : triples) {
+            if (t.getSubject().isBlank()) {
+                edges.computeIfAbsent(t.getSubject(), ignored -> new ArrayList<>())
+                        .add(new Edge("o:", t.getPredicate(), t.getObject()));
+            }
+            if (t.getObject().isBlank()) {
+                edges.computeIfAbsent(t.getObject(), ignored -> new ArrayList<>())
+                        .add(new Edge("s:", t.getPredicate(), t.getSubject()));
+            }
+        }
+
         Map<Node, String> hashes = new HashMap<>();
         blankNodes.forEach(bn -> hashes.put(bn, ""));
 
@@ -157,7 +176,7 @@ public class GraphUtils {
             var next = new HashMap<Node, String>();
             var changed = false;
             for (var bn : blankNodes) {
-                var h = blankNodeFingerprint(bn, triples, hashes);
+                var h = blankNodeFingerprint(edges.getOrDefault(bn, List.of()), hashes);
                 next.put(bn, h);
                 if (!h.equals(hashes.get(bn))) {
                     changed = true;
@@ -171,16 +190,13 @@ public class GraphUtils {
         return hashes;
     }
 
-    private static String blankNodeFingerprint(
-            Node bn, List<Triple> triples, Map<Node, String> hashes) {
-        var lines = new ArrayList<String>();
-        for (var t : triples) {
-            if (t.getSubject().equals(bn)) {
-                lines.add("o:" + t.getPredicate() + "=" + nodeLabel(t.getObject(), hashes));
-            }
-            if (t.getObject().equals(bn)) {
-                lines.add("s:" + t.getPredicate() + "=" + nodeLabel(t.getSubject(), hashes));
-            }
+    /** One triple seen from a blank node: which end the node is on, and what is at the other. */
+    private record Edge(String direction, Node predicate, Node other) {}
+
+    private static String blankNodeFingerprint(List<Edge> edges, Map<Node, String> hashes) {
+        var lines = new ArrayList<String>(edges.size());
+        for (var edge : edges) {
+            lines.add(edge.direction() + edge.predicate() + "=" + nodeLabel(edge.other(), hashes));
         }
         Collections.sort(lines);
         return sha256prefix(String.join("|", lines));

@@ -18,6 +18,7 @@
 package org.rdfarchitect.database.inmemory;
 
 import org.apache.jena.graph.Graph;
+import org.apache.jena.query.Dataset;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
@@ -129,6 +130,16 @@ public interface InMemoryDatabase {
     void createEmptyGraph(GraphIdentifier graphIdentifier);
 
     /**
+     * Replaces a graph's content with {@code newGraph}, or with nothing when it is {@code null},
+     * keeping the graph's shapes documents. Otherwise behaves like {@link #createGraph} and {@link
+     * #createEmptyGraph} respectively.
+     *
+     * @param graphIdentifier identifies dataset and graph URI
+     * @param newGraph the new content, or {@code null} for an empty graph
+     */
+    void replaceGraph(GraphIdentifier graphIdentifier, Graph newGraph);
+
+    /**
      * Deletes the named graph from a specified dataset. If the graph or dataset does not exist,
      * nothing happens.
      *
@@ -200,6 +211,19 @@ public interface InMemoryDatabase {
      *     database
      */
     void fetchSnapshot(DatabaseConnection databaseConnection, String base64Token);
+
+    /**
+     * Loads {@code dataset} as the dataset {@code datasetName}, replacing one of that name.
+     *
+     * <p>The dataset is read in the layout a snapshot is stored in: the schema graphs, plus the
+     * shapes and metadata graphs {@link org.rdfarchitect.database.snapshots.ShapesDocumentGraphs}
+     * writes, which are routed back to the graphs owning them. The loaded dataset starts out
+     * read-only.
+     *
+     * @param datasetName literal dataset name
+     * @param dataset the dataset to load; its graphs are taken over, not copied
+     */
+    void restoreDataset(String datasetName, Dataset dataset);
 
     /**
      * Checks if a dataset is currently set to read-only.

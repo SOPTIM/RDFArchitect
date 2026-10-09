@@ -101,7 +101,7 @@
             bind:value={workspace}
             options={workspaces}
             getOptionIsDisabled={workspace =>
-                !allowSelectionOfReadonlyWorkspaces && workspace.readonly}
+                !allowSelectionOfReadonlyWorkspaces && workspace.readOnly}
             getOptionValue={workspace => workspace.label}
             getOptionLabel={workspace =>
                 workspace.label + (workspace.readOnly ? " (readonly)" : "")}

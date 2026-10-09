@@ -38,9 +38,8 @@ public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCa
 
     @Override
     public void replaceGraph(GraphIdentifier graphIdentifier, MultipartFile file) {
-        databasePort.deleteGraph(graphIdentifier);
         if (file == null || file.isEmpty()) {
-            databasePort.createEmptyGraph(graphIdentifier);
+            databasePort.replaceGraph(graphIdentifier, null);
         } else {
             var graph =
                     new GraphFileSourceBuilderImpl()
@@ -48,7 +47,7 @@ public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCa
                             .setGraphName(graphIdentifier.graphUri())
                             .build()
                             .graph();
-            databasePort.createGraph(graphIdentifier, graph);
+            databasePort.replaceGraph(graphIdentifier, graph);
         }
     }
 }

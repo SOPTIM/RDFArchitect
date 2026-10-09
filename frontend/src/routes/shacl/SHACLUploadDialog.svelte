@@ -16,15 +16,22 @@
   -->
 
 <script>
-    import { replaceGraphWithFile } from "$lib/api/generated/index.ts";
+    import {
+        createShapesDocumentFromFile,
+        listShapesDocuments,
+    } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { uniqueDocumentName } from "$lib/shacl/documentNames.js";
     import {
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { graphStore } from "$lib/stores/graphStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
+    import { graphLabelOf } from "$lib/utils/graph-label.js";
 
     let {
         showDialog = $bindable(),
@@ -51,37 +58,60 @@
         }
     }
 
+    /**
+     * Adds the file to the graph as its own constraints document.
+     *
+     * It used to replace the graph's default document instead, which cost two things a user
+     * noticed: the file's name, since everything landed in "custom.ttl", and the file itself,
+     * since that path stored a parsed graph and threw the text away. Official constraints files
+     * carry comments and a deliberate ordering that have to come back unchanged.
+     *
+     * The server does not enforce read-only, so this has to: a workspace locked by the caller
+     * never went through the picker, and an unknown answer is treated as read-only.
+     */
     async function importGraph() {
-        replaceGraphWithFile({
-            path: { datasetName: workspaceName, graphURI: graphURI },
-            body: { file },
-        })
-            .then(res => {
-                if (!res.error) {
-                    console.log("successfully inserted data");
-                    toastStore.success(
-                        "Constraints imported",
-                        `"${file.name}" was applied to "${graphURI}".`,
-                    );
-                } else {
-                    console.log("failed to insert SHACL file");
-                    toastStore.error(
-                        "Import failed",
-                        `Could not import "${file.name}".`,
-                    );
-                }
-            })
-            .catch(e => {
-                console.log("failed to insert SHACL file:");
-                console.log(e);
+        const path = { datasetName: workspaceName, graphURI: graphURI };
+        const fileName = file.name;
+        if ((await workspaceStore.isReadOnly(workspaceName)) !== false) {
+            toastStore.error(
+                "Import refused",
+                `"${workspaceName}" is read-only. Enable editing to add constraints to it.`,
+            );
+            return;
+        }
+        try {
+            const { data: documents } = await listShapesDocuments({ path });
+            const { error } = await createShapesDocumentFromFile({
+                path,
+                query: {
+                    name: uniqueDocumentName(
+                        (documents ?? []).map(document => document.name),
+                        fileName,
+                    ),
+                },
+                body: { file },
+            });
+            if (error) {
                 toastStore.error(
                     "Import failed",
-                    "An unexpected error occurred while uploading the SHACL file.",
+                    error.detail ?? `Could not import "${fileName}".`,
                 );
-            })
-            .finally(() => {
-                forceReloadTrigger.trigger();
-            });
+                return;
+            }
+            const graphs = await graphStore.getGraphs(workspaceName);
+            toastStore.success(
+                "Constraints imported",
+                `"${fileName}" was added to "${graphLabelOf(graphs, graphURI)}".`,
+            );
+        } catch (e) {
+            console.warn("failed to import the SHACL file:", e);
+            toastStore.error(
+                "Import failed",
+                "An unexpected error occurred while uploading the SHACL file.",
+            );
+        } finally {
+            forceReloadTrigger.trigger();
+        }
     }
 </script>
 
@@ -99,6 +129,7 @@
             bind:graph={graphURI}
             {lockedWorkspaceName}
             {lockedGraphUri}
+            allowSelectionOfReadonlyWorkspaces={false}
             displayAsCard={false}
         />
         <input

@@ -38,8 +38,66 @@ public interface GraphContext extends Transactional, VersionControl {
 
     Graph getRdfGraph();
 
+    /**
+     * Identifies the graph's current committed content. A commit that changes the graph mints a
+     * fresh id, one that leaves it alone keeps it, and an undo or redo returns the id of the
+     * content it moves to, so two reads seeing the same id are looking at the same triples.
+     *
+     * <p>Exposed so that work derived from a graph — indexing its schema for term lookups, say —
+     * can be kept until the graph actually changes, without the commit path having to notify
+     * anyone.
+     */
+    UUID getRdfGraphVersion();
+
+    /**
+     * Identifies the committed state of the graph's shapes documents — which exist, their triples,
+     * their text and their metadata — the way {@link #getRdfGraphVersion()} does for the schema.
+     */
+    UUID getShapesDocumentsVersion();
+
     DiagramLayoutDelta getDiagramLayout();
 
+    /**
+     * Id of the document {@link #getCustomSHACL()} reads and writes.
+     *
+     * <p>Reserved and fixed so that it survives a snapshot round-trip and so the single shapes
+     * graph of a session created before documents existed always migrates to the same place.
+     */
+    UUID DEFAULT_SHAPES_DOCUMENT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+
+    /** Name given to the default document. */
+    String DEFAULT_SHAPES_DOCUMENT_NAME = "custom.ttl";
+
+    /**
+     * The graph's shapes documents, keyed by id.
+     *
+     * <p>The returned map is an ordered snapshot; use {@link #createShapesDocument} and {@link
+     * #removeShapesDocument} to change which documents exist.
+     */
+    Map<UUID, ShapesDocument> getShapesDocuments();
+
+    /**
+     * Adds a shapes document to this graph.
+     *
+     * <p>Must be called in a write transaction. The new document joins the context's transactions
+     * and history: an abort discards it, and undoing the commit that created it removes it again.
+     */
+    ShapesDocument createShapesDocument(String name, ShapesDocument.Origin origin);
+
+    /**
+     * Removes a shapes document.
+     *
+     * <p>Must be called in a write transaction. Which documents exist is versioned like their
+     * content, so undoing the commit brings the document back with its shapes, text and metadata.
+     */
+    void removeShapesDocument(UUID documentId);
+
+    /**
+     * The default document's shapes.
+     *
+     * <p>Kept for callers that predate multiple documents per graph; it creates the default
+     * document on first use so it never returns {@code null}.
+     */
     RDFGraphDelta getCustomSHACL();
 
     ChangeLog getChangeLog();

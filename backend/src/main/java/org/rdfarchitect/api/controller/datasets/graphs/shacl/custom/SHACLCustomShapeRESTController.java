@@ -31,6 +31,7 @@ import org.rdfarchitect.services.shacl.SHACLReplaceShapeUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -56,10 +57,16 @@ public class SHACLCustomShapeRESTController {
     @Operation(
             summary = "Replace/Insert shacl shape",
             description =
-                    "Replace or insert a shacl shape from a shacl graph with the given triples in a valid turtle syntax.",
+                    "Replace or insert a shacl shape in the graph's default constraints document. "
+                            + "Superseded by PUT /shacl/documents/{documentId}: this rewrites the "
+                            + "default document's text from its triples, so its comments and "
+                            + "ordering are lost.",
             tags = {"shacl"},
+            deprecated = true,
             responses = {@ApiResponse(responseCode = "200")})
-    @PutMapping
+    // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
+    // body would reach Jena with its surrounding quotes and fail to parse.
+    @PutMapping(consumes = {MediaType.TEXT_PLAIN_VALUE, "text/turtle"})
     public String replaceShape(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
@@ -103,9 +110,19 @@ public class SHACLCustomShapeRESTController {
 
     @Operation(
             summary = "delete a shacl shape",
-            description = "Delete a shacl shape form a shacl graph",
+            description =
+                    "Delete a shacl shape from the graph's default constraints document. Shapes in "
+                            + "other documents are edited through /shacl/documents/{documentId}. "
+                            + "Superseded by PUT /shacl/documents/{documentId}, like the other "
+                            + "/shacl/custom writes.",
             tags = {"shacl"},
-            responses = {@ApiResponse(responseCode = "200")})
+            deprecated = true,
+            responses = {
+                @ApiResponse(responseCode = "200"),
+                @ApiResponse(
+                        responseCode = "404",
+                        description = "The default document has no shape with this IRI.")
+            })
     @DeleteMapping
     public String deleteShape(
             @Parameter(description = "The name/url of the inquirer.")

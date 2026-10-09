@@ -24,11 +24,29 @@ import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.datatypes.TypeMapper;
 import org.apache.jena.vocabulary.XSD;
 
+import java.util.Map;
+
 @UtilityClass
 public class XSDDatatypeMapper {
 
+    /**
+     * CIM primitives whose name is not the local name of the XSD datatype they stand for. Without
+     * these, composing {@code xsd:<label>} invents datatypes such as {@code xsd:MonthDay} that no
+     * validator knows and that contradict every official ENTSO-E constraint on the same attribute.
+     */
+    private static final Map<String, String> CIM_PRIMITIVE_ALIASES =
+            Map.of(
+                    "MonthDay", "gMonthDay",
+                    "URI", "anyURI",
+                    "IRI", "anyURI",
+                    "StringIRI", "anyURI",
+                    "StringFixedLanguage", "string");
+
     public RDFDatatype classLabelToDatatype(String primitiveDatatypeClassLabel) {
-        var xsdUri = XSD.getURI() + primitiveDatatypeClassLabel;
+        var localName =
+                CIM_PRIMITIVE_ALIASES.getOrDefault(
+                        primitiveDatatypeClassLabel, primitiveDatatypeClassLabel);
+        var xsdUri = XSD.getURI() + localName;
         var typeListIterator = TypeMapper.getInstance().listTypes();
         while (typeListIterator.hasNext()) {
             var dt = typeListIterator.next();

@@ -28,6 +28,7 @@ import org.apache.jena.system.Txn;
 import org.rdfarchitect.config.DatabaseConfig;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.SnapshotPort;
 import org.rdfarchitect.database.implementations.http.FusekiHttpAdminProtocol;
@@ -114,8 +115,20 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
             GraphUtils.removeUUIDs(copiedGraph);
 
             conn.put(graphIdentifier.graphUri(), ModelFactory.createModelForGraph(copiedGraph));
+            transferShapesDocuments(conn, graphIdentifier, ctx);
         } catch (Exception e) {
             throw new FusekiServerException(e.getMessage());
         }
+    }
+
+    /**
+     * Copies each of the graph's shapes documents into its own named graph, plus one graph holding
+     * their metadata, so that constraints a user imported or authored survive a share link instead
+     * of being silently dropped. See {@link ShapesDocumentGraphs#of} for what is written.
+     */
+    private void transferShapesDocuments(
+            RDFConnection conn, GraphIdentifier graphIdentifier, GraphContext ctx) {
+        ShapesDocumentGraphs.of(graphIdentifier.graphUri(), ctx.getShapesDocuments().values())
+                .forEach((name, graph) -> conn.put(name, ModelFactory.createModelForGraph(graph)));
     }
 }

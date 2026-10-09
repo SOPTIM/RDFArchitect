@@ -1,0 +1,201 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Turtle",
+    "scopeName": "source.turtle",
+    "fileTypes": ["ttl", "shacl"],
+    "patterns": [
+        { "include": "#comment" },
+        { "include": "#embedded-sparql" },
+        { "include": "#directive" },
+        { "include": "#blank-node-label" },
+        { "include": "#iri" },
+        { "include": "#literal" },
+        { "include": "#type-abbreviation" },
+        { "include": "#prefixed-name" }
+    ],
+    "repository": {
+        "comment": {
+            "name": "comment.line.number-sign.turtle",
+            "match": "#.*$"
+        },
+        "embedded-sparql": {
+            "patterns": [
+                {
+                    "begin": "(sh:(?:select|ask|construct|update))(\\s*)(\"\"\")",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.other.sparql-constraint.turtle"
+                        },
+                        "3": {
+                            "name": "string.quoted.triple.turtle punctuation.definition.string.begin.turtle"
+                        }
+                    },
+                    "end": "(\"\"\")",
+                    "endCaptures": {
+                        "1": {
+                            "name": "string.quoted.triple.turtle punctuation.definition.string.end.turtle"
+                        }
+                    },
+                    "contentName": "meta.embedded.block.sparql",
+                    "patterns": [{ "include": "source.sparql" }]
+                },
+                {
+                    "begin": "(sh:(?:select|ask|construct|update))(\\s*)(''')",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.other.sparql-constraint.turtle"
+                        },
+                        "3": {
+                            "name": "string.quoted.triple.turtle punctuation.definition.string.begin.turtle"
+                        }
+                    },
+                    "end": "(''')",
+                    "endCaptures": {
+                        "1": {
+                            "name": "string.quoted.triple.turtle punctuation.definition.string.end.turtle"
+                        }
+                    },
+                    "contentName": "meta.embedded.block.sparql",
+                    "patterns": [{ "include": "source.sparql" }]
+                }
+            ]
+        },
+        "directive": {
+            "patterns": [
+                {
+                    "name": "meta.directive.prefix.turtle",
+                    "match": "(?i)(@prefix|\\bPREFIX\\b)\\s+([A-Za-z\\u00C0-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD_][\\w\\u00B7\\u00C0-\\u02FF\\u0300-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u203F-\\u2040\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD.\\-]*)?(:)",
+                    "captures": {
+                        "1": {
+                            "name": "keyword.control.directive.prefix.turtle"
+                        },
+                        "2": { "name": "storage.modifier.namespace.turtle" },
+                        "3": {
+                            "name": "punctuation.separator.namespace.turtle"
+                        }
+                    }
+                },
+                {
+                    "name": "keyword.control.directive.base.turtle",
+                    "match": "(?i)(@base|\\bBASE\\b)"
+                }
+            ]
+        },
+        "iri": {
+            "name": "entity.name.type.iri.turtle",
+            "match": "<(?:[^\\x00-\\x20<>\"{}|^`\\\\]|\\\\u[0-9A-Fa-f]{4}|\\\\U[0-9A-Fa-f]{8})*>"
+        },
+        "prefixed-name": {
+            "match": "([A-Za-z\\u00C0-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD_](?:[\\w\\u00B7\\u00C0-\\u02FF\\u0300-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u203F-\\u2040\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD\\-]|\\.(?=[\\w\\u00B7\\u00C0-\\uFFFD\\-]))*)?(:)((?:(?:[\\w\\u00B7\\u00C0-\\u02FF\\u0300-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u203F-\\u2040\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD:\\-]|%[0-9A-Fa-f]{2}|\\\\[_~.\\-!$&'()*+,;=/?#@%])|\\.(?=[\\w\\u00B7\\u00C0-\\uFFFD:\\-%\\\\]))*)?",
+            "captures": {
+                "1": { "name": "storage.modifier.namespace.turtle" },
+                "2": { "name": "punctuation.separator.namespace.turtle" },
+                "3": { "name": "variable.other.local-name.turtle" }
+            }
+        },
+        "blank-node-label": {
+            "name": "variable.language.blank-node.turtle",
+            "match": "_:[A-Za-z0-9\\u00C0-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD_][\\w\\u00B7\\u00C0-\\u02FF\\u0300-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u203F-\\u2040\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD.\\-]*"
+        },
+        "type-abbreviation": {
+            "name": "keyword.other.rdf-type.turtle",
+            "match": "(?<=[\\s;,\\[(])a(?=[\\s<\"'_?$({\\[#]|$)"
+        },
+        "literal": {
+            "patterns": [
+                { "include": "#string-triple-double" },
+                { "include": "#string-triple-single" },
+                { "include": "#string-double" },
+                { "include": "#string-single" },
+                { "include": "#number" },
+                { "include": "#boolean" }
+            ]
+        },
+        "string-triple-double": {
+            "begin": "\"\"\"",
+            "beginCaptures": {
+                "0": { "name": "punctuation.definition.string.begin.turtle" }
+            },
+            "end": "\"\"\"(?:(@[a-zA-Z]+(?:-[a-zA-Z0-9]+)*)|(\\^\\^)\\s*(?=<|[\\w\\-]*:))?",
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.string.end.turtle" },
+                "1": { "name": "keyword.other.language-tag.turtle" },
+                "2": { "name": "keyword.operator.datatype.turtle" }
+            },
+            "name": "string.quoted.triple.turtle",
+            "patterns": [{ "include": "#string-escape" }]
+        },
+        "string-triple-single": {
+            "begin": "'''",
+            "beginCaptures": {
+                "0": { "name": "punctuation.definition.string.begin.turtle" }
+            },
+            "end": "'''(?:(@[a-zA-Z]+(?:-[a-zA-Z0-9]+)*)|(\\^\\^)\\s*(?=<|[\\w\\-]*:))?",
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.string.end.turtle" },
+                "1": { "name": "keyword.other.language-tag.turtle" },
+                "2": { "name": "keyword.operator.datatype.turtle" }
+            },
+            "name": "string.quoted.triple.turtle",
+            "patterns": [{ "include": "#string-escape" }]
+        },
+        "string-double": {
+            "begin": "\"",
+            "beginCaptures": {
+                "0": { "name": "punctuation.definition.string.begin.turtle" }
+            },
+            "end": "\"(?:(@[a-zA-Z]+(?:-[a-zA-Z0-9]+)*)|(\\^\\^)\\s*(?=<|[\\w\\-]*:))?",
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.string.end.turtle" },
+                "1": { "name": "keyword.other.language-tag.turtle" },
+                "2": { "name": "keyword.operator.datatype.turtle" }
+            },
+            "name": "string.quoted.double.turtle",
+            "patterns": [
+                { "include": "#string-escape" },
+                { "match": "$", "name": "invalid.illegal.newline.turtle" }
+            ]
+        },
+        "string-single": {
+            "begin": "'",
+            "beginCaptures": {
+                "0": { "name": "punctuation.definition.string.begin.turtle" }
+            },
+            "end": "'(?:(@[a-zA-Z]+(?:-[a-zA-Z0-9]+)*)|(\\^\\^)\\s*(?=<|[\\w\\-]*:))?",
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.string.end.turtle" },
+                "1": { "name": "keyword.other.language-tag.turtle" },
+                "2": { "name": "keyword.operator.datatype.turtle" }
+            },
+            "name": "string.quoted.single.turtle",
+            "patterns": [
+                { "include": "#string-escape" },
+                { "match": "$", "name": "invalid.illegal.newline.turtle" }
+            ]
+        },
+        "string-escape": {
+            "name": "constant.character.escape.turtle",
+            "match": "\\\\(?:[\\\\\"'nrtbf]|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})"
+        },
+        "number": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.float.turtle",
+                    "match": "(?<![\\w.])[+-]?(?:\\d+\\.\\d*|\\.\\d+|\\d+)(?:[eE][+-]?\\d+)(?![\\w])"
+                },
+                {
+                    "name": "constant.numeric.decimal.turtle",
+                    "match": "(?<![\\w.])[+-]?(?:\\d+\\.\\d+|\\.\\d+)(?![\\w])"
+                },
+                {
+                    "name": "constant.numeric.integer.turtle",
+                    "match": "(?<![\\w.])[+-]?\\d+(?![\\w.])"
+                }
+            ]
+        },
+        "boolean": {
+            "name": "constant.language.boolean.turtle",
+            "match": "\\b(?:true|false)\\b"
+        }
+    }
+}

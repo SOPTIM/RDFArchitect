@@ -20,6 +20,7 @@ package org.rdfarchitect.database.inmemory;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
+import org.apache.jena.query.Dataset;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -107,6 +108,32 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     public void createGraph(GraphIdentifier graphIdentifier, Graph newGraph) {
         var store = getOrCreateSessionDataStore();
         store.create(graphIdentifier, newGraph);
+        registerContent(store, graphIdentifier, newGraph);
+    }
+
+    @Override
+    public void replaceGraph(GraphIdentifier graphIdentifier, Graph newGraph) {
+        var store = getOrCreateSessionDataStore();
+        var datasetName = graphIdentifier.datasetName();
+        var isNewDataset = !store.listDatasets().contains(datasetName);
+        if (newGraph == null) {
+            store.replace(graphIdentifier, GraphFactory.createDefaultGraph());
+            store.getCrossProfileDiagramInfo(datasetName)
+                    .setColor(
+                            graphIdentifier.graphUri(),
+                            CrossProfileUtils.generateRandomDarkColor());
+            if (isNewDataset) {
+                initializeNewDataset(store, datasetName);
+            }
+        } else {
+            store.replace(graphIdentifier, newGraph);
+            registerContent(store, graphIdentifier, newGraph);
+        }
+    }
+
+    /** Merges a new graph's prefixes into the dataset's and gives it a diagram colour. */
+    private static void registerContent(
+            SessionDataStore store, GraphIdentifier graphIdentifier, Graph newGraph) {
         var currentPrefixMapping =
                 new PrefixMappingImpl()
                         .setNsPrefixes(store.getPrefixMapping(graphIdentifier.datasetName()))
@@ -178,6 +205,11 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     @Override
     public void fetchSnapshot(DatabaseConnection databaseConnection, String base64Token) {
         getOrCreateSessionDataStore().fetchSnapshot(databaseConnection, base64Token);
+    }
+
+    @Override
+    public void restoreDataset(String datasetName, Dataset dataset) {
+        getOrCreateSessionDataStore().restoreDataset(datasetName, dataset);
     }
 
     @Override

@@ -10,4 +10,23 @@
         <Bug
             pattern="CT_CONSTRUCTOR_THROW,MC_OVERRIDABLE_METHOD_CALL_IN_CONSTRUCTOR,UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR,UL_UNRELEASED_LOCK,UL_UNRELEASED_LOCK_EXCEPTION_PATH"/>
     </Match>
+    <!--
+        A compensating handler: creating a document changes the context outside the transaction,
+        so a failure has to undo that and rethrow what it caught. The detector reports exactly
+        this shape; everywhere else it stays on.
+    -->
+    <Match>
+        <Class name="org.rdfarchitect.services.shacl.SHACLStoringService"/>
+        <Method name="createShapesDocument"/>
+        <Bug pattern="THROWS_METHOD_THROWS_RUNTIMEEXCEPTION"/>
+    </Match>
+    <!--
+        Held only to keep the graphs a changelog entry's weak references point at alive: a deleted
+        constraints document's triples, which no version history retains. Never read on purpose.
+    -->
+    <Match>
+        <Class name="org.rdfarchitect.models.changelog.ChangeLogEntry"/>
+        <Field name="retained"/>
+        <Bug pattern="URF_UNREAD_FIELD"/>
+    </Match>
 </FindBugsFilter>
