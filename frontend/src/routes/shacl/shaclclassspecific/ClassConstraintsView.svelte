@@ -187,12 +187,26 @@
                                 />
                             </button>
                             <span
-                                class="text-default-text min-w-0 flex-1 truncate font-mono text-sm"
+                                class="text-default-text min-w-40 flex-1 truncate font-mono text-sm"
                                 title={row.label}
                             >
                                 {row.label}
                             </span>
-                            <span class="text-text-subtle shrink-0 text-xs">
+                            <!--
+                              Truncated rather than kept whole: where generated and custom rules
+                              disagree both readings are listed, which can be longer than the row,
+                              and pushed the property's name out of it altogether.
+                            -->
+                            <span
+                                class="text-text-subtle min-w-0 shrink truncate text-xs"
+                                title={summaries
+                                    .map(summary =>
+                                        summary.side
+                                            ? `${summary.side}: ${summary.text}`
+                                            : summary.text,
+                                    )
+                                    .join("\n")}
+                            >
                                 {#each summaries as summary, index (index)}
                                     {#if summary.side}
                                         <span class="opacity-70">
