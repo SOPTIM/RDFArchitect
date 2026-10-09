@@ -48,6 +48,11 @@
         documentKey = undefined,
         /** Shown while the text is empty, to say what the box is for. */
         placeholder = undefined,
+        /**
+         * Prefixes to read the text with besides its own declarations — for a shape shown on its
+         * own, whose document's `@prefix` lines are not part of it.
+         */
+        prefixes = undefined,
     } = $props();
 
     // All four are $state because the effects below key off them: the editor is created when
@@ -225,14 +230,14 @@
         editor?.updateOptions({ readOnly, placeholder });
     });
 
-    // Completion and hover answer only for a model that has been given a schema to answer from,
-    // so the small editors in the class-editor dialogs stay plain.
+    // Completion, hover and go-to-definition answer only for a model that has been given a schema
+    // to answer from.
     $effect(() => {
         const model = editor?.getModel();
         if (!model || !termSource) {
             return;
         }
-        attachTermSource(model, termSource);
+        attachTermSource(model, termSource, prefixes ?? null);
         return () => detachTermSource(model);
     });
 

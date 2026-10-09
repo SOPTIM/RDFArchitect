@@ -57,10 +57,16 @@ const sources = new WeakMap();
 /** Model → its prefixes, remembered per content version rather than re-scanned per keystroke. */
 const prefixCache = new WeakMap();
 
+/**
+ * Model → prefixes it is read with besides its own: a shape shown on its own, as the class
+ * dialogs show them, has none of its document's prefix declarations in its text.
+ */
+const givenPrefixes = new WeakMap();
+
 /** A directive line, where a `:` belongs to a prefix being declared rather than to a term. */
 const DIRECTIVE = /^\s*(?:@prefix|@base|prefix|base)\b/i;
 
-/** Where following a term should go. Set by the workbench; without it, definitions do nothing. */
+/** Where following a term should go. Set by whatever shows an editor; without it, nothing. */
 let openClass = null;
 
 /** Keeps `model` and disposes whichever placeholder has gone longest without being needed. */
@@ -71,13 +77,24 @@ function trackPreviewModel(model) {
     }
 }
 
-export function attachTermSource(model, source) {
+/**
+ * @param prefixes prefix → namespace to read the model's terms with as well as its own, for text
+ *     that is a fragment of a document rather than a document
+ */
+export function attachTermSource(model, source, prefixes = null) {
     sources.set(model, source);
+    if (prefixes) {
+        givenPrefixes.set(model, prefixes);
+    } else {
+        givenPrefixes.delete(model);
+    }
+    prefixCache.delete(model);
     source?.load();
 }
 
 export function detachTermSource(model) {
     sources.delete(model);
+    givenPrefixes.delete(model);
 }
 
 /**
@@ -88,7 +105,14 @@ export function detachTermSource(model) {
  * wherever the user last was, with the class they asked for nowhere in sight.
  */
 export function onOpenClass(handler) {
+    const previous = openClass;
     openClass = handler;
+    // A dialog opened over a page that registered its own hands it back when it closes.
+    return () => {
+        if (openClass === handler) {
+            openClass = previous;
+        }
+    };
 }
 
 function sourceFor(model) {
@@ -100,7 +124,10 @@ function prefixesOf(model) {
     if (cached && cached.version === model.getVersionId()) {
         return cached.prefixes;
     }
-    const prefixes = parsePrefixes(model.getValue());
+    const prefixes = {
+        ...(givenPrefixes.get(model) ?? {}),
+        ...parsePrefixes(model.getValue()),
+    };
     prefixCache.set(model, { version: model.getVersionId(), prefixes });
     return prefixes;
 }

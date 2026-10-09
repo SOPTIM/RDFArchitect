@@ -34,6 +34,7 @@
     import { guardUnsavedChanges } from "$lib/eventhandling/unsavedChanges.js";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
     import { onOpenClass } from "$lib/monaco/turtleLanguageFeatures.js";
+    import { showClass } from "$lib/shacl/classNavigation.js";
     import { ConformanceView } from "$lib/shacl/conformanceState.svelte.js";
     import { ShapesFormView } from "$lib/shacl/formState.svelte.js";
     import { newDocumentText } from "$lib/shacl/newDocument.js";
@@ -46,7 +47,6 @@
     } from "$lib/shacl/workbenchLink.js";
     import { ShapesWorkbench } from "$lib/shacl/workbenchState.svelte.js";
     import {
-        ClassType,
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
@@ -261,31 +261,15 @@
      * component only knows it was asked to follow something.
      */
     $effect(() => {
-        onOpenClass(async (graphUri, classUUID, packageUUID) => {
+        return onOpenClass(async (graphUri, classUUID, packageUUID) => {
             // Asked before the selection moves: once it has, the workbench is rebuilt for the new
             // schema and the edits are gone before any navigation guard could see them.
             if (!(await confirmDiscard())) {
                 return;
             }
-            editorState.selectPackage(
-                selectedWorkspace,
-                graphUri,
-                packageUUID ?? "default",
-            );
-            editorState.selectedClassWorkspace.updateValue(selectedWorkspace);
-            editorState.selectedClassGraph.updateValue(graphUri);
-            editorState.selectedClass.updateValue({
-                type: ClassType.SINGLE_CLASS,
-                id: classUUID,
-            });
-            editorState.focusedClassUUID.updateValue(classUUID);
-            editorState.selectedWorkspace.trigger();
-            editorState.selectedGraph.trigger();
-            editorState.selectedDiagram.trigger();
-            forceReloadTrigger.trigger();
+            showClass(selectedWorkspace, graphUri, classUUID, packageUUID);
             goto("/mainpage");
         });
-        return () => onOpenClass(null);
     });
 
     /** Ctrl+S saves wherever the focus is on this page, not only inside the editor. */

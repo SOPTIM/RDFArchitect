@@ -30,6 +30,10 @@
     import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
     import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
+    import { onOpenClass } from "$lib/monaco/turtleLanguageFeatures.js";
+    import { showClass } from "$lib/shacl/classNavigation.js";
+    import { SchemaTermSource } from "$lib/shacl/schemaTermSource.svelte.js";
+    import { parsePrefixes } from "$lib/shacl/turtleTerms.js";
     import { selectSchemaOf, workbenchHref } from "$lib/shacl/workbenchLink.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
@@ -59,6 +63,33 @@
         editorState.selectedClassGraph.getValue() ??
             editorState.selectedGraph.getValue(),
     );
+
+    /** The schema the shown rules are read against, for hover and Ctrl+click on their terms. */
+    const termSource = $derived(
+        classWorkspaceName && classGraphUri
+            ? new SchemaTermSource({
+                  datasetName: classWorkspaceName,
+                  graphUri: classGraphUri,
+              })
+            : null,
+    );
+
+    /** Each rule is shown on its own, without its document's prefix declarations. */
+    const prefixes = $derived({
+        ...parsePrefixes(generatedShacl.namespaces ?? ""),
+        ...parsePrefixes(customShacl.namespaces ?? ""),
+    });
+
+    // While the dialog is open, following a term goes to its class here on the main page.
+    $effect(() => {
+        if (!showDialog) {
+            return;
+        }
+        return onOpenClass((targetGraph, classUUID, packageUUID) => {
+            showDialog = false;
+            showClass(classWorkspaceName, targetGraph, classUUID, packageUUID);
+        });
+    });
 
     function getViewedClassUuid() {
         return classUuidOverride ?? editorState.selectedClass.getProperty("id");
@@ -287,6 +318,8 @@
                                         autoGrow
                                         value={propertyShape.triples.trim()}
                                         readOnly={true}
+                                        {termSource}
+                                        {prefixes}
                                     />
                                 </div>
                             {/each}
@@ -347,6 +380,8 @@
                                         autoGrow
                                         value={propertyShape.triples.trim()}
                                         readOnly={true}
+                                        {termSource}
+                                        {prefixes}
                                     />
                                 </div>
                             {/each}

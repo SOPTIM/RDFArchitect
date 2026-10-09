@@ -35,7 +35,14 @@
         summaryOf,
     } from "$lib/shacl/classConstraints.js";
 
-    let { custom, generated, onopen = () => {} } = $props();
+    let {
+        custom,
+        generated,
+        onopen = () => {},
+        /** For hover and Ctrl+click on the terms of the rules shown. */
+        termSource = undefined,
+        prefixes = undefined,
+    } = $props();
 
     let scope = $state("both");
     let filter = $state("");
@@ -154,6 +161,8 @@
                                     autoGrow
                                     value={shape.triples}
                                     readOnly={true}
+                                    {termSource}
+                                    {prefixes}
                                 />
                             </div>
                         {/each}
@@ -266,6 +275,8 @@
                                                 autoGrow
                                                 value={shape.triples.trim()}
                                                 readOnly={true}
+                                                {termSource}
+                                                {prefixes}
                                             />
                                         </div>
                                     {/each}

@@ -24,10 +24,14 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { onOpenClass } from "$lib/monaco/turtleLanguageFeatures.js";
     import {
         emptyRelations,
         firstDocumentOf,
     } from "$lib/shacl/classConstraints.js";
+    import { showClass } from "$lib/shacl/classNavigation.js";
+    import { SchemaTermSource } from "$lib/shacl/schemaTermSource.svelte.js";
+    import { parsePrefixes } from "$lib/shacl/turtleTerms.js";
     import { selectSchemaOf, workbenchHref } from "$lib/shacl/workbenchLink.js";
     import { ClassType, editorState } from "$lib/sharedState.svelte.js";
 
@@ -48,6 +52,30 @@
     let loading = $state(false);
     let error = $state(null);
     let fetchKey = $state(0);
+
+    /** The schema the shown rules are read against, for hover and Ctrl+click on their terms. */
+    const termSource = $derived(
+        workspaceName && graphUri
+            ? new SchemaTermSource({ datasetName: workspaceName, graphUri })
+            : null,
+    );
+
+    /** The rules are shown one shape at a time, without their documents' prefix declarations. */
+    const prefixes = $derived({
+        ...parsePrefixes(generatedShacl?.namespaces ?? ""),
+        ...parsePrefixes(customShacl?.namespaces ?? ""),
+    });
+
+    // While the dialog is open, following a term goes to its class here on the main page.
+    $effect(() => {
+        if (!showDialog) {
+            return;
+        }
+        return onOpenClass((targetGraph, classUUID, packageUUID) => {
+            showDialog = false;
+            showClass(workspaceName, targetGraph, classUUID, packageUUID);
+        });
+    });
 
     function onOpen() {
         fetchShacl();
@@ -156,6 +184,8 @@
                         <ClassConstraintsView
                             custom={customShacl}
                             generated={generatedShacl}
+                            {termSource}
+                            {prefixes}
                             onopen={openInWorkbench}
                         />
                     {/key}
