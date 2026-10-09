@@ -120,10 +120,10 @@ public class GraphWithContextTransactional implements GraphContext {
     private final List<NamedRewindable> coreRewindables = new CopyOnWriteArrayList<>();
     private final AtomicInteger stepsSinceNamedCommit = new AtomicInteger(0);
 
-    /** The name is read at commit time, so a renamed document is labelled by its new name. */
     /**
      * A participant the changelog reports on, under a name the user reads.
      *
+     * @param name read at commit time, so a renamed document is labelled by its new name
      * @param documentId the shapes document it holds, or {@code null} for the schema graph
      */
     private record NamedRewindable(Supplier<String> name, Rewindable rewindable, UUID documentId) {}
