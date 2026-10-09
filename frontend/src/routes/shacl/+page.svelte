@@ -86,6 +86,8 @@
     /** Resolved when the user has answered the unsaved-changes dialog. */
     let pendingSwitch = $state(null);
     let showUnsavedDialog = $state(false);
+    /** Off when the caller would undo a save made from the dialog, as an undo would. */
+    let unsavedDialogOffersSave = $state(true);
     let showStaleDialog = $state(false);
     let staleReason = $state(null);
 
@@ -337,8 +339,10 @@
      *
      * Returns a promise the list awaits, so the switch either happens after the answer or not at
      * all. Without it, opening another document would silently discard the buffer.
+     *
+     * @param {{ allowSave?: boolean }} [options] whether Save is offered as an answer
      */
-    async function confirmSwitch() {
+    async function confirmSwitch({ allowSave = true } = {}) {
         // Land anything typed in the form before asking, or an edit still on its way would decide
         // the question by arriving after the answer.
         await formView?.settle();
@@ -347,6 +351,7 @@
         }
         return new Promise(resolve => {
             pendingSwitch = resolve;
+            unsavedDialogOffersSave = allowSave;
             showUnsavedDialog = true;
         });
     }
@@ -355,8 +360,8 @@
      * `confirmSwitch` for anything that replaces the buffer from outside: a discarded answer
      * reverts it, so what follows — a reload after an undo, say — is free to replace it.
      */
-    async function confirmDiscard() {
-        const agreed = await confirmSwitch();
+    async function confirmDiscard(options) {
+        const agreed = await confirmSwitch(options);
         if (agreed) {
             workbench?.revert();
         }
@@ -762,6 +767,7 @@
 </ActionDialog>
 <DiscardCancelConfirmDialog
     bind:showDialog={showUnsavedDialog}
+    hideSave={!unsavedDialogOffersSave}
     onCancel={() => answerSwitch(false)}
     onDiscard={() => answerSwitch(true)}
     onSave={async () => {

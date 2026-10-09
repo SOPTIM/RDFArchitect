@@ -29,7 +29,8 @@ let guard = null;
 
 /**
  * Registers the question to ask. `ask` resolves true when it is fine to go ahead — nothing was
- * unsaved, it was saved, or the user chose to discard it.
+ * unsaved, it was saved, or the user chose to discard it. It is called with `{ allowSave }`; when
+ * that is false, saving must not be offered as an answer.
  *
  * @returns a function that removes the registration
  */
@@ -42,7 +43,13 @@ export function guardUnsavedChanges(ask) {
     };
 }
 
-/** Whether the caller may go ahead and replace what the current page shows. */
-export async function confirmUnsavedChanges() {
-    return guard ? (await guard()) === true : true;
+/**
+ * Whether the caller may go ahead and replace what the current page shows.
+ *
+ * @param {{ allowSave?: boolean }} [options] `allowSave: false` for a caller whose action would
+ *     take a save straight back — an undo would undo the very save it was asked to make first, so
+ *     the only honest answers there are to discard the work or to stop.
+ */
+export async function confirmUnsavedChanges({ allowSave = true } = {}) {
+    return guard ? (await guard({ allowSave })) === true : true;
 }

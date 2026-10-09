@@ -42,6 +42,19 @@ describe("confirmUnsavedChanges", () => {
         expect(await confirmUnsavedChanges()).toBe(true);
     });
 
+    test("tells the page whether saving may be offered", async () => {
+        const ask = vi.fn().mockResolvedValue(true);
+        release = guardUnsavedChanges(ask);
+
+        await confirmUnsavedChanges();
+        await confirmUnsavedChanges({ allowSave: false });
+
+        expect(ask.mock.calls).toEqual([
+            [{ allowSave: true }],
+            [{ allowSave: false }],
+        ]);
+    });
+
     test("stops asking a page once it has gone", async () => {
         const ask = vi.fn().mockResolvedValue(false);
         guardUnsavedChanges(ask)();

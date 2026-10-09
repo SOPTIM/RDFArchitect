@@ -409,7 +409,7 @@
     }
 
     async function undo() {
-        if (!(await confirmUnsavedChanges())) {
+        if (!(await confirmUnsavedChanges({ allowSave: false }))) {
             return;
         }
         const { error } = await versionControlStore.undo(
@@ -422,7 +422,7 @@
     }
 
     async function redo() {
-        if (!(await confirmUnsavedChanges())) {
+        if (!(await confirmUnsavedChanges({ allowSave: false }))) {
             return;
         }
         const { error } = await versionControlStore.redo(

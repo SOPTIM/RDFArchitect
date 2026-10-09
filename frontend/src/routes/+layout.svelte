@@ -187,8 +187,9 @@
 
         await eventStack.guardAction(async () => {
             // An undo rewrites the schema under whatever page is open; the page gets to keep its
-            // unsaved work first, and reloads from the result afterwards.
-            if (!(await confirmUnsavedChanges())) {
+            // unsaved work first, and reloads from the result afterwards. Not by saving it: the
+            // undo would take that save straight back.
+            if (!(await confirmUnsavedChanges({ allowSave: false }))) {
                 return;
             }
             const { error } = isRedo
