@@ -257,8 +257,14 @@
         monaco?.editor.setTheme(themeName);
     });
 
+    // Also after every change of text, not only of findings. Opening a document empties the editor
+    // and then fills it, while the findings — read from the stored report — stay the same object:
+    // set against the empty text, the markers did not survive the text arriving, and a document
+    // opened with errors showed them in the problems panel but nowhere in the editor.
     $effect(() => {
         const model = editor?.getModel();
+        void value;
+        void documentKey;
         if (!monaco || !model) {
             return;
         }
