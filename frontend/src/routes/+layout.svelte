@@ -37,6 +37,13 @@
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import {
+        dragHasFiles,
+        endFileDrag,
+        enterFileDrag,
+        fileDragState,
+        leaveFileDrag,
+    } from "$lib/fileDragState.svelte.js";
     import { versionControlStore } from "$lib/stores/versionControlStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
@@ -240,6 +247,42 @@
         if (inputFocused) return;
         shortcutStore.handleEvent(event);
     }
+
+    /**
+     * Accepts dragged files on behalf of the whole window: without this, a drop next to a drop
+     * zone opens the file in the tab and takes the editor with it.
+     */
+    function handleWindowDragOver(event) {
+        if (dragHasFiles(event)) {
+            event.preventDefault();
+        }
+    }
+
+    /**
+     * Clears a drag the browser never ended — cancelling with Esc does not reliably report a last
+     * `dragleave`. A file drag suppresses mouse events, so one arriving now means it is over.
+     */
+    function endStrandedFileDrag() {
+        if (fileDragState.active) {
+            endFileDrag();
+        }
+    }
+
+    function handleWindowDrop(event) {
+        if (!dragHasFiles(event)) {
+            return;
+        }
+        // Whoever took the drop has prevented it already; what still reaches the window landed
+        // beside every zone and would otherwise be gone without a word.
+        if (!event.defaultPrevented && page.url.pathname === "/mainpage") {
+            toastStore.info(
+                "Nothing imported",
+                "Drop schemas on the schema navigation to import them.",
+            );
+        }
+        event.preventDefault();
+        endFileDrag();
+    }
 </script>
 
 <svelte:window
@@ -250,6 +293,12 @@
     onblur={() => {
         isLeftAltPressed = false;
     }}
+    ondragenter={enterFileDrag}
+    ondragover={handleWindowDragOver}
+    ondragleave={leaveFileDrag}
+    ondrop={handleWindowDrop}
+    ondragend={endFileDrag}
+    onmousemove={endStrandedFileDrag}
 />
 <Tooltip.Provider delayDuration={150}>
     <div

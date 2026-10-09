@@ -24,6 +24,7 @@
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
+    import SchemaDropZone from "../SchemaDropZone.svelte";
     import WorkspaceActionsMenu from "../workspaceActions/WorkspaceActionsMenu.svelte";
 
     let { workspaceName } = $props();
@@ -40,7 +41,9 @@
 
 <ContextMenu.Root>
     <ContextMenu.TriggerArea class="contents">
-        <div
+        <SchemaDropZone
+            {workspaceName}
+            {readonly}
             class="bg-window-background flex min-h-0 flex-1 items-center justify-center"
         >
             <EmptyStateCard
@@ -72,7 +75,7 @@
                     </div>
                 </div>
             </EmptyStateCard>
-        </div>
+        </SchemaDropZone>
     </ContextMenu.TriggerArea>
     <WorkspaceActionsMenu
         {workspaceName}

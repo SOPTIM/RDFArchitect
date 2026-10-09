@@ -476,6 +476,11 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     }
 
     private void replaceGraph(String datasetName, String graphUri, Graph graph) {
+        // The import may name a workspace that does not exist yet, and one it works in must not be
+        // left read-only. Created at the first write, not up front: an import that writes nothing
+        // leaves nothing behind, and a new workspace's prefixes cannot contest the first file's.
+        databasePort.createWorkspaceIfAbsent(datasetName);
+
         var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
         databasePort.deleteGraph(graphIdentifier);
         databasePort.createGraph(graphIdentifier, graph);
