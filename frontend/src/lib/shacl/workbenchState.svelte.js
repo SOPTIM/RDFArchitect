@@ -57,6 +57,13 @@ const NO_FINDINGS = {
 };
 
 /**
+ * What Java's `String.isBlank` counts as blank, which is what the server tests — not `trim`'s
+ * idea of it: Java keeps the no-break spaces as content.
+ */
+const JAVA_BLANK =
+    /^(?:(?![\u00A0\u2007\u202F])[\p{Zs}\u2028\u2029\t\n\v\f\r\u001C-\u001F])*$/u;
+
+/**
  * The document the workbench opens when none is chosen: the first that holds anything, and the
  * generated shapes when the graph has no document at all — which is how every graph starts.
  */
@@ -89,6 +96,14 @@ export async function revisionOf(text) {
     return Array.from(new Uint8Array(digest), byte =>
         byte.toString(16).padStart(2, "0"),
     ).join("");
+}
+
+/**
+ * Text as the server records it: whitespace-only Turtle is kept as the empty document it means.
+ * A revision has to name that, or a save after emptying a document reads as made to stale text.
+ */
+function storedForm(text) {
+    return JAVA_BLANK.test(text) ? "" : text;
 }
 
 /**
@@ -520,7 +535,7 @@ export class ShapesWorkbench {
             // tab, or rewound by an undo while this buffer held edits — is not overwritten unseen.
             const expectedRevision = overwrite
                 ? undefined
-                : await revisionOf(this.savedText);
+                : await revisionOf(storedForm(this.savedText));
             // A document that has been emptied still has to be sent as something, or the
             // endpoint's plain-string body arrives absent and Spring rejects the request.
             const { error, response } = await replaceShapesDocumentText({

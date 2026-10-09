@@ -311,6 +311,37 @@ describe("editing and saving", () => {
         );
     });
 
+    test("names an emptied document's text as the server stores it", async () => {
+        // The server keeps whitespace-only Turtle as the empty document it means. Naming the
+        // blank text sent instead made the next save look stale, and refused it.
+        await workbench.load();
+        workbench.text = "\n  \n";
+        await workbench.save();
+        workbench.text = "# started again\n";
+        server.requests.length = 0;
+
+        await workbench.save();
+
+        const put = server.requests.find(entry => entry.method === "PUT");
+        expect(put.query.get("expectedRevision")).toBe(await revisionOf(""));
+    });
+
+    test("names a document holding only a no-break space by that text", async () => {
+        // Java's isBlank, which the server uses, keeps it as content; trim() would not.
+        await workbench.load();
+        workbench.text = "\u00A0";
+        await workbench.save();
+        workbench.text = "# started again\n";
+        server.requests.length = 0;
+
+        await workbench.save();
+
+        const put = server.requests.find(entry => entry.method === "PUT");
+        expect(put.query.get("expectedRevision")).toBe(
+            await revisionOf("\u00A0"),
+        );
+    });
+
     test("reports a save refused because the document changed elsewhere", async () => {
         await workbench.load();
         workbench.text = `${SHAPES}# mine\n`;
