@@ -65,7 +65,9 @@ export function newDocumentText({ graphUri, namespaces = [], keyword = null }) {
         iris.add(iri);
     }
 
-    const shapes = shapesNamespace(graphUri);
+    const shapes = shapesNamespace(
+        profileNamespace(namespaces, keyword) ?? graphUri,
+    );
     if (!iris.has(shapes)) {
         bindings.set(shapesPrefix(keyword, bindings), shapes);
     }
@@ -75,6 +77,27 @@ export function newDocumentText({ graphUri, namespaces = [], keyword = null }) {
         ([name, iri]) => `@prefix ${`${name}:`.padEnd(width + 1)} <${iri}> .`,
     );
     return `${lines.join("\n")}\n\n`;
+}
+
+/**
+ * The namespace the schema's own terms live in, found as the one the workspace binds to its keyword
+ * — `eq:` for the CGMES Equipment profile.
+ *
+ * Preferred over the graph URI, which for an imported file is a name the importer made up
+ * (`http://graph#61970_…`): built from that, a new document's shapes lived under `http://graph/…`,
+ * where the official file puts them under the profile, `…/CoreEquipment-EU/Constraints#`.
+ */
+function profileNamespace(namespaces, keyword) {
+    const wanted = (keyword ?? "").toLowerCase();
+    // `cim:` is the namespace every profile's classes share, not one profile's own.
+    if (!wanted || wanted === "cim") {
+        return null;
+    }
+    const match = (namespaces ?? []).find(
+        namespace =>
+            (namespace?.substitutedPrefix ?? "").replace(/:$/, "") === wanted,
+    );
+    return match?.prefix ?? null;
 }
 
 function shapesPrefix(keyword, bindings) {

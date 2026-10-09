@@ -49,6 +49,29 @@ describe("a new constraints document", () => {
         });
     });
 
+    test("puts its shapes under the profile's namespace, as the official files do", () => {
+        // An imported schema's graph URI is one the importer made up; built from that, the
+        // shapes lived under http://graph/…, where the official file has them under the profile.
+        const prefixes = parsePrefixes(
+            newDocumentText({
+                graphUri: "http://graph#61970_600_2_Equipment_AP_Voc_RDFS2020",
+                namespaces: [
+                    { prefix: CIM, substitutedPrefix: "cim:" },
+                    {
+                        prefix: "http://iec.ch/TC57/ns/CIM/CoreEquipment-EU#",
+                        substitutedPrefix: "eq:",
+                    },
+                ],
+                keyword: "EQ",
+            }),
+        );
+
+        expect(Object.values(prefixes)).toContain(
+            "http://iec.ch/TC57/ns/CIM/CoreEquipment-EU/Constraints#",
+        );
+        expect(Object.values(prefixes).join(" ")).not.toContain("http://graph");
+    });
+
     test("never rebinds a standard prefix or a namespace twice", () => {
         const text = newDocumentText({
             graphUri: "http://example.org/P",
