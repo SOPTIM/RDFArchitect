@@ -157,7 +157,7 @@
     );
 
     /**
-     * The generated rules are a view of the schema, so only the Turtle tab means anything for
+     * The generated shapes are a view of the schema, so only the Turtle tab means anything for
      * them: there is no document to edit as a form, and comparing them with the schema they were
      * generated from would compare a thing with itself.
      */

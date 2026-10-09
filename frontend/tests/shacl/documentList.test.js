@@ -45,12 +45,12 @@ let target = null;
 function fakeWorkbench(overrides = {}) {
     return {
         documents: DOCUMENTS,
-        // Mirrors the real getter: the generated rules are always the first row.
+        // Mirrors the real getter: the generated shapes are always the first row.
         get entries() {
             return [
                 {
                     id: "generated",
-                    name: "Generated rules",
+                    name: "Generated shapes",
                     generated: true,
                     enabled: true,
                 },
@@ -230,12 +230,12 @@ describe("DocumentList", () => {
         expect(list.textContent).toContain("eq.ttl");
     });
 
-    test("the generated rules head the list, read-only and with no checkbox", () => {
+    test("the generated shapes head the list, read-only and with no checkbox", () => {
         const list = render({ workbench: fakeWorkbench() });
         const generated = [...list.querySelectorAll("li")][0];
 
         // Not a document: nothing stores it, so nothing about it can be changed.
-        expect(generated.textContent).toContain("Generated rules");
+        expect(generated.textContent).toContain("Generated shapes");
         expect(generated.textContent.replace(/\s+/g, " ")).toContain(
             "from the schema · read-only",
         );
@@ -245,7 +245,7 @@ describe("DocumentList", () => {
         expect(button(generated, "Move down")).toBeUndefined();
     });
 
-    test("opening the generated rules goes through the workbench like a document", async () => {
+    test("opening the generated shapes goes through the workbench like a document", async () => {
         const workbench = fakeWorkbench();
         const list = render({
             workbench,

@@ -45,7 +45,7 @@ const READ_ONLY =
 export const GENERATED_ID = "generated";
 
 /** What the generated entry is called in the list. */
-export const GENERATED_NAME = "Generated rules";
+export const GENERATED_NAME = "Generated shapes";
 
 /** An empty per-document result, so a badge has something to render before the first report. */
 const NO_FINDINGS = {
@@ -76,7 +76,7 @@ function firstToOpen(documents) {
  *
  * Not a document: nothing stores it, and it is rebuilt from the classes every time it is asked
  * for. It sits in the list anyway because the list is where someone looks for "what constrains
- * this schema", and the generated rules are most of the answer — reading them beside an imported
+ * this schema", and the generated shapes are most of the answer — reading them beside an imported
  * file is what makes a conformance report legible. A plain string, so it can never collide with a
  * document's UUID.
  */
@@ -144,7 +144,7 @@ export class ShapesWorkbench {
     lastError = $state(null);
     loading = $state(false);
     saving = $state(false);
-    /** True while the generated rules are being fetched for the first time. */
+    /** True while the generated shapes are being fetched for the first time. */
     generating = $state(false);
     validating = $state(false);
     /** Last failure, shown in place of the editor rather than swallowed. */
@@ -193,7 +193,7 @@ export class ShapesWorkbench {
         );
     }
 
-    /** The document list as the UI shows it: the generated rules, then the graph's documents. */
+    /** The document list as the UI shows it: the generated shapes, then the graph's documents. */
     get entries() {
         return [
             {
@@ -206,7 +206,7 @@ export class ShapesWorkbench {
         ];
     }
 
-    /** Whether what is open is the generated rules rather than a document. */
+    /** Whether what is open is the generated shapes rather than a document. */
     get showingGenerated() {
         return this.selectedId === GENERATED_ID;
     }
@@ -215,7 +215,7 @@ export class ShapesWorkbench {
      * Whether the editor must refuse edits.
      *
      * Two unrelated reasons, and the editor only needs the answer: the workspace may be read-only,
-     * and the generated rules are derived from the schema — editing them would mean editing a view.
+     * and the generated shapes are derived from the schema — editing them would mean editing a view.
      */
     get editorReadOnly() {
         return this.readOnly || this.showingGenerated || !this.#textReady;
@@ -478,7 +478,7 @@ export class ShapesWorkbench {
             return {
                 saved: false,
                 reason:
-                    "The generated rules come from the schema itself. Change the classes, or" +
+                    "The generated shapes come from the schema itself. Change the classes, or" +
                     " copy what you need into a document of your own.",
             };
         }
@@ -715,7 +715,7 @@ export class ShapesWorkbench {
                 return;
             }
             if (error) {
-                this.error = "The generated rules could not be read.";
+                this.error = "The generated shapes could not be read.";
                 this.#replaceBuffer("");
                 return;
             }

@@ -682,7 +682,7 @@ describe("the document list", () => {
     });
 });
 
-describe("the generated rules", () => {
+describe("the generated shapes", () => {
     test("head the list without pretending to be a document", async () => {
         await workbench.load();
 

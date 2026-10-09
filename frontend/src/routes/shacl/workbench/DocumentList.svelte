@@ -200,7 +200,7 @@
 
   The first entry is not a document at all: it is what RDFArchitect derives from the schema. It is
   in the list because this is where someone looks for "what constrains this schema", and reading
-  the generated rules beside an imported file is what makes a conformance report legible.
+  the generated shapes beside an imported file is what makes a conformance report legible.
 
   Each row carries its actions twice, on purpose: on the row itself, where hovering shows them
   without hiding the name behind a menu, and in the right-click menu, which is where someone
