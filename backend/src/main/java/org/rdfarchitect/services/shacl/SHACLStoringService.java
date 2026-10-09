@@ -31,7 +31,6 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.RiotException;
 import org.apache.jena.riot.system.PrefixEntry;
-import org.apache.jena.shacl.vocabulary.SHACL;
 import org.apache.jena.shacl.vocabulary.SHACLM;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
@@ -55,6 +54,7 @@ import org.rdfarchitect.services.shacl.form.ShapeBlockLocator;
 import org.rdfarchitect.shacl.PropertyShapeToClassAssigner;
 import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 import org.rdfarchitect.shacl.SHACLShapesFetcher;
+import org.rdfarchitect.shacl.ShapeClosure;
 import org.rdfarchitect.shacl.dto.CustomAndGeneratedTuple;
 import org.rdfarchitect.shacl.dto.NodeShape;
 import org.rdfarchitect.shacl.dto.PropertyShape;
@@ -1124,22 +1124,7 @@ public class SHACLStoringService
         return deleteModel;
     }
 
-    /**
-     * Copies the SHACL shape and its constraints to a new model.
-     *
-     * @param originalModel the original model containing the SHACL shapes
-     * @param newModel the new model to copy the SHACL shapes to
-     * @param subject the subject/uri of the SHACL shape
-     */
     private void copySHACLShapeToNewModel(Model originalModel, Model newModel, Resource subject) {
-        var stmtIterator = originalModel.listStatements(subject, null, (RDFNode) null);
-        while (stmtIterator.hasNext()) {
-            var stmt = stmtIterator.nextStatement();
-            newModel.add(stmt);
-            var object = stmt.getObject();
-            if (object.isAnon() || stmt.getPredicate().toString().equals(SHACL.sparql.getURI())) {
-                copySHACLShapeToNewModel(originalModel, newModel, object.asResource());
-            }
-        }
+        ShapeClosure.copy(originalModel, newModel, subject);
     }
 }

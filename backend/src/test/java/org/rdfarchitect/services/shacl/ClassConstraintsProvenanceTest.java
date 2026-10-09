@@ -236,6 +236,61 @@ class ClassConstraintsProvenanceTest {
                 .anyMatch(origin -> documentName.equals(origin.getDocumentName()));
     }
 
+    /** A document a user wrote or imported, on top of the official one. */
+    private void givenDocument(String name, String body) {
+        service.createShapesDocument(
+                GRAPH,
+                name,
+                null,
+                """
+                @prefix sh:  <http://www.w3.org/ns/shacl#> .
+                @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+                @prefix cim: <http://iec.ch/TC57/CIM100#> .
+                @prefix ex:  <http://ex.org/> .
+                """
+                        + body,
+                Lang.TURTLE);
+    }
+
+    @Test
+    void aCyclicListDoesNotBreakTheDialog() {
+        givenDocument(
+                "cyclic.ttl",
+                """
+                ex:S a sh:NodeShape ; sh:targetClass cim:Diagram ;
+                    sh:property [ sh:path cim:Diagram.orientation ; sh:in _:l ] .
+                _:l rdf:first ex:a ; rdf:rest _:l .
+                """);
+
+        assertThat(shapesOf(custom())).isNotEmpty();
+    }
+
+    @Test
+    void aNamedSparqlConstraintIsShownWithTheShapeUsingIt() {
+        givenDocument(
+                "sparql.ttl",
+                """
+                ex:S a sh:NodeShape ; sh:targetClass cim:Diagram ; sh:sparql ex:Check .
+                ex:Check sh:select "SELECT $this WHERE { $this ?p ?o }" .
+                """);
+
+        assertThat(custom().getNodeShapes())
+                .anySatisfy(shape -> assertThat(shape.getTriples()).contains("sh:select"));
+    }
+
+    @Test
+    void deeplyNestedShapesDoNotBreakTheDialog() {
+        var nested = "[ sh:minCount 1 ]";
+        for (int level = 0; level < 500; level++) {
+            nested = "[ sh:or ( " + nested + " ) ]";
+        }
+        givenDocument(
+                "deep.ttl",
+                "ex:S a sh:NodeShape ; sh:targetClass cim:Diagram ; sh:or ( " + nested + " ) .\n");
+
+        assertThat(custom().getNodeShapes()).isNotEmpty();
+    }
+
     private SHACLToClassRelations custom() {
         return service.getSHACLToClassRelations(GRAPH, diagramUUID).getCustom();
     }
