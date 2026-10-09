@@ -8077,7 +8077,7 @@
                 }
               }
             },
-            "description" : "Another document in this graph already has that name."
+            "description" : "Another document in this graph already has that name, or the workspace is read-only."
           }
         },
         "summary" : "add a constraints document from Turtle",
@@ -8177,7 +8177,7 @@
                 }
               }
             },
-            "description" : "Another document in this graph already has that name."
+            "description" : "Another document in this graph already has that name, or the workspace is read-only."
           },
           "415" : {
             "content" : {
@@ -8260,6 +8260,16 @@
               }
             },
             "description" : "No constraints document with this id in the graph."
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The workspace is read-only."
           }
         },
         "summary" : "delete a constraints document",
@@ -8437,7 +8447,7 @@
                 }
               }
             },
-            "description" : "Another document in this graph already has that name."
+            "description" : "Another document in this graph already has that name, or the workspace is read-only."
           }
         },
         "summary" : "update constraints document metadata",
@@ -8788,6 +8798,16 @@
               }
             },
             "description" : "OK"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapeEditResult"
+                }
+              }
+            },
+            "description" : "The edit cannot be written back: the text changed since the form was read, the shape cannot be edited as a form, or the result would not say what was asked. The detail says which."
           }
         },
         "summary" : "apply a form edit",

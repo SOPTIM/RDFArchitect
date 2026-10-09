@@ -108,7 +108,9 @@ public class ShapesDocumentsRESTController {
                         description = "The content is not valid Turtle."),
                 @ApiResponse(
                         responseCode = "409",
-                        description = "Another document in this graph already has that name."),
+                        description =
+                                "Another document in this graph already has that name, or the"
+                                        + " workspace is read-only."),
                 @ApiResponse(
                         responseCode = "415",
                         description = "The file is not Turtle, RDF/XML or N-Triples.")
@@ -160,7 +162,9 @@ public class ShapesDocumentsRESTController {
                         description = "The content is not valid Turtle."),
                 @ApiResponse(
                         responseCode = "409",
-                        description = "Another document in this graph already has that name.")
+                        description =
+                                "Another document in this graph already has that name, or the"
+                                        + " workspace is read-only.")
             })
     // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
     // body would reach Jena with its surrounding quotes and fail to parse.

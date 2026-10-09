@@ -169,7 +169,9 @@ public class ShapesDocumentRESTController {
                         description = "No constraints document with this id in the graph."),
                 @ApiResponse(
                         responseCode = "409",
-                        description = "Another document in this graph already has that name.")
+                        description =
+                                "Another document in this graph already has that name, or the"
+                                        + " workspace is read-only.")
             })
     @PatchMapping
     public ShapesDocumentInfo updateShapesDocument(
@@ -217,7 +219,8 @@ public class ShapesDocumentRESTController {
                 @ApiResponse(responseCode = "200"),
                 @ApiResponse(
                         responseCode = "404",
-                        description = "No constraints document with this id in the graph.")
+                        description = "No constraints document with this id in the graph."),
+                @ApiResponse(responseCode = "409", description = "The workspace is read-only.")
             })
     @DeleteMapping
     public String deleteShapesDocument(

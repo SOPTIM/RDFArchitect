@@ -81,12 +81,13 @@ class ShapesDocumentsApiTest {
             """;
 
     private SHACLStoringService service;
+    private DatabasePort databasePort;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         var context = new GraphWithContextTransactional(GraphFactory.createDefaultGraph());
-        var databasePort = mock(DatabasePort.class);
+        databasePort = mock(DatabasePort.class);
         when(databasePort.getGraphWithContext(any(GraphIdentifier.class))).thenReturn(context);
         when(databasePort.getPrefixMapping(any())).thenReturn(PrefixMapping.Factory.create());
         service = new SHACLStoringService(databasePort);
@@ -301,6 +302,29 @@ class ShapesDocumentsApiTest {
         var other = givenDocument("tp.ttl", SHAPES);
 
         mockMvc.perform(patch(DOCUMENTS + "/" + other.getId()).param("name", "eq.ttl"))
+                .andExpect(status().isConflict());
+    }
+
+    /** The status the API documents for each write to a read-only workspace. */
+    @Test
+    void everyWriteToAReadOnlyWorkspaceIsAConflict() throws Exception {
+        var document = givenDocument("eq.ttl", SHAPES);
+        when(databasePort.isReadOnly("cgmes")).thenReturn(true);
+
+        mockMvc.perform(
+                        post(DOCUMENTS)
+                                .param("name", "new.ttl")
+                                .contentType(MediaType.TEXT_PLAIN)
+                                .content(SHAPES))
+                .andExpect(status().isConflict());
+        mockMvc.perform(
+                        put(DOCUMENTS + "/" + document.getId())
+                                .contentType(MediaType.TEXT_PLAIN)
+                                .content(SHAPES + "# edited\n"))
+                .andExpect(status().isConflict());
+        mockMvc.perform(patch(DOCUMENTS + "/" + document.getId()).param("enabled", "false"))
+                .andExpect(status().isConflict());
+        mockMvc.perform(delete(DOCUMENTS + "/" + document.getId()))
                 .andExpect(status().isConflict());
     }
 

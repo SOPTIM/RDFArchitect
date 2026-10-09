@@ -114,7 +114,14 @@ public class ShapeFormRESTController {
                         content =
                                 @Content(
                                         mediaType = "application/json",
-                                        schema = @Schema(implementation = ShapeEditResult.class)))
+                                        schema = @Schema(implementation = ShapeEditResult.class))),
+                @ApiResponse(
+                        responseCode = "409",
+                        description =
+                                "The edit cannot be written back: the text changed since the form"
+                                        + " was read, the shape cannot be edited as a form, or the"
+                                        + " result would not say what was asked. The detail says"
+                                        + " which.")
             })
     @PostMapping("/apply")
     public ShapeEditResult applyEdit(
