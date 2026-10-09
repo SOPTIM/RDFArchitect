@@ -23,6 +23,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.services.shacl.ShapesTurtleParser;
 import org.rdfarchitect.shacl.dto.NodeShapeModel;
@@ -436,5 +438,30 @@ class ShapeFormEditSafetyTest {
 
         assertThat(shapeNamed(edited, "http://example.org/full#S").getTargetClasses())
                 .containsExactlyInAnyOrder(EX + "Target", CIM + "Terminal");
+    }
+
+    // -------------------------------------------------------------------------
+    // Names Turtle cannot write
+    // -------------------------------------------------------------------------
+
+    /**
+     * Jena reads {@code <http://x.org/a b>} with no more than a warning, so the check after an edit
+     * lets it through — and the document then holds a name every stricter tool rejects.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"http://x.org/a b", "http://x.org/a<b", "http://x.org/{b}", "x\\y"})
+    void aNameTurtleCannotWriteIsRefused(String iri) {
+        var turtle =
+                PREFIXES
+                        + """
+                        ex:S a sh:NodeShape ;
+                            sh:property [ sh:path cim:X.v ] .
+                        """;
+        var shape = shapeNamed(turtle, EX + "S");
+        shape.getProperties().get(0).setClassIri(iri);
+
+        assertThatExceptionOfType(ResourceConflictException.class)
+                .isThrownBy(() -> service.apply(edit(turtle, shape)))
+                .withMessageContaining("cannot be written as an IRI");
     }
 }

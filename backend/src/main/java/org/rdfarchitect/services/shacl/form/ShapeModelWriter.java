@@ -26,6 +26,7 @@ import org.rdfarchitect.shacl.dto.PropertyShapeModel;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Spells the Turtle a form edit adds to a document.
@@ -318,9 +319,20 @@ final class ShapeModelWriter {
      * of that trade.
      */
     static String term(String iri, PrefixMapping prefixes) {
+        // Jena reads such a name with a warning, so the check after an edit would let it through.
+        if (iri.isEmpty() || NOT_IN_IRIREF.matcher(iri).find()) {
+            throw new ResourceConflictException(
+                    "\""
+                            + iri
+                            + "\" cannot be written as an IRI: it is empty or contains a space or"
+                            + " one of <>\"{}|^`\\.");
+        }
         var qname = prefixes.qnameFor(iri);
         return qname == null ? "<" + iri + ">" : qname;
     }
+
+    /** What Turtle's IRIREF cannot hold — and an escape the writer has no reason to need. */
+    private static final Pattern NOT_IN_IRIREF = Pattern.compile("[\\x00-\\x20<>\"{}|^`\\\\]");
 
     private static String quote(String value) {
         var escaped =
