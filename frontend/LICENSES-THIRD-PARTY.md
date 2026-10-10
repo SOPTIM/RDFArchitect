@@ -109,7 +109,7 @@
 
 ### bits-ui
 - **Package:** bits-ui
-- **Version:** 2.19.3
+- **Version:** 2.19.5
 - **License:** MIT
 
 ### codemirror
@@ -132,7 +132,7 @@
 
 ### eslint
 - **Package:** eslint
-- **Version:** 10.11.0
+- **Version:** 10.12.0
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -162,7 +162,7 @@
 
 ### globals
 - **Package:** globals
-- **Version:** 17.12.0
+- **Version:** 17.13.0
 - **License:** MIT
 
 ### html-to-image
@@ -275,13 +275,13 @@
 
 ### vite
 - **Package:** vite
-- **Version:** 8.3.1
+- **Version:** 8.3.2
 - **License:** MIT
 - **URL:** [https://vite.dev](https://vite.dev)
 
 ### vitest
 - **Package:** vitest
-- **Version:** 5.0.2
+- **Version:** 5.0.3
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 
