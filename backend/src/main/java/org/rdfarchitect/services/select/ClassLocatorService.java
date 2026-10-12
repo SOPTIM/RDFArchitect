@@ -79,7 +79,9 @@ public class ClassLocatorService implements LocateClassUseCase {
 
     private LocatedClass locateInGraph(String datasetName, String graphUri, String classUUID) {
         var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             return model.listSubjectsWithProperty(RDFA.uuid, classUUID).toList().stream()
                     .filter(subject -> subject.isURIResource())
@@ -95,8 +97,9 @@ public class ClassLocatorService implements LocateClassUseCase {
     private LocatedClass locateMergedClass(String datasetName, String classUUID) {
         for (var graphUri : graphsInListingOrder(datasetName)) {
             var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
-            try (var ctx =
-                    databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            try (var transaction =
+                    databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                var ctx = transaction.graph(graphIdentifier.graphUri());
                 var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
                 for (var cimClass : new CIMModelFacade(graphUri, model).getCIMClasses()) {
                     var classUri = cimClass.getUri().toString();

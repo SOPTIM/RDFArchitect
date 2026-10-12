@@ -19,10 +19,13 @@ package org.rdfarchitect.services.update.graph;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.vocabulary.DCAT;
@@ -31,7 +34,9 @@ import org.apache.jena.vocabulary.RDF;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 
 class RenameGraphServiceTest {
 
@@ -42,13 +47,21 @@ class RenameGraphServiceTest {
     private static final String DCTERMS_TITLE = "http://purl.org/dc/terms/title";
 
     private DatabasePort databasePort;
+    private WorkspaceTransaction transaction;
     private Model model;
     private RenameGraphService renameGraphService;
 
     @BeforeEach
     void setUp() {
         databasePort = mock(DatabasePort.class);
+        transaction = mock(WorkspaceTransaction.class);
+        var graphContext = mock(GraphContext.class);
         model = ModelFactory.createDefaultModel();
+
+        when(graphContext.getRdfGraph()).thenReturn(model.getGraph());
+        when(transaction.graph(anyString())).thenReturn(graphContext);
+        when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))
+                .thenReturn(transaction);
 
         renameGraphService = new RenameGraphService(databasePort);
     }
@@ -71,7 +84,8 @@ class RenameGraphServiceTest {
     void renameGraph_renamesTheGraph() {
         renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
 
-        verify(databasePort).renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
+        verify(transaction).renameGraph(OLD_URI, NEW_URI);
+        verify(transaction).commit("renamed schema to " + NEW_URI);
     }
 
     /**
@@ -85,7 +99,7 @@ class RenameGraphServiceTest {
 
         renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
 
-        verify(databasePort, never()).getGraphWithContext(any());
+        verify(transaction, never()).graph(anyString());
         verify(databasePort, never()).getPrefixMapping(any());
         assertThat(literalOf(DCTERMS_TITLE)).isEqualTo("Core Equipment Vocabulary");
         assertThat(literalOf(DCAT.keyword.getURI())).isEqualTo("EQ");

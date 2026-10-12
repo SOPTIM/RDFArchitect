@@ -106,7 +106,8 @@ public class CIMUpdatesAssociationsTest extends CIMUpdatesTestBase {
                             .build());
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isFalse
                 assertThat(
                                 ctx.getRdfGraph()
@@ -144,7 +145,8 @@ public class CIMUpdatesAssociationsTest extends CIMUpdatesTestBase {
                                             associationRequired, associationInverseRequired))
                             .build());
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isFalse
                 assertThat(
                                 ctx.getRdfGraph()
@@ -290,7 +292,8 @@ public class CIMUpdatesAssociationsTest extends CIMUpdatesTestBase {
                             .build());
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isFalse
                 assertThat(
                                 ctx.getRdfGraph()

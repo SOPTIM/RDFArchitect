@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs;
+package org.rdfarchitect.api.controller.datasets.versioncontrol;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -25,46 +25,40 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.changelog.ChangeLog;
-import org.rdfarchitect.services.ChangeLogUseCase;
-import org.rdfarchitect.services.ExpandURIUseCase;
+import org.rdfarchitect.api.dto.HistoryStepDTO;
+import org.rdfarchitect.services.versioncontrol.RedoUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/changes")
+@RequestMapping("api/datasets/{datasetName}/redo")
 @RequiredArgsConstructor
-public class ChangelogRESTController {
+public class RedoRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(ChangelogRESTController.class);
+    private static final Logger logger = LoggerFactory.getLogger(RedoRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
-    private final ChangeLogUseCase changelogUseCase;
+    private final RedoUseCase redoUseCase;
 
     @Operation(
-            summary = "list changes for graph",
-            description = "Get a list containing all changes made to a graph",
-            tags = {"graph"},
+            summary = "redo ",
+            description = "Redo the last undone change",
+            tags = {"workspace"},
             responses = {
                 @ApiResponse(
                         responseCode = "200",
                         content =
                                 @Content(
                                         mediaType = "application/json",
-                                        schema = @Schema(implementation = ChangeLog.class)))
+                                        schema = @Schema(implementation = HistoryStepDTO.class)))
             })
-    @GetMapping
-    public List<ChangeLogEntryDTO> getChangeLog(
+    @PostMapping
+    public HistoryStepDTO redo(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -72,28 +66,18 @@ public class ChangelogRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI) {
+                    String datasetName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/changes\" from \"{}\".",
+                "Received POST request: \"/api/datasets/{{}}/redo\" from \"{}\".",
                 datasetName,
-                graphURI,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-
-        var changes =
-                changelogUseCase.listChanges(new GraphIdentifier(datasetName, extendedGraphURI));
+        var entry = redoUseCase.redo(datasetName);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/changes\" to \"{}\".",
+                "Sending response to POST request: \"/api/datasets/{{}}/redo\" to \"{}\".",
                 datasetName,
-                graphURI,
                 originURL);
-        return changes;
+        return entry;
     }
 }

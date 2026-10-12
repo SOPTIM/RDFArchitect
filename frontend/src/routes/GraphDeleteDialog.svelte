@@ -90,7 +90,7 @@
                 ? `The schema will be removed from workspace "${workspaceName}".`
                 : "Select a workspace and schema to delete."}
             <br />
-            This action is not reversible.
+            This can be undone with Ctrl+Z, until the workspace is reloaded.
         </p>
     </div>
 </ActionDialog>

@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs.versioncontrol;
+package org.rdfarchitect.api.controller.datasets.versioncontrol;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,35 +24,37 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
-import org.rdfarchitect.services.versioncontrol.UndoUseCase;
+import org.rdfarchitect.services.versioncontrol.RestoreVersionUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.UUID;
+
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/undo")
+@RequestMapping("api/datasets/{datasetName}/restore")
 @RequiredArgsConstructor
-public class UndoRESTController {
+public class RestoreVersionRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(UndoRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(RestoreVersionRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
-    private final UndoUseCase undoUseCase;
+    private final RestoreVersionUseCase restoreVersionUseCase;
 
     @Operation(
-            summary = "undo ",
-            description = "Undo the last change",
-            tags = {"graph"},
+            summary = "restore ",
+            description = "restores the graph to the state specified by the version id",
+            tags = {"workspace"},
             responses = {@ApiResponse(responseCode = "200")})
-    @PostMapping
-    public String undo(
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public String restoreVersion(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -61,26 +63,25 @@ public class UndoRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI) {
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            required = true,
+                            description = "The ID of the version to restore.")
+                    @RequestBody
+                    RestoreVersionDTO dto) {
+
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/undo\" from \"{}\".",
+                "Received POST request: \"/api/datasets/{{}}/restore\" from \"{}\".",
                 datasetName,
-                graphURI,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-
-        undoUseCase.undo(new GraphIdentifier(datasetName, extendedGraphURI));
+        restoreVersionUseCase.restoreVersion(datasetName, UUID.fromString(dto.versionId));
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/undo\" to \"{}\".",
+                "Sending response to POST request: \"/api/datasets/{{}}/restore\" to \"{}\".",
                 datasetName,
-                graphURI,
                 originURL);
         return Response.SUCCESS;
     }
+
+    public record RestoreVersionDTO(String versionId) {}
 }

@@ -17,49 +17,82 @@
 
 package org.rdfarchitect.database;
 
-import org.apache.jena.graph.Graph;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
+import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public interface DatabasePort {
 
     /**
-     * Get a {@link GraphContext} for the specified graph.
+     * Begins a transaction on a workspace. Graphs, custom diagrams and layout are reachable only
+     * through the returned transaction, so that a change spanning several graphs commits or rolls
+     * back as a whole.
      *
-     * @param graphIdentifier The identifier of the graph.
-     * @return {@link GraphContext}
+     * @param workspaceName literal workspace name
+     * @param mode the transaction mode
+     * @return the running transaction, to be used in try-with-resources
      */
-    GraphContext getGraphWithContext(GraphIdentifier graphIdentifier);
+    WorkspaceTransaction beginTransaction(String workspaceName, ReadWrite mode);
 
     /**
-     * Get all {@link CustomDiagram} for a dataset.
+     * Returns whether the workspace has a change that can be undone.
      *
-     * @param datasetName literal dataset name
-     * @return map of custom diagrams belonging to the dataset
+     * @param workspaceName literal workspace name
+     * @return {@code true} if there is something to undo
      */
-    Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName);
+    boolean canUndo(String workspaceName);
 
     /**
-     * Get the {@link DiagramLayout} for all custom diagrams defined on a dataset
+     * Returns the change the next undo would take back, or {@code null} if there is none.
      *
-     * @param datasetName literal dataset name
-     * @return diagram layout for the dataset
+     * @param workspaceName the workspace to inspect
+     * @return the pending change
      */
-    DiagramLayout getDatasetDiagramLayout(String datasetName);
+    WorkspaceChangeLogEntry pendingUndo(String workspaceName);
 
     /**
-     * Returns the information of the CrossProfileDiagram of the given dataset.
+     * Returns whether the workspace has an undone change that can be reapplied.
      *
-     * @param datasetName literal dataset name
-     * @return {@link CrossProfileDiagramInfo} of the CrossProfileDiagram for the dataset
+     * @param workspaceName literal workspace name
+     * @return {@code true} if there is something to redo
      */
-    CrossProfileDiagramInfo getCrossProfileDiagramInfo(String datasetName);
+    boolean canRedo(String workspaceName);
+
+    /**
+     * Rolls back the most recent change anywhere in the workspace.
+     *
+     * @param workspaceName literal workspace name
+     * @return the change that was undone
+     */
+    WorkspaceHistoryStep undo(String workspaceName);
+
+    /**
+     * Reapplies the most recently undone change of the workspace.
+     *
+     * @param workspaceName literal workspace name
+     * @return the change that was redone
+     */
+    WorkspaceHistoryStep redo(String workspaceName);
+
+    /**
+     * Rolls the workspace back to the given version.
+     *
+     * @param workspaceName literal workspace name
+     * @param versionId the change to restore to
+     */
+    void restoreToVersion(String workspaceName, UUID versionId);
+
+    /**
+     * Returns the recorded changes of the workspace, newest first.
+     *
+     * @param workspaceName literal workspace name
+     * @return the change history
+     */
+    List<WorkspaceChangeLogEntry> listChanges(String workspaceName);
 
     /**
      * Loads the namespace prefix mapping for the dataset.
@@ -68,31 +101,6 @@ public interface DatabasePort {
      * @return prefix mapping associated with the dataset
      */
     PrefixMapping getPrefixMapping(String datasetName);
-
-    /**
-     * Deletes the graph specified by {@code graphIdentifier}.
-     *
-     * @param graphIdentifier identifies dataset and graph URI
-     */
-    void deleteGraph(GraphIdentifier graphIdentifier);
-
-    /**
-     * Creates or replaces the graph referenced by {@code graphIdentifier} using the supplied RDF
-     * content.
-     *
-     * @param graphIdentifier identifies dataset and graph URI
-     * @param graph graph contents to persist
-     */
-    void createGraph(GraphIdentifier graphIdentifier, Graph graph);
-
-    /**
-     * Creates an empty graph referenced by {@code graphIdentifier}.
-     *
-     * <p>If the dataset does not exist yet, it will be created.
-     *
-     * @param graphIdentifier identifies dataset and graph URI
-     */
-    void createEmptyGraph(GraphIdentifier graphIdentifier);
 
     /**
      * Lists all graph URIs belonging to the dataset.
@@ -111,14 +119,6 @@ public interface DatabasePort {
     void persist(DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier);
 
     /**
-     * Sets the complete prefix mapping for the dataset, replacing any existing prefixes.
-     *
-     * @param datasetName literal dataset name
-     * @param prefixMapping new prefix mapping to set
-     */
-    void setPrefixMapping(String datasetName, PrefixMapping prefixMapping);
-
-    /**
      * Lists all available dataset names.
      *
      * @return dataset names managed by the persistence layer
@@ -135,6 +135,14 @@ public interface DatabasePort {
     void createDataset(String datasetName);
 
     /**
+     * Creates the workspace unless it already exists. For uploads that address a workspace by name
+     * and are expected to bring it into existence; everything else must create it explicitly.
+     *
+     * @param workspaceName the literal workspace name
+     */
+    void createWorkspaceIfAbsent(String workspaceName);
+
+    /**
      * Removes the dataset identified by {@code datasetName} and clears all graphs that belong to
      * it.
      *
@@ -149,15 +157,6 @@ public interface DatabasePort {
      * @param newDatasetName the literal dataset name to rename to
      */
     void renameDataset(String oldDatasetName, String newDatasetName);
-
-    /**
-     * Renames a graph within its dataset and rewrites all references to it. The content and history
-     * of the graph are kept.
-     *
-     * @param graphIdentifier identifies dataset and current graph URI
-     * @param newGraphUri the graph URI to rename to
-     */
-    void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri);
 
     /**
      * Synchronizes dataset metadata and graph structure from the backing database.

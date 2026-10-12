@@ -18,17 +18,25 @@
 package org.rdfarchitect.services;
 
 import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
-import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.List;
 
 public interface ChangeLogUseCase {
 
     /**
-     * Lists all changelog entries for the specified graph.
+     * Lists the recorded changes of a workspace, newest first.
      *
-     * @param graphIdentifier The identifier of the graph for which to list changes.
-     * @return A list of changelog entries for the specified graph.
+     * @param workspaceName the workspace to read
+     * @return the change history
      */
-    List<ChangeLogEntryDTO> listChanges(GraphIdentifier graphIdentifier);
+    List<ChangeLogEntryDTO> listChanges(String workspaceName);
+
+    /**
+     * Returns the change the next undo would take back, so that the editor can ask before an undo
+     * that makes something disappear.
+     *
+     * @param workspaceName the workspace to inspect
+     * @return the pending change, or {@code null} if there is nothing to undo
+     */
+    ChangeLogEntryDTO pendingUndo(String workspaceName);
 }

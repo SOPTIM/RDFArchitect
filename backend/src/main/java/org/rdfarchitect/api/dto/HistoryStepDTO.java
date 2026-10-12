@@ -15,27 +15,19 @@
  *
  */
 
-package org.rdfarchitect.rdf.graph.wrapper;
+package org.rdfarchitect.api.dto;
 
-import org.apache.jena.query.ReadWrite;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-public class TransactionContext {
+/** What one undo or redo did, and what is left to undo or redo afterwards. */
+@Data
+@NoArgsConstructor
+public class HistoryStepDTO {
 
-    private final ThreadLocal<ReadWrite> mode = new ThreadLocal<>();
+    /** The change that was undone or redone. */
+    private ChangeLogEntryDTO change;
 
-    public void begin(ReadWrite mode) {
-        this.mode.set(mode);
-    }
-
-    public void end() {
-        mode.remove();
-    }
-
-    public boolean isInTransaction() {
-        return mode.get() != null;
-    }
-
-    public ReadWrite transactionMode() {
-        return mode.get();
-    }
+    private Boolean canUndo;
+    private Boolean canRedo;
 }

@@ -19,6 +19,7 @@ package org.rdfarchitect.models.dto.rendering.svelteflow;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.database.DatabasePort;
@@ -69,7 +70,10 @@ public class RenderMergedDiagramSvelteFlowService implements RenderMergedDiagram
 
     @Override
     public RenderingDataDTO renderCustomDatasetDiagram(String datasetName, UUID diagramId) {
-        var diagram = databasePort.getDatasetDiagrams(datasetName).get(diagramId);
+        CustomDiagram diagram;
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            diagram = transaction.diagrams().get(diagramId);
+        }
         if (diagram == null) {
             throw new IllegalArgumentException(
                     "Diagram with ID " + diagramId + " not found in dataset " + datasetName);

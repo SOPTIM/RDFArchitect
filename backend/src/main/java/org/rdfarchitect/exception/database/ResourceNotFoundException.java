@@ -15,28 +15,14 @@
  *
  */
 
-package org.rdfarchitect.models.changelog;
+package org.rdfarchitect.exception.database;
 
-import lombok.Data;
+import org.springframework.http.HttpStatus;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
+/** Thrown when a workspace or graph is addressed that does not exist. */
+public class ResourceNotFoundException extends DatabaseException {
 
-@Data
-public class ChangeLogEntry {
-
-    private UUID changeId;
-    private LocalDateTime timestamp;
-    private String message;
-    private int steps;
-    private List<ContextDelta> contextDeltas;
-
-    public ChangeLogEntry(String message, int steps, List<ContextDelta> contextDeltas) {
-        this.changeId = UUID.randomUUID();
-        this.timestamp = LocalDateTime.now();
-        this.message = message;
-        this.steps = steps;
-        this.contextDeltas = contextDeltas;
+    public ResourceNotFoundException(String errorMessage) {
+        super(HttpStatus.NOT_FOUND, errorMessage);
     }
 }
