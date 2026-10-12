@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.services.update.graph.ImportJobUseCase;
+import org.rdfarchitect.services.update.graph.PrefixResolutionDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -34,6 +35,8 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -115,6 +118,51 @@ public class GraphBulkContentRESTController {
                 .getStatus(datasetName, jobId)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
+    @Operation(
+            summary = "Resolve the namespace prefix conflicts of an import",
+            description =
+                    "Hands an import that is waiting for namespace prefix decisions the decisions it asked for and lets it go on. A contested namespace left out of the request is imported without a prefix, leaving the prefixes of the dataset as they are.",
+            tags = {"graph"},
+            responses = {
+                @ApiResponse(responseCode = "204", description = "Import continues"),
+                @ApiResponse(responseCode = "400", description = "Invalid namespace prefix"),
+                @ApiResponse(responseCode = "404", description = "No such import job"),
+                @ApiResponse(
+                        responseCode = "409",
+                        description = "The import is not waiting for decisions")
+            })
+    @PutMapping("/{jobId}/prefix-resolutions")
+    public ResponseEntity<Void> resolvePrefixConflicts(
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(description = "The id of the import job.") @PathVariable UUID jobId,
+            @Parameter(description = "What to do with each contested namespace binding.")
+                    @RequestBody
+                    List<PrefixResolutionDTO> resolutions) {
+        logger.info(
+                "Received PUT request: \"/api/datasets/{{}}/graphs/content/imports/{{}}/prefix-resolutions\" from \"{}\".",
+                datasetName,
+                jobId,
+                originURL);
+
+        var resolved = importJobUseCase.resolvePrefixConflicts(datasetName, jobId, resolutions);
+
+        logger.info(
+                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/content/imports/{{}}/prefix-resolutions\" to \"{}\".",
+                datasetName,
+                jobId,
+                originURL);
+        return resolved
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
     @Operation(

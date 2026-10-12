@@ -122,26 +122,6 @@ public class HttpUpdateCommandImpl implements DatabaseUpdateCommand {
         // insert graph into dataset/database
         String graphName = graphSource.graphName();
         Graph graph = graphSource.graph();
-        var newGraphPrefixMapping = graph.getPrefixMapping().getNsPrefixMap();
-        var currentPrefixMapping =
-                new HttpSelectCommandImpl()
-                        .setEndpoint(this.url)
-                        .setDatasetName(this.datasetName)
-                        .getCurrentPrefixMapping()
-                        .getNsPrefixMap();
-        for (var newPrefix : newGraphPrefixMapping.entrySet()) {
-            if (currentPrefixMapping.containsKey(newPrefix.getKey())
-                    && !currentPrefixMapping.get(newPrefix.getKey()).equals(newPrefix.getValue())) {
-                throw new DataAccessException(
-                        "Graph prefix '"
-                                + newPrefix.getKey()
-                                + "' already exists in combination with uri '"
-                                + newPrefix.getValue()
-                                + "' in dataset: '"
-                                + datasetName
-                                + "'.");
-            }
-        }
         if (graphName == null || graphName.isEmpty()) {
             GSP.service(endpoint).defaultGraph().POST(graph);
             logger.debug("Insert default graph into endpoint \"{}\"", this.endpoint);

@@ -280,6 +280,19 @@
         );
     }
 
+    /** See `GraphSection.editProfileHeader`: the rename dialog says which editor owns the name. */
+    function editProfileHeader(target) {
+        if (target?.kind === "ontology") {
+            showEditOntologyDialog = true;
+        } else if (target?.kind === "class") {
+            editorState.editClass(
+                selectedWorkspace,
+                selectedGraph,
+                target.uuid,
+            );
+        }
+    }
+
     async function requestEnableEditing() {
         if (!selectedWorkspace || !isWorkspaceReadOnly) {
             return;
@@ -707,6 +720,7 @@
     bind:showDialog={showGraphRenameDialog}
     workspaceName={selectedWorkspace}
     graphUri={selectedGraph}
+    onEditHeader={editProfileHeader}
 />
 <NamespacesDialog bind:showDialog={showNamespaceDialog} />
 {#if ontology}

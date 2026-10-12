@@ -34,18 +34,20 @@ import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
+import org.rdfarchitect.services.update.graph.PrefixScanner.ScannedFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -77,12 +79,188 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                         .map(PlannedFile::toPlannedImport)
                         .toList());
 
-        var reservedGraphUris = loadExistingGraphUris(datasetName);
         var result = new ImportResult();
+        var negotiation = negotiatePrefixes(datasetName, sources, listener, result);
+
+        var reservedGraphUris = loadExistingGraphUris(datasetName);
         for (var source : sources) {
-            importSource(result, datasetName, source, reservedGraphUris, listener);
+            importSource(result, datasetName, source, reservedGraphUris, listener, negotiation);
         }
         return result;
+    }
+
+    // -------------------------------------------------------------------------
+    // Namespace prefixes
+    // -------------------------------------------------------------------------
+
+    /**
+     * Finds the prefixes the import cannot store as they are and has them decided on before the
+     * first file is written, which leaves the dataset untouched while the answer is pending. Files
+     * the scan cannot read drop out here, before the question is asked rather than after it has
+     * been answered.
+     */
+    private PrefixNegotiation negotiatePrefixes(
+            String datasetName,
+            List<PlannedSource> sources,
+            ImportProgressListener listener,
+            ImportResult result) {
+        if (listener.isCancelled()) {
+            return PrefixNegotiation.none();
+        }
+        listener.scanningPrefixes();
+        var scanned = scan(sources);
+        var unreadableIndices = failUnreadable(scanned, result, listener);
+
+        var readableFiles =
+                scanned.stream().map(ScanResult::scanned).filter(ScannedFile::readable).toList();
+        var comparison = PrefixComparer.compare(loadExistingPrefixes(datasetName), readableFiles);
+        var contested = comparison.stream().filter(PrefixComparison::contested).count();
+        if (contested == 0) {
+            return new PrefixNegotiation(ResolvedPrefixes.none(), unreadableIndices);
+        }
+        logger.info(
+                "Import into dataset \"{}\" contests {} namespace prefix(es).",
+                datasetName,
+                contested);
+        var resolved = listener.awaitResolvedPrefixes(comparison);
+        if (!listener.isCancelled()) {
+            applyToWorkspacePrefixes(datasetName, resolved);
+        }
+        return new PrefixNegotiation(resolved, unreadableIndices);
+    }
+
+    /** Reports the files the scan could not parse and returns where they sit in the plan. */
+    private Set<Integer> failUnreadable(
+            List<ScanResult> scanned, ImportResult result, ImportProgressListener listener) {
+        var unreadableIndices = new HashSet<Integer>();
+        for (var scanResult : scanned) {
+            if (scanResult.scanned().readable()) {
+                continue;
+            }
+            var plannedFile = scanResult.plannedFile();
+            result.failedFileNames().add(plannedFile.fileName());
+            listener.finished(plannedFile.index(), Outcome.FAILED, null);
+            unreadableIndices.add(plannedFile.index());
+        }
+        return unreadableIndices;
+    }
+
+    /** Moves the prefixes the dataset holds out of the way, where the decisions call for it. */
+    private void applyToWorkspacePrefixes(String datasetName, ResolvedPrefixes resolved) {
+        try {
+            var current = databasePort.getPrefixMapping(datasetName);
+            resolved.rewriteWorkspacePrefixes(current)
+                    .ifPresent(rewritten -> databasePort.setPrefixMapping(datasetName, rewritten));
+        } catch (RuntimeException exception) {
+            logger.warn(
+                    "Unable to apply the namespace prefix decisions to dataset \"{}\": {}",
+                    datasetName,
+                    exception.getMessage());
+        }
+    }
+
+    /** Reads the prefixes of every planned file, zip entries included. */
+    private List<ScanResult> scan(List<PlannedSource> sources) {
+        var scanned = new ArrayList<ScanResult>();
+        for (var source : sources) {
+            if (source.unreadableReason() != null) {
+                continue;
+            }
+            if (!source.zip()) {
+                var plannedFile = source.plannedFiles().getFirst();
+                scanned.add(
+                        new ScanResult(
+                                plannedFile,
+                                PrefixScanner.scan(plannedFile.fileName(), source.file())));
+                continue;
+            }
+            scanned.addAll(scanZipSource(source));
+        }
+        return scanned;
+    }
+
+    /**
+     * The decisions say nothing about the files behind the point the scan stopped at, so those are
+     * reported unreadable rather than left for a second pass to bind without anybody being asked.
+     */
+    private List<ScanResult> scanZipSource(PlannedSource source) {
+        var scanned = new ArrayList<ScanResult>();
+        var unreached =
+                forEachZipEntry(
+                        source,
+                        "Unable to read all namespace prefixes of zip file '{}': {}",
+                        (plannedFile, content) ->
+                                scanned.add(
+                                        new ScanResult(
+                                                plannedFile,
+                                                PrefixScanner.scan(
+                                                        plannedFile.fileName(),
+                                                        InMemoryMultipartFile.of(
+                                                                plannedFile.fileName(),
+                                                                content)))));
+        unreached.forEach(plannedFile -> scanned.add(unscannable(plannedFile)));
+        return scanned;
+    }
+
+    private ScanResult unscannable(PlannedFile plannedFile) {
+        return new ScanResult(
+                plannedFile, new ScannedFile(plannedFile.fileName(), Map.of(), false));
+    }
+
+    /**
+     * Streams the graph files of an archive in the order they were planned in and hands each to
+     * {@code process}. A stream that breaks ends the walk as much as one that simply runs out of
+     * entries, so both passes over an archive have to know what they never got to see.
+     *
+     * @param failureMessage logged with the file name and the error when the walk breaks off
+     * @return the planned files the walk did not get through, in order
+     */
+    private List<PlannedFile> forEachZipEntry(
+            PlannedSource source, String failureMessage, ZipEntryProcessor process) {
+        var plannedFiles = source.plannedFiles().iterator();
+        PlannedFile inFlight = null;
+        try (var zipInputStream = new ZipInputStream(source.file().getInputStream())) {
+            ZipEntry entry;
+            while (plannedFiles.hasNext() && (entry = zipInputStream.getNextEntry()) != null) {
+                try {
+                    if (!isImportableEntry(entry)) {
+                        continue;
+                    }
+                    inFlight = plannedFiles.next();
+                    process.accept(inFlight, zipInputStream);
+                    inFlight = null;
+                } finally {
+                    zipInputStream.closeEntry();
+                }
+            }
+        } catch (IOException | RuntimeException exception) {
+            logger.warn(
+                    failureMessage, source.file().getOriginalFilename(), exception.getMessage());
+        }
+        var unreached = new ArrayList<PlannedFile>();
+        if (inFlight != null) {
+            unreached.add(inFlight);
+        }
+        plannedFiles.forEachRemaining(unreached::add);
+        return unreached;
+    }
+
+    /** What one pass over an archive does with a single graph file of it. */
+    @FunctionalInterface
+    private interface ZipEntryProcessor {
+
+        void accept(PlannedFile plannedFile, InputStream content) throws IOException;
+    }
+
+    /**
+     * The prefixes of the dataset, none when it does not exist yet and so collides with nothing.
+     */
+    private Map<String, String> loadExistingPrefixes(String datasetName) {
+        try {
+            return Map.copyOf(databasePort.getPrefixMapping(datasetName).getNsPrefixMap());
+        } catch (RuntimeException _) {
+            return Map.of();
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -191,79 +369,65 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             String datasetName,
             PlannedSource source,
             Set<String> reservedGraphUris,
-            ImportProgressListener listener) {
-        var plannedFiles = source.plannedFiles().iterator();
-
+            ImportProgressListener listener,
+            PrefixNegotiation negotiation) {
         if (source.unreadableReason() != null) {
-            failRemaining(result, plannedFiles, listener);
+            failRemaining(result, source.plannedFiles(), listener, negotiation);
             return;
         }
         if (!source.zip()) {
-            importPlannedFile(
-                    result,
-                    datasetName,
-                    plannedFiles.next(),
-                    source.file(),
-                    reservedGraphUris,
-                    listener);
+            var plannedFile = source.plannedFiles().getFirst();
+            if (!negotiation.isUnreadable(plannedFile)) {
+                importPlannedFile(
+                        result,
+                        datasetName,
+                        plannedFile,
+                        source.file(),
+                        reservedGraphUris,
+                        listener,
+                        negotiation.resolved());
+            }
             return;
         }
 
         // The plan was built with the same predicate over the same archive, so streaming it again
         // yields the importable entries in exactly the order they were planned in.
-        try (var zipInputStream = new ZipInputStream(source.file().getInputStream())) {
-            ZipEntry entry;
-            while (plannedFiles.hasNext() && (entry = zipInputStream.getNextEntry()) != null) {
-                try {
-                    if (!isImportableEntry(entry)) {
-                        continue;
-                    }
-                    var plannedFile = plannedFiles.next();
-                    if (listener.isCancelled()) {
-                        listener.finished(plannedFile.index(), Outcome.SKIPPED, null);
-                        continue;
-                    }
-                    MultipartFile entryFile;
-                    try {
-                        entryFile =
-                                InMemoryMultipartFile.of(plannedFile.fileName(), zipInputStream);
-                    } catch (IOException exception) {
-                        // The iterator has already moved past this file, so failRemaining below
-                        // would leave it pending forever; fail it here and let the rest follow.
-                        result.failedFileNames().add(plannedFile.fileName());
-                        listener.finished(plannedFile.index(), Outcome.FAILED, null);
-                        throw exception;
-                    }
-                    importPlannedFile(
-                            result,
-                            datasetName,
-                            plannedFile,
-                            entryFile,
-                            reservedGraphUris,
-                            listener);
-                } finally {
-                    zipInputStream.closeEntry();
-                }
-            }
-        } catch (IOException exception) {
-            logger.warn(
-                    "Unable to import the remaining graphs of zip file '{}': {}",
-                    source.file().getOriginalFilename(),
-                    exception.getMessage());
-        }
-        // The archive is read a second time here, and a stream that breaks can end the loop by
-        // throwing as much as by simply running out of entries. Either way the files it did not
-        // yield again have to be reported, or the import waits on them forever.
-        failRemaining(result, plannedFiles, listener);
+        var unreached =
+                forEachZipEntry(
+                        source,
+                        "Unable to import the remaining graphs of zip file '{}': {}",
+                        (plannedFile, content) -> {
+                            if (negotiation.isUnreadable(plannedFile)) {
+                                return;
+                            }
+                            if (listener.isCancelled()) {
+                                listener.finished(plannedFile.index(), Outcome.SKIPPED, null);
+                                return;
+                            }
+                            importPlannedFile(
+                                    result,
+                                    datasetName,
+                                    plannedFile,
+                                    InMemoryMultipartFile.of(plannedFile.fileName(), content),
+                                    reservedGraphUris,
+                                    listener,
+                                    negotiation.resolved());
+                        });
+        failRemaining(result, unreached, listener, negotiation);
     }
 
+    /**
+     * Imports one planned file. Storing the graph is what merges its prefixes into those of the
+     * dataset, so the decisions taken on them have to be applied to it first.
+     */
     private void importPlannedFile(
             ImportResult result,
             String datasetName,
             PlannedFile plannedFile,
             MultipartFile file,
             Set<String> reservedGraphUris,
-            ImportProgressListener listener) {
+            ImportProgressListener listener,
+            ResolvedPrefixes resolved) {
         if (listener.isCancelled()) {
             listener.finished(plannedFile.index(), Outcome.SKIPPED, null);
             return;
@@ -277,6 +441,8 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                             reservedGraphUris);
 
             var graph = parseGraph(file, graphUri);
+            resolved.applyTo(graph.getPrefixMapping());
+
             var undisplayableProperties = findUndisplayableProperties(graph);
             replaceGraph(datasetName, graphUri, graph);
 
@@ -294,12 +460,16 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         }
     }
 
+    /** Reports the files nothing else will, or the import waits on them forever. */
     private void failRemaining(
             ImportResult result,
-            Iterator<PlannedFile> plannedFiles,
-            ImportProgressListener listener) {
-        while (plannedFiles.hasNext()) {
-            var plannedFile = plannedFiles.next();
+            List<PlannedFile> plannedFiles,
+            ImportProgressListener listener,
+            PrefixNegotiation negotiation) {
+        for (var plannedFile : plannedFiles) {
+            if (negotiation.isUnreadable(plannedFile)) {
+                continue;
+            }
             result.failedFileNames().add(plannedFile.fileName());
             listener.finished(plannedFile.index(), Outcome.FAILED, null);
         }
@@ -422,6 +592,22 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
         PlannedImport toPlannedImport() {
             return new PlannedImport(index, fileName, sizeBytes);
+        }
+    }
+
+    private record ScanResult(PlannedFile plannedFile, ScannedFile scanned) {}
+
+    /**
+     * What the prefix scan settled: what to do with the prefixes, and which files already failed.
+     */
+    private record PrefixNegotiation(ResolvedPrefixes resolved, Set<Integer> unreadableIndices) {
+
+        private static PrefixNegotiation none() {
+            return new PrefixNegotiation(ResolvedPrefixes.none(), Set.of());
+        }
+
+        private boolean isUnreadable(PlannedFile plannedFile) {
+            return unreadableIndices.contains(plannedFile.index());
         }
     }
 }

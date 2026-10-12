@@ -19,5 +19,17 @@ package org.rdfarchitect.api.dto;
 
 import java.util.UUID;
 
+/**
+ * What one schema of a workspace has to say about a class.
+ *
+ * <p>The schema is described by the same fields the schema pickers name a graph with — {@code
+ * label} first, {@code keyword} when it has no name — so that a class is offered under the name the
+ * navigation tree shows it under.
+ */
 public record ClassSchemaOccurrenceDTO(
-        String graphUri, String keyword, boolean present, UUID classUUID, ClassStubDTO stub) {}
+        String graphUri,
+        String keyword,
+        String label,
+        boolean present,
+        UUID classUUID,
+        ClassStubDTO stub) {}

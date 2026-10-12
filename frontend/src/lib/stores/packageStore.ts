@@ -17,6 +17,7 @@
 
 import { writable } from "svelte/store";
 
+import { graphStore } from "./graphStore";
 import { type GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./storeLogging";
 import { type AsyncSlot, createEmptySlot, type Result } from "./storeTypes";
@@ -239,6 +240,8 @@ function createPackageStore() {
         }
 
         patchLocalPackage(workspaceName, graphURI, pkg);
+        // A CGMES 2.4.15 profile may take its name from its profile package.
+        graphStore.invalidateWorkspace(workspaceName);
 
         console.log(`${LOG_PREFIX} Saved package "${label}"`);
         toastStore.success("Package saved", `"${label}" was saved.`);

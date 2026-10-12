@@ -18,9 +18,12 @@
 <script>
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { graphColors } from "$lib/graphColors.svelte.js";
-    import { URI } from "$lib/models/dto/index.ts";
+    import { graphStore } from "$lib/stores/graphStore.ts";
     import { userSettings } from "$lib/userSettings.svelte.js";
     import { normalizeHex } from "$lib/utils/color.js";
+    import { graphLabeller, graphUri } from "$lib/utils/graph-label.js";
+    import { compareGraphs } from "$lib/utils/graph-order.js";
+    import { uriSuffix } from "$lib/utils/iri.js";
 
     let { showDialog = $bindable(), workspaceName } = $props();
 
@@ -44,9 +47,25 @@
     async function onOpen() {
         if (!workspaceName) return;
         const loaded = await graphColors.reload(workspaceName);
+        // The colors are keyed by graph URI alone, so the names come from the schema list — the
+        // same one the navigation tree reads them from.
+        const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
+        const nameOf = graphLabeller(graphs);
+        const names = new Map(
+            graphs.map(graph => [graphUri(graph), nameOf(graph)]),
+        );
         colorEntries = Object.entries(loaded)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([graphURI, color]) => ({ graphURI, color }));
+            .map(([graphURI, color]) => ({
+                graphURI,
+                color,
+                name: names.get(graphURI) ?? uriSuffix(graphURI),
+            }))
+            .sort((a, b) =>
+                compareGraphs(
+                    { label: a.name, uri: a.graphURI },
+                    { label: b.name, uri: b.graphURI },
+                ),
+            );
         snapshotOriginal();
     }
 
@@ -75,14 +94,6 @@
 
     function snapshotOriginal() {
         originalJson = JSON.stringify(colorEntries);
-    }
-
-    function shortName(uri) {
-        try {
-            return new URI(uri).suffix;
-        } catch {
-            return uri;
-        }
     }
 
     /** Rejects invalid input by snapping the field back to the current color. */
@@ -140,7 +151,7 @@
                                     class="truncate font-medium"
                                     title={entry.graphURI}
                                 >
-                                    {shortName(entry.graphURI)}
+                                    {entry.name}
                                 </p>
                                 <p
                                     class="text-muted-foreground truncate text-xs"

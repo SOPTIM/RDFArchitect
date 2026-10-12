@@ -42,4 +42,13 @@ public interface SnapshotPort {
      * @return true if a snapshot with the token exists, false otherwise
      */
     boolean snapshotExists(String base64Token);
+
+    /**
+     * Indicates whether the underlying snapshot storage is currently reachable
+     *
+     * @return true if snapshots can be created and fetched right now
+     */
+    default boolean isAvailable() {
+        return true;
+    }
 }

@@ -19,6 +19,7 @@ import { get } from "svelte/store";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import * as api from "../../src/lib/api/generated";
+import { graphStore } from "../../src/lib/stores/graphStore";
 import { createPackageStore } from "../../src/lib/stores/packageStore";
 import { makeGraphKey } from "../../src/lib/stores/storeHelpers";
 
@@ -74,6 +75,10 @@ vi.mock("$lib/api/generated", () => ({
     addPackage: vi.fn(),
     replacePackage: vi.fn(),
     deletePackage: vi.fn(),
+}));
+
+vi.mock("$lib/stores/graphStore", () => ({
+    graphStore: { invalidateWorkspace: vi.fn() },
 }));
 
 vi.mock("$lib/eventhandling/toastStore.svelte.js", () => ({
@@ -426,6 +431,24 @@ describe("packageStore", () => {
             expect(
                 state.byGraph.get(makeGraphKey(WORKSPACE_A, GRAPH_URI_1))?.data,
             ).toBeUndefined();
+        });
+
+        /** A CGMES 2.4.15 profile may take its name from its profile package. */
+        test("invalidates the schema list the navigation names schemas from", async () => {
+            vi.mocked(api.replacePackage).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+
+            await store.replacePackage(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+                MOCK_PKG_INTERNAL,
+            );
+
+            expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE_A,
+            );
         });
 
         test("returns error and preserves cache on API failure", async () => {

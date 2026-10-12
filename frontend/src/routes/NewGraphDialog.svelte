@@ -19,9 +19,9 @@
     import { v4 as uuidv4 } from "uuid";
 
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { URI } from "$lib/models/dto/index.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
+    import { graphUri } from "$lib/utils/graph-label.js";
 
     import {
         DiagramType,
@@ -53,7 +53,7 @@
     const resolvedGraphUri = $derived(resolveGraphUri(graphUriUserInput));
     const graphExists = $derived(
         !!resolvedGraphUri &&
-            graphNames.some(g => new URI(g).toString() === resolvedGraphUri),
+            graphNames.some(graph => graphUri(graph) === resolvedGraphUri),
     );
     const disableSubmit = $derived(
         !workspaceNameUserInput ||

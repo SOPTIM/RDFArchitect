@@ -103,6 +103,8 @@
         );
         saveChangesToBackend(classDto);
         datatypesStore.invalidateGraph(workspaceName, graphUri);
+        if (reactiveClass.associations.isModified)
+            classStore.invalidateGraph(workspaceName, graphUri);
     }
 
     async function saveChangesToBackend(classDto) {

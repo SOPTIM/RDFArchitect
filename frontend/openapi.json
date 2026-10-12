@@ -590,6 +590,9 @@
           "keyword" : {
             "type" : "string"
           },
+          "label" : {
+            "type" : "string"
+          },
           "present" : {
             "type" : "boolean"
           },
@@ -902,11 +905,35 @@
       },
       "GraphDTO" : {
         "properties" : {
+          "description" : {
+            "type" : "string"
+          },
           "keyword" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "ontologyHeader" : {
+            "type" : "boolean"
+          },
+          "profileClassIri" : {
+            "type" : "string"
+          },
+          "profileClassUuid" : {
             "type" : "string"
           },
           "uri" : {
             "$ref" : "#/components/schemas/URI"
+          },
+          "versionInfo" : {
+            "type" : "string"
+          },
+          "versionIris" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -1067,9 +1094,17 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "prefixComparison" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PrefixComparison"
+            },
+            "type" : "array"
+          },
           "state" : {
             "enum" : [
               "RUNNING",
+              "SCANNING_PREFIXES",
+              "AWAITING_PREFIX_RESOLUTION",
               "COMPLETED",
               "CANCELLED",
               "FAILED"
@@ -1397,6 +1432,62 @@
             "type" : "string"
           },
           "memberName" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PrefixBinding" : {
+        "properties" : {
+          "fileNames" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "iri" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PrefixComparison" : {
+        "properties" : {
+          "contested" : {
+            "type" : "boolean"
+          },
+          "imported" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PrefixBinding"
+            },
+            "type" : "array"
+          },
+          "prefix" : {
+            "type" : "string"
+          },
+          "workspace" : {
+            "$ref" : "#/components/schemas/PrefixBinding"
+          }
+        },
+        "type" : "object"
+      },
+      "PrefixResolutionDTO" : {
+        "properties" : {
+          "action" : {
+            "enum" : [
+              "KEEP",
+              "RENAME",
+              "DROP"
+            ],
+            "type" : "string"
+          },
+          "iri" : {
+            "type" : "string"
+          },
+          "newPrefix" : {
+            "type" : "string"
+          },
+          "prefix" : {
             "type" : "string"
           }
         },
@@ -2121,6 +2212,14 @@
         "required" : [
           "type"
         ],
+        "type" : "object"
+      },
+      "SessionDTO" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          }
+        },
         "type" : "object"
       },
       "SuperClassDTO" : {
@@ -3414,6 +3513,75 @@
           }
         },
         "summary" : "Get the progress of an import",
+        "tags" : [
+          "graph"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/content/imports/{jobId}/prefix-resolutions" : {
+      "put" : {
+        "description" : "Hands an import that is waiting for namespace prefix decisions the decisions it asked for and lets it go on. A contested namespace left out of the request is imported without a prefix, leaving the prefixes of the dataset as they are.",
+        "operationId" : "resolvePrefixConflicts",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the import job.",
+            "in" : "path",
+            "name" : "jobId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "description" : "What to do with each contested namespace binding.",
+                "items" : {
+                  "$ref" : "#/components/schemas/PrefixResolutionDTO"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Import continues"
+          },
+          "400" : {
+            "description" : "Invalid namespace prefix"
+          },
+          "404" : {
+            "description" : "No such import job"
+          },
+          "409" : {
+            "description" : "The import is not waiting for decisions"
+          }
+        },
+        "summary" : "Resolve the namespace prefix conflicts of an import",
         "tags" : [
           "graph"
         ]
@@ -6947,7 +7115,7 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/rename" : {
       "post" : {
-        "description" : "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. If a new keyword is given, it replaces the dcat:keyword of the profile header.",
+        "description" : "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. The profile header is left untouched: what a schema is called on screen is read from there and is edited in the ontology editor.",
         "operationId" : "renameGraph",
         "parameters" : [
           {
@@ -6983,15 +7151,6 @@
             "in" : "query",
             "name" : "newGraphURI",
             "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The display name to store as dcat:keyword in the profile header.",
-            "in" : "query",
-            "name" : "newKeyword",
-            "required" : false,
             "schema" : {
               "type" : "string"
             }
@@ -9397,6 +9556,26 @@
           }
         },
         "summary" : "Reset session",
+        "tags" : [
+          "session"
+        ]
+      },
+      "get" : {
+        "description" : "The id of the session this request belongs to. Workspaces live in a session, so a tool that wants to read the very workspaces a browser is editing has to address that session — the app hands this id to an embedding host (see the embedded-session handshake) which passes it on to that tool. The id is the session cookie's value and therefore grants full access to the session: treat it as a credential.",
+        "operationId" : "getSession",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SessionDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Current session",
         "tags" : [
           "session"
         ]

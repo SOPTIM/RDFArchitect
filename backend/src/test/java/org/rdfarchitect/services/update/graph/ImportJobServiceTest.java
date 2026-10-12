@@ -19,8 +19,10 @@ package org.rdfarchitect.services.update.graph;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.entry;
 import static org.awaitility.Awaitility.await;
 
+import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +33,7 @@ import org.rdfarchitect.context.UserSettingsContext;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.exception.graph.InvalidPrefixException;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportResult;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.FileState;
@@ -44,6 +47,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -55,6 +59,20 @@ class ImportJobServiceTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
     private static final String DATASET = "ds";
+
+    private static final String CIM16 = "http://iec.ch/TC57/2013/CIM-schema-cim16#";
+    private static final String CIM18 = "http://iec.ch/TC57/2023/CIM-schema-cim18#";
+    private static final String RDFS = "http://www.w3.org/2000/01/rdf-schema#";
+
+    private static final PrefixComparison COMPARISON =
+            new PrefixComparison(
+                    "cim:",
+                    new PrefixBinding(CIM16, List.of()),
+                    List.of(new PrefixBinding(CIM18, List.of("first.ttl"))),
+                    true);
+
+    private static final PrefixComparison RDFS_COMPARISON =
+            new PrefixComparison("rdfs:", new PrefixBinding(RDFS, List.of()), List.of(), false);
 
     private static final String SCHEMA =
             """
@@ -195,6 +213,75 @@ class ImportJobServiceTest {
     }
 
     @Test
+    void startImport_whileACancelledImportIsStillOnAFile_isRejectedUntilItStopped()
+            throws Exception {
+        var running = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        service =
+                new ImportJobService(
+                        (datasetName, files, graphUris, listener) -> {
+                            listener.planned(List.of(new PlannedImport(0, "first.ttl", 1)));
+                            listener.started(0);
+                            running.countDown();
+                            awaitLatch(release);
+                            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
+                            return new ImportResult();
+                        });
+        var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
+        assertThat(running.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS)).isTrue();
+        assertThat(service.cancel(DATASET, jobId)).isTrue();
+
+        assertThatThrownBy(
+                        () -> service.startImport(DATASET, List.of(graphFile("second.ttl")), null))
+                .isInstanceOf(ResourceConflictException.class);
+
+        release.countDown();
+        awaitFinished(jobId);
+        assertThat(service.startImport(DATASET, List.of(graphFile("second.ttl")), null))
+                .isNotNull();
+    }
+
+    @Test
+    void startImport_importDyingOnAnError_settlesTheJobAndFreesTheSession() {
+        service =
+                new ImportJobService(
+                        (datasetName, files, graphUris, listener) -> {
+                            throw new StackOverflowError("nesting too deep");
+                        });
+
+        var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
+
+        assertThat(awaitFinished(jobId).state()).isEqualTo(JobState.FAILED);
+        assertThat(service.startImport(DATASET, List.of(graphFile("second.ttl")), null))
+                .isNotNull();
+    }
+
+    @Test
+    void resolvePrefixConflicts_renameOntoAPrefixNobodyGivesUp_isRejected() {
+        service =
+                new ImportJobService(
+                        prefixAskingImportService(
+                                new AtomicReference<>(), List.of(COMPARISON, RDFS_COMPARISON)));
+        var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
+        awaitState(jobId, JobState.AWAITING_PREFIX_RESOLUTION);
+
+        assertThatThrownBy(
+                        () ->
+                                service.resolvePrefixConflicts(
+                                        DATASET,
+                                        jobId,
+                                        List.of(
+                                                new PrefixResolutionDTO(
+                                                        "cim:",
+                                                        CIM18,
+                                                        PrefixResolutionDTO.Action.RENAME,
+                                                        "rdfs:"))))
+                .isInstanceOf(InvalidPrefixException.class);
+
+        service.cancel(DATASET, jobId);
+    }
+
+    @Test
     void startImport_whileAnotherSessionImports_isAllowed() throws Exception {
         var running = new CountDownLatch(1);
         var release = new CountDownLatch(1);
@@ -329,6 +416,107 @@ class ImportJobServiceTest {
         assertThat(status.errorMessage()).isEqualTo("import blew up");
     }
 
+    @Test
+    void startImport_contestedPrefixes_waitForADecisionWithoutImportingAnything() {
+        var received = new AtomicReference<ResolvedPrefixes>();
+        service = new ImportJobService(prefixAskingImportService(received));
+
+        var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
+
+        var waiting = awaitState(jobId, JobState.AWAITING_PREFIX_RESOLUTION);
+        assertThat(waiting.prefixComparison()).containsExactly(COMPARISON);
+        assertThat(waiting.importedGraphUris()).isEmpty();
+        assertThat(waiting.files())
+                .singleElement()
+                .extracting(ImportJobUseCase.ImportFileStatus::state)
+                .isEqualTo(FileState.PENDING);
+
+        var decisions =
+                List.of(
+                        new PrefixResolutionDTO(
+                                "cim:", CIM18, PrefixResolutionDTO.Action.RENAME, "cim2:"));
+        assertThat(service.resolvePrefixConflicts(DATASET, jobId, decisions)).isTrue();
+
+        var status = awaitFinished(jobId);
+        assertThat(status.state()).isEqualTo(JobState.COMPLETED);
+        assertThat(status.prefixComparison()).isEmpty();
+        assertThat(applyTo(received.get(), CIM18)).containsExactly(entry("cim2", CIM18));
+    }
+
+    @Test
+    void resolvePrefixConflicts_invalidNewPrefix_isRejectedAndLeavesTheJobWaiting() {
+        service = new ImportJobService(prefixAskingImportService(new AtomicReference<>()));
+        var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
+        awaitState(jobId, JobState.AWAITING_PREFIX_RESOLUTION);
+
+        assertThatThrownBy(
+                        () ->
+                                service.resolvePrefixConflicts(
+                                        DATASET,
+                                        jobId,
+                                        List.of(
+                                                new PrefixResolutionDTO(
+                                                        "cim:",
+                                                        CIM18,
+                                                        PrefixResolutionDTO.Action.RENAME,
+                                                        "2cim:"))))
+                .isInstanceOf(InvalidPrefixException.class);
+
+        assertThat(service.getStatus(DATASET, jobId).orElseThrow().state())
+                .isEqualTo(JobState.AWAITING_PREFIX_RESOLUTION);
+        service.cancel(DATASET, jobId);
+    }
+
+    @Test
+    void resolvePrefixConflicts_importThatIsNotWaiting_isRejected() throws Exception {
+        var running = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        service = new ImportJobService(blockingImportService(running, release));
+        var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
+        assertThat(running.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS)).isTrue();
+
+        assertThatThrownBy(() -> service.resolvePrefixConflicts(DATASET, jobId, List.of()))
+                .isInstanceOf(ResourceConflictException.class);
+
+        release.countDown();
+    }
+
+    @Test
+    void resolvePrefixConflicts_unknownJob_isNotFound() {
+        service = new ImportJobService(realImportService());
+
+        assertThat(service.resolvePrefixConflicts(DATASET, UUID.randomUUID(), List.of())).isFalse();
+    }
+
+    @Test
+    void cancel_importWaitingForADecision_stopsItWithoutImportingAnything() {
+        service = new ImportJobService(prefixAskingImportService(new AtomicReference<>()));
+        var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
+        awaitState(jobId, JobState.AWAITING_PREFIX_RESOLUTION);
+
+        assertThat(service.cancel(DATASET, jobId)).isTrue();
+
+        var status = awaitFinished(jobId);
+        assertThat(status.state()).isEqualTo(JobState.CANCELLED);
+        assertThat(status.importedGraphUris()).isEmpty();
+        assertThat(status.files())
+                .singleElement()
+                .extracting(ImportJobUseCase.ImportFileStatus::state)
+                .isEqualTo(FileState.SKIPPED);
+    }
+
+    @Test
+    void startImport_whileAnotherImportOfTheSessionAwaitsADecision_takesItsPlace() {
+        service = new ImportJobService(prefixAskingImportService(new AtomicReference<>()));
+        var abandonedJobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
+        awaitState(abandonedJobId, JobState.AWAITING_PREFIX_RESOLUTION);
+
+        var jobId = service.startImport(DATASET, List.of(graphFile("second.ttl")), null);
+
+        assertThat(jobId).isNotEqualTo(abandonedJobId);
+        assertThat(awaitFinished(abandonedJobId).state()).isEqualTo(JobState.CANCELLED);
+    }
+
     /**
      * Awaitility runs a condition on a thread of its own, which would not see the session of this
      * test, so every wait that looks at the job has to poll on the calling thread.
@@ -339,9 +527,57 @@ class ImportJobServiceTest {
                 .until(
                         () ->
                                 service.getStatus(DATASET, jobId)
-                                        .filter(status -> status.state() != JobState.RUNNING)
+                                        .filter(status -> isFinished(status.state()))
                                         .isPresent());
         return service.getStatus(DATASET, jobId).orElseThrow();
+    }
+
+    private ImportJobUseCase.ImportJobStatus awaitState(UUID jobId, JobState state) {
+        await().pollInSameThread()
+                .atMost(TIMEOUT)
+                .until(
+                        () ->
+                                service.getStatus(DATASET, jobId)
+                                        .filter(status -> status.state() == state)
+                                        .isPresent());
+        return service.getStatus(DATASET, jobId).orElseThrow();
+    }
+
+    private static boolean isFinished(JobState state) {
+        return state == JobState.COMPLETED
+                || state == JobState.CANCELLED
+                || state == JobState.FAILED;
+    }
+
+    /** Stands in for an import that found contested prefixes and waits for them to be decided. */
+    /** The prefixes a file binding {@code cim:} to the given namespace ends up with. */
+    private Map<String, String> applyTo(ResolvedPrefixes resolutions, String iri) {
+        var prefixes = new PrefixMappingImpl().setNsPrefixes(Map.of("cim", iri));
+        resolutions.applyTo(prefixes);
+        return prefixes.getNsPrefixMap();
+    }
+
+    private ImportGraphsUseCase prefixAskingImportService(
+            AtomicReference<ResolvedPrefixes> received) {
+        return prefixAskingImportService(received, List.of(COMPARISON));
+    }
+
+    private ImportGraphsUseCase prefixAskingImportService(
+            AtomicReference<ResolvedPrefixes> received, List<PrefixComparison> comparison) {
+        return (datasetName, files, graphUris, listener) -> {
+            listener.planned(List.of(new PlannedImport(0, "first.ttl", 1)));
+            listener.scanningPrefixes();
+            received.set(listener.awaitResolvedPrefixes(comparison));
+            var result = new ImportResult();
+            if (listener.isCancelled()) {
+                listener.finished(0, Outcome.SKIPPED, null);
+                return result;
+            }
+            listener.started(0);
+            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
+            result.importedGraphUris().add(RDFA.GRAPH_URI + "first");
+            return result;
+        };
     }
 
     private ImportGraphsUseCase realImportService() {
@@ -353,13 +589,17 @@ class ImportJobServiceTest {
             CountDownLatch running, CountDownLatch release) {
         return (datasetName, files, graphUris, listener) -> {
             running.countDown();
-            try {
-                release.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS);
-            } catch (InterruptedException exception) {
-                Thread.currentThread().interrupt();
-            }
+            awaitLatch(release);
             return new ImportResult();
         };
+    }
+
+    private void awaitLatch(CountDownLatch latch) {
+        try {
+            latch.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private MultipartFile graphFile(String fileName) {

@@ -233,6 +233,106 @@ describe("ImportProgress", () => {
         expect(progress.errorMessage).toBeNull();
     });
 
+    test("scanning the prefixes keeps the import running", () => {
+        const progress = new ImportProgress();
+        progress.uploaded();
+
+        progress.apply(running({ state: JobState.SCANNING_PREFIXES }));
+
+        expect(progress.phase).toBe(ImportPhase.IMPORTING);
+        expect(progress.finished).toBe(false);
+        expect(progress.statusText).toBe("Checking the namespace prefixes…");
+    });
+
+    test("contested prefixes hold the import up without finishing it", () => {
+        const progress = new ImportProgress();
+        progress.uploaded();
+
+        progress.apply(
+            running({
+                state: JobState.AWAITING_PREFIX_RESOLUTION,
+                files: [file({ state: FileState.PENDING })],
+                prefixComparison: [
+                    {
+                        prefix: "cim:",
+                        workspace: {
+                            iri: "http://cim16#",
+                            fileNames: [],
+                        },
+                        imported: [
+                            {
+                                iri: "http://cim18#",
+                                fileNames: ["dl30.ttl"],
+                            },
+                        ],
+                        contested: true,
+                    },
+                ],
+            }),
+        );
+
+        expect(progress.phase).toBe(ImportPhase.RESOLVING);
+        expect(progress.awaitingPrefixResolution).toBe(true);
+        expect(progress.finished).toBe(false);
+        expect(progress.prefixComparison).toHaveLength(1);
+        expect(progress.statusText).toBe(
+            "Waiting for your decision on the namespace prefixes…",
+        );
+        expect(progress.percent).toBe(25);
+    });
+
+    test("the comparison is gone once the import goes on", () => {
+        const progress = new ImportProgress();
+        progress.uploaded();
+        progress.apply(
+            running({
+                state: JobState.AWAITING_PREFIX_RESOLUTION,
+                prefixComparison: [
+                    {
+                        prefix: "cim:",
+                        workspace: {
+                            iri: "http://cim16#",
+                            fileNames: [],
+                        },
+                        imported: [],
+                        contested: false,
+                    },
+                ],
+            }),
+        );
+
+        progress.apply(running({ state: JobState.RUNNING }));
+
+        expect(progress.awaitingPrefixResolution).toBe(false);
+        expect(progress.prefixComparison).toEqual([]);
+    });
+
+    test("polling again leaves the comparison being decided on alone", () => {
+        const progress = new ImportProgress();
+        progress.uploaded();
+        const awaiting = () =>
+            running({
+                state: JobState.AWAITING_PREFIX_RESOLUTION,
+                prefixComparison: [
+                    {
+                        prefix: "cim:",
+                        workspace: {
+                            iri: "http://cim16#",
+                            fileNames: [],
+                        },
+                        imported: [],
+                        contested: true,
+                    },
+                ],
+            });
+
+        progress.apply(awaiting());
+        const shown = progress.prefixComparison;
+        progress.apply(awaiting());
+
+        expect(progress.prefixComparison).toBe(shown);
+    });
+
     test("a failure to start is shown as a finished, failed import", () => {
         const progress = new ImportProgress();
 

@@ -20,7 +20,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
 
-/** Graph list as the backend returns it: the URI next to its dcat:keyword. */
+/** Graph list as the backend returns it: the URI next to what the profile says about itself. */
 const GRAPHS = vi.hoisted(() => [
     {
         uri: { prefix: "http://iec.ch/TC57/CIM100#", suffix: "EQ" },
@@ -29,6 +29,11 @@ const GRAPHS = vi.hoisted(() => [
     {
         uri: { prefix: "http://iec.ch/TC57/CIM100#", suffix: "TP" },
         keyword: "Topology",
+    },
+    {
+        uri: { prefix: "http://iec.ch/TC57/CIM100#", suffix: "SSH" },
+        keyword: "SSH",
+        label: "Steady State Hypothesis Vocabulary",
     },
 ]);
 
@@ -83,15 +88,16 @@ describe("WorkspaceAndGraphSelection", () => {
         expect(graphOptions(container).map(option => option.value)).toEqual([
             "http://iec.ch/TC57/CIM100#EQ",
             "http://iec.ch/TC57/CIM100#TP",
+            "http://iec.ch/TC57/CIM100#SSH",
         ]);
     });
 
-    test("labels a graph by its keyword and falls back to the URI suffix", async () => {
+    test("labels a graph by its name, then its keyword, then the URI suffix", async () => {
         const container = await render({ workspace: "cgmes", graph: null });
 
         expect(
             graphOptions(container).map(option => option.textContent.trim()),
-        ).toEqual(["EQ", "Topology"]);
+        ).toEqual(["EQ", "Topology", "Steady State Hypothesis Vocabulary"]);
     });
 
     test("keeps a preselected graph that is part of the workspace", async () => {

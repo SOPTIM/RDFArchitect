@@ -146,7 +146,9 @@
         ) {
             return;
         }
-        if (generateOntologyEntries && someSelected) {
+        // hasOntology as well as someSelected: the two effects below settle independently, so
+        // entries generated for one schema can outlive the switch to another that has no header.
+        if (generateOntologyEntries && hasOntology && someSelected) {
             for (const entry of generatedOntologyEntries) {
                 if (entry.generate) {
                     ontology.entries.append(entry);

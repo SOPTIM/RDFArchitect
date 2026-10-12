@@ -20,6 +20,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import * as api from "../../src/lib/api/generated";
 import { toastStore } from "../../src/lib/eventhandling/toastStore.svelte.js";
 import { createClassStore } from "../../src/lib/stores/classStore";
+import { graphStore } from "../../src/lib/stores/graphStore";
 
 import type {
     AssociationPairDto,
@@ -86,6 +87,10 @@ vi.mock("$lib/api/generated", () => ({
     replaceAssociation: vi.fn(),
     createEnumEntry: vi.fn(),
     replaceEnumEntry: vi.fn(),
+}));
+
+vi.mock("$lib/stores/graphStore", () => ({
+    graphStore: { invalidateWorkspace: vi.fn() },
 }));
 
 vi.mock("$lib/eventhandling/toastStore.svelte.js", () => ({
@@ -191,6 +196,22 @@ describe("ClassStore", () => {
 
             expect(result?.uuid).toBe("uuid-1");
             expect(result?.attributes).toHaveLength(1);
+        });
+
+        test("treats a body without a uuid as no class at all", async () => {
+            const cls = makeClass("uuid-1");
+            vi.mocked(api.getClassList).mockResolvedValue(ok([cls]));
+            // What the client yields for the empty `200` the endpoint answers a uuid that names
+            // something else with: truthy, and spreading it would build a class with no fields.
+            vi.mocked(api.getClassInformation).mockResolvedValue(
+                ok(new ReadableStream() as unknown as ClassUmlAdaptedDto),
+            );
+
+            await store.getClasses(WORKSPACE, GRAPH, false);
+
+            expect(
+                await store.getClassInfo(WORKSPACE, GRAPH, "not-a-class"),
+            ).toBeNull();
         });
 
         test("returns cached details without re-fetching", async () => {
@@ -348,6 +369,22 @@ describe("ClassStore", () => {
             expect(all?.find(c => c.uuid === "uuid-1")?.label).toBe("Updated");
         });
 
+        /** A CGMES 2.4.15 profile names itself on a class, so saving one can rename the schema. */
+        test("invalidates the schema list the navigation names schemas from", async () => {
+            vi.mocked(api.replaceClass).mockResolvedValue(ok(undefined));
+
+            await store.replaceClass(
+                WORKSPACE,
+                GRAPH,
+                "uuid-1",
+                makeClass("uuid-1", "Updated"),
+            );
+
+            expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+        });
+
         test("returns error and does not mutate the store on failure", async () => {
             const original = makeClass("uuid-1", "Original");
             vi.mocked(api.getClassList).mockResolvedValue(ok([original]));
@@ -410,6 +447,22 @@ describe("ClassStore", () => {
             ).toBe("local-uuid");
         });
 
+        /** A CGMES 2.4.15 profile states its name and version IRIs as fixed attribute values. */
+        test("invalidates the schema list the navigation names schemas from", async () => {
+            vi.mocked(api.createAttribute).mockResolvedValue(ok("attr-1"));
+
+            await store.addAttribute(
+                WORKSPACE,
+                GRAPH,
+                "class-1",
+                makeAttribute(""),
+            );
+
+            expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+        });
+
         test("returns error and shows toast on failure", async () => {
             vi.mocked(api.createAttribute).mockResolvedValue(err());
             const result = await store.addAttribute(
@@ -443,6 +496,20 @@ describe("ClassStore", () => {
             expect(
                 classes?.find(c => c.uuid === "class-1")?.attributes?.[0].label,
             ).toBe("updated-attr");
+        });
+
+        /** A CGMES 2.4.15 profile states its name and version IRIs as fixed attribute values. */
+        test("invalidates the schema list the navigation names schemas from", async () => {
+            vi.mocked(api.replaceAttribute).mockResolvedValue(ok(undefined));
+
+            await store.replaceAttribute(WORKSPACE, GRAPH, "class-1", {
+                uuid: "attr-1",
+                fixedValue: "changed",
+            } as AttributeDto);
+
+            expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
         });
 
         test("returns error immediately if attribute.uuid is missing", async () => {
