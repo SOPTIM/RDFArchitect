@@ -457,6 +457,23 @@
         },
         "type" : "object"
       },
+      "ClassMappingOverview" : {
+        "properties" : {
+          "added" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticClassChange"
+            },
+            "type" : "array"
+          },
+          "deletedAndRemapped" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ResourceMappingSemanticClassChange"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "ClassPositionDTO" : {
         "properties" : {
           "classUUID" : {
@@ -1385,64 +1402,6 @@
         },
         "type" : "object"
       },
-      "PropertyMappingOverview" : {
-        "properties" : {
-          "addedInClass" : {
-            "items" : {
-              "oneOf" : [
-                {
-                  "$ref" : "#/components/schemas/SemanticResourceChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticAssociationChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticAttributeChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticEnumEntryChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticPackageChange"
-                }
-              ]
-            },
-            "type" : "array"
-          },
-          "allAdded" : {
-            "items" : {
-              "oneOf" : [
-                {
-                  "$ref" : "#/components/schemas/SemanticResourceChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticAssociationChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticAttributeChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticClassChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticEnumEntryChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticPackageChange"
-                }
-              ]
-            },
-            "type" : "array"
-          },
-          "deletedAndRemapped" : {
-            "items" : {
-              "$ref" : "#/components/schemas/ResourceMappingSemanticResourceChange"
-            },
-            "type" : "array"
-          }
-        },
-        "type" : "object"
-      },
       "PropertyMappingOverviewSemanticAssociationChange" : {
         "properties" : {
           "addedInClass" : {
@@ -1761,79 +1720,6 @@
           "oldResources" : {
             "items" : {
               "$ref" : "#/components/schemas/SemanticEnumEntryChange"
-            },
-            "type" : "array"
-          },
-          "type" : {
-            "enum" : [
-              "RENAME",
-              "MOVE",
-              "SPLIT",
-              "MERGE",
-              "UNMAPPED"
-            ],
-            "type" : "string"
-          }
-        },
-        "type" : "object"
-      },
-      "ResourceMappingSemanticResourceChange" : {
-        "properties" : {
-          "confidenceScore" : {
-            "format" : "double",
-            "type" : "number"
-          },
-          "id" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
-          "newResources" : {
-            "items" : {
-              "oneOf" : [
-                {
-                  "$ref" : "#/components/schemas/SemanticResourceChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticAssociationChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticAttributeChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticClassChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticEnumEntryChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticPackageChange"
-                }
-              ]
-            },
-            "type" : "array"
-          },
-          "oldResources" : {
-            "items" : {
-              "oneOf" : [
-                {
-                  "$ref" : "#/components/schemas/SemanticResourceChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticAssociationChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticAttributeChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticClassChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticEnumEntryChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticPackageChange"
-                }
-              ]
             },
             "type" : "array"
           },
@@ -2173,24 +2059,6 @@
           }
         },
         "type" : "object"
-      },
-      "SemanticPackageChange" : {
-        "allOf" : [
-          {
-            "$ref" : "#/components/schemas/SemanticResourceChange"
-          },
-          {
-            "properties" : {
-              "classChanges" : {
-                "items" : {
-                  "$ref" : "#/components/schemas/SemanticClassChange"
-                },
-                "type" : "array"
-              }
-            },
-            "type" : "object"
-          }
-        ]
       },
       "SemanticResourceChange" : {
         "discriminator" : {
@@ -8963,10 +8831,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/PropertyMappingOverview"
-                  },
-                  "type" : "array"
+                  "$ref" : "#/components/schemas/ClassMappingOverview"
                 }
               }
             },

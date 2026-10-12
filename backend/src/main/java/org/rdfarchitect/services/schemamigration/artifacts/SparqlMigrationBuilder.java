@@ -33,7 +33,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -69,28 +68,10 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         }
 
         return new SplitGroups(
-                groupSplitSiblings(allAttributes),
-                groupSplitSiblings(allAssociations),
+                SplitSiblingGrouping.groupSplitSiblings(allAttributes),
+                SplitSiblingGrouping.groupSplitSiblings(allAssociations),
                 new HashSet<>(),
                 new HashSet<>());
-    }
-
-    private <T extends SemanticResourceChange> Map<String, List<T>> groupSplitSiblings(
-            List<T> properties) {
-        return properties.stream()
-                .filter(
-                        p ->
-                                (p.getSemanticResourceChangeType()
-                                                        == SemanticResourceChangeType.RENAME
-                                                || p.getSemanticResourceChangeType()
-                                                        == SemanticResourceChangeType.MOVE)
-                                        && p.getOldIRI() != null
-                                        && p.getAdditionalOldIRIs().isEmpty())
-                .collect(Collectors.groupingBy(SemanticResourceChange::getOldIRI))
-                .entrySet()
-                .stream()
-                .filter(e -> e.getValue().size() > 1)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private String generateUpdateForClass(
@@ -199,7 +180,7 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         if (!splitGroups.emittedAttributeGroups().add(attributeChange.getOldIRI())) {
             return "";
         }
-        return updateGenerator.generateSplitAttributeUpdate(group);
+        return updateGenerator.generateSplitPropertyUpdate(group);
     }
 
     private String generateRenameOrSplitAssociationUpdate(
@@ -211,7 +192,7 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         if (!splitGroups.emittedAssociationGroups().add(associationChange.getOldIRI())) {
             return "";
         }
-        return updateGenerator.generateSplitAssociationUpdate(group);
+        return updateGenerator.generateSplitPropertyUpdate(group);
     }
 
     private void processAttributeFieldChanges(

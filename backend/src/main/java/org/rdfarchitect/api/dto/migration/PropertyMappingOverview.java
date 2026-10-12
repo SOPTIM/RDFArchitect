@@ -61,7 +61,10 @@ public class PropertyMappingOverview<T extends SemanticResourceChange> {
                         .toList();
         var mappedDeleted =
                 resourceMappings.stream()
-                        .flatMap(r -> r.getOldResources().stream().map(T::getLabel))
+                        .flatMap(
+                                r ->
+                                        r.getOldResources().stream()
+                                                .map(SemanticResourceChange::getIri))
                         .collect(Collectors.toSet());
 
         var deletedIris =
@@ -80,8 +83,7 @@ public class PropertyMappingOverview<T extends SemanticResourceChange> {
                         .toList();
         var deletedAndRenamedCandidates = new ArrayList<>(ownedMappings);
         for (var change : deleted) {
-            var label = change.getLabel();
-            if (!mappedDeleted.contains(label)) {
+            if (!mappedDeleted.contains(change.getIri())) {
                 deletedAndRenamedCandidates.add(new ResourceMapping<>(change));
             }
         }

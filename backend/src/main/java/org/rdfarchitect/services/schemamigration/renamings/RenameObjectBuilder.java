@@ -32,6 +32,7 @@ import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @UtilityClass
 public class RenameObjectBuilder {
@@ -55,7 +56,7 @@ public class RenameObjectBuilder {
                 resourceMapping.getType() == MappingType.MOVE
                         ? SemanticResourceChangeType.MOVE
                         : SemanticResourceChangeType.RENAME);
-        result.setChanges(mergeChanges(addedResource.getChanges(), deletedResource.getChanges()));
+        result.setChanges(mergeChangesFromAllOldResources(addedResource, oldResources));
 
         if (result instanceof SemanticClassChange classChange
                 && addedResource instanceof SemanticClassChange addedClass
@@ -64,6 +65,18 @@ public class RenameObjectBuilder {
         }
 
         return result;
+    }
+
+    private <T extends SemanticResourceChange>
+            List<SemanticFieldChange> mergeChangesFromAllOldResources(
+                    T addedResource, List<T> oldResources) {
+        return oldResources.stream()
+                .flatMap(
+                        oldResource ->
+                                mergeChanges(addedResource.getChanges(), oldResource.getChanges())
+                                        .stream())
+                .distinct()
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     public <T extends SemanticResourceChange> List<T> createSplitObjects(

@@ -26,7 +26,6 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticPropertyChange;
-import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
@@ -35,10 +34,22 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @UtilityClass
 public class CrossDomainPropertyPropagationHandler {
+
+    private record PropertyAccess<T extends SemanticPropertyChange>(
+            Function<SemanticClassChange, List<T>> existing,
+            BiFunction<Resource, SemanticResourceChangeType, T> create) {}
+
+    private static final PropertyAccess<SemanticAttributeChange> ATTRIBUTES =
+            new PropertyAccess<>(SemanticClassChange::getAttributes, SemanticAttributeChange::new);
+    private static final PropertyAccess<SemanticAssociationChange> ASSOCIATIONS =
+            new PropertyAccess<>(
+                    SemanticClassChange::getAssociations, SemanticAssociationChange::new);
 
     public void processCrossDomainPropertyMappings(
             List<SemanticClassChange> classes,
@@ -50,10 +61,10 @@ public class CrossDomainPropertyPropagationHandler {
                 classes.stream().collect(Collectors.toMap(SemanticClassChange::getIri, c -> c));
 
         for (var mapping : attributeMappings) {
-            processMapping(classChangeMap, oldModel, newModel, mapping, true);
+            processMapping(classChangeMap, oldModel, newModel, mapping, ATTRIBUTES);
         }
         for (var mapping : associationMappings) {
-            processMapping(classChangeMap, oldModel, newModel, mapping, false);
+            processMapping(classChangeMap, oldModel, newModel, mapping, ASSOCIATIONS);
         }
 
         classes.clear();
@@ -65,11 +76,11 @@ public class CrossDomainPropertyPropagationHandler {
             Model oldModel,
             Model newModel,
             ResourceMapping<T> mapping,
-            boolean isAttribute) {
+            PropertyAccess<T> propertyAccess) {
         switch (mapping.getType()) {
-            case MOVE -> processMove(classChangeMap, oldModel, newModel, mapping, isAttribute);
-            case MERGE -> processMerge(classChangeMap, oldModel, newModel, mapping, isAttribute);
-            case SPLIT -> processSplit(classChangeMap, oldModel, newModel, mapping, isAttribute);
+            case MOVE -> processMove(classChangeMap, oldModel, newModel, mapping, propertyAccess);
+            case MERGE -> processMerge(classChangeMap, oldModel, newModel, mapping, propertyAccess);
+            case SPLIT -> processSplit(classChangeMap, oldModel, newModel, mapping, propertyAccess);
             default -> {
                 // RENAME/UNMAPPED mappings stay within one domain - nothing to propagate
             }
@@ -81,7 +92,7 @@ public class CrossDomainPropertyPropagationHandler {
             Model oldModel,
             Model newModel,
             ResourceMapping<T> mapping,
-            boolean isAttribute) {
+            PropertyAccess<T> propertyAccess) {
         var oldResource = mapping.getOldResources().getFirst();
         var newResource = mapping.getNewResources().getFirst();
 
@@ -97,7 +108,7 @@ public class CrossDomainPropertyPropagationHandler {
                 excluded,
                 oldResource.getIri(),
                 SemanticResourceChangeType.DELETED_FROM_INHERITANCE,
-                isAttribute);
+                propertyAccess);
         emitDifference(
                 classChangeMap,
                 newModel,
@@ -106,7 +117,7 @@ public class CrossDomainPropertyPropagationHandler {
                 excluded,
                 newResource.getIri(),
                 SemanticResourceChangeType.ADDED_FROM_INHERITANCE,
-                isAttribute);
+                propertyAccess);
     }
 
     private <T extends SemanticPropertyChange> void processMerge(
@@ -114,7 +125,7 @@ public class CrossDomainPropertyPropagationHandler {
             Model oldModel,
             Model newModel,
             ResourceMapping<T> mapping,
-            boolean isAttribute) {
+            PropertyAccess<T> propertyAccess) {
         var newResource = mapping.getNewResources().getFirst();
         var newDeriving = derivingUris(newModel, newResource.getDomain());
 
@@ -136,10 +147,9 @@ public class CrossDomainPropertyPropagationHandler {
                     excluded,
                     oldResource.getIri(),
                     SemanticResourceChangeType.DELETED_FROM_INHERITANCE,
-                    isAttribute);
+                    propertyAccess);
         }
 
-        // a class only counts as gaining the merged property if it had no access from ANY source
         emitDifference(
                 classChangeMap,
                 newModel,
@@ -148,7 +158,7 @@ public class CrossDomainPropertyPropagationHandler {
                 excluded,
                 newResource.getIri(),
                 SemanticResourceChangeType.ADDED_FROM_INHERITANCE,
-                isAttribute);
+                propertyAccess);
     }
 
     private <T extends SemanticPropertyChange> void processSplit(
@@ -156,7 +166,7 @@ public class CrossDomainPropertyPropagationHandler {
             Model oldModel,
             Model newModel,
             ResourceMapping<T> mapping,
-            boolean isAttribute) {
+            PropertyAccess<T> propertyAccess) {
         var oldResource = mapping.getOldResources().getFirst();
         var oldDeriving = derivingUris(oldModel, oldResource.getDomain());
 
@@ -180,7 +190,7 @@ public class CrossDomainPropertyPropagationHandler {
                     excluded,
                     newResource.getIri(),
                     SemanticResourceChangeType.ADDED_FROM_INHERITANCE,
-                    isAttribute);
+                    propertyAccess);
         }
 
         // a class only loses the property if it kept access through NONE of the split targets
@@ -192,10 +202,10 @@ public class CrossDomainPropertyPropagationHandler {
                 excluded,
                 oldResource.getIri(),
                 SemanticResourceChangeType.DELETED_FROM_INHERITANCE,
-                isAttribute);
+                propertyAccess);
     }
 
-    private void emitDifference(
+    private <T extends SemanticPropertyChange> void emitDifference(
             Map<String, SemanticClassChange> classChangeMap,
             Model model,
             Set<String> fromDeriving,
@@ -203,7 +213,7 @@ public class CrossDomainPropertyPropagationHandler {
             Set<String> excluded,
             String propertyIri,
             SemanticResourceChangeType changeType,
-            boolean isAttribute) {
+            PropertyAccess<T> propertyAccess) {
         var difference = new HashSet<>(fromDeriving);
         difference.removeAll(toSubtract);
         difference.removeAll(excluded);
@@ -220,18 +230,18 @@ public class CrossDomainPropertyPropagationHandler {
                             _ ->
                                     new SemanticClassChange(
                                             classResource, SemanticResourceChangeType.CHANGE));
-            addPropagatedPropertyChange(classChange, model, propertyIri, changeType, isAttribute);
+            addPropagatedPropertyChange(
+                    classChange, model, propertyIri, changeType, propertyAccess);
         }
     }
 
-    private void addPropagatedPropertyChange(
+    private <T extends SemanticPropertyChange> void addPropagatedPropertyChange(
             SemanticClassChange classChange,
             Model model,
             String propertyIri,
             SemanticResourceChangeType changeType,
-            boolean isAttribute) {
-        List<? extends SemanticResourceChange> existingChanges =
-                isAttribute ? classChange.getAttributes() : classChange.getAssociations();
+            PropertyAccess<T> propertyAccess) {
+        var existingChanges = propertyAccess.existing().apply(classChange);
         if (existingChanges.stream().anyMatch(change -> propertyIri.equals(change.getIri()))) {
             return;
         }
@@ -239,17 +249,10 @@ public class CrossDomainPropertyPropagationHandler {
         var propertyResource = model.getResource(propertyIri);
         var label = new URI(propertyIri).getSuffix();
 
-        if (isAttribute) {
-            var attributeChange = new SemanticAttributeChange(propertyResource, changeType);
-            attributeChange.setLabel(label);
-            attributeChange.setDomain(classChange.getIri());
-            classChange.getAttributes().add(attributeChange);
-        } else {
-            var associationChange = new SemanticAssociationChange(propertyResource, changeType);
-            associationChange.setLabel(label);
-            associationChange.setDomain(classChange.getIri());
-            classChange.getAssociations().add(associationChange);
-        }
+        var propertyChange = propertyAccess.create().apply(propertyResource, changeType);
+        propertyChange.setLabel(label);
+        propertyChange.setDomain(classChange.getIri());
+        existingChanges.add(propertyChange);
     }
 
     private Set<String> derivingUris(Model model, String classIri) {

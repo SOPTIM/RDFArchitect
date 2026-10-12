@@ -19,7 +19,6 @@ package org.rdfarchitect.api.controller.datasets.graphs.migration;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -27,7 +26,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.migration.ClassMappingOverview;
-import org.rdfarchitect.api.dto.migration.PropertyMappingOverview;
 import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.services.schemamigration.renamings.ClassRenamingsUseCase;
@@ -64,13 +62,10 @@ public class ClassMappingsRESTController {
                         content =
                                 @Content(
                                         mediaType = "application/json",
-                                        array =
-                                                @ArraySchema(
-                                                        schema =
-                                                                @Schema(
-                                                                        implementation =
-                                                                                PropertyMappingOverview
-                                                                                        .class))))
+                                        schema =
+                                                @Schema(
+                                                        implementation =
+                                                                ClassMappingOverview.class)))
             })
     @GetMapping
     public ClassMappingOverview getClassMappings(

@@ -61,6 +61,24 @@
         })),
     );
 
+    let invalidMappingIdsByKind = $derived.by(() => {
+        const result = {};
+        for (const { overviewKey } of PROPERTY_KINDS) {
+            const allRows = filteredClasses.flatMap(
+                cls => cls[overviewKey]?.deletedAndRemapped ?? [],
+            );
+            result[overviewKey] =
+                groupMappingsForSubmission(allRows).invalidMappingIds;
+        }
+        return result;
+    });
+
+    let currentInvalidMappingIds = $derived(
+        invalidMappingIdsByKind[
+            PROPERTY_KINDS[currentSubstepIndex]?.overviewKey
+        ] ?? new Set(),
+    );
+
     onMount(async () => {
         const storedState = get(migrationState);
         ignorePrefixes = storedState.ignorePrefixes;
@@ -178,6 +196,10 @@
     </div>
 
     <div class="flex-1 overflow-y-auto p-2">
-        <currentSubstep.component classes={filteredClasses} {isLoading} />
+        <currentSubstep.component
+            classes={filteredClasses}
+            {isLoading}
+            invalidMappingIds={currentInvalidMappingIds}
+        />
     </div>
 </div>

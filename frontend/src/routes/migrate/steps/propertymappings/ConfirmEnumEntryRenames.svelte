@@ -24,7 +24,7 @@
 
     import MappingSection from "../MappingSection.svelte";
 
-    const { classes, isLoading } = $props();
+    const { classes, isLoading, invalidMappingIds = new Set() } = $props();
 
     let renamedFrom = $derived(
         buildRenamedFromMap(
@@ -82,6 +82,7 @@
                     resourceType="Enum Entry"
                     {renamedFrom}
                     currentClassLabel={cls.classLabel}
+                    {invalidMappingIds}
                 />
             {/if}
         {/each}

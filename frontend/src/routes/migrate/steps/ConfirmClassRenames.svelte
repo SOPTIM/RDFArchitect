@@ -40,6 +40,11 @@
     let isLoading = $state(true);
     let ignorePrefixes = $state(true);
 
+    let invalidMappingIds = $derived(
+        groupMappingsForSubmission([...hiddenMappings, ...visibleMappings])
+            .invalidMappingIds,
+    );
+
     let renamedFrom = $derived.by(() => {
         const map = new Map();
         for (const mapping of [...hiddenMappings, ...visibleMappings]) {
@@ -148,6 +153,7 @@
             candidates={visibleAdded}
             resourceType="Class"
             {renamedFrom}
+            {invalidMappingIds}
         />
     {/if}
 </div>

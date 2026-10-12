@@ -379,6 +379,9 @@ public class SchemaMigrationService
 
             for (var source : sources) {
                 var oldDomain = classChanges.get(source.getOldResources().getFirst().getDomain());
+                if (oldDomain == null) {
+                    continue;
+                }
                 var bucket = mappingAccessor.apply(oldDomain);
                 bucket.remove(source);
                 bucket.add(merge);

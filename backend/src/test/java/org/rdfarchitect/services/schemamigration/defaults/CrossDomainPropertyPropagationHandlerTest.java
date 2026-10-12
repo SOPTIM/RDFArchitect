@@ -68,7 +68,7 @@ class CrossDomainPropertyPropagationHandlerTest {
         subClass.addProperty(RDFS.subClassOf, superClass);
     }
 
-    private Resource declareAttribute(Model model, Resource domain, String name) {
+    private void declareAttribute(Model model, Resource domain, String name) {
         var attribute = model.createResource(PREFIX + name);
         attribute.addProperty(RDF.type, RDF.Property);
         attribute.addProperty(RDFS.label, model.createLiteral(name));
@@ -76,10 +76,9 @@ class CrossDomainPropertyPropagationHandlerTest {
         attribute.addProperty(CIMS.datatype, model.createResource(XSD_STRING));
         attribute.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:1..1"));
         attribute.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
-        return attribute;
     }
 
-    private Resource declareAssociation(Model model, Resource domain, Resource range, String name) {
+    private void declareAssociation(Model model, Resource domain, Resource range, String name) {
         var association = model.createResource(PREFIX + name);
         association.addProperty(RDF.type, RDF.Property);
         association.addProperty(RDFS.label, model.createLiteral(name));
@@ -89,15 +88,14 @@ class CrossDomainPropertyPropagationHandlerTest {
         association.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:0..1"));
         association.addProperty(
                 CIMS.inverseRoleName, model.createResource(PREFIX + name + ".inverse"));
-        return association;
     }
 
-    private SemanticAttributeChange attributeChange(String iri, SemanticResourceChangeType type) {
+    private SemanticAttributeChange attributeChange() {
         return SemanticAttributeChange.builder()
-                .iri(iri)
-                .label(iri)
+                .iri("http://example.org#A.voltage")
+                .label("http://example.org#A.voltage")
                 .domain(null)
-                .semanticResourceChangeType(type)
+                .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
                 .build();
     }
 
@@ -132,7 +130,6 @@ class CrossDomainPropertyPropagationHandlerTest {
         void processCrossDomainPropertyMappings_subclassOfOldDomainOnly_deletesOldPredicate() {
             var oldA = declareClass(oldModel, "A");
             declareAttribute(oldModel, oldA, "A.voltage");
-            var oldB = declareClass(oldModel, "B");
             var oldLostSub = declareClass(oldModel, "LostSub");
             declareSubclassOf(oldLostSub, oldA);
 
@@ -176,7 +173,6 @@ class CrossDomainPropertyPropagationHandlerTest {
             var oldGainedSub = declareClass(oldModel, "GainedSub");
             declareSubclassOf(oldGainedSub, oldB);
 
-            var newA = declareClass(newModel, "A");
             var newB = declareClass(newModel, "B");
             declareAttribute(newModel, newB, "B.voltage");
             var newGainedSub = declareClass(newModel, "GainedSub");
@@ -247,7 +243,6 @@ class CrossDomainPropertyPropagationHandlerTest {
             var oldA = declareClass(oldModel, "A");
             var oldTarget = declareClass(oldModel, "Target");
             declareAssociation(oldModel, oldA, oldTarget, "A.link");
-            var oldB = declareClass(oldModel, "B");
             var oldLostSub = declareClass(oldModel, "LostSub");
             declareSubclassOf(oldLostSub, oldA);
 
@@ -293,7 +288,6 @@ class CrossDomainPropertyPropagationHandlerTest {
             var oldGainedSub = declareClass(oldModel, "GainedSub");
             declareSubclassOf(oldGainedSub, oldB);
 
-            var newA = declareClass(newModel, "A");
             var newB = declareClass(newModel, "B");
             var newTarget = declareClass(newModel, "Target");
             declareAssociation(newModel, newB, newTarget, "B.link");
@@ -330,7 +324,6 @@ class CrossDomainPropertyPropagationHandlerTest {
         void processCrossDomainPropertyMappings_abstractDerivingClass_getsNoEntry() {
             var oldA = declareClass(oldModel, "A");
             declareAttribute(oldModel, oldA, "A.voltage");
-            var oldB = declareClass(oldModel, "B");
             var oldAbstractSub = oldModel.createResource(PREFIX + "AbstractSub");
             oldAbstractSub.addProperty(RDF.type, RDFS.Class);
             oldAbstractSub.addProperty(RDFS.label, oldModel.createLiteral("AbstractSub"));
@@ -366,7 +359,6 @@ class CrossDomainPropertyPropagationHandlerTest {
         void processCrossDomainPropertyMappings_classAlreadyListsProperty_notDuplicated() {
             var oldA = declareClass(oldModel, "A");
             declareAttribute(oldModel, oldA, "A.voltage");
-            var oldB = declareClass(oldModel, "B");
             var oldLostSub = declareClass(oldModel, "LostSub");
             declareSubclassOf(oldLostSub, oldA);
 
@@ -376,12 +368,7 @@ class CrossDomainPropertyPropagationHandlerTest {
             var newLostSub = declareClass(newModel, "LostSub");
             declareSubclassOf(newLostSub, newA);
 
-            var existing =
-                    new ArrayList<>(
-                            List.of(
-                                    attributeChange(
-                                            PREFIX + "A.voltage",
-                                            SemanticResourceChangeType.CHANGE)));
+            var existing = new ArrayList<>(List.of(attributeChange()));
             classes.add(
                     SemanticClassChange.builder()
                             .iri(PREFIX + "LostSub")
@@ -421,12 +408,10 @@ class CrossDomainPropertyPropagationHandlerTest {
             declareAttribute(oldModel, oldA, "A.voltage");
             var oldB = declareClass(oldModel, "B");
             declareAttribute(oldModel, oldB, "B.volt");
-            var oldMerged = declareClass(oldModel, "Merged");
             var oldLostSub = declareClass(oldModel, "LostSub");
             declareSubclassOf(oldLostSub, oldA);
 
             var newA = declareClass(newModel, "A");
-            var newB = declareClass(newModel, "B");
             var newMerged = declareClass(newModel, "Merged");
             declareAttribute(newModel, newMerged, "Merged.voltage");
             var newLostSub = declareClass(newModel, "LostSub");
@@ -474,8 +459,6 @@ class CrossDomainPropertyPropagationHandlerTest {
             var oldGainedSub = declareClass(oldModel, "GainedSub");
             declareSubclassOf(oldGainedSub, oldMerged);
 
-            var newA = declareClass(newModel, "A");
-            var newB = declareClass(newModel, "B");
             var newMerged = declareClass(newModel, "Merged");
             declareAttribute(newModel, newMerged, "Merged.voltage");
             var newGainedSub = declareClass(newModel, "GainedSub");
@@ -575,11 +558,9 @@ class CrossDomainPropertyPropagationHandlerTest {
             var oldA = declareClass(oldModel, "A");
             declareAttribute(oldModel, oldA, "A.voltage");
             var oldB1 = declareClass(oldModel, "B1");
-            var oldB2 = declareClass(oldModel, "B2");
             var oldGainedSub = declareClass(oldModel, "GainedSub");
             declareSubclassOf(oldGainedSub, oldB1);
 
-            var newA = declareClass(newModel, "A");
             var newB1 = declareClass(newModel, "B1");
             declareAttribute(newModel, newB1, "B1.voltage");
             var newB2 = declareClass(newModel, "B2");
@@ -623,8 +604,6 @@ class CrossDomainPropertyPropagationHandlerTest {
         void processCrossDomainPropertyMappings_subclassOfNeitherTarget_singleDeletedEntry() {
             var oldA = declareClass(oldModel, "A");
             declareAttribute(oldModel, oldA, "A.voltage");
-            var oldB1 = declareClass(oldModel, "B1");
-            var oldB2 = declareClass(oldModel, "B2");
             var oldLostSub = declareClass(oldModel, "LostSub");
             declareSubclassOf(oldLostSub, oldA);
 

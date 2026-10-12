@@ -582,23 +582,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
             allProperties.addAll(classChange.getEnumEntries());
         }
 
-        return allProperties.stream()
-                .filter(
-                        p ->
-                                (p.getSemanticResourceChangeType()
-                                                        == SemanticResourceChangeType.RENAME
-                                                || p.getSemanticResourceChangeType()
-                                                        == SemanticResourceChangeType.MOVE)
-                                        && p.getOldIRI() != null
-                                        && p.getAdditionalOldIRIs().isEmpty())
-                .collect(
-                        Collectors.groupingBy(
-                                SemanticResourceChange::getOldIRI, Collectors.counting()))
-                .entrySet()
-                .stream()
-                .filter(e -> e.getValue() > 1)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toSet());
+        return SplitSiblingGrouping.groupSplitSiblings(allProperties).keySet();
     }
 
     private <T extends SemanticResourceChange> void appendDirectProperties(

@@ -187,11 +187,14 @@ class SparqlUpdateGeneratorTest {
 
         var siblings =
                 List.of(
-                        splitSibling(PREFIX + "OldClass.voltage", PREFIX + "ClassA.voltage", "ClassA"),
-                        splitSibling(PREFIX + "OldClass.voltage", PREFIX + "ClassB.voltage", "ClassB"),
-                        splitSibling(PREFIX + "OldClass.voltage", PREFIX + "ClassC.voltage", "ClassC"));
+                        splitSibling(
+                                PREFIX + "OldClass.voltage", PREFIX + "ClassA.voltage", "ClassA"),
+                        splitSibling(
+                                PREFIX + "OldClass.voltage", PREFIX + "ClassB.voltage", "ClassB"),
+                        splitSibling(
+                                PREFIX + "OldClass.voltage", PREFIX + "ClassC.voltage", "ClassC"));
 
-        var update = generator.generateSplitAttributeUpdate(siblings);
+        var update = generator.generateSplitPropertyUpdate(siblings);
         UpdateAction.parseExecute(update, schema);
 
         assertThat(instance.hasProperty(oldAttribute)).isFalse();
@@ -217,17 +220,20 @@ class SparqlUpdateGeneratorTest {
 
         var siblings =
                 List.of(
-                        splitSibling(PREFIX + "OldClass.voltage", PREFIX + "ClassA.voltage", "ClassA"),
-                        splitSibling(PREFIX + "OldClass.voltage", PREFIX + "ClassB.voltage", "ClassB"));
+                        splitSibling(
+                                PREFIX + "OldClass.voltage", PREFIX + "ClassA.voltage", "ClassA"),
+                        splitSibling(
+                                PREFIX + "OldClass.voltage", PREFIX + "ClassB.voltage", "ClassB"));
 
-        var update = generator.generateSplitAttributeUpdate(siblings);
+        var update = generator.generateSplitPropertyUpdate(siblings);
         UpdateAction.parseExecute(update, schema);
 
         assertThat(instance.hasProperty(oldAttribute)).isFalse();
         assertThat(instance.getProperty(newAttribute1).getString()).isEqualTo("400");
     }
 
-    private SemanticAttributeChange splitSibling(String oldIri, String newIri, String domainLocalName) {
+    private SemanticAttributeChange splitSibling(
+            String oldIri, String newIri, String domainLocalName) {
         return SemanticAttributeChange.builder()
                 .iri(newIri)
                 .oldIRI(oldIri)

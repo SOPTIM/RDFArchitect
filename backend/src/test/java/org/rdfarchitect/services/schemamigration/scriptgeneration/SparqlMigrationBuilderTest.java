@@ -22,7 +22,6 @@ import static org.mockito.Mockito.lenient;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,11 +67,10 @@ class SparqlMigrationBuilderTest {
         builder = new SparqlMigrationBuilder(new SparqlUpdateGenerator(migrationSessionStore));
     }
 
-    private Resource concreteClass(String localName) {
+    private void concreteClass(String localName) {
         var resource = schema.createResource(PREFIX + localName);
         resource.addProperty(RDF.type, RDFS.Class);
         resource.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
-        return resource;
     }
 
     @Test
@@ -291,7 +289,8 @@ class SparqlMigrationBuilderTest {
                 .contains(PREFIX + "Base.link");
     }
 
-    private SemanticAttributeChange splitSibling(String oldIri, String newIri, String domainLocalName) {
+    private SemanticAttributeChange splitSibling(
+            String oldIri, String newIri, String domainLocalName) {
         return SemanticAttributeChange.builder()
                 .iri(newIri)
                 .oldIRI(oldIri)

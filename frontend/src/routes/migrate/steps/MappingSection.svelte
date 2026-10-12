@@ -31,6 +31,7 @@
         resourceType = "Item",
         renamedFrom = new Map(),
         currentClassLabel = null,
+        invalidMappingIds = new Set(),
     } = $props();
 
     let sortedAdded = $derived(
@@ -46,6 +47,7 @@
             {getCandidateSubtitle}
             {resourceType}
             {currentClassLabel}
+            {invalidMappingIds}
         />
     {/if}
 

@@ -20,7 +20,6 @@ package org.rdfarchitect.services.schemamigration.artifacts;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.datatypes.TypeMapper;
-import org.apache.jena.query.ParameterizedSparqlString;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.update.UpdateRequest;
@@ -29,6 +28,7 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticPropertyChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.cim.queries.templates.SparqlTemplateLoader;
 import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
@@ -124,49 +124,19 @@ public class SparqlUpdateGenerator {
         return result.toString();
     }
 
-    public String generateSplitAttributeUpdate(List<SemanticAttributeChange> siblings) {
+    public <T extends SemanticPropertyChange> String generateSplitPropertyUpdate(List<T> siblings) {
         var oldAttribute = siblings.getFirst().getOldIRI();
         var result = new UpdateRequest();
         for (var sibling : siblings) {
             for (var classIri : getClassHierarchy(sibling.getDomain())) {
-                var pss = new ParameterizedSparqlString(buildSplitTargetUpdateText("Attribute"));
-                pss.setIri("oldAttribute", oldAttribute);
-                pss.setIri("newAttribute", sibling.getIri());
+                var pss = SparqlTemplateLoader.loadTemplate("migration/property-split");
+                pss.setIri("oldProperty", oldAttribute);
+                pss.setIri("newProperty", sibling.getIri());
                 pss.setIri("domain", classIri);
                 result.add(pss.toString());
             }
         }
         return result.toString();
-    }
-
-    public String generateSplitAssociationUpdate(List<SemanticAssociationChange> siblings) {
-        var oldAssociation = siblings.getFirst().getOldIRI();
-        var result = new UpdateRequest();
-        for (var sibling : siblings) {
-            for (var classIri : getClassHierarchy(sibling.getDomain())) {
-                var pss = new ParameterizedSparqlString(buildSplitTargetUpdateText("Association"));
-                pss.setIri("oldAssociation", oldAssociation);
-                pss.setIri("newAssociation", sibling.getIri());
-                pss.setIri("domain", classIri);
-                result.add(pss.toString());
-            }
-        }
-        return result.toString();
-    }
-
-    /**
-     * Each split target is scoped to its own class hierarchy ({@code ?instance a <domain>}) - a
-     * shared, unscoped block would copy every target's value onto every instance regardless of
-     * which split target it actually belongs to.
-     */
-    private String buildSplitTargetUpdateText(String varBase) {
-        var sb = new StringBuilder();
-        sb.append("DELETE {\n    ?instance ?old").append(varBase).append(" ?value .\n}\n");
-        sb.append("INSERT {\n    ?instance ?new").append(varBase).append(" ?value .\n}\n");
-        sb.append("WHERE {\n    ?instance ?old")
-                .append(varBase)
-                .append(" ?value .\n    ?instance a ?domain .\n};");
-        return sb.toString();
     }
 
     public String generateDatatypeChangedUpdate(SemanticAttributeChange attributeChange) {
@@ -275,13 +245,6 @@ public class SparqlUpdateGenerator {
                 + generateAddAssociationUpdate(associationChange);
     }
 
-    /**
-     * Whether the attribute is left without a default value. A required attribute may be waived on
-     * purpose when no default makes sense for it (RDFA-714), and then nothing is generated for it:
-     * the instances stay uninitialized instead of being filled with an invented value, and the
-     * existing ones keep the values they have. Without this guard the missing value would either
-     * end up in the script as an ill-typed empty literal or break generation altogether.
-     */
     private boolean lacksDefaultValue(SemanticAttributeChange attributeChange) {
         return attributeChange.getDefaultValue() == null
                 || attributeChange.getDefaultValue().isBlank();

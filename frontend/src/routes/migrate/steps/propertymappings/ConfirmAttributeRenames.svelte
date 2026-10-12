@@ -24,7 +24,7 @@
 
     import MappingSection from "../MappingSection.svelte";
 
-    const { classes, isLoading } = $props();
+    const { classes, isLoading, invalidMappingIds = new Set() } = $props();
 
     let renamedFrom = $derived(
         buildRenamedFromMap(classes, cls => cls.attributes?.deletedAndRemapped),
@@ -83,6 +83,7 @@
                     resourceType="Attribute"
                     {renamedFrom}
                     currentClassLabel={cls.classLabel}
+                    {invalidMappingIds}
                 />
             {/if}
         {/each}

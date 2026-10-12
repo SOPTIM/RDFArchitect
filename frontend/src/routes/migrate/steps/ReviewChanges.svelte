@@ -20,7 +20,7 @@
 
     import {
         confirmMigrationChanges,
-        getMigrationChanges
+        getMigrationChanges,
     } from "$lib/api/generated/index.ts";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
@@ -35,10 +35,13 @@
     let ignorePrefixes = $state(false);
 
     let splitAttributeIris = $derived(
-        findSplitSiblingIris(classes, cls => cls.attributes)
+        findSplitSiblingIris(classes, cls => cls.attributes),
     );
     let splitAssociationIris = $derived(
-        findSplitSiblingIris(classes, cls => cls.associations)
+        findSplitSiblingIris(classes, cls => cls.associations),
+    );
+    let splitEnumEntryIris = $derived(
+        findSplitSiblingIris(classes, cls => cls.enumEntries),
     );
 
     onMount(async () => {
@@ -61,13 +64,13 @@
 
     export async function onNext() {
         const { error } = await confirmMigrationChanges({
-            body: classes
+            body: classes,
         });
         if (error) {
             console.log("Failed to fetch changes:", error);
             toastStore.error(
                 "Save failed",
-                "Could not save changes for the migration."
+                "Could not save changes for the migration.",
             );
         }
     }
@@ -113,8 +116,9 @@
                                     title="Attribute"
                                     {ignorePrefixes}
                                     isSplit={splitAttributeIris.has(
-                                    attribute.iri,
-                                )} />
+                                        attribute.iri,
+                                    )}
+                                />
                             {/if}
                         {/each}
                     </div>
@@ -138,8 +142,8 @@
                                     title="Association"
                                     {ignorePrefixes}
                                     isSplit={splitAssociationIris.has(
-                                    association.iri,
-                                )}
+                                        association.iri,
+                                    )}
                                 />
                             {/if}
                         {/each}
@@ -160,6 +164,7 @@
                                 }
                                 title="Enum Entry"
                                 {ignorePrefixes}
+                                isSplit={splitEnumEntryIris.has(enumEntry.iri)}
                             />
                         {/each}
                     </div>
