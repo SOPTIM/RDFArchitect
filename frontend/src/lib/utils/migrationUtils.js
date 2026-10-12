@@ -24,6 +24,8 @@ const RENAMED_FROM_VERBS = {
     SPLIT: "split from",
 };
 
+const RENAME_LIKE_CHANGE_TYPES = ["CHANGE", "RENAME", "MOVE", "SPLIT", "MERGE"];
+
 export function isPrefixOnlyRename(oldIRI, newIRI) {
     if (!newIRI || !oldIRI) {
         return false;
@@ -97,34 +99,6 @@ export function computeMappingType(oldResources, newResources) {
     const oldDomain = oldResources[0]?.domain ?? null;
     const newDomain = newResources[0]?.domain ?? null;
     return oldDomain === newDomain ? "RENAME" : "MOVE";
-}
-
-export function findSplitSiblingIris(classes, getProperties) {
-    const byOldIRI = new Map();
-    for (const cls of classes ?? []) {
-        for (const property of getProperties(cls) ?? []) {
-            const isRenameOrMove =
-                property.semanticResourceChangeType === "RENAME" ||
-                property.semanticResourceChangeType === "MOVE";
-            if (
-                isRenameOrMove &&
-                property.oldIRI &&
-                (property.additionalOldIRIs?.length ?? 0) === 0
-            ) {
-                const siblings = byOldIRI.get(property.oldIRI) ?? [];
-                siblings.push(property.iri);
-                byOldIRI.set(property.oldIRI, siblings);
-            }
-        }
-    }
-
-    const result = new Set();
-    for (const siblings of byOldIRI.values()) {
-        if (siblings.length > 1) {
-            siblings.forEach(iri => result.add(iri));
-        }
-    }
-    return result;
 }
 
 function oldLabelWithClass(resource) {
@@ -278,8 +252,7 @@ export function hasDataTypeChange(attribute) {
  */
 export function canKeepExistingValues(attribute) {
     if (
-        attribute.semanticResourceChangeType !== "CHANGE" &&
-        attribute.semanticResourceChangeType !== "RENAME"
+        !RENAME_LIKE_CHANGE_TYPES.includes(attribute.semanticResourceChangeType)
     ) {
         return false;
     }
@@ -337,8 +310,7 @@ export function requiresDefaultValue(attribute) {
         return !attribute.optional;
     }
     if (
-        attribute.semanticResourceChangeType !== "CHANGE" &&
-        attribute.semanticResourceChangeType !== "RENAME"
+        !RENAME_LIKE_CHANGE_TYPES.includes(attribute.semanticResourceChangeType)
     ) {
         return false;
     }

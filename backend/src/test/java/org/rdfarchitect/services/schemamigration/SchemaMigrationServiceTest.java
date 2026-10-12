@@ -157,9 +157,6 @@ class SchemaMigrationServiceTest {
                 .toList();
     }
 
-    /**
-     * Maps an attribute rename by hand, as the user does when similarity is below the threshold.
-     */
     private void confirmAttributeRename(String classLabel, String oldLabel, String newLabel) {
         var confirmed = new ArrayList<ClassPropertyMappings>();
         for (var overview : service.getPropertyMappings()) {
@@ -189,11 +186,6 @@ class SchemaMigrationServiceTest {
         service.confirmPropertyMappings(confirmed);
     }
 
-    /**
-     * Maps an attribute move between two unrelated classes by hand - chain-pooled auto-detection
-     * only pairs a deletion with an addition found via the deleted side's own superclass/subclass
-     * chain, so it never pairs two classes with no relation to each other.
-     */
     private void confirmAttributeMove(
             String oldClassLabel, String newClassLabel, String attributeLabel) {
         var overviews = service.getPropertyMappings();
@@ -326,13 +318,6 @@ class SchemaMigrationServiceTest {
                 .toList();
     }
 
-    /**
-     * A "Base" class and a "Sub" class that is {@code rdfs:subClassOf Base}, with a "voltage"
-     * attribute declared on whichever of the two {@code attributeOnSub} selects. Using a
-     * class-prefixed attribute IRI (as CIM does) means moving the attribute to the other class
-     * changes its IRI too, so the triple diff sees a DELETE+ADD pair rather than an in-place change
-     * - exactly the shape the rename/move detector is meant to catch.
-     */
     private static Model inheritanceSchema(boolean attributeOnSub) {
         var model = ModelFactory.createDefaultModel();
 
@@ -385,10 +370,6 @@ class SchemaMigrationServiceTest {
         assertThat(attributeMoveTargetClass("voltage")).isEqualTo("Sub");
     }
 
-    /**
-     * The chain-wide candidate pool means the same mapping can plausibly be handed back under more
-     * than one class's bucket in a single confirm call - it must only be materialized once.
-     */
     @Test
     void confirmPropertyMappings_sameMappingSubmittedUnderTwoClassBuckets_materializesOnce() {
         initContext(inheritanceSchema(true), inheritanceSchema(false));
@@ -419,9 +400,6 @@ class SchemaMigrationServiceTest {
 
         service.confirmPropertyMappings(List.of(subMappings, baseMappings));
 
-        // the old domain (Sub) also carries its own DELETED_FROM_MAPPING marker under the same
-        // label now (see attachDeletionMarkersForLosingDomains) - only the materialized
-        // move/rename result itself must not be duplicated
         var materializedVoltageCount =
                 migrationSessionStore.getContext().getDiffAfterPropertyConfirm().stream()
                         .flatMap(c -> c.getAttributes().stream())
@@ -435,15 +413,6 @@ class SchemaMigrationServiceTest {
         assertThat(materializedVoltageCount).isEqualTo(1);
     }
 
-    /**
-     * A moved attribute's own domain classes (Base/Target) are handled by its own merged
-     * RENAME/MOVE object - this covers the subclasses that only find out about the move through
-     * inheritance: LostSub derives from Base only, so it loses the attribute entirely; GainedSub
-     * derives from Target only, so it gains a fresh one and needs a default value. Base and Target
-     * are deliberately unrelated classes, so the mapping is confirmed by hand (like {@link
-     * #confirmAttributeRename}) rather than via chain-pooled auto-detection, which only pairs a
-     * deletion with an addition found in the deleted side's own superclass/subclass chain.
-     */
     @Test
     void getDefaultValueViews_attributeMovedAcrossDomains_propagatesToLostAndGainedSubclasses() {
         initContext(
@@ -483,14 +452,6 @@ class SchemaMigrationServiceTest {
                                         && a.getDataType() == null);
     }
 
-    /**
-     * GainedSub has no change of its own - it only shows up in {@code getDefaultValueViews()}
-     * because the cross-domain propagation step synthesizes an entry for it. Submitting its default
-     * value has to actually stick: before this was fixed, {@code submitDefaultValues} matched views
-     * against the pre-propagation class list, which has no entry for GainedSub at all, so the view
-     * (and the attribute's default value) was silently dropped and the generated script never
-     * initialized the attribute on GainedSub's instances.
-     */
     @Test
     void submitDefaultValues_classGainedPropertyOnlyThroughPropagation_keepsItsSubmittedDefault() {
         initContext(
@@ -573,12 +534,6 @@ class SchemaMigrationServiceTest {
         return model;
     }
 
-    /**
-     * The class holding the materialized move/rename result for this attribute - not just any class
-     * whose attributes mention the label, since the old domain now also carries a
-     * DELETED_FROM_MAPPING marker of its own under the same label (see {@code
-     * attachDeletionMarkersForLosingDomains}).
-     */
     private String attributeMoveTargetClass(String attributeLabel) {
         return migrationSessionStore.getContext().getDiffAfterPropertyConfirm().stream()
                 .filter(
@@ -620,15 +575,6 @@ class SchemaMigrationServiceTest {
         return model;
     }
 
-    /**
-     * A "Base" class with sibling subclasses (one per label in {@code subLabels}, each {@code
-     * rdfs:subClassOf Base}), with a "voltage" attribute declared on whichever classes {@code
-     * voltageOwners} names. Used to exercise a merge (voltage declared on several siblings,
-     * consolidated onto Base) or a split (declared on Base, pushed down onto several siblings) -
-     * per-class chain-pooled detection only ever sees one sibling's own deletion paired with Base's
-     * own addition at a time, so recognizing the full merge/split requires collapsing those
-     * independent detections.
-     */
     private static Model siblingSchema(List<String> subLabels, Set<String> voltageOwners) {
         var model = ModelFactory.createDefaultModel();
 
@@ -663,7 +609,6 @@ class SchemaMigrationServiceTest {
         return model;
     }
 
-    /** Adds one more attribute to a {@link #siblingSchema} model, independent of "voltage". */
     private static void addAttribute(Model model, String domainLabel, String iri, String label) {
         var attribute = model.createResource(PREFIX + iri);
         attribute.addProperty(RDF.type, RDF.Property);
@@ -725,7 +670,6 @@ class SchemaMigrationServiceTest {
 
         var baseMappings = deletedAndRemappedAttributesFor(overviews, "Base");
         var sub1Mappings = deletedAndRemappedAttributesFor(overviews, "Sub1");
-        var sub2Mappings = deletedAndRemappedAttributesFor(overviews, "Sub2");
 
         assertThat(baseMappings).hasSize(1);
         var split = baseMappings.getFirst();
@@ -739,17 +683,8 @@ class SchemaMigrationServiceTest {
         assertThat(sub1Mappings)
                 .as("neither sibling owns the deletion, so neither offers it for remapping")
                 .isEmpty();
-        assertThat(sub2Mappings).isEmpty();
     }
 
-    /**
-     * Before the fix, Sub1 and Sub2 (the merge's old domains) lost "voltage" entirely once it was
-     * confirmed - nothing in their own property list recorded that it had been merged away, so the
-     * review step showed them as classes with no changes at all. Each must now carry its own
-     * DELETED_FROM_MAPPING marker for it (a plain DELETE would instead generate its own SPARQL
-     * deletion for that exact predicate, racing the merge's own rename), while Base keeps the
-     * single materialized merge result.
-     */
     @Test
     void confirmPropertyMappings_merge_leavesDeleteMarkersOnBothOldDomains() {
         initContext(
@@ -780,16 +715,10 @@ class SchemaMigrationServiceTest {
                         .toList();
         assertThat(baseVoltage).hasSize(1);
         assertThat(baseVoltage.getFirst().getSemanticResourceChangeType())
-                .isNotEqualTo(SemanticResourceChangeType.DELETED_FROM_MAPPING);
+                .isEqualTo(SemanticResourceChangeType.MERGE);
         assertThat(baseVoltage.getFirst().getAdditionalOldIRIs()).hasSize(1);
     }
 
-    /**
-     * Revisiting this step (e.g. navigating back after confirming) must not re-run detection - a
-     * non-empty mapping list can just as well mean the user already made their own choice, so
-     * re-collapsing on every call would silently overwrite that choice with the auto-detected merge
-     * again.
-     */
     @Test
     void getPropertyMappings_calledTwice_doesNotDuplicateOrChangeTheDetectedMerge() {
         initContext(
@@ -849,16 +778,8 @@ class SchemaMigrationServiceTest {
         assertThat(deletedAndRemappedAttributesFor(overviews, "Sub3")).isEmpty();
     }
 
-    /**
-     * A class that both contributes an old resource to a cross-class merge and independently
-     * renames one of its own, unrelated attributes in the same run - the two must not interfere
-     * with each other.
-     */
     @Test
     void getPropertyMappings_classContributesToMergeAndHasUnrelatedOwnRename_bothCoexist() {
-        // TripleChangeAnalyser derives an attribute's label from its IRI suffix, split on the
-        // first '.' (the "ClassName." part is discarded) - varying what comes before that first
-        // dot keeps the label "status" on both sides while still giving each a distinct IRI.
         var original = siblingSchema(List.of("Sub1", "Sub2"), Set.of("Sub1", "Sub2"));
         addAttribute(original, "Sub1", "Sub1v1.status", "status");
         var updated = siblingSchema(List.of("Sub1", "Sub2"), Set.of("Base"));
@@ -869,9 +790,9 @@ class SchemaMigrationServiceTest {
 
         var sub1Mappings = deletedAndRemappedAttributesFor(service.getPropertyMappings(), "Sub1");
 
-        assertThat(sub1Mappings).hasSize(2);
-        assertThat(sub1Mappings).anyMatch(m -> m.getType() == MappingType.MERGE);
         assertThat(sub1Mappings)
+                .hasSize(2)
+                .anyMatch(m -> m.getType() == MappingType.MERGE)
                 .anyMatch(
                         m ->
                                 m.getType() == MappingType.RENAME
@@ -881,11 +802,6 @@ class SchemaMigrationServiceTest {
                                                 .equals("status"));
     }
 
-    /**
-     * Mirrors {@link #siblingSchema}, but for associations instead of attributes - confirms
-     * collapseMovesIntoMerges generalizes beyond attributes, as {@code collectMovedPropertyIris}
-     * already assumed associations can carry MERGE/SPLIT.
-     */
     private static Model siblingAssociationSchema(List<String> subLabels, Set<String> owners) {
         var model = ModelFactory.createDefaultModel();
 
@@ -908,11 +824,6 @@ class SchemaMigrationServiceTest {
         terminal.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
 
         for (var owner : owners) {
-            // the association's own IRI deliberately does NOT embed the owning class name the
-            // way attribute IRIs do - TripleChangeAnalyser derives an association's label from
-            // its IRI's whole fragment (unlike attributes, it isn't split on the first '.'), so
-            // varying the path instead of the fragment keeps "Terminals" as the label on every
-            // owner while still giving each owner's association a distinct IRI.
             var association = model.createResource("http://example.org/" + owner + "#Terminals");
             association.addProperty(RDF.type, RDF.Property);
             association.addProperty(RDFS.label, model.createLiteral("Terminals"));
@@ -948,12 +859,6 @@ class SchemaMigrationServiceTest {
         assertThat(sub1Mappings.getFirst().getType()).isEqualTo(MappingType.MERGE);
     }
 
-    /**
-     * Two unrelated enumeration classes that each have an entry sharing the same label - since enum
-     * classes never participate in {@code rdfs:subClassOf}, their chain-pooled candidates never
-     * overlap, so collapseMovesIntoMerges must be a safe no-op here even though it is now
-     * generalized to enum entries.
-     */
     private static Model unrelatedEnumEntrySchema(boolean entryOnA) {
         var model = ModelFactory.createDefaultModel();
 

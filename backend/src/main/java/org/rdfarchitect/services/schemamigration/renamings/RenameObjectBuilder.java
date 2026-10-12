@@ -53,9 +53,12 @@ public class RenameObjectBuilder {
         result.setAdditionalOldIRIs(
                 oldResources.stream().skip(1).map(SemanticResourceChange::getIri).toList());
         result.setSemanticResourceChangeType(
-                resourceMapping.getType() == MappingType.MOVE
-                        ? SemanticResourceChangeType.MOVE
-                        : SemanticResourceChangeType.RENAME);
+                switch (resourceMapping.getType()) {
+                    case MOVE -> SemanticResourceChangeType.MOVE;
+                    case MERGE -> SemanticResourceChangeType.MERGE;
+                    case SPLIT -> SemanticResourceChangeType.SPLIT;
+                    case RENAME, UNMAPPED -> SemanticResourceChangeType.RENAME;
+                });
         result.setChanges(mergeChangesFromAllOldResources(addedResource, oldResources));
 
         if (result instanceof SemanticClassChange classChange
@@ -84,12 +87,11 @@ public class RenameObjectBuilder {
         var deletedResource = resourceMapping.getOldResources().getFirst();
         var result = new ArrayList<T>();
         for (var addedResource : resourceMapping.getNewResources()) {
-            result.add(
-                    createRenameObject(
-                            new ResourceMapping<>(
-                                    deletedResource,
-                                    addedResource,
-                                    resourceMapping.getConfidenceScore())));
+            var siblingMapping =
+                    new ResourceMapping<>(
+                            deletedResource, addedResource, resourceMapping.getConfidenceScore());
+            siblingMapping.setType(MappingType.SPLIT);
+            result.add(createRenameObject(siblingMapping));
         }
         return result;
     }

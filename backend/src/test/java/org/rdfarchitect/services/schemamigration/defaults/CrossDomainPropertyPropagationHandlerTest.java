@@ -151,7 +151,7 @@ class CrossDomainPropertyPropagationHandlerTest {
                                     SemanticResourceChangeType.ADD),
                             1.0);
 
-            CrossDomainPropertyPropagationHandler.processCrossDomainPropertyMappings(
+            CrossDomainPropertyPropagationHandler.processPropertyMoveInheritanceChanges(
                     classes, oldModel, newModel, List.of(mapping), List.of());
 
             var lostSubChange = classChange(PREFIX + "LostSub");
@@ -190,7 +190,7 @@ class CrossDomainPropertyPropagationHandlerTest {
                                     SemanticResourceChangeType.ADD),
                             1.0);
 
-            CrossDomainPropertyPropagationHandler.processCrossDomainPropertyMappings(
+            CrossDomainPropertyPropagationHandler.processPropertyMoveInheritanceChanges(
                     classes, oldModel, newModel, List.of(mapping), List.of());
 
             var gainedSubChange = classChange(PREFIX + "GainedSub");
@@ -232,7 +232,7 @@ class CrossDomainPropertyPropagationHandlerTest {
                                     SemanticResourceChangeType.ADD),
                             1.0);
 
-            CrossDomainPropertyPropagationHandler.processCrossDomainPropertyMappings(
+            CrossDomainPropertyPropagationHandler.processPropertyMoveInheritanceChanges(
                     classes, oldModel, newModel, List.of(mapping), List.of());
 
             assertThat(classChange(PREFIX + "KeptSub")).isNull();
@@ -265,7 +265,7 @@ class CrossDomainPropertyPropagationHandlerTest {
                                     SemanticResourceChangeType.ADD),
                             1.0);
 
-            CrossDomainPropertyPropagationHandler.processCrossDomainPropertyMappings(
+            CrossDomainPropertyPropagationHandler.processPropertyMoveInheritanceChanges(
                     classes, oldModel, newModel, List.of(), List.of(mapping));
 
             var lostSubChange = classChange(PREFIX + "LostSub");
@@ -306,7 +306,7 @@ class CrossDomainPropertyPropagationHandlerTest {
                                     SemanticResourceChangeType.ADD),
                             1.0);
 
-            CrossDomainPropertyPropagationHandler.processCrossDomainPropertyMappings(
+            CrossDomainPropertyPropagationHandler.processPropertyMoveInheritanceChanges(
                     classes, oldModel, newModel, List.of(), List.of(mapping));
 
             var gainedSubChange = classChange(PREFIX + "GainedSub");
@@ -349,7 +349,7 @@ class CrossDomainPropertyPropagationHandlerTest {
                                     SemanticResourceChangeType.ADD),
                             1.0);
 
-            CrossDomainPropertyPropagationHandler.processCrossDomainPropertyMappings(
+            CrossDomainPropertyPropagationHandler.processPropertyMoveInheritanceChanges(
                     classes, oldModel, newModel, List.of(mapping), List.of());
 
             assertThat(classChange(PREFIX + "AbstractSub")).isNull();
@@ -391,7 +391,7 @@ class CrossDomainPropertyPropagationHandlerTest {
                                     SemanticResourceChangeType.ADD),
                             1.0);
 
-            CrossDomainPropertyPropagationHandler.processCrossDomainPropertyMappings(
+            CrossDomainPropertyPropagationHandler.processPropertyMoveInheritanceChanges(
                     classes, oldModel, newModel, List.of(mapping), List.of());
 
             assertThat(classChange(PREFIX + "LostSub").getAttributes()).hasSize(1);
@@ -434,7 +434,7 @@ class CrossDomainPropertyPropagationHandlerTest {
                                     SemanticResourceChangeType.ADD),
                             1.0);
 
-            CrossDomainPropertyPropagationHandler.processCrossDomainPropertyMappings(
+            CrossDomainPropertyPropagationHandler.processPropertyMoveInheritanceChanges(
                     classes, oldModel, newModel, List.of(mapping), List.of());
 
             var lostSubChange = classChange(PREFIX + "LostSub");
@@ -481,7 +481,7 @@ class CrossDomainPropertyPropagationHandlerTest {
                                     SemanticResourceChangeType.ADD),
                             1.0);
 
-            CrossDomainPropertyPropagationHandler.processCrossDomainPropertyMappings(
+            CrossDomainPropertyPropagationHandler.processPropertyMoveInheritanceChanges(
                     classes, oldModel, newModel, List.of(mapping), List.of());
 
             var gainedSubChange = classChange(PREFIX + "GainedSub");
@@ -546,7 +546,7 @@ class CrossDomainPropertyPropagationHandlerTest {
                                             SemanticResourceChangeType.ADD)),
                             1.0);
 
-            CrossDomainPropertyPropagationHandler.processCrossDomainPropertyMappings(
+            CrossDomainPropertyPropagationHandler.processPropertyMoveInheritanceChanges(
                     classes, oldModel, newModel, List.of(mapping), List.of());
 
             assertThat(classChange(PREFIX + "KeptSub")).isNull();
@@ -585,7 +585,7 @@ class CrossDomainPropertyPropagationHandlerTest {
                                             SemanticResourceChangeType.ADD)),
                             1.0);
 
-            CrossDomainPropertyPropagationHandler.processCrossDomainPropertyMappings(
+            CrossDomainPropertyPropagationHandler.processPropertyMoveInheritanceChanges(
                     classes, oldModel, newModel, List.of(mapping), List.of());
 
             var gainedSubChange = classChange(PREFIX + "GainedSub");
@@ -632,7 +632,7 @@ class CrossDomainPropertyPropagationHandlerTest {
                                             SemanticResourceChangeType.ADD)),
                             1.0);
 
-            CrossDomainPropertyPropagationHandler.processCrossDomainPropertyMappings(
+            CrossDomainPropertyPropagationHandler.processPropertyMoveInheritanceChanges(
                     classes, oldModel, newModel, List.of(mapping), List.of());
 
             var lostSubChange = classChange(PREFIX + "LostSub");

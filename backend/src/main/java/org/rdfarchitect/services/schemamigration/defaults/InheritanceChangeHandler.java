@@ -93,8 +93,6 @@ public class InheritanceChangeHandler {
         removeRenamedClassesFromSuperClassChanges(
                 oldSuperClasses, newSuperClasses, classRenames, oldModel, newModel);
 
-        // a property that was explicitly moved is already represented by its own merged mapping
-        // entry, not by inheritance propagation, even if it also sits in a changed super/subclass
         var propertiesToRemove = collectPropertiesToRemove(oldSuperClasses, movedPropertyIris);
         var propertiesToAdd =
                 collectPropertiesToAdd(newSuperClasses, allClassChanges, movedPropertyIris);

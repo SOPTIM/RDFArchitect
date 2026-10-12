@@ -144,8 +144,9 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         var update =
                 switch (attributeChange.getSemanticResourceChangeType()) {
                     case DELETE -> updateGenerator.generateDeletePropertyUpdate(attributeChange);
-                    case RENAME, MOVE ->
-                            generateRenameOrMoveAttributeUpdate(attributeChange, splitGroups);
+                    case RENAME, MOVE, MERGE ->
+                            updateGenerator.generateRenameAttributeUpdate(attributeChange);
+                    case SPLIT -> generateSplitAttributeUpdate(attributeChange, splitGroups);
                     case ADD ->
                             updateGenerator.generateAddAttributeUpdate(attributeChange, classIri);
                     case ADDED_FROM_INHERITANCE ->
@@ -164,32 +165,30 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         var type = attributeChange.getSemanticResourceChangeType();
         if (type == SemanticResourceChangeType.CHANGE
                 || type == SemanticResourceChangeType.RENAME
-                || type == SemanticResourceChangeType.MOVE) {
+                || type == SemanticResourceChangeType.MOVE
+                || type == SemanticResourceChangeType.SPLIT
+                || type == SemanticResourceChangeType.MERGE) {
             processAttributeFieldChanges(attributeChange, classIri, sb);
         }
 
         return sb.toString();
     }
 
-    private String generateRenameOrMoveAttributeUpdate(
+    private String generateSplitAttributeUpdate(
             SemanticAttributeChange attributeChange, SplitGroups splitGroups) {
         var group = splitGroups.attributeGroups().get(attributeChange.getOldIRI());
-        if (group == null) {
-            return updateGenerator.generateRenameAttributeUpdate(attributeChange);
-        }
-        if (!splitGroups.emittedAttributeGroups().add(attributeChange.getOldIRI())) {
+        if (group == null
+                || !splitGroups.emittedAttributeGroups().add(attributeChange.getOldIRI())) {
             return "";
         }
         return updateGenerator.generateSplitPropertyUpdate(group);
     }
 
-    private String generateRenameOrSplitAssociationUpdate(
+    private String generateSplitAssociationUpdate(
             SemanticAssociationChange associationChange, SplitGroups splitGroups) {
         var group = splitGroups.associationGroups().get(associationChange.getOldIRI());
-        if (group == null) {
-            return updateGenerator.generateRenameAssociationUpdate(associationChange);
-        }
-        if (!splitGroups.emittedAssociationGroups().add(associationChange.getOldIRI())) {
+        if (group == null
+                || !splitGroups.emittedAssociationGroups().add(associationChange.getOldIRI())) {
             return "";
         }
         return updateGenerator.generateSplitPropertyUpdate(group);
@@ -234,7 +233,7 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         var update =
                 switch (enumEntryChange.getSemanticResourceChangeType()) {
                     case DELETE -> updateGenerator.generateDeleteEnumEntryUpdate(enumEntryChange);
-                    case RENAME, MOVE ->
+                    case RENAME, MOVE, SPLIT, MERGE ->
                             updateGenerator.generateRenameEnumEntryUpdate(enumEntryChange);
                     default -> null;
                 };
@@ -261,8 +260,9 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                     case DELETED_FROM_INHERITANCE ->
                             updateGenerator.generateDeletePropertyFromSingleClassUpdate(
                                     associationChange, classIri);
-                    case RENAME, MOVE ->
-                            generateRenameOrSplitAssociationUpdate(associationChange, splitGroups);
+                    case RENAME, MOVE, MERGE ->
+                            updateGenerator.generateRenameAssociationUpdate(associationChange);
+                    case SPLIT -> generateSplitAssociationUpdate(associationChange, splitGroups);
                     default -> null;
                 };
 
@@ -273,7 +273,9 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         var type = associationChange.getSemanticResourceChangeType();
         if (type == SemanticResourceChangeType.CHANGE
                 || type == SemanticResourceChangeType.RENAME
-                || type == SemanticResourceChangeType.MOVE) {
+                || type == SemanticResourceChangeType.MOVE
+                || type == SemanticResourceChangeType.SPLIT
+                || type == SemanticResourceChangeType.MERGE) {
             processAssociationFieldChanges(associationChange, sb);
         }
 

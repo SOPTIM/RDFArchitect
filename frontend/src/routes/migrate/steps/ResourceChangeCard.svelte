@@ -28,7 +28,6 @@
         resource = $bindable(),
         title = "",
         ignorePrefixes = false,
-        isSplit = false,
     } = $props();
 
     const RESOURCE_CHANGE_LABELS = {
@@ -73,7 +72,7 @@
     let newLabel = $derived(new URI(resource.iri).suffix);
 
     let moveDomainChange = $derived(
-        resource.semanticResourceChangeType === "MOVE" && !isSplit
+        resource.semanticResourceChangeType === "MOVE"
             ? resource.changes?.find(
                   c => c.semanticFieldChangeType === "DOMAIN_CHANGE",
               )
@@ -82,20 +81,6 @@
 
     let mergedFromLabels = $derived(
         (resource.additionalOldIRIs ?? []).map(iri => new URI(iri).suffix),
-    );
-
-    /**
-     * The badge shown for the change is picked from this rather than straight off
-     * `semanticResourceChangeType`: a split sibling and a merge result are both confirmed as plain
-     * RENAME/MOVE changes (see `findSplitSiblingIris` and the `additionalOldIRIs` merge signal),
-     * so the more specific label has to be layered on top here instead.
-     */
-    let displayChangeType = $derived(
-        isSplit
-            ? "SPLIT"
-            : mergedFromLabels.length > 0
-              ? "MERGE"
-              : resource.semanticResourceChangeType,
     );
 
     function getChangeLabel(changeType) {
@@ -155,10 +140,10 @@
             </h3>
         </div>
         <span
-            class={`rounded border px-2 py-0.5 text-xs font-medium ${badgeClass(displayChangeType)}`}
+            class={`rounded border px-2 py-0.5 text-xs font-medium ${badgeClass(resource.semanticResourceChangeType)}`}
         >
-            {RESOURCE_CHANGE_LABELS[displayChangeType] ??
-                displayChangeType ??
+            {RESOURCE_CHANGE_LABELS[resource.semanticResourceChangeType] ??
+                resource.semanticResourceChangeType ??
                 "—"}
         </span>
     </div>
@@ -188,7 +173,7 @@
         </div>
     {/if}
 
-    {#if isSplit && oldLabel}
+    {#if resource.semanticResourceChangeType === "SPLIT" && oldLabel}
         <div class="text-orange text-xs">
             Split from
             <span class="font-mono">{oldLabel}</span>

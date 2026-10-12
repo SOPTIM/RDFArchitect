@@ -278,6 +278,8 @@ class RenameObjectBuilderTest {
 
             var result = RenameObjectBuilder.createRenameObject(mapping);
 
+            assertThat(result.getSemanticResourceChangeType())
+                    .isEqualTo(SemanticResourceChangeType.MERGE);
             assertThat(result.getOldIRI()).isEqualTo("http://example.org#ClassA.voltage");
             assertThat(result.getAdditionalOldIRIs())
                     .containsExactly("http://example.org#ClassB.volt");
@@ -323,6 +325,8 @@ class RenameObjectBuilderTest {
 
             var result = RenameObjectBuilder.createRenameObject(mapping);
 
+            assertThat(result.getSemanticResourceChangeType())
+                    .isEqualTo(SemanticResourceChangeType.MERGE);
             assertThat(result.getChanges())
                     .extracting(SemanticFieldChange::getFrom)
                     .containsExactlyInAnyOrder("OldTypeA", "OldTypeB");
@@ -366,6 +370,10 @@ class RenameObjectBuilderTest {
             assertThat(results)
                     .hasSize(2)
                     .allMatch(r -> r.getOldIRI().equals("http://example.org#ClassA.voltage"))
+                    .allMatch(
+                            r ->
+                                    r.getSemanticResourceChangeType()
+                                            == SemanticResourceChangeType.SPLIT)
                     .anyMatch(r -> r.getIri().equals(added1.getIri()))
                     .anyMatch(r -> r.getIri().equals(added2.getIri()));
         }

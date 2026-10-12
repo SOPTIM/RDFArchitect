@@ -101,8 +101,6 @@ public class SchemaMigrationService
     private final SchemaValidationService validationService;
 
     private static final String GRAPH_URI = "http://example.org/graph";
-    private static final Set<MappingType> CROSS_CLASS_MAPPING_TYPES =
-            Set.of(MappingType.MOVE, MappingType.MERGE, MappingType.SPLIT);
     private final SchemaValidationReportToMarkdownService schemaValidationReportToMarkdownService;
 
     @Override
@@ -507,23 +505,16 @@ public class SchemaMigrationService
             Map<String, SemanticClassChange> classesByIri,
             Function<SemanticClassChange, List<T>> propertyListAccessor,
             List<ResourceMapping<T>> renames) {
-        var materializedMappingIds = new HashSet<UUID>();
+        var mappingsIDs = new HashSet<UUID>();
 
         for (var rename : renames) {
-            if (!materializedMappingIds.add(rename.getId())) {
-                // the chain-wide candidate pool means the same mapping id can legitimately show
-                // up more than once here (surfaced while processing more than one class) - only
-                // the first occurrence is applied, the rest are no-ops rather than re-removing
-                // (and thereby deleting) the property that occurrence already materialized.
+            if (!mappingsIDs.add(rename.getId())) {
                 continue;
             }
 
             var oldIris = rename.getOldResources().stream().map(this::iriOf).toList();
             var newIris = rename.getNewResources().stream().map(this::iriOf).toList();
 
-            // the old and new resources of a cross-class mapping can each live in a different
-            // class's own property list, so every class has to be checked rather than just the
-            // class the mapping was submitted under.
             for (var classChange : classesByIri.values()) {
                 propertyListAccessor
                         .apply(classChange)
@@ -548,16 +539,6 @@ public class SchemaMigrationService
         }
     }
 
-    /**
-     * A cross-class rename/move/merge/split only ever attaches its merged result to the new side's
-     * domain(s) - every old resource whose own domain isn't one of those is left with nothing in
-     * its property list once the removal above runs, even though the property genuinely disappeared
-     * from that class (moved or merged elsewhere). Re-attaching a copy of that old resource to its
-     * own domain class, retyped to {@link SemanticResourceChangeType#DELETED_FROM_MAPPING}, is what
-     * lets the review step show that correctly instead of a class with no properties at all - a
-     * plain DELETE would instead generate its own independent SPARQL deletion for that exact
-     * predicate (see the comment below).
-     */
     private <T extends SemanticResourceChange> void attachDeletionMarkersForLosingDomains(
             Map<String, SemanticClassChange> classesByIri,
             Function<SemanticClassChange, List<T>> propertyListAccessor,
@@ -581,9 +562,6 @@ public class SchemaMigrationService
 
             @SuppressWarnings("unchecked")
             var deleted = (T) oldResource.copy();
-            // not a plain DELETE: that would generate its own SPARQL deletion for this exact
-            // predicate, racing the surviving RENAME/MOVE entry's own delete+insert for the same
-            // predicate on whichever class comes first in the script
             deleted.setSemanticResourceChangeType(SemanticResourceChangeType.DELETED_FROM_MAPPING);
             propertyListAccessor.apply(domainClass).add(deleted);
         }
@@ -626,29 +604,20 @@ public class SchemaMigrationService
         return result;
     }
 
-    /**
-     * Rebuilds the class list exactly as {@link #getDefaultValueViews()} hands it to the frontend:
-     * the context's {@code diffAfterPropertyConfirm} enriched with every class that gains or loses
-     * a property purely through inheritance or a cross-class move/merge/split - classes that have
-     * no change of their own and only exist in the result because {@link InheritanceChangeHandler}
-     * and {@link CrossDomainPropertyPropagationHandler} synthesize an entry for them.
-     *
-     * <p>{@link #submitDefaultValues(List)} must match {@link DefaultValueView}s against this same
-     * enriched set, not the raw {@code diffAfterPropertyConfirm} - otherwise a view for one of
-     * those synthesized classes has nothing to attach to and is silently dropped, which left
-     * classes that newly inherit a merged/moved/split property without their default-value SPARQL.
-     */
     private List<SemanticClassChange> computePropagatedClassChanges() {
         var context = migrationSessionStore.getContext();
+        var changes = context.getDiffAfterPropertyConfirm();
+
         var newChangeList = new ArrayList<SemanticClassChange>();
-        for (var cls : context.getDiffAfterPropertyConfirm()) {
+        for (var cls : changes) {
             newChangeList.add(new SemanticClassChange(cls));
         }
 
         var oldModel = ModelFactory.createModelForGraph(context.getOriginalSchema());
         var updatedModel = ModelFactory.createModelForGraph(context.getUpdatedSchema());
         var classRenames = context.getResourceMappings();
-        var movedPropertyIris = collectMovedPropertyIris(context.getDiffAfterClassConfirm());
+
+        var movedPropertyIris = collectMovedPropertyIris(newChangeList);
 
         InheritanceChangeHandler.processInheritanceChanges(
                 newChangeList, updatedModel, oldModel, classRenames, movedPropertyIris);
@@ -661,7 +630,7 @@ public class SchemaMigrationService
                 collectCrossDomainMappings(
                         context.getDiffAfterClassConfirm(),
                         SemanticClassChange::getAssociationResourceMappings);
-        CrossDomainPropertyPropagationHandler.processCrossDomainPropertyMappings(
+        CrossDomainPropertyPropagationHandler.processPropertyMoveInheritanceChanges(
                 newChangeList,
                 oldModel,
                 updatedModel,
@@ -671,37 +640,32 @@ public class SchemaMigrationService
         return newChangeList;
     }
 
-    /**
-     * IRIs of every property already covered by a confirmed cross-class move, merge, or split, on
-     * either side - inheritance propagation must leave these alone, since such a property is
-     * already represented by its own merged entry rather than by an inherited add/delete.
-     */
     private Set<String> collectMovedPropertyIris(List<SemanticClassChange> classChanges) {
         var movedPropertyIris = new HashSet<String>();
         for (var classChange : classChanges) {
-            addMovedPropertyIris(movedPropertyIris, classChange.getAttributeResourceMappings());
-            addMovedPropertyIris(movedPropertyIris, classChange.getAssociationResourceMappings());
+            addMovedPropertyIris(movedPropertyIris, classChange.getAttributes());
+            addMovedPropertyIris(movedPropertyIris, classChange.getAssociations());
         }
         return movedPropertyIris;
     }
 
     private <T extends SemanticResourceChange> void addMovedPropertyIris(
-            Set<String> movedPropertyIris, List<ResourceMapping<T>> mappings) {
-        for (var mapping : mappings) {
-            if (!CROSS_CLASS_MAPPING_TYPES.contains(mapping.getType())) {
+            Set<String> movedPropertyIris, List<T> properties) {
+        for (var property : properties) {
+            var changeType = property.getSemanticResourceChangeType();
+            if (changeType != SemanticResourceChangeType.MERGE
+                    && changeType != SemanticResourceChangeType.MOVE
+                    && changeType != SemanticResourceChangeType.SPLIT) {
                 continue;
             }
-            mapping.getOldResources().forEach(r -> movedPropertyIris.add(iriOf(r)));
-            mapping.getNewResources().forEach(r -> movedPropertyIris.add(iriOf(r)));
+            movedPropertyIris.add(property.getIri());
+            if (property.getOldIRI() != null) {
+                movedPropertyIris.add(property.getOldIRI());
+            }
+            movedPropertyIris.addAll(property.getAdditionalOldIRIs());
         }
     }
 
-    /**
-     * Every confirmed cross-class move, merge, or split mapping, deduplicated by id - the same
-     * mapping can legitimately be attached to more than one class's property list (its old and new
-     * resources can each live in a different class), same as in {@link #applyPropertyRenames(Map,
-     * Function, List)}.
-     */
     private <T extends SemanticResourceChange> List<ResourceMapping<T>> collectCrossDomainMappings(
             List<SemanticClassChange> classChanges,
             Function<SemanticClassChange, List<ResourceMapping<T>>> mappingAccessor) {
@@ -709,8 +673,7 @@ public class SchemaMigrationService
         var result = new ArrayList<ResourceMapping<T>>();
         for (var classChange : classChanges) {
             for (var mapping : mappingAccessor.apply(classChange)) {
-                if (CROSS_CLASS_MAPPING_TYPES.contains(mapping.getType())
-                        && seen.add(mapping.getId())) {
+                if (seen.add(mapping.getId())) {
                     result.add(mapping);
                 }
             }

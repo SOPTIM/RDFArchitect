@@ -26,23 +26,12 @@
     import InfoBox from "$lib/components/InfoBox.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
-    import { findSplitSiblingIris } from "$lib/utils/migrationUtils.js";
 
     import ResourceChangeCard from "./ResourceChangeCard.svelte";
 
     let classes = $state([]);
     let isLoading = $state(true);
     let ignorePrefixes = $state(false);
-
-    let splitAttributeIris = $derived(
-        findSplitSiblingIris(classes, cls => cls.attributes),
-    );
-    let splitAssociationIris = $derived(
-        findSplitSiblingIris(classes, cls => cls.associations),
-    );
-    let splitEnumEntryIris = $derived(
-        findSplitSiblingIris(classes, cls => cls.enumEntries),
-    );
 
     onMount(async () => {
         let storedState = get(migrationState);
@@ -115,9 +104,6 @@
                                     }
                                     title="Attribute"
                                     {ignorePrefixes}
-                                    isSplit={splitAttributeIris.has(
-                                        attribute.iri,
-                                    )}
                                 />
                             {/if}
                         {/each}
@@ -141,9 +127,6 @@
                                     }
                                     title="Association"
                                     {ignorePrefixes}
-                                    isSplit={splitAssociationIris.has(
-                                        association.iri,
-                                    )}
                                 />
                             {/if}
                         {/each}
@@ -164,7 +147,6 @@
                                 }
                                 title="Enum Entry"
                                 {ignorePrefixes}
-                                isSplit={splitEnumEntryIris.has(enumEntry.iri)}
                             />
                         {/each}
                     </div>

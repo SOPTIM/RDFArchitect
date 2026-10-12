@@ -38,6 +38,10 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Detects changes to the inheritance of properties due to moves, splits or merges of properties and
+ * propagates them to the classes that derive from the affected classes.
+ */
 @UtilityClass
 public class CrossDomainPropertyPropagationHandler {
 
@@ -51,7 +55,7 @@ public class CrossDomainPropertyPropagationHandler {
             new PropertyAccess<>(
                     SemanticClassChange::getAssociations, SemanticAssociationChange::new);
 
-    public void processCrossDomainPropertyMappings(
+    public void processPropertyMoveInheritanceChanges(
             List<SemanticClassChange> classes,
             Model oldModel,
             Model newModel,
@@ -178,8 +182,6 @@ public class CrossDomainPropertyPropagationHandler {
 
         var unionNewDeriving = new HashSet<String>();
         for (var newResource : mapping.getNewResources()) {
-            // each split target may have its own datatype/semantics, so a class gaining access
-            // through this particular target needs its own default-value prompt for it
             var newDeriving = derivingUris(newModel, newResource.getDomain());
             unionNewDeriving.addAll(newDeriving);
             emitDifference(

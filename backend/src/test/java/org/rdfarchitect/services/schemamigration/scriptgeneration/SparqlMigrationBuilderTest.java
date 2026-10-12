@@ -140,7 +140,7 @@ class SparqlMigrationBuilderTest {
                         .oldIRI(PREFIX + "ClassA.voltage")
                         .additionalOldIRIs(List.of(PREFIX + "ClassB.volt"))
                         .label("voltage")
-                        .semanticResourceChangeType(SemanticResourceChangeType.RENAME)
+                        .semanticResourceChangeType(SemanticResourceChangeType.MERGE)
                         .build();
 
         var script = generateFor(attributeChange);
@@ -169,9 +169,6 @@ class SparqlMigrationBuilderTest {
                                 classWithAttribute("ClassB", sibling2),
                                 classWithAttribute("ClassC", sibling3)));
 
-        // one independent DELETE/WHERE pair per target, each scoped by rdf:type to its own
-        // class - a shared, unscoped block would copy every target's value onto every instance
-        // regardless of which split target it actually belongs to (RDFA-729)
         assertThat(script.split("DELETE").length - 1).isEqualTo(3);
         assertThat(script)
                 .contains(oldIri)
@@ -218,13 +215,6 @@ class SparqlMigrationBuilderTest {
                 .contains(PREFIX + "Base.voltage");
     }
 
-    /**
-     * This marker (see {@code SchemaMigrationService.attachDeletionMarkersForLosingDomains}) exists
-     * purely for the review step to show that the old domain lost the property - the surviving
-     * RENAME/MOVE entry on the new domain already generates the one delete+insert this predicate's
-     * data needs. Generating a second, independent delete for it here would race that rename and
-     * could destroy the data before it gets migrated, depending on class order in the script.
-     */
     @Test
     void generateMigrationScript_attributeDeletedFromMapping_generatesNoSparql() {
         var attributeChange =
@@ -296,7 +286,7 @@ class SparqlMigrationBuilderTest {
                 .oldIRI(oldIri)
                 .domain(PREFIX + domainLocalName)
                 .label("voltage")
-                .semanticResourceChangeType(SemanticResourceChangeType.MOVE)
+                .semanticResourceChangeType(SemanticResourceChangeType.SPLIT)
                 .build();
     }
 

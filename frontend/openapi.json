@@ -1990,6 +1990,8 @@
               "CHANGE",
               "RENAME",
               "MOVE",
+              "SPLIT",
+              "MERGE",
               "DELETED_FROM_MAPPING",
               "INHERITS_CHANGE",
               "INDIRECT_CHANGE"
@@ -2104,6 +2106,8 @@
               "CHANGE",
               "RENAME",
               "MOVE",
+              "SPLIT",
+              "MERGE",
               "DELETED_FROM_MAPPING",
               "INHERITS_CHANGE",
               "INDIRECT_CHANGE"

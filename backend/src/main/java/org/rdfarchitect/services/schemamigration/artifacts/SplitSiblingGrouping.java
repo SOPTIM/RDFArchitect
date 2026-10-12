@@ -31,19 +31,7 @@ class SplitSiblingGrouping {
 
     <T extends SemanticResourceChange> Map<String, List<T>> groupSplitSiblings(List<T> properties) {
         return properties.stream()
-                .filter(SplitSiblingGrouping::isSplitSibling)
-                .collect(Collectors.groupingBy(SemanticResourceChange::getOldIRI))
-                .entrySet()
-                .stream()
-                .filter(e -> e.getValue().size() > 1)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    private boolean isSplitSibling(SemanticResourceChange property) {
-        return (property.getSemanticResourceChangeType() == SemanticResourceChangeType.RENAME
-                        || property.getSemanticResourceChangeType()
-                                == SemanticResourceChangeType.MOVE)
-                && property.getOldIRI() != null
-                && property.getAdditionalOldIRIs().isEmpty();
+                .filter(p -> p.getSemanticResourceChangeType() == SemanticResourceChangeType.SPLIT)
+                .collect(Collectors.groupingBy(SemanticResourceChange::getOldIRI));
     }
 }

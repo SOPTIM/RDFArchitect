@@ -48,7 +48,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -102,10 +101,9 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
         var classChangesMap =
                 visibleChanges.stream()
                         .collect(Collectors.toMap(SemanticClassChange::getIri, c -> c));
-        var splitSourceIris = findSplitSourceIris(visibleChanges);
 
         for (var cls : sortedConcreteClassIRIs) {
-            appendDetailedClassSection(sb, cls, model, classChangesMap, splitSourceIris);
+            appendDetailedClassSection(sb, cls, model, classChangesMap);
         }
 
         return sb.toString();
@@ -134,7 +132,6 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                         .filter(this::hasDirectChange)
                         .sorted(Comparator.comparing(SemanticResourceChange::getLabel))
                         .toList();
-        var splitSourceIris = findSplitSourceIris(visibleChanges);
 
         for (var classChange : directlyChanged) {
             appendClassHeader(sb, classChange);
@@ -143,11 +140,9 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                 appendFieldChangesAsSentences(sb, classChange.getChanges());
             }
 
-            appendDirectProperties(sb, "Attributes", classChange.getAttributes(), splitSourceIris);
-            appendDirectProperties(
-                    sb, "Associations", classChange.getAssociations(), splitSourceIris);
-            appendDirectProperties(
-                    sb, "Enum Entries", classChange.getEnumEntries(), splitSourceIris);
+            appendDirectProperties(sb, "Attributes", classChange.getAttributes());
+            appendDirectProperties(sb, "Associations", classChange.getAssociations());
+            appendDirectProperties(sb, "Enum Entries", classChange.getEnumEntries());
 
             var model = createModelForGraph(updatedGraph);
             var affectedSubclasses = findAffectedSubclasses(classChange, model);
@@ -291,8 +286,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
             StringBuilder sb,
             String classIRI,
             Model model,
-            Map<String, SemanticClassChange> classChangesMap,
-            Set<String> splitSourceIris) {
+            Map<String, SemanticClassChange> classChangesMap) {
         SemanticClassChange classChange;
         if (classChangesMap.containsKey(classIRI)) {
             classChange = classChangesMap.get(classIRI);
@@ -370,16 +364,13 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
         if (classChange.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE) {
             appendFieldChangesAsSentences(sb, classChange.getChanges());
         }
-        appendPropertySection(sb, "Attributes", classChange.getAttributes(), splitSourceIris);
-        appendPropertySection(sb, "Associations", classChange.getAssociations(), splitSourceIris);
-        appendPropertySection(sb, "Enum Entries", classChange.getEnumEntries(), splitSourceIris);
+        appendPropertySection(sb, "Attributes", classChange.getAttributes());
+        appendPropertySection(sb, "Associations", classChange.getAssociations());
+        appendPropertySection(sb, "Enum Entries", classChange.getEnumEntries());
 
-        appendPropertySection(
-                sb, "Inherited Attribute Changes", ancestorChangedAttributes, splitSourceIris);
-        appendPropertySection(
-                sb, "Inherited Association Changes", ancestorChangedAssociations, splitSourceIris);
-        appendPropertySection(
-                sb, "Inherited Enum Entry Changes", ancestorChangedEnumEntries, splitSourceIris);
+        appendPropertySection(sb, "Inherited Attribute Changes", ancestorChangedAttributes);
+        appendPropertySection(sb, "Inherited Association Changes", ancestorChangedAssociations);
+        appendPropertySection(sb, "Inherited Enum Entry Changes", ancestorChangedEnumEntries);
 
         sb.append("\n---\n\n");
     }
@@ -463,7 +454,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
     }
 
     private <T extends SemanticResourceChange> void appendPropertySection(
-            StringBuilder sb, String title, List<T> properties, Set<String> splitSourceIris) {
+            StringBuilder sb, String title, List<T> properties) {
         if (properties == null || properties.isEmpty()) {
             return;
         }
@@ -471,32 +462,23 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
         sb.append("### ").append(title).append("\n\n");
 
         for (var prop : properties) {
-            var isRenameOrMove =
-                    prop.getSemanticResourceChangeType() == SemanticResourceChangeType.RENAME
-                            || prop.getSemanticResourceChangeType()
-                                    == SemanticResourceChangeType.MOVE;
-            if (prop.getSemanticResourceChangeType() == SemanticResourceChangeType.RENAME
-                    && prop.getOldIRI() != null
-                    && !prop.getAdditionalOldIRIs().isEmpty()) {
+            var type = prop.getSemanticResourceChangeType();
+            if (type == SemanticResourceChangeType.MERGE && prop.getOldIRI() != null) {
                 appendMergedHeader(sb, prop);
-            } else if (isRenameOrMove
-                    && prop.getOldIRI() != null
-                    && splitSourceIris.contains(prop.getOldIRI())) {
+            } else if (type == SemanticResourceChangeType.SPLIT && prop.getOldIRI() != null) {
                 appendSplitHeader(sb, prop);
-            } else if (prop.getSemanticResourceChangeType() == SemanticResourceChangeType.RENAME
-                    && prop.getOldIRI() != null) {
+            } else if (type == SemanticResourceChangeType.RENAME && prop.getOldIRI() != null) {
                 var oldLabel = new URI(prop.getOldIRI()).getSuffix();
                 sb.append("#### Renamed from ")
                         .append(oldLabel)
                         .append(" to ")
                         .append(prop.getLabel())
                         .append("\n\n");
-            } else if (prop.getSemanticResourceChangeType() == SemanticResourceChangeType.MOVE
-                    && prop.getOldIRI() != null) {
+            } else if (type == SemanticResourceChangeType.MOVE && prop.getOldIRI() != null) {
                 appendMovedHeader(sb, prop);
             } else {
                 sb.append("#### ")
-                        .append(formatChangeType(prop.getSemanticResourceChangeType()))
+                        .append(formatChangeType(type))
                         .append(" ")
                         .append(prop.getLabel())
                         .append("\n\n");
@@ -574,19 +556,8 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                 .append("\n\n");
     }
 
-    private Set<String> findSplitSourceIris(List<SemanticClassChange> classChanges) {
-        var allProperties = new ArrayList<SemanticResourceChange>();
-        for (var classChange : classChanges) {
-            allProperties.addAll(classChange.getAttributes());
-            allProperties.addAll(classChange.getAssociations());
-            allProperties.addAll(classChange.getEnumEntries());
-        }
-
-        return SplitSiblingGrouping.groupSplitSiblings(allProperties).keySet();
-    }
-
     private <T extends SemanticResourceChange> void appendDirectProperties(
-            StringBuilder sb, String title, List<T> properties, Set<String> splitSourceIris) {
+            StringBuilder sb, String title, List<T> properties) {
         if (properties == null) {
             return;
         }
@@ -605,7 +576,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
         if (direct.isEmpty()) {
             return;
         }
-        appendPropertySection(sb, title, direct, splitSourceIris);
+        appendPropertySection(sb, title, direct);
     }
 
     private boolean hasDirectChange(SemanticClassChange c) {
@@ -642,13 +613,14 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
     private String formatChangeType(SemanticResourceChangeType type) {
         return switch (type) {
             case ADD -> "[Added]";
-            case DELETE -> "[Deleted]";
+            case DELETE, DELETED_FROM_MAPPING -> "[Deleted]";
             case CHANGE -> "[Changed]";
             case RENAME -> "[Renamed]";
             case MOVE -> "[Moved]";
+            case SPLIT -> "[Split]";
+            case MERGE -> "[Merged]";
             case ADDED_FROM_INHERITANCE -> "[Added via inheritance]";
             case DELETED_FROM_INHERITANCE -> "[Deleted via inheritance]";
-            case DELETED_FROM_MAPPING -> "[Deleted]";
             case INHERITS_CHANGE -> "[Inherits changes]";
             case INDIRECT_CHANGE -> "[Indirectly changed]";
         };

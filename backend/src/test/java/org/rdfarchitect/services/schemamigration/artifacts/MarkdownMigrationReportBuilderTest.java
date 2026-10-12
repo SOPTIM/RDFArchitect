@@ -81,7 +81,7 @@ class MarkdownMigrationReportBuilderTest {
                         .iri(PREFIX + "ClassC.mergedVoltage")
                         .oldIRI(PREFIX + "ClassA.voltage")
                         .additionalOldIRIs(List.of(PREFIX + "ClassB.voltage"))
-                        .semanticResourceChangeType(SemanticResourceChangeType.RENAME)
+                        .semanticResourceChangeType(SemanticResourceChangeType.MERGE)
                         .build();
 
         var classChange =
@@ -105,12 +105,6 @@ class MarkdownMigrationReportBuilderTest {
                 .contains("Merged from ClassA.voltage, ClassB.voltage to mergedVoltage");
     }
 
-    /**
-     * {@link org.rdfarchitect.services.schemamigration.renamings.RenameObjectBuilder} turns a split
-     * into several independent MOVE (or RENAME) properties that all share the one deleted
-     * resource's IRI as their own {@code oldIRI} - the report must recognize that duplication and
-     * label them as a split rather than as two unrelated moves.
-     */
     @Test
     void generateSummaryMigrationReport_splitAttribute_rendersSplitNotMove() {
         var target1 =
@@ -118,14 +112,14 @@ class MarkdownMigrationReportBuilderTest {
                         .label("voltageB")
                         .iri(PREFIX + "ClassB.voltage")
                         .oldIRI(PREFIX + "ClassA.voltage")
-                        .semanticResourceChangeType(SemanticResourceChangeType.MOVE)
+                        .semanticResourceChangeType(SemanticResourceChangeType.SPLIT)
                         .build();
         var target2 =
                 SemanticAttributeChange.builder()
                         .label("voltageC")
                         .iri(PREFIX + "ClassC.voltage")
                         .oldIRI(PREFIX + "ClassA.voltage")
-                        .semanticResourceChangeType(SemanticResourceChangeType.MOVE)
+                        .semanticResourceChangeType(SemanticResourceChangeType.SPLIT)
                         .build();
 
         var classB =
