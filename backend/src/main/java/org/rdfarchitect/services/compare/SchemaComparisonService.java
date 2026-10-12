@@ -19,10 +19,12 @@ package org.rdfarchitect.services.compare;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.changes.triplechanges.TriplePackageChange;
+import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -46,7 +48,9 @@ public class SchemaComparisonService implements SchemaComparisonUseCase {
                         .setGraphName(GRAPH_URI)
                         .build()
                         .graph();
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             return TripleChangeAnalyser.compareGraphs(originalGraph, ctx.getRdfGraph());
         }
     }
@@ -75,16 +79,15 @@ public class SchemaComparisonService implements SchemaComparisonUseCase {
         if (originalGraphIdentifier.equals(updatedGraphIdentifier)) {
             return new ArrayList<>();
         }
-        try (var originalCtx =
-                        databasePort
-                                .getGraphWithContext(originalGraphIdentifier)
-                                .begin(ReadWrite.READ);
-                var updatedCtx =
-                        databasePort
-                                .getGraphWithContext(updatedGraphIdentifier)
-                                .begin(ReadWrite.READ)) {
-            return TripleChangeAnalyser.compareGraphs(
-                    originalCtx.getRdfGraph(), updatedCtx.getRdfGraph());
+        // The graphs may live in different workspaces, and a thread may only be inside one.
+        return TripleChangeAnalyser.compareGraphs(
+                copyGraph(originalGraphIdentifier), copyGraph(updatedGraphIdentifier));
+    }
+
+    private Graph copyGraph(GraphIdentifier graphIdentifier) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            return GraphUtils.deepCopy(transaction.graph(graphIdentifier.graphUri()).getRdfGraph());
         }
     }
 }

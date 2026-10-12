@@ -335,45 +335,49 @@
         },
         "type" : "object"
       },
-      "ChangeLog" : {
+      "ChangeLogEntryDTO" : {
         "properties" : {
-          "redoHistory" : {
+          "affectedGraphUris" : {
             "items" : {
-              "$ref" : "#/components/schemas/ChangeLogEntry"
+              "type" : "string"
             },
             "type" : "array"
           },
-          "undoHistory" : {
+          "affectedKinds" : {
             "items" : {
-              "$ref" : "#/components/schemas/ChangeLogEntry"
+              "type" : "string"
             },
             "type" : "array"
-          }
-        },
-        "type" : "object"
-      },
-      "ChangeLogEntry" : {
-        "properties" : {
+          },
           "changeId" : {
-            "format" : "uuid",
             "type" : "string"
           },
           "contextDeltas" : {
             "items" : {
-              "$ref" : "#/components/schemas/ContextDelta"
+              "$ref" : "#/components/schemas/ContextDeltaDTO"
             },
             "type" : "array"
           },
           "message" : {
             "type" : "string"
           },
-          "steps" : {
-            "format" : "int32",
-            "type" : "integer"
+          "removedOnUndo" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "restorableGraphUris" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           },
           "timestamp" : {
-            "format" : "date-time",
             "type" : "string"
+          },
+          "undone" : {
+            "type" : "boolean"
           }
         },
         "type" : "object"
@@ -631,28 +635,31 @@
         },
         "type" : "object"
       },
-      "ContextDelta" : {
+      "ContextDeltaDTO" : {
         "properties" : {
           "additions" : {
-            "properties" : {
-              "enqueued" : {
-                "deprecated" : true,
-                "type" : "boolean"
-              }
+            "items" : {
+              "$ref" : "#/components/schemas/TripleDTO"
             },
-            "type" : "object"
+            "type" : "array"
           },
           "contextName" : {
             "type" : "string"
           },
           "deletions" : {
-            "properties" : {
-              "enqueued" : {
-                "deprecated" : true,
-                "type" : "boolean"
-              }
+            "items" : {
+              "$ref" : "#/components/schemas/TripleDTO"
             },
-            "type" : "object"
+            "type" : "array"
+          },
+          "graphUri" : {
+            "type" : "string"
+          },
+          "values" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ValueChangeDTO"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -962,6 +969,20 @@
           },
           "value" : {
             "$ref" : "#/components/schemas/SuperClassDTO"
+          }
+        },
+        "type" : "object"
+      },
+      "HistoryStepDTO" : {
+        "properties" : {
+          "canRedo" : {
+            "type" : "boolean"
+          },
+          "canUndo" : {
+            "type" : "boolean"
+          },
+          "change" : {
+            "$ref" : "#/components/schemas/ChangeLogEntryDTO"
           }
         },
         "type" : "object"
@@ -1800,6 +1821,12 @@
       },
       "RestoreVersionDTO" : {
         "properties" : {
+          "graphUris" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "versionId" : {
             "type" : "string"
           }
@@ -2216,6 +2243,20 @@
         },
         "type" : "object"
       },
+      "TripleDTO" : {
+        "properties" : {
+          "object" : {
+            "type" : "string"
+          },
+          "predicate" : {
+            "type" : "string"
+          },
+          "subject" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "TriplePackageChange" : {
         "properties" : {
           "changes" : {
@@ -2333,6 +2374,20 @@
           },
           "valid" : {
             "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ValueChangeDTO" : {
+        "properties" : {
+          "after" : {
+            "type" : "string"
+          },
+          "before" : {
+            "type" : "string"
+          },
+          "key" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -2544,6 +2599,138 @@
         "summary" : "Create dataset",
         "tags" : [
           "dataset"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/canRedo" : {
+      "post" : {
+        "description" : "Check whether the last undone change can be redone",
+        "operationId" : "canRedo",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "boolean"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "can Redo",
+        "tags" : [
+          "workspace"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/canUndo" : {
+      "post" : {
+        "description" : "Check whether an undo operation is possible.",
+        "operationId" : "canUndo",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "boolean"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "can undo",
+        "tags" : [
+          "workspace"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/changes" : {
+      "get" : {
+        "description" : "Get a list containing all changes made to a graph",
+        "operationId" : "getChangeLog",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ChangeLogEntryDTO"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "list changes for graph",
+        "tags" : [
+          "workspace"
         ]
       }
     },
@@ -3597,162 +3784,6 @@
           }
         },
         "summary" : "export graph as asciidoc",
-        "tags" : [
-          "graph"
-        ]
-      }
-    },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/canRedo" : {
-      "post" : {
-        "description" : "Check whether the last undone change can be redone",
-        "operationId" : "canRedo",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "datasetName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
-            "in" : "path",
-            "name" : "graphURI",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "boolean"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "can Redo",
-        "tags" : [
-          "graph"
-        ]
-      }
-    },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/canUndo" : {
-      "post" : {
-        "description" : "Check whether an undo operation is possible.",
-        "operationId" : "canUndo",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "datasetName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
-            "in" : "path",
-            "name" : "graphURI",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "boolean"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "can undo",
-        "tags" : [
-          "graph"
-        ]
-      }
-    },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/changes" : {
-      "get" : {
-        "description" : "Get a list containing all changes made to a graph",
-        "operationId" : "getChangeLog",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "datasetName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
-            "in" : "path",
-            "name" : "graphURI",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ChangeLog"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "list changes for graph",
         "tags" : [
           "graph"
         ]
@@ -7009,58 +7040,6 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/redo" : {
-      "post" : {
-        "description" : "Redo the last undone change",
-        "operationId" : "redo",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "datasetName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
-            "in" : "path",
-            "name" : "graphURI",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "redo ",
-        "tags" : [
-          "graph"
-        ]
-      }
-    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/rename" : {
       "post" : {
         "description" : "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. The profile header is left untouched: what a schema is called on screen is read from there and is edited in the ontology editor.",
@@ -7251,69 +7230,6 @@
           }
         },
         "summary" : "resolve iri identifier",
-        "tags" : [
-          "graph"
-        ]
-      }
-    },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/restore" : {
-      "post" : {
-        "description" : "restores the graph to the state specified by the version id",
-        "operationId" : "restoreVersion",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "datasetName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
-            "in" : "path",
-            "name" : "graphURI",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/RestoreVersionDTO"
-              }
-            }
-          },
-          "description" : "The ID of the version to restore.",
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "restore ",
         "tags" : [
           "graph"
         ]
@@ -7984,58 +7900,6 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/undo" : {
-      "post" : {
-        "description" : "Undo the last change",
-        "operationId" : "undo",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "datasetName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
-            "in" : "path",
-            "name" : "graphURI",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "undo ",
-        "tags" : [
-          "graph"
-        ]
-      }
-    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/validate-workspace" : {
       "get" : {
         "description" : "Validates a schema against the other schemas of its workspace and returns the issues that involve the schema.",
@@ -8621,6 +8485,49 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/redo" : {
+      "post" : {
+        "description" : "Redo the last undone change",
+        "operationId" : "redo",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HistoryStepDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "redo ",
+        "tags" : [
+          "workspace"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/rename" : {
       "post" : {
         "description" : "Renames a dataset, keeping all of its graphs, diagrams and namespaces.",
@@ -8670,6 +8577,146 @@
         "summary" : "Rename dataset",
         "tags" : [
           "dataset"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/restore" : {
+      "post" : {
+        "description" : "Puts the workspace back the way the given version left it, recorded as a new change. The scope can hold the restore to certain graphs; leaving it out restores the whole workspace.",
+        "operationId" : "restoreVersion",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RestoreVersionDTO"
+              }
+            }
+          },
+          "description" : "The ID of the version to restore.",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HistoryStepDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "restore a version",
+        "tags" : [
+          "workspace"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/undo" : {
+      "post" : {
+        "description" : "Undo the last change",
+        "operationId" : "undo",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HistoryStepDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "undo ",
+        "tags" : [
+          "workspace"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/undo/pending" : {
+      "get" : {
+        "description" : "Get the change that the next undo would take back, so that the editor can ask before an undo that makes something disappear. Returns nothing when there is no history left.",
+        "operationId" : "getPendingUndo",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ChangeLogEntryDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "peek at the next undo",
+        "tags" : [
+          "workspace"
         ]
       }
     },

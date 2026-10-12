@@ -19,6 +19,10 @@ package org.rdfarchitect.services.dl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.jena.graph.Graph;
+import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
 import org.junit.jupiter.api.AfterEach;
@@ -27,17 +31,18 @@ import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.DiagramLayout;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabase;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.data.DLUtils;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.rdf.resources.CIM;
 import org.rdfarchitect.dl.rdf.resources.DL;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.dl.update.packagelayout.UpdatePackageLayoutService;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterService;
@@ -47,7 +52,10 @@ import org.springframework.mock.web.MockMultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 public class DiagramLayoutServicesTestBase {
 
@@ -69,7 +77,7 @@ public class DiagramLayoutServicesTestBase {
     public static DatabasePort databasePort;
     public static PackageMapper packageMapper;
     public static InMemoryDatabase database;
-    public static DiagramLayoutDelta diagramLayout;
+    public static DiagramLayout diagramLayout;
 
     @BeforeAll
     static void setUpEnvironment() {
@@ -97,8 +105,8 @@ public class DiagramLayoutServicesTestBase {
                         .build()
                         .graph();
         var identifier = new GraphIdentifier(graphIdentifier.datasetName(), graphUri);
-        databasePort.createGraph(identifier, graph);
-        diagramLayout = databasePort.getGraphWithContext(identifier).getDiagramLayout();
+        createGraph(databasePort, identifier, graph);
+        diagramLayout = layoutOf(identifier);
     }
 
     /**
@@ -139,11 +147,7 @@ public class DiagramLayoutServicesTestBase {
     }
 
     public static void assertDiagram(UUID packageUUID, String packageName) {
-        var model =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModelDirect();
+        var model = layoutModelOf(graphIdentifier);
         var diagram = model.getResource(new MRID(packageUUID).getFullMRID());
         assertThat(diagram).isNotNull();
         assertThat(diagram.hasProperty(RDF.type, DL.diagramType)).isTrue();
@@ -153,11 +157,7 @@ public class DiagramLayoutServicesTestBase {
     }
 
     public static void assertDiagramDoesNotExist(UUID packageUUID) {
-        var model =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModelDirect();
+        var model = layoutModelOf(graphIdentifier);
 
         var diagramResource = ResourceFactory.createResource(new MRID(packageUUID).getFullMRID());
 
@@ -171,11 +171,7 @@ public class DiagramLayoutServicesTestBase {
     }
 
     public static MRID assertDiagramObject(UUID classUUID, UUID packageUUID, String className) {
-        var model =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModelDirect();
+        var model = layoutModelOf(graphIdentifier);
 
         var diagramObjects =
                 model.listSubjectsWithProperty(
@@ -205,11 +201,7 @@ public class DiagramLayoutServicesTestBase {
     }
 
     public static void assertClassDiagramObjectsDoNotExist(UUID classUUID) {
-        var model =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModelDirect();
+        var model = layoutModelOf(graphIdentifier);
 
         var diagramObjects =
                 model.listSubjectsWithProperty(
@@ -220,11 +212,7 @@ public class DiagramLayoutServicesTestBase {
     }
 
     public static void assertSpecificDiagramObjectDoesNotExist(UUID classUUID, UUID packageUUID) {
-        var model =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModelDirect();
+        var model = layoutModelOf(graphIdentifier);
 
         var classResource = ResourceFactory.createResource(new MRID(classUUID).getFullMRID());
         var packageResource = ResourceFactory.createResource(new MRID(packageUUID).getFullMRID());
@@ -244,11 +232,7 @@ public class DiagramLayoutServicesTestBase {
     }
 
     public static void assertDiagramObjectPoint(MRID doMRID, float xPosition, float yPosition) {
-        var model =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModelDirect();
+        var model = layoutModelOf(graphIdentifier);
 
         var diagramObjectPoints =
                 model.listSubjectsWithProperty(
@@ -273,11 +257,7 @@ public class DiagramLayoutServicesTestBase {
     }
 
     public static void assertDiagramObjectPointDoesNotExist(MRID doMRID) {
-        var model =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModelDirect();
+        var model = layoutModelOf(graphIdentifier);
 
         var diagramObjectPoints =
                 model.listSubjectsWithProperty(
@@ -289,11 +269,7 @@ public class DiagramLayoutServicesTestBase {
 
     public static void assertDiagramObjectCoordinates(
             UUID classUUID, float xPosition, float yPosition) {
-        var model =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModelDirect();
+        var model = layoutModelOf(graphIdentifier);
 
         var diagramObjects =
                 model.listSubjectsWithProperty(
@@ -330,6 +306,94 @@ public class DiagramLayoutServicesTestBase {
 
     @AfterEach
     void tearDown() {
-        databasePort.deleteGraph(graphIdentifier);
+        deleteGraph(databasePort, graphIdentifier);
+    }
+
+    /** The diagram layout of a graph, read inside a transaction as production code does. */
+    protected static DiagramLayout layoutOf(GraphIdentifier identifier) {
+        try (var transaction =
+                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
+            return transaction.graph(identifier.graphUri()).getDiagramLayout();
+        }
+    }
+
+    /** A detached copy of a graph's layout model, for assertions outside a transaction. */
+    protected static Model layoutModelOf(GraphIdentifier identifier) {
+        try (var transaction =
+                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
+            return ModelFactory.createDefaultModel()
+                    .add(
+                            transaction
+                                    .graph(identifier.graphUri())
+                                    .getDiagramLayout()
+                                    .getDiagramLayoutModel());
+        }
+    }
+
+    /** A detached copy of the workspace's custom diagrams, for assertions outside a transaction. */
+    protected static Map<UUID, CustomDiagram> workspaceDiagrams() {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var copy = new HashMap<UUID, CustomDiagram>();
+            transaction.diagrams().forEach((id, diagram) -> copy.put(id, diagram.copy()));
+            return copy;
+        }
+    }
+
+    /** A detached copy of the workspace's layout model, for assertions outside a transaction. */
+    protected static Model workspaceLayoutModel() {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            return ModelFactory.createDefaultModel()
+                    .add(transaction.layout().getDiagramLayoutModel());
+        }
+    }
+
+    /** Runs {@code action} against the workspace's live custom diagrams, inside a transaction. */
+    protected static void withWorkspaceDiagrams(Consumer<Map<UUID, CustomDiagram>> action) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            action.accept(transaction.diagrams());
+            transaction.commit("test change");
+        }
+    }
+
+    /** Runs {@code action} against the workspace's live layout model, inside a transaction. */
+    protected static void withWorkspaceLayoutModel(Consumer<Model> action) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            action.accept(transaction.layout().getDiagramLayoutModel());
+            transaction.commit("test change");
+        }
+    }
+
+    /** Runs {@code action} against the live layout model of a graph, inside a write transaction. */
+    protected static void withLayoutModel(GraphIdentifier identifier, Consumer<Model> action) {
+        try (var transaction =
+                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+            action.accept(
+                    transaction
+                            .graph(identifier.graphUri())
+                            .getDiagramLayout()
+                            .getDiagramLayoutModel());
+            transaction.commit("test change");
+        }
+    }
+
+    /** Creates a workspace and a graph in it, the way an upload does. */
+    protected static void createGraph(DatabasePort port, GraphIdentifier identifier, Graph graph) {
+        port.createWorkspaceIfAbsent(identifier.datasetName());
+        try (var transaction = port.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.createGraph(identifier.graphUri(), graph);
+            transaction.commit("created graph %s".formatted(identifier.graphUri()));
+        }
+    }
+
+    /** Deletes a graph from its workspace. */
+    protected static void deleteGraph(DatabasePort port, GraphIdentifier identifier) {
+        try (var transaction = port.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.deleteGraph(identifier.graphUri());
+            transaction.commit("deleted graph %s".formatted(identifier.graphUri()));
+        }
     }
 }

@@ -38,6 +38,7 @@ import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.dl.update.ReplaceDiagramUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.CreatePackageLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.DeletePackageLayoutDataUseCase;
@@ -64,7 +65,9 @@ public class UpdatePackageService
     public UUID addPackage(GraphIdentifier graphIdentifier, PackageDTO packageDTO) {
         UUID newPackageUUID = UUID.randomUUID();
         packageDTO.setUuid(newPackageUUID);
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
             var newPackage = packageMapper.toCIMObject(packageDTO);
             assertNoClassWithSameIri(graph, newPackage);
@@ -72,18 +75,19 @@ public class UpdatePackageService
                     graph,
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     newPackage);
-            ctx.commit("Added package " + packageDTO.getLabel());
+            createPackageLayoutData.createPackageLayoutData(
+                    graphIdentifier, packageDTO, newPackageUUID);
+            transaction.commit("Added package " + packageDTO.getLabel());
         }
-
-        createPackageLayoutData.createPackageLayoutData(
-                graphIdentifier, packageDTO, newPackageUUID);
 
         return newPackageUUID;
     }
 
     @Override
     public void replacePackage(GraphIdentifier graphIdentifier, PackageDTO packageDTO) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
             var newPackage = packageMapper.toCIMObject(packageDTO);
             assertNoClassWithSameIri(graph, newPackage);
@@ -91,24 +95,43 @@ public class UpdatePackageService
                     graph,
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     newPackage);
-            ctx.commit("Replaced package " + packageDTO.getUuid());
+            replaceDiagramUseCase.replaceDiagram(
+                    graphIdentifier, packageDTO.getUuid(), packageDTO.getLabel());
+            transaction.commit("Updated package \"%s\"".formatted(packageDTO.getLabel()));
         }
-
-        replaceDiagramUseCase.replaceDiagram(
-                graphIdentifier, packageDTO.getUuid(), packageDTO.getLabel());
     }
 
     @Override
     public void deletePackage(GraphIdentifier graphIdentifier, UUID packageUUID) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
+            // Read before deleting: afterwards there is no label left to name the change with.
+            var packageLabel = packageLabel(ctx.getRdfGraph(), packageUUID);
             CIMUpdates.deletePackage(
                     ctx.getRdfGraph(),
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     packageUUID);
-            ctx.commit("Deleted package " + packageUUID);
+            deletePackageLayoutDataUseCase.deletePackageLayoutData(graphIdentifier, packageUUID);
+            transaction.commit(
+                    packageLabel.isEmpty()
+                            ? "Deleted a package"
+                            : "Deleted package \"%s\"".formatted(packageLabel));
         }
+    }
 
-        deletePackageLayoutDataUseCase.deletePackageLayoutData(graphIdentifier, packageUUID);
+    /**
+     * The name a package carries in the schema, or {@code ""} where it has none. An unnamed package
+     * is still deletable, so this answers rather than throwing the way the lookups it wraps do.
+     */
+    private static String packageLabel(Graph schema, UUID packageUUID) {
+        try {
+            return ChangeDescriptions.name(
+                    CIMResourceUtils.findLabelForResource(
+                            CIMResourceUtils.findResourceForUuid(schema, packageUUID)));
+        } catch (IllegalStateException _) {
+            return "";
+        }
     }
 
     private void assertNoClassWithSameIri(Graph graph, CIMPackage newPackage) {
@@ -138,9 +161,7 @@ public class UpdatePackageService
                         .build();
         var resultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier),
-                        query,
-                        graphIdentifier.graphUri());
+                        databasePort, graphIdentifier, query, graphIdentifier.graphUri());
 
         if (!resultSet.hasNext()) {
             throw new DataAccessException("Package not found: " + packageUUID);

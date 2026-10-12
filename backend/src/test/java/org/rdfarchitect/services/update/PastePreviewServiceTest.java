@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.tuple;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -86,8 +87,8 @@ class PastePreviewServiceTest {
                         .setFile(file)
                         .setGraphName(sourceGraphIdentifier.graphUri())
                         .build();
-        databasePort.createGraph(sourceGraphIdentifier, graphSource.graph());
-        databasePort.createGraph(targetGraphIdentifier, GraphFactory.createDefaultGraph());
+        createGraph(sourceGraphIdentifier, graphSource.graph());
+        createGraph(targetGraphIdentifier, GraphFactory.createDefaultGraph());
     }
 
     private PasteSourceClassDTO source(String classUUID) {
@@ -263,14 +264,16 @@ class PastePreviewServiceTest {
 
     @Test
     void previewPaste_associationWithoutRange_namesNoAssociationTarget() {
-        try (var ctx =
-                databasePort.getGraphWithContext(sourceGraphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(
+                        sourceGraphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(sourceGraphIdentifier.graphUri());
             ctx.getRdfGraph()
                     .remove(
                             NodeFactory.createURI("http://example.org#class.associatedClass"),
                             RDFS.range.asNode(),
                             NodeFactory.createURI("http://example.org#associatedClass"));
-            ctx.commit("Removed a triple for the test.");
+            transaction.commit("Removed a triple for the test.");
         }
 
         var preview =
@@ -291,5 +294,15 @@ class PastePreviewServiceTest {
         assertThat(missing(preview, Kind.DATA_TYPE)).isEmpty();
         assertThat(missing(preview, Kind.ASSOCIATION_TARGET)).isEmpty();
         assertThat(missing(preview, Kind.SUPER_CLASS)).isEmpty();
+    }
+
+    /** Creates a workspace and a graph in it, the way an upload does. */
+    private void createGraph(GraphIdentifier identifier, Graph graph) {
+        databasePort.createWorkspaceIfAbsent(identifier.datasetName());
+        try (var transaction =
+                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.createGraph(identifier.graphUri(), graph);
+            transaction.commit("created graph %s".formatted(identifier.graphUri()));
+        }
     }
 }

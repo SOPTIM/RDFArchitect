@@ -18,14 +18,19 @@
 package org.rdfarchitect.rdf.graph.wrapper;
 
 /**
- * Implemented by every component that participates in a transaction managed by {@link
- * org.rdfarchitect.database.inmemory.GraphWithContextTransactional}.
+ * A component that takes part in the transaction of the workspace that owns it.
+ *
+ * <p>A participant enrols itself on its first write, so that committing and aborting only cost what
+ * was actually touched.
  */
 public interface TransactionParticipant {
 
+    /** Makes the changes of the running transaction permanent and cuts a new version. */
     void commit();
 
+    /** Discards the changes of the running transaction. */
     void abort();
 
+    /** Returns whether the running transaction changed anything here. */
     boolean hasChanges();
 }

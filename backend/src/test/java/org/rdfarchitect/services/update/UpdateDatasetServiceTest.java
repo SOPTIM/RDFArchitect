@@ -18,11 +18,14 @@
 package org.rdfarchitect.services.update;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
 import org.rdfarchitect.services.update.dataset.UpdateDatasetService;
 
@@ -33,9 +36,14 @@ class UpdateDatasetServiceTest {
     private UpdateDatasetService service;
     private DatabasePort databasePort;
 
+    private WorkspaceTransaction transaction;
+
     @BeforeEach
     void setUp() {
         databasePort = mock(DatabasePort.class);
+        transaction = mock(WorkspaceTransaction.class);
+        when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))
+                .thenReturn(transaction);
         service = new UpdateDatasetService(databasePort);
     }
 
@@ -62,7 +70,8 @@ class UpdateDatasetServiceTest {
 
         service.replaceNamespaces("test-dataset", namespaces);
 
-        verify(databasePort).setPrefixMapping(eq("test-dataset"), any());
+        verify(transaction).setPrefixes(any());
+        verify(transaction).commit(anyString());
     }
 
     @Test

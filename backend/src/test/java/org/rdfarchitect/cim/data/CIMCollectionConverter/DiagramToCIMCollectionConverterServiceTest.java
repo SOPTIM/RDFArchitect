@@ -29,6 +29,7 @@ import org.mockito.ArgumentCaptor;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
@@ -41,12 +42,14 @@ import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterService;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 class DiagramToCIMCollectionConverterServiceTest {
 
     private DatabasePort databasePort;
+    private WorkspaceTransaction transaction;
     private GraphToCIMCollectionConverterService converter;
     private DiagramToCIMCollectionConverterService service;
 
@@ -55,6 +58,7 @@ class DiagramToCIMCollectionConverterServiceTest {
     @BeforeEach
     void setUp() {
         databasePort = mock(DatabasePort.class);
+        transaction = mock(WorkspaceTransaction.class);
         converter = mock(GraphToCIMCollectionConverterService.class);
         service = new DiagramToCIMCollectionConverterService(databasePort, converter);
 
@@ -101,7 +105,7 @@ class DiagramToCIMCollectionConverterServiceTest {
         var diagramId = UUID.randomUUID();
         var emptyDiagrams = new ConcurrentHashMap<UUID, CustomDiagram>();
 
-        when(databasePort.getDatasetDiagrams("dataset")).thenReturn(emptyDiagrams);
+        mockWorkspace(emptyDiagrams);
 
         assertThatThrownBy(() -> service.convert("dataset", diagramId))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -122,7 +126,7 @@ class DiagramToCIMCollectionConverterServiceTest {
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
         map.put(diagramId, diagram);
 
-        when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
+        mockWorkspace(map);
         mockGraphWithReadLock();
 
         var cimClass1 = createTestClass("TestClass1");
@@ -158,7 +162,7 @@ class DiagramToCIMCollectionConverterServiceTest {
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
         map.put(diagramId, diagram);
 
-        when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
+        mockWorkspace(map);
         mockGraphWithReadLock();
 
         var cimClassA = createTestClass("ClassA");
@@ -196,7 +200,7 @@ class DiagramToCIMCollectionConverterServiceTest {
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
         map.put(diagramId, diagram);
 
-        when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
+        mockWorkspace(map);
         mockGraphWithReadLock();
 
         when(converter.convert(
@@ -218,7 +222,7 @@ class DiagramToCIMCollectionConverterServiceTest {
 
     @Test
     void convert_datasetDiagramNotFound_throwsIllegalArgumentException() {
-        when(databasePort.getDatasetDiagrams("dataset")).thenReturn(new ConcurrentHashMap<>());
+        mockWorkspace(new ConcurrentHashMap<>());
 
         var id = UUID.randomUUID();
         assertThatThrownBy(() -> service.convert("dataset", id))
@@ -234,7 +238,7 @@ class DiagramToCIMCollectionConverterServiceTest {
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
         map.put(diagramId, diagram);
 
-        when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
+        mockWorkspace(map);
 
         var result = service.convert("dataset", diagramId);
 
@@ -244,11 +248,15 @@ class DiagramToCIMCollectionConverterServiceTest {
     }
 
     private void mockGraphWithReadLock() {
-        GraphContext outerCtx = mock(GraphContext.class);
-        GraphContext innerCtx = mock(GraphContext.class);
-        when(innerCtx.getRdfGraph()).thenReturn(GraphFactory.createDefaultGraph());
-        when(outerCtx.begin(ReadWrite.READ)).thenReturn(innerCtx);
-        when(databasePort.getGraphWithContext(any(GraphIdentifier.class))).thenReturn(outerCtx);
+        var ctx = mock(GraphContext.class);
+        when(ctx.getRdfGraph()).thenReturn(GraphFactory.createDefaultGraph());
+        when(transaction.graph(anyString())).thenReturn(ctx);
+    }
+
+    private void mockWorkspace(Map<UUID, CustomDiagram> diagrams) {
+        when(transaction.diagrams()).thenReturn(diagrams);
+        when(databasePort.beginTransaction(eq("dataset"), any(ReadWrite.class)))
+                .thenReturn(transaction);
     }
 
     private CIMClass createTestClass(String label) {

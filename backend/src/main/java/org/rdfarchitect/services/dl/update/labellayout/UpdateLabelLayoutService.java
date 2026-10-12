@@ -29,6 +29,7 @@ import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher.LabelKey;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.springframework.stereotype.Service;
 
@@ -54,28 +55,38 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
             GraphIdentifier graphIdentifier,
             UUID diagramUUID,
             List<LabelPositionDTO> labelPositionDTOList) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagramLayout = ctx.getDiagramLayout();
             var resolvedDiagramUUID =
                     diagramUUID != null
                             ? diagramUUID
                             : diagramLayout.getDefaultPackageMRID().getUuid();
 
-            applyLabelPositions(
-                    diagramLayout.getDiagramLayoutModel(),
-                    resolvedDiagramUUID,
-                    labelPositionDTOList);
-            ctx.commit();
+            var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
+            applyLabelPositions(diagramLayoutModel, resolvedDiagramUUID, labelPositionDTOList);
+            transaction.commit(
+                    ChangeDescriptions.in(
+                            "Moved labels",
+                            "diagram",
+                            ChangeDescriptions.diagramName(
+                                    diagramLayoutModel, resolvedDiagramUUID)));
         }
     }
 
     @Override
     public void updateLabelPositions(
             String datasetName, UUID diagramUUID, List<LabelPositionDTO> labelPositionDTOList) {
-        applyLabelPositions(
-                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel(),
-                diagramUUID,
-                labelPositionDTOList);
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            var diagramLayoutModel = transaction.layout().getDiagramLayoutModel();
+            applyLabelPositions(diagramLayoutModel, diagramUUID, labelPositionDTOList);
+            transaction.commit(
+                    ChangeDescriptions.in(
+                            "Moved labels",
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagramLayoutModel, diagramUUID)));
+        }
     }
 
     /**

@@ -19,6 +19,9 @@ package org.rdfarchitect.services.dl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -167,12 +170,68 @@ class LazyDiagramLayoutTest {
                 .orElseThrow();
     }
 
+    @Test
+    void firstLayoutOfADiagram_isNotSomethingTheUserCanUndo() {
+        var packageUUID = onlyPackageUUID();
+        var gadgetUUID = nodeUUID("Gadget", renderPackage(packageUUID));
+        var entriesBefore = databasePort.listChanges(graphIdentifier.datasetName()).size();
+
+        sendPosition(packageUUID, gadgetUUID, 120.0F, 80.0F);
+
+        assertThat(databasePort.listChanges(graphIdentifier.datasetName()))
+                .as("the layout the editor computes on opening a diagram")
+                .hasSize(entriesBefore);
+        assertThat(diagramExists(packageUUID)).isTrue();
+    }
+
+    @Test
+    void movingAClassInALaidOutDiagram_isUndoable() {
+        var packageUUID = onlyPackageUUID();
+        var gadgetUUID = nodeUUID("Gadget", renderPackage(packageUUID));
+        sendPosition(packageUUID, gadgetUUID, 120.0F, 80.0F);
+        var entriesBefore = databasePort.listChanges(graphIdentifier.datasetName()).size();
+
+        sendPosition(packageUUID, gadgetUUID, 300.0F, 400.0F);
+
+        assertThat(databasePort.listChanges(graphIdentifier.datasetName()))
+                .hasSize(entriesBefore + 1);
+    }
+
+    @Test
+    void movingClasses_isRecordedUnderThePackageName_notItsId() {
+        var packageUUID = onlyPackageUUID();
+        var gadgetUUID = nodeUUID("Gadget", renderPackage(packageUUID));
+        sendPosition(packageUUID, gadgetUUID, 120.0F, 80.0F);
+
+        sendPosition(packageUUID, gadgetUUID, 300.0F, 400.0F);
+
+        assertThat(databasePort.listChanges(graphIdentifier.datasetName()).getFirst().message())
+                .doesNotContain(packageUUID.toString())
+                .isEqualTo("Moved classes in package \"gadgets\"");
+    }
+
+    private void sendPosition(UUID packageUUID, UUID classUUID, float x, float y) {
+        var position = new ClassPositionDTO();
+        position.setClassUUID(classUUID);
+        position.setXPosition(x);
+        position.setYPosition(y);
+        classLayoutService.updateClassPositions(graphIdentifier, packageUUID, List.of(position));
+    }
+
     private boolean diagramExists(UUID packageUUID) {
-        var model =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModelDirect();
+        var model = layoutModelOf(graphIdentifier);
         return DLObjectFetcher.fetchDiagram(model, packageUUID) != null;
+    }
+
+    private Model layoutModelOf(GraphIdentifier identifier) {
+        try (var transaction =
+                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
+            return ModelFactory.createDefaultModel()
+                    .add(
+                            transaction
+                                    .graph(identifier.graphUri())
+                                    .getDiagramLayout()
+                                    .getDiagramLayoutModel());
+        }
     }
 }

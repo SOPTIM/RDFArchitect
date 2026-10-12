@@ -19,18 +19,17 @@ package org.rdfarchitect.database.inmemory;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.graph.Graph;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
+import org.rdfarchitect.database.WorkspaceTransaction;
+import org.rdfarchitect.models.changelog.RevertScope;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
+import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RequiredArgsConstructor
@@ -39,43 +38,49 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     private final InMemoryDatabase database;
 
     @Override
-    public GraphContext getGraphWithContext(GraphIdentifier graphIdentifier) {
-        return database.getGraphWithContext(graphIdentifier);
+    public WorkspaceTransaction beginTransaction(String workspaceName, ReadWrite mode) {
+        return database.beginTransaction(workspaceName, mode);
     }
 
     @Override
-    public Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName) {
-        return database.getDatasetDiagrams(datasetName);
+    public boolean canUndo(String workspaceName) {
+        return database.canUndo(workspaceName);
     }
 
     @Override
-    public DiagramLayout getDatasetDiagramLayout(String datasetName) {
-        return database.getDatasetDiagramLayout(datasetName);
+    public WorkspaceChangeLogEntry pendingUndo(String workspaceName) {
+        return database.pendingUndo(workspaceName);
     }
 
     @Override
-    public CrossProfileDiagramInfo getCrossProfileDiagramInfo(String datasetName) {
-        return database.getCrossProfileDiagramInfo(datasetName);
+    public boolean canRedo(String workspaceName) {
+        return database.canRedo(workspaceName);
+    }
+
+    @Override
+    public WorkspaceHistoryStep undo(String workspaceName) {
+        return database.undo(workspaceName);
+    }
+
+    @Override
+    public WorkspaceHistoryStep redo(String workspaceName) {
+        return database.redo(workspaceName);
+    }
+
+    @Override
+    public WorkspaceHistoryStep restoreToVersion(
+            String workspaceName, UUID versionId, RevertScope scope) {
+        return database.restoreToVersion(workspaceName, versionId, scope);
+    }
+
+    @Override
+    public List<WorkspaceChangeLogEntry> listChanges(String workspaceName) {
+        return database.listChanges(workspaceName);
     }
 
     @Override
     public PrefixMapping getPrefixMapping(String datasetName) {
         return database.getPrefixMapping(datasetName);
-    }
-
-    @Override
-    public void deleteGraph(GraphIdentifier graphIdentifier) {
-        database.remove(graphIdentifier);
-    }
-
-    @Override
-    public void createGraph(GraphIdentifier graphIdentifier, Graph graph) {
-        database.createGraph(graphIdentifier, graph);
-    }
-
-    @Override
-    public void createEmptyGraph(GraphIdentifier graphIdentifier) {
-        database.createEmptyGraph(graphIdentifier);
     }
 
     @Override
@@ -89,11 +94,6 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
-    public void setPrefixMapping(String datasetName, PrefixMapping prefixMapping) {
-        database.setPrefixMapping(datasetName, prefixMapping);
-    }
-
-    @Override
     public List<String> listDatasets() {
         return database.listDatasets();
     }
@@ -104,6 +104,11 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
+    public void createWorkspaceIfAbsent(String workspaceName) {
+        database.createWorkspaceIfAbsent(workspaceName);
+    }
+
+    @Override
     public void deleteDataset(String datasetName) {
         database.deleteDataset(datasetName);
     }
@@ -111,11 +116,6 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     @Override
     public void renameDataset(String oldDatasetName, String newDatasetName) {
         database.renameDataset(oldDatasetName, newDatasetName);
-    }
-
-    @Override
-    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri) {
-        database.renameGraph(graphIdentifier, newGraphUri);
     }
 
     @Override

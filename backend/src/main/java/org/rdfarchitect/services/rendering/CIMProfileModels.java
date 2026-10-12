@@ -46,12 +46,18 @@ public final class CIMProfileModels {
             String datasetName,
             String excludedGraphUri) {
         var profiles = new ArrayList<CIMProfileModel>();
-        for (var graphUri : databasePort.listGraphUris(datasetName)) {
-            if (graphUri.equals(excludedGraphUri)) {
-                continue;
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            for (var graphUri : transaction.graphUris()) {
+                if (graphUri.equals(excludedGraphUri)) {
+                    continue;
+                }
+                profiles.add(
+                        load(
+                                databasePort,
+                                datasetName,
+                                graphUri,
+                                keywordsByGraphUri.get(graphUri)));
             }
-            profiles.add(
-                    load(databasePort, datasetName, graphUri, keywordsByGraphUri.get(graphUri)));
         }
         return profiles;
     }
@@ -76,11 +82,13 @@ public final class CIMProfileModels {
             DatabasePort databasePort, String datasetName, String graphUri, String keyword) {
         var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
         Graph graphCopy;
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            graphCopy = GraphUtils.deepCopy(ctx.getRdfGraph());
+        String color;
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            graphCopy = GraphUtils.deepCopy(transaction.graph(graphUri).getRdfGraph());
+            color = transaction.crossProfileInfo().getColor(graphUri);
         }
 
-        var color = databasePort.getCrossProfileDiagramInfo(datasetName).getColor(graphUri);
         var model = new CIMModelFacade(graphUri, ModelFactory.createModelForGraph(graphCopy));
         return new CIMProfileModel(graphUri, color, keyword, model);
     }

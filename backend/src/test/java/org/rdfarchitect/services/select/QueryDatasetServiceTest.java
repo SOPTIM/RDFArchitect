@@ -29,7 +29,6 @@ import org.rdfarchitect.api.dto.GraphDTO;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -351,10 +350,10 @@ class QueryDatasetServiceTest {
     private void createGraph(String graphUri, String turtle) {
         var graph = GraphFactory.createDefaultGraph();
         RDFParser.create().source(new StringReader(turtle)).lang(Lang.TURTLE).parse(graph);
-        var identifier = new GraphIdentifier(DATASET, graphUri);
-        databasePort.createGraph(identifier, graph);
-        try (var ctx = databasePort.getGraphWithContext(identifier).begin(ReadWrite.WRITE)) {
-            ctx.commit("import");
+        databasePort.createWorkspaceIfAbsent(DATASET);
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.WRITE)) {
+            transaction.createGraph(graphUri, graph);
+            transaction.commit("import");
         }
     }
 }

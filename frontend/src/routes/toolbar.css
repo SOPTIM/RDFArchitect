@@ -23,6 +23,12 @@
         border-color 0.2s ease;
 }
 
+/* A page laid out like the editor but not one, told apart by the colour of the bar above it. */
+.toolbar-surface--named {
+    background: var(--color-lightblue);
+    border-bottom-color: var(--color-button-border);
+}
+
 .toolbar-icon-button {
     align-items: center;
     justify-content: center;

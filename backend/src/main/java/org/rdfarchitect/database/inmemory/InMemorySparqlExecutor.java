@@ -24,14 +24,31 @@ import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.query.ResultSetFactory;
-import org.rdfarchitect.database.GraphContext;
+import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphIdentifier;
 
 @UtilityClass
 public class InMemorySparqlExecutor {
 
-    public ResultSet executeSingleQuery(GraphContext graph, Query query, String graphUri) {
-        try (var ctx = graph.begin(ReadWrite.READ)) {
-            var dataset = SessionDataStore.wrapGraphInDataset(ctx.getRdfGraph(), graphUri);
+    /**
+     * Runs a query against a single graph, opening a read transaction on its workspace. Joins the
+     * caller's transaction when there already is one.
+     *
+     * @param databasePort the database to read from
+     * @param graphIdentifier identifies workspace and graph
+     * @param query the query to run
+     * @param graphUri the name to expose the graph under, or {@code null} for the default graph
+     * @return the query result
+     */
+    public ResultSet executeSingleQuery(
+            DatabasePort databasePort,
+            GraphIdentifier graphIdentifier,
+            Query query,
+            String graphUri) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var graph = transaction.graph(graphIdentifier.graphUri()).getRdfGraph();
+            var dataset = SessionDataStore.wrapGraphInDataset(graph, graphUri);
             try (var queryExecution = QueryExecutionFactory.create(query, dataset)) {
                 var resultSet = queryExecution.execSelect();
                 return ResultSetFactory.copyResults(resultSet);

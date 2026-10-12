@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
@@ -153,10 +154,7 @@ class ClassSchemaOccurrenceServiceTest {
     private void createProfileGraph(GraphIdentifier graphIdentifier) {
         var graph = GraphFactory.createDefaultGraph();
         RDFParser.create().source(new StringReader(NAMED_PROFILE)).lang(Lang.TURTLE).parse(graph);
-        databasePort.createGraph(graphIdentifier, graph);
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            ctx.commit("import");
-        }
+        createGraph(graphIdentifier, graph);
     }
 
     private void createGraph(GraphIdentifier graphIdentifier, String fileName) {
@@ -166,6 +164,16 @@ class ClassSchemaOccurrenceServiceTest {
                         .setFile(file)
                         .setGraphName(graphIdentifier.graphUri())
                         .build();
-        databasePort.createGraph(graphIdentifier, graphSource.graph());
+        createGraph(graphIdentifier, graphSource.graph());
+    }
+
+    /** Creates a workspace and a graph in it, the way an upload does. */
+    private void createGraph(GraphIdentifier identifier, Graph graph) {
+        databasePort.createWorkspaceIfAbsent(identifier.datasetName());
+        try (var transaction =
+                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.createGraph(identifier.graphUri(), graph);
+            transaction.commit("created graph %s".formatted(identifier.graphUri()));
+        }
     }
 }

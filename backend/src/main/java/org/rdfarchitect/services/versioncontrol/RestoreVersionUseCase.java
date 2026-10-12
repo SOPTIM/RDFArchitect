@@ -17,17 +17,21 @@
 
 package org.rdfarchitect.services.versioncontrol;
 
-import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.api.dto.HistoryStepDTO;
+import org.rdfarchitect.models.changelog.RevertScope;
 
 import java.util.UUID;
 
 public interface RestoreVersionUseCase {
 
     /**
-     * Restores a specific version of the graph for the graph provided through the graph identifier.
+     * Puts the workspace back the way a specific version left it, recording that as a new change.
      *
-     * @param graphIdentifier The identifier of the graph to restore.
-     * @param versionId The unique identifier of the version to restore.
+     * @param workspaceName the workspace to operate on
+     * @param versionId the change to restore to
+     * @param scope how much of the workspace to put back
+     * @return what was restored and what is left to undo or redo; the change is {@code null} if
+     *     nothing within the scope had changed since
      */
-    void restoreVersion(GraphIdentifier graphIdentifier, UUID versionId);
+    HistoryStepDTO restoreVersion(String workspaceName, UUID versionId, RevertScope scope);
 }
