@@ -32,7 +32,7 @@
         isPrefixOnlyRename,
     } from "$lib/utils/migrationUtils.js";
 
-    import RenameTable from "./RenameTable.svelte";
+    import MappingSection from "./MappingSection.svelte";
 
     let hiddenMappings = $state([]);
     let visibleMappings = $state([]);
@@ -45,8 +45,8 @@
         for (const mapping of [...hiddenMappings, ...visibleMappings]) {
             for (const newClass of mapping.newResources) {
                 const froms = mapping.oldResources.map(r => r.label);
-                map.set(newClass.label, [
-                    ...(map.get(newClass.label) ?? []),
+                map.set(newClass.iri, [
+                    ...(map.get(newClass.iri) ?? []),
                     ...froms,
                 ]);
             }
@@ -141,36 +141,13 @@
             description="There are no class changes to review in this migration."
         />
     {:else}
-        {#if visibleMappings.length > 0}
-            <RenameTable
-                bind:mappings={visibleMappings}
-                candidates={visibleAdded}
-                propertyType="Class"
-            />
-        {/if}
-
-        {#if visibleAdded.length > 0}
-            <div>
-                <h3 class="mb-3 text-lg font-semibold">Added Classes</h3>
-                <div class="space-y-1">
-                    {#each visibleAdded as addedClass}
-                        <div
-                            class="bg-lightgray flex items-center justify-between px-3 py-1 text-sm"
-                        >
-                            <p>{addedClass.label}</p>
-                            {#if renamedFrom.has(addedClass.label)}
-                                <span
-                                    class="text-soptim-dunkelgrau text-xs italic"
-                                >
-                                    renamed from {renamedFrom
-                                        .get(addedClass.label)
-                                        .join(", ")}
-                                </span>
-                            {/if}
-                        </div>
-                    {/each}
-                </div>
-            </div>
-        {/if}
+        <MappingSection
+            bind:deletedAndRemapped={visibleMappings}
+            added={visibleAdded}
+            addedTitle="Added Classes"
+            candidates={visibleAdded}
+            resourceType="Class"
+            {renamedFrom}
+        />
     {/if}
 </div>

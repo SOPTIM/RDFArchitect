@@ -34,6 +34,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.changes.MappingType;
 import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
@@ -51,6 +52,7 @@ import org.rdfarchitect.services.schemamigration.artifacts.GenerateMigrationRepo
 import org.rdfarchitect.services.schemamigration.artifacts.GenerateMigrationScriptUseCase;
 import org.rdfarchitect.services.schemamigration.artifacts.MigrationReportBuilder;
 import org.rdfarchitect.services.schemamigration.artifacts.MigrationScriptBuilder;
+import org.rdfarchitect.services.schemamigration.defaults.CrossDomainPropertyPropagationHandler;
 import org.rdfarchitect.services.schemamigration.defaults.DefaultValueAssigner;
 import org.rdfarchitect.services.schemamigration.defaults.GetDefaultValueViewsUseCase;
 import org.rdfarchitect.services.schemamigration.defaults.InheritanceChangeHandler;
@@ -67,9 +69,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -97,6 +101,8 @@ public class SchemaMigrationService
     private final SchemaValidationService validationService;
 
     private static final String GRAPH_URI = "http://example.org/graph";
+    private static final Set<MappingType> CROSS_CLASS_MAPPING_TYPES =
+            Set.of(MappingType.MOVE, MappingType.MERGE, MappingType.SPLIT);
     private final SchemaValidationReportToMarkdownService schemaValidationReportToMarkdownService;
 
     @Override
@@ -297,7 +303,7 @@ public class SchemaMigrationService
         var classChanges =
                 context.getDiffAfterClassConfirm().stream()
                         .collect(Collectors.toMap(SemanticClassChange::getIri, c -> c));
-        var result = new ArrayList<ClassPropertyMappingOverview>();
+        var potentialPropertiesByIri = new HashMap<String, PotentialPropertyData>();
 
         var originalModel = ModelFactory.createModelForGraph(context.getOriginalSchema());
         var updatedModel = ModelFactory.createModelForGraph(context.getUpdatedSchema());
@@ -305,28 +311,79 @@ public class SchemaMigrationService
         for (var cls : classChanges.values()) {
             markAssociationsUsed(cls.getAssociations(), originalModel, updatedModel);
             var potentialProperties = findPotentialProperties(cls, classChanges, updatedModel);
+            potentialPropertiesByIri.put(cls.getIri(), potentialProperties);
 
             if (cls.getAttributeResourceMappings().isEmpty()) {
                 cls.setAttributeResourceMappings(
-                        RenameDetector.detectPropertyRenames(potentialProperties.attributes));
+                        RenameDetector.detectPropertyMappings(
+                                cls.getAttributes(), potentialProperties.attributes));
             }
             if (cls.getAssociationResourceMappings().isEmpty()) {
                 cls.setAssociationResourceMappings(
-                        RenameDetector.detectPropertyRenames(potentialProperties.associations));
+                        RenameDetector.detectPropertyMappings(
+                                cls.getAssociations(), potentialProperties.associations));
             }
             if (cls.getEnumEntryResourceMappings().isEmpty()) {
                 cls.setEnumEntryResourceMappings(
-                        RenameDetector.detectPropertyRenames(potentialProperties.enumEntries));
+                        RenameDetector.detectPropertyMappings(
+                                cls.getEnumEntries(), potentialProperties.enumEntries));
             }
+        }
+
+        collapseMovesIntoMerges(classChanges, SemanticClassChange::getAttributeResourceMappings);
+        collapseMovesIntoMerges(classChanges, SemanticClassChange::getAssociationResourceMappings);
+        collapseMovesIntoMerges(classChanges, SemanticClassChange::getEnumEntryResourceMappings);
+
+        var mappings = new ArrayList<ClassPropertyMappingOverview>();
+        for (var cls : classChanges.values()) {
             if (cls.getAttributes().size()
                             + cls.getAssociations().size()
                             + cls.getEnumEntries().size()
                     > 0) {
-                result.add(new ClassPropertyMappingOverview(cls, potentialProperties));
+                mappings.add(
+                        new ClassPropertyMappingOverview(
+                                cls, potentialPropertiesByIri.get(cls.getIri())));
             }
         }
+        return mappings;
+    }
 
-        return result;
+    private <T extends SemanticPropertyChange> void collapseMovesIntoMerges(
+            Map<String, SemanticClassChange> classChanges,
+            Function<SemanticClassChange, List<ResourceMapping<T>>> mappingAccessor) {
+        var moves =
+                classChanges.values().stream()
+                        .flatMap(cls -> mappingAccessor.apply(cls).stream())
+                        .filter(m -> m.getType() == MappingType.MOVE)
+                        .filter(
+                                m ->
+                                        Objects.equals(
+                                                m.getOldResources().getFirst().getLabel(),
+                                                m.getNewResources().getFirst().getLabel()))
+                        .toList();
+
+        var moveTo =
+                moves.stream()
+                        .collect(
+                                Collectors.groupingBy(
+                                        m -> m.getNewResources().getFirst().getIri()));
+
+        for (var sources : moveTo.values()) {
+            if (sources.size() < 2) {
+                continue;
+            }
+
+            var newResource = sources.getFirst().getNewResources().getFirst();
+            var oldResources = sources.stream().map(m -> m.getOldResources().getFirst()).toList();
+            var merge = new ResourceMapping<>(oldResources, newResource, 1.0);
+
+            for (var source : sources) {
+                var oldDomain = classChanges.get(source.getOldResources().getFirst().getDomain());
+                var bucket = mappingAccessor.apply(oldDomain);
+                bucket.remove(source);
+                bucket.add(merge);
+            }
+        }
     }
 
     /**
@@ -426,11 +483,6 @@ public class SchemaMigrationService
             oldClassChange.setAssociationResourceMappings(propertyRename.getAssociationMappings());
             oldClassChange.setEnumEntryResourceMappings(propertyRename.getEnumEntryMappings());
 
-            // a mapping that crosses class boundaries can be detected while processing either the
-            // source or the target class's candidate pool, so the same mapping id can legitimately
-            // show up under more than one class's bucket here - collect everything first and
-            // materialize/attach each mapping exactly once, by its own resolved target class,
-            // rather than blindly attaching it to whichever bucket it happened to arrive under.
             allAttributeMappings.addAll(propertyRename.getAttributeMappings());
             allAssociationMappings.addAll(propertyRename.getAssociationMappings());
             allEnumEntryMappings.addAll(propertyRename.getEnumEntryMappings());
@@ -443,19 +495,11 @@ public class SchemaMigrationService
         applyPropertyRenames(
                 newClassChangesByIri, SemanticClassChange::getEnumEntries, allEnumEntryMappings);
 
-        // merging a property rename rebuilds its field changes from both sides, which mints a
-        // fresh DATATYPE_CHANGE even where the datatype was only renamed - so reclassify again
         reclassifyChangesDueToRenames(newClassChanges, context.getResourceMappings());
 
         context.setDiffAfterPropertyConfirm(newClassChanges);
     }
 
-    /**
-     * Replaces both sides of every confirmed mapping with the merged change(s), so a renamed,
-     * moved, merged, or split property is listed once per resulting property rather than as
-     * unrelated additions plus deletions - attached to the class the result actually belongs to
-     * (its own domain), not to whichever class the mapping happened to be submitted under.
-     */
     private <T extends SemanticResourceChange> void applyPropertyRenames(
             Map<String, SemanticClassChange> classesByIri,
             Function<SemanticClassChange, List<T>> propertyListAccessor,
@@ -496,7 +540,56 @@ public class SchemaMigrationService
                         propertyListAccessor,
                         RenameObjectBuilder.createRenameObject(rename));
             }
+
+            attachDeletionMarkersForLosingDomains(classesByIri, propertyListAccessor, rename);
         }
+    }
+
+    /**
+     * A cross-class rename/move/merge/split only ever attaches its merged result to the new side's
+     * domain(s) - every old resource whose own domain isn't one of those is left with nothing in
+     * its property list once the removal above runs, even though the property genuinely disappeared
+     * from that class (moved or merged elsewhere). Re-attaching a copy of that old resource to its
+     * own domain class, retyped to {@link SemanticResourceChangeType#DELETED_FROM_MAPPING}, is what
+     * lets the review step show that correctly instead of a class with no properties at all - a
+     * plain DELETE would instead generate its own independent SPARQL deletion for that exact
+     * predicate (see the comment below).
+     */
+    private <T extends SemanticResourceChange> void attachDeletionMarkersForLosingDomains(
+            Map<String, SemanticClassChange> classesByIri,
+            Function<SemanticClassChange, List<T>> propertyListAccessor,
+            ResourceMapping<T> rename) {
+        var newDomains =
+                rename.getNewResources().stream()
+                        .map(this::domainOf)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
+
+        for (var oldResource : rename.getOldResources()) {
+            var domain = domainOf(oldResource);
+            if (domain == null || newDomains.contains(domain)) {
+                continue;
+            }
+
+            var domainClass = classesByIri.get(domain);
+            if (domainClass == null) {
+                continue;
+            }
+
+            @SuppressWarnings("unchecked")
+            var deleted = (T) oldResource.copy();
+            // not a plain DELETE: that would generate its own SPARQL deletion for this exact
+            // predicate, racing the surviving RENAME/MOVE entry's own delete+insert for the same
+            // predicate on whichever class comes first in the script
+            deleted.setSemanticResourceChangeType(SemanticResourceChangeType.DELETED_FROM_MAPPING);
+            propertyListAccessor.apply(domainClass).add(deleted);
+        }
+    }
+
+    private String domainOf(SemanticResourceChange change) {
+        return change instanceof SemanticPropertyChange propertyChange
+                ? propertyChange.getDomain()
+                : null;
     }
 
     private <T extends SemanticResourceChange> void attachMergedProperty(
@@ -506,10 +599,7 @@ public class SchemaMigrationService
         if (merged.getChanges().isEmpty()) {
             return;
         }
-        var domain =
-                merged instanceof SemanticPropertyChange propertyChange
-                        ? propertyChange.getDomain()
-                        : null;
+        var domain = domainOf(merged);
         var targetClass = domain != null ? classesByIri.get(domain) : null;
         if (targetClass != null) {
             propertyListAccessor.apply(targetClass).add(merged);
@@ -522,13 +612,36 @@ public class SchemaMigrationService
 
     @Override
     public List<DefaultValueView> getDefaultValueViews() {
-        var newChangeList = new ArrayList<SemanticClassChange>();
-        for (var cls : migrationSessionStore.getContext().getDiffAfterPropertyConfirm()) {
-            newChangeList.add(new SemanticClassChange(cls));
-        }
+        var newChangeList = computePropagatedClassChanges();
         var result = new ArrayList<DefaultValueView>();
 
+        var updatedModel =
+                ModelFactory.createModelForGraph(
+                        migrationSessionStore.getContext().getUpdatedSchema());
+        DefaultValueAssigner.assignDefaultValues(newChangeList, updatedModel, result);
+
+        return result;
+    }
+
+    /**
+     * Rebuilds the class list exactly as {@link #getDefaultValueViews()} hands it to the frontend:
+     * the context's {@code diffAfterPropertyConfirm} enriched with every class that gains or loses
+     * a property purely through inheritance or a cross-class move/merge/split - classes that have
+     * no change of their own and only exist in the result because {@link InheritanceChangeHandler}
+     * and {@link CrossDomainPropertyPropagationHandler} synthesize an entry for them.
+     *
+     * <p>{@link #submitDefaultValues(List)} must match {@link DefaultValueView}s against this same
+     * enriched set, not the raw {@code diffAfterPropertyConfirm} - otherwise a view for one of
+     * those synthesized classes has nothing to attach to and is silently dropped, which left
+     * classes that newly inherit a merged/moved/split property without their default-value SPARQL.
+     */
+    private List<SemanticClassChange> computePropagatedClassChanges() {
         var context = migrationSessionStore.getContext();
+        var newChangeList = new ArrayList<SemanticClassChange>();
+        for (var cls : context.getDiffAfterPropertyConfirm()) {
+            newChangeList.add(new SemanticClassChange(cls));
+        }
+
         var oldModel = ModelFactory.createModelForGraph(context.getOriginalSchema());
         var updatedModel = ModelFactory.createModelForGraph(context.getUpdatedSchema());
         var classRenames = context.getResourceMappings();
@@ -536,15 +649,29 @@ public class SchemaMigrationService
 
         InheritanceChangeHandler.processInheritanceChanges(
                 newChangeList, updatedModel, oldModel, classRenames, movedPropertyIris);
-        DefaultValueAssigner.assignDefaultValues(newChangeList, updatedModel, result);
 
-        return result;
+        var crossDomainAttributeMappings =
+                collectCrossDomainMappings(
+                        context.getDiffAfterClassConfirm(),
+                        SemanticClassChange::getAttributeResourceMappings);
+        var crossDomainAssociationMappings =
+                collectCrossDomainMappings(
+                        context.getDiffAfterClassConfirm(),
+                        SemanticClassChange::getAssociationResourceMappings);
+        CrossDomainPropertyPropagationHandler.processCrossDomainPropertyMappings(
+                newChangeList,
+                oldModel,
+                updatedModel,
+                crossDomainAttributeMappings,
+                crossDomainAssociationMappings);
+
+        return newChangeList;
     }
 
     /**
-     * IRIs of every property already covered by a confirmed cross-class move, on either side -
-     * inheritance propagation must leave these alone, since a moved property is already represented
-     * by its own merged entry rather than by an inherited add/delete.
+     * IRIs of every property already covered by a confirmed cross-class move, merge, or split, on
+     * either side - inheritance propagation must leave these alone, since such a property is
+     * already represented by its own merged entry rather than by an inherited add/delete.
      */
     private Set<String> collectMovedPropertyIris(List<SemanticClassChange> classChanges) {
         var movedPropertyIris = new HashSet<String>();
@@ -558,7 +685,7 @@ public class SchemaMigrationService
     private <T extends SemanticResourceChange> void addMovedPropertyIris(
             Set<String> movedPropertyIris, List<ResourceMapping<T>> mappings) {
         for (var mapping : mappings) {
-            if (mapping.getType() != MappingType.MOVE) {
+            if (!CROSS_CLASS_MAPPING_TYPES.contains(mapping.getType())) {
                 continue;
             }
             mapping.getOldResources().forEach(r -> movedPropertyIris.add(iriOf(r)));
@@ -566,10 +693,31 @@ public class SchemaMigrationService
         }
     }
 
+    /**
+     * Every confirmed cross-class move, merge, or split mapping, deduplicated by id - the same
+     * mapping can legitimately be attached to more than one class's property list (its old and new
+     * resources can each live in a different class), same as in {@link #applyPropertyRenames(Map,
+     * Function, List)}.
+     */
+    private <T extends SemanticResourceChange> List<ResourceMapping<T>> collectCrossDomainMappings(
+            List<SemanticClassChange> classChanges,
+            Function<SemanticClassChange, List<ResourceMapping<T>>> mappingAccessor) {
+        var seen = new HashSet<UUID>();
+        var result = new ArrayList<ResourceMapping<T>>();
+        for (var classChange : classChanges) {
+            for (var mapping : mappingAccessor.apply(classChange)) {
+                if (CROSS_CLASS_MAPPING_TYPES.contains(mapping.getType())
+                        && seen.add(mapping.getId())) {
+                    result.add(mapping);
+                }
+            }
+        }
+        return result;
+    }
+
     @Override
     public void submitDefaultValues(List<DefaultValueView> defaultValueViews) {
-        var classes =
-                new ArrayList<>(migrationSessionStore.getContext().getDiffAfterPropertyConfirm());
+        var classes = computePropagatedClassChanges();
         var classChangeMap =
                 classes.stream().collect(Collectors.toMap(SemanticClassChange::getLabel, c -> c));
 

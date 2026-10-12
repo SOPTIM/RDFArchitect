@@ -40,7 +40,8 @@ public class SchemaValidationReportToMarkdownService
     private static final String NO_RESOURCE_LABEL = "General";
 
     @Override
-    public String convertToMarkdown(ValidationReportDTO report, String title) {        var sb = new StringBuilder();
+    public String convertToMarkdown(ValidationReportDTO report, String title) {
+        var sb = new StringBuilder();
 
         sb.append("# ").append(title).append(NEW_LINE).append(NEW_LINE);
         sb.append("Errors and warnings found during schema validation, grouped by affected ")
@@ -95,7 +96,8 @@ public class SchemaValidationReportToMarkdownService
 
         sb.append("## ").append(title).append(NEW_LINE).append(NEW_LINE);
 
-        var byResource = new HashMap<String, List<ValidationIssueDTO>>();        issues.forEach(
+        var byResource = new HashMap<String, List<ValidationIssueDTO>>();
+        issues.forEach(
                 issue ->
                         byResource
                                 .computeIfAbsent(issue.getResourceUri(), k -> new ArrayList<>())

@@ -17,6 +17,13 @@
 
 import { URI } from "$lib/models/dto/index.ts";
 
+const RENAMED_FROM_VERBS = {
+    RENAME: "renamed from",
+    MOVE: "moved from",
+    MERGE: "merged from",
+    SPLIT: "split from",
+};
+
 export function isPrefixOnlyRename(oldIRI, newIRI) {
     if (!newIRI || !oldIRI) {
         return false;
@@ -26,29 +33,10 @@ export function isPrefixOnlyRename(oldIRI, newIRI) {
     return oldName === newName;
 }
 
-/**
- * Whether the user should be spared the rename mapping for this association. An association with
- * AssociationUsed = "No" cannot be instantiated, so no instance data ever used the old predicate
- * and there is nothing a mapping could rewrite. Judged on the old side, which is where the values
- * would have come from.
- */
 export function isNonInstantiableAssociationRename(renameCandidate) {
     return renameCandidate?.oldResources?.[0]?.associationUsed === false;
 }
 
-/**
- * Drops the rename candidates the user should not be asked about from a property overview,
- * returning a copy: the caller keeps the unfiltered overview and still submits the hidden
- * candidates with the target that was detected for them.
- *
- * `alsoHide` adds a rule on top of the prefix-only one, which applies only when the migration was
- * started with "ignore prefixes".
- *
- * Handles both overview shapes: the class overview's `added`, and the property overview's
- * `addedInClass`/`allAdded` (the latter spans the whole inheritance chain). Auto-detected
- * candidates are always 1:1 at this point (a row only grows past one old/new resource once the
- * user links it in the UI), so filtering only has to look at the first old/new resource.
- */
 export function filterRenameCandidates(
     properties,
     { ignorePrefixes = false, alsoHide } = {},
@@ -60,8 +48,14 @@ export function filterRenameCandidates(
     const allAdded = properties.allAdded ?? addedInClass;
 
     const isHidden = mapping => {
-        const oldIri = mapping.oldResources?.[0]?.iri;
-        const newIri = mapping.newResources?.[0]?.iri;
+        if (
+            mapping.oldResources?.length !== 1 ||
+            mapping.newResources?.length !== 1
+        ) {
+            return false;
+        }
+        const oldIri = mapping.oldResources[0]?.iri;
+        const newIri = mapping.newResources[0]?.iri;
         return (
             (ignorePrefixes && isPrefixOnlyRename(oldIri, newIri)) ||
             (alsoHide?.(mapping) ?? false)
@@ -95,15 +89,6 @@ export function filterRenameCandidates(
     return filtered;
 }
 
-/**
- * Classifies a mapping row from the cardinality of its two sides, mirroring the backend's own
- * `ResourceMapping` constructors so a freshly-assembled row is classified exactly the way the
- * server would have classified it, since the server trusts whatever `type` is submitted rather
- * than re-deriving it on the way in.
- *
- * A resource "moved" when it's linked 1:1 but its `domain` (the owning class IRI) differs between
- * the old and new side; classes have no `domain`, so a class-to-class link is always a rename.
- */
 export function computeMappingType(oldResources, newResources) {
     if (!newResources || newResources.length === 0) return "UNMAPPED";
     if (oldResources.length > 1) return "MERGE";
@@ -112,6 +97,66 @@ export function computeMappingType(oldResources, newResources) {
     const oldDomain = oldResources[0]?.domain ?? null;
     const newDomain = newResources[0]?.domain ?? null;
     return oldDomain === newDomain ? "RENAME" : "MOVE";
+}
+
+export function findSplitSiblingIris(classes, getProperties) {
+    const byOldIRI = new Map();
+    for (const cls of classes ?? []) {
+        for (const property of getProperties(cls) ?? []) {
+            const isRenameOrMove =
+                property.semanticResourceChangeType === "RENAME" ||
+                property.semanticResourceChangeType === "MOVE";
+            if (
+                isRenameOrMove &&
+                property.oldIRI &&
+                (property.additionalOldIRIs?.length ?? 0) === 0
+            ) {
+                const siblings = byOldIRI.get(property.oldIRI) ?? [];
+                siblings.push(property.iri);
+                byOldIRI.set(property.oldIRI, siblings);
+            }
+        }
+    }
+
+    const result = new Set();
+    for (const siblings of byOldIRI.values()) {
+        if (siblings.length > 1) {
+            siblings.forEach(iri => result.add(iri));
+        }
+    }
+    return result;
+}
+
+function oldLabelWithClass(resource) {
+    if (!resource.domain) return resource.label;
+    return `${resource.label} (in ${new URI(resource.domain).suffix})`;
+}
+
+export function buildRenamedFromMap(classes, getMappings) {
+    const map = new Map();
+    const seenMappingIds = new Set();
+    if (!classes) return map;
+
+    for (const cls of classes) {
+        for (const mapping of getMappings(cls) ?? []) {
+            if ((mapping.newResources?.length ?? 0) === 0) continue;
+            if (seenMappingIds.has(mapping.id)) continue;
+            seenMappingIds.add(mapping.id);
+
+            const type = computeMappingType(
+                mapping.oldResources,
+                mapping.newResources,
+            );
+            const verb = RENAMED_FROM_VERBS[type] ?? RENAMED_FROM_VERBS.RENAME;
+            const text = `${verb} ${mapping.oldResources.map(oldLabelWithClass).join(", ")}`;
+
+            for (const target of mapping.newResources) {
+                const existing = map.get(target.iri);
+                map.set(target.iri, existing ? `${existing}; ${text}` : text);
+            }
+        }
+    }
+    return map;
 }
 
 function dedupeByIri(resources) {
@@ -126,19 +171,6 @@ function dedupeByIri(resources) {
     return result;
 }
 
-/**
- * Assembles the mapping rows a mapping table edited into the shape the backend expects for
- * submission: a genuine N:M `ResourceMapping` whenever two rows ended up sharing a resource (the
- * user merged them by linking two old resources to the same new one, or split one by linking it
- * to more than one new resource), found via connected components over every old/new resource IRI
- * the rows reference. Submitting repeated 1:1 mappings that merely share a target instead of one
- * real N:M mapping would make the backend attach the same result twice.
- *
- * Rows with no linked target are dropped (nothing to submit). A component that ends up with more
- * than one old AND more than one new resource at once can't be represented by the backend's model
- * (neither a pure merge nor a pure split) - such rows are excluded from `mappings` and returned in
- * `invalidMappingIds` so the UI can flag them and block submission until the user resolves them.
- */
 export function groupMappingsForSubmission(mappings) {
     const rows = (mappings ?? []).filter(
         m => (m.newResources?.length ?? 0) > 0,
@@ -260,7 +292,6 @@ export function canKeepExistingValues(attribute) {
     );
 }
 
-/** True once the user declared the old and the new datatype interchangeable. */
 export function keepsExistingValues(attribute) {
     return (
         canKeepExistingValues(attribute) &&
@@ -288,7 +319,6 @@ export function describeAttributeChange(attribute) {
     return "other";
 }
 
-/** Whether the step offers a default value for this attribute at all. */
 export function allowsDefaultValueInput(attribute) {
     return (
         attribute.semanticResourceChangeType === "ADD" ||
@@ -299,11 +329,6 @@ export function allowsDefaultValueInput(attribute) {
     );
 }
 
-/**
- * Whether a default value has to be given before the migration can continue. Marking the two
- * datatypes equivalent keeps every existing value, so the datatype change needs no default - but
- * an attribute that also became mandatory still needs one for the instances that lack a value.
- */
 export function requiresDefaultValue(attribute) {
     if (
         attribute.semanticResourceChangeType === "ADD" ||
@@ -323,24 +348,14 @@ export function requiresDefaultValue(attribute) {
     return hasDataTypeChange(attribute) && !keepsExistingValues(attribute);
 }
 
-/** Whether a default value was filled in for this attribute. */
 export function hasDefaultValue(attribute) {
     return Boolean(attribute.defaultValue?.trim());
 }
 
-/**
- * True once the user waived the default value for an attribute that requires one (RDFA-714): the
- * attribute is knowingly left uninitialised because no default makes sense for it. Tied to the
- * requirement, so the flag turns inert as soon as the attribute stops asking for a default.
- */
 export function skipsInitialization(attribute) {
     return requiresDefaultValue(attribute) && attribute.noDefaultValue === true;
 }
 
-/**
- * Whether this attribute still blocks the defaults step: it requires a default value that was
- * neither given nor waived.
- */
 export function isDefaultValueMissing(attribute) {
     return (
         requiresDefaultValue(attribute) &&

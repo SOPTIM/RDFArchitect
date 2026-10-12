@@ -64,8 +64,21 @@ public class PropertyMappingOverview<T extends SemanticResourceChange> {
                         .flatMap(r -> r.getOldResources().stream().map(T::getLabel))
                         .collect(Collectors.toSet());
 
-        // Add all unmapped deletions as potential renamingCandidates with confidenceScore 0
-        var deletedAndRenamedCandidates = new ArrayList<>(resourceMappings);
+        var deletedIris =
+                deleted.stream().map(SemanticResourceChange::getIri).collect(Collectors.toSet());
+
+        // To avoid duplication in the frontend, only mappings that include a deleted resource are
+        // considered "owned" by the deleted resource.
+        // Deletions with no detected mapping are also included, to allow custom mapping in the
+        // frontend.
+        var ownedMappings =
+                resourceMappings.stream()
+                        .filter(
+                                mapping ->
+                                        mapping.getOldResources().stream()
+                                                .anyMatch(o -> deletedIris.contains(o.getIri())))
+                        .toList();
+        var deletedAndRenamedCandidates = new ArrayList<>(ownedMappings);
         for (var change : deleted) {
             var label = change.getLabel();
             if (!mappedDeleted.contains(label)) {

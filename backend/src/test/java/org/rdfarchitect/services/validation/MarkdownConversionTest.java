@@ -30,7 +30,8 @@ public class MarkdownConversionTest extends SchemaValidationTestBase {
 
     @Test
     void convertToMarkdown_emptyIssues_reportsNoIssues() {
-        var report = ValidationReportDTO.builder().valid(true).issues(List.of()).build();        var title = "Schema Validation Report";
+        var report = ValidationReportDTO.builder().valid(true).issues(List.of()).build();
+        var title = "Schema Validation Report";
 
         var markdown = markdownService.convertToMarkdown(report, title);
 

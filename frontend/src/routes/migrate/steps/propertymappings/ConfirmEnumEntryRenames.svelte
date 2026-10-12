@@ -15,43 +15,23 @@
   -->
 
 <script>
-    import {
-        faCaretDown,
-        faCircleInfo,
-    } from "@fortawesome/free-solid-svg-icons";
-    import { CollapsibleCard } from "svelte-collapsible";
+    import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import { URI } from "$lib/models/dto/index.ts";
+    import { buildRenamedFromMap } from "$lib/utils/migrationUtils.js";
 
-    import RenameTable from "../RenameTable.svelte";
+    import MappingSection from "../MappingSection.svelte";
 
     const { classes, isLoading } = $props();
 
-    let renamedFrom = $derived.by(() => {
-        const map = new Map();
-        if (!classes || classes.length === 0) return map;
-
-        for (const cls of classes) {
-            for (const mapping of cls.enumEntries?.deletedAndRemapped ?? []) {
-                if (mapping.newResources.length === 0) continue;
-                for (const target of mapping.newResources) {
-                    const froms = mapping.oldResources.map(oldLabelWithClass);
-                    map.set(target.iri, [
-                        ...(map.get(target.iri) ?? []),
-                        ...froms,
-                    ]);
-                }
-            }
-        }
-        return map;
-    });
-
-    function oldLabelWithClass(resource) {
-        if (!resource.domain) return resource.label;
-        return `${resource.label} (in ${new URI(resource.domain).suffix})`;
-    }
+    let renamedFrom = $derived(
+        buildRenamedFromMap(
+            classes,
+            cls => cls.enumEntries?.deletedAndRemapped,
+        ),
+    );
 
     function candidateSubtitle(cls) {
         return candidate => {
@@ -92,59 +72,17 @@
     {:else}
         {#each classes as cls}
             {#if hasEnumEntries(cls)}
-                <div class="space-y-4">
-                    <CollapsibleCard>
-                        <h2 slot="header" class="mb-3 text-lg font-semibold">
-                            {cls.classLabel}
-                            <Fa icon={faCaretDown} />
-                        </h2>
-                        <div
-                            class="border-l-blue flex-col space-y-4 border-l-4 pl-4"
-                            slot="body"
-                        >
-                            {#if cls.enumEntries.deletedAndRemapped.length > 0}
-                                <RenameTable
-                                    bind:mappings={
-                                        cls.enumEntries.deletedAndRemapped
-                                    }
-                                    candidates={cls.enumEntries.allAdded ?? []}
-                                    getCandidateSubtitle={candidateSubtitle(
-                                        cls,
-                                    )}
-                                    propertyType="Enum Entry"
-                                />
-                            {/if}
-
-                            {#if cls.enumEntries.addedInClass?.length > 0}
-                                <div>
-                                    <h3 class="mb-3 font-semibold">
-                                        Added Enum Entries
-                                    </h3>
-                                    <div class="space-y-1">
-                                        {#each [...cls.enumEntries.addedInClass].sort( (a, b) => a.label.localeCompare(b.label) ) as addedEnumEntry}
-                                            <div
-                                                class="bg-lightgray flex items-center justify-between px-3 py-1 text-sm"
-                                            >
-                                                <p>{addedEnumEntry.label}</p>
-                                                {#if renamedFrom.has(addedEnumEntry.iri)}
-                                                    <span
-                                                        class="text-soptim-dunkelgrau text-xs italic"
-                                                    >
-                                                        renamed from {renamedFrom
-                                                            .get(
-                                                                addedEnumEntry.iri,
-                                                            )
-                                                            .join(", ")}
-                                                    </span>
-                                                {/if}
-                                            </div>
-                                        {/each}
-                                    </div>
-                                </div>
-                            {/if}
-                        </div>
-                    </CollapsibleCard>
-                </div>
+                <MappingSection
+                    title={cls.classLabel}
+                    bind:deletedAndRemapped={cls.enumEntries.deletedAndRemapped}
+                    added={cls.enumEntries.addedInClass ?? []}
+                    addedTitle="Added Enum Entries"
+                    candidates={cls.enumEntries.allAdded ?? []}
+                    getCandidateSubtitle={candidateSubtitle(cls)}
+                    resourceType="Enum Entry"
+                    {renamedFrom}
+                    currentClassLabel={cls.classLabel}
+                />
             {/if}
         {/each}
     {/if}

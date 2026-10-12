@@ -72,4 +72,90 @@ class MarkdownMigrationReportBuilderTest {
 
         assertThat(report).contains("Moved from ClassA.voltage to ClassB.voltage");
     }
+
+    @Test
+    void generateSummaryMigrationReport_mergedAttribute_rendersEveryOldLabel() {
+        var mergedAttribute =
+                SemanticAttributeChange.builder()
+                        .label("mergedVoltage")
+                        .iri(PREFIX + "ClassC.mergedVoltage")
+                        .oldIRI(PREFIX + "ClassA.voltage")
+                        .additionalOldIRIs(List.of(PREFIX + "ClassB.voltage"))
+                        .semanticResourceChangeType(SemanticResourceChangeType.RENAME)
+                        .build();
+
+        var classChange =
+                SemanticClassChange.builder()
+                        .label("ClassC")
+                        .iri(PREFIX + "ClassC")
+                        .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                        .attributes(List.of(mergedAttribute))
+                        .associations(List.of())
+                        .enumEntries(List.of())
+                        .build();
+
+        var emptyGraph = ModelFactory.createDefaultModel().getGraph();
+
+        var report =
+                builder.generateSummaryMigrationReport(
+                        List.of(classChange), emptyGraph, emptyGraph, false);
+
+        assertThat(report)
+                .as("both merged-away sources must be listed, not just the first")
+                .contains("Merged from ClassA.voltage, ClassB.voltage to mergedVoltage");
+    }
+
+    /**
+     * {@link org.rdfarchitect.services.schemamigration.renamings.RenameObjectBuilder} turns a split
+     * into several independent MOVE (or RENAME) properties that all share the one deleted
+     * resource's IRI as their own {@code oldIRI} - the report must recognize that duplication and
+     * label them as a split rather than as two unrelated moves.
+     */
+    @Test
+    void generateSummaryMigrationReport_splitAttribute_rendersSplitNotMove() {
+        var target1 =
+                SemanticAttributeChange.builder()
+                        .label("voltageB")
+                        .iri(PREFIX + "ClassB.voltage")
+                        .oldIRI(PREFIX + "ClassA.voltage")
+                        .semanticResourceChangeType(SemanticResourceChangeType.MOVE)
+                        .build();
+        var target2 =
+                SemanticAttributeChange.builder()
+                        .label("voltageC")
+                        .iri(PREFIX + "ClassC.voltage")
+                        .oldIRI(PREFIX + "ClassA.voltage")
+                        .semanticResourceChangeType(SemanticResourceChangeType.MOVE)
+                        .build();
+
+        var classB =
+                SemanticClassChange.builder()
+                        .label("ClassB")
+                        .iri(PREFIX + "ClassB")
+                        .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                        .attributes(List.of(target1))
+                        .associations(List.of())
+                        .enumEntries(List.of())
+                        .build();
+        var classC =
+                SemanticClassChange.builder()
+                        .label("ClassC")
+                        .iri(PREFIX + "ClassC")
+                        .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                        .attributes(List.of(target2))
+                        .associations(List.of())
+                        .enumEntries(List.of())
+                        .build();
+
+        var emptyGraph = ModelFactory.createDefaultModel().getGraph();
+
+        var report =
+                builder.generateSummaryMigrationReport(
+                        List.of(classB, classC), emptyGraph, emptyGraph, false);
+
+        assertThat(report)
+                .contains("Split from ClassA.voltage to voltageB")
+                .contains("Split from ClassA.voltage to voltageC")
+                .doesNotContain("Moved from");
+    }
 }

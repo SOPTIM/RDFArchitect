@@ -28,6 +28,7 @@
         resource = $bindable(),
         title = "",
         ignorePrefixes = false,
+        isSplit = false,
     } = $props();
 
     const RESOURCE_CHANGE_LABELS = {
@@ -36,6 +37,11 @@
         CHANGE: "Changed",
         RENAME: "Renamed",
         MOVE: "Moved",
+        SPLIT: "Split",
+        MERGE: "Merged",
+        ADDED_FROM_INHERITANCE: "Added (inherited)",
+        DELETED_FROM_INHERITANCE: "Removed (inherited)",
+        DELETED_FROM_MAPPING: "Removed (moved or merged)",
     };
 
     const FIELD_CHANGE_LABELS = {
@@ -67,7 +73,7 @@
     let newLabel = $derived(new URI(resource.iri).suffix);
 
     let moveDomainChange = $derived(
-        resource.semanticResourceChangeType === "MOVE"
+        resource.semanticResourceChangeType === "MOVE" && !isSplit
             ? resource.changes?.find(
                   c => c.semanticFieldChangeType === "DOMAIN_CHANGE",
               )
@@ -76,6 +82,20 @@
 
     let mergedFromLabels = $derived(
         (resource.additionalOldIRIs ?? []).map(iri => new URI(iri).suffix),
+    );
+
+    /**
+     * The badge shown for the change is picked from this rather than straight off
+     * `semanticResourceChangeType`: a split sibling and a merge result are both confirmed as plain
+     * RENAME/MOVE changes (see `findSplitSiblingIris` and the `additionalOldIRIs` merge signal),
+     * so the more specific label has to be layered on top here instead.
+     */
+    let displayChangeType = $derived(
+        isSplit
+            ? "SPLIT"
+            : mergedFromLabels.length > 0
+              ? "MERGE"
+              : resource.semanticResourceChangeType,
     );
 
     function getChangeLabel(changeType) {
@@ -97,6 +117,7 @@
                 return "bg-green-background text-green-text border-green-border";
             case "DELETE":
             case "DELETED_FROM_INHERITANCE":
+            case "DELETED_FROM_MAPPING":
                 return "bg-red-background text-red-text border-red-border";
             case "RENAME":
                 if (ignorePrefixes && oldLabel === newLabel) {
@@ -106,6 +127,10 @@
                 }
             case "MOVE":
                 return "bg-purple/10 text-purple border-purple/40";
+            case "SPLIT":
+                return "bg-orange/10 text-orange border-orange/40";
+            case "MERGE":
+                return "bg-lightblue text-blue border-blue";
             case "CHANGE":
             default:
                 return "bg-lightgray text-default-text border-border";
@@ -130,10 +155,10 @@
             </h3>
         </div>
         <span
-            class={`rounded border px-2 py-0.5 text-xs font-medium ${badgeClass(resource.semanticResourceChangeType)}`}
+            class={`rounded border px-2 py-0.5 text-xs font-medium ${badgeClass(displayChangeType)}`}
         >
-            {RESOURCE_CHANGE_LABELS[resource.semanticResourceChangeType] ??
-                resource.semanticResourceChangeType ??
+            {RESOURCE_CHANGE_LABELS[displayChangeType] ??
+                displayChangeType ??
                 "—"}
         </span>
     </div>
@@ -160,6 +185,13 @@
             <span class="font-mono">
                 {new URI(moveDomainChange.to).suffix}
             </span>
+        </div>
+    {/if}
+
+    {#if isSplit && oldLabel}
+        <div class="text-orange text-xs">
+            Split from
+            <span class="font-mono">{oldLabel}</span>
         </div>
     {/if}
 

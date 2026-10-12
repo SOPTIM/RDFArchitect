@@ -25,21 +25,27 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.api.dto.migration.ClassPropertyMappingOverview;
 import org.rdfarchitect.api.dto.migration.ClassPropertyMappings;
 import org.rdfarchitect.api.dto.migration.PropertyMappingOverview;
 import org.rdfarchitect.context.MigrationSessionStore;
+import org.rdfarchitect.models.changes.MappingType;
 import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.services.compare.TripleChangeAnalyser;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Covers how a renamed datatype class is reported to the default-values step: a rename is not a
@@ -179,6 +185,48 @@ class SchemaMigrationServiceTest {
                 }
             }
             confirmed.add(renamings);
+        }
+        service.confirmPropertyMappings(confirmed);
+    }
+
+    /**
+     * Maps an attribute move between two unrelated classes by hand - chain-pooled auto-detection
+     * only pairs a deletion with an addition found via the deleted side's own superclass/subclass
+     * chain, so it never pairs two classes with no relation to each other.
+     */
+    private void confirmAttributeMove(
+            String oldClassLabel, String newClassLabel, String attributeLabel) {
+        var overviews = service.getPropertyMappings();
+        var added =
+                overviews.stream()
+                        .filter(o -> o.getClassLabel().equals(newClassLabel))
+                        .findFirst()
+                        .orElseThrow()
+                        .getAttributes()
+                        .getAddedInClass()
+                        .stream()
+                        .filter(attribute -> attribute.getLabel().equals(attributeLabel))
+                        .findFirst()
+                        .orElseThrow();
+
+        var confirmed = new ArrayList<ClassPropertyMappings>();
+        for (var overview : overviews) {
+            var mappings = new ClassPropertyMappings();
+            mappings.setClassLabel(overview.getClassLabel());
+            mappings.setAssociationMappings(confirmedOf(overview.getAssociations()));
+            mappings.setEnumEntryMappings(confirmedOf(overview.getEnumEntries()));
+            mappings.setAttributeMappings(List.of());
+
+            if (overview.getClassLabel().equals(oldClassLabel)) {
+                var deleted =
+                        overview.getAttributes().getDeletedAndRemapped().stream()
+                                .flatMap(candidate -> candidate.getOldResources().stream())
+                                .filter(attribute -> attribute.getLabel().equals(attributeLabel))
+                                .findFirst()
+                                .orElseThrow();
+                mappings.setAttributeMappings(List.of(new ResourceMapping<>(deleted, added, 1.0)));
+            }
+            confirmed.add(mappings);
         }
         service.confirmPropertyMappings(confirmed);
     }
@@ -371,21 +419,177 @@ class SchemaMigrationServiceTest {
 
         service.confirmPropertyMappings(List.of(subMappings, baseMappings));
 
-        var voltageCount =
+        // the old domain (Sub) also carries its own DELETED_FROM_MAPPING marker under the same
+        // label now (see attachDeletionMarkersForLosingDomains) - only the materialized
+        // move/rename result itself must not be duplicated
+        var materializedVoltageCount =
                 migrationSessionStore.getContext().getDiffAfterPropertyConfirm().stream()
                         .flatMap(c -> c.getAttributes().stream())
                         .filter(a -> a.getLabel().equals("voltage"))
+                        .filter(
+                                a ->
+                                        a.getSemanticResourceChangeType()
+                                                != SemanticResourceChangeType.DELETED_FROM_MAPPING)
                         .count();
 
-        assertThat(voltageCount).isEqualTo(1);
+        assertThat(materializedVoltageCount).isEqualTo(1);
     }
 
+    /**
+     * A moved attribute's own domain classes (Base/Target) are handled by its own merged
+     * RENAME/MOVE object - this covers the subclasses that only find out about the move through
+     * inheritance: LostSub derives from Base only, so it loses the attribute entirely; GainedSub
+     * derives from Target only, so it gains a fresh one and needs a default value. Base and Target
+     * are deliberately unrelated classes, so the mapping is confirmed by hand (like {@link
+     * #confirmAttributeRename}) rather than via chain-pooled auto-detection, which only pairs a
+     * deletion with an addition found in the deleted side's own superclass/subclass chain.
+     */
+    @Test
+    void getDefaultValueViews_attributeMovedAcrossDomains_propagatesToLostAndGainedSubclasses() {
+        initContext(
+                movedAttributeWithSubclassesSchema(true),
+                movedAttributeWithSubclassesSchema(false));
+
+        confirmDetectedClassRenames();
+        confirmAttributeMove("Base", "Target", "voltage");
+
+        var views = service.getDefaultValueViews();
+
+        var gainedView =
+                views.stream()
+                        .filter(v -> v.getClassLabel().equals("GainedSub"))
+                        .findFirst()
+                        .orElseThrow();
+        assertThat(gainedView.getAttributes())
+                .anyMatch(
+                        a ->
+                                a.getIri().equals(PREFIX + "Target.voltage")
+                                        && a.getSemanticResourceChangeType()
+                                                == SemanticResourceChangeType.ADDED_FROM_INHERITANCE
+                                        && a.getDataType() != null);
+
+        var lostView =
+                views.stream()
+                        .filter(v -> v.getClassLabel().equals("LostSub"))
+                        .findFirst()
+                        .orElseThrow();
+        assertThat(lostView.getAttributes())
+                .anyMatch(
+                        a ->
+                                a.getIri().equals(PREFIX + "Base.voltage")
+                                        && a.getSemanticResourceChangeType()
+                                                == SemanticResourceChangeType
+                                                        .DELETED_FROM_INHERITANCE
+                                        && a.getDataType() == null);
+    }
+
+    /**
+     * GainedSub has no change of its own - it only shows up in {@code getDefaultValueViews()}
+     * because the cross-domain propagation step synthesizes an entry for it. Submitting its default
+     * value has to actually stick: before this was fixed, {@code submitDefaultValues} matched views
+     * against the pre-propagation class list, which has no entry for GainedSub at all, so the view
+     * (and the attribute's default value) was silently dropped and the generated script never
+     * initialized the attribute on GainedSub's instances.
+     */
+    @Test
+    void submitDefaultValues_classGainedPropertyOnlyThroughPropagation_keepsItsSubmittedDefault() {
+        initContext(
+                movedAttributeWithSubclassesSchema(true),
+                movedAttributeWithSubclassesSchema(false));
+
+        confirmDetectedClassRenames();
+        confirmAttributeMove("Base", "Target", "voltage");
+
+        var views = service.getDefaultValueViews();
+        for (var view : views) {
+            for (var attribute : view.getAttributes()) {
+                if (attribute.getIri().equals(PREFIX + "Target.voltage")) {
+                    attribute.setDefaultValue(PREFIX + "VoltageLevel.high");
+                }
+            }
+        }
+
+        service.submitDefaultValues(views);
+
+        var gainedSubChange =
+                migrationSessionStore.getContext().getDiffAfterDefaultValueConfirm().stream()
+                        .filter(c -> c.getLabel().equals("GainedSub"))
+                        .findFirst()
+                        .orElseThrow();
+        assertThat(gainedSubChange.getAttributes())
+                .anyMatch(
+                        a ->
+                                a.getIri().equals(PREFIX + "Target.voltage")
+                                        && a.getSemanticResourceChangeType()
+                                                == SemanticResourceChangeType.ADDED_FROM_INHERITANCE
+                                        && PREFIX.concat("VoltageLevel.high")
+                                                .equals(a.getDefaultValue()));
+    }
+
+    private static Model movedAttributeWithSubclassesSchema(boolean attributeOnBase) {
+        var model = ModelFactory.createDefaultModel();
+
+        var base = model.createResource(PREFIX + "Base");
+        base.addProperty(RDF.type, RDFS.Class);
+        base.addProperty(RDFS.label, model.createLiteral("Base"));
+        base.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+
+        var target = model.createResource(PREFIX + "Target");
+        target.addProperty(RDF.type, RDFS.Class);
+        target.addProperty(RDFS.label, model.createLiteral("Target"));
+        target.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+
+        var lostSub = model.createResource(PREFIX + "LostSub");
+        lostSub.addProperty(RDF.type, RDFS.Class);
+        lostSub.addProperty(RDFS.label, model.createLiteral("LostSub"));
+        lostSub.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+        lostSub.addProperty(RDFS.subClassOf, base);
+
+        var gainedSub = model.createResource(PREFIX + "GainedSub");
+        gainedSub.addProperty(RDF.type, RDFS.Class);
+        gainedSub.addProperty(RDFS.label, model.createLiteral("GainedSub"));
+        gainedSub.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+        gainedSub.addProperty(RDFS.subClassOf, target);
+
+        var voltageLevel = model.createResource(PREFIX + "VoltageLevel");
+        voltageLevel.addProperty(RDF.type, RDFS.Class);
+        voltageLevel.addProperty(RDFS.label, model.createLiteral("VoltageLevel"));
+        voltageLevel.addProperty(CIMS.stereotype, CIMStereotypes.enumeration);
+        var entry = model.createResource(PREFIX + "VoltageLevel.high");
+        entry.addProperty(RDF.type, voltageLevel);
+        entry.addProperty(RDFS.label, model.createLiteral("high"));
+        entry.addProperty(CIMS.stereotype, CIMStereotypes.enumLiteral);
+
+        var domainClass = attributeOnBase ? base : target;
+        var domainLabel = attributeOnBase ? "Base" : "Target";
+        var attribute = model.createResource(PREFIX + domainLabel + ".voltage");
+        attribute.addProperty(RDF.type, RDF.Property);
+        attribute.addProperty(RDFS.label, model.createLiteral("voltage"));
+        attribute.addProperty(RDFS.domain, domainClass);
+        attribute.addProperty(RDFS.range, voltageLevel);
+        attribute.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:1..1"));
+        attribute.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
+
+        return model;
+    }
+
+    /**
+     * The class holding the materialized move/rename result for this attribute - not just any class
+     * whose attributes mention the label, since the old domain now also carries a
+     * DELETED_FROM_MAPPING marker of its own under the same label (see {@code
+     * attachDeletionMarkersForLosingDomains}).
+     */
     private String attributeMoveTargetClass(String attributeLabel) {
         return migrationSessionStore.getContext().getDiffAfterPropertyConfirm().stream()
                 .filter(
                         c ->
                                 c.getAttributes().stream()
-                                        .anyMatch(a -> a.getLabel().equals(attributeLabel)))
+                                        .anyMatch(
+                                                a ->
+                                                        a.getLabel().equals(attributeLabel)
+                                                                && a.getSemanticResourceChangeType()
+                                                                        != SemanticResourceChangeType
+                                                                                .DELETED_FROM_MAPPING))
                 .map(SemanticClassChange::getLabel)
                 .findFirst()
                 .orElseThrow();
@@ -414,5 +618,376 @@ class SchemaMigrationServiceTest {
                 CIMS.inverseRoleName, model.createResource(PREFIX + "Terminal.Switch"));
 
         return model;
+    }
+
+    /**
+     * A "Base" class with sibling subclasses (one per label in {@code subLabels}, each {@code
+     * rdfs:subClassOf Base}), with a "voltage" attribute declared on whichever classes {@code
+     * voltageOwners} names. Used to exercise a merge (voltage declared on several siblings,
+     * consolidated onto Base) or a split (declared on Base, pushed down onto several siblings) -
+     * per-class chain-pooled detection only ever sees one sibling's own deletion paired with Base's
+     * own addition at a time, so recognizing the full merge/split requires collapsing those
+     * independent detections.
+     */
+    private static Model siblingSchema(List<String> subLabels, Set<String> voltageOwners) {
+        var model = ModelFactory.createDefaultModel();
+
+        var base = model.createResource(PREFIX + "Base");
+        base.addProperty(RDF.type, RDFS.Class);
+        base.addProperty(RDFS.label, model.createLiteral("Base"));
+        base.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+
+        for (var label : subLabels) {
+            var sub = model.createResource(PREFIX + label);
+            sub.addProperty(RDF.type, RDFS.Class);
+            sub.addProperty(RDFS.label, model.createLiteral(label));
+            sub.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+            sub.addProperty(RDFS.subClassOf, base);
+        }
+
+        var range = model.createResource(PREFIX + "VoltageLevel");
+        range.addProperty(RDF.type, RDFS.Class);
+        range.addProperty(RDFS.label, model.createLiteral("VoltageLevel"));
+        range.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+
+        for (var owner : voltageOwners) {
+            var attribute = model.createResource(PREFIX + owner + ".voltage");
+            attribute.addProperty(RDF.type, RDF.Property);
+            attribute.addProperty(RDFS.label, model.createLiteral("voltage"));
+            attribute.addProperty(RDFS.domain, model.getResource(PREFIX + owner));
+            attribute.addProperty(RDFS.range, range);
+            attribute.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:1..1"));
+            attribute.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
+        }
+
+        return model;
+    }
+
+    /** Adds one more attribute to a {@link #siblingSchema} model, independent of "voltage". */
+    private static void addAttribute(Model model, String domainLabel, String iri, String label) {
+        var attribute = model.createResource(PREFIX + iri);
+        attribute.addProperty(RDF.type, RDF.Property);
+        attribute.addProperty(RDFS.label, model.createLiteral(label));
+        attribute.addProperty(RDFS.domain, model.getResource(PREFIX + domainLabel));
+        attribute.addProperty(RDFS.range, model.getResource(PREFIX + "VoltageLevel"));
+        attribute.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:1..1"));
+        attribute.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
+    }
+
+    private List<ResourceMapping<SemanticAttributeChange>> deletedAndRemappedAttributesFor(
+            List<ClassPropertyMappingOverview> overviews, String classLabel) {
+        return overviews.stream()
+                .filter(o -> o.getClassLabel().equals(classLabel))
+                .findFirst()
+                .orElseThrow()
+                .getAttributes()
+                .getDeletedAndRemapped();
+    }
+
+    @Test
+    void getPropertyMappings_voltageDeletedFromBothSiblingsAddedOnBase_detectsOneMerge() {
+        initContext(
+                siblingSchema(List.of("Sub1", "Sub2"), Set.of("Sub1", "Sub2")),
+                siblingSchema(List.of("Sub1", "Sub2"), Set.of("Base")));
+        confirmDetectedClassRenames();
+
+        var overviews = service.getPropertyMappings();
+
+        var sub1Mappings = deletedAndRemappedAttributesFor(overviews, "Sub1");
+        var sub2Mappings = deletedAndRemappedAttributesFor(overviews, "Sub2");
+        var baseMappings = deletedAndRemappedAttributesFor(overviews, "Base");
+
+        assertThat(sub1Mappings).hasSize(1);
+        var merge = sub1Mappings.getFirst();
+        assertThat(merge.getType()).isEqualTo(MappingType.MERGE);
+        assertThat(merge.getOldResources())
+                .extracting(SemanticResourceChange::getLabel)
+                .containsOnly("voltage");
+        assertThat(merge.getOldResources()).hasSize(2);
+        assertThat(merge.getNewResources()).hasSize(1);
+
+        assertThat(sub2Mappings)
+                .as("Sub2 sees the very same merge, not a second independent one")
+                .containsExactly(merge);
+        assertThat(baseMappings)
+                .as("Base owns only the addition, nothing for it to remap")
+                .isEmpty();
+    }
+
+    @Test
+    void getPropertyMappings_voltageDeletedFromBaseAddedOnBothSiblings_detectsOneSplit() {
+        initContext(
+                siblingSchema(List.of("Sub1", "Sub2"), Set.of("Base")),
+                siblingSchema(List.of("Sub1", "Sub2"), Set.of("Sub1", "Sub2")));
+        confirmDetectedClassRenames();
+
+        var overviews = service.getPropertyMappings();
+
+        var baseMappings = deletedAndRemappedAttributesFor(overviews, "Base");
+        var sub1Mappings = deletedAndRemappedAttributesFor(overviews, "Sub1");
+        var sub2Mappings = deletedAndRemappedAttributesFor(overviews, "Sub2");
+
+        assertThat(baseMappings).hasSize(1);
+        var split = baseMappings.getFirst();
+        assertThat(split.getType()).isEqualTo(MappingType.SPLIT);
+        assertThat(split.getOldResources()).hasSize(1);
+        assertThat(split.getNewResources())
+                .extracting(SemanticResourceChange::getLabel)
+                .containsOnly("voltage");
+        assertThat(split.getNewResources()).hasSize(2);
+
+        assertThat(sub1Mappings)
+                .as("neither sibling owns the deletion, so neither offers it for remapping")
+                .isEmpty();
+        assertThat(sub2Mappings).isEmpty();
+    }
+
+    /**
+     * Before the fix, Sub1 and Sub2 (the merge's old domains) lost "voltage" entirely once it was
+     * confirmed - nothing in their own property list recorded that it had been merged away, so the
+     * review step showed them as classes with no changes at all. Each must now carry its own
+     * DELETED_FROM_MAPPING marker for it (a plain DELETE would instead generate its own SPARQL
+     * deletion for that exact predicate, racing the merge's own rename), while Base keeps the
+     * single materialized merge result.
+     */
+    @Test
+    void confirmPropertyMappings_merge_leavesDeleteMarkersOnBothOldDomains() {
+        initContext(
+                siblingSchema(List.of("Sub1", "Sub2"), Set.of("Sub1", "Sub2")),
+                siblingSchema(List.of("Sub1", "Sub2"), Set.of("Base")));
+        confirmDetectedClassRenames();
+        confirmDetectedPropertyRenames();
+
+        var classesByLabel =
+                migrationSessionStore.getContext().getDiffAfterPropertyConfirm().stream()
+                        .collect(Collectors.toMap(SemanticClassChange::getLabel, c -> c));
+
+        for (var sourceLabel : List.of("Sub1", "Sub2")) {
+            var voltageAttributes =
+                    classesByLabel.get(sourceLabel).getAttributes().stream()
+                            .filter(a -> a.getLabel().equals("voltage"))
+                            .toList();
+            assertThat(voltageAttributes)
+                    .as(sourceLabel + " keeps a marker that it lost voltage to the merge")
+                    .hasSize(1);
+            assertThat(voltageAttributes.getFirst().getSemanticResourceChangeType())
+                    .isEqualTo(SemanticResourceChangeType.DELETED_FROM_MAPPING);
+        }
+
+        var baseVoltage =
+                classesByLabel.get("Base").getAttributes().stream()
+                        .filter(a -> a.getLabel().equals("voltage"))
+                        .toList();
+        assertThat(baseVoltage).hasSize(1);
+        assertThat(baseVoltage.getFirst().getSemanticResourceChangeType())
+                .isNotEqualTo(SemanticResourceChangeType.DELETED_FROM_MAPPING);
+        assertThat(baseVoltage.getFirst().getAdditionalOldIRIs()).hasSize(1);
+    }
+
+    /**
+     * Revisiting this step (e.g. navigating back after confirming) must not re-run detection - a
+     * non-empty mapping list can just as well mean the user already made their own choice, so
+     * re-collapsing on every call would silently overwrite that choice with the auto-detected merge
+     * again.
+     */
+    @Test
+    void getPropertyMappings_calledTwice_doesNotDuplicateOrChangeTheDetectedMerge() {
+        initContext(
+                siblingSchema(List.of("Sub1", "Sub2"), Set.of("Sub1", "Sub2")),
+                siblingSchema(List.of("Sub1", "Sub2"), Set.of("Base")));
+        confirmDetectedClassRenames();
+
+        service.getPropertyMappings();
+        var overviews = service.getPropertyMappings();
+
+        var sub1Mappings = deletedAndRemappedAttributesFor(overviews, "Sub1");
+        assertThat(sub1Mappings).hasSize(1);
+        assertThat(sub1Mappings.getFirst().getType()).isEqualTo(MappingType.MERGE);
+    }
+
+    @Test
+    void getPropertyMappings_voltageDeletedFromThreeSiblingsAddedOnBase_detectsOneThreeWayMerge() {
+        var subs = List.of("Sub1", "Sub2", "Sub3");
+        initContext(
+                siblingSchema(subs, Set.of("Sub1", "Sub2", "Sub3")),
+                siblingSchema(subs, Set.of("Base")));
+        confirmDetectedClassRenames();
+
+        var overviews = service.getPropertyMappings();
+
+        var sub1Mappings = deletedAndRemappedAttributesFor(overviews, "Sub1");
+        var sub2Mappings = deletedAndRemappedAttributesFor(overviews, "Sub2");
+        var sub3Mappings = deletedAndRemappedAttributesFor(overviews, "Sub3");
+
+        assertThat(sub1Mappings).hasSize(1);
+        var merge = sub1Mappings.getFirst();
+        assertThat(merge.getType()).isEqualTo(MappingType.MERGE);
+        assertThat(merge.getOldResources()).hasSize(3);
+        assertThat(merge.getNewResources()).hasSize(1);
+        assertThat(sub2Mappings).containsExactly(merge);
+        assertThat(sub3Mappings).containsExactly(merge);
+    }
+
+    @Test
+    void getPropertyMappings_voltageDeletedFromBaseAddedOnThreeSiblings_detectsOneThreeWaySplit() {
+        var subs = List.of("Sub1", "Sub2", "Sub3");
+        initContext(
+                siblingSchema(subs, Set.of("Base")),
+                siblingSchema(subs, Set.of("Sub1", "Sub2", "Sub3")));
+        confirmDetectedClassRenames();
+
+        var overviews = service.getPropertyMappings();
+
+        var baseMappings = deletedAndRemappedAttributesFor(overviews, "Base");
+
+        assertThat(baseMappings).hasSize(1);
+        var split = baseMappings.getFirst();
+        assertThat(split.getType()).isEqualTo(MappingType.SPLIT);
+        assertThat(split.getNewResources()).hasSize(3);
+        assertThat(deletedAndRemappedAttributesFor(overviews, "Sub1")).isEmpty();
+        assertThat(deletedAndRemappedAttributesFor(overviews, "Sub2")).isEmpty();
+        assertThat(deletedAndRemappedAttributesFor(overviews, "Sub3")).isEmpty();
+    }
+
+    /**
+     * A class that both contributes an old resource to a cross-class merge and independently
+     * renames one of its own, unrelated attributes in the same run - the two must not interfere
+     * with each other.
+     */
+    @Test
+    void getPropertyMappings_classContributesToMergeAndHasUnrelatedOwnRename_bothCoexist() {
+        // TripleChangeAnalyser derives an attribute's label from its IRI suffix, split on the
+        // first '.' (the "ClassName." part is discarded) - varying what comes before that first
+        // dot keeps the label "status" on both sides while still giving each a distinct IRI.
+        var original = siblingSchema(List.of("Sub1", "Sub2"), Set.of("Sub1", "Sub2"));
+        addAttribute(original, "Sub1", "Sub1v1.status", "status");
+        var updated = siblingSchema(List.of("Sub1", "Sub2"), Set.of("Base"));
+        addAttribute(updated, "Sub1", "Sub1v2.status", "status");
+
+        initContext(original, updated);
+        confirmDetectedClassRenames();
+
+        var sub1Mappings = deletedAndRemappedAttributesFor(service.getPropertyMappings(), "Sub1");
+
+        assertThat(sub1Mappings).hasSize(2);
+        assertThat(sub1Mappings).anyMatch(m -> m.getType() == MappingType.MERGE);
+        assertThat(sub1Mappings)
+                .anyMatch(
+                        m ->
+                                m.getType() == MappingType.RENAME
+                                        && m.getOldResources()
+                                                .getFirst()
+                                                .getLabel()
+                                                .equals("status"));
+    }
+
+    /**
+     * Mirrors {@link #siblingSchema}, but for associations instead of attributes - confirms
+     * collapseMovesIntoMerges generalizes beyond attributes, as {@code collectMovedPropertyIris}
+     * already assumed associations can carry MERGE/SPLIT.
+     */
+    private static Model siblingAssociationSchema(List<String> subLabels, Set<String> owners) {
+        var model = ModelFactory.createDefaultModel();
+
+        var base = model.createResource(PREFIX + "Base");
+        base.addProperty(RDF.type, RDFS.Class);
+        base.addProperty(RDFS.label, model.createLiteral("Base"));
+        base.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+
+        for (var label : subLabels) {
+            var sub = model.createResource(PREFIX + label);
+            sub.addProperty(RDF.type, RDFS.Class);
+            sub.addProperty(RDFS.label, model.createLiteral(label));
+            sub.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+            sub.addProperty(RDFS.subClassOf, base);
+        }
+
+        var terminal = model.createResource(PREFIX + "Terminal");
+        terminal.addProperty(RDF.type, RDFS.Class);
+        terminal.addProperty(RDFS.label, model.createLiteral("Terminal"));
+        terminal.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+
+        for (var owner : owners) {
+            // the association's own IRI deliberately does NOT embed the owning class name the
+            // way attribute IRIs do - TripleChangeAnalyser derives an association's label from
+            // its IRI's whole fragment (unlike attributes, it isn't split on the first '.'), so
+            // varying the path instead of the fragment keeps "Terminals" as the label on every
+            // owner while still giving each owner's association a distinct IRI.
+            var association = model.createResource("http://example.org/" + owner + "#Terminals");
+            association.addProperty(RDF.type, RDF.Property);
+            association.addProperty(RDFS.label, model.createLiteral("Terminals"));
+            association.addProperty(RDFS.domain, model.getResource(PREFIX + owner));
+            association.addProperty(RDFS.range, terminal);
+            association.addProperty(CIMS.associationUsed, "Yes");
+            association.addProperty(
+                    CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:0..n"));
+            association.addProperty(
+                    CIMS.inverseRoleName, model.createResource(PREFIX + "Terminal." + owner));
+        }
+
+        return model;
+    }
+
+    @Test
+    void getPropertyMappings_associationDeletedFromBothSiblingsAddedOnBase_detectsOneMerge() {
+        initContext(
+                siblingAssociationSchema(List.of("Sub1", "Sub2"), Set.of("Sub1", "Sub2")),
+                siblingAssociationSchema(List.of("Sub1", "Sub2"), Set.of("Base")));
+        confirmDetectedClassRenames();
+
+        var overviews = service.getPropertyMappings();
+        var sub1Mappings =
+                overviews.stream()
+                        .filter(o -> o.getClassLabel().equals("Sub1"))
+                        .findFirst()
+                        .orElseThrow()
+                        .getAssociations()
+                        .getDeletedAndRemapped();
+
+        assertThat(sub1Mappings).hasSize(1);
+        assertThat(sub1Mappings.getFirst().getType()).isEqualTo(MappingType.MERGE);
+    }
+
+    /**
+     * Two unrelated enumeration classes that each have an entry sharing the same label - since enum
+     * classes never participate in {@code rdfs:subClassOf}, their chain-pooled candidates never
+     * overlap, so collapseMovesIntoMerges must be a safe no-op here even though it is now
+     * generalized to enum entries.
+     */
+    private static Model unrelatedEnumEntrySchema(boolean entryOnA) {
+        var model = ModelFactory.createDefaultModel();
+
+        for (var enumLabel : List.of("StateKindA", "StateKindB")) {
+            var enumClass = model.createResource(PREFIX + enumLabel);
+            enumClass.addProperty(RDF.type, RDFS.Class);
+            enumClass.addProperty(RDFS.label, model.createLiteral(enumLabel));
+            enumClass.addProperty(CIMS.stereotype, CIMStereotypes.enumeration);
+        }
+
+        var owner = entryOnA ? "StateKindA" : "StateKindB";
+        var entry = model.createResource(PREFIX + owner + ".open");
+        entry.addProperty(RDF.type, model.getResource(PREFIX + owner));
+        entry.addProperty(RDFS.label, model.createLiteral("open"));
+        entry.addProperty(CIMS.stereotype, CIMStereotypes.enumLiteral);
+
+        return model;
+    }
+
+    @Test
+    void getPropertyMappings_enumEntryMovedBetweenUnrelatedEnumClasses_neverLinksAcrossClasses() {
+        initContext(unrelatedEnumEntrySchema(true), unrelatedEnumEntrySchema(false));
+        confirmDetectedClassRenames();
+
+        var overviews = service.getPropertyMappings();
+        var stateKindAMappings =
+                overviews.stream()
+                        .filter(o -> o.getClassLabel().equals("StateKindA"))
+                        .findFirst()
+                        .orElseThrow()
+                        .getEnumEntries()
+                        .getDeletedAndRemapped();
+
+        assertThat(stateKindAMappings).hasSize(1);
+        assertThat(stateKindAMappings.getFirst().getNewResources()).isEmpty();
     }
 }

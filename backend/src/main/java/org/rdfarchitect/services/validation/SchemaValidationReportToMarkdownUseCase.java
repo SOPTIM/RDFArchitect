@@ -29,4 +29,5 @@ public interface SchemaValidationReportToMarkdownUseCase {
      * @param title the title to use in the Markdown report
      * @return the Markdown representation of the report
      */
-    String convertToMarkdown(ValidationReportDTO report, String title);}
+    String convertToMarkdown(ValidationReportDTO report, String title);
+}

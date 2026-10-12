@@ -23,6 +23,7 @@ import {
     computeMappingType,
     describeAttributeChange,
     filterRenameCandidates,
+    findSplitSiblingIris,
     groupMappingsForSubmission,
     hasDataTypeChange,
     hasDefaultValue,
@@ -479,6 +480,94 @@ describe("computeMappingType", () => {
     it("is UNMAPPED when there is no linked target", () => {
         expect(computeMappingType([property("state", "Switch")], [])).toBe(
             "UNMAPPED",
+        );
+    });
+});
+
+describe("findSplitSiblingIris", () => {
+    const splitSibling = (label, domain, oldIri) => ({
+        iri: `${PREFIX}${domain}.${label}`,
+        semanticResourceChangeType: "MOVE",
+        oldIRI: oldIri,
+        additionalOldIRIs: [],
+    });
+
+    it("finds every sibling sharing the same oldIRI across classes", () => {
+        const classes = [
+            {
+                attributes: [
+                    splitSibling("voltage", "B1", `${PREFIX}A.voltage`),
+                ],
+            },
+            {
+                attributes: [
+                    splitSibling("voltage", "B2", `${PREFIX}A.voltage`),
+                ],
+            },
+        ];
+
+        const result = findSplitSiblingIris(classes, cls => cls.attributes);
+
+        expect(result).toEqual(
+            new Set([`${PREFIX}B1.voltage`, `${PREFIX}B2.voltage`]),
+        );
+    });
+
+    it("ignores a plain move with no sibling sharing its oldIRI", () => {
+        const classes = [
+            {
+                attributes: [
+                    splitSibling("voltage", "B1", `${PREFIX}A.voltage`),
+                ],
+            },
+        ];
+
+        expect(findSplitSiblingIris(classes, cls => cls.attributes).size).toBe(
+            0,
+        );
+    });
+
+    it("ignores a merge result, which has additionalOldIRIs set", () => {
+        const classes = [
+            {
+                attributes: [
+                    {
+                        iri: `${PREFIX}Merged.voltage`,
+                        semanticResourceChangeType: "RENAME",
+                        oldIRI: `${PREFIX}A.voltage`,
+                        additionalOldIRIs: [`${PREFIX}B.volt`],
+                    },
+                ],
+            },
+        ];
+
+        expect(findSplitSiblingIris(classes, cls => cls.attributes).size).toBe(
+            0,
+        );
+    });
+
+    it("ignores entries without a semanticResourceChangeType of RENAME or MOVE", () => {
+        const classes = [
+            {
+                attributes: [
+                    {
+                        iri: `${PREFIX}B1.voltage`,
+                        semanticResourceChangeType: "ADDED_FROM_INHERITANCE",
+                        oldIRI: `${PREFIX}A.voltage`,
+                        additionalOldIRIs: [],
+                    },
+                    {
+                        iri: `${PREFIX}B2.voltage`,
+                        semanticResourceChangeType: "ADDED_FROM_INHERITANCE",
+                        oldIRI: `${PREFIX}A.voltage`,
+                        additionalOldIRIs: [],
+                    },
+                ],
+            },
+        ];
+
+        expect(findSplitSiblingIris(classes, cls => cls.attributes).size).toBe(
+            0,
         );
     });
 });

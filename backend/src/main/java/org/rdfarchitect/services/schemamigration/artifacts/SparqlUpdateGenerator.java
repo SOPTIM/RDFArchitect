@@ -20,6 +20,7 @@ package org.rdfarchitect.services.schemamigration.artifacts;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.datatypes.TypeMapper;
+import org.apache.jena.query.ParameterizedSparqlString;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.update.UpdateRequest;
@@ -121,6 +122,51 @@ public class SparqlUpdateGenerator {
             result.add(pss.toString());
         }
         return result.toString();
+    }
+
+    public String generateSplitAttributeUpdate(List<SemanticAttributeChange> siblings) {
+        var oldAttribute = siblings.getFirst().getOldIRI();
+        var result = new UpdateRequest();
+        for (var sibling : siblings) {
+            for (var classIri : getClassHierarchy(sibling.getDomain())) {
+                var pss = new ParameterizedSparqlString(buildSplitTargetUpdateText("Attribute"));
+                pss.setIri("oldAttribute", oldAttribute);
+                pss.setIri("newAttribute", sibling.getIri());
+                pss.setIri("domain", classIri);
+                result.add(pss.toString());
+            }
+        }
+        return result.toString();
+    }
+
+    public String generateSplitAssociationUpdate(List<SemanticAssociationChange> siblings) {
+        var oldAssociation = siblings.getFirst().getOldIRI();
+        var result = new UpdateRequest();
+        for (var sibling : siblings) {
+            for (var classIri : getClassHierarchy(sibling.getDomain())) {
+                var pss = new ParameterizedSparqlString(buildSplitTargetUpdateText("Association"));
+                pss.setIri("oldAssociation", oldAssociation);
+                pss.setIri("newAssociation", sibling.getIri());
+                pss.setIri("domain", classIri);
+                result.add(pss.toString());
+            }
+        }
+        return result.toString();
+    }
+
+    /**
+     * Each split target is scoped to its own class hierarchy ({@code ?instance a <domain>}) - a
+     * shared, unscoped block would copy every target's value onto every instance regardless of
+     * which split target it actually belongs to.
+     */
+    private String buildSplitTargetUpdateText(String varBase) {
+        var sb = new StringBuilder();
+        sb.append("DELETE {\n    ?instance ?old").append(varBase).append(" ?value .\n}\n");
+        sb.append("INSERT {\n    ?instance ?new").append(varBase).append(" ?value .\n}\n");
+        sb.append("WHERE {\n    ?instance ?old")
+                .append(varBase)
+                .append(" ?value .\n    ?instance a ?domain .\n};");
+        return sb.toString();
     }
 
     public String generateDatatypeChangedUpdate(SemanticAttributeChange attributeChange) {

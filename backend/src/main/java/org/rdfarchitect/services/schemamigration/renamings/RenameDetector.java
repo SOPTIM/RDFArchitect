@@ -59,25 +59,28 @@ public class RenameDetector {
         return mapping;
     }
 
-    public <T extends SemanticPropertyChange> List<ResourceMapping<T>> detectPropertyRenames(
-            List<T> resources) {
+    public <T extends SemanticPropertyChange> List<ResourceMapping<T>> detectPropertyMappings(
+            List<T> changesInClass, List<T> changesInChain) {
         var deletedResources =
-                resources.stream()
-                        .filter(
-                                change ->
-                                        change.getSemanticResourceChangeType()
-                                                .equals(SemanticResourceChangeType.DELETE))
-                        .toList();
+                new ArrayList<>(
+                        changesInClass.stream()
+                                .filter(
+                                        change ->
+                                                change.getSemanticResourceChangeType()
+                                                        .equals(SemanticResourceChangeType.DELETE))
+                                .toList());
         var addedResources =
-                resources.stream()
-                        .filter(
-                                change ->
-                                        change.getSemanticResourceChangeType()
-                                                .equals(SemanticResourceChangeType.ADD))
-                        .toList();
+                new ArrayList<>(
+                        changesInChain.stream()
+                                .filter(
+                                        change ->
+                                                change.getSemanticResourceChangeType()
+                                                        .equals(SemanticResourceChangeType.ADD))
+                                .toList());
 
-        var mappings = matchBySimilarity(addedResources, deletedResources);
-        for (var mapping : mappings) {
+        var mappings = detectSplits(deletedResources, addedResources);
+        var fuzzyMappings = matchBySimilarity(addedResources, deletedResources);
+        for (var mapping : fuzzyMappings) {
             if (!Objects.equals(
                     mapping.getOldResources().getFirst().getDomain(),
                     mapping.getNewResources().getFirst().getDomain())) {
@@ -86,7 +89,25 @@ public class RenameDetector {
                 mapping.setType(MappingType.RENAME);
             }
         }
+        mappings.addAll(fuzzyMappings);
         return mappings;
+    }
+
+    private <T extends SemanticPropertyChange> List<ResourceMapping<T>> detectSplits(
+            List<T> deletedResources, List<T> addedResources) {
+        var splits = new ArrayList<ResourceMapping<T>>();
+        for (var deletedItem : List.copyOf(deletedResources)) {
+            var exactMatches =
+                    addedResources.stream()
+                            .filter(added -> added.getLabel().equals(deletedItem.getLabel()))
+                            .toList();
+            if (exactMatches.size() >= 2) {
+                splits.add(new ResourceMapping<>(deletedItem, exactMatches, 1.0));
+                addedResources.removeAll(exactMatches);
+                deletedResources.remove(deletedItem);
+            }
+        }
+        return splits;
     }
 
     private <T extends SemanticResourceChange> List<ResourceMapping<T>> matchBySimilarity(

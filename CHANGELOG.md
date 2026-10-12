@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- RDFA-729: Detect cross-class property merges and splits during schema migration
+
+### Fixed
+
+- RDFA-729: Show only the current class's own label for a merge in the rename table, and show the correct merged/split/moved tag (not always "renamed") on added properties
+- RDFA-729: Generate correct SPARQL for a property split - previously only the first new property received the migrated data, since each target's rename statement deleted the same source triples
+- RDFA-729: Show every merged-away source property in the migration report (previously only the first was listed) and label split targets as "Split from", not "Renamed"/"Moved"
+
 ## [1.6.0] - 2026-09-10
 
 ### Added

@@ -69,4 +69,18 @@ public class ResourceMapping<T extends SemanticResourceChange> {
                     "Invalid mapping: cannot map multiple deleted resources to multiple added resources.");
         }
     }
+
+    public ResourceMapping(T deletedResource, List<T> addedResources, double confidenceScore) {
+        this.oldResources.add(deletedResource);
+        this.newResources.addAll(addedResources);
+        this.confidenceScore = confidenceScore;
+        this.type = MappingType.SPLIT;
+    }
+
+    public ResourceMapping(List<T> deletedResources, T addedResource, double confidenceScore) {
+        this.oldResources.addAll(deletedResources);
+        this.newResources.add(addedResource);
+        this.confidenceScore = confidenceScore;
+        this.type = MappingType.MERGE;
+    }
 }

@@ -51,6 +51,16 @@ public class ChangeObjectTestBuilder {
                 .build();
     }
 
+    public SemanticPropertyChange propertyChange(
+            String label, SemanticResourceChangeType type, String domain, String iri) {
+        return SemanticPropertyChange.builder()
+                .label(label)
+                .semanticResourceChangeType(type)
+                .domain(domain)
+                .iri(iri)
+                .build();
+    }
+
     public SemanticFieldChange fieldChange(SemanticFieldChangeType type, String from, String to) {
         return SemanticFieldChange.builder()
                 .semanticFieldChangeType(type)

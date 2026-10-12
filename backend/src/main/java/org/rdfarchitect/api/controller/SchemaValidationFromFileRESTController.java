@@ -68,7 +68,8 @@ public class SchemaValidationFromFileRESTController {
                                                                 ValidationReportDTO.class)))
             })
     @PostMapping(consumes = {"multipart/form-data"})
-    public ValidationReportDTO validateFile(            @Parameter(description = "The name/url of the inquirer.")
+    public ValidationReportDTO validateFile(
+            @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
                             required = false,

@@ -254,7 +254,8 @@ class RenameDetectorTest {
                 mock.when(() -> SimilarityCalculator.calculateSimilarity(addedA, deletedA))
                         .thenReturn(0.9);
 
-                var result = RenameDetector.detectPropertyRenames(List.of(deletedA, addedA));
+                var result =
+                        RenameDetector.detectPropertyMappings(List.of(deletedA), List.of(addedA));
 
                 assertThat(result).hasSize(1);
                 assertThat(result.getFirst().getOldResources()).isEqualTo(List.of(deletedA));
@@ -268,7 +269,7 @@ class RenameDetectorTest {
                     ChangeObjectTestBuilder.propertyChange(
                             "OldA", SemanticResourceChangeType.DELETE);
 
-            var result = RenameDetector.detectPropertyRenames(List.of(deletedA));
+            var result = RenameDetector.detectPropertyMappings(List.of(deletedA), List.of());
 
             assertThat(result).isEmpty();
         }
@@ -278,7 +279,7 @@ class RenameDetectorTest {
             var addedA =
                     ChangeObjectTestBuilder.propertyChange("NewA", SemanticResourceChangeType.ADD);
 
-            var result = RenameDetector.detectPropertyRenames(List.of(addedA));
+            var result = RenameDetector.detectPropertyMappings(List.of(), List.of(addedA));
 
             assertThat(result).isEmpty();
         }
@@ -301,7 +302,9 @@ class RenameDetectorTest {
                 mock.when(() -> SimilarityCalculator.calculateSimilarity(added2, deleted))
                         .thenReturn(0.8);
 
-                var result = RenameDetector.detectPropertyRenames(List.of(deleted, added1, added2));
+                var result =
+                        RenameDetector.detectPropertyMappings(
+                                List.of(deleted), List.of(added1, added2));
 
                 assertThat(result).hasSize(1);
                 assertThat(result.getFirst().getNewResources()).isEqualTo(List.of(added2));
@@ -321,7 +324,8 @@ class RenameDetectorTest {
                 mock.when(() -> SimilarityCalculator.calculateSimilarity(added, deleted))
                         .thenReturn(0.3);
 
-                var result = RenameDetector.detectPropertyRenames(List.of(deleted, added));
+                var result =
+                        RenameDetector.detectPropertyMappings(List.of(deleted), List.of(added));
 
                 assertThat(result).isEmpty();
             }
@@ -348,7 +352,8 @@ class RenameDetectorTest {
                         .thenReturn(0.95);
 
                 var result =
-                        RenameDetector.detectPropertyRenames(List.of(deleted1, deleted2, added));
+                        RenameDetector.detectPropertyMappings(
+                                List.of(deleted1, deleted2), List.of(added));
 
                 assertThat(result).hasSize(1);
             }
@@ -356,7 +361,7 @@ class RenameDetectorTest {
 
         @Test
         void detectPropertyRenames_emptyList_returnsEmpty() {
-            var result = RenameDetector.detectPropertyRenames(List.of());
+            var result = RenameDetector.detectPropertyMappings(List.of(), List.of());
 
             assertThat(result).isEmpty();
         }
@@ -391,8 +396,8 @@ class RenameDetectorTest {
                         .thenReturn(0.93);
 
                 var result =
-                        RenameDetector.detectPropertyRenames(
-                                List.of(deleted1, deleted2, added1, added2));
+                        RenameDetector.detectPropertyMappings(
+                                List.of(deleted1, deleted2), List.of(added1, added2));
 
                 assertThat(result).hasSize(2);
                 assertThat(result)
@@ -433,8 +438,8 @@ class RenameDetectorTest {
                         .thenReturn(0.6);
 
                 var result =
-                        RenameDetector.detectPropertyRenames(
-                                List.of(deleted, added1, added2, added3));
+                        RenameDetector.detectPropertyMappings(
+                                List.of(deleted), List.of(added1, added2, added3));
 
                 assertThat(result).hasSize(1);
                 assertThat(result.getFirst().getNewResources()).isEqualTo(List.of(added1));
@@ -454,7 +459,8 @@ class RenameDetectorTest {
                 mock.when(() -> SimilarityCalculator.calculateSimilarity(added, deleted))
                         .thenReturn(0.84);
 
-                var result = RenameDetector.detectPropertyRenames(List.of(deleted, added));
+                var result =
+                        RenameDetector.detectPropertyMappings(List.of(deleted), List.of(added));
 
                 assertThat(result).hasSize(1);
                 assertThat(result.getFirst().getConfidenceScore()).isEqualTo(0.84);
@@ -474,7 +480,8 @@ class RenameDetectorTest {
                 mock.when(() -> SimilarityCalculator.calculateSimilarity(added, deleted))
                         .thenReturn(0.9);
 
-                var result = RenameDetector.detectPropertyRenames(List.of(deleted, added));
+                var result =
+                        RenameDetector.detectPropertyMappings(List.of(deleted), List.of(added));
 
                 assertThat(result).hasSize(1);
                 assertThat(result.getFirst().getType()).isEqualTo(MappingType.RENAME);
@@ -494,7 +501,8 @@ class RenameDetectorTest {
                 mock.when(() -> SimilarityCalculator.calculateSimilarity(added, deleted))
                         .thenReturn(0.9);
 
-                var result = RenameDetector.detectPropertyRenames(List.of(deleted, added));
+                var result =
+                        RenameDetector.detectPropertyMappings(List.of(deleted), List.of(added));
 
                 assertThat(result).hasSize(1);
                 assertThat(result.getFirst().getType()).isEqualTo(MappingType.MOVE);
@@ -518,11 +526,220 @@ class RenameDetectorTest {
                 mock.when(() -> SimilarityCalculator.calculateSimilarity(added, deleted))
                         .thenReturn(0.9);
 
-                var result = RenameDetector.detectPropertyRenames(List.of(deleted, added));
+                var result =
+                        RenameDetector.detectPropertyMappings(List.of(deleted), List.of(added));
 
                 assertThat(result).hasSize(1);
                 assertThat(result.getFirst().getType()).isEqualTo(MappingType.RENAME);
             }
+        }
+
+        @Test
+        void detectPropertyMappings_twoExactLabelMatches_returnsSplit() {
+            var deleted =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "voltage",
+                            SemanticResourceChangeType.DELETE,
+                            "urn:ClassA",
+                            "urn:ClassA.voltage");
+            var added1 =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "voltage",
+                            SemanticResourceChangeType.ADD,
+                            "urn:ClassB",
+                            "urn:ClassB.voltage");
+            var added2 =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "voltage",
+                            SemanticResourceChangeType.ADD,
+                            "urn:ClassC",
+                            "urn:ClassC.voltage");
+
+            var result =
+                    RenameDetector.detectPropertyMappings(
+                            List.of(deleted), List.of(added1, added2));
+
+            assertThat(result).hasSize(1);
+            var split = result.getFirst();
+            assertThat(split.getType()).isEqualTo(MappingType.SPLIT);
+            assertThat(split.getConfidenceScore()).isEqualTo(1.0);
+            assertThat(split.getOldResources()).containsExactly(deleted);
+            assertThat(split.getNewResources()).containsExactlyInAnyOrder(added1, added2);
+        }
+
+        @Test
+        void detectPropertyMappings_threeExactLabelMatches_returnsSplitWithThreeTargets() {
+            var deleted =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "voltage",
+                            SemanticResourceChangeType.DELETE,
+                            "urn:ClassA",
+                            "urn:ClassA.voltage");
+            var added1 =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "voltage",
+                            SemanticResourceChangeType.ADD,
+                            "urn:ClassB",
+                            "urn:ClassB.voltage");
+            var added2 =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "voltage",
+                            SemanticResourceChangeType.ADD,
+                            "urn:ClassC",
+                            "urn:ClassC.voltage");
+            var added3 =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "voltage",
+                            SemanticResourceChangeType.ADD,
+                            "urn:ClassD",
+                            "urn:ClassD.voltage");
+
+            var result =
+                    RenameDetector.detectPropertyMappings(
+                            List.of(deleted), List.of(added1, added2, added3));
+
+            assertThat(result).hasSize(1);
+            var split = result.getFirst();
+            assertThat(split.getType()).isEqualTo(MappingType.SPLIT);
+            assertThat(split.getNewResources()).containsExactlyInAnyOrder(added1, added2, added3);
+        }
+
+        @Test
+        void detectPropertyMappings_oneExactLabelMatch_fallsThroughToFuzzyPath() {
+            var deleted =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "voltage",
+                            SemanticResourceChangeType.DELETE,
+                            "urn:ClassA",
+                            "urn:ClassA.voltage");
+            var added =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "voltage",
+                            SemanticResourceChangeType.ADD,
+                            "urn:ClassA",
+                            "urn:ClassA.voltage.new");
+
+            var result = RenameDetector.detectPropertyMappings(List.of(deleted), List.of(added));
+
+            assertThat(result).hasSize(1);
+            assertThat(result.getFirst().getType()).isEqualTo(MappingType.RENAME);
+            assertThat(result.getFirst().getNewResources()).containsExactly(added);
+        }
+
+        @Test
+        void
+                detectPropertyMappings_oneDeletedConsumesSplit_anotherUnrelatedPairStillFuzzyMatched() {
+            var deletedVoltage =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "voltage",
+                            SemanticResourceChangeType.DELETE,
+                            "urn:ClassA",
+                            "urn:ClassA.voltage");
+            var addedVoltage1 =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "voltage",
+                            SemanticResourceChangeType.ADD,
+                            "urn:ClassB",
+                            "urn:ClassB.voltage");
+            var addedVoltage2 =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "voltage",
+                            SemanticResourceChangeType.ADD,
+                            "urn:ClassC",
+                            "urn:ClassC.voltage");
+
+            var deletedCurrent =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "current",
+                            SemanticResourceChangeType.DELETE,
+                            "urn:ClassA",
+                            "urn:ClassA.current");
+            var addedAmperage =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "amperage",
+                            SemanticResourceChangeType.ADD,
+                            "urn:ClassD",
+                            "urn:ClassD.amperage");
+
+            try (MockedStatic<SimilarityCalculator> mock = mockStatic(SimilarityCalculator.class)) {
+                mock.when(
+                                () ->
+                                        SimilarityCalculator.calculateSimilarity(
+                                                addedAmperage, deletedCurrent))
+                        .thenReturn(0.9);
+
+                var result =
+                        RenameDetector.detectPropertyMappings(
+                                List.of(deletedVoltage, deletedCurrent),
+                                List.of(addedVoltage1, addedVoltage2, addedAmperage));
+
+                assertThat(result).hasSize(2);
+                assertThat(result)
+                        .anyMatch(
+                                r ->
+                                        r.getType() == MappingType.SPLIT
+                                                && r.getOldResources()
+                                                        .equals(List.of(deletedVoltage))
+                                                && r.getNewResources()
+                                                        .containsAll(
+                                                                List.of(
+                                                                        addedVoltage1,
+                                                                        addedVoltage2)));
+                assertThat(result)
+                        .anyMatch(
+                                r ->
+                                        r.getType() == MappingType.MOVE
+                                                && r.getOldResources()
+                                                        .equals(List.of(deletedCurrent))
+                                                && r.getNewResources()
+                                                        .equals(List.of(addedAmperage)));
+            }
+        }
+
+        /**
+         * Documents a known, already-established limitation shared with {@link
+         * DetectClassRenamesTest#detectClassRenames_multipleDeletedClassesWithSameAddedClass_onlyMatchesOnce}:
+         * matching is greedy and list-order dependent, not globally optimal. Here a split consuming
+         * both exact-label candidates up front can starve a later deletion's only possible match,
+         * rather than leaving one candidate for it - this is accepted, existing behavior, not
+         * something this change fixes.
+         */
+        @Test
+        void
+                detectPropertyMappings_splitConsumesCandidateNeededBySibling_siblingDeletedItemGoesUnmatched() {
+            var deletedVoltage =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "voltage",
+                            SemanticResourceChangeType.DELETE,
+                            "urn:ClassA",
+                            "urn:ClassA.voltage");
+            var deletedVolt =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "volt",
+                            SemanticResourceChangeType.DELETE,
+                            "urn:ClassA",
+                            "urn:ClassA.volt");
+            var addedVoltage1 =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "voltage",
+                            SemanticResourceChangeType.ADD,
+                            "urn:ClassB",
+                            "urn:ClassB.voltage");
+            var addedVoltage2 =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "voltage",
+                            SemanticResourceChangeType.ADD,
+                            "urn:ClassC",
+                            "urn:ClassC.voltage");
+
+            var result =
+                    RenameDetector.detectPropertyMappings(
+                            List.of(deletedVoltage, deletedVolt),
+                            List.of(addedVoltage1, addedVoltage2));
+
+            assertThat(result).hasSize(1);
+            assertThat(result.getFirst().getType()).isEqualTo(MappingType.SPLIT);
+            assertThat(result).noneMatch(r -> r.getOldResources().contains(deletedVolt));
         }
     }
 }

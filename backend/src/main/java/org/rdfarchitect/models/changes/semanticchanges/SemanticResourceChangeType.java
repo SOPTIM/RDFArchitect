@@ -26,6 +26,11 @@ public enum SemanticResourceChangeType {
     CHANGE,
     RENAME,
     MOVE,
+    // the property survives under a new predicate attached to a different class, via a
+    // cross-class move/merge/split that didn't name this class as one of its targets - display
+    // only, deliberately left out of SPARQL generation since the surviving RENAME/MOVE entry on
+    // the target class already does the one rename/migrate that this property's data needs
+    DELETED_FROM_MAPPING,
     // should only be created and used when creating the report
     INHERITS_CHANGE,
     INDIRECT_CHANGE,

@@ -19,6 +19,7 @@
     import { Fa } from "svelte-fa";
 
     import { Checkbox } from "$lib/components/bitsui/checkbox/index.js";
+    import { URI } from "$lib/models/dto/index.ts";
     import { computeMappingType } from "$lib/utils/migrationUtils.js";
 
     let {
@@ -26,7 +27,8 @@
         candidates = [],
         invalidMappingIds = new Set(),
         getCandidateSubtitle = () => null,
-        propertyType = "Item",
+        resourceType = "Item",
+        currentClassLabel = null,
     } = $props();
 
     const BADGE_LABELS = {
@@ -93,13 +95,20 @@
     }
 
     function oldLabel(mapping) {
+        if (currentClassLabel) {
+            const ownResource = mapping.oldResources.find(
+                r =>
+                    !r.domain || new URI(r.domain).suffix === currentClassLabel,
+            );
+            if (ownResource) return ownResource.label;
+        }
         return mapping.oldResources.map(r => r.label).join(", ");
     }
 </script>
 
 <div>
     <h3 class="mb-3 font-semibold">
-        Deleted and Possibly Remapped {propertyType}s
+        Deleted and Possibly Remapped {resourceType}s
     </h3>
     <div
         class="border-border bg-window-background overflow-x-auto rounded-xl border shadow-sm"

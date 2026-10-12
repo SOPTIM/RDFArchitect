@@ -20,18 +20,26 @@
 
     import {
         confirmMigrationChanges,
-        getMigrationChanges,
+        getMigrationChanges
     } from "$lib/api/generated/index.ts";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
+    import { findSplitSiblingIris } from "$lib/utils/migrationUtils.js";
 
     import ResourceChangeCard from "./ResourceChangeCard.svelte";
 
     let classes = $state([]);
     let isLoading = $state(true);
     let ignorePrefixes = $state(false);
+
+    let splitAttributeIris = $derived(
+        findSplitSiblingIris(classes, cls => cls.attributes)
+    );
+    let splitAssociationIris = $derived(
+        findSplitSiblingIris(classes, cls => cls.associations)
+    );
 
     onMount(async () => {
         let storedState = get(migrationState);
@@ -53,13 +61,13 @@
 
     export async function onNext() {
         const { error } = await confirmMigrationChanges({
-            body: classes,
+            body: classes
         });
         if (error) {
             console.log("Failed to fetch changes:", error);
             toastStore.error(
                 "Save failed",
-                "Could not save changes for the migration.",
+                "Could not save changes for the migration."
             );
         }
     }
@@ -104,7 +112,9 @@
                                     }
                                     title="Attribute"
                                     {ignorePrefixes}
-                                />
+                                    isSplit={splitAttributeIris.has(
+                                    attribute.iri,
+                                )} />
                             {/if}
                         {/each}
                     </div>
@@ -127,6 +137,9 @@
                                     }
                                     title="Association"
                                     {ignorePrefixes}
+                                    isSplit={splitAssociationIris.has(
+                                    association.iri,
+                                )}
                                 />
                             {/if}
                         {/each}

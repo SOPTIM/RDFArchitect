@@ -20,7 +20,11 @@ package org.rdfarchitect.services.schemamigration.scriptgeneration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.lenient;
 
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,11 +32,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.rdfarchitect.context.MigrationSessionStore;
 import org.rdfarchitect.context.SchemaMigrationContext;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.services.schemamigration.artifacts.SparqlMigrationBuilder;
 import org.rdfarchitect.services.schemamigration.artifacts.SparqlUpdateGenerator;
 
@@ -50,12 +57,22 @@ class SparqlMigrationBuilderTest {
 
     private SparqlMigrationBuilder builder;
 
+    private Model schema;
+
     @BeforeEach
     void setUp() {
+        schema = ModelFactory.createDefaultModel();
         var context = new SchemaMigrationContext();
-        context.setUpdatedSchema(ModelFactory.createDefaultModel().getGraph());
+        context.setUpdatedSchema(schema.getGraph());
         lenient().when(migrationSessionStore.getContext()).thenReturn(context);
         builder = new SparqlMigrationBuilder(new SparqlUpdateGenerator(migrationSessionStore));
+    }
+
+    private Resource concreteClass(String localName) {
+        var resource = schema.createResource(PREFIX + localName);
+        resource.addProperty(RDF.type, RDFS.Class);
+        resource.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+        return resource;
     }
 
     @Test
@@ -134,6 +151,180 @@ class SparqlMigrationBuilderTest {
                 .contains(PREFIX + "ClassA.voltage")
                 .contains(PREFIX + "ClassB.volt")
                 .contains(PREFIX + "NewClass.voltage");
+    }
+
+    @Test
+    void generateMigrationScript_threeWaySplit_scopesEachTargetToItsOwnClass() {
+        concreteClass("ClassA");
+        concreteClass("ClassB");
+        concreteClass("ClassC");
+
+        var oldIri = PREFIX + "OldClass.voltage";
+        var sibling1 = splitSibling(oldIri, PREFIX + "ClassA.voltage", "ClassA");
+        var sibling2 = splitSibling(oldIri, PREFIX + "ClassB.voltage", "ClassB");
+        var sibling3 = splitSibling(oldIri, PREFIX + "ClassC.voltage", "ClassC");
+
+        var script =
+                builder.generateMigrationScript(
+                        List.of(
+                                classWithAttribute("ClassA", sibling1),
+                                classWithAttribute("ClassB", sibling2),
+                                classWithAttribute("ClassC", sibling3)));
+
+        // one independent DELETE/WHERE pair per target, each scoped by rdf:type to its own
+        // class - a shared, unscoped block would copy every target's value onto every instance
+        // regardless of which split target it actually belongs to (RDFA-729)
+        assertThat(script.split("DELETE").length - 1).isEqualTo(3);
+        assertThat(script)
+                .contains(oldIri)
+                .contains(PREFIX + "ClassA.voltage")
+                .contains(PREFIX + "ClassB.voltage")
+                .contains(PREFIX + "ClassC.voltage")
+                .contains(PREFIX + "ClassA>")
+                .contains(PREFIX + "ClassB>")
+                .contains(PREFIX + "ClassC>");
+    }
+
+    @Test
+    void generateMigrationScript_attributeAddedFromInheritance_scopesToGivenClass() {
+        var attributeChange =
+                SemanticAttributeChange.builder()
+                        .iri(PREFIX + "Base.voltage")
+                        .label("voltage")
+                        .semanticResourceChangeType(
+                                SemanticResourceChangeType.ADDED_FROM_INHERITANCE)
+                        .defaultValue("0")
+                        .primitiveDataType(XSD_INTEGER)
+                        .build();
+
+        var script = generateFor(attributeChange);
+
+        assertThat(script).contains(PREFIX + "Switch").contains(PREFIX + "Base.voltage");
+    }
+
+    @Test
+    void generateMigrationScript_attributeDeletedFromInheritance_scopesToGivenClass() {
+        var attributeChange =
+                SemanticAttributeChange.builder()
+                        .iri(PREFIX + "Base.voltage")
+                        .label("voltage")
+                        .semanticResourceChangeType(
+                                SemanticResourceChangeType.DELETED_FROM_INHERITANCE)
+                        .build();
+
+        var script = generateFor(attributeChange);
+
+        assertThat(script)
+                .contains("DELETE")
+                .contains(PREFIX + "Switch")
+                .contains(PREFIX + "Base.voltage");
+    }
+
+    /**
+     * This marker (see {@code SchemaMigrationService.attachDeletionMarkersForLosingDomains}) exists
+     * purely for the review step to show that the old domain lost the property - the surviving
+     * RENAME/MOVE entry on the new domain already generates the one delete+insert this predicate's
+     * data needs. Generating a second, independent delete for it here would race that rename and
+     * could destroy the data before it gets migrated, depending on class order in the script.
+     */
+    @Test
+    void generateMigrationScript_attributeDeletedFromMapping_generatesNoSparql() {
+        var attributeChange =
+                SemanticAttributeChange.builder()
+                        .iri(PREFIX + "Sub1.voltage")
+                        .label("voltage")
+                        .semanticResourceChangeType(SemanticResourceChangeType.DELETED_FROM_MAPPING)
+                        .build();
+
+        var script = generateFor(attributeChange);
+
+        assertThat(script).isBlank();
+    }
+
+    @Test
+    void generateMigrationScript_associationDeletedFromMapping_generatesNoSparql() {
+        var associationChange =
+                SemanticAssociationChange.builder()
+                        .iri(PREFIX + "Sub1.link")
+                        .label("link")
+                        .semanticResourceChangeType(SemanticResourceChangeType.DELETED_FROM_MAPPING)
+                        .build();
+
+        var script = generateForAssociation(associationChange);
+
+        assertThat(script).isBlank();
+    }
+
+    @Test
+    void
+            generateMigrationScript_associationAddedFromInheritance_scopesToGivenClassNotAssociationIri() {
+        var associationChange =
+                SemanticAssociationChange.builder()
+                        .iri(PREFIX + "Base.link")
+                        .label("link")
+                        .semanticResourceChangeType(
+                                SemanticResourceChangeType.ADDED_FROM_INHERITANCE)
+                        .associationUsed(true)
+                        .mapping("?instance <" + PREFIX + "someProp> ?target .")
+                        .build();
+
+        var script = generateForAssociation(associationChange);
+
+        assertThat(script).contains(PREFIX + "Switch").contains(PREFIX + "Base.link");
+    }
+
+    @Test
+    void generateMigrationScript_associationDeletedFromInheritance_scopesToGivenClass() {
+        var associationChange =
+                SemanticAssociationChange.builder()
+                        .iri(PREFIX + "Base.link")
+                        .label("link")
+                        .semanticResourceChangeType(
+                                SemanticResourceChangeType.DELETED_FROM_INHERITANCE)
+                        .build();
+
+        var script = generateForAssociation(associationChange);
+
+        assertThat(script)
+                .contains("DELETE")
+                .contains(PREFIX + "Switch")
+                .contains(PREFIX + "Base.link");
+    }
+
+    private SemanticAttributeChange splitSibling(String oldIri, String newIri, String domainLocalName) {
+        return SemanticAttributeChange.builder()
+                .iri(newIri)
+                .oldIRI(oldIri)
+                .domain(PREFIX + domainLocalName)
+                .label("voltage")
+                .semanticResourceChangeType(SemanticResourceChangeType.MOVE)
+                .build();
+    }
+
+    private SemanticClassChange classWithAttribute(
+            String classLabel, SemanticAttributeChange attributeChange) {
+        return SemanticClassChange.builder()
+                .iri(PREFIX + classLabel)
+                .label(classLabel)
+                .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                .attributes(new ArrayList<>(List.of(attributeChange)))
+                .associations(new ArrayList<>())
+                .enumEntries(new ArrayList<>())
+                .build();
+    }
+
+    private String generateForAssociation(SemanticAssociationChange associationChange) {
+        var classChange =
+                SemanticClassChange.builder()
+                        .iri(PREFIX + "Switch")
+                        .label("Switch")
+                        .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                        .attributes(new ArrayList<>())
+                        .associations(new ArrayList<>(List.of(associationChange)))
+                        .enumEntries(new ArrayList<>())
+                        .build();
+
+        return builder.generateMigrationScript(List.of(classChange));
     }
 
     private String generateFor(SemanticAttributeChange attributeChange) {
