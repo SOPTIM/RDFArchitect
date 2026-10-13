@@ -26,6 +26,13 @@ export interface InactiveBendPoint {
     insertionIndex: number;
 }
 
+export interface Rect {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
 /**
  * The corner rounding factor is exposed to the user as a percentage (0..100),
  * mapped onto this maximum corner radius in pixels (flow units).
@@ -453,4 +460,38 @@ export function projectPointOntoNodeBorder(
     if (minDist === distRight) return { x: right, y: clampedY };
     if (minDist === distTop) return { x: clampedX, y: top };
     return { x: clampedX, y: bottom };
+}
+
+/**
+ * Moves an end point along with the border of a class whose bounds changed, e.g. because it shrank
+ * after its attributes were deleted. The point keeps the side of the class it was docked to and its
+ * relative position along that side.
+ */
+export function moveEndPointWithBorder(
+    point: { x: number; y: number },
+    oldRect: Rect,
+    newRect: Rect,
+): { x: number; y: number } {
+    const left = Math.abs(point.x - oldRect.x);
+    const right = Math.abs(point.x - (oldRect.x + oldRect.width));
+    const top = Math.abs(point.y - oldRect.y);
+    const bottom = Math.abs(point.y - (oldRect.y + oldRect.height));
+    const nearest = Math.min(left, right, top, bottom);
+    const alongY = ratio(point.y - oldRect.y, oldRect.height);
+    const alongX = ratio(point.x - oldRect.x, oldRect.width);
+
+    if (nearest === left || nearest === right) {
+        return {
+            x: nearest === left ? newRect.x : newRect.x + newRect.width,
+            y: newRect.y + alongY * newRect.height,
+        };
+    }
+    return {
+        x: newRect.x + alongX * newRect.width,
+        y: nearest === top ? newRect.y : newRect.y + newRect.height,
+    };
+}
+
+function ratio(offset: number, length: number): number {
+    return length > 0 ? Math.max(0, Math.min(1, offset / length)) : 0;
 }
