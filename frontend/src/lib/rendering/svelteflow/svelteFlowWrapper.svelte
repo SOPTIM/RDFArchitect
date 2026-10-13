@@ -35,6 +35,10 @@
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import {
+        propertyEditorRequest,
+        superClassFocusRequest,
+    } from "$lib/propertyEditorRequest.svelte.js";
     import SvelteFlowEdgeContextMenu from "$lib/rendering/svelteflow/components/contextmenu/SvelteFlowEdgeContextMenu.svelte";
     import InheritanceEdge from "$lib/rendering/svelteflow/components/edge/InheritanceEdge.svelte";
     import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
@@ -90,6 +94,10 @@
         DIAGRAM_SELECTION_CONTEXT,
         DiagramSelectionController,
     } from "./interaction/diagramSelection.svelte.js";
+    import {
+        associationEditTarget,
+        isEditableEdge,
+    } from "./interaction/edgeEditing.js";
     import { EdgeLayoutPersistence } from "./interaction/edgeLayoutPersistence.js";
     import { labelHighlight } from "./interaction/labelHighlight.svelte.js";
     import {
@@ -190,6 +198,11 @@
     // recompute the placement of every other edge in the diagram.
     let labelPlacementCache = new Map();
     let labelDragActive = false;
+    let contextMenuEdge = $derived(
+        contextMenus.edgeRequest
+            ? edges.find(edge => edge.id === contextMenus.edgeRequest.edgeId)
+            : null,
+    );
     let classNodes = $derived(
         nodes.filter(node => node.type !== LABEL_NODE_TYPE),
     );
@@ -911,9 +924,32 @@
     }
     // Selects only the clicked edge on a plain left click. Independent of the
     // class-based auto selection: clicking an edge always selects just that edge.
-    function handleEdgeClick({ edge }) {
+    function handleEdgeClick({ edge, event }) {
         if (!edge?.id) return;
         selectOnlyEdge(edge.id);
+        if (event?.detail === 2) {
+            openEdgeEditor(edge);
+        }
+    }
+
+    /**
+     * Opens what an edge stands for: the association editor with the association end focused, or
+     * the class editor of the sub class with its super class focused.
+     */
+    function openEdgeEditor(edge) {
+        if (edge?.type === "inheritance") {
+            superClassFocusRequest.open(edge.source);
+            openClassFromMenu(edge.source);
+            return;
+        }
+        const target = associationEditTarget(edge);
+        if (target) {
+            propertyEditorRequest.open(target);
+        }
+    }
+
+    function handleEditEdge({ edgeId }) {
+        openEdgeEditor(edges.find(edge => edge.id === edgeId));
     }
 
     function updateEdgeBendPoints(edgeId, newBendPoints) {
@@ -1361,7 +1397,10 @@
         request={contextMenus.edgeRequest}
         disabled={!contextMenus.edgeRequest}
         readOnly={isWorkspaceReadOnly}
+        edgeKind={contextMenuEdge?.type ?? null}
+        canEdit={isEditableEdge(contextMenuEdge)}
         onClose={() => contextMenus.close()}
+        onEditEdge={handleEditEdge}
         onAddBendPoint={handleEdgeAddBendPoint}
         onDeleteBendPoint={handleEdgeDeleteBendPoint}
         onDeleteEndPoint={handleEdgeDeleteEndPoint}
