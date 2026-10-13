@@ -54,6 +54,7 @@ import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.rdf.resources.DL;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
+import org.rdfarchitect.models.dto.rendering.svelteflow.RenderMergedDiagramSvelteFlowService;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.GetRenderingDataService;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
@@ -784,6 +785,84 @@ class EdgeLayoutTest {
     }
 
     @Test
+    void deletingTheLayoutDataOfAClass_dropsThePointsOfItsEdges_andKeepsTheOtherEdgesGlued() {
+        layoutClasses(SUB, SUPER, OTHER_SUPER, TARGET);
+        var association = EdgeKey.association(SUB_TO_TARGET, TARGET_TO_SUB);
+        edgeLayoutService.updateEdgeLayouts(
+                graphOne,
+                PACKAGE,
+                List.of(
+                        inheritanceLayout(
+                                point("s", 0, 0, SOURCE_SIDE), point("t", 100, 0, TARGET_SIDE)),
+                        edgeLayout(
+                                "association",
+                                SUB_TO_TARGET,
+                                TARGET_TO_SUB,
+                                SUB,
+                                TARGET,
+                                point("a", 0, 10, SOURCE_SIDE),
+                                point("b", 50, 50),
+                                point("c", 300, 50, TARGET_SIDE))));
+        var inheritanceMRID = edgeDO(PACKAGE, EdgeKey.inheritance(SUB, SUPER)).getMRID();
+
+        classLayoutService.deleteClassLayoutData(graphOne, SUPER);
+
+        assertThat(edgesOf(PACKAGE)).containsExactly(association);
+        assertThat(DLObjectFetcher.fetchDOPsForDO(graphLayout(), inheritanceMRID)).isEmpty();
+        assertThat(pointsOf(association))
+                .extracting(DiagramObjectPoint::getBelongsToGluePoint)
+                .containsExactly(gluePointOfClass(SUB), null, gluePointOfClass(TARGET));
+    }
+
+    @Test
+    void crossProfileDiagram_rendersTheStoredPointsUnderTheMergedUuids() {
+        var customDiagramService =
+                new CustomDiagramService(
+                        databasePort, datasetName -> List.of(), syncDiagramLayoutService);
+        var diagramUUID =
+                customDiagramService
+                        .getCrossProfileDiagram(
+                                DATASET,
+                                true,
+                                CIMProfileModels.loadAll(databasePort, Map.of(), DATASET, null))
+                        .getDiagramId();
+        var ids =
+                idsOf(
+                        edgeLayoutService.updateEdgeLayouts(
+                                DATASET,
+                                diagramUUID,
+                                List.of(
+                                        edgeLayout(
+                                                "inheritance",
+                                                merged("Sub"),
+                                                merged("Super"),
+                                                merged("Sub"),
+                                                merged("Super"),
+                                                point("s", 0, 0, SOURCE_SIDE),
+                                                point("m", 50, 50),
+                                                point("t", 100, 100, TARGET_SIDE)))));
+
+        var rendering =
+                (SvelteFlowDTO)
+                        new RenderMergedDiagramSvelteFlowService(
+                                        databasePort,
+                                        customDiagramService,
+                                        new QueryDiagramLayoutService(databasePort),
+                                        new RenderCIMFacadeCollectionSvelteFlowService(),
+                                        datasetName -> List.of())
+                                .renderCrossProfileDiagram(DATASET);
+
+        var bendPoints =
+                edgeIn(rendering, EdgeKey.inheritance(merged("Sub"), merged("Super")))
+                        .getData()
+                        .getBendPoints();
+        assertThat(bendPoints).extracting(BendPointDTO::getId).containsExactlyElementsOf(ids);
+        assertThat(bendPoints)
+                .extracting(BendPointDTO::getSide)
+                .containsExactly(SOURCE_SIDE, null, TARGET_SIDE);
+    }
+
+    @Test
     void associationKey_doesNotDependOnWhichEndComesFirst() {
         assertThat(EdgeKey.association(SUB_TO_TARGET, TARGET_TO_SUB))
                 .isEqualTo(EdgeKey.association(TARGET_TO_SUB, SUB_TO_TARGET));
@@ -871,6 +950,10 @@ class EdgeLayoutTest {
                                         datasetName -> List.of(),
                                         new QueryDiagramLayoutService(databasePort))
                                 .getRenderingData(graphOne, filter, PACKAGE);
+        return edgeIn(rendering, key);
+    }
+
+    private static EdgeDTO edgeIn(SvelteFlowDTO rendering, EdgeKey key) {
         return rendering.getEdges().stream()
                 .filter(
                         edge ->
