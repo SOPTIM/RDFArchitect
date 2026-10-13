@@ -20,6 +20,8 @@ package org.rdfarchitect.services.diagrams;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.shared.Lock;
 import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.api.dto.GraphDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.ClassSourceDTO;
@@ -181,6 +183,19 @@ public class CustomDiagramService
             List<CIMProfileModel> profiles) {
 
         var model = diagramLayout.getDiagramLayoutModel();
+        model.enterCriticalSection(Lock.WRITE);
+        try {
+            insertCrossProfileClassLayoutData(model, crossProfileDiagramUUID, mergeMap, profiles);
+        } finally {
+            model.leaveCriticalSection();
+        }
+    }
+
+    private static void insertCrossProfileClassLayoutData(
+            Model model,
+            UUID crossProfileDiagramUUID,
+            Map<String, MergedClassDTO> mergeMap,
+            List<CIMProfileModel> profiles) {
         DiagramLayoutServiceUtils.insertAllDiagramObjectStyles(model);
         if (DLObjectFetcher.fetchDiagram(model, crossProfileDiagramUUID) == null) {
             DiagramLayoutServiceUtils.insertDiagram(

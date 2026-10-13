@@ -26,10 +26,23 @@ import org.rdfarchitect.rdf.graph.DeltaCompressible;
  */
 public interface DeltaSource {
 
-    /**
-     * Returns the delta of the most recent version.
-     *
-     * @return the additions and deletions that produced the current state
-     */
-    DeltaCompressible getLastDelta();
+import java.util.UUID;
+
+/**
+ * The diagram layout of the diagrams defined on a dataset, shared by all requests of a session.
+ * Every access to its model has to hold the lock of the model ({@code
+ * enterCriticalSection(Lock.READ)} or {@code enterCriticalSection(Lock.WRITE)}): concurrent writes
+ * create duplicate diagram objects and corrupt the model.
+ */
+public class DiagramLayout {
+
+    @Getter private final Model diagramLayoutModel;
+    @Getter private final MRID defaultPackageMRID;
+
+    public DiagramLayout() {
+        defaultPackageMRID = new MRID(UUID.randomUUID());
+        diagramLayoutModel = ModelFactory.createDefaultModel();
+        diagramLayoutModel.setNsPrefix(CIM.PREFIX, CIM.NAMESPACE);
+        diagramLayoutModel.setNsPrefix("rdf", RDF.uri);
+    }
 }
