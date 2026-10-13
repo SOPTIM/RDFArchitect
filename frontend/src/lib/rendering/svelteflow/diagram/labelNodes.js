@@ -94,6 +94,11 @@ export function labelsOf(edgeData) {
     return labels;
 }
 
+/** The class a label belongs to: the class at the other end of the edge than its anchor. */
+export function ownerClassIdOf(edge, label) {
+    return label.anchor === SOURCE_ANCHOR ? edge.target : edge.source;
+}
+
 export function labelNodeId(label) {
     return `${label.identifiedObjectUUID}:${label.kind}`;
 }
