@@ -44,6 +44,7 @@
         <SchemaDropZone
             {workspaceName}
             {readonly}
+            hideContentOnDrag
             class="bg-window-background flex min-h-0 flex-1 items-center justify-center"
         >
             <EmptyStateCard

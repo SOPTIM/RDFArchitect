@@ -74,7 +74,7 @@
     $effect(() => cancelSwitch);
 
     function scheduleSwitch(event) {
-        if (!dragHasFiles(event)) {
+        if (!dragHasFiles(event) || !fileDragState.active) {
             return;
         }
         draggedOver = true;
@@ -93,7 +93,7 @@
      */
     function refuseDrop(event) {
         cancelSwitch(event);
-        if (!dragHasFiles(event)) {
+        if (!dragHasFiles(event) || !fileDragState.active) {
             return;
         }
         // Answered here, so the window does not report it as a drop that landed nowhere.

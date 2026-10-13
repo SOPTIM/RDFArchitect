@@ -104,9 +104,24 @@
             ? !prefixResolutionsValid || submittingResolutions
             : !progress?.finished && !enableSubmit,
     );
+    /** Why the name cannot be that of a new workspace, empty while it can. */
+    let newWorkspaceNameError = $derived.by(() => {
+        if (!forNewWorkspace) {
+            return "";
+        }
+        const name = workspaceNameUserInput.trim();
+        if (name === "") {
+            return "Enter a name for the new workspace";
+        }
+        if ([...modifiableWorkspaces, ...readOnlyWorkspaces].includes(name)) {
+            return `A workspace named "${name}" already exists`;
+        }
+        return "";
+    });
     let enableSubmit = $derived(
         files.length > 0 &&
             !isWorkspaceReadOnly(workspaceNameUserInput) &&
+            !newWorkspaceNameError &&
             progress === null,
     );
 
@@ -451,20 +466,34 @@
     {:else}
         <div class="mx-2 flex h-full max-h-[80vh] flex-col">
             {#if !workspaceSelectionLocked}
-                <label for={workspaceInputId} class="mb-1">Workspace</label>
+                <label for={workspaceInputId} class="mb-1">
+                    {forNewWorkspace ? "New workspace" : "Workspace"}
+                </label>
                 <input
                     class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
                     type="text"
                     id={workspaceInputId}
-                    list={workspaceListId}
-                    placeholder={DEFAULT_WORKSPACE_NAME}
+                    list={forNewWorkspace ? undefined : workspaceListId}
+                    placeholder={forNewWorkspace
+                        ? "Name of the workspace to create"
+                        : DEFAULT_WORKSPACE_NAME}
                     bind:value={workspaceNameUserInput}
                 />
-                <datalist id={workspaceListId}>
-                    {#each modifiableWorkspaces as workspaceName}
-                        <option value={workspaceName}>{workspaceName}</option>
-                    {/each}
-                </datalist>
+                <!-- Suggesting existing workspaces would invite the import into one of them. -->
+                {#if !forNewWorkspace}
+                    <datalist id={workspaceListId}>
+                        {#each modifiableWorkspaces as workspaceName}
+                            <option value={workspaceName}>
+                                {workspaceName}
+                            </option>
+                        {/each}
+                    </datalist>
+                {/if}
+                {#if newWorkspaceNameError}
+                    <div class="text-red mt-1 mb-1 h-6 text-sm">
+                        {newWorkspaceNameError}
+                    </div>
+                {/if}
             {/if}
             <!-- Also when the workspace is fixed: the disabled Import button is otherwise the only
                  hint that this workspace takes nothing. -->

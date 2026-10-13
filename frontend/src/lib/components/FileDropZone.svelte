@@ -28,6 +28,7 @@
 
     let {
         onFiles,
+        onRefused,
         disabled = false,
         icon = null,
         message = "Drop files here",
@@ -57,10 +58,10 @@
      */
     const overlayTone = $derived(
         disabled
-            ? "border-red bg-red-background/40 text-red-text"
+            ? "border-red bg-red-background/50 text-red-text"
             : over
-              ? "border-blue bg-lightblue/40 text-blue"
-              : "border-blue/60 text-blue",
+              ? "border-blue bg-lightblue/50 text-blue"
+              : "border-blue/70 bg-lightblue/25 text-blue",
     );
 
     const fileCountLabel = $derived(
@@ -76,13 +77,19 @@
             : `rounded-xl border-2 border-dashed transition-colors ${inlineTone}`,
     );
 
+    // An overlay zone exists only for as long as the drag mode does; a zone that is part of the
+    // layout, such as the import dialog's, takes files whenever it is on screen.
+    const takesFiles = $derived(!overlay || fileDragState.active);
+
     function handleDragOver(event) {
-        if (!dragHasFiles(event)) {
+        if (!dragHasFiles(event) || !takesFiles) {
             return;
         }
         // Without this the browser refuses the drop and opens the file in the tab instead.
         event.preventDefault();
-        over = true;
+        // A disabled zone accepts the drag all the same, so that the drop reaches it and can be
+        // answered; refusing it through `dropEffect` would keep the drop event from firing.
+        over = !disabled;
     }
 
     function handleDragLeave(event) {
@@ -95,15 +102,17 @@
     }
 
     function handleDrop(event) {
-        if (!dragHasFiles(event)) {
+        if (!dragHasFiles(event) || !takesFiles) {
             return;
         }
         event.preventDefault();
         over = false;
         endFileDrag();
-        if (!disabled) {
-            onFiles?.(extractDroppedItems(event.dataTransfer));
+        if (disabled) {
+            onRefused?.();
+            return;
         }
+        onFiles?.(extractDroppedItems(event.dataTransfer));
     }
 </script>
 
@@ -118,28 +127,30 @@
 
     {#if overlay && fileDragState.active}
         <!-- The zone is lifted out of the page-wide dimming, so the box dims the margin it leaves
-             around itself; what stays lit is exactly what lies inside the dashed outline. -->
-        <div
-            class={`drag-cutout pointer-events-none absolute inset-1 z-40 flex flex-col items-center justify-center gap-1 rounded-2xl border-[3px] border-dashed p-4 text-center transition-colors ${overlayTone}`}
-            in:fade={{ duration: 120 }}
-            out:fade={{ duration: 80 }}
-        >
-            <!-- Only this much is opaque: the label has to be read off whatever it covers. -->
+             around itself; what stays lit is exactly what lies inside the dashed outline. The
+             clipping keeps that dimming inside the zone, wherever the zone sits. -->
+        <div class="pointer-events-none absolute inset-0 z-40 overflow-hidden">
             <div
-                class="bg-window-background/85 flex flex-col items-center gap-1 rounded-xl px-5 py-3 shadow-sm"
+                class={`drag-cutout absolute inset-1 flex flex-col items-center justify-center gap-1 rounded-2xl border-[3px] border-dashed p-4 text-center transition-colors ${overlayTone}`}
+                in:fade={{ duration: 120 }}
+                out:fade={{ duration: 80 }}
             >
-                {#if icon && !disabled}
-                    <span class="mb-1 text-2xl"><Fa {icon} /></span>
-                {/if}
-                <p class="text-sm font-semibold">
-                    {disabled ? disabledMessage : message}
-                </p>
-                {#if !disabled && fileDragState.fileCount > 0}
-                    <p class="text-xs">{fileCountLabel}</p>
-                {/if}
-                {#if !disabled && info}
-                    <p class="mt-1 text-xs opacity-80">{info}</p>
-                {/if}
+                <div
+                    class="bg-window-background border-border flex flex-col items-center gap-1 rounded-xl border px-6 py-4 shadow-md"
+                >
+                    {#if icon && !disabled}
+                        <span class="mb-1 text-2xl"><Fa {icon} /></span>
+                    {/if}
+                    <p class="text-base font-semibold">
+                        {disabled ? disabledMessage : message}
+                    </p>
+                    {#if !disabled && fileDragState.fileCount > 0}
+                        <p class="text-sm">{fileCountLabel}</p>
+                    {/if}
+                    {#if !disabled && info}
+                        <p class="mt-1 text-xs opacity-80">{info}</p>
+                    {/if}
+                </div>
             </div>
         </div>
     {/if}

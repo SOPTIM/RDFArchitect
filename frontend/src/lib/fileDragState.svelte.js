@@ -15,6 +15,8 @@
  *
  */
 
+import { isDialogOpen } from "$lib/dialog/openDialogs.js";
+
 /**
  * Whether files from outside the browser are currently being dragged over the window, and how many
  * of them. Drop targets announce themselves from this, so that they are found before the pointer
@@ -28,12 +30,13 @@ export const fileDragState = $state({
 let enteredElements = 0;
 
 /**
- * Starts the drag mode, unless what is dragged are not files.
+ * Starts the drag mode, unless what is dragged are not files or a dialog covers everything that
+ * could take them.
  *
  * @param {DragEvent} event the drag event that entered an element
  */
 export function enterFileDrag(event) {
-    if (!dragHasFiles(event)) {
+    if (!dragHasFiles(event) || isDialogOpen()) {
         return;
     }
     enteredElements += 1;

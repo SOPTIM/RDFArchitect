@@ -163,7 +163,7 @@
         <!-- Dims everything that takes no files. The drop zones and the workspace tabs, which
              switch the editor while dragging, lift themselves above it. -->
         <div
-            class="bg-drag-scrim pointer-events-none fixed inset-0 z-30 backdrop-blur-[2px]"
+            class="bg-drag-scrim pointer-events-none fixed inset-0 z-30 backdrop-blur-[4px]"
             in:fade={{ duration: 120 }}
             out:fade={{ duration: 80 }}
         ></div>

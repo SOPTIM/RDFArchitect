@@ -19,6 +19,8 @@
     import { faPlus } from "@fortawesome/free-solid-svg-icons";
 
     import FileDropZone from "$lib/components/FileDropZone.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { fileDragState } from "$lib/fileDragState.svelte.js";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils";
 
     import { acceptSchemaDrop } from "./schemaDrop.js";
@@ -27,6 +29,7 @@
     let {
         workspaceName = null,
         readonly = false,
+        hideContentOnDrag = false,
         class: className = "",
         children,
     } = $props();
@@ -43,6 +46,13 @@
             ? `Add schemas to "${workspaceName}"`
             : "Add schemas to a new workspace",
     );
+    // An empty state puts its card where the drop box lands; the two of them stacked read as one
+    // card too many.
+    const contentClasses = $derived(
+        hideContentOnDrag && fileDragState.active
+            ? "pointer-events-none opacity-0"
+            : "opacity-100",
+    );
 
     function openImport(items) {
         const accepted = acceptSchemaDrop(items);
@@ -51,6 +61,13 @@
         }
         droppedItems = accepted;
         showImportDialog = true;
+    }
+
+    function reportReadOnly() {
+        toastStore.error(
+            "Nothing imported",
+            `"${workspaceName}" is read-only. Enable editing for it, or import into another workspace.`,
+        );
     }
 </script>
 
@@ -63,8 +80,17 @@
     {message}
     {info}
     onFiles={openImport}
+    onRefused={reportReadOnly}
 >
-    {@render children?.()}
+    {#if hideContentOnDrag}
+        <div
+            class={`flex min-h-0 flex-1 items-center justify-center transition-opacity duration-150 ${contentClasses}`}
+        >
+            {@render children?.()}
+        </div>
+    {:else}
+        {@render children?.()}
+    {/if}
 </FileDropZone>
 
 <ImportDialog
