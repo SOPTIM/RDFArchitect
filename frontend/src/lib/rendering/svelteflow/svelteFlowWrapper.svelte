@@ -56,6 +56,7 @@
         getEdgeParams,
         getClosestSegmentInsertionIndex,
         distanceToPolyline,
+        moveEndPointWithBorder,
     } from "./components/edge/edgeUtils.ts";
     import SvelteFlowPropertyContextMenu from "./components/SvelteFlowPropertyContextMenu.svelte";
     import {
@@ -180,6 +181,8 @@
     // Tracks the last seen position per dragged node id, to compute the delta
     // for moving attached end points live during a class drag.
     let lastDragPositions = new Map();
+    let classBounds = new Map();
+    let classBoundsDiagramId = null;
 
     let hasFittedInitially = false;
     let labelPositions = new SvelteMap();
@@ -214,6 +217,11 @@
     $effect(() => {
         const currentEdges = edges;
         untrack(() => edgeLayouts.track(currentEdges));
+    });
+
+    $effect(() => {
+        const currentNodes = nodes;
+        untrack(() => moveEndPointsOfResizedClasses(currentNodes));
     });
 
     $effect(() => {
@@ -452,6 +460,11 @@
     }
 
     function syncDiagramElements() {
+        const diagramId = editorState.selectedDiagram.getProperty("id");
+        if (diagramId !== classBoundsDiagramId) {
+            classBoundsDiagramId = diagramId;
+            classBounds = new Map();
+        }
         labelPositions = new SvelteMap();
         labelPlacementCache = new Map();
         const nextNodes = [...inputNodes];
@@ -511,6 +524,72 @@
             });
             editorState.focusedClassUUID.updateValue(null);
         });
+    }
+
+    /**
+     * Keeps the end points on the border of classes whose size changed, e.g. a class that shrank
+     * after its attributes were deleted. The bounds of each class are remembered per diagram, also
+     * across a reload of the diagram, so a class that is rendered smaller than before is noticed.
+     */
+    function moveEndPointsOfResizedClasses(currentNodes) {
+        const resizedClasses = new Map();
+        for (const node of currentNodes) {
+            if (node.type === LABEL_NODE_TYPE || !node.measured?.width) {
+                continue;
+            }
+            const bounds = {
+                x: node.position.x,
+                y: node.position.y,
+                width: node.measured.width,
+                height: node.measured.height,
+            };
+            const previous = classBounds.get(node.id);
+            if (
+                previous &&
+                (previous.width !== bounds.width ||
+                    previous.height !== bounds.height)
+            ) {
+                resizedClasses.set(node.id, { previous, bounds });
+            }
+            classBounds.set(node.id, bounds);
+        }
+        if (resizedClasses.size === 0) {
+            return;
+        }
+        let changed = false;
+        const nextEdges = edges.map(edge => {
+            const points = edge.data?.bendPoints ?? [];
+            const sourceEnd = getSourceEndPoint(points);
+            const targetEnd = getTargetEndPoint(points);
+            const nextPoints = points.map(point => {
+                const classId =
+                    point === sourceEnd
+                        ? edge.source
+                        : point === targetEnd
+                          ? edge.target
+                          : null;
+                const resized = resizedClasses.get(classId);
+                if (!resized) {
+                    return point;
+                }
+                return {
+                    ...point,
+                    ...moveEndPointWithBorder(
+                        point,
+                        resized.previous,
+                        resized.bounds,
+                    ),
+                };
+            });
+            if (nextPoints.every((point, index) => point === points[index])) {
+                return edge;
+            }
+            changed = true;
+            return { ...edge, data: { ...edge.data, bendPoints: nextPoints } };
+        });
+        if (changed) {
+            edges = nextEdges;
+        }
     }
 
     function handleNodeDragStart({ nodes: draggedNodes }) {

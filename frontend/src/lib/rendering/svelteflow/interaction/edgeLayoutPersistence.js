@@ -16,6 +16,8 @@
  */
 
 import {
+    updateClassPositions,
+    updateDatasetClassPositions,
     updateDatasetDiagramLayout,
     updateDatasetEdgeLayouts,
     updateDiagramLayout,
@@ -28,6 +30,12 @@ import {
     getTargetEndPoint,
 } from "./bendPointOperations.js";
 import { EDGE_INTERACTION_CONFIG } from "./edgeInteractionConfig.js";
+
+/**
+ * Whether a point of an edge is being dragged right now. Set by the component that drags the
+ * points, the drag is saved once the point is dropped.
+ */
+export const edgePointDrag = { active: false };
 
 /**
  * The layout of an edge as the backend stores it: the full, ordered list of its points from the
@@ -102,6 +110,26 @@ function requestEdgeLayouts(target, edgeLayouts, keepalive) {
     });
 }
 
+function requestClassPositions(target, classes) {
+    if (target.graphURI) {
+        return updateClassPositions({
+            path: {
+                datasetName: target.datasetName,
+                graphURI: target.graphURI,
+                diagramUUID: target.diagramUUID,
+            },
+            body: classes,
+        });
+    }
+    return updateDatasetClassPositions({
+        path: {
+            datasetName: target.datasetName,
+            diagramUUID: target.diagramUUID,
+        },
+        body: classes,
+    });
+}
+
 function requestDiagramLayout(target, diagramLayout) {
     if (target.graphURI) {
         return updateDiagramLayout({
@@ -126,10 +154,12 @@ function requestDiagramLayout(target, diagramLayout) {
  * Saves the points of the edges of the shown diagram. An edge is saved as soon as it can no longer
  * be edited, i.e. when it is deselected, when another diagram is loaded and when the page is left.
  * While classes are dragged, the end points of their edges move along; those edges are saved
- * together with the classes once the drag ends.
+ * together with the classes once the drag ends. Neither a class drag nor a point drag is saved
+ * before the drop.
  *
  * Before an edge is saved, its unnecessary bend points are dissolved, in the shown edge as well, so
- * a bend point that was created but never moved off the line is not stored.
+ * a bend point that was created but never moved off the line is not stored. An edge that ends up
+ * with the points it was saved with is not sent at all.
  *
  * Changes are detected by the identity of the points array of an edge, which every edit replaces.
  * The requests of an edge are sent one after another, so the mRIDs the backend returns for new
@@ -143,6 +173,7 @@ export class EdgeLayoutPersistence {
 
     #target = null;
     #savedPoints = new Map();
+    #persistedPoints = new Map();
     #unsavedEdges = new Map();
     #storedIds = new Map();
     #pendingRequests = new Map();
@@ -176,6 +207,9 @@ export class EdgeLayoutPersistence {
         this.#savedPoints = new Map(
             edges.map(edge => [edge.id, edge.data?.bendPoints]),
         );
+        this.#persistedPoints = new Map(
+            edges.map(edge => [edge.id, toEdgeLayoutDTO(edge).points]),
+        );
     }
 
     /** Records the changed edges and saves those that can no longer be edited. */
@@ -201,7 +235,8 @@ export class EdgeLayoutPersistence {
 
     /**
      * Saves the given classes and labels together with the unsaved edges of the shown diagram, or
-     * with all of its edges, e.g. after the diagram was laid out anew.
+     * with all of its edges, e.g. after the diagram was laid out anew. Classes that moved without
+     * any edge or label are saved on their own.
      */
     saveDiagramLayout({ classes = [], labels = [], allEdges = false }) {
         this.#nodeDragActive = false;
@@ -211,15 +246,23 @@ export class EdgeLayoutPersistence {
             changedEdges = edges;
             for (const edge of edges) {
                 this.#savedPoints.set(edge.id, edge.data?.bendPoints);
+                this.#persistedPoints.set(
+                    edge.id,
+                    toEdgeLayoutDTO(edge).points,
+                );
                 this.#unsavedEdges.delete(edge.id);
             }
         } else {
             this.#recordChanges(edges);
-            changedEdges = this.#takeUnsavedEdges(
-                [...this.#unsavedEdges]
-                    .filter(([, unsaved]) => unsaved.target === this.#target)
-                    .map(([edgeId]) => edgeId),
-            ).map(unsaved => this.#withoutUnnecessaryBendPoints(unsaved.edge));
+            changedEdges = this.#changedEdges(
+                this.#takeUnsavedEdges(
+                    [...this.#unsavedEdges]
+                        .filter(
+                            ([, unsaved]) => unsaved.target === this.#target,
+                        )
+                        .map(([edgeId]) => edgeId),
+                ).map(unsaved => unsaved.edge),
+            );
         }
         if (
             this.#isReadOnly() ||
@@ -229,6 +272,10 @@ export class EdgeLayoutPersistence {
             return;
         }
         const target = this.#target;
+        if (labels.length + changedEdges.length === 0) {
+            this.#enqueue([], () => requestClassPositions(target, classes));
+            return;
+        }
         this.#enqueue(
             changedEdges.map(edge => edge.id),
             () =>
@@ -259,6 +306,9 @@ export class EdgeLayoutPersistence {
     }
 
     #recordChanges(edges) {
+        if (this.#nodeDragActive || edgePointDrag.active) {
+            return;
+        }
         const readOnly = this.#isReadOnly();
         for (const edge of edges) {
             const points = edge.data?.bendPoints;
@@ -293,11 +343,13 @@ export class EdgeLayoutPersistence {
             if (!edgesByTarget.has(target)) {
                 edgesByTarget.set(target, []);
             }
-            edgesByTarget
-                .get(target)
-                .push(this.#withoutUnnecessaryBendPoints(edge));
+            edgesByTarget.get(target).push(edge);
         }
-        for (const [target, edges] of edgesByTarget) {
+        for (const [target, unsavedEdges] of edgesByTarget) {
+            const edges = this.#changedEdges(unsavedEdges);
+            if (edges.length === 0) {
+                continue;
+            }
             const send = () =>
                 requestEdgeLayouts(
                     target,
@@ -313,6 +365,43 @@ export class EdgeLayoutPersistence {
                 );
             }
         }
+    }
+
+    /**
+     * The given edges without their unnecessary bend points, leaving out those that end up with
+     * the points they were saved with. The remaining ones count as saved from here on.
+     */
+    #changedEdges(edges) {
+        const changedEdges = [];
+        for (const unsavedEdge of edges) {
+            const edge = this.#withoutUnnecessaryBendPoints(unsavedEdge);
+            const points = toEdgeLayoutDTO(edge).points;
+            if (this.#samePoints(points, this.#persistedPoints.get(edge.id))) {
+                continue;
+            }
+            this.#persistedPoints.set(edge.id, points);
+            changedEdges.push(edge);
+        }
+        return changedEdges;
+    }
+
+    #samePoints(points, persistedPoints) {
+        if (!persistedPoints || points.length !== persistedPoints.length) {
+            return false;
+        }
+        return points.every((point, index) => {
+            const persisted = persistedPoints[index];
+            return (
+                this.#storedIdOf(point.id) === this.#storedIdOf(persisted.id) &&
+                point.xPosition === persisted.xPosition &&
+                point.yPosition === persisted.yPosition &&
+                point.side === persisted.side
+            );
+        });
+    }
+
+    #storedIdOf(id) {
+        return this.#storedIds.get(id) ?? id;
     }
 
     /**
@@ -354,7 +443,7 @@ export class EdgeLayoutPersistence {
     #toSentLayout(edge) {
         const layout = toEdgeLayoutDTO(edge);
         for (const point of layout.points) {
-            point.id = this.#storedIds.get(point.id) ?? point.id;
+            point.id = this.#storedIdOf(point.id);
         }
         return layout;
     }

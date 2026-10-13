@@ -25,6 +25,7 @@ import {
     getInactiveBendPoints,
     getPolylinePath,
     getRoundedCornerPolylinePath,
+    moveEndPointWithBorder,
     projectPointOntoNodeBorder,
 } from "$lib/rendering/svelteflow/components/edge/edgeUtils.ts";
 
@@ -175,5 +176,21 @@ describe("class borders", () => {
         expect([params.sx, params.sy]).toEqual([100, 10]);
         expect([params.borderSx, params.borderSy]).toEqual([100, 25]);
         expect([params.tx, params.ty]).toEqual([300, 25]);
+    });
+
+    test("an end point stays on its side of a class whose size changed", () => {
+        const before = { x: 0, y: 0, width: 200, height: 100 };
+        const after = { x: 0, y: 0, width: 100, height: 40 };
+
+        expect(
+            moveEndPointWithBorder({ x: 200, y: 25 }, before, after),
+        ).toEqual({ x: 100, y: 10 });
+        expect(
+            moveEndPointWithBorder({ x: 50, y: 100 }, before, after),
+        ).toEqual({ x: 25, y: 40 });
+        expect(moveEndPointWithBorder({ x: 0, y: 50 }, before, after)).toEqual({
+            x: 0,
+            y: 20,
+        });
     });
 });

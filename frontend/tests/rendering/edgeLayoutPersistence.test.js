@@ -18,6 +18,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
+    updateClassPositions,
     updateDatasetEdgeLayouts,
     updateDiagramLayout,
     updateEdgeLayouts,
@@ -28,6 +29,7 @@ import {
 } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
 import {
     EdgeLayoutPersistence,
+    edgePointDrag,
     toEdgeLayoutDTO,
     withStoredIds,
 } from "$lib/rendering/svelteflow/interaction/edgeLayoutPersistence.js";
@@ -94,6 +96,8 @@ function persistenceFor(
 }
 
 vi.mock("$lib/api/generated/index.ts", () => ({
+    updateClassPositions: vi.fn(),
+    updateDatasetClassPositions: vi.fn(),
     updateDatasetDiagramLayout: vi.fn(),
     updateDatasetEdgeLayouts: vi.fn(),
     updateDiagramLayout: vi.fn(),
@@ -105,6 +109,8 @@ beforeEach(() => {
     updateEdgeLayouts.mockImplementation(() => answer());
     updateDatasetEdgeLayouts.mockImplementation(() => answer());
     updateDiagramLayout.mockImplementation(() => answer());
+    updateClassPositions.mockImplementation(() => answer());
+    edgePointDrag.active = false;
 });
 
 describe("toEdgeLayoutDTO", () => {
@@ -328,5 +334,53 @@ describe("EdgeLayoutPersistence", () => {
         expect(state.edges[0].data.bendPoints).toEqual([source, target]);
         persistence.track(state.edges);
         expect(updateEdgeLayouts).toHaveBeenCalledTimes(1);
+    });
+
+    test("sends nothing if the edge ends up with the points it was saved with", async () => {
+        const source = createEndPoint(0, 0, "source");
+        const target = createEndPoint(100, 100, "target");
+        const shown = edge("e", [source, target], true);
+        const { show } = persistenceFor([shown]);
+
+        show([withPoints(shown, [source, createBendPoint(50, 50), target])]);
+        show([
+            selected(
+                withPoints(shown, [source, createBendPoint(50, 50), target]),
+                false,
+            ),
+        ]);
+        await settle();
+
+        expect(updateEdgeLayouts).not.toHaveBeenCalled();
+    });
+
+    test("does not save a point while it is dragged", async () => {
+        const shown = edge("e", [], true);
+        const { persistence, show } = persistenceFor([shown]);
+        const bend = createBendPoint(1, 1);
+
+        edgePointDrag.active = true;
+        show([withPoints(shown, [{ ...bend, x: 5 }])]);
+        persistence.saveAll({ keepalive: true });
+        expect(updateEdgeLayouts).not.toHaveBeenCalled();
+
+        edgePointDrag.active = false;
+        persistence.saveAll({ keepalive: true });
+        expect(sentEdges(updateEdgeLayouts)[0].points[0].xPosition).toBe(5);
+    });
+
+    test("saves classes that moved without any edge or label over the class route", async () => {
+        const { persistence } = persistenceFor([edge("e")]);
+        const classes = [{ classUUID: "c", xPosition: 1, yPosition: 2 }];
+
+        persistence.beginNodeDrag();
+        persistence.saveDiagramLayout({ classes, labels: [] });
+        await settle();
+
+        expect(updateDiagramLayout).not.toHaveBeenCalled();
+        expect(updateClassPositions.mock.calls[0][0]).toMatchObject({
+            path: GRAPH_TARGET,
+            body: classes,
+        });
     });
 });
