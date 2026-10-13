@@ -26,6 +26,7 @@
         getTargetEndPoint,
     } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
     import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
+    import { edgePointDrag } from "$lib/rendering/svelteflow/interaction/edgeLayoutPersistence.js";
 
     import {
         getInactiveBendPoints,
@@ -124,6 +125,7 @@
     }
 
     function addDragListeners() {
+        edgePointDrag.active = true;
         window.addEventListener("pointermove", onMove);
         window.addEventListener("pointerup", endDrag, { once: true });
         window.addEventListener("contextmenu", endDrag, { once: true });
@@ -132,6 +134,7 @@
     function endDrag() {
         const wasDragging = drag !== null;
         drag = null;
+        edgePointDrag.active = false;
         autoPan.stop();
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", endDrag);
