@@ -20,6 +20,7 @@ package org.rdfarchitect.services.dl.select;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.shared.Lock;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
@@ -46,8 +47,13 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
     public RenderingLayoutData fetchGlobalRenderingLayoutData(String datasetName, UUID diagramId) {
         var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
-        return fetchRenderingLayoutData(
-                diagramLayout.getDefaultPackageMRID().getUuid(), diagramLayoutModel, diagramId);
+        diagramLayoutModel.enterCriticalSection(Lock.READ);
+        try {
+            return fetchRenderingLayoutData(
+                    diagramLayout.getDefaultPackageMRID().getUuid(), diagramLayoutModel, diagramId);
+        } finally {
+            diagramLayoutModel.leaveCriticalSection();
+        }
     }
 
     private RenderingLayoutData fetchRenderingLayoutData(

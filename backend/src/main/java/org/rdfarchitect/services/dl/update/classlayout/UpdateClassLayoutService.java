@@ -24,6 +24,7 @@ import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.shared.Lock;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
@@ -158,12 +159,16 @@ public class UpdateClassLayoutService
             String datasetName, UUID diagramUUID, List<ClassPositionDTO> classPositionDTOList) {
         var diagramLayoutModel =
                 databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-
-        if (applyClassPositions(diagramLayoutModel, diagramUUID, classPositionDTOList)) {
-            EdgeLayoutReconciler.reconcileEdges(
-                    diagramLayoutModel,
-                    diagramUUID,
-                    EdgeResolver.forDataset(databasePort, datasetName));
+        diagramLayoutModel.enterCriticalSection(Lock.WRITE);
+        try {
+            if (applyClassPositions(diagramLayoutModel, diagramUUID, classPositionDTOList)) {
+                EdgeLayoutReconciler.reconcileEdges(
+                        diagramLayoutModel,
+                        diagramUUID,
+                        EdgeResolver.forDataset(databasePort, datasetName));
+            }
+        } finally {
+            diagramLayoutModel.leaveCriticalSection();
         }
     }
 
@@ -471,14 +476,19 @@ public class UpdateClassLayoutService
         }
         var diagramLayoutModel =
                 databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        insertLayoutForClasses(
-                diagramLayoutModel,
-                diagramUUID,
-                mergedUuidsOf(classes, classUriByUuid(datasetName, classes)));
-        EdgeLayoutReconciler.reconcileEdges(
-                diagramLayoutModel,
-                diagramUUID,
-                EdgeResolver.forDataset(databasePort, datasetName));
+        diagramLayoutModel.enterCriticalSection(Lock.WRITE);
+        try {
+            insertLayoutForClasses(
+                    diagramLayoutModel,
+                    diagramUUID,
+                    mergedUuidsOf(classes, classUriByUuid(datasetName, classes)));
+            EdgeLayoutReconciler.reconcileEdges(
+                    diagramLayoutModel,
+                    diagramUUID,
+                    EdgeResolver.forDataset(databasePort, datasetName));
+        } finally {
+            diagramLayoutModel.leaveCriticalSection();
+        }
     }
 
     private Map<UUID, String> classUriByUuid(String datasetName, List<ClassInDiagram> classes) {
@@ -513,23 +523,28 @@ public class UpdateClassLayoutService
         }
 
         var model = databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        var diagram = databasePort.getDatasetDiagrams(datasetName).get(diagramUUID);
-        if (diagram == null) {
-            deleteLayoutForClasses(model, diagramUUID, classUUIDs);
-        } else {
-            var updated = diagram.getClasses();
-            var classUriByUuid = classUriByUuid(datasetName, updated);
-            updated.removeIf(removedByAnyOf(classUUIDs, classUriByUuid));
-            diagram.setClasses(updated);
+        model.enterCriticalSection(Lock.WRITE);
+        try {
+            var diagram = databasePort.getDatasetDiagrams(datasetName).get(diagramUUID);
+            if (diagram == null) {
+                deleteLayoutForClasses(model, diagramUUID, classUUIDs);
+            } else {
+                var updated = diagram.getClasses();
+                var classUriByUuid = classUriByUuid(datasetName, updated);
+                updated.removeIf(removedByAnyOf(classUUIDs, classUriByUuid));
+                diagram.setClasses(updated);
 
-            var stillRendered = mergedUuidsOf(updated, classUriByUuid);
-            deleteLayoutForClasses(
-                    model,
-                    diagramUUID,
-                    classUUIDs.stream().filter(uuid -> !stillRendered.contains(uuid)).toList());
+                var stillRendered = mergedUuidsOf(updated, classUriByUuid);
+                deleteLayoutForClasses(
+                        model,
+                        diagramUUID,
+                        classUUIDs.stream().filter(uuid -> !stillRendered.contains(uuid)).toList());
+            }
+            EdgeLayoutReconciler.reconcileEdges(
+                    model, diagramUUID, EdgeResolver.forDataset(databasePort, datasetName));
+        } finally {
+            model.leaveCriticalSection();
         }
-        EdgeLayoutReconciler.reconcileEdges(
-                model, diagramUUID, EdgeResolver.forDataset(databasePort, datasetName));
     }
 
     @Override
@@ -542,9 +557,14 @@ public class UpdateClassLayoutService
                 databasePort.getCrossProfileDiagramInfo(datasetName).getCrossProfileDiagramUUID());
         diagramUUIDs.addAll(databasePort.getDatasetDiagrams(datasetName).keySet());
 
-        for (var diagramUUID : diagramUUIDs) {
-            migrateLayoutToNewClassUri(
-                    model, diagramUUID, oldMergedUuid, newMergedUuid, newClassUri);
+        model.enterCriticalSection(Lock.WRITE);
+        try {
+            for (var diagramUUID : diagramUUIDs) {
+                migrateLayoutToNewClassUri(
+                        model, diagramUUID, oldMergedUuid, newMergedUuid, newClassUri);
+            }
+        } finally {
+            model.leaveCriticalSection();
         }
     }
 

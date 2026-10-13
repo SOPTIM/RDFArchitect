@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.shared.Lock;
 import org.rdfarchitect.api.dto.dl.LabelPositionDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -72,10 +73,14 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
     @Override
     public void updateLabelPositions(
             String datasetName, UUID diagramUUID, List<LabelPositionDTO> labelPositionDTOList) {
-        applyLabelPositions(
-                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel(),
-                diagramUUID,
-                labelPositionDTOList);
+        var diagramLayoutModel =
+                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
+        diagramLayoutModel.enterCriticalSection(Lock.WRITE);
+        try {
+            applyLabelPositions(diagramLayoutModel, diagramUUID, labelPositionDTOList);
+        } finally {
+            diagramLayoutModel.leaveCriticalSection();
+        }
     }
 
     /**

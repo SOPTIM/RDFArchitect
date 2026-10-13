@@ -77,6 +77,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -863,9 +865,93 @@ class EdgeLayoutTest {
     }
 
     @Test
+    void concurrentSavesOfAWorkspaceDiagram_keepOneDiagramObjectPerClass() throws Exception {
+        var customDiagramService =
+                new CustomDiagramService(
+                        databasePort, datasetName -> List.of(), syncDiagramLayoutService);
+        var renderer =
+                new RenderMergedDiagramSvelteFlowService(
+                        databasePort,
+                        customDiagramService,
+                        new QueryDiagramLayoutService(databasePort),
+                        new RenderCIMFacadeCollectionSvelteFlowService(),
+                        datasetName -> List.of());
+        var sessionId = SessionContext.getSessionId();
+        var errors = new CopyOnWriteArrayList<Throwable>();
+        var layout = new DiagramLayoutDTO();
+        layout.setClasses(
+                positions(merged("Sub"), merged("Super"), merged("Target"), merged("OtherSuper")));
+        layout.setEdges(
+                List.of(
+                        edgeLayout(
+                                "inheritance",
+                                merged("Sub"),
+                                merged("Super"),
+                                merged("Sub"),
+                                merged("Super"),
+                                point("s", 1, 1, SOURCE_SIDE))));
+
+        for (var round = 0; round < 10; round++) {
+            var diagramUUID = UUID.randomUUID();
+            customDiagramService.replaceCustomDatasetDiagram(
+                    DATASET,
+                    diagramUUID.toString(),
+                    customDiagram(diagramUUID, SUB, SUPER, TARGET, OTHER_SUPER));
+            var start = new CountDownLatch(1);
+            Runnable save =
+                    () ->
+                            inSession(
+                                    sessionId,
+                                    start,
+                                    errors,
+                                    () ->
+                                            new UpdateDiagramLayoutService(databasePort)
+                                                    .updateDiagramLayout(
+                                                            DATASET, diagramUUID, layout));
+            Runnable render =
+                    () ->
+                            inSession(
+                                    sessionId,
+                                    start,
+                                    errors,
+                                    () ->
+                                            renderer.renderCustomDatasetDiagram(
+                                                    DATASET, diagramUUID));
+            var threads = List.of(new Thread(save), new Thread(save), new Thread(render));
+            threads.forEach(Thread::start);
+            start.countDown();
+            for (var thread : threads) {
+                thread.join();
+            }
+
+            assertThat(errors).isEmpty();
+            assertThat(DLObjectFetcher.fetchDiagramClassDOs(datasetLayout(), new MRID(diagramUUID)))
+                    .extracting(DiagramObject::getBelongsToIdentifiedObject)
+                    .doesNotHaveDuplicates()
+                    .hasSize(4);
+        }
+    }
+
+    @Test
     void associationKey_doesNotDependOnWhichEndComesFirst() {
         assertThat(EdgeKey.association(SUB_TO_TARGET, TARGET_TO_SUB))
                 .isEqualTo(EdgeKey.association(TARGET_TO_SUB, SUB_TO_TARGET));
+    }
+
+    private static void inSession(
+            String sessionId, CountDownLatch start, List<Throwable> errors, Runnable action) {
+        SessionContext.setSessionId(sessionId);
+        try {
+            start.await();
+            action.run();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            errors.add(e);
+        } catch (RuntimeException e) {
+            errors.add(e);
+        } finally {
+            SessionContext.clear();
+        }
     }
 
     private GraphIdentifier addGraph(String graphUri, String schema) {
