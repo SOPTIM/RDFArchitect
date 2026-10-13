@@ -28,6 +28,13 @@ export const FocusField = {
 
 export const propertyEditorRequest = createPropertyEditorRequest();
 
+/**
+ * Asks the class editor of a class to focus its super class, e.g. after an inheritance edge was
+ * opened from the diagram. Every request carries a new token, so the same class can be asked
+ * again.
+ */
+export const superClassFocusRequest = createSuperClassFocusRequest();
+
 function createPropertyEditorRequest() {
     let request = $state(null);
 
@@ -40,6 +47,23 @@ function createPropertyEditorRequest() {
             request = { ...target };
         },
 
+        close() {
+            request = null;
+        },
+    };
+}
+
+function createSuperClassFocusRequest() {
+    let request = $state(null);
+    let token = 0;
+
+    return {
+        get current() {
+            return request;
+        },
+        open(classUuid) {
+            request = { classUuid, token: ++token };
+        },
         close() {
             request = null;
         },

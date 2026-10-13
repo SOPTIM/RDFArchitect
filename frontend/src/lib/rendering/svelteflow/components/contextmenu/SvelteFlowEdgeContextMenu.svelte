@@ -17,9 +17,11 @@
 
 <script>
     import {
+        faEraser,
+        faEye,
+        faGear,
         faPlus,
         faTrash,
-        faEraser,
     } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
@@ -34,7 +36,10 @@
         request = null,
         disabled = false,
         readOnly = false,
+        edgeKind = null,
+        canEdit = false,
         onClose = () => {},
+        onEditEdge = () => {},
         onAddBendPoint = () => {},
         onDeleteBendPoint = () => {},
         onDeleteEndPoint = () => {},
@@ -45,6 +50,10 @@
     let open = $state(false);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
+
+    let editLabel = $derived(
+        `${readOnly ? "View" : "Edit"} ${edgeKind === "inheritance" ? "Inheritance" : "Association"}`,
+    );
 
     let onBendPoint = $derived(!!request?.hitBendPointId);
     let onEndPoint = $derived(!!request?.hitEndPointId);
@@ -86,6 +95,12 @@
             edgeId: request.edgeId,
             endPointId: request.hitEndPointId,
         });
+        onClose();
+    }
+
+    function editEdge() {
+        if (!request) return;
+        onEditEdge({ edgeId: request.edgeId });
         onClose();
     }
 
@@ -141,5 +156,14 @@
         >
             Remove all bend points
         </ContextMenu.Item.Button>
+        {#if canEdit}
+            <ContextMenu.Separator />
+            <ContextMenu.Item.Button
+                onSelect={editEdge}
+                faIcon={readOnly ? faEye : faGear}
+            >
+                {editLabel}
+            </ContextMenu.Item.Button>
+        {/if}
     </ContextMenu.Content>
 </ContextMenu.Root>
