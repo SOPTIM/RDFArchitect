@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.shared.Lock;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
@@ -66,25 +67,32 @@ public class SyncDiagramLayoutService implements SyncDiagramLayoutUseCase {
     public void syncDatasetDiagramLayout(String datasetName) {
         var diagramLayoutModel =
                 databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        var diagramMRIDs = DLObjectFetcher.fetchDiagramMRIDs(diagramLayoutModel);
-        if (diagramMRIDs.isEmpty()) {
-            return;
-        }
-        var profiles = CIMProfileModels.loadAll(databasePort, Map.of(), datasetName, null);
-        var edgeResolver = EdgeResolver.forMergedProfiles(profiles);
-        var crossProfileDiagramUUID =
-                databasePort.getCrossProfileDiagramInfo(datasetName).getCrossProfileDiagramUUID();
-        var customDiagrams = databasePort.getDatasetDiagrams(datasetName);
-        for (var diagramMRID : diagramMRIDs) {
-            syncDiagram(
-                    diagramLayoutModel,
-                    diagramMRID,
-                    shownClassesOfDatasetDiagram(
-                            profiles,
-                            diagramMRID.getUuid(),
-                            crossProfileDiagramUUID,
-                            customDiagrams),
-                    edgeResolver);
+        diagramLayoutModel.enterCriticalSection(Lock.WRITE);
+        try {
+            var diagramMRIDs = DLObjectFetcher.fetchDiagramMRIDs(diagramLayoutModel);
+            if (diagramMRIDs.isEmpty()) {
+                return;
+            }
+            var profiles = CIMProfileModels.loadAll(databasePort, Map.of(), datasetName, null);
+            var edgeResolver = EdgeResolver.forMergedProfiles(profiles);
+            var crossProfileDiagramUUID =
+                    databasePort
+                            .getCrossProfileDiagramInfo(datasetName)
+                            .getCrossProfileDiagramUUID();
+            var customDiagrams = databasePort.getDatasetDiagrams(datasetName);
+            for (var diagramMRID : diagramMRIDs) {
+                syncDiagram(
+                        diagramLayoutModel,
+                        diagramMRID,
+                        shownClassesOfDatasetDiagram(
+                                profiles,
+                                diagramMRID.getUuid(),
+                                crossProfileDiagramUUID,
+                                customDiagrams),
+                        edgeResolver);
+            }
+        } finally {
+            diagramLayoutModel.leaveCriticalSection();
         }
     }
 

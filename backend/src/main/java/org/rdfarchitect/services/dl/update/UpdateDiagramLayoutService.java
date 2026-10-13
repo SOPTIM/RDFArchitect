@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.shared.Lock;
 import org.rdfarchitect.api.dto.dl.DiagramLayoutDTO;
 import org.rdfarchitect.api.dto.dl.EdgePointIdDTO;
 import org.rdfarchitect.database.DatabasePort;
@@ -68,11 +69,18 @@ public class UpdateDiagramLayoutService implements UpdateDiagramLayoutUseCase {
     @Override
     public List<EdgePointIdDTO> updateDiagramLayout(
             String datasetName, UUID diagramUUID, DiagramLayoutDTO diagramLayout) {
-        return applyDiagramLayout(
-                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel(),
-                diagramUUID,
-                diagramLayout,
-                EdgeResolver.lazily(() -> EdgeResolver.forDataset(databasePort, datasetName)));
+        var diagramLayoutModel =
+                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
+        diagramLayoutModel.enterCriticalSection(Lock.WRITE);
+        try {
+            return applyDiagramLayout(
+                    diagramLayoutModel,
+                    diagramUUID,
+                    diagramLayout,
+                    EdgeResolver.lazily(() -> EdgeResolver.forDataset(databasePort, datasetName)));
+        } finally {
+            diagramLayoutModel.leaveCriticalSection();
+        }
     }
 
     /**
