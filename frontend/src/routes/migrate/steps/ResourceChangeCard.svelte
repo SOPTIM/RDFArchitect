@@ -35,6 +35,12 @@
         DELETE: "Deleted",
         CHANGE: "Changed",
         RENAME: "Renamed",
+        MOVE: "Moved",
+        SPLIT: "Split",
+        MERGE: "Merged",
+        ADDED_FROM_INHERITANCE: "Added (inherited)",
+        DELETED_FROM_INHERITANCE: "Removed (inherited)",
+        DELETED_FROM_MAPPING: "Removed (moved or merged)",
     };
 
     const FIELD_CHANGE_LABELS = {
@@ -65,6 +71,18 @@
     );
     let newLabel = $derived(new URI(resource.iri).suffix);
 
+    let moveDomainChange = $derived(
+        resource.semanticResourceChangeType === "MOVE"
+            ? resource.changes?.find(
+                  c => c.semanticFieldChangeType === "DOMAIN_CHANGE",
+              )
+            : null,
+    );
+
+    let mergedFromLabels = $derived(
+        (resource.additionalOldIRIs ?? []).map(iri => new URI(iri).suffix),
+    );
+
     function getChangeLabel(changeType) {
         if (
             changeType === "RENAME" &&
@@ -84,6 +102,7 @@
                 return "bg-green-background text-green-text border-green-border";
             case "DELETE":
             case "DELETED_FROM_INHERITANCE":
+            case "DELETED_FROM_MAPPING":
                 return "bg-red-background text-red-text border-red-border";
             case "RENAME":
                 if (ignorePrefixes && oldLabel === newLabel) {
@@ -91,6 +110,12 @@
                 } else {
                     return "bg-lightblue text-blue border-blue";
                 }
+            case "MOVE":
+                return "bg-purple/10 text-purple border-purple/40";
+            case "SPLIT":
+                return "bg-orange/10 text-orange border-orange/40";
+            case "MERGE":
+                return "bg-lightblue text-blue border-blue";
             case "CHANGE":
             default:
                 return "bg-lightgray text-default-text border-border";
@@ -131,6 +156,35 @@
             <span class="mx-1">→</span>
             <span class="font-mono">
                 {ignorePrefixes ? newLabel : resource.iri}
+            </span>
+        </div>
+    {/if}
+
+    {#if moveDomainChange}
+        <div class="text-purple text-xs">
+            Moved from
+            <span class="font-mono">
+                {new URI(moveDomainChange.from).suffix}
+            </span>
+            <span class="mx-1">→</span>
+            <span class="font-mono">
+                {new URI(moveDomainChange.to).suffix}
+            </span>
+        </div>
+    {/if}
+
+    {#if resource.semanticResourceChangeType === "SPLIT" && oldLabel}
+        <div class="text-orange text-xs">
+            Split from
+            <span class="font-mono">{oldLabel}</span>
+        </div>
+    {/if}
+
+    {#if mergedFromLabels.length > 0}
+        <div class="text-text-subtle text-xs">
+            Merged from
+            <span class="font-mono">
+                {[oldLabel, ...mergedFromLabels].join(", ")}
             </span>
         </div>
     {/if}

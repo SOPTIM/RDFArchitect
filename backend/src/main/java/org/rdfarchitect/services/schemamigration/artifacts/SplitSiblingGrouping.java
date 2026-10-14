@@ -15,23 +15,23 @@
  *
  */
 
-package org.rdfarchitect.models.changes;
+package org.rdfarchitect.services.schemamigration.artifacts;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.experimental.UtilityClass;
 
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class RenameCandidate<T extends SemanticResourceChange> {
-    private T oldResource;
-    private T newResource;
-    private double confidenceScore;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-    public RenameCandidate(T deletedResource) {
-        this.oldResource = deletedResource;
+@UtilityClass
+class SplitSiblingGrouping {
+
+    <T extends SemanticResourceChange> Map<String, List<T>> groupSplitSiblings(List<T> properties) {
+        return properties.stream()
+                .filter(p -> p.getSemanticResourceChangeType() == SemanticResourceChangeType.SPLIT)
+                .collect(Collectors.groupingBy(SemanticResourceChange::getOldIRI));
     }
 }

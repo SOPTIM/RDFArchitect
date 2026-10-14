@@ -49,7 +49,14 @@ Every confirmed rename becomes a `DELETE/INSERT` block that rewrites the RDF typ
 
 ## Step 4 — Review Property Renames
 
-The same logic applied to **attributes**, **associations**, and **enum entries**, in three sub-tabs. This step covers the common case where a property was renamed between profile versions without any change in meaning.
+The same logic applied to **attributes**, **associations**, and **enum entries**, in three sub-tabs. This step covers the common case where a property was renamed between profile versions without any change in meaning, including a rename to or from a different class (a **move**).
+
+Where a deleted property and its successor aren't a clean 1:1 pairing, two further shapes are detected automatically, as long as the properties involved share the exact same name somewhere in the same class inheritance chain:
+
+- **Split** — one deleted property matched against several added ones (for example, an attribute pushed down from a superclass onto more than one subclass).
+- **Merge** — several deleted properties, from different classes, that all converge on the same added one (the reverse: several subclasses' attributes consolidated onto a shared superclass).
+
+A split or merge row lists every property on its many side and can be adjusted the same way a plain rename can: link a deleted property to more than one target to turn it into a split, or link two deleted properties to the same target to turn them into a merge. Rows that end up linking more than one property on *both* sides at once can't be represented and are flagged for you to resolve before continuing.
 
 Two kinds of proposal are handled for you and never reach the table:
 
@@ -124,6 +131,8 @@ Class headings, and the property headings beneath them, carry the kind of change
 | `[Deleted]`                | gone in the target schema                                                     |
 | `[Changed]`                | still there, but something about it changed                                    |
 | `[Renamed]`                | matched to a resource with a different IRI; old and new IRI are both listed    |
+| `[Merged]`                 | several deleted properties converged on this one; every one of them is listed  |
+| `[Split]`                  | this deleted property was matched to more than one new target; each target gets its own entry |
 | `[Added via inheritance]`  | the property arrived through a changed superclass                              |
 | `[Deleted via inheritance]`| the property disappeared through a changed superclass                          |
 | `[Inherits changes]`       | the class itself is unchanged; it is listed for the changes it inherits         |

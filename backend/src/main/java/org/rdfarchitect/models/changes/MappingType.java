@@ -15,13 +15,12 @@
  *
  */
 
-package org.rdfarchitect.services.schemamigration.renamings;
+package org.rdfarchitect.models.changes;
 
-import org.rdfarchitect.api.dto.migration.PropertyRenamings;
-
-import java.util.List;
-
-public interface ConfirmPropertyRenamingsUseCase {
-
-    void confirmPropertyRenamings(List<PropertyRenamings> propertyRenames);
+public enum MappingType {
+    RENAME,
+    MOVE,
+    SPLIT,
+    MERGE,
+    UNMAPPED
 }

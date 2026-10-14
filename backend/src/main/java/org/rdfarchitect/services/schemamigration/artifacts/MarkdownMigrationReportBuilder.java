@@ -318,7 +318,10 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                                                                             .ADDED_FROM_INHERITANCE
                                                             && p.getSemanticResourceChangeType()
                                                                     != SemanticResourceChangeType
-                                                                            .DELETED_FROM_INHERITANCE)
+                                                                            .DELETED_FROM_INHERITANCE
+                                                            && p.getSemanticResourceChangeType()
+                                                                    != SemanticResourceChangeType
+                                                                            .DELETED_FROM_MAPPING)
                                     .forEach(ancestorChangedAttributes::add);
                             superclass.getAssociations().stream()
                                     .filter(
@@ -329,6 +332,9 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                                                             && p.getSemanticResourceChangeType()
                                                                     != SemanticResourceChangeType
                                                                             .DELETED_FROM_INHERITANCE
+                                                            && p.getSemanticResourceChangeType()
+                                                                    != SemanticResourceChangeType
+                                                                            .DELETED_FROM_MAPPING
                                                             && p.getSemanticResourceChangeType()
                                                                     != SemanticResourceChangeType
                                                                             .INDIRECT_CHANGE)
@@ -456,17 +462,23 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
         sb.append("### ").append(title).append("\n\n");
 
         for (var prop : properties) {
-            if (prop.getSemanticResourceChangeType() == SemanticResourceChangeType.RENAME
-                    && prop.getOldIRI() != null) {
+            var type = prop.getSemanticResourceChangeType();
+            if (type == SemanticResourceChangeType.MERGE && prop.getOldIRI() != null) {
+                appendMergedHeader(sb, prop);
+            } else if (type == SemanticResourceChangeType.SPLIT && prop.getOldIRI() != null) {
+                appendSplitHeader(sb, prop);
+            } else if (type == SemanticResourceChangeType.RENAME && prop.getOldIRI() != null) {
                 var oldLabel = new URI(prop.getOldIRI()).getSuffix();
                 sb.append("#### Renamed from ")
                         .append(oldLabel)
                         .append(" to ")
                         .append(prop.getLabel())
                         .append("\n\n");
+            } else if (type == SemanticResourceChangeType.MOVE && prop.getOldIRI() != null) {
+                appendMovedHeader(sb, prop);
             } else {
                 sb.append("#### ")
-                        .append(formatChangeType(prop.getSemanticResourceChangeType()))
+                        .append(formatChangeType(type))
                         .append(" ")
                         .append(prop.getLabel())
                         .append("\n\n");
@@ -478,7 +490,9 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
 
             if (prop.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE
                     && prop.getSemanticResourceChangeType()
-                            != SemanticResourceChangeType.DELETED_FROM_INHERITANCE) {
+                            != SemanticResourceChangeType.DELETED_FROM_INHERITANCE
+                    && prop.getSemanticResourceChangeType()
+                            != SemanticResourceChangeType.DELETED_FROM_MAPPING) {
                 var regularChanges =
                         prop.getChanges().stream()
                                 .filter(
@@ -491,8 +505,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                 if (prop instanceof SemanticAttributeChange attribute
                         && attribute.isDataTypesEquivalent()) {
                     sb.append(
-                            "The datatypes were marked equivalent, so existing values are"
-                                    + " kept.\n\n");
+                            "The datatypes were marked equivalent, so existing values are kept.\n\n");
                 }
                 var invalidTargets =
                         prop.getChanges().stream()
@@ -510,6 +523,37 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                 }
             }
         }
+    }
+
+    private void appendMovedHeader(StringBuilder sb, SemanticResourceChange prop) {
+        var oldLabel = new URI(prop.getOldIRI()).getSuffix();
+        var newLabel = new URI(prop.getIri()).getSuffix();
+        sb.append("#### Moved from ")
+                .append(oldLabel)
+                .append(" to ")
+                .append(newLabel)
+                .append("\n\n");
+    }
+
+    private void appendMergedHeader(StringBuilder sb, SemanticResourceChange prop) {
+        var oldLabels =
+                prop.getAllOldIRIs().stream()
+                        .map(iri -> new URI(iri).getSuffix())
+                        .collect(Collectors.joining(", "));
+        sb.append("#### Merged from ")
+                .append(oldLabels)
+                .append(" to ")
+                .append(prop.getLabel())
+                .append("\n\n");
+    }
+
+    private void appendSplitHeader(StringBuilder sb, SemanticResourceChange prop) {
+        var oldLabel = new URI(prop.getOldIRI()).getSuffix();
+        sb.append("#### Split from ")
+                .append(oldLabel)
+                .append(" to ")
+                .append(prop.getLabel())
+                .append("\n\n");
     }
 
     private <T extends SemanticResourceChange> void appendDirectProperties(
@@ -569,9 +613,12 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
     private String formatChangeType(SemanticResourceChangeType type) {
         return switch (type) {
             case ADD -> "[Added]";
-            case DELETE -> "[Deleted]";
+            case DELETE, DELETED_FROM_MAPPING -> "[Deleted]";
             case CHANGE -> "[Changed]";
             case RENAME -> "[Renamed]";
+            case MOVE -> "[Moved]";
+            case SPLIT -> "[Split]";
+            case MERGE -> "[Merged]";
             case ADDED_FROM_INHERITANCE -> "[Added via inheritance]";
             case DELETED_FROM_INHERITANCE -> "[Deleted via inheritance]";
             case INHERITS_CHANGE -> "[Inherits changes]";

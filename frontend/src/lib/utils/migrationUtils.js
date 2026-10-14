@@ -17,6 +17,15 @@
 
 import { URI } from "$lib/models/dto/index.ts";
 
+const RENAMED_FROM_VERBS = {
+    RENAME: "renamed from",
+    MOVE: "moved from",
+    MERGE: "merged from",
+    SPLIT: "split from",
+};
+
+const RENAME_LIKE_CHANGE_TYPES = ["CHANGE", "RENAME", "MOVE", "SPLIT", "MERGE"];
+
 export function isPrefixOnlyRename(oldIRI, newIRI) {
     if (!newIRI || !oldIRI) {
         return false;
@@ -26,53 +35,198 @@ export function isPrefixOnlyRename(oldIRI, newIRI) {
     return oldName === newName;
 }
 
-/**
- * Whether the user should be spared the rename mapping for this association. An association with
- * AssociationUsed = "No" cannot be instantiated, so no instance data ever used the old predicate
- * and there is nothing a mapping could rewrite. Judged on the old side, which is where the values
- * would have come from.
- */
 export function isNonInstantiableAssociationRename(renameCandidate) {
-    return renameCandidate?.oldResource?.associationUsed === false;
+    return renameCandidate?.oldResources?.[0]?.associationUsed === false;
 }
 
-/**
- * Drops the rename candidates the user should not be asked about from a property overview,
- * returning a copy: the caller keeps the unfiltered overview and still submits the hidden
- * candidates with the target that was detected for them.
- *
- * `alsoHide` adds a rule on top of the prefix-only one, which applies only when the migration was
- * started with "ignore prefixes".
- */
 export function filterRenameCandidates(
     properties,
     { ignorePrefixes = false, alsoHide } = {},
 ) {
     if (!properties) return properties;
 
-    const deletedAndRenamed = properties.deletedAndRenamed ?? [];
-    const added = properties.added ?? [];
+    const deletedAndRemapped = properties.deletedAndRemapped ?? [];
+    const addedInClass = properties.addedInClass ?? properties.added ?? [];
+    const allAdded = properties.allAdded ?? addedInClass;
 
-    const isHidden = candidate =>
-        (ignorePrefixes &&
-            isPrefixOnlyRename(
-                candidate.oldResource.iri,
-                candidate.newResource?.iri,
-            )) ||
-        (alsoHide?.(candidate) ?? false);
-
-    const hiddenTargetIRIs = deletedAndRenamed
-        .filter(isHidden)
-        .map(candidate => candidate.newResource?.iri)
-        .filter(iri => iri != null);
-
-    return {
-        ...properties,
-        deletedAndRenamed: deletedAndRenamed.filter(
-            candidate => !isHidden(candidate),
-        ),
-        added: added.filter(a => !hiddenTargetIRIs.includes(a.iri)),
+    const isHidden = mapping => {
+        if (
+            mapping.oldResources?.length !== 1 ||
+            mapping.newResources?.length !== 1
+        ) {
+            return false;
+        }
+        const oldIri = mapping.oldResources[0]?.iri;
+        const newIri = mapping.newResources[0]?.iri;
+        return (
+            (ignorePrefixes && isPrefixOnlyRename(oldIri, newIri)) ||
+            (alsoHide?.(mapping) ?? false)
+        );
     };
+
+    const hiddenTargetIRIs = new Set(
+        deletedAndRemapped
+            .filter(isHidden)
+            .map(mapping => mapping.newResources?.[0]?.iri)
+            .filter(iri => iri != null),
+    );
+
+    const filtered = {
+        ...properties,
+        deletedAndRemapped: deletedAndRemapped.filter(
+            mapping => !isHidden(mapping),
+        ),
+    };
+    if (properties.addedInClass) {
+        filtered.addedInClass = addedInClass.filter(
+            a => !hiddenTargetIRIs.has(a.iri),
+        );
+    }
+    if (properties.allAdded) {
+        filtered.allAdded = allAdded.filter(a => !hiddenTargetIRIs.has(a.iri));
+    }
+    if (properties.added) {
+        filtered.added = addedInClass.filter(a => !hiddenTargetIRIs.has(a.iri));
+    }
+    return filtered;
+}
+
+export function computeMappingType(oldResources, newResources) {
+    if (!newResources || newResources.length === 0) return "UNMAPPED";
+    if (oldResources.length > 1) return "MERGE";
+    if (newResources.length > 1) return "SPLIT";
+
+    const oldDomain = oldResources[0]?.domain ?? null;
+    const newDomain = newResources[0]?.domain ?? null;
+    return oldDomain === newDomain ? "RENAME" : "MOVE";
+}
+
+function oldLabelWithClass(resource) {
+    if (!resource.domain) return resource.label;
+    return `${resource.label} (in ${new URI(resource.domain).suffix})`;
+}
+
+export function buildRenamedFromMap(classes, getMappings) {
+    const map = new Map();
+    const seenMappingIds = new Set();
+    if (!classes) return map;
+
+    for (const cls of classes) {
+        for (const mapping of getMappings(cls) ?? []) {
+            if ((mapping.newResources?.length ?? 0) === 0) continue;
+            if (seenMappingIds.has(mapping.id)) continue;
+            seenMappingIds.add(mapping.id);
+
+            const type = computeMappingType(
+                mapping.oldResources,
+                mapping.newResources,
+            );
+            const verb = RENAMED_FROM_VERBS[type] ?? RENAMED_FROM_VERBS.RENAME;
+            const text = `${verb} ${mapping.oldResources.map(oldLabelWithClass).join(", ")}`;
+
+            for (const target of mapping.newResources) {
+                const existing = map.get(target.iri);
+                map.set(target.iri, existing ? `${existing}; ${text}` : text);
+            }
+        }
+    }
+    return map;
+}
+
+function dedupeByIri(resources) {
+    const seen = new Set();
+    const result = [];
+    for (const resource of resources) {
+        if (resource?.iri && !seen.has(resource.iri)) {
+            seen.add(resource.iri);
+            result.push(resource);
+        }
+    }
+    return result;
+}
+
+export function groupMappingsForSubmission(mappings) {
+    const rows = (mappings ?? []).filter(
+        m => (m.newResources?.length ?? 0) > 0,
+    );
+    if (rows.length === 0) {
+        return { mappings: [], invalidMappingIds: new Set() };
+    }
+
+    const parent = new Map();
+    function find(iri) {
+        if (!parent.has(iri)) parent.set(iri, iri);
+        let root = iri;
+        while (parent.get(root) !== root) root = parent.get(root);
+        let cur = iri;
+        while (parent.get(cur) !== root) {
+            const next = parent.get(cur);
+            parent.set(cur, root);
+            cur = next;
+        }
+        return root;
+    }
+    function union(a, b) {
+        const rootA = find(a);
+        const rootB = find(b);
+        if (rootA !== rootB) parent.set(rootA, rootB);
+    }
+
+    for (const row of rows) {
+        const iris = [
+            ...row.oldResources.map(r => r.iri),
+            ...row.newResources.map(r => r.iri),
+        ];
+        iris.forEach(iri => find(iri));
+        for (let i = 1; i < iris.length; i++) {
+            union(iris[0], iris[i]);
+        }
+    }
+
+    const rowsByRoot = new Map();
+    for (const row of rows) {
+        const anchorIri = row.oldResources[0]?.iri ?? row.newResources[0]?.iri;
+        const root = find(anchorIri);
+        if (!rowsByRoot.has(root)) rowsByRoot.set(root, []);
+        rowsByRoot.get(root).push(row);
+    }
+
+    const resultMappings = [];
+    const invalidMappingIds = new Set();
+    const mappingByRowId = new Map();
+
+    for (const groupRows of rowsByRoot.values()) {
+        const oldResources = dedupeByIri(
+            groupRows.flatMap(r => r.oldResources),
+        );
+        const newResources = dedupeByIri(
+            groupRows.flatMap(r => r.newResources),
+        );
+
+        if (oldResources.length > 1 && newResources.length > 1) {
+            groupRows.forEach(r => invalidMappingIds.add(r.id));
+            continue;
+        }
+
+        const merged =
+            groupRows.length === 1
+                ? {
+                      ...groupRows[0],
+                      type: computeMappingType(oldResources, newResources),
+                  }
+                : {
+                      id: crypto.randomUUID(),
+                      oldResources,
+                      newResources,
+                      confidenceScore: 1,
+                      type: computeMappingType(oldResources, newResources),
+                  };
+
+        resultMappings.push(merged);
+        groupRows.forEach(r => mappingByRowId.set(r.id, merged));
+    }
+
+    return { mappings: resultMappings, invalidMappingIds, mappingByRowId };
 }
 
 function hasChange(attribute, changeType) {
@@ -98,8 +252,7 @@ export function hasDataTypeChange(attribute) {
  */
 export function canKeepExistingValues(attribute) {
     if (
-        attribute.semanticResourceChangeType !== "CHANGE" &&
-        attribute.semanticResourceChangeType !== "RENAME"
+        !RENAME_LIKE_CHANGE_TYPES.includes(attribute.semanticResourceChangeType)
     ) {
         return false;
     }
@@ -112,7 +265,6 @@ export function canKeepExistingValues(attribute) {
     );
 }
 
-/** True once the user declared the old and the new datatype interchangeable. */
 export function keepsExistingValues(attribute) {
     return (
         canKeepExistingValues(attribute) &&
@@ -140,7 +292,6 @@ export function describeAttributeChange(attribute) {
     return "other";
 }
 
-/** Whether the step offers a default value for this attribute at all. */
 export function allowsDefaultValueInput(attribute) {
     return (
         attribute.semanticResourceChangeType === "ADD" ||
@@ -151,11 +302,6 @@ export function allowsDefaultValueInput(attribute) {
     );
 }
 
-/**
- * Whether a default value has to be given before the migration can continue. Marking the two
- * datatypes equivalent keeps every existing value, so the datatype change needs no default - but
- * an attribute that also became mandatory still needs one for the instances that lack a value.
- */
 export function requiresDefaultValue(attribute) {
     if (
         attribute.semanticResourceChangeType === "ADD" ||
@@ -164,8 +310,7 @@ export function requiresDefaultValue(attribute) {
         return !attribute.optional;
     }
     if (
-        attribute.semanticResourceChangeType !== "CHANGE" &&
-        attribute.semanticResourceChangeType !== "RENAME"
+        !RENAME_LIKE_CHANGE_TYPES.includes(attribute.semanticResourceChangeType)
     ) {
         return false;
     }
@@ -175,24 +320,14 @@ export function requiresDefaultValue(attribute) {
     return hasDataTypeChange(attribute) && !keepsExistingValues(attribute);
 }
 
-/** Whether a default value was filled in for this attribute. */
 export function hasDefaultValue(attribute) {
     return Boolean(attribute.defaultValue?.trim());
 }
 
-/**
- * True once the user waived the default value for an attribute that requires one (RDFA-714): the
- * attribute is knowingly left uninitialised because no default makes sense for it. Tied to the
- * requirement, so the flag turns inert as soon as the attribute stops asking for a default.
- */
 export function skipsInitialization(attribute) {
     return requiresDefaultValue(attribute) && attribute.noDefaultValue === true;
 }
 
-/**
- * Whether this attribute still blocks the defaults step: it requires a default value that was
- * neither given nor waived.
- */
 export function isDefaultValueMissing(attribute) {
     return (
         requiresDefaultValue(attribute) &&

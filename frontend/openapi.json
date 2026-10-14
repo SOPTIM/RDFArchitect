@@ -457,6 +457,23 @@
         },
         "type" : "object"
       },
+      "ClassMappingOverview" : {
+        "properties" : {
+          "added" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticClassChange"
+            },
+            "type" : "array"
+          },
+          "deletedAndRemapped" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ResourceMappingSemanticClassChange"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "ClassPositionDTO" : {
         "properties" : {
           "classUUID" : {
@@ -486,6 +503,49 @@
           "zposition" : {
             "format" : "int32",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ClassPropertyMappingOverview" : {
+        "properties" : {
+          "associations" : {
+            "$ref" : "#/components/schemas/PropertyMappingOverviewSemanticAssociationChange"
+          },
+          "attributes" : {
+            "$ref" : "#/components/schemas/PropertyMappingOverviewSemanticAttributeChange"
+          },
+          "classLabel" : {
+            "type" : "string"
+          },
+          "enumEntries" : {
+            "$ref" : "#/components/schemas/PropertyMappingOverviewSemanticEnumEntryChange"
+          }
+        },
+        "type" : "object"
+      },
+      "ClassPropertyMappings" : {
+        "properties" : {
+          "associationMappings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ResourceMappingSemanticAssociationChange"
+            },
+            "type" : "array"
+          },
+          "attributeMappings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ResourceMappingSemanticAttributeChange"
+            },
+            "type" : "array"
+          },
+          "classLabel" : {
+            "type" : "string"
+          },
+          "enumEntryMappings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ResourceMappingSemanticEnumEntryChange"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -1433,43 +1493,69 @@
         },
         "type" : "object"
       },
-      "PropertyOverview" : {
+      "PropertyMappingOverviewSemanticAssociationChange" : {
         "properties" : {
-          "associations" : {
-            "$ref" : "#/components/schemas/ResourceRenameOverviewSemanticAssociationChange"
+          "addedInClass" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticAssociationChange"
+            },
+            "type" : "array"
           },
-          "attributes" : {
-            "$ref" : "#/components/schemas/ResourceRenameOverviewSemanticAttributeChange"
+          "allAdded" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticAssociationChange"
+            },
+            "type" : "array"
           },
-          "enumEntries" : {
-            "$ref" : "#/components/schemas/ResourceRenameOverviewSemanticEnumEntryChange"
-          },
-          "label" : {
-            "type" : "string"
+          "deletedAndRemapped" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ResourceMappingSemanticAssociationChange"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
       },
-      "PropertyRenamings" : {
+      "PropertyMappingOverviewSemanticAttributeChange" : {
         "properties" : {
-          "associationRenames" : {
+          "addedInClass" : {
             "items" : {
-              "$ref" : "#/components/schemas/RenameCandidateSemanticAssociationChange"
+              "$ref" : "#/components/schemas/SemanticAttributeChange"
             },
             "type" : "array"
           },
-          "attributeRenames" : {
+          "allAdded" : {
             "items" : {
-              "$ref" : "#/components/schemas/RenameCandidateSemanticAttributeChange"
+              "$ref" : "#/components/schemas/SemanticAttributeChange"
             },
             "type" : "array"
           },
-          "classLabel" : {
-            "type" : "string"
-          },
-          "enumEntryRenames" : {
+          "deletedAndRemapped" : {
             "items" : {
-              "$ref" : "#/components/schemas/RenameCandidateSemanticEnumEntryChange"
+              "$ref" : "#/components/schemas/ResourceMappingSemanticAttributeChange"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "PropertyMappingOverviewSemanticEnumEntryChange" : {
+        "properties" : {
+          "addedInClass" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticEnumEntryChange"
+            },
+            "type" : "array"
+          },
+          "allAdded" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticEnumEntryChange"
+            },
+            "type" : "array"
+          },
+          "deletedAndRemapped" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ResourceMappingSemanticEnumEntryChange"
             },
             "type" : "array"
           }
@@ -1556,119 +1642,6 @@
         },
         "type" : "object"
       },
-      "RenameCandidateSemanticAssociationChange" : {
-        "properties" : {
-          "confidenceScore" : {
-            "format" : "double",
-            "type" : "number"
-          },
-          "newResource" : {
-            "$ref" : "#/components/schemas/SemanticAssociationChange"
-          },
-          "oldResource" : {
-            "$ref" : "#/components/schemas/SemanticAssociationChange"
-          }
-        },
-        "type" : "object"
-      },
-      "RenameCandidateSemanticAttributeChange" : {
-        "properties" : {
-          "confidenceScore" : {
-            "format" : "double",
-            "type" : "number"
-          },
-          "newResource" : {
-            "$ref" : "#/components/schemas/SemanticAttributeChange"
-          },
-          "oldResource" : {
-            "$ref" : "#/components/schemas/SemanticAttributeChange"
-          }
-        },
-        "type" : "object"
-      },
-      "RenameCandidateSemanticClassChange" : {
-        "properties" : {
-          "confidenceScore" : {
-            "format" : "double",
-            "type" : "number"
-          },
-          "newResource" : {
-            "$ref" : "#/components/schemas/SemanticClassChange"
-          },
-          "oldResource" : {
-            "$ref" : "#/components/schemas/SemanticClassChange"
-          }
-        },
-        "type" : "object"
-      },
-      "RenameCandidateSemanticEnumEntryChange" : {
-        "properties" : {
-          "confidenceScore" : {
-            "format" : "double",
-            "type" : "number"
-          },
-          "newResource" : {
-            "$ref" : "#/components/schemas/SemanticEnumEntryChange"
-          },
-          "oldResource" : {
-            "$ref" : "#/components/schemas/SemanticEnumEntryChange"
-          }
-        },
-        "type" : "object"
-      },
-      "RenameCandidateSemanticResourceChange" : {
-        "properties" : {
-          "confidenceScore" : {
-            "format" : "double",
-            "type" : "number"
-          },
-          "newResource" : {
-            "oneOf" : [
-              {
-                "$ref" : "#/components/schemas/SemanticResourceChange"
-              },
-              {
-                "$ref" : "#/components/schemas/SemanticAssociationChange"
-              },
-              {
-                "$ref" : "#/components/schemas/SemanticAttributeChange"
-              },
-              {
-                "$ref" : "#/components/schemas/SemanticClassChange"
-              },
-              {
-                "$ref" : "#/components/schemas/SemanticEnumEntryChange"
-              },
-              {
-                "$ref" : "#/components/schemas/SemanticPackageChange"
-              }
-            ]
-          },
-          "oldResource" : {
-            "oneOf" : [
-              {
-                "$ref" : "#/components/schemas/SemanticResourceChange"
-              },
-              {
-                "$ref" : "#/components/schemas/SemanticAssociationChange"
-              },
-              {
-                "$ref" : "#/components/schemas/SemanticAttributeChange"
-              },
-              {
-                "$ref" : "#/components/schemas/SemanticClassChange"
-              },
-              {
-                "$ref" : "#/components/schemas/SemanticEnumEntryChange"
-              },
-              {
-                "$ref" : "#/components/schemas/SemanticPackageChange"
-              }
-            ]
-          }
-        },
-        "type" : "object"
-      },
       "RenderingDataDTO" : {
         "properties" : {
           "format" : {
@@ -1714,86 +1687,142 @@
         },
         "type" : "object"
       },
-      "ResourceRenameOverview" : {
+      "ResourceMappingSemanticAssociationChange" : {
         "properties" : {
-          "added" : {
-            "items" : {
-              "oneOf" : [
-                {
-                  "$ref" : "#/components/schemas/SemanticResourceChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticAssociationChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticAttributeChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticEnumEntryChange"
-                },
-                {
-                  "$ref" : "#/components/schemas/SemanticPackageChange"
-                }
-              ]
-            },
-            "type" : "array"
+          "confidenceScore" : {
+            "format" : "double",
+            "type" : "number"
           },
-          "deletedAndRenamed" : {
-            "items" : {
-              "$ref" : "#/components/schemas/RenameCandidateSemanticResourceChange"
-            },
-            "type" : "array"
-          }
-        },
-        "type" : "object"
-      },
-      "ResourceRenameOverviewSemanticAssociationChange" : {
-        "properties" : {
-          "added" : {
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "newResources" : {
             "items" : {
               "$ref" : "#/components/schemas/SemanticAssociationChange"
             },
             "type" : "array"
           },
-          "deletedAndRenamed" : {
+          "oldResources" : {
             "items" : {
-              "$ref" : "#/components/schemas/RenameCandidateSemanticAssociationChange"
+              "$ref" : "#/components/schemas/SemanticAssociationChange"
             },
             "type" : "array"
+          },
+          "type" : {
+            "enum" : [
+              "RENAME",
+              "MOVE",
+              "SPLIT",
+              "MERGE",
+              "UNMAPPED"
+            ],
+            "type" : "string"
           }
         },
         "type" : "object"
       },
-      "ResourceRenameOverviewSemanticAttributeChange" : {
+      "ResourceMappingSemanticAttributeChange" : {
         "properties" : {
-          "added" : {
+          "confidenceScore" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "newResources" : {
             "items" : {
               "$ref" : "#/components/schemas/SemanticAttributeChange"
             },
             "type" : "array"
           },
-          "deletedAndRenamed" : {
+          "oldResources" : {
             "items" : {
-              "$ref" : "#/components/schemas/RenameCandidateSemanticAttributeChange"
+              "$ref" : "#/components/schemas/SemanticAttributeChange"
             },
             "type" : "array"
+          },
+          "type" : {
+            "enum" : [
+              "RENAME",
+              "MOVE",
+              "SPLIT",
+              "MERGE",
+              "UNMAPPED"
+            ],
+            "type" : "string"
           }
         },
         "type" : "object"
       },
-      "ResourceRenameOverviewSemanticEnumEntryChange" : {
+      "ResourceMappingSemanticClassChange" : {
         "properties" : {
-          "added" : {
+          "confidenceScore" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "newResources" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticClassChange"
+            },
+            "type" : "array"
+          },
+          "oldResources" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticClassChange"
+            },
+            "type" : "array"
+          },
+          "type" : {
+            "enum" : [
+              "RENAME",
+              "MOVE",
+              "SPLIT",
+              "MERGE",
+              "UNMAPPED"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ResourceMappingSemanticEnumEntryChange" : {
+        "properties" : {
+          "confidenceScore" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "newResources" : {
             "items" : {
               "$ref" : "#/components/schemas/SemanticEnumEntryChange"
             },
             "type" : "array"
           },
-          "deletedAndRenamed" : {
+          "oldResources" : {
             "items" : {
-              "$ref" : "#/components/schemas/RenameCandidateSemanticEnumEntryChange"
+              "$ref" : "#/components/schemas/SemanticEnumEntryChange"
             },
             "type" : "array"
+          },
+          "type" : {
+            "enum" : [
+              "RENAME",
+              "MOVE",
+              "SPLIT",
+              "MERGE",
+              "UNMAPPED"
+            ],
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -1919,6 +1948,9 @@
               "associationUsed" : {
                 "type" : "boolean"
               },
+              "domain" : {
+                "type" : "string"
+              },
               "mapping" : {
                 "type" : "string"
               },
@@ -1952,6 +1984,9 @@
               "defaultValue" : {
                 "type" : "string"
               },
+              "domain" : {
+                "type" : "string"
+              },
               "forceDefaultValue" : {
                 "type" : "boolean"
               },
@@ -1971,9 +2006,21 @@
       },
       "SemanticClassChange" : {
         "properties" : {
-          "associationRenameCandidates" : {
+          "additionalOldIRIs" : {
             "items" : {
-              "$ref" : "#/components/schemas/RenameCandidateSemanticAssociationChange"
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "allOldIRIs" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "associationResourceMappings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ResourceMappingSemanticAssociationChange"
             },
             "type" : "array"
           },
@@ -1983,9 +2030,9 @@
             },
             "type" : "array"
           },
-          "attributeRenameCandidates" : {
+          "attributeResourceMappings" : {
             "items" : {
-              "$ref" : "#/components/schemas/RenameCandidateSemanticAttributeChange"
+              "$ref" : "#/components/schemas/ResourceMappingSemanticAttributeChange"
             },
             "type" : "array"
           },
@@ -2010,9 +2057,9 @@
             },
             "type" : "array"
           },
-          "enumEntryRenameCandidates" : {
+          "enumEntryResourceMappings" : {
             "items" : {
-              "$ref" : "#/components/schemas/RenameCandidateSemanticEnumEntryChange"
+              "$ref" : "#/components/schemas/ResourceMappingSemanticEnumEntryChange"
             },
             "type" : "array"
           },
@@ -2033,6 +2080,10 @@
               "DELETED_FROM_INHERITANCE",
               "CHANGE",
               "RENAME",
+              "MOVE",
+              "SPLIT",
+              "MERGE",
+              "DELETED_FROM_MAPPING",
               "INHERITS_CHANGE",
               "INDIRECT_CHANGE"
             ],
@@ -2053,6 +2104,9 @@
                   "type" : "string"
                 },
                 "type" : "array"
+              },
+              "domain" : {
+                "type" : "string"
               },
               "replacementValue" : {
                 "type" : "string"
@@ -2099,29 +2153,23 @@
         },
         "type" : "object"
       },
-      "SemanticPackageChange" : {
-        "allOf" : [
-          {
-            "$ref" : "#/components/schemas/SemanticResourceChange"
-          },
-          {
-            "properties" : {
-              "classChanges" : {
-                "items" : {
-                  "$ref" : "#/components/schemas/SemanticClassChange"
-                },
-                "type" : "array"
-              }
-            },
-            "type" : "object"
-          }
-        ]
-      },
       "SemanticResourceChange" : {
         "discriminator" : {
           "propertyName" : "type"
         },
         "properties" : {
+          "additionalOldIRIs" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "allOldIRIs" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "changes" : {
             "items" : {
               "$ref" : "#/components/schemas/SemanticFieldChange"
@@ -2148,6 +2196,10 @@
               "DELETED_FROM_INHERITANCE",
               "CHANGE",
               "RENAME",
+              "MOVE",
+              "SPLIT",
+              "MERGE",
+              "DELETED_FROM_MAPPING",
               "INHERITS_CHANGE",
               "INDIRECT_CHANGE"
             ],
@@ -8924,7 +8976,7 @@
     "/api/migrations/class-renamings" : {
       "get" : {
         "description" : "Provides an overview of the migration classes including added, modified, deleted and potentially renamed classes.",
-        "operationId" : "getClassRenamings",
+        "operationId" : "getClassMappings",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -8942,10 +8994,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/ResourceRenameOverview"
-                  },
-                  "type" : "array"
+                  "$ref" : "#/components/schemas/ClassMappingOverview"
                 }
               }
             },
@@ -8978,7 +9027,7 @@
               "schema" : {
                 "description" : "The updated class renamings",
                 "items" : {
-                  "$ref" : "#/components/schemas/RenameCandidateSemanticClassChange"
+                  "$ref" : "#/components/schemas/ResourceMappingSemanticClassChange"
                 },
                 "type" : "array"
               }
@@ -9222,9 +9271,9 @@
         ]
       }
     },
-    "/api/migrations/property-renames" : {
+    "/api/migrations/property-mappings" : {
       "get" : {
-        "description" : "Provides an overview of the properties on migration classes including added, modified, deleted and potentially renamed properties.",
+        "description" : "Provides an overview of the properties on migration classes including added, deleted and potentially remapped properties.",
         "operationId" : "migrationPropertiesOverview",
         "parameters" : [
           {
@@ -9244,7 +9293,7 @@
               "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/PropertyOverview"
+                    "$ref" : "#/components/schemas/ClassPropertyMappingOverview"
                   },
                   "type" : "array"
                 }
@@ -9260,7 +9309,7 @@
       },
       "post" : {
         "description" : "Confirms the previously suggested renamed properties and updates the migration context accordingly.",
-        "operationId" : "confirmRenamedProperties",
+        "operationId" : "confirmPropertyMappings",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -9277,9 +9326,9 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "description" : "The updated property renames",
+                "description" : "The updated property mappings",
                 "items" : {
-                  "$ref" : "#/components/schemas/PropertyRenamings"
+                  "$ref" : "#/components/schemas/ClassPropertyMappings"
                 },
                 "type" : "array"
               }
@@ -9292,7 +9341,7 @@
             "description" : "OK"
           }
         },
-        "summary" : "confirm renamed properties",
+        "summary" : "confirm remapped properties",
         "tags" : [
           "migration"
         ]

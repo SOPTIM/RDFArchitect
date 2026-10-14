@@ -39,7 +39,7 @@ import java.util.List;
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public final class SemanticAttributeChange extends SemanticResourceChange {
+public final class SemanticAttributeChange extends SemanticPropertyChange {
 
     private String dataType;
 
@@ -61,6 +61,8 @@ public final class SemanticAttributeChange extends SemanticResourceChange {
      */
     private boolean dataTypesEquivalent = false;
 
+    // @Builder.Default only applies this initializer via the generated builder - every
+    // hand-written constructor below has to set it explicitly or it stays null
     @Builder.Default private List<String> allowedValues = new ArrayList<>();
 
     public SemanticAttributeChange(TripleResourceChange tripleChange) {
@@ -87,6 +89,7 @@ public final class SemanticAttributeChange extends SemanticResourceChange {
 
     public SemanticAttributeChange(Resource resource, SemanticResourceChangeType changeType) {
         super(resource, changeType);
+        allowedValues = new ArrayList<>();
     }
 
     @Override
