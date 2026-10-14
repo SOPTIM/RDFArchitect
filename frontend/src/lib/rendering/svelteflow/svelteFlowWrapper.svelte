@@ -65,6 +65,7 @@
     import SvelteFlowPropertyContextMenu from "./components/SvelteFlowPropertyContextMenu.svelte";
     import {
         decorateEdges,
+        elevateEdges,
         hasDefaultNodeLayout,
     } from "./diagram/diagramElements.js";
     import {
@@ -75,6 +76,7 @@
         LABEL_NODE_TYPE,
         labelNodeId,
         labelNodesChanged,
+        labelsOf,
     } from "./diagram/labelNodes.js";
     import {
         createBendPoint,
@@ -287,6 +289,17 @@
                 edges = next;
             }
         });
+    });
+
+    $effect(() => {
+        const currentEdges = edges;
+        const next = elevateEdges(
+            currentEdges,
+            edge => edge.selected || labelHighlight.isHeld(labelsOf(edge.data)),
+        );
+        if (next !== currentEdges) {
+            edges = next;
+        }
     });
 
     onMount(() => {

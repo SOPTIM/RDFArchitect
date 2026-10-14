@@ -17,7 +17,12 @@
 
 import { describe, expect, test, vi } from "vitest";
 
-import { decorateEdges } from "$lib/rendering/svelteflow/diagram/diagramElements.js";
+import {
+    decorateEdges,
+    EDGE_Z_INDEX,
+    ELEVATED_EDGE_Z_INDEX,
+    elevateEdges,
+} from "$lib/rendering/svelteflow/diagram/diagramElements.js";
 import {
     getSourceEndPoint,
     getTargetEndPoint,
@@ -81,5 +86,28 @@ describe("decorateEdges", () => {
             { id: "s", xPosition: 0, yPosition: 0, side: "source" },
             { id: "t", xPosition: 100, yPosition: 100, side: "target" },
         ]);
+    });
+});
+
+describe("elevateEdges", () => {
+    test("raises the elevated edge and lowers the others", () => {
+        const edges = elevateEdges(
+            [
+                { id: "a", selected: true, zIndex: EDGE_Z_INDEX },
+                { id: "b", selected: false, zIndex: ELEVATED_EDGE_Z_INDEX },
+            ],
+            edge => edge.selected,
+        );
+
+        expect(edges.map(edge => edge.zIndex)).toEqual([
+            ELEVATED_EDGE_Z_INDEX,
+            EDGE_Z_INDEX,
+        ]);
+    });
+
+    test("returns the same array when nothing changes", () => {
+        const edges = [{ id: "a", selected: false, zIndex: EDGE_Z_INDEX }];
+
+        expect(elevateEdges(edges, edge => edge.selected)).toBe(edges);
     });
 });

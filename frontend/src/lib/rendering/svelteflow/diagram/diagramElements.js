@@ -18,6 +18,7 @@
 import { LABEL_NODE_TYPE } from "./labelNodes.js";
 
 export const EDGE_Z_INDEX = -1;
+export const ELEVATED_EDGE_Z_INDEX = 1_500_000;
 
 export function hasDefaultNodeLayout(diagramNodes) {
     const classNodes = diagramNodes.filter(
@@ -31,6 +32,27 @@ export function hasDefaultNodeLayout(diagramNodes) {
 
 export function decorateEdges(edges) {
     return edges.map(decorateEdge);
+}
+
+/**
+ * Raises the given edges above every class, including selected ones, so their bend
+ * points can be grabbed where other edges or classes cover them. Labels stay on top.
+ * Returns the given array when no z-index changes.
+ *
+ * @param edges the diagram edges
+ * @param isElevated whether an edge is raised, e.g. while selected or one of its labels is held
+ */
+export function elevateEdges(edges, isElevated) {
+    let changed = false;
+    const next = edges.map(edge => {
+        const zIndex = isElevated(edge) ? ELEVATED_EDGE_Z_INDEX : EDGE_Z_INDEX;
+        if (edge.zIndex === zIndex) {
+            return edge;
+        }
+        changed = true;
+        return { ...edge, zIndex };
+    });
+    return changed ? next : edges;
 }
 
 function decorateEdge(edge) {
