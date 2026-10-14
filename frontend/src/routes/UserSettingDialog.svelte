@@ -18,7 +18,7 @@
 <script>
     import { UserSettingsComponents as USC } from "$lib/components/bitsui/usersettings/index.js";
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
-    import TextEditControl from "$lib/components/TextEditControl.svelte";
+    import SliderEditControl from "$lib/components/SliderEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { isInvalidCornerRoundingFactor } from "$lib/models/reactive/validity-rules/validityFunctions.js";
@@ -172,10 +172,12 @@
                     "straight segments, only the corners are smoothed."}
             />
             <div class="flex flex-col gap-1">
-                <TextEditControl
+                <SliderEditControl
                     label="Corner rounding (%)"
                     bind:value={localSettings["cornerRoundingFactor"]}
-                    placeholder="50"
+                    min={0}
+                    max={100}
+                    step={10}
                     disabled={!localSettings["useRoundedEdges"]}
                     warn={hasInvalidInput}
                     title={"Controls how strongly the edge corners are \n" +
