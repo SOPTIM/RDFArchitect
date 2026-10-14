@@ -39,6 +39,14 @@ public class DiagramLayoutDTO {
     @JsonProperty("edges")
     private List<EdgeLayoutDTO> edges;
 
+    /**
+     * Whether {@link #edges} holds every edge the frontend shows, e.g. after the automatic layout.
+     * The stored points of any other edge of the diagram, i.e. one hidden by a filter, are deleted
+     * then, so it is drawn straight once it is shown again instead of along the old layout.
+     */
+    @JsonProperty("allEdges")
+    private boolean allEdges;
+
     @JsonProperty("labels")
     private List<LabelPositionDTO> labels;
 }

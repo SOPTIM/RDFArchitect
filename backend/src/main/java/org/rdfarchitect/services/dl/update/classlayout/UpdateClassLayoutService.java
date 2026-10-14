@@ -23,7 +23,9 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.shared.Lock;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
@@ -40,6 +42,7 @@ import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
+import org.rdfarchitect.dl.rdf.resources.DL;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
@@ -52,6 +55,7 @@ import org.rdfarchitect.services.dl.update.edgelayout.EdgeResolver;
 import org.rdfarchitect.services.rendering.MergedClasses;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -174,7 +178,8 @@ public class UpdateClassLayoutService
 
     /**
      * Moves the classes of a diagram, creating the layout data of classes that have none yet,
-     * inside a transaction the caller holds.
+     * inside a transaction the caller holds. The end points glued to a moved class move along, see
+     * {@link #shiftGluedEdgePoints}.
      *
      * @return whether layout data was created for a class, in which case the classes may have
      *     gained edges in the diagram
@@ -184,6 +189,7 @@ public class UpdateClassLayoutService
             UUID diagramUUID,
             List<ClassPositionDTO> classPositionDTOList) {
         var createdClassLayoutData = false;
+        var shifts = new ArrayList<ClassShift>();
         for (var classPositionDTO : classPositionDTOList) {
             var diagramObject =
                     DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
@@ -205,15 +211,97 @@ public class UpdateClassLayoutService
                 createdClassLayoutData = true;
                 continue;
             }
-            moveClassDOPPosition(
-                    diagramLayoutModel,
-                    diagramObject,
-                    diagramUUID,
-                    classPositionDTO.getXPosition(),
-                    classPositionDTO.getYPosition(),
-                    classPositionDTO.getZPosition());
+            var shift =
+                    moveClassDOPPosition(
+                            diagramLayoutModel,
+                            diagramObject,
+                            diagramUUID,
+                            classPositionDTO.getXPosition(),
+                            classPositionDTO.getYPosition(),
+                            classPositionDTO.getZPosition());
+            if (shift != null) {
+                shifts.add(shift);
+            }
         }
+        shiftGluedEdgePoints(diagramLayoutModel, shifts);
         return createdClassLayoutData;
+    }
+
+    /**
+     * Moves the end points glued to the moved classes by the distance their class moved, and the
+     * bend points of an edge whose end points at both sides moved by the same distance, as the
+     * frontend does for the edges it shows. Edges hidden by a filter are not sent by the frontend,
+     * so without this their end points would stay where the class was. The points of edges the
+     * frontend does send are overwritten with the sent ones afterwards.
+     */
+    private static void shiftGluedEdgePoints(Model diagramLayoutModel, List<ClassShift> shifts) {
+        var endPointShiftsByEdge = new HashMap<Resource, List<ClassShift>>();
+        for (var shift : shifts) {
+            if (shift.isZero()) {
+                continue;
+            }
+            var gluePoint = diagramLayoutModel.createResource(shift.gluePoint().getFullMRID());
+            var classPoint = diagramLayoutModel.createResource(shift.classPoint().getFullMRID());
+            for (var endPoint :
+                    diagramLayoutModel
+                            .listResourcesWithProperty(DL.belongsToGluePoint, gluePoint)
+                            .toList()) {
+                if (endPoint.equals(classPoint)) {
+                    continue;
+                }
+                shiftPoint(endPoint, shift);
+                var edgeDO = endPoint.getPropertyResourceValue(DL.belongsToDiagramObject);
+                if (edgeDO != null) {
+                    endPointShiftsByEdge
+                            .computeIfAbsent(edgeDO, edge -> new ArrayList<>())
+                            .add(shift);
+                }
+            }
+        }
+        for (var entry : endPointShiftsByEdge.entrySet()) {
+            var endPointShifts = entry.getValue();
+            if (endPointShifts.size() != 2
+                    || !endPointShifts.get(0).sameDistance(endPointShifts.get(1))) {
+                continue;
+            }
+            for (var bendPoint :
+                    diagramLayoutModel
+                            .listResourcesWithProperty(DL.belongsToDiagramObject, entry.getKey())
+                            .toList()) {
+                if (!bendPoint.hasProperty(DL.belongsToGluePoint)) {
+                    shiftPoint(bendPoint, endPointShifts.get(0));
+                }
+            }
+        }
+    }
+
+    private static void shiftPoint(Resource point, ClassShift shift) {
+        shiftCoordinate(point, DL.xPosition, shift.dx());
+        shiftCoordinate(point, DL.yPosition, shift.dy());
+    }
+
+    private static void shiftCoordinate(Resource point, Property coordinate, float distance) {
+        var statement = point.getProperty(coordinate);
+        if (statement == null) {
+            return;
+        }
+        var shifted = Float.parseFloat(statement.getString()) + distance;
+        statement.changeObject(ResourceFactory.createPlainLiteral(String.valueOf(shifted)));
+    }
+
+    /**
+     * The distance a class moved, with the point of the class and the glue point its end points are
+     * glued to.
+     */
+    private record ClassShift(MRID classPoint, MRID gluePoint, float dx, float dy) {
+
+        boolean isZero() {
+            return dx == 0 && dy == 0;
+        }
+
+        boolean sameDistance(ClassShift other) {
+            return dx == other.dx && dy == other.dy;
+        }
     }
 
     /**
@@ -222,8 +310,9 @@ public class UpdateClassLayoutService
      * always references the class' glue point, reusing an existing one or creating it if missing.
      *
      * @param zPosition the stacking order to apply, or {@code null} to keep the current one.
+     * @return the distance the class moved, or null if it had no point before
      */
-    private static void moveClassDOPPosition(
+    private static ClassShift moveClassDOPPosition(
             Model diagramLayoutModel,
             DiagramObject diagramObject,
             UUID diagramUUID,
@@ -242,9 +331,10 @@ public class UpdateClassLayoutService
                     yPosition,
                     null,
                     resolveGluePointMRID(diagramLayoutModel, diagramObject.getMRID()));
-            return;
+            return null;
         }
 
+        var previousPosition = diagramObjectPoint.getPosition();
         DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint.getMRID());
         diagramObjectPoint.setPosition(
                 new XYZPosition(
@@ -256,6 +346,11 @@ public class UpdateClassLayoutService
                     resolveGluePointMRID(diagramLayoutModel, diagramObject.getMRID()));
         }
         DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);
+        return new ClassShift(
+                diagramObjectPoint.getMRID(),
+                diagramObjectPoint.getBelongsToGluePoint(),
+                xPosition - previousPosition.getX(),
+                yPosition - previousPosition.getY());
     }
 
     /**

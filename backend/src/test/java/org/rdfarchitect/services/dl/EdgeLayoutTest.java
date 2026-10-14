@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.dl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
@@ -590,6 +591,75 @@ class EdgeLayoutTest {
     }
 
     @Test
+    void movingAClass_movesTheEndPointsGluedToIt() {
+        layoutClasses(SUB, SUPER);
+        edgeLayoutService.updateEdgeLayouts(
+                graphOne,
+                PACKAGE,
+                List.of(
+                        inheritanceLayout(
+                                point("s", 0, 60, SOURCE_SIDE),
+                                point("m", 50, 60),
+                                point("t", 100, 60, TARGET_SIDE))));
+
+        classLayoutService.updateClassPositions(graphOne, PACKAGE, List.of(position(SUB, 10, 80)));
+
+        assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER)))
+                .extracting(
+                        point -> point.getPosition().getX(), point -> point.getPosition().getY())
+                .containsExactly(tuple(10F, 90F), tuple(50F, 60F), tuple(100F, 60F));
+    }
+
+    @Test
+    void movingBothClassesByTheSameDistance_movesTheWholeEdge() {
+        layoutClasses(SUB, SUPER);
+        edgeLayoutService.updateEdgeLayouts(
+                graphOne,
+                PACKAGE,
+                List.of(
+                        inheritanceLayout(
+                                point("s", 0, 60, SOURCE_SIDE),
+                                point("m", 50, 60),
+                                point("t", 100, 60, TARGET_SIDE))));
+
+        classLayoutService.updateClassPositions(
+                graphOne, PACKAGE, List.of(position(SUB, 10, 80), position(SUPER, 110, 80)));
+
+        assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER)))
+                .extracting(
+                        point -> point.getPosition().getX(), point -> point.getPosition().getY())
+                .containsExactly(tuple(10F, 90F), tuple(60F, 90F), tuple(110F, 90F));
+    }
+
+    @Test
+    void diagramLayoutWithAllEdges_deletesThePointsOfTheEdgesNotSent() {
+        layoutClasses(SUB, SUPER, OTHER_SUPER, TARGET);
+        edgeLayoutService.updateEdgeLayouts(
+                graphOne,
+                PACKAGE,
+                List.of(
+                        inheritanceLayout(point("a", 10, 10)),
+                        edgeLayout(
+                                "association",
+                                SUB_TO_TARGET,
+                                TARGET_TO_SUB,
+                                SUB,
+                                TARGET,
+                                point("b", 20, 20))));
+        var diagramLayout = new DiagramLayoutDTO();
+        diagramLayout.setEdges(List.of(inheritanceLayout(point("c", 30, 30))));
+        diagramLayout.setAllEdges(true);
+
+        new UpdateDiagramLayoutService(databasePort)
+                .updateDiagramLayout(graphOne, PACKAGE, diagramLayout);
+
+        assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER)))
+                .extracting(point -> point.getPosition().getX())
+                .containsExactly(30F);
+        assertThat(pointsOf(EdgeKey.association(SUB_TO_TARGET, TARGET_TO_SUB))).isEmpty();
+    }
+
+    @Test
     void mergedDiagramLayout_storesTheEdgesUnderTheMergedUuids() {
         var diagramUUID = UUID.randomUUID();
         var diagramLayout = new DiagramLayoutDTO();
@@ -993,6 +1063,14 @@ class EdgeLayoutTest {
             positions.add(position);
         }
         return positions;
+    }
+
+    private static ClassPositionDTO position(UUID classUUID, float x, float y) {
+        var position = new ClassPositionDTO();
+        position.setClassUUID(classUUID);
+        position.setXPosition(x);
+        position.setYPosition(y);
+        return position;
     }
 
     private static EdgeLayoutDTO inheritanceLayout(EdgePointDTO... points) {

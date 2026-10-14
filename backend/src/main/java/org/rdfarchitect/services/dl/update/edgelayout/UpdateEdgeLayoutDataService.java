@@ -34,6 +34,7 @@ import org.rdfarchitect.dl.data.dto.relations.EdgeKey;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
+import org.rdfarchitect.dl.rdf.resources.DL;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.springframework.stereotype.Service;
 
@@ -158,6 +159,41 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
                     applyEdgeLayout(diagramLayoutModel, diagramUUID, edgeDO, edge, gluePoints));
         }
         return newPointIds;
+    }
+
+    /**
+     * Deletes the stored points of the edges of a diagram that are not among the given ones, inside
+     * a transaction the caller holds.
+     *
+     * @param diagramLayoutModel the diagram layout holding the diagram
+     * @param diagramUUID the UUID of the diagram
+     * @param edges the edges whose points are kept
+     */
+    public static void deletePointsOfOtherEdges(
+            Model diagramLayoutModel, UUID diagramUUID, List<EdgeLayoutDTO> edges) {
+        var keptEdges =
+                edges.stream()
+                        .filter(UpdateEdgeLayoutDataService::identifiesItsEdge)
+                        .map(
+                                edge ->
+                                        EdgeKey.of(
+                                                DiagramObjectStyle.byName(edge.getKind()),
+                                                edge.getSourceObject(),
+                                                edge.getTargetObject()))
+                        .collect(Collectors.toSet());
+        for (var edgeDO : edgeDOsByKey(diagramLayoutModel, diagramUUID).entrySet()) {
+            if (keptEdges.contains(edgeDO.getKey())) {
+                continue;
+            }
+            var edgeResource =
+                    diagramLayoutModel.createResource(edgeDO.getValue().getMRID().getFullMRID());
+            for (var point :
+                    diagramLayoutModel
+                            .listResourcesWithProperty(DL.belongsToDiagramObject, edgeResource)
+                            .toList()) {
+                diagramLayoutModel.removeAll(point, null, null);
+            }
+        }
     }
 
     /** Whether an edge layout names both identified objects and both classes of its edge. */
