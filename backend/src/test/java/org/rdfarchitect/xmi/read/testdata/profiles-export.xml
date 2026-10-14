@@ -1,0 +1,208 @@
+<?xml  version='1.0' encoding='windows-1252' ?>
+<xmi:XMI xmlns:xmi="http://www.omg.org/spec/XMI/20131001" xmlns:uml="http://www.omg.org/spec/UML/20161101" xmlns:thecustomprofile="http://www.sparxsystems.com/profiles/thecustomprofile/1.0">
+	<xmi:Documentation exporter="Enterprise Architect" exporterVersion="6.5" exporterID="1715"/>
+	<uml:Model xmi:type="uml:Model" name="EA_Model">
+		<packagedElement xmi:type="uml:Package" xmi:id="EAPK_ROOT" name="ExampleStandard">
+			<ownedComment xmi:type="uml:Comment" xmi:id="EAID_C1" body="A reduced stand-in for a released export."/>
+			<packagedElement xmi:type="uml:Package" xmi:id="EAPK_DOMAIN" name="DomainProfile">
+				<packagedElement xmi:type="uml:Class" xmi:id="EAID_DOMAINVERSION" name="DomainVersion" isAbstract="true">
+					<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A01" name="baseUML" isStatic="true" isReadOnly="true">
+						<defaultValue xmi:type="uml:LiteralString" xmi:id="EAID_V01" value="iec61970cim16v28_iec61968cim12v08"/>
+					</ownedAttribute>
+					<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A02" name="date" isStatic="true" isReadOnly="true">
+						<defaultValue xmi:type="uml:LiteralString" xmi:id="EAID_V02" value="2014-08-07"/>
+					</ownedAttribute>
+				</packagedElement>
+				<packagedElement xmi:type="uml:Class" xmi:id="EAID_ACTIVEPOWER" name="ActivePower">
+					<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A20" name="value">
+						<type xmi:idref="EAID_FLOAT"/>
+						<lowerValue xmi:type="uml:LiteralInteger" xmi:id="EAID_L20" value="1"/>
+						<upperValue xmi:type="uml:LiteralUnlimitedNatural" xmi:id="EAID_U20" value="1"/>
+					</ownedAttribute>
+					<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A21" name="unit">
+						<type xmi:idref="EAID_UNITSYMBOL"/>
+						<lowerValue xmi:type="uml:LiteralInteger" xmi:id="EAID_L21" value="1"/>
+						<upperValue xmi:type="uml:LiteralUnlimitedNatural" xmi:id="EAID_U21" value="1"/>
+						<defaultValue xmi:type="uml:LiteralString" xmi:id="EAID_V21" value="W"/>
+					</ownedAttribute>
+				</packagedElement>
+				<packagedElement xmi:type="uml:Class" xmi:id="EAID_FLOAT" name="Float"/>
+				<packagedElement xmi:type="uml:Enumeration" xmi:id="EAID_UNITSYMBOL" name="UnitSymbol">
+					<ownedLiteral xmi:type="uml:EnumerationLiteral" xmi:id="EAID_LIT_W" name="W"/>
+					<ownedLiteral xmi:type="uml:EnumerationLiteral" xmi:id="EAID_LIT_VA" name="VA"/>
+				</packagedElement>
+			</packagedElement>
+			<packagedElement xmi:type="uml:Package" xmi:id="EAPK_TOPOLOGY" name="Topology">
+				<packagedElement xmi:type="uml:Class" xmi:id="EAID_TOPOLOGYVERSION" name="TopologyVersion" isAbstract="true">
+					<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A03" name="baseUML" isStatic="true" isReadOnly="true">
+						<defaultValue xmi:type="uml:LiteralString" xmi:id="EAID_V03" value="iec61970cim16v28_iec61968cim12v08"/>
+					</ownedAttribute>
+					<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A04" name="baseURI" isStatic="true" isReadOnly="true">
+						<defaultValue xmi:type="uml:LiteralString" xmi:id="EAID_V04" value=" http://iec.ch/TC57/2013/61970-456/Topology/4"/>
+					</ownedAttribute>
+					<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A05" name="differenceModelURI" isStatic="true" isReadOnly="true">
+						<defaultValue xmi:type="uml:LiteralString" xmi:id="EAID_V05" value="http://iec.ch/TC57/61970-552/DifferenceModel/1#"/>
+					</ownedAttribute>
+					<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A06" name="shortName" isStatic="true" isReadOnly="true">
+						<defaultValue xmi:type="uml:LiteralString" xmi:id="EAID_V06" value="TP"/>
+					</ownedAttribute>
+				</packagedElement>
+				<packagedElement xmi:type="uml:Package" xmi:id="EAPK_TOPOLOGY_INNER" name="TopologyCore">
+					<packagedElement xmi:type="uml:Class" xmi:id="EAID_IDENTIFIEDOBJECT" name="IdentifiedObject" isAbstract="true">
+						<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A30" name="name">
+							<type xmi:idref="EAID_STRING"/>
+							<lowerValue xmi:type="uml:LiteralInteger" xmi:id="EAID_L30" value="0"/>
+							<upperValue xmi:type="uml:LiteralUnlimitedNatural" xmi:id="EAID_U30" value="1"/>
+						</ownedAttribute>
+					</packagedElement>
+					<packagedElement xmi:type="uml:Class" xmi:id="EAID_TOPOLOGICALNODE" name="TopologicalNode">
+						<generalization xmi:type="uml:Generalization" xmi:id="EAID_G01" general="EAID_IDENTIFIEDOBJECT" isSubstitutable="true"/>
+						<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A07" name="pInjection">
+							<type xmi:idref="EAID_ACTIVEPOWER"/>
+							<lowerValue xmi:type="uml:LiteralInteger" xmi:id="EAID_L07" value="0"/>
+							<upperValue xmi:type="uml:LiteralUnlimitedNatural" xmi:id="EAID_U07" value="n"/>
+						</ownedAttribute>
+						<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A08" name="fromEndIsoCode">
+							<type xmi:idref="EAID_STRING"/>
+							<lowerValue xmi:type="uml:LiteralInteger" xmi:id="EAID_L08" value="0"/>
+							<upperValue xmi:type="uml:LiteralUnlimitedNatural" xmi:id="EAID_U08" value="*"/>
+							<defaultValue xmi:type="uml:LiteralString" xmi:id="EAID_V08b" value="DE"/>
+						</ownedAttribute>
+						<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_dstTN" name="Terminal" association="EAID_ASSOC01">
+							<type xmi:idref="EAID_TERMINAL"/>
+						</ownedAttribute>
+					</packagedElement>
+					<packagedElement xmi:type="uml:Class" xmi:id="EAID_TERMINAL" name="Terminal">
+						<generalization xmi:type="uml:Generalization" xmi:id="EAID_G02" general="EAID_IDENTIFIEDOBJECT" isSubstitutable="true"/>
+					</packagedElement>
+					<packagedElement xmi:type="uml:Class" xmi:id="EAID_BOUNDARY" name="TopologyOverview"/>
+					<packagedElement xmi:type="uml:Class" xmi:id="EAID_TEXT" name="static power system model"/>
+					<packagedElement xmi:type="uml:Class" xmi:id="EAID_STRING" name="String"/>
+				</packagedElement>
+			</packagedElement>
+			<packagedElement xmi:type="uml:Package" xmi:id="EAPK_MESSWERTE" name="Meßwerte">
+				<packagedElement xmi:type="uml:Class" xmi:id="EAID_MESSWERTEVERSION" name="MesswerteVersion" isAbstract="true">
+					<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A09" name="entsoeURI" isStatic="true" isReadOnly="true">
+						<defaultValue xmi:type="uml:LiteralString" xmi:id="EAID_V09" value="http://example.com/ns/Messwerte/1"/>
+					</ownedAttribute>
+				</packagedElement>
+			</packagedElement>
+			<packagedElement xmi:type="uml:Package" xmi:id="EAPK_COREEQUIPMENT" name="CoreEquipment-EU">
+				<packagedElement xmi:type="uml:Class" xmi:id="EAID_COREONTOLOGY" name="CoreEquipment-EU_Ontology">
+					<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A10" name="versionIRI">
+						<defaultValue xmi:type="uml:LiteralString" xmi:id="EAID_V10" value="http://iec.ch/TC57/ns/CIM/CoreEquipment-EU/3.0"/>
+					</ownedAttribute>
+					<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A11" name="keyword">
+						<defaultValue xmi:type="uml:LiteralString" xmi:id="EAID_V11" value="EQ"/>
+					</ownedAttribute>
+				</packagedElement>
+			</packagedElement>
+		</packagedElement>
+	</uml:Model>
+	<xmi:Extension extender="Enterprise Architect" extenderID="6.5">
+		<elements>
+			<element xmi:idref="EAID_TOPOLOGICALNODE" xmi:type="uml:Class" name="TopologicalNode" scope="public">
+				<properties documentation="A set of connectivity nodes connected through closed switches." isAbstract="false" sType="Class"/>
+				<attributes>
+					<attribute xmi:idref="EAID_A07" name="pInjection" scope="Public">
+						<documentation value="The active power injected into the network."/>
+						<properties type="ActivePower" changeability="changeable"/>
+						<stereotype stereotype="Operation"/>
+						<bounds lower="0" upper="n"/>
+					</attribute>
+					<attribute xmi:idref="EAID_A08" name="fromEndIsoCode" scope="Public">
+						<documentation value="The ISO code of the country the node belongs to."/>
+						<properties type="String" changeability="frozen"/>
+						<bounds lower="0" upper="*"/>
+					</attribute>
+				</attributes>
+			</element>
+			<element xmi:idref="EAID_IDENTIFIEDOBJECT" xmi:type="uml:Class" name="IdentifiedObject" scope="public">
+				<properties documentation="Anything that can be named." isAbstract="true" sType="Class"/>
+			</element>
+			<element xmi:idref="EAID_TERMINAL" xmi:type="uml:Class" name="Terminal" scope="public">
+				<properties documentation="An electrical connection point." isAbstract="false" sType="Class"/>
+			</element>
+			<element xmi:idref="EAID_UNITSYMBOL" xmi:type="uml:Enumeration" name="UnitSymbol" scope="public">
+				<properties documentation="The unit symbols of a measurement." isAbstract="false" sType="Enumeration"/>
+				<attributes>
+					<attribute xmi:idref="EAID_LIT_W" name="W" scope="Public">
+						<documentation value="Watt."/>
+					</attribute>
+				</attributes>
+			</element>
+			<element xmi:idref="EAID_BOUNDARY" xmi:type="uml:Boundary" name="TopologyOverview" scope="public">
+				<properties documentation="A drawing frame, not a class." isAbstract="false"/>
+			</element>
+			<element xmi:idref="EAID_TEXT" name="static power system model" scope="public">
+				<properties documentation="A text box whose extension entry carries no type at all."/>
+			</element>
+		</elements>
+		<connectors>
+			<connector xmi:idref="EAID_ASSOC01">
+				<source xmi:idref="EAID_TERMINAL">
+					<model ea_localid="1" type="Class" name="Terminal"/>
+					<role name="Terminals" visibility="Public" targetScope="instance"/>
+					<type multiplicity="0..*" aggregation="none"/>
+					<modifiers isOrdered="false" changeable="none" isNavigable="true"/>
+					<style value="Owned=0;Navigable=Unspecified;Union=0;AllowDuplicates=0;Derived=0;"/>
+					<documentation value="The terminals of the topological node."/>
+				</source>
+				<target xmi:idref="EAID_TOPOLOGICALNODE">
+					<model ea_localid="2" type="Class" name="TopologicalNode"/>
+					<role name="TopologicalNode" visibility="Public" targetScope="instance"/>
+					<type multiplicity="1.." aggregation="none"/>
+					<modifiers isOrdered="false" changeable="none" isNavigable="false"/>
+					<style value="Owned=0;Union=0;AllowDuplicates=0;Derived=0;Navigable=Navigable;"/>
+					<documentation value="The topological node of the terminal."/>
+				</target>
+				<model ea_localid="3"/>
+				<properties ea_type="Association" direction="Source -&gt; Destination"/>
+				<documentation/>
+			</connector>
+			<connector xmi:idref="EAID_ASSOC02">
+				<source xmi:idref="EAID_ACTIVEPOWER">
+					<model ea_localid="4" type="Class" name="ActivePower"/>
+					<role name="Readings" visibility="Public"/>
+					<type multiplicity="0..*" aggregation="composite"/>
+					<style value="Owned=0;Navigable=Navigable;"/>
+					<documentation value="The readings of the node."/>
+				</source>
+				<target xmi:idref="EAID_TOPOLOGICALNODE">
+					<model ea_localid="5" type="Class" name="TopologicalNode"/>
+					<role name="Node" visibility="Public"/>
+					<type multiplicity="1" aggregation="none"/>
+					<style value="Owned=0;Navigable=Navigable;"/>
+					<documentation value="The node of the reading."/>
+				</target>
+				<properties ea_type="Aggregation" direction="Source -&gt; Destination"/>
+			</connector>
+			<connector xmi:idref="EAID_NOTE01">
+				<source xmi:idref="EAID_BOUNDARY">
+					<model ea_localid="6" type="Note"/>
+					<role visibility="Public"/>
+					<type aggregation="none"/>
+					<style/>
+					<documentation/>
+				</source>
+				<target xmi:idref="EAID_TERMINAL">
+					<model ea_localid="7" type="Class" name="Terminal"/>
+					<role visibility="Public"/>
+					<type aggregation="none"/>
+					<style/>
+					<documentation/>
+				</target>
+				<properties ea_type="NoteLink" direction="Source -&gt; Destination"/>
+			</connector>
+		</connectors>
+	</xmi:Extension>
+	<thecustomprofile:Description base_Class="EAID_TOPOLOGICALNODE"/>
+	<thecustomprofile:Entsoe base_Class="EAID_TOPOLOGICALNODE"/>
+	<thecustomprofile:GUIDBasedOn base_Class="EAID_TOPOLOGICALNODE" GUIDBasedOn="{919623A3-FCC6-4af8-984C-2845ACE54737}"/>
+	<thecustomprofile:IsBasedOn base_Dependency="EAID_DEP01"/>
+	<thecustomprofile:abstract base_Class="EAID_IDENTIFIEDOBJECT"/>
+	<thecustomprofile:Compound base_Class="EAID_ACTIVEPOWER"/>
+	<thecustomprofile:Primitive base_Class="EAID_FLOAT"/>
+	<thecustomprofile:enumeration base_Enumeration="EAID_UNITSYMBOL"/>
+	<thecustomprofile:ShortCircuit base_Property="EAID_A07"/>
+</xmi:XMI>
