@@ -180,3 +180,162 @@ export function dissolveCollinearBendPoints(points, tolerance) {
 
     return kept.length === points.length ? points : kept;
 }
+
+/**
+ * Replaces the end points of all edges by what the given function returns for them, called with
+ * the id of the class each end point is docked to.
+ *
+ * @param {Array} edges the diagram edges
+ * @param {Function} updateEndPoint returns the point itself to keep it unchanged
+ * @returns {Array} the given edges if no point changed, otherwise new edges
+ */
+export function updateEndPoints(edges, updateEndPoint) {
+    let changed = false;
+    const nextEdges = edges.map(edge => {
+        const points = edge.data?.bendPoints ?? [];
+        const sourceEnd = getSourceEndPoint(points);
+        const targetEnd = getTargetEndPoint(points);
+        const nextPoints = points.map(point => {
+            if (point === sourceEnd) {
+                return updateEndPoint(point, edge.source);
+            }
+            if (point === targetEnd) {
+                return updateEndPoint(point, edge.target);
+            }
+            return point;
+        });
+        if (nextPoints.every((point, index) => point === points[index])) {
+            return edge;
+        }
+        changed = true;
+        return { ...edge, data: { ...edge.data, bendPoints: nextPoints } };
+    });
+    return changed ? nextEdges : edges;
+}
+
+/**
+ * Moves the points of the edges along with dragged classes: the end points docked to a dragged
+ * class by the distance it moved since the last drag event, and the inner bend points of an edge
+ * whose classes are both dragged by the distance of the drag.
+ *
+ * @param {Array} edges the diagram edges
+ * @param {Array} draggedNodes the dragged classes at their current positions
+ * @param {Map<string, {x: number, y: number}>} lastPositions the positions of the dragged classes
+ *     at the last drag event, by id
+ * @returns {Array} the given edges if no point moved, otherwise new edges
+ */
+export function moveEdgePointsWithDraggedClasses(
+    edges,
+    draggedNodes,
+    lastPositions,
+) {
+    const draggedNodeIds = new Set(draggedNodes.map(node => node.id));
+    const dragDelta = computeDragDelta(draggedNodes, lastPositions);
+    let anyPointMoved = false;
+
+    const updatedEdges = edges.map(edge => {
+        const points = edge.data?.bendPoints ?? [];
+        let nextPoints = points;
+
+        if (getSourceEndPoint(points) || getTargetEndPoint(points)) {
+            for (const node of draggedNodes) {
+                const previous = lastPositions.get(node.id);
+                if (!previous) continue;
+                const dx = node.position.x - previous.x;
+                const dy = node.position.y - previous.y;
+                if (dx === 0 && dy === 0) continue;
+                nextPoints = shiftEndPointsForNode(
+                    nextPoints,
+                    edge,
+                    node.id,
+                    dx,
+                    dy,
+                );
+            }
+        }
+
+        const bothClassesDragged =
+            draggedNodeIds.has(edge.source) && draggedNodeIds.has(edge.target);
+        if (bothClassesDragged && dragDelta) {
+            nextPoints = shiftInnerBendPoints(
+                nextPoints,
+                dragDelta.dx,
+                dragDelta.dy,
+            );
+        }
+
+        if (nextPoints === points) {
+            return edge;
+        }
+        anyPointMoved = true;
+        return { ...edge, data: { ...edge.data, bendPoints: nextPoints } };
+    });
+
+    return anyPointMoved ? updatedEdges : edges;
+}
+
+/**
+ * Takes over the routing ELK computed for the edges: source and target points become sided end
+ * points, interior points become bend points, and nearly collinear ones are dissolved.
+ *
+ * @param {Array} edges the diagram edges
+ * @param {Map<string, Array>} layoutedEdges the routing points ELK computed, by edge id
+ * @param {number} tolerance see {@link dissolveCollinearBendPoints}
+ * @returns {Array} the edges with the computed points
+ */
+export function applyLayoutedEdges(edges, layoutedEdges, tolerance) {
+    return edges.map(edge => {
+        const routingPoints = layoutedEdges.get(edge.id);
+        if (!routingPoints || routingPoints.length === 0) {
+            return edge;
+        }
+        return {
+            ...edge,
+            data: {
+                ...edge.data,
+                bendPoints: dissolveCollinearBendPoints(
+                    toEdgePoints(routingPoints),
+                    tolerance,
+                ),
+            },
+        };
+    });
+}
+
+function computeDragDelta(draggedNodes, lastPositions) {
+    for (const node of draggedNodes) {
+        const previous = lastPositions.get(node.id);
+        if (!previous) continue;
+        const dx = node.position.x - previous.x;
+        const dy = node.position.y - previous.y;
+        if (dx === 0 && dy === 0) continue;
+        return { dx, dy };
+    }
+    return null;
+}
+
+function shiftInnerBendPoints(points, dx, dy) {
+    return points.map(point =>
+        isEndPoint(point)
+            ? point
+            : { ...point, x: point.x + dx, y: point.y + dy },
+    );
+}
+
+function shiftEndPointsForNode(points, edge, movedNodeId, dx, dy) {
+    const sourceEnd = getSourceEndPoint(points);
+    const targetEnd = getTargetEndPoint(points);
+    const shiftSource = edge.source === movedNodeId && sourceEnd;
+    const shiftTarget = edge.target === movedNodeId && targetEnd;
+    if (!shiftSource && !shiftTarget) return points;
+
+    return points.map(point => {
+        if (shiftSource && point.id === sourceEnd.id) {
+            return { ...point, x: point.x + dx, y: point.y + dy };
+        }
+        if (shiftTarget && point.id === targetEnd.id) {
+            return { ...point, x: point.x + dx, y: point.y + dy };
+        }
+        return point;
+    });
+}

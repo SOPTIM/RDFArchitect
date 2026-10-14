@@ -171,7 +171,7 @@
     }
 </script>
 
-{@render children(path, edgeParams, highlighted)}
+{@render children(path, highlighted, edgeParams)}
 
 {#if edited && edgeParams && target !== source}
     <EdgeBendPoints

@@ -27,7 +27,7 @@
 </script>
 
 <PolylineEdge {id} {source} {target} {data} {selected}>
-    {#snippet children(path, _edgeParams, highlighted)}
+    {#snippet children(path, highlighted)}
         <BaseEdge
             {id}
             {path}

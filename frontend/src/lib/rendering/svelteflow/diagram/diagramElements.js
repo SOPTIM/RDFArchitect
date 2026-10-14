@@ -74,6 +74,58 @@ export function onlySelectedEdgeId(edges) {
     return selectedId;
 }
 
+/**
+ * The bounds of a diagram including the bend and end points of its edges, which may lie outside
+ * of the classes.
+ *
+ * @param nodes the diagram nodes
+ * @param edges the diagram edges
+ * @param getInternalNode returns the measured SvelteFlow node of an id
+ * @returns the bounds, or null for an empty diagram
+ */
+export function getDiagramBounds(nodes, edges, getInternalNode) {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const node of nodes) {
+        const internalNode = getInternalNode(node.id);
+        const position =
+            internalNode?.internals?.positionAbsolute ?? node.position;
+        const width = internalNode?.measured?.width ?? 0;
+        const height = internalNode?.measured?.height ?? 0;
+        minX = Math.min(minX, position.x);
+        minY = Math.min(minY, position.y);
+        maxX = Math.max(maxX, position.x + width);
+        maxY = Math.max(maxY, position.y + height);
+    }
+
+    for (const edge of edges) {
+        for (const bendPoint of edge.data?.bendPoints ?? []) {
+            minX = Math.min(minX, bendPoint.x);
+            minY = Math.min(minY, bendPoint.y);
+            maxX = Math.max(maxX, bendPoint.x);
+            maxY = Math.max(maxY, bendPoint.y);
+        }
+    }
+    if (
+        !Number.isFinite(minX) ||
+        !Number.isFinite(minY) ||
+        !Number.isFinite(maxX) ||
+        !Number.isFinite(maxY)
+    ) {
+        return null;
+    }
+
+    return {
+        x: minX,
+        y: minY,
+        width: maxX - minX,
+        height: maxY - minY,
+    };
+}
+
 function decorateEdge(edge) {
     return {
         ...edge,
