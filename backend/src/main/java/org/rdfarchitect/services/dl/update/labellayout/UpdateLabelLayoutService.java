@@ -84,14 +84,11 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
     }
 
     /**
-     * Replaces each addressed label wholesale instead of patching its position, which keeps the
-     * stored text in sync with the model and makes a reset (an entry without an offset) fall out of
-     * the same code path.
-     */
-    /**
      * Places or resets the given labels of a diagram, inside a transaction the caller holds. A
      * label with a position replaces the stored one, a label without position is reset to its
-     * default place by deleting the stored one.
+     * default place by deleting the stored one. Labels are replaced wholesale instead of patching
+     * their position, which keeps the stored text in sync with the model and lets a reset take the
+     * same code path.
      *
      * @param diagramLayoutModel the diagram layout holding the diagram
      * @param diagramUUID the UUID of the diagram

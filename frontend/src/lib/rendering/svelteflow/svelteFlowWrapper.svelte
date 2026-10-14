@@ -188,8 +188,10 @@
 
     let selectionZFrame = null;
     let boxSelecting = $state(false);
-    // Tracks the last seen position per dragged node id, to compute the delta
-    // for moving attached end points live during a class drag.
+    /**
+     * The last seen position per dragged node id, to compute the delta for moving attached end
+     * points live during a class drag.
+     */
     let lastDragPositions = new Map();
     let classBounds = new Map();
     let classBoundsDiagramId = null;
@@ -540,6 +542,8 @@
      * Keeps the end points on the border of classes whose size changed, e.g. a class that shrank
      * after its attributes were deleted. The bounds of each class are remembered per diagram, also
      * across a reload of the diagram, so a class that is rendered smaller than before is noticed.
+     * The moved end points are not saved on their own, see
+     * {@link EdgeLayoutPersistence#acceptWithoutSaving}.
      */
     function moveEndPointsOfResizedClasses(currentNodes) {
         const resizedClasses = new Map();
@@ -580,13 +584,15 @@
                 ),
             };
         });
+        edgeLayouts.acceptWithoutSaving(edges);
     }
 
     /**
      * Puts stored end points that are off the border of their class back onto it, once per loaded
      * diagram as soon as its classes are measured. An end point comes off the border when its class
      * changed while the edge was not shown, e.g. the class grew while a filter hid the edge, or when
-     * the layout data was changed outside of this diagram.
+     * the layout data was changed outside of this diagram. The docked end points are not saved on
+     * their own, see {@link EdgeLayoutPersistence#acceptWithoutSaving}.
      */
     function dockDetachedEndPoints(currentNodes) {
         if (!endPointsCheckPending) {
@@ -620,6 +626,7 @@
             }
             return { ...point, ...docked };
         });
+        edgeLayouts.acceptWithoutSaving(edges);
     }
 
     function handleNodeDragStart({ nodes: draggedNodes }) {
@@ -854,8 +861,10 @@
             selected: edge.id === edgeId,
         }));
     }
-    // Selects only the clicked edge on a plain left click. Independent of the
-    // class-based auto selection: clicking an edge always selects just that edge.
+    /**
+     * Selects only the clicked edge on a plain left click. Independent of the class-based auto
+     * selection: clicking an edge always selects just that edge.
+     */
     function handleEdgeClick({ edge, event }) {
         if (!edge?.id) return;
         selectOnlyEdge(edge.id);
@@ -884,13 +893,21 @@
         openEdgeEditor(edges.find(edge => edge.id === edgeId));
     }
 
+    /**
+     * Lays out the classes and saves the result. A layout that finishes after another diagram was
+     * loaded is dropped, otherwise it would be saved into that diagram.
+     */
     export async function applyELKLayout() {
         if (!isLoading) isLoading = true;
         layouted = true;
+        const laidOutInput = inputNodes;
         try {
             const [{ nodes: layoutedNodes, layoutedEdges }] = await Promise.all(
                 [layoutDiagram(classNodes, edges), refreshReadOnlyState()],
             );
+            if (inputNodes !== laidOutInput) {
+                return;
+            }
             nodes = [...layoutedNodes];
             edges = applyLayoutedEdges(
                 edges,
@@ -914,7 +931,9 @@
                 "The diagram could not be laid out automatically.",
             );
         } finally {
-            isLoading = false;
+            if (inputNodes === laidOutInput) {
+                isLoading = false;
+            }
         }
     }
 
@@ -929,7 +948,7 @@
         }
 
         return svelteFlowAPI.svelteFlow.fitBounds(bounds, {
-            padding: 0.1, //matches the same padding of SvelteFlows fitView
+            padding: 0.1,
             duration,
         });
     }

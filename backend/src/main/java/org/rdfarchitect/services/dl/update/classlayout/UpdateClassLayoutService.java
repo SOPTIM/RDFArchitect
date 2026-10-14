@@ -280,13 +280,23 @@ public class UpdateClassLayoutService
         shiftCoordinate(point, DL.yPosition, shift.dy());
     }
 
+    /**
+     * Shifts one coordinate of a point. A coordinate that is no number is left as it is, so a
+     * broken point does not abort moving the classes.
+     */
     private static void shiftCoordinate(Resource point, Property coordinate, float distance) {
         var statement = point.getProperty(coordinate);
         if (statement == null) {
             return;
         }
-        var shifted = Float.parseFloat(statement.getString()) + distance;
-        statement.changeObject(ResourceFactory.createPlainLiteral(String.valueOf(shifted)));
+        float value;
+        try {
+            value = Float.parseFloat(statement.getString());
+        } catch (NumberFormatException e) {
+            return;
+        }
+        statement.changeObject(
+                ResourceFactory.createPlainLiteral(String.valueOf(value + distance)));
     }
 
     /**

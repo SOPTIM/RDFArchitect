@@ -116,15 +116,16 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
      *
      * The sequence numbers count from the side of the identified object of the edge diagram object,
      * so the points are reversed if the edge was drawn the other way round. A class of an edge that
-     * has no layout data in the diagram yet gets it at 0;0, where it is shown without layout data,
-     * so the edge gets its diagram object. Edges that are not part of the schema or that do not
-     * name both identified objects and both classes are ignored.
+     * has no layout data in the diagram yet gets it at 0;0, where it is shown without layout data.
+     * Edges without a diagram object, e.g. in a diagram laid out before edges had them, get one.
+     * Edges that are not part of the schema or that do not name both identified objects and both
+     * classes are ignored.
      *
      * @param diagramLayoutModel the diagram layout holding the diagram
      * @param diagramUUID the UUID of the diagram
      * @param edges the edges to store
      * @param edgeResolver resolves the edges between the classes of the diagram, only needed if
-     *     class layout data has to be created
+     *     class layout data or edge diagram objects have to be created
      * @return the mRIDs the new points are stored under
      */
     public static List<EdgePointIdDTO> applyEdgeLayouts(
@@ -137,21 +138,20 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
         if (completeEdges.isEmpty()) {
             return List.of();
         }
-        if (ensureClassLayoutData(diagramLayoutModel, diagramUUID, completeEdges)) {
+        var createdClassLayoutData =
+                ensureClassLayoutData(diagramLayoutModel, diagramUUID, completeEdges);
+        var edgeDOs = edgeDOsByKey(diagramLayoutModel, diagramUUID);
+        var sentEdges = completeEdges.stream().map(UpdateEdgeLayoutDataService::keyOf).toList();
+        if (createdClassLayoutData || !edgeDOs.keySet().containsAll(sentEdges)) {
             EdgeLayoutReconciler.reconcileEdges(
                     diagramLayoutModel, diagramUUID, edgeResolver.get());
+            edgeDOs = edgeDOsByKey(diagramLayoutModel, diagramUUID);
         }
 
-        var edgeDOs = edgeDOsByKey(diagramLayoutModel, diagramUUID);
         var gluePoints = new HashMap<UUID, MRID>();
         var newPointIds = new ArrayList<EdgePointIdDTO>();
         for (var edge : completeEdges) {
-            var edgeDO =
-                    edgeDOs.get(
-                            EdgeKey.of(
-                                    DiagramObjectStyle.byName(edge.getKind()),
-                                    edge.getSourceObject(),
-                                    edge.getTargetObject()));
+            var edgeDO = edgeDOs.get(keyOf(edge));
             if (edgeDO == null) {
                 continue;
             }
@@ -231,6 +231,13 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
             }
         }
         return createdClassLayoutData;
+    }
+
+    private static EdgeKey keyOf(EdgeLayoutDTO edge) {
+        return EdgeKey.of(
+                DiagramObjectStyle.byName(edge.getKind()),
+                edge.getSourceObject(),
+                edge.getTargetObject());
     }
 
     private static Map<EdgeKey, DiagramObject> edgeDOsByKey(

@@ -106,8 +106,10 @@ export class AutoPanController {
         };
     }
 
-    // Returns the pan speed for one axis. Positive speed pans towards the
-    // start (left/top) edge, negative towards the end (right/bottom) edge.
+    /**
+     * Returns the pan speed for one axis. Positive speed pans towards the start (left/top) edge,
+     * negative towards the end (right/bottom) edge.
+     */
     #axisSpeed(distanceToStart, distanceToEnd) {
         if (distanceToStart < AUTO_PAN_EDGE_PX) {
             return this.#scaledSpeed(AUTO_PAN_EDGE_PX - distanceToStart);
@@ -118,8 +120,10 @@ export class AutoPanController {
         return 0;
     }
 
-    // Maps how deep the cursor is inside the edge zone onto a speed between the
-    // min and max, clamped at the max (also when pushed past the container edge).
+    /**
+     * Maps how deep the cursor is inside the edge zone onto a speed between the min and max,
+     * clamped at the max (also when pushed past the container edge).
+     */
     #scaledSpeed(depthIntoZone) {
         const ratio = Math.min(depthIntoZone / AUTO_PAN_EDGE_PX, 1);
         return (

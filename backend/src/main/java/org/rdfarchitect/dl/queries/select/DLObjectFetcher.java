@@ -602,39 +602,6 @@ public class DLObjectFetcher {
     }
 
     /**
-     * Fetches the {@link DiagramObjectGluePoint} referenced by a given diagram object point.
-     * Returns {@code null} if the point does not reference a glue point (for example an inner bend
-     * point).
-     *
-     * @param diagramLayout the model from where the object(s) will be fetched
-     * @param dopMRID the diagram object point mRID whose glue point is fetched
-     * @return the referenced {@link DiagramObjectGluePoint} or {@code null}
-     */
-    public DiagramObjectGluePoint fetchGluePointForDOP(Model diagramLayout, MRID dopMRID) {
-        var query =
-                QUERY_PREFIXES
-                        + """
-                        SELECT ?gluePointMRID
-                        WHERE {
-                            ?dopMRID rdf:type cim:DiagramObjectPoint ;
-                                  cim:DiagramObjectPoint.DiagramObjectGluePoint ?gluePointMRID .
-
-                            FILTER(STR(?dopMRID) = "DOP_MRID")
-                        }
-                        """
-                                .replace("DOP_MRID", dopMRID.getFullMRID());
-
-        try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
-            var results = qexec.execSelect();
-
-            if (results.hasNext()) {
-                return DLObjectFactory.createDiagramObjectGluePoint(results.next());
-            }
-            return null;
-        }
-    }
-
-    /**
      * Fetches the {@link DiagramObjectGluePoint} that belongs to a given diagram object, resolved
      * through the diagram object's point. Returns {@code null} if the diagram object has no point
      * referencing a glue point (for example an edge diagram object).
