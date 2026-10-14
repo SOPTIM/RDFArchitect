@@ -152,9 +152,7 @@ public class DLUpdates {
     public void deleteDiagramObjectCascade(Model model, MRID doMRID) {
         List<DiagramObjectPoint> dops = DLObjectFetcher.fetchDOPsForDO(model, doMRID);
         deleteDiagramObject(model, doMRID);
-        if (dops != null && !dops.isEmpty()) {
-            dops.forEach(dop -> deleteDiagramObjectPointCascade(model, dop));
-        }
+        dops.forEach(dop -> deleteDiagramObjectPointCascade(model, dop));
     }
 
     public void deleteDiagramObject(Model model, MRID doMRID) {

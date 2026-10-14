@@ -332,8 +332,8 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
             EdgePointDTO point,
             int sequenceNumber,
             MRID gluePoint) {
-        return storedPoint.getPosition().getX() == point.getXPosition()
-                && storedPoint.getPosition().getY() == point.getYPosition()
+        return Float.compare(storedPoint.getPosition().getX(), point.getXPosition()) == 0
+                && Float.compare(storedPoint.getPosition().getY(), point.getYPosition()) == 0
                 && Objects.equals(storedPoint.getSequenceNumber(), sequenceNumber)
                 && Objects.equals(storedPoint.getBelongsToGluePoint(), gluePoint);
     }
