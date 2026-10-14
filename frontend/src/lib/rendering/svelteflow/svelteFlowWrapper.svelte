@@ -1231,7 +1231,7 @@
         layouted = true;
         try {
             const [{ nodes: layoutedNodes, layoutedEdges }] = await Promise.all(
-                [layoutDiagram(nodes, edges), refreshReadOnlyState()],
+                [layoutDiagram(classNodes, edges), refreshReadOnlyState()],
             );
             nodes = [...layoutedNodes];
             applyLayoutedEdges(layoutedEdges);

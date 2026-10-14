@@ -22,26 +22,18 @@ const LAYOUT_OPTIONS = {
     //BASE
     "elk.algorithm": "layered",
     "elk.aspectRatio": "1.78f",
-    "elk.edge.thickness": "2.0",
     "elk.direction": "RIGHT",
     "elk.layered.thoroughness": "150",
     "elk.edgeRouting": "POLYLINE",
     "elk.layered.edgeRouting.polyline.slopedEdgeZoneWidth": "20.0",
-    "elk.separateConnectedComponents": "false",
-    "elk.layered.mergeHierarchyEdges": "false",
+    "elk.separateConnectedComponents": "true",
+    "elk.layered.considerModelOrder.components": "MODEL_ORDER",
 
     //NODE PLACEMENT
     "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
-    "elk.layered.nodePlacement.favorStraightEdges": "true",
-
-    //CROSSING MINIMIZATION
-    "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
-    "elk.layered.crossingMinimization.greedySwitch.type": "TWO_SIDED",
-    "elk.layered.crossingMinimization.greedySwitch.activationThreshold": "40",
 
     //NODE PROMOTION
     "elk.layered.layering.nodePromotion.strategy": "NIKOLOV_IMPROVED",
-    "elk.layered.layering.nodePromotion.maxIterations": "20",
 
     //NODE LAYERING
     "elk.layered.layering.strategy": "STRETCH_WIDTH",
@@ -49,15 +41,21 @@ const LAYOUT_OPTIONS = {
     //HIGH DEGREE NODES
     "elk.layered.highDegreeNodes.treatment": "true",
     "elk.layered.highDegreeNodes.threshold": "10",
-    "elk.layered.highDegreeNodes.treeHeight": "5",
 
     //SPACING
     "elk.layered.spacing.edgeEdgeBetweenLayers": "20",
-    "elk.layered.spacing.edgeNodeBetweenLayers": "40",
     "elk.spacing.edgeNode": "40",
     "elk.spacing.edgeEdge": "20",
     "elk.layered.spacing.nodeNodeBetweenLayers": "80",
     "elk.spacing.nodeNode": "60",
+};
+
+/**
+ * Inheritance edges keep pointing in the layout direction, from the subclass to the superclass, when
+ * edges form cycles: ELK then reverses associations instead.
+ */
+const INHERITANCE_EDGE_OPTIONS = {
+    "elk.layered.priority.direction": "10",
 };
 
 let elk = null;
@@ -149,16 +147,24 @@ function extractLayoutedEdges(elkGraph) {
 
 /**
  * Builds the ELK graph input structure from the SvelteFlow nodes and edges.
- * A pure SvelteFlow-to-ELK transformation.
+ * A pure SvelteFlow-to-ELK transformation. Classes with edges come first, so
+ * that ELK places the classes without any edge behind the diagram.
  *
  * @param {Array} nodes SvelteFlow nodes
  * @param {Array} edges SvelteFlow edges
  * @returns {object} the ELK graph input
  */
 function buildElkGraph(nodes, edges) {
+    const connected = new Set(
+        edges.flatMap(edge => [edge.source, edge.target]),
+    );
+    const ordered = [
+        ...nodes.filter(node => connected.has(node.id)),
+        ...nodes.filter(node => !connected.has(node.id)),
+    ];
     return {
         id: "root",
-        children: nodes.map(node => ({
+        children: ordered.map(node => ({
             id: node.id,
             width: node.measured.width,
             height: node.measured.height,
@@ -167,6 +173,9 @@ function buildElkGraph(nodes, edges) {
             id: edge.id,
             source: edge.source,
             target: edge.target,
+            ...(edge.type === "inheritance" && {
+                layoutOptions: INHERITANCE_EDGE_OPTIONS,
+            }),
         })),
         layoutOptions: LAYOUT_OPTIONS,
     };
