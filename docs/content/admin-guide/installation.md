@@ -107,12 +107,14 @@ RDFArchitect has no built-in authentication or authorisation. For a production d
 
 ### File upload size
 
-Default max upload size is **50 MB**, which is sufficient for most ENTSO-E profiles. If you need larger uploads, raise both:
+Default max upload size is **256 MB**, which leaves headroom above the largest input the application takes: a full Enterprise Architect model export reaches 100 MB, while an ENTSO-E profile is a few MB. If you need larger uploads, raise all four:
 
 - `spring.servlet.multipart.max-file-size`
 - `spring.servlet.multipart.max-request-size`
 - `server.tomcat.max-http-form-post-size`
 - `server.tomcat.max-swallow-size`
+
+A reverse proxy in front of the backend caps the request on its own, so raise its limit too. The nginx gateway of the compose file does this with `client_max_body_size` in `docker/nginx.local.conf`.
 
 ## Verifying the installation
 

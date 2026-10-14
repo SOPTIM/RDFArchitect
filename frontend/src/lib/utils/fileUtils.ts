@@ -31,6 +31,13 @@ export const supportedRDFMediaTypes: MediaType[] = [
     },
 ];
 
+/**
+ * The file extensions an Enterprise Architect XMI export comes under. Kept apart from
+ * {@link supportedRDFMediaTypes}, which the export dialogs and the user settings read as well: an
+ * export is read but never written, and it has an import of its own.
+ */
+export const xmiFileExtensions: string[] = [".xmi", ".xml"];
+
 export const sparqlMediaType: MediaType = {
     mimeType: "application/sparql-query",
     name: "SPARQL",

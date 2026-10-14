@@ -208,6 +208,7 @@ function createGraphStore() {
         addEmptyGraph,
         renameGraph,
         startImport,
+        startXmiScan,
         getImportStatus,
         resolvePrefixConflicts,
         cancelImport,
@@ -267,6 +268,43 @@ async function startImport(
         return { error: null, data: { jobId } };
     } catch (error) {
         console.error(`${LOG_PREFIX} Failed to start the import`, error);
+        return { error };
+    }
+}
+
+/**
+ * Starts reading an Enterprise Architect XMI export and returns the id of the job that runs it.
+ * The job reports the profiles the export holds and stores nothing; follow it with
+ * {@link getImportStatus} exactly like an import.
+ */
+async function startXmiScan(
+    workspaceName: string,
+    file: File,
+    options: {
+        onUploadProgress?: (percent: number) => void;
+        signal?: AbortSignal;
+    } = {},
+): Promise<Result<{ jobId: string }>> {
+    console.log(`${LOG_PREFIX} Reading the export "${file?.name}"`);
+
+    if (!file) {
+        const error = new Error("A file is required.");
+        console.error(`${LOG_PREFIX} ${error.message}`);
+        return { error };
+    }
+
+    try {
+        const jobId = await uploadImport(
+            workspaceName,
+            [file],
+            [],
+            options,
+            "/xmi",
+        );
+        console.log(`${LOG_PREFIX} Export job "${jobId}" started`);
+        return { error: null, data: { jobId } };
+    } catch (error) {
+        console.error(`${LOG_PREFIX} Failed to read the export`, error);
         return { error };
     }
 }
@@ -362,13 +400,14 @@ function uploadImport(
         onUploadProgress?: (percent: number) => void;
         signal?: AbortSignal;
     },
+    path: string = "",
 ): Promise<string> {
     const query = graphUris
         .map(graphUri => `graphUris=${encodeURIComponent(graphUri ?? "")}`)
         .join("&");
     const url =
         `${PUBLIC_BACKEND_URL}/api/datasets/${encodeURIComponent(workspaceName)}` +
-        `/graphs/content/imports${query ? `?${query}` : ""}`;
+        `/imports${path}${query ? `?${query}` : ""}`;
 
     const formData = new FormData();
     for (const file of files) {

@@ -22,6 +22,10 @@ import static org.awaitility.Awaitility.await;
 
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.JobState;
+import org.rdfarchitect.services.update.graph.ImportOutcome.GraphsImported;
+import org.rdfarchitect.services.update.graph.ImportOutcome.ProfilesScanned;
+import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
+import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -34,6 +38,8 @@ class ImportJobTest {
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
     private static final Instant STARTED_AT = Instant.parse("2026-09-22T09:00:00Z");
+
+    private static final PlannedImport PLANNED_SECOND = new PlannedImport(1, "second.ttl", 10);
 
     private static final PrefixComparison COMPARISON =
             new PrefixComparison(
@@ -126,8 +132,51 @@ class ImportJobTest {
         assertThat(job().isAbandoned(STARTED_AT.plusSeconds(600))).isFalse();
     }
 
+    @Test
+    void fail_graphImport_recoversWhatWasWrittenBeforeItDied() {
+        var job = job();
+        job.planned(List.of(new PlannedImport(0, "first.ttl", 10), PLANNED_SECOND));
+        job.started(0);
+        job.finished(0, Outcome.IMPORTED, "http://graph#first");
+        job.started(1);
+
+        job.fail("the store went away");
+
+        var written = outcomeOf(job, GraphsImported.class);
+        assertThat(written.graphUris()).containsExactly("http://graph#first");
+        assertThat(written.failedFileNames()).containsExactly("second.ttl");
+    }
+
+    @Test
+    void fail_exportScan_recoversNothing_havingStoredNothing() {
+        var job = scanJob();
+        job.planned(List.of(new PlannedImport(0, "model.xmi", 10)));
+        job.started(0);
+
+        job.fail("the export broke off");
+
+        assertThat(outcomeOf(job, ProfilesScanned.class).profiles()).isEmpty();
+    }
+
+    @Test
+    void status_whileRunning_hasNoOutcomeYet() {
+        assertThat(job().status().outcome()).isNull();
+    }
+
+    private static <T extends ImportOutcome> T outcomeOf(ImportJob job, Class<T> kind) {
+        var outcome = job.status().outcome();
+        assertThat(outcome).isInstanceOf(kind);
+        return kind.cast(outcome);
+    }
+
     private ImportJob job() {
-        return new ImportJob(UUID.randomUUID(), "session-a", "ds", STARTED_AT);
+        return new ImportJob(
+                UUID.randomUUID(), "session-a", "ds", ImportKind.GRAPH_IMPORT, STARTED_AT);
+    }
+
+    private ImportJob scanJob() {
+        return new ImportJob(
+                UUID.randomUUID(), "session-a", "ds", ImportKind.EXPORT_SCAN, STARTED_AT);
     }
 
     private Thread waitForResolutions(ImportJob job, AtomicReference<ResolvedPrefixes> answer) {

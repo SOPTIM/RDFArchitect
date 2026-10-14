@@ -23,6 +23,7 @@ import {
     FileState,
     ImportProgress,
     JobState,
+    OutcomeKind,
 } from "$lib/utils/importProgress.svelte.js";
 
 let mounted = null;
@@ -41,13 +42,16 @@ function statusOf(files, state) {
         datasetName: "ds",
         state,
         files,
-        importedGraphUris: files
-            .filter(file => file.state === FileState.IMPORTED)
-            .map(file => file.graphUri),
-        failedImports: files
-            .filter(file => file.state === FileState.FAILED)
-            .map(file => file.fileName),
-        warnings: [],
+        outcome: {
+            kind: OutcomeKind.GRAPHS_IMPORTED,
+            graphUris: files
+                .filter(file => file.state === FileState.IMPORTED)
+                .map(file => file.graphUri),
+            failedFileNames: files
+                .filter(file => file.state === FileState.FAILED)
+                .map(file => file.fileName),
+            warnings: [],
+        },
     };
 }
 
@@ -135,7 +139,7 @@ describe("ImportProgressPanel", () => {
             [fileOf(0, "schema.ttl", FileState.IMPORTED)],
             JobState.COMPLETED,
         );
-        status.warnings = [
+        status.outcome.warnings = [
             {
                 fileName: "schema.ttl",
                 undisplayableProperties: ["color", "owner"],
@@ -163,7 +167,7 @@ describe("ImportProgressPanel", () => {
             ],
             JobState.COMPLETED,
         );
-        status.warnings = [
+        status.outcome.warnings = [
             { fileName: "schema.ttl", undisplayableProperties: ["color"] },
             { fileName: "schema.ttl", undisplayableProperties: ["owner"] },
         ];

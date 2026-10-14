@@ -89,7 +89,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        datasetName, List.of(file1, file2), null, ImportProgressListener.NOOP);
+                        datasetName, List.of(file1, file2), null, GraphImportListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedGraphUris())
@@ -120,7 +120,7 @@ class ImportGraphsServiceTest {
                 .thenThrow(new RuntimeException("dataset does not exist"));
 
         importGraphsUseCase.importGraphs(
-                datasetName, List.of(file), null, ImportProgressListener.NOOP);
+                datasetName, List.of(file), null, GraphImportListener.NOOP);
 
         var inOrder = inOrder(databasePortMock);
         inOrder.verify(databasePortMock).createWorkspaceIfAbsent(datasetName);
@@ -143,7 +143,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        datasetName, List.of(file), null, ImportProgressListener.NOOP);
+                        datasetName, List.of(file), null, GraphImportListener.NOOP);
 
         assertThat(result.importedGraphUris()).isEmpty();
         verify(databasePortMock, never()).createWorkspaceIfAbsent(datasetName);
@@ -198,7 +198,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        datasetName, List.of(file), null, ImportProgressListener.NOOP);
+                        datasetName, List.of(file), null, GraphImportListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "schema");
@@ -263,7 +263,7 @@ class ImportGraphsServiceTest {
     /**
      * Answers the prefix question with a fixed set of decisions and remembers what it was asked.
      */
-    private final class RecordingListener implements ImportProgressListener {
+    private final class RecordingListener implements GraphImportListener {
 
         private final List<PrefixResolutionDTO> resolutions;
         private final Map<Integer, String> plannedFileNames = new LinkedHashMap<>();
@@ -523,7 +523,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        datasetName, List.of(file), null, ImportProgressListener.NOOP);
+                        datasetName, List.of(file), null, GraphImportListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "schema");

@@ -22,6 +22,7 @@ import {
     ImportPhase,
     ImportProgress,
     JobState,
+    OutcomeKind,
 } from "$lib/utils/importProgress.svelte.js";
 
 function file(overrides) {
@@ -41,10 +42,22 @@ function running(status) {
         datasetName: "ds",
         state: JobState.RUNNING,
         files: [],
-        importedGraphUris: [],
-        failedImports: [],
-        warnings: [],
+        outcome: null,
         ...status,
+    };
+}
+
+/** The outcome a finished graph import reports. */
+function graphsImported({
+    graphUris = [],
+    failedFileNames = [],
+    warnings = [],
+}) {
+    return {
+        kind: OutcomeKind.GRAPHS_IMPORTED,
+        graphUris,
+        failedFileNames,
+        warnings,
     };
 }
 
@@ -135,7 +148,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.COMPLETED,
                 files: [file({ state: FileState.IMPORTED })],
-                importedGraphUris: ["http://graph#first"],
+                outcome: graphsImported({ graphUris: ["http://graph#first"] }),
             }),
         );
 
@@ -150,8 +163,10 @@ describe("ImportProgress", () => {
         progress.apply(
             running({
                 state: JobState.COMPLETED,
-                importedGraphUris: ["http://graph#first"],
-                failedImports: ["broken.ttl"],
+                outcome: graphsImported({
+                    graphUris: ["http://graph#first"],
+                    failedFileNames: ["broken.ttl"],
+                }),
             }),
         );
 
@@ -164,10 +179,9 @@ describe("ImportProgress", () => {
         progress.apply(
             running({
                 state: JobState.CANCELLED,
-                importedGraphUris: [
-                    "http://graph#first",
-                    "http://graph#second",
-                ],
+                outcome: graphsImported({
+                    graphUris: ["http://graph#first", "http://graph#second"],
+                }),
             }),
         );
 
@@ -181,7 +195,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.FAILED,
                 errorMessage: "out of memory",
-                importedGraphUris: ["http://graph#first"],
+                outcome: graphsImported({ graphUris: ["http://graph#first"] }),
             }),
         );
 

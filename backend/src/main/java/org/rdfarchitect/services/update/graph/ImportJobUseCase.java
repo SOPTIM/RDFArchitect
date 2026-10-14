@@ -17,7 +17,6 @@
 
 package org.rdfarchitect.services.update.graph;
 
-import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportWarning;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -55,6 +54,8 @@ public interface ImportJobUseCase {
         PENDING,
         RUNNING,
         IMPORTED,
+        /** Read and reported on, but not stored. */
+        SCANNED,
         FAILED,
         SKIPPED
     }
@@ -74,6 +75,8 @@ public interface ImportJobUseCase {
      * @param files one entry per graph file, in the order the import processes them
      * @param prefixComparison the prefixes waiting to be decided on, empty unless the state is
      *     {@code AWAITING_PREFIX_RESOLUTION}
+     * @param outcome what the job produced, {@code null} while it is still running. Which kind it
+     *     is says what the job was started to do
      * @param errorMessage why the job failed, {@code null} unless its state is {@code FAILED}
      */
     record ImportJobStatus(
@@ -81,18 +84,25 @@ public interface ImportJobUseCase {
             String datasetName,
             JobState state,
             List<ImportFileStatus> files,
-            List<String> importedGraphUris,
-            List<String> failedImports,
-            List<ImportWarning> warnings,
             List<PrefixComparison> prefixComparison,
+            ImportOutcome outcome,
             String errorMessage) {}
 
     /**
      * Starts an import and returns immediately.
      *
-     * @return the id of the started job, to be passed to {@link #getStatus(UUID)}
+     * @return the id of the started job, to be passed to {@link #getStatus(String, UUID)}
      */
     UUID startImport(String datasetName, List<MultipartFile> files, List<String> graphUris);
+
+    /**
+     * Starts reading Enterprise Architect exports and returns immediately. The job reports the
+     * profiles the exports hold in an {@link ImportOutcome.ProfilesScanned} outcome and stores
+     * nothing.
+     *
+     * @return the id of the started job, to be passed to {@link #getStatus(String, UUID)}
+     */
+    UUID startXmiScan(String datasetName, List<MultipartFile> files);
 
     /** The current progress of the job, or empty if the session has no such job for the dataset. */
     Optional<ImportJobStatus> getStatus(String datasetName, UUID jobId);

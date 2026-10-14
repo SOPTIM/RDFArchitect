@@ -16,14 +16,13 @@
   -->
 
 <script>
-    import { faMinus } from "@fortawesome/free-solid-svg-icons";
-    import { Fa } from "svelte-fa";
     import { v4 as uuidv4 } from "uuid";
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import FileDropZone from "$lib/components/FileDropZone.svelte";
     import ImportProgressPanel from "$lib/components/ImportProgressPanel.svelte";
     import NamespacePrefixComparison from "$lib/components/NamespacePrefixComparison.svelte";
+    import SelectedFileRow from "$lib/components/SelectedFileRow.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
@@ -32,8 +31,10 @@
         isSupportedGraphFile,
         isZipFile,
         supportedRDFMediaTypes,
+        xmiFileExtensions,
     } from "$lib/utils/fileUtils";
     import { ImportProgress } from "$lib/utils/importProgress.svelte.js";
+    import { ImportStatusPoller } from "$lib/utils/importStatusPoller.svelte.js";
 
     import {
         editorState,
@@ -48,8 +49,7 @@
     } = $props();
 
     const DEFAULT_WORKSPACE_NAME = "default";
-    const POLL_INTERVAL_MS = 300;
-    const MAX_FAILED_POLLS = 3;
+    const poller = new ImportStatusPoller();
     const GRAPH_NAMESPACE_URI = "http://graph#"; // Keep in sync with RDFA.GRAPH_URI (backend)
     const DEFAULT_GRAPH_NAME = "graph";
     const supportedFileExtensions = supportedRDFMediaTypes.map(
@@ -70,8 +70,6 @@
 
     /** Set while an import runs and until its result is dismissed; drives the progress panel. */
     let progress = $state(null);
-    let pollTimeout = null;
-    let failedPolls = 0;
     /** The workspace the running import writes into, applied to the editor once it is done. */
     let importWorkspaceName = null;
     let importJobId = null;
@@ -126,6 +124,13 @@
     );
 
     const workspaceSelectionLocked = $derived(!!lockedWorkspaceName);
+    const rejectedAnExport = $derived(
+        rejectedFiles.some(fileName =>
+            xmiFileExtensions.some(extension =>
+                fileName.toLowerCase().endsWith(extension),
+            ),
+        ),
+    );
 
     async function onOpen() {
         clearInputs();
@@ -219,7 +224,6 @@
         if (mappedFiles.length > 0) {
             files = [...files, ...mappedFiles];
         }
-        fileInputValue = "";
     }
 
     function removeFile(index) {
@@ -253,7 +257,6 @@
 
         const currentProgress = new ImportProgress();
         progress = currentProgress;
-        failedPolls = 0;
         importWorkspaceName = workspaceName;
 
         const { data, error } = await graphStore.startImport(
@@ -284,60 +287,23 @@
             // Cancelled while the files were still going up, so the job needs to hear about it.
             await cancelImportJob(workspaceName, data.jobId);
         }
-        pollImportStatus();
+        followJob(currentProgress, data.jobId);
     }
 
     /**
-     * Polls the backend until the job is done, the prefix question included: polling is what tells
-     * the backend somebody is still there to answer it. A single timeout is kept in flight, so
-     * closing the dialog or finishing the import ends the polling.
+     * Follows the job until it is done, the prefix question included: polling is what tells the
+     * backend somebody is still there to answer it.
      */
-    function pollImportStatus() {
-        stopPolling();
-        pollTimeout = setTimeout(async () => {
-            const currentProgress = progress;
-            const jobId = importJobId;
-            if (!currentProgress || !jobId) {
-                return;
-            }
-
-            const { data, error } = await graphStore.getImportStatus(
-                importWorkspaceName,
-                jobId,
-            );
-
-            if (progress !== currentProgress) {
-                return;
-            }
-            if (error || !data) {
-                // A single missed poll is not worth giving up on, the import keeps running.
-                failedPolls += 1;
-                if (failedPolls > MAX_FAILED_POLLS) {
-                    currentProgress.fail(
-                        "The progress of the import could not be read.",
-                    );
-                    return;
+    function followJob(currentProgress, startedJobId) {
+        poller.follow(
+            () => graphStore.getImportStatus(importWorkspaceName, startedJobId),
+            currentProgress,
+            () => {
+                if (!currentProgress.awaitingPrefixResolution) {
+                    submittingResolutions = false;
                 }
-                pollImportStatus();
-                return;
-            }
-
-            failedPolls = 0;
-            currentProgress.apply(data);
-            if (!currentProgress.awaitingPrefixResolution) {
-                submittingResolutions = false;
-            }
-            if (!currentProgress.finished) {
-                pollImportStatus();
-            }
-        }, POLL_INTERVAL_MS);
-    }
-
-    function stopPolling() {
-        if (pollTimeout !== null) {
-            clearTimeout(pollTimeout);
-            pollTimeout = null;
-        }
+            },
+        );
     }
 
     /** Hands the decisions to the import; a rejected answer leaves it waiting for a new one. */
@@ -367,7 +333,7 @@
      * graphs it already wrote still have to reach the editor.
      */
     async function dismissImport() {
-        stopPolling();
+        poller.stop();
         const currentProgress = progress;
         const jobId = importJobId;
         const workspaceName = importWorkspaceName;
@@ -562,6 +528,13 @@
                                     <li>{fileName}</li>
                                 {/each}
                             </ul>
+                            {#if rejectedAnExport}
+                                <p class="mt-2">
+                                    An Enterprise Architect XMI export has an
+                                    import of its own, under File ▸ Import ▸
+                                    Model.
+                                </p>
+                            {/if}
                         </div>
                     {/if}
                 </FileDropZone>
@@ -569,40 +542,15 @@
                 {#if files.length > 0}
                     <div class="mt-3 max-h-[55vh] space-y-2 overflow-y-auto">
                         {#each files as fileEntry, index}
-                            <div
-                                class="border-border flex items-center space-x-3 rounded border px-3 py-2"
-                            >
-                                <div class="flex-1">
-                                    <input
-                                        id={`graph-uri-${index}`}
-                                        class="border-border bg-window-background focus:border-blue ring-none w-full rounded border-2 p-2 text-sm outline-none"
-                                        type="text"
-                                        value={fileEntry.isZip
-                                            ? fileEntry.file.name
-                                            : fileEntry.graphUri}
-                                        disabled={fileEntry.isZip}
-                                        oninput={event =>
-                                            updateGraphUri(
-                                                index,
-                                                event.target.value,
-                                            )}
-                                    />
-                                </div>
-                                <div
-                                    class="flex size-10 items-center justify-center p-0"
-                                >
-                                    <ButtonControl
-                                        height={10}
-                                        callOnClick={() => removeFile(index)}
-                                        title="Remove file"
-                                    >
-                                        <Fa
-                                            icon={faMinus}
-                                            ariaLabel="Remove file"
-                                        />
-                                    </ButtonControl>
-                                </div>
-                            </div>
+                            <SelectedFileRow
+                                value={fileEntry.isZip
+                                    ? fileEntry.file.name
+                                    : fileEntry.graphUri}
+                                disabled={fileEntry.isZip}
+                                onValueChange={value =>
+                                    updateGraphUri(index, value)}
+                                onRemove={() => removeFile(index)}
+                            />
                         {/each}
                     </div>
                 {:else}

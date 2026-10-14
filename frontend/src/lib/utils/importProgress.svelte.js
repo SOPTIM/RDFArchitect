@@ -29,6 +29,8 @@ export const FileState = {
     PENDING: "PENDING",
     RUNNING: "RUNNING",
     IMPORTED: "IMPORTED",
+    /** Read and reported on, but not stored. An export is scanned before anything is chosen. */
+    SCANNED: "SCANNED",
     FAILED: "FAILED",
     SKIPPED: "SKIPPED",
 };
@@ -41,6 +43,15 @@ export const JobState = {
     COMPLETED: "COMPLETED",
     CANCELLED: "CANCELLED",
     FAILED: "FAILED",
+};
+
+/**
+ * What a finished job produced, by the discriminator the backend writes. The values are the names
+ * of the generated schemas, which is what the contract says the discriminator carries.
+ */
+export const OutcomeKind = {
+    GRAPHS_IMPORTED: "GraphsImported",
+    PROFILES_SCANNED: "ProfilesScanned",
 };
 
 /** Which phase a job state puts the import in; everything else has it finished. */
@@ -58,6 +69,7 @@ const PHASE_SHARE = { upload: 25, import: 75 };
 
 const FINISHED_STATES = [
     FileState.IMPORTED,
+    FileState.SCANNED,
     FileState.FAILED,
     FileState.SKIPPED,
 ];
@@ -95,6 +107,13 @@ export class ImportProgress {
     failedImports = $state([]);
     /** @type {{fileName: string, undisplayableProperties: string[]}[]} */
     warnings = $state([]);
+    /**
+     * The profiles the uploaded Enterprise Architect exports hold; empty for an import of RDF
+     * files. Nothing of them is stored yet.
+     *
+     * @type {{fileName: string, id: string, name: string, namespaceCandidates: string[]}[]}
+     */
+    profiles = $state([]);
     /**
      * Every prefix of the workspace and of the import, side by side; empty unless the import is
      * waiting for a decision on them.
@@ -186,9 +205,7 @@ export class ImportProgress {
             graphUri: file.graphUri ?? null,
         }));
         this.jobState = status.state ?? JobState.RUNNING;
-        this.importedGraphUris = status.importedGraphUris ?? [];
-        this.failedImports = status.failedImports ?? [];
-        this.warnings = status.warnings ?? [];
+        this.#applyOutcome(status.outcome);
         const reportedComparison = status.prefixComparison ?? [];
         if (
             reportedComparison.length === 0 ||
@@ -200,6 +217,32 @@ export class ImportProgress {
             this.errorMessage =
                 status.errorMessage ?? "The import ended unexpectedly.";
         }
+    }
+
+    /**
+     * Unpacks what the job produced. A job produces one kind of outcome and none until it has
+     * finished, so everything the other kind would have carried is cleared rather than left over
+     * from a job this one replaced.
+     *
+     * @param {{kind: string}|null|undefined} outcome what the job reported
+     */
+    #applyOutcome(outcome) {
+        this.importedGraphUris =
+            outcome?.kind === OutcomeKind.GRAPHS_IMPORTED
+                ? (outcome.graphUris ?? [])
+                : [];
+        this.failedImports =
+            outcome?.kind === OutcomeKind.GRAPHS_IMPORTED
+                ? (outcome.failedFileNames ?? [])
+                : [];
+        this.warnings =
+            outcome?.kind === OutcomeKind.GRAPHS_IMPORTED
+                ? (outcome.warnings ?? [])
+                : [];
+        this.profiles =
+            outcome?.kind === OutcomeKind.PROFILES_SCANNED
+                ? (outcome.profiles ?? [])
+                : [];
     }
 
     uploadProgress(percent) {
@@ -259,6 +302,10 @@ export class ImportProgress {
     }
 
     #finishedText() {
+        if (this.profiles.length > 0) {
+            const found = this.profiles.length;
+            return `Found ${found} profile${found === 1 ? "" : "s"}`;
+        }
         const imported = this.importedGraphUris.length;
         const schemas = `${imported} schema${imported === 1 ? "" : "s"}`;
         if (this.jobState === JobState.FAILED) {

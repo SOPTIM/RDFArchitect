@@ -288,7 +288,7 @@ describe("graphStore", () => {
 
             expect(request.method).toBe("POST");
             expect(request.url).toBe(
-                `/api/datasets/${WORKSPACE_A}/graphs/content/imports` +
+                `/api/datasets/${WORKSPACE_A}/imports` +
                     `?graphUris=${encodeURIComponent(GRAPH_URI)}`,
             );
             expect(request.withCredentials).toBe(true);

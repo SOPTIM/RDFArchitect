@@ -10,13 +10,14 @@ spring:
       - application-schema.yml
   servlet:
     multipart:
-      max-file-size: 50MB
-      max-request-size: 50MB
+      # A full Enterprise Architect model export reaches 100 MB; the rest is headroom.
+      max-file-size: 256MB
+      max-request-size: 256MB
 
 server:
   tomcat:
-    max-http-form-post-size: 50MB
-    max-swallow-size: 50MB
+    max-http-form-post-size: 256MB
+    max-swallow-size: 256MB
     max-part-count: 100
   servlet:
     session:

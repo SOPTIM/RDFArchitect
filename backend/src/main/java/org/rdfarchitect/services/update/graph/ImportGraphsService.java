@@ -71,7 +71,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             String datasetName,
             List<MultipartFile> files,
             List<String> graphUris,
-            ImportProgressListener listener) {
+            GraphImportListener listener) {
         var sources = planSources(files, graphUris);
         listener.planned(
                 sources.stream()
@@ -102,7 +102,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     private PrefixNegotiation negotiatePrefixes(
             String datasetName,
             List<PlannedSource> sources,
-            ImportProgressListener listener,
+            GraphImportListener listener,
             ImportResult result) {
         if (listener.isCancelled()) {
             return PrefixNegotiation.none();
@@ -131,7 +131,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     /** Reports the files the scan could not parse and returns where they sit in the plan. */
     private Set<Integer> failUnreadable(
-            List<ScanResult> scanned, ImportResult result, ImportProgressListener listener) {
+            List<ScanResult> scanned, ImportResult result, GraphImportListener listener) {
         var unreadableIndices = new HashSet<Integer>();
         for (var scanResult : scanned) {
             if (scanResult.scanned().readable()) {
@@ -369,7 +369,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             String datasetName,
             PlannedSource source,
             Set<String> reservedGraphUris,
-            ImportProgressListener listener,
+            GraphImportListener listener,
             PrefixNegotiation negotiation) {
         if (source.unreadableReason() != null) {
             failRemaining(result, source.plannedFiles(), listener, negotiation);
@@ -426,7 +426,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             PlannedFile plannedFile,
             MultipartFile file,
             Set<String> reservedGraphUris,
-            ImportProgressListener listener,
+            GraphImportListener listener,
             ResolvedPrefixes resolved) {
         if (listener.isCancelled()) {
             listener.finished(plannedFile.index(), Outcome.SKIPPED, null);
@@ -464,7 +464,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     private void failRemaining(
             ImportResult result,
             List<PlannedFile> plannedFiles,
-            ImportProgressListener listener,
+            GraphImportListener listener,
             PrefixNegotiation negotiation) {
         for (var plannedFile : plannedFiles) {
             if (negotiation.isUnreadable(plannedFile)) {

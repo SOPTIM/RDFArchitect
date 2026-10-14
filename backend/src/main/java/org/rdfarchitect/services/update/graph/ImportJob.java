@@ -19,33 +19,39 @@ package org.rdfarchitect.services.update.graph;
 
 import lombok.Getter;
 
-import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportResult;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.FileState;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.ImportFileStatus;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.ImportJobStatus;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.JobState;
+import org.rdfarchitect.services.update.graph.ImportOutcome.GraphsImported;
+import org.rdfarchitect.services.update.graph.ImportOutcome.ProfilesScanned;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * The state of one background import. Written by the thread running the import through the {@link
- * ImportProgressListener} it implements and read by the requests polling for progress, so every
- * access is synchronized and {@link #status()} hands out an immutable copy.
+ * GraphImportListener} it implements and read by the requests polling for progress, so every access
+ * is synchronized and {@link #status()} hands out an immutable copy.
+ *
+ * <p>What the job produces is one {@link ImportOutcome}, whichever kind its {@link ImportKind}
+ * calls for. The job itself is the same either way: a plan of files, a progress per file, and the
+ * rules about sessions, cancelling and being given up on.
  */
-class ImportJob implements ImportProgressListener {
+class ImportJob implements GraphImportListener {
 
     @Getter private final UUID id;
     @Getter private final String sessionId;
     @Getter private final String datasetName;
+    private final ImportKind kind;
 
     private JobState state = JobState.RUNNING;
     private final List<FileProgress> files = new ArrayList<>();
-    private List<String> importedGraphUris = List.of();
-    private List<String> failedImports = List.of();
-    private List<ImportGraphsUseCase.ImportWarning> warnings = List.of();
+    private ImportOutcome outcome;
     private String errorMessage;
     private boolean cancelRequested;
     private boolean startedAFile;
@@ -54,15 +60,16 @@ class ImportJob implements ImportProgressListener {
     private ResolvedPrefixes resolvedPrefixes;
     private Instant lastPolledAt;
 
-    ImportJob(UUID id, String sessionId, String datasetName, Instant startedAt) {
+    ImportJob(UUID id, String sessionId, String datasetName, ImportKind kind, Instant startedAt) {
         this.id = id;
         this.sessionId = sessionId;
         this.datasetName = datasetName;
+        this.kind = kind;
         this.lastPolledAt = startedAt;
     }
 
     // -------------------------------------------------------------------------
-    // ImportProgressListener
+    // GraphImportListener
     // -------------------------------------------------------------------------
 
     @Override
@@ -111,6 +118,7 @@ class ImportJob implements ImportProgressListener {
         file.state =
                 switch (outcome) {
                     case IMPORTED -> FileState.IMPORTED;
+                    case SCANNED -> FileState.SCANNED;
                     case FAILED -> FileState.FAILED;
                     case SKIPPED -> FileState.SKIPPED;
                 };
@@ -178,10 +186,8 @@ class ImportJob implements ImportProgressListener {
         return prefixComparison;
     }
 
-    synchronized void complete(ImportResult result) {
-        importedGraphUris = List.copyOf(result.importedGraphUris());
-        failedImports = List.copyOf(result.failedFileNames());
-        warnings = List.copyOf(result.warnings());
+    synchronized void complete(ImportOutcome producedOutcome) {
+        outcome = producedOutcome;
         state = cancelRequested ? JobState.CANCELLED : JobState.COMPLETED;
         finishedAt = Instant.now();
     }
@@ -197,18 +203,24 @@ class ImportJob implements ImportProgressListener {
                 file.state = FileState.SKIPPED;
             }
         }
-        // The result died with the exception, but every file that made it through reported its
-        // outcome, so what the import did manage to write is still recoverable from the progress.
-        importedGraphUris =
-                files.stream()
-                        .filter(file -> file.state == FileState.IMPORTED && file.graphUri != null)
-                        .map(file -> file.graphUri)
-                        .toList();
-        failedImports =
-                files.stream()
-                        .filter(file -> file.state == FileState.FAILED)
-                        .map(file -> file.plannedImport.fileName())
-                        .toList();
+        // The outcome died with the exception, but every file that made it through reported how it
+        // ended, so what the job did manage to do is still recoverable from the progress. A scan
+        // recovers nothing, having stored nothing in the first place.
+        outcome =
+                switch (kind) {
+                    case GRAPH_IMPORT ->
+                            new GraphsImported(
+                                    fileNamesWhere(
+                                            file ->
+                                                    file.state == FileState.IMPORTED
+                                                            && file.graphUri != null,
+                                            file -> file.graphUri),
+                                    fileNamesWhere(
+                                            file -> file.state == FileState.FAILED,
+                                            file -> file.plannedImport.fileName()),
+                                    List.of());
+                    case EXPORT_SCAN -> ProfilesScanned.nothing();
+                };
         errorMessage = message;
         state = JobState.FAILED;
         finishedAt = Instant.now();
@@ -225,11 +237,14 @@ class ImportJob implements ImportProgressListener {
                 datasetName,
                 state,
                 files.stream().map(FileProgress::toStatus).toList(),
-                importedGraphUris,
-                failedImports,
-                warnings,
                 prefixComparison,
+                outcome,
                 errorMessage);
+    }
+
+    private List<String> fileNamesWhere(
+            Predicate<FileProgress> matches, Function<FileProgress, String> name) {
+        return files.stream().filter(matches).map(name).toList();
     }
 
     private FileProgress fileAt(int index) {
