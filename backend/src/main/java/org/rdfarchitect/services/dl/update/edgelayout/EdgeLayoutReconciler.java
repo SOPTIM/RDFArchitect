@@ -51,7 +51,8 @@ public class EdgeLayoutReconciler {
      *       or the association changed or one of the classes left the diagram, are deleted together
      *       with their points and, for associations, the labels anchored to their ends
      *   <li>edge diagram objects whose class labels changed are renamed
-     *   <li>a second diagram object of the same edge is deleted, so every edge keeps one
+     *   <li>a second diagram object of the same edge is deleted with its points, so every edge
+     *       keeps one together with its labels
      * </ul>
      *
      * @param diagramLayoutModel the diagram layout holding the diagram
@@ -66,14 +67,23 @@ public class EdgeLayoutReconciler {
                         .map(classDO -> classDO.getBelongsToIdentifiedObject().getUuid())
                         .collect(Collectors.toSet());
         var missingEdges = new LinkedHashMap<>(edgeResolver.edgesBetween(classUUIDs));
+        var keptEdges = new HashSet<EdgeKey>();
 
         for (var edgeDO :
                 DLObjectFetcher.fetchDiagramEdgeDOs(diagramLayoutModel, new MRID(diagramUUID))) {
             var edge = EdgeKey.of(edgeDO);
+            if (keptEdges.contains(edge)) {
+                DiagramLayoutServiceUtils.deleteEdgeLayoutData(
+                        diagramLayoutModel, edgeDO.getMRID());
+                continue;
+            }
             var name = edge != null ? missingEdges.remove(edge) : null;
             if (name == null) {
                 deleteEdge(diagramLayoutModel, diagramUUID, edgeDO);
-            } else if (!name.equals(edgeDO.getName())) {
+                continue;
+            }
+            keptEdges.add(edge);
+            if (!name.equals(edgeDO.getName())) {
                 DLUpdates.updateDiagramObjectName(diagramLayoutModel, edgeDO, name);
             }
         }

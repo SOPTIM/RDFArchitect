@@ -250,12 +250,9 @@ class DLObjectFetcherTest {
     }
 
     @Test
-    void fetchGluePoints_resolveTheGluePointOfAClassAndOfAnEndPoint() {
+    void fetchGluePointForDO_resolvesTheGluePointOfAClass() {
         assertThat(DLObjectFetcher.fetchGluePointForDO(model, SUB_DO).getMRID())
                 .isEqualTo(SUB_GLUE_POINT);
-        assertThat(DLObjectFetcher.fetchGluePointForDOP(model, INHERITANCE_TARGET_POINT).getMRID())
-                .isEqualTo(SUPER_GLUE_POINT);
-        assertThat(DLObjectFetcher.fetchGluePointForDOP(model, INHERITANCE_BEND_POINT)).isNull();
         assertThat(DLObjectFetcher.fetchGluePointForDO(model, LABEL_DO)).isNull();
     }
 

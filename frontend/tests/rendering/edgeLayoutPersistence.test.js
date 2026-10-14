@@ -354,6 +354,19 @@ describe("EdgeLayoutPersistence", () => {
         expect(updateEdgeLayouts).not.toHaveBeenCalled();
     });
 
+    test("does not save points the diagram moved on its own", async () => {
+        const shown = edge("e", [createEndPoint(0, 0, "source")]);
+        const { state, persistence, show } = persistenceFor([shown]);
+        const docked = withPoints(shown, [createEndPoint(0, 5, "source")]);
+
+        state.edges = [docked];
+        persistence.acceptWithoutSaving(state.edges);
+        show(state.edges);
+        await settle();
+
+        expect(updateEdgeLayouts).not.toHaveBeenCalled();
+    });
+
     test("does not save a point while it is dragged", async () => {
         const shown = edge("e", [], true);
         const { persistence, show } = persistenceFor([shown]);

@@ -228,6 +228,23 @@ export class EdgeLayoutPersistence {
         );
     }
 
+    /**
+     * Takes the points of the given edges as saved without sending them, for points the diagram
+     * moved on its own, e.g. end points kept on the border of a resized class. Saving them would
+     * clear the redo stack of the backend, e.g. right after an undo. They are sent with the next
+     * change of their edge. Edges with unsaved changes are left to be saved as usual.
+     */
+    acceptWithoutSaving(edges) {
+        for (const edge of edges) {
+            if (
+                this.#savedPoints.has(edge.id) &&
+                !this.#unsavedEdges.has(edge.id)
+            ) {
+                this.#savedPoints.set(edge.id, edge.data?.bendPoints);
+            }
+        }
+    }
+
     /** Holds the edges back until the dragged classes are saved with {@link saveDiagramLayout}. */
     beginNodeDrag() {
         this.#nodeDragActive = true;
@@ -466,9 +483,12 @@ export class EdgeLayoutPersistence {
                 }
                 this.#acceptStoredIds(data);
             })
-            .catch(error =>
-                console.error("Saving the edge layout failed:", error),
-            )
+            .catch(error => {
+                for (const edgeId of edgeIds) {
+                    this.#persistedPoints.delete(edgeId);
+                }
+                console.error("Saving the edge layout failed:", error);
+            })
             .finally(() => {
                 for (const edgeId of edgeIds) {
                     if (this.#pendingRequests.get(edgeId) === request) {
