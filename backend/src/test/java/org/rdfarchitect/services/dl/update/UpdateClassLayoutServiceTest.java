@@ -258,11 +258,10 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         addGraphFromFile("package_and_class.ttl");
         initialiseDiagramLayout();
         var doMRID = assertDiagramObject(CLASS_A_UUID, PACKAGE_A_UUID, CLASS_A_LABEL);
-        withLayoutModel(
-                graphIdentifier,
-                model ->
-                        DLUpdates.deleteDiagramObjectPoint(
-                                model, DLObjectFetcher.fetchDOPForDO(model, doMRID).getMRID()));
+        var diagramLayoutModel = diagramLayout.getDiagramLayoutModelDirect();
+        DLUpdates.deleteDiagramObjectPoint(
+                diagramLayoutModel,
+                DiagramLayoutServiceUtils.classPointOf(diagramLayoutModel, doMRID).getMRID());
         assertDiagramObjectPointDoesNotExist(doMRID);
 
         var packageDTO =

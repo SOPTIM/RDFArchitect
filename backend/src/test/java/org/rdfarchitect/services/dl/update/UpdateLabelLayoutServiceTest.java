@@ -104,7 +104,7 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
                         PACKAGE_A_UUID,
                         new LabelKey(ASSOCIATION_END_UUID, DiagramObjectStyle.MULTIPLICITY));
         assertThat(labelDO).isNotNull();
-        assertThat(DLObjectFetcher.fetchDOPForDO(model(), labelDO.getMRID())).isNotNull();
+        assertThat(DLObjectFetcher.fetchDOPsForDO(model(), labelDO.getMRID())).isNotEmpty();
 
         var labelResource = model().getResource(labelDO.getMRID().getFullMRID());
         assertThat(labelResource.hasProperty(RDF.type, DL.diagramObjectType)).isTrue();

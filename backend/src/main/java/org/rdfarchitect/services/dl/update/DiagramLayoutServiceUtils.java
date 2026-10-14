@@ -176,6 +176,19 @@ public class DiagramLayoutServiceUtils {
     }
 
     /**
+     * The point of a class diagram object. A class is placed by a single point, unlike an edge,
+     * whose diagram object owns the chain of its bend and end points.
+     *
+     * @param diagramLayoutModel the model holding the class diagram object
+     * @param classDoMRID the mRID of the class diagram object
+     * @return the point of the class, or null if it has none
+     */
+    public DiagramObjectPoint classPointOf(Model diagramLayoutModel, MRID classDoMRID) {
+        var points = DLObjectFetcher.fetchDOPsForDO(diagramLayoutModel, classDoMRID);
+        return points.isEmpty() ? null : points.getFirst();
+    }
+
+    /**
      * Resolves the glue point of a class diagram object, the point end points of edges are glued
      * to. A class point without glue point, created before glue points existed, gets one.
      *
@@ -184,7 +197,7 @@ public class DiagramLayoutServiceUtils {
      * @return the mRID of the glue point, or null if the class diagram object has no point
      */
     public MRID resolveClassGluePoint(Model diagramLayoutModel, MRID classDoMRID) {
-        var classPoint = DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, classDoMRID);
+        var classPoint = classPointOf(diagramLayoutModel, classDoMRID);
         if (classPoint == null) {
             return null;
         }
