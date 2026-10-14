@@ -113,7 +113,7 @@ public class CopyClassService implements CopyClassUseCase {
                     sources.size());
             return List.of();
         }
-        var references = resolveSelectedReferences(resolvedSources, options);
+        var references = resolveSelectedReferences(resolvedSources, options, targetGraphIdentifier);
         var referencedClasses = readReferencedClasses(references, snapshots);
 
         var cimPackage = options.targetPackage();
@@ -180,12 +180,17 @@ public class CopyClassService implements CopyClassUseCase {
     }
 
     private List<CopyClassReference> resolveSelectedReferences(
-            List<ResolvedSource> sources, CopyClassOptions options) {
+            List<ResolvedSource> sources,
+            CopyClassOptions options,
+            GraphIdentifier targetGraphIdentifier) {
 
         if (options.referencesToCopy().isEmpty()) {
             return List.of();
         }
-        var selected = referenceResolver.resolve(sources).stream().filter(options::copies).toList();
+        var selected =
+                referenceResolver.resolve(sources, targetGraphIdentifier).stream()
+                        .filter(options::copies)
+                        .toList();
         return Stream.concat(
                         selected.stream(), referenceResolver.resolveDataTypesOf(selected).stream())
                 .toList();
@@ -244,9 +249,6 @@ public class CopyClassService implements CopyClassUseCase {
             Graph targetGraph,
             PrefixMapping prefixMapping) {
 
-        var copiedUris =
-                references.stream().map(CopyClassReference::uri).collect(Collectors.toSet());
-
         var messages = new ArrayList<String>();
         for (var reference : references) {
             var sourceClass = referencedClasses.get(reference.uri());
@@ -257,8 +259,7 @@ public class CopyClassService implements CopyClassUseCase {
                             options,
                             cimPackage,
                             targetGraph,
-                            prefixMapping,
-                            copiedUris)) {
+                            prefixMapping)) {
                 messages.add(buildReferenceMessage(reference, options));
             }
         }
@@ -271,8 +272,7 @@ public class CopyClassService implements CopyClassUseCase {
             CopyClassOptions options,
             ICIMClassCategory cimPackage,
             Graph targetGraph,
-            PrefixMapping prefixMapping,
-            Set<URI> copiedUris) {
+            PrefixMapping prefixMapping) {
 
         if (CIMResourceUtils.containsClass(targetGraph, sourceClass.getUri())) {
             return false;
@@ -284,7 +284,7 @@ public class CopyClassService implements CopyClassUseCase {
                         sourceClass.getUri(),
                         sourceClass.getLabel(),
                         sourceClass.getStereotypes(),
-                        resolvableSuperClass(sourceClass, targetGraph, copiedUris),
+                        options.copyInheritance() ? superClassOf(sourceClass) : null,
                         cimPackage);
         if (options.copiesMembersOf(reference)) {
             copyMembers(sourceClass, newCimClass);
@@ -293,19 +293,6 @@ public class CopyClassService implements CopyClassUseCase {
         CIMUpdates.insertUMLAdaptedClass(
                 targetGraph, prefixMapping, newCimClass, newValuesAsBlankNode);
         return true;
-    }
-
-    private RDFSSubClassOf resolvableSuperClass(
-            ICIMClass sourceClass, Graph targetGraph, Set<URI> copiedUris) {
-        var superClass = superClassOf(sourceClass);
-        if (superClass == null) {
-            return null;
-        }
-        if (copiedUris.contains(superClass.getUri())
-                || CIMResourceUtils.containsClass(targetGraph, superClass.getUri())) {
-            return superClass;
-        }
-        return null;
     }
 
     private RDFSSubClassOf superClassOf(ICIMClass sourceClass) {

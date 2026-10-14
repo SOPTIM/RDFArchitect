@@ -83,6 +83,7 @@ class CopyClassServiceTest {
     private static final String OTHER_DATA_TYPE_URI = PREFIX + "OtherDataType";
     private static final String ASSOCIATION_TARGET_URI = PREFIX + "associatedClass";
     private static final String SUPER_CLASS_URI = PREFIX + "BaseClass";
+    private static final String ROOT_CLASS_URI = PREFIX + "RootClass";
     private static final String VALUE_TYPE_URI = PREFIX + "ValueType";
     private static final String DEEP_TYPE_URI = PREFIX + "DeepType";
 
@@ -249,6 +250,43 @@ class CopyClassServiceTest {
                                             CIMS.stereotype.asNode(),
                                             CIMStereotypes.concrete.asNode()))
                     .isFalse();
+        }
+    }
+
+    @Test
+    void copyClass_selectedInheritanceChain_copiesEveryAncestorAsStub() {
+        setUpReferenceGraphs();
+
+        var request = referenceRequest(SUPER_CLASS_URI, ROOT_CLASS_URI);
+
+        copyClassService.copyClasses(request, targetGraphIdentifier);
+
+        try (var ctx =
+                databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.READ)) {
+            var graph = ctx.getRdfGraph();
+            assertThat(containsClass(graph, SUPER_CLASS_URI)).isTrue();
+            assertThat(containsClass(graph, ROOT_CLASS_URI)).isTrue();
+            assertThat(superClassOf(graph, PREFIX + "oldLabel"))
+                    .isEqualTo(NodeFactory.createURI(SUPER_CLASS_URI));
+            assertThat(superClassOf(graph, SUPER_CLASS_URI))
+                    .isEqualTo(NodeFactory.createURI(ROOT_CLASS_URI));
+        }
+    }
+
+    @Test
+    void copyClass_ancestorLeftBehind_keepsItAsAReferenceOfTheCopiedStub() {
+        setUpReferenceGraphs();
+
+        var request = referenceRequest(SUPER_CLASS_URI);
+
+        copyClassService.copyClasses(request, targetGraphIdentifier);
+
+        try (var ctx =
+                databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.READ)) {
+            var graph = ctx.getRdfGraph();
+            assertThat(containsClass(graph, ROOT_CLASS_URI)).isFalse();
+            assertThat(superClassOf(graph, SUPER_CLASS_URI))
+                    .isEqualTo(NodeFactory.createURI(ROOT_CLASS_URI));
         }
     }
 
@@ -856,6 +894,13 @@ class CopyClassServiceTest {
             ctx.getRdfGraph().remove(NodeFactory.createURI(subjectUri), predicate, object);
             ctx.commit("Removed a triple for the test.");
         }
+    }
+
+    private Node superClassOf(Graph graph, String classUri) {
+        var superClasses =
+                graph.find(NodeFactory.createURI(classUri), RDFS.subClassOf.asNode(), Node.ANY)
+                        .toList();
+        return superClasses.isEmpty() ? null : superClasses.getFirst().getObject();
     }
 
     private boolean containsClass(Graph graph, String classUri) {
