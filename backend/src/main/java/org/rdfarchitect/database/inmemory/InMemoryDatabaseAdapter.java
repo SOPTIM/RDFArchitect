@@ -104,6 +104,11 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
+    public void createWorkspaceIfAbsent(String workspaceName) {
+        database.createWorkspaceIfAbsent(workspaceName);
+    }
+
+    @Override
     public void deleteDataset(String datasetName) {
         database.deleteDataset(datasetName);
     }

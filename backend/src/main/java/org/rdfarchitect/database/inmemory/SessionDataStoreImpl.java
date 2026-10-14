@@ -61,16 +61,18 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public void createDataset(String datasetName) {
+        createDatasetIfAbsent(datasetName);
+    }
+
+    @Override
+    public boolean createDatasetIfAbsent(String datasetName) {
         lock.lock();
         try {
-            createDatasetIfAbsent(datasetName);
+            return graphCollections.putIfAbsent(datasetName, new GraphWithContextCollection())
+                    == null;
         } finally {
             lock.unlock();
         }
-    }
-
-    private void createDatasetIfAbsent(String datasetName) {
-        graphCollections.putIfAbsent(datasetName, new GraphWithContextCollection());
     }
 
     @Override

@@ -135,6 +135,14 @@ public interface DatabasePort {
     void createDataset(String datasetName);
 
     /**
+     * Creates the workspace unless it already exists. For uploads that address a workspace by name
+     * and are expected to bring it into existence; everything else must create it explicitly.
+     *
+     * @param workspaceName the literal workspace name
+     */
+    void createWorkspaceIfAbsent(String workspaceName);
+
+    /**
      * Removes the dataset identified by {@code datasetName} and clears all graphs that belong to
      * it.
      *

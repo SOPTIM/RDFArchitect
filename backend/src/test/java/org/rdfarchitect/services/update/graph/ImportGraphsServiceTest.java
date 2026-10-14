@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
@@ -101,6 +102,51 @@ class ImportGraphsServiceTest {
         assertThat(captor.getAllValues())
                 .extracting(GraphIdentifier::graphUri)
                 .containsExactly(RDFA.GRAPH_URI + "graph", RDFA.GRAPH_URI + "graph_1");
+    }
+
+    @Test
+    void importGraphs_workspaceDoesNotExistYet_hasItCreatedBeforeTheFirstGraphIsWritten() {
+        var datasetName = "ds";
+
+        var file =
+                new MockMultipartFile(
+                        "graph",
+                        "graph.ttl",
+                        "text/turtle",
+                        "@prefix ex: <http://example.com/> . ex:a ex:b ex:c ."
+                                .getBytes(StandardCharsets.UTF_8));
+
+        when(databasePortMock.listGraphUris(datasetName))
+                .thenThrow(new RuntimeException("dataset does not exist"));
+
+        importGraphsUseCase.importGraphs(
+                datasetName, List.of(file), null, ImportProgressListener.NOOP);
+
+        var inOrder = inOrder(databasePortMock);
+        inOrder.verify(databasePortMock).createWorkspaceIfAbsent(datasetName);
+        inOrder.verify(databasePortMock).createGraph(any(GraphIdentifier.class), any(Graph.class));
+    }
+
+    @Test
+    void importGraphs_nothingCouldBeRead_leavesNoWorkspaceBehind() {
+        var datasetName = "ds";
+
+        var file =
+                new MockMultipartFile(
+                        "graph",
+                        "graph.ttl",
+                        "text/turtle",
+                        "this is not turtle at all".getBytes(StandardCharsets.UTF_8));
+
+        when(databasePortMock.listGraphUris(datasetName))
+                .thenThrow(new RuntimeException("dataset does not exist"));
+
+        var result =
+                importGraphsUseCase.importGraphs(
+                        datasetName, List.of(file), null, ImportProgressListener.NOOP);
+
+        assertThat(result.importedGraphUris()).isEmpty();
+        verify(databasePortMock, never()).createWorkspaceIfAbsent(datasetName);
     }
 
     @Test

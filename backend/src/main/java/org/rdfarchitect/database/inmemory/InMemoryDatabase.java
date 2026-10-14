@@ -42,6 +42,14 @@ public interface InMemoryDatabase {
     void createDataset(String datasetName);
 
     /**
+     * Creates the workspace unless it already exists, readying a new one for editing just like
+     * {@link #createDataset(String)} does.
+     *
+     * @param workspaceName The name of the workspace to be created.
+     */
+    void createWorkspaceIfAbsent(String workspaceName);
+
+    /**
      * Deletes a complete Dataset with all containing graphs. Waits for ongoing transactions on
      * individual graphs before deleting.
      *
