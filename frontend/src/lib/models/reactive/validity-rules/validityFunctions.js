@@ -454,19 +454,28 @@ export function hasNoSpaces(text) {
  * @returns {string[]} the violations
  */
 export function isInvalidCornerRoundingFactor(value) {
-    const violations = [];
+    return isInvalidRangeValue(value, 0, 100);
+}
+
+/**
+ * Checks a value typed into a slider or another input for a number within bounds.
+ *
+ * @param value the typed value, a number or its text
+ * @param {number} min the lower bound
+ * @param {number} max the upper bound
+ * @returns {string[]} the violations, empty if the value is valid
+ */
+export function isInvalidRangeValue(value, min, max) {
     const raw = typeof value === "number" ? String(value) : (value ?? "");
     if (raw.trim() === "") {
-        violations.push("must not be empty");
-        return violations;
+        return ["must not be empty"];
     }
     const parsed = Number(raw);
     if (Number.isNaN(parsed)) {
-        violations.push("must be a number");
-        return violations;
+        return ["must be a number"];
     }
-    if (parsed < 0 || parsed > 100) {
-        violations.push("must be between 0 and 100");
+    if (parsed < min || parsed > max) {
+        return [`must be between ${min} and ${max}`];
     }
-    return violations;
+    return [];
 }

@@ -1384,7 +1384,6 @@
         nodeCount={classNodes.length}
         onClose={() => contextMenus.close()}
         onOpenClass={openClassFromMenu}
-        onMoveClass={e => nodeOrderCtrl.moveClass(e)}
         onSetLayer={e => nodeOrderCtrl.setLayer(e)}
         onPersistLayer={e => nodeOrderCtrl.persistLayer(e)}
     />
