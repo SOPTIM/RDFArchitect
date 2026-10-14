@@ -97,7 +97,6 @@
     import {
         DIAGRAM_SELECTION_CONTEXT,
         DiagramSelectionController,
-        editedEdge,
     } from "./interaction/diagramSelection.svelte.js";
     import {
         associationEditTarget,
@@ -301,7 +300,6 @@
     $effect(() => {
         const currentEdges = edges;
         const editedEdgeId = onlySelectedEdgeId(currentEdges);
-        untrack(() => editedEdge.set(editedEdgeId));
         const next = elevateEdges(
             currentEdges,
             edge =>
