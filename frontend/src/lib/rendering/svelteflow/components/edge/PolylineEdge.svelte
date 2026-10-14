@@ -24,7 +24,6 @@
         getTargetEndPoint,
         dissolveCollinearBendPoints,
     } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
-    import { editedEdge } from "$lib/rendering/svelteflow/interaction/diagramSelection.svelte.js";
     import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
     import { labelHighlight } from "$lib/rendering/svelteflow/interaction/labelHighlight.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
@@ -67,8 +66,16 @@
     /** Whether the edge should swell: on selection, or while one of its labels is held. */
     let highlighted = $derived(selected || held);
 
-    /** Whether the bend point handles are shown: only on the one selected edge, see {@link editedEdge}. */
-    let edited = $derived(selected && editedEdge.id === id);
+    /**
+     * Whether the bend point handles are shown: only on an edge that is selected alone. With several
+     * edges selected, e.g. after a box selection over a large diagram, no edge shows them, so they
+     * are not mounted and moved for hundreds of edges at once. Only a selected edge looks for a
+     * second selected one and stops at the first it finds.
+     */
+    let edited = $derived(
+        selected &&
+            !edges.current.some(edge => edge.selected && edge.id !== id),
+    );
 
     let useRoundedCorners = $derived(
         userSettings.get("useRoundedEdges", false),

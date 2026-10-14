@@ -15,16 +15,14 @@
   -
   -->
 
-<!--TODO DIE INHERITANCE PFEILSPITZE SPITZER MACHEN! gleiches problem wie bei der assoc edge früher, die ist vorne iwie stumpf. fix das svg da iwie-->
-
 <svg class="pointer-events-none absolute h-0 w-0 overflow-hidden">
     <defs>
         <marker
             id="inheritance"
-            viewBox="0 0 20 12"
-            refX="20"
+            viewBox="-1 -1 23 14"
+            refX="19.2"
             refY="6"
-            markerWidth="14"
+            markerWidth="16.1"
             markerHeight="12"
             orient="auto"
         >
