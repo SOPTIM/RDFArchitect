@@ -17,18 +17,17 @@
 
 import { type InternalNode } from "@xyflow/svelte";
 
-//TODO REFACTOR: WICHTIG: AM ENDE HIER AUFRÄUMEN! einmal über alle funktionen gehen, zusammenfassen, aufräumen
-
-export interface InactiveBendPoint {
+export interface Point {
     x: number;
     y: number;
+}
+
+export interface InactiveBendPoint extends Point {
     /** Index in the bendPoints array where this point would be inserted when activated. */
     insertionIndex: number;
 }
 
-export interface Rect {
-    x: number;
-    y: number;
+export interface Rect extends Point {
     width: number;
     height: number;
 }
@@ -38,6 +37,7 @@ export interface Rect {
  * mapped onto this maximum corner radius in pixels (flow units).
  */
 const MAX_CORNER_RADIUS_PX = 30;
+
 /**
  * Caps how far the rounding may reach relative to the radius itself, as a
  * multiple of the radius. Without this, a very sharp corner would need a
@@ -49,101 +49,54 @@ const MAX_CORNER_RADIUS_PX = 30;
  */
 const MAX_TANGENT_TO_RADIUS_RATIO = 3;
 
-/**
- * Calculates the intersection point between a line (from the target to the node center)
- * and the border of the intersection node. Used to determine edge start and end points.
- * This and the following methods are adapted from the SvelteFlow "Easy Connect" example.
- * See: https://svelteflow.dev/examples/nodes/easy-connect
- */
-function getNodeIntersection(
-    intersectionNode: InternalNode,
-    targetNode: InternalNode,
-    offsetY: number = 0,
-) {
-    const intersectionPos = intersectionNode.internals?.positionAbsolute ??
-        intersectionNode.position ?? { x: 0, y: 0 };
-    const targetPos = targetNode.internals?.positionAbsolute ??
-        targetNode.position ?? { x: 0, y: 0 };
+/** How far an end label is pushed along its segment, away from the class. */
+const LABEL_ALONG_EDGE_DISTANCE = 20;
 
-    const w = (intersectionNode.measured.width ?? 0) / 2;
-    const h = (intersectionNode.measured.height ?? 0) / 2;
-
-    const x2 = intersectionPos.x + w;
-    const y2 = intersectionPos.y + h;
-    const x1 = targetPos.x + (targetNode.measured.width ?? 0) / 2;
-    const y1 = targetPos.y + (targetNode.measured.height ?? 0) / 2 + offsetY;
-
-    const xx1 = (x1 - x2) / (2 * w) - (y1 - y2) / (2 * h);
-    const yy1 = (x1 - x2) / (2 * w) + (y1 - y2) / (2 * h);
-
-    const denominator = Math.abs(xx1) + Math.abs(yy1);
-    if (denominator === 0) {
-        // Both node centres coincide, so there is no unique border intersection.
-        // Fall back to the shared centre, which is what the edge visibly collapses to.
-        return { x: x2, y: y2 };
-    }
-    const a = 1 / denominator;
-    const xx3 = a * xx1;
-    const yy3 = a * yy1;
-
-    return {
-        x: w * (xx3 + yy3) + x2,
-        y: h * (-xx3 + yy3) + y2,
-    };
-}
+/** How far an end label is pushed perpendicular to its segment, next to the line. */
+const LABEL_PERPENDICULAR_DISTANCE = 14;
 
 /**
- * Returns all parameters needed to render an edge and its labels.
- * Contains the start/end points of the edge as well as the calculated label positions.
+ * Returns all parameters needed to render an edge and its labels: the start and
+ * end point of the edge, the points where it crosses the class borders, and the
+ * offsets of the labels at both ends.
  *
  * When bend points are provided, the source endpoint aims at the first bend point
  * and the target endpoint aims at the last bend point, so the edge docks correctly
  * on the node borders facing its actual routing instead of the opposite node.
+ * Active end points override the automatic border intersection of their side; the
+ * border points stay available for snapping them back.
  */
 export function getEdgeParams(
     source: InternalNode,
     target: InternalNode,
-    offsetY: number = 0,
-    bendPoints: { x: number; y: number }[] = [],
+    bendPoints: Point[] = [],
     activeEndPoints: {
-        source?: { x: number; y: number } | null;
-        target?: { x: number; y: number } | null;
+        source?: Point | null;
+        target?: Point | null;
     } = {},
 ) {
-    const sourceAim =
-        bendPoints.length > 0 ? makePointNode(bendPoints[0]) : target;
-    const targetAim =
-        bendPoints.length > 0
-            ? makePointNode(bendPoints[bendPoints.length - 1])
-            : source;
+    const firstBendPoint = bendPoints[0];
+    const lastBendPoint = bendPoints[bendPoints.length - 1];
 
-    const sourceIntersection = getNodeIntersection(source, sourceAim);
-    const targetIntersection = getNodeIntersection(target, targetAim, offsetY);
+    const sourceIntersection = getNodeIntersection(
+        source,
+        firstBendPoint ? makePointNode(firstBendPoint) : target,
+    );
+    const targetIntersection = getNodeIntersection(
+        target,
+        lastBendPoint ? makePointNode(lastBendPoint) : source,
+    );
 
-    // Active end points override the automatic border intersection for that side.
     const sourcePoint = activeEndPoints.source ?? sourceIntersection;
     const targetPoint = activeEndPoints.target ?? targetIntersection;
 
-    const startAim =
-        bendPoints.length > 0
-            ? bendPoints[0]
-            : { x: targetPoint.x, y: targetPoint.y };
-    const endAim =
-        bendPoints.length > 0
-            ? bendPoints[bendPoints.length - 1]
-            : { x: sourcePoint.x, y: sourcePoint.y };
-
     const startOffset = getSingleLabelOffset(
-        sourcePoint.x,
-        sourcePoint.y,
-        startAim.x,
-        startAim.y,
+        sourcePoint,
+        firstBendPoint ?? targetPoint,
     );
     const endOffset = getSingleLabelOffset(
-        targetPoint.x,
-        targetPoint.y,
-        endAim.x,
-        endAim.y,
+        targetPoint,
+        lastBendPoint ?? sourcePoint,
     );
 
     return {
@@ -163,11 +116,53 @@ export function getEdgeParams(
 }
 
 /**
+ * Calculates the intersection point between a line (from the target to the node center)
+ * and the border of the intersection node. Used to determine edge start and end points.
+ * If both node centres coincide, there is no unique border intersection and the shared
+ * centre is returned, which is what the edge visibly collapses to.
+ * Adapted from the SvelteFlow "Easy Connect" example.
+ * See: https://svelteflow.dev/examples/nodes/easy-connect
+ */
+function getNodeIntersection(
+    intersectionNode: InternalNode,
+    targetNode: InternalNode,
+): Point {
+    const intersectionPos = intersectionNode.internals?.positionAbsolute ??
+        intersectionNode.position ?? { x: 0, y: 0 };
+    const targetPos = targetNode.internals?.positionAbsolute ??
+        targetNode.position ?? { x: 0, y: 0 };
+
+    const w = (intersectionNode.measured.width ?? 0) / 2;
+    const h = (intersectionNode.measured.height ?? 0) / 2;
+
+    const x2 = intersectionPos.x + w;
+    const y2 = intersectionPos.y + h;
+    const x1 = targetPos.x + (targetNode.measured.width ?? 0) / 2;
+    const y1 = targetPos.y + (targetNode.measured.height ?? 0) / 2;
+
+    const xx1 = (x1 - x2) / (2 * w) - (y1 - y2) / (2 * h);
+    const yy1 = (x1 - x2) / (2 * w) + (y1 - y2) / (2 * h);
+
+    const denominator = Math.abs(xx1) + Math.abs(yy1);
+    if (denominator === 0) {
+        return { x: x2, y: y2 };
+    }
+    const a = 1 / denominator;
+    const xx3 = a * xx1;
+    const yy3 = a * yy1;
+
+    return {
+        x: w * (xx3 + yy3) + x2,
+        y: h * (-xx3 + yy3) + y2,
+    };
+}
+
+/**
  * Wraps a plain point as a minimal InternalNode-like object so it can be used
  * as an "aim" target in getNodeIntersection. The point acts as a zero-size node
  * centered exactly on the given coordinates.
  */
-function makePointNode(point: { x: number; y: number }): InternalNode {
+function makePointNode(point: Point): InternalNode {
     return {
         internals: { positionAbsolute: { x: point.x, y: point.y } },
         measured: { width: 0, height: 0 },
@@ -175,131 +170,13 @@ function makePointNode(point: { x: number; y: number }): InternalNode {
 }
 
 /**
- * Builds a direct (diagonal) polyline SVG path through the given ordered points.
- * The points array must already include the source endpoint first and the
- * target endpoint last, with any bend points in between.
- */
-export function getPolylinePath(points: { x: number; y: number }[]): string {
-    if (points.length < 2) return "";
-    const [start, ...rest] = points;
-    const segments = rest.map(p => `L ${p.x} ${p.y}`).join(" ");
-    return `M ${start.x} ${start.y} ${segments}`;
-}
-
-/**
- * Computes the midpoint of every segment in the given ordered point list.
- * These are the inactive bend points shown as insertion hints on a selected edge.
- * `points` must include source first and target last. Since corner rounding keeps
- * the segments straight, the plain segment midpoint always lies on the drawn line.
- */
-export function getInactiveBendPoints(
-    points: { x: number; y: number }[],
-): InactiveBendPoint[] {
-    const inactiveBendPoints: InactiveBendPoint[] = [];
-    for (let i = 0; i < points.length - 1; i++) {
-        inactiveBendPoints.push({
-            x: (points[i].x + points[i + 1].x) / 2,
-            y: (points[i].y + points[i + 1].y) / 2,
-            insertionIndex: i,
-        });
-    }
-    return inactiveBendPoints;
-}
-
-/**
- * Finds the index in the bend points array at which a new point should be
- * inserted so that it lands on the segment closest to the given position.
- *
- * `orderedPoints` must be the full ordered list [source, ...bendPoints, target].
- * The returned index is relative to the bendPoints array (source excluded),
- * i.e. inserting at that index in bendPoints places the new point on the
- * closest segment.
- */
-export function getClosestSegmentInsertionIndex(
-    orderedPoints: { x: number; y: number }[],
-    position: { x: number; y: number },
-): number {
-    let bestIndex = 0;
-    let bestDistance = Infinity;
-
-    for (let i = 0; i < orderedPoints.length - 1; i++) {
-        const distance = distanceToSegment(
-            position,
-            orderedPoints[i],
-            orderedPoints[i + 1],
-        );
-        if (distance < bestDistance) {
-            bestDistance = distance;
-            bestIndex = i;
-        }
-    }
-
-    return bestIndex;
-}
-
-/**
- * Returns the shortest distance from a point to a line segment.
- */
-export function distanceToSegment(
-    point: { x: number; y: number },
-    segmentStart: { x: number; y: number },
-    segmentEnd: { x: number; y: number },
-): number {
-    const dx = segmentEnd.x - segmentStart.x;
-    const dy = segmentEnd.y - segmentStart.y;
-    const lengthSquared = dx * dx + dy * dy;
-
-    if (lengthSquared === 0) {
-        return Math.hypot(point.x - segmentStart.x, point.y - segmentStart.y);
-    }
-
-    let t =
-        ((point.x - segmentStart.x) * dx + (point.y - segmentStart.y) * dy) /
-        lengthSquared;
-    t = Math.max(0, Math.min(1, t));
-
-    const projX = segmentStart.x + t * dx;
-    const projY = segmentStart.y + t * dy;
-    return Math.hypot(point.x - projX, point.y - projY);
-}
-
-/**
- * Returns the shortest distance from a point to a polyline described by the given
- * ordered points. The polyline must contain at least two points. Used to find the
- * edge closest to the cursor for the on-cursor bend point hotkey.
- */
-export function distanceToPolyline(
-    point: { x: number; y: number },
-    orderedPoints: { x: number; y: number }[],
-): number {
-    let shortestDistance = Infinity;
-    for (let i = 0; i < orderedPoints.length - 1; i++) {
-        const distance = distanceToSegment(
-            point,
-            orderedPoints[i],
-            orderedPoints[i + 1],
-        );
-        shortestDistance = Math.min(shortestDistance, distance);
-    }
-    return shortestDistance;
-}
-
-/**
  * Calculates the offset for a single label based on the direction of the
  * segment it belongs to. The label is pushed a bit along the segment (away
  * from the node) and a bit perpendicular to it, so it sits next to the line.
  */
-function getSingleLabelOffset(
-    fromX: number,
-    fromY: number,
-    towardX: number,
-    towardY: number,
-) {
-    const ALONG_EDGE_DISTANCE = 20;
-    const PERPENDICULAR_DISTANCE = 14;
-
-    const dx = towardX - fromX;
-    const dy = towardY - fromY;
+function getSingleLabelOffset(from: Point, toward: Point): Point {
+    const dx = toward.x - from.x;
+    const dy = toward.y - from.y;
     const length = Math.hypot(dx, dy) || 1;
 
     const normDx = dx / length;
@@ -313,15 +190,26 @@ function getSingleLabelOffset(
         normalizedAngle >= 270;
     const side = labelOnLeft ? 1 : -1;
 
-    const alongX = normDx * ALONG_EDGE_DISTANCE;
-    const alongY = normDy * ALONG_EDGE_DISTANCE;
-    const perpX = -normDy * PERPENDICULAR_DISTANCE * side;
-    const perpY = normDx * PERPENDICULAR_DISTANCE * side;
-
     return {
-        x: alongX + perpX,
-        y: alongY + perpY,
+        x:
+            normDx * LABEL_ALONG_EDGE_DISTANCE -
+            normDy * LABEL_PERPENDICULAR_DISTANCE * side,
+        y:
+            normDy * LABEL_ALONG_EDGE_DISTANCE +
+            normDx * LABEL_PERPENDICULAR_DISTANCE * side,
     };
+}
+
+/**
+ * Builds a direct (diagonal) polyline SVG path through the given ordered points.
+ * The points array must already include the source endpoint first and the
+ * target endpoint last, with any bend points in between.
+ */
+export function getPolylinePath(points: Point[]): string {
+    if (points.length < 2) return "";
+    const [start, ...rest] = points;
+    const segments = rest.map(p => `L ${p.x} ${p.y}`).join(" ");
+    return `M ${start.x} ${start.y} ${segments}`;
 }
 
 /**
@@ -336,13 +224,10 @@ function getSingleLabelOffset(
  * because even minor factors already produce a strong visual rounding.
  */
 export function getRoundedCornerPolylinePath(
-    points: { x: number; y: number }[],
+    points: Point[],
     roundingPercent: number = 50,
 ): string {
-    if (points.length < 2) return "";
-    if (points.length === 2) {
-        return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
-    }
+    if (points.length < 3) return getPolylinePath(points);
 
     const clampedPercent = Math.max(0, Math.min(100, roundingPercent));
     const radius = (clampedPercent / 100) * MAX_CORNER_RADIUS_PX;
@@ -382,9 +267,9 @@ export function getRoundedCornerPolylinePath(
  * keeps neighboring corners' fillets from overlapping.
  */
 function cornerTangentLength(
-    previous: { x: number; y: number },
-    corner: { x: number; y: number },
-    next: { x: number; y: number },
+    previous: Point,
+    corner: Point,
+    next: Point,
     radius: number,
 ): number {
     if (radius <= 0) return 0;
@@ -415,11 +300,7 @@ function cornerTangentLength(
  * Returns the point that lies `distance` pixels away from `from` in the
  * direction of `to`.
  */
-function pointTowards(
-    from: { x: number; y: number },
-    to: { x: number; y: number },
-    distance: number,
-): { x: number; y: number } {
+function pointTowards(from: Point, to: Point, distance: number): Point {
     const dx = to.x - from.x;
     const dy = to.y - from.y;
     const length = Math.hypot(dx, dy) || 1;
@@ -430,14 +311,110 @@ function pointTowards(
 }
 
 /**
+ * Computes the midpoint of every segment in the given ordered point list.
+ * These are the inactive bend points shown as insertion hints on a selected edge.
+ * `points` must include source first and target last. Since corner rounding keeps
+ * the segments straight, the plain segment midpoint always lies on the drawn line.
+ */
+export function getInactiveBendPoints(points: Point[]): InactiveBendPoint[] {
+    const inactiveBendPoints: InactiveBendPoint[] = [];
+    for (let i = 0; i < points.length - 1; i++) {
+        inactiveBendPoints.push({
+            x: (points[i].x + points[i + 1].x) / 2,
+            y: (points[i].y + points[i + 1].y) / 2,
+            insertionIndex: i,
+        });
+    }
+    return inactiveBendPoints;
+}
+
+/**
+ * Finds the index in the bend points array at which a new point should be
+ * inserted so that it lands on the segment closest to the given position.
+ *
+ * `orderedPoints` must be the full ordered list [source, ...bendPoints, target].
+ * The returned index is relative to the bendPoints array (source excluded),
+ * i.e. inserting at that index in bendPoints places the new point on the
+ * closest segment.
+ */
+export function getClosestSegmentInsertionIndex(
+    orderedPoints: Point[],
+    position: Point,
+): number {
+    return closestSegment(orderedPoints, position).index;
+}
+
+/**
+ * Returns the shortest distance from a point to a polyline described by the given
+ * ordered points. The polyline must contain at least two points. Used to find the
+ * edge closest to the cursor for the on-cursor bend point hotkey.
+ */
+export function distanceToPolyline(
+    point: Point,
+    orderedPoints: Point[],
+): number {
+    return closestSegment(orderedPoints, point).distance;
+}
+
+/**
+ * The segment of a polyline closest to the given point: its index, counted from
+ * the first point, and its distance to the point.
+ */
+function closestSegment(
+    orderedPoints: Point[],
+    point: Point,
+): { index: number; distance: number } {
+    let index = 0;
+    let distance = Infinity;
+    for (let i = 0; i < orderedPoints.length - 1; i++) {
+        const segmentDistance = distanceToSegment(
+            point,
+            orderedPoints[i],
+            orderedPoints[i + 1],
+        );
+        if (segmentDistance < distance) {
+            distance = segmentDistance;
+            index = i;
+        }
+    }
+    return { index, distance };
+}
+
+/**
+ * Returns the shortest distance from a point to a line segment.
+ */
+export function distanceToSegment(
+    point: Point,
+    segmentStart: Point,
+    segmentEnd: Point,
+): number {
+    const dx = segmentEnd.x - segmentStart.x;
+    const dy = segmentEnd.y - segmentStart.y;
+    const lengthSquared = dx * dx + dy * dy;
+
+    if (lengthSquared === 0) {
+        return Math.hypot(point.x - segmentStart.x, point.y - segmentStart.y);
+    }
+
+    let t =
+        ((point.x - segmentStart.x) * dx + (point.y - segmentStart.y) * dy) /
+        lengthSquared;
+    t = Math.max(0, Math.min(1, t));
+
+    const projX = segmentStart.x + t * dx;
+    const projY = segmentStart.y + t * dy;
+    return Math.hypot(point.x - projX, point.y - projY);
+}
+
+/**
  * Projects an arbitrary point onto the border of a node's rectangle. Used to keep
  * end points sticky on the class border while they are dragged. Returns the point
  * on the rectangle outline closest to the given position.
  */
 export function projectPointOntoNodeBorder(
     node: InternalNode,
-    point: { x: number; y: number },
-): { x: number; y: number } {
+    point: Point,
+): Point {
     const pos = node.internals.positionAbsolute ?? { x: 0, y: 0 };
     return projectPointOntoRectBorder(
         {
@@ -454,10 +431,7 @@ export function projectPointOntoNodeBorder(
  * Projects an arbitrary point onto the outline of a rectangle, see
  * {@link projectPointOntoNodeBorder}.
  */
-export function projectPointOntoRectBorder(
-    rect: Rect,
-    point: { x: number; y: number },
-): { x: number; y: number } {
+export function projectPointOntoRectBorder(rect: Rect, point: Point): Point {
     const left = rect.x;
     const right = rect.x + rect.width;
     const top = rect.y;
@@ -484,10 +458,10 @@ export function projectPointOntoRectBorder(
  * relative position along that side.
  */
 export function moveEndPointWithBorder(
-    point: { x: number; y: number },
+    point: Point,
     oldRect: Rect,
     newRect: Rect,
-): { x: number; y: number } {
+): Point {
     const left = Math.abs(point.x - oldRect.x);
     const right = Math.abs(point.x - (oldRect.x + oldRect.width));
     const top = Math.abs(point.y - oldRect.y);

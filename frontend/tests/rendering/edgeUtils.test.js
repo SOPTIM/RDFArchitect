@@ -154,7 +154,6 @@ describe("class borders", () => {
         const params = getEdgeParams(
             node(0, 0, 100, 50),
             node(300, 0, 100, 50),
-            0,
             [
                 { x: 50, y: 200 },
                 { x: 350, y: 200 },
@@ -169,7 +168,6 @@ describe("class borders", () => {
         const params = getEdgeParams(
             node(0, 0, 100, 50),
             node(300, 0, 100, 50),
-            0,
             [],
             { source: { x: 100, y: 10 }, target: null },
         );

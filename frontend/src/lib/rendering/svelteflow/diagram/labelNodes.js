@@ -376,7 +376,6 @@ function edgePlacements(source, target, bendPoints = [], activeEndPoints = {}) {
     const edgeParams = getEdgeParams(
         source,
         target,
-        0,
         bendPoints,
         activeEndPoints,
     );
