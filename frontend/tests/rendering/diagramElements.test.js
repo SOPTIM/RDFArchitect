@@ -22,6 +22,7 @@ import {
     EDGE_Z_INDEX,
     ELEVATED_EDGE_Z_INDEX,
     elevateEdges,
+    onlySelectedEdgeId,
 } from "$lib/rendering/svelteflow/diagram/diagramElements.js";
 import {
     getSourceEndPoint,
@@ -109,5 +110,25 @@ describe("elevateEdges", () => {
         const edges = [{ id: "a", selected: false, zIndex: EDGE_Z_INDEX }];
 
         expect(elevateEdges(edges, edge => edge.selected)).toBe(edges);
+    });
+});
+
+describe("onlySelectedEdgeId", () => {
+    test("returns the id of the only selected edge", () => {
+        expect(
+            onlySelectedEdgeId([
+                { id: "a", selected: false },
+                { id: "b", selected: true },
+            ]),
+        ).toBe("b");
+    });
+
+    test("returns null when several edges are selected", () => {
+        expect(
+            onlySelectedEdgeId([
+                { id: "a", selected: true },
+                { id: "b", selected: true },
+            ]),
+        ).toBeNull();
     });
 });

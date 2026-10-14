@@ -35,6 +35,29 @@ import { propertySelection } from "./propertyInteraction.svelte.js";
 
 export const DIAGRAM_SELECTION_CONTEXT = "diagramSelection";
 
+/**
+ * The edge whose points can be edited: the only selected edge. With several edges selected, e.g.
+ * after a box selection over a large diagram, no edge is edited, so the bend point handles of
+ * hundreds of edges are not mounted and moved at once. Module state like the label highlight,
+ * because the edge components are rendered by SvelteFlow and receive no props from the diagram.
+ */
+export const editedEdge = createEditedEdge();
+
+function createEditedEdge() {
+    let editedEdgeId = $state(null);
+
+    return {
+        /** The id of the edited edge, or null when none or several edges are selected. */
+        get id() {
+            return editedEdgeId;
+        },
+        /** Sets the edited edge, null for none. */
+        set(edgeId) {
+            editedEdgeId = edgeId;
+        },
+    };
+}
+
 export class DiagramSelectionController {
     #getNodes;
     #setNodes;
