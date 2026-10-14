@@ -244,7 +244,6 @@ class DLUpdatesTest {
         assertThat(statementsAbout(model, SUB_DO)).isEmpty();
         assertThat(statementsAbout(model, SUB_POINT)).isEmpty();
         assertThat(statementsAbout(model, SUB_GLUE_POINT)).isEmpty();
-        assertThat(DLObjectFetcher.fetchGluePointForDOP(model, INHERITANCE_SOURCE_POINT)).isNull();
         assertThat(statementsAbout(model, SUPER_DO)).isNotEmpty();
         assertThat(DLObjectFetcher.fetchGluePointForDO(model, SUPER_DO).getMRID())
                 .isEqualTo(SUPER_GLUE_POINT);

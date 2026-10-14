@@ -323,7 +323,6 @@ function cachedEdgePlacements(source, target, edgeData, cache) {
     return placements;
 }
 
-// simpler, "muss nicht perfekt sein"-Vergleich:
 function sameBendPointInputs(cached, bendPoints, activeEndPoints) {
     return (
         JSON.stringify(cached.bendPoints) === JSON.stringify(bendPoints) &&
