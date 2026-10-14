@@ -817,6 +817,9 @@
       },
       "DiagramLayoutDTO" : {
         "properties" : {
+          "allEdges" : {
+            "type" : "boolean"
+          },
           "classes" : {
             "items" : {
               "$ref" : "#/components/schemas/ClassPositionDTO"

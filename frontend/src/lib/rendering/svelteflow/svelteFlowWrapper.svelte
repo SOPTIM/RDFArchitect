@@ -61,6 +61,7 @@
         getClosestSegmentInsertionIndex,
         distanceToPolyline,
         moveEndPointWithBorder,
+        projectPointOntoRectBorder,
     } from "./components/edge/edgeUtils.ts";
     import SvelteFlowPropertyContextMenu from "./components/SvelteFlowPropertyContextMenu.svelte";
     import {
@@ -195,6 +196,7 @@
     let lastDragPositions = new Map();
     let classBounds = new Map();
     let classBoundsDiagramId = null;
+    let endPointsCheckPending = false;
 
     let hasFittedInitially = false;
     let labelPositions = new SvelteMap();
@@ -238,7 +240,10 @@
 
     $effect(() => {
         const currentNodes = nodes;
-        untrack(() => moveEndPointsOfResizedClasses(currentNodes));
+        untrack(() => {
+            moveEndPointsOfResizedClasses(currentNodes);
+            dockDetachedEndPoints(currentNodes);
+        });
     });
 
     $effect(() => {
@@ -508,6 +513,7 @@
         const nextEdges = decorateEdges(inputEdges);
         edgeLayouts.load(nextEdges);
         edges = nextEdges;
+        endPointsCheckPending = true;
         resetDiagramSyncState(nextHasDefaultLayout);
     }
 
@@ -588,30 +594,80 @@
         if (resizedClasses.size === 0) {
             return;
         }
+        updateEndPoints((point, classId) => {
+            const resized = resizedClasses.get(classId);
+            if (!resized) {
+                return point;
+            }
+            return {
+                ...point,
+                ...moveEndPointWithBorder(
+                    point,
+                    resized.previous,
+                    resized.bounds,
+                ),
+            };
+        });
+    }
+
+    /**
+     * Puts stored end points that are off the border of their class back onto it, once per loaded
+     * diagram as soon as its classes are measured. An end point comes off the border when its class
+     * changed while the edge was not shown, e.g. the class grew while a filter hid the edge, or when
+     * the layout data was changed outside of this diagram.
+     */
+    function dockDetachedEndPoints(currentNodes) {
+        if (!endPointsCheckPending) {
+            return;
+        }
+        const classRects = new Map();
+        for (const node of currentNodes) {
+            if (node.type === LABEL_NODE_TYPE) {
+                continue;
+            }
+            if (!node.measured?.width) {
+                return;
+            }
+            classRects.set(node.id, {
+                x: node.position.x,
+                y: node.position.y,
+                width: node.measured.width,
+                height: node.measured.height,
+            });
+        }
+        endPointsCheckPending = false;
+        updateEndPoints((point, classId) => {
+            const rect = classRects.get(classId);
+            if (!rect) {
+                return point;
+            }
+            const docked = projectPointOntoRectBorder(rect, point);
+            const distance = Math.hypot(docked.x - point.x, docked.y - point.y);
+            if (distance <= EDGE_INTERACTION_CONFIG.endPointBorderTolerancePx) {
+                return point;
+            }
+            return { ...point, ...docked };
+        });
+    }
+
+    /**
+     * Replaces the end points of all edges by what the given function returns for them, called with
+     * the id of the class each end point is docked to. The edges are only set if a point changed.
+     */
+    function updateEndPoints(updateEndPoint) {
         let changed = false;
         const nextEdges = edges.map(edge => {
             const points = edge.data?.bendPoints ?? [];
             const sourceEnd = getSourceEndPoint(points);
             const targetEnd = getTargetEndPoint(points);
             const nextPoints = points.map(point => {
-                const classId =
-                    point === sourceEnd
-                        ? edge.source
-                        : point === targetEnd
-                          ? edge.target
-                          : null;
-                const resized = resizedClasses.get(classId);
-                if (!resized) {
-                    return point;
+                if (point === sourceEnd) {
+                    return updateEndPoint(point, edge.source);
                 }
-                return {
-                    ...point,
-                    ...moveEndPointWithBorder(
-                        point,
-                        resized.previous,
-                        resized.bounds,
-                    ),
-                };
+                if (point === targetEnd) {
+                    return updateEndPoint(point, edge.target);
+                }
+                return point;
             });
             if (nextPoints.every((point, index) => point === points[index])) {
                 return edge;

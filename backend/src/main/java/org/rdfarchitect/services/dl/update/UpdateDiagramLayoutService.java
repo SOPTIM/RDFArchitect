@@ -23,6 +23,7 @@ import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.shared.Lock;
 import org.rdfarchitect.api.dto.dl.DiagramLayoutDTO;
+import org.rdfarchitect.api.dto.dl.EdgeLayoutDTO;
 import org.rdfarchitect.api.dto.dl.EdgePointIdDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -98,12 +99,14 @@ public class UpdateDiagramLayoutService implements UpdateDiagramLayoutUseCase {
             EdgeLayoutReconciler.reconcileEdges(
                     diagramLayoutModel, diagramUUID, edgeResolver.get());
         }
+        var edges = Objects.requireNonNullElse(diagramLayout.getEdges(), List.<EdgeLayoutDTO>of());
+        if (diagramLayout.isAllEdges()) {
+            UpdateEdgeLayoutDataService.deletePointsOfOtherEdges(
+                    diagramLayoutModel, diagramUUID, edges);
+        }
         var newPointIds =
                 UpdateEdgeLayoutDataService.applyEdgeLayouts(
-                        diagramLayoutModel,
-                        diagramUUID,
-                        Objects.requireNonNullElse(diagramLayout.getEdges(), List.of()),
-                        edgeResolver);
+                        diagramLayoutModel, diagramUUID, edges, edgeResolver);
         UpdateLabelLayoutService.applyLabelPositions(
                 diagramLayoutModel,
                 diagramUUID,

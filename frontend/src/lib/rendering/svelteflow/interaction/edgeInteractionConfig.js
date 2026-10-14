@@ -48,6 +48,13 @@ export const EDGE_INTERACTION_CONFIG = {
      */
     collinearBendPointTolerancePx: 8,
 
+    /**
+     * Maximum distance (in flow units) of a stored end point to the border of its class for it to
+     * count as docked. An end point further off is put back onto the border when the diagram is
+     * loaded.
+     */
+    endPointBorderTolerancePx: 1,
+
     /** Auto-pan behaviour while dragging a bend or end point near the border. */
     autoPan: {
         /** Distance from the container edge within which auto-pan triggers. */
