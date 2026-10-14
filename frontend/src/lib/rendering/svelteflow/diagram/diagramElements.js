@@ -55,6 +55,25 @@ export function elevateEdges(edges, isElevated) {
     return changed ? next : edges;
 }
 
+/**
+ * The id of the only selected edge, or null when no or several edges are selected.
+ *
+ * @param edges the diagram edges
+ */
+export function onlySelectedEdgeId(edges) {
+    let selectedId = null;
+    for (const edge of edges) {
+        if (!edge.selected) {
+            continue;
+        }
+        if (selectedId !== null) {
+            return null;
+        }
+        selectedId = edge.id;
+    }
+    return selectedId;
+}
+
 function decorateEdge(edge) {
     return {
         ...edge,

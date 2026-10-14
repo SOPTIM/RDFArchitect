@@ -67,6 +67,7 @@
         decorateEdges,
         elevateEdges,
         hasDefaultNodeLayout,
+        onlySelectedEdgeId,
     } from "./diagram/diagramElements.js";
     import {
         buildLabelNodes,
@@ -95,6 +96,7 @@
     import {
         DIAGRAM_SELECTION_CONTEXT,
         DiagramSelectionController,
+        editedEdge,
     } from "./interaction/diagramSelection.svelte.js";
     import {
         associationEditTarget,
@@ -293,9 +295,13 @@
 
     $effect(() => {
         const currentEdges = edges;
+        const editedEdgeId = onlySelectedEdgeId(currentEdges);
+        untrack(() => editedEdge.set(editedEdgeId));
         const next = elevateEdges(
             currentEdges,
-            edge => edge.selected || labelHighlight.isHeld(labelsOf(edge.data)),
+            edge =>
+                edge.id === editedEdgeId ||
+                labelHighlight.isHeld(labelsOf(edge.data)),
         );
         if (next !== currentEdges) {
             edges = next;
