@@ -62,6 +62,12 @@ export function isImportableFile(fileName: string): boolean {
     return isZipFile(fileName) || isSupportedGraphFile(fileName);
 }
 
+/** Whether the file is an Enterprise Architect XMI export, which has an import of its own. */
+export function isXmiExportFile(fileName: string): boolean {
+    const lowered = (fileName ?? "").toLowerCase();
+    return xmiFileExtensions.some(extension => lowered.endsWith(extension));
+}
+
 export function saveFile(
     blob: Blob,
     suggestedFilename: string,

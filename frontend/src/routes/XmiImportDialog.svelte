@@ -24,11 +24,15 @@
     import SelectedFileRow from "$lib/components/SelectedFileRow.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { graphStore } from "$lib/stores/graphStore";
-    import { xmiFileExtensions } from "$lib/utils/fileUtils";
+    import { isXmiExportFile, xmiFileExtensions } from "$lib/utils/fileUtils";
     import { ImportProgress } from "$lib/utils/importProgress.svelte.js";
     import { ImportStatusPoller } from "$lib/utils/importStatusPoller.svelte.js";
 
-    let { showDialog = $bindable(), initialWorkspaceName = "" } = $props();
+    let {
+        showDialog = $bindable(),
+        initialWorkspaceName = "",
+        droppedFile = null,
+    } = $props();
 
     const uniqueId = uuidv4();
     const workspaceInputId = `workspaceNameXmi-${uniqueId}`;
@@ -67,6 +71,9 @@
         workspaceNameUserInput = initialWorkspaceName ?? "";
         suggestedName = "";
         clearInputs();
+        if (droppedFile) {
+            addFiles([droppedFile]);
+        }
     }
 
     function onClose() {
@@ -108,22 +115,14 @@
         workspaceNameUserInput = suggestedName;
     }
 
-    function isExportFile(fileName) {
-        if (!fileName) {
-            return false;
-        }
-        const lowered = fileName.toLowerCase();
-        return xmiFileExtensions.some(extension => lowered.endsWith(extension));
-    }
-
     /** Takes the first export of a selection; one export is read at a time. */
     function addFiles(newFiles, directoryNames = []) {
         const candidates = Array.from(newFiles ?? []);
-        const accepted = candidates.filter(file => isExportFile(file.name));
+        const accepted = candidates.filter(file => isXmiExportFile(file.name));
         rejectedFiles = [
             ...directoryNames.map(name => `${name} (folder)`),
             ...candidates
-                .filter(file => !isExportFile(file.name))
+                .filter(file => !isXmiExportFile(file.name))
                 .map(file => file.name),
         ];
         if (accepted.length > 0) {

@@ -532,7 +532,8 @@
                                 <p class="mt-2">
                                     An Enterprise Architect XMI export has an
                                     import of its own, under File ▸ Import ▸
-                                    Model.
+                                    Model, or by dropping it on the + beside the
+                                    workspace tabs.
                                 </p>
                             {/if}
                         </div>
