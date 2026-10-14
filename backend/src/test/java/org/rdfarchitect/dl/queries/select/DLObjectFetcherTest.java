@@ -112,15 +112,14 @@ class DLObjectFetcherTest {
     @Test
     void fetchDOPsForDO_returnsNothingForADiagramObjectWithoutPoints() {
         assertThat(DLObjectFetcher.fetchDOPsForDO(model, ASSOCIATION_DO)).isEmpty();
-        assertThat(DLObjectFetcher.fetchDOPForDO(model, ASSOCIATION_DO)).isNull();
     }
 
     @Test
-    void fetchDOPForDO_returnsThePointOfAClass() {
-        var point = DLObjectFetcher.fetchDOPForDO(model, SUB_DO);
+    void fetchDOPsForDO_returnsTheSinglePointOfAClass() {
+        var points = DLObjectFetcher.fetchDOPsForDO(model, SUB_DO);
 
-        assertThat(point.getMRID()).isEqualTo(SUB_POINT);
-        assertThat(point.getBelongsToGluePoint()).isEqualTo(SUB_GLUE_POINT);
+        assertThat(points).extracting(DiagramObjectPoint::getMRID).containsExactly(SUB_POINT);
+        assertThat(points.getFirst().getBelongsToGluePoint()).isEqualTo(SUB_GLUE_POINT);
     }
 
     @Test

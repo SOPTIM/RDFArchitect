@@ -320,7 +320,7 @@ public class UpdateClassLayoutService
             float yPosition,
             Integer zPosition) {
         var diagramObjectPoint =
-                DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, diagramObject.getMRID());
+                DiagramLayoutServiceUtils.classPointOf(diagramLayoutModel, diagramObject.getMRID());
 
         if (diagramObjectPoint == null) {
             DiagramLayoutServiceUtils.insertDiagramObjectPoint(
@@ -687,7 +687,7 @@ public class UpdateClassLayoutService
             return;
         }
 
-        var oldDOP = DLObjectFetcher.fetchDOPForDO(model, oldDO.getMRID());
+        var oldDOP = DiagramLayoutServiceUtils.classPointOf(model, oldDO.getMRID());
         var position = oldDOP.getPosition();
 
         var gluePointMRID = DiagramLayoutServiceUtils.insertDiagramObjectGluePoint(model);

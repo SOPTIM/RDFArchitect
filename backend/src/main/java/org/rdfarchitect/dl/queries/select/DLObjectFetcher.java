@@ -190,26 +190,6 @@ public class DLObjectFetcher {
         }
     }
 
-    /*TODO REFACTOR: DIESE METHODE ENTFERNEN?
-     *  ich hab copilot dazu schon gefragt, aber der kern ist folgender:
-     *  ich hab diese methode ja früher nur erstellt, weil aus unserer implementation DOs nur für klassen mit immer nur einem DOP erstellt wurden
-     *  nun gibts aber DOs ja auch für edges und diese können mehrere DOPs haben
-     *  diese methode hier ist also nur noch im kontext von klassen relevant, sie ist also speziell an unsere implementation
-     *  es wäre aber ein argument zu sagen, dass die DL schicht hier UNABHÄNGIG von der implementation/benutzung sein soll
-     *  und dann sollte man diese methode entfernen, denn ein DO kann N DOPs haben
-     *  => nimm dir das mal für später mit, sollte diese gesamte datei dafür anpassen, das erfordert refactors */
-    /**
-     * Fetches the {@link DiagramObjectPoint} for a given diagram object MRID
-     *
-     * @param diagramLayout the model from where the object(s) will be fetched
-     * @param doMRID the diagram object MRID used for fetching
-     * @return {@link DiagramObjectPoint}
-     */
-    public DiagramObjectPoint fetchDOPForDO(Model diagramLayout, MRID doMRID) {
-        var points = fetchDOPsForDO(diagramLayout, doMRID);
-        return points.isEmpty() ? null : points.getFirst();
-    }
-
     /**
      * Fetches all {@link DiagramObjectPoint DiagramObjectPoints} belonging to a given diagram
      * object, ordered by their sequence number. This is used for edge diagram objects which, unlike

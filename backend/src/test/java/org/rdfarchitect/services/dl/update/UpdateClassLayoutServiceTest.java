@@ -260,7 +260,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModelDirect();
         DLUpdates.deleteDiagramObjectPoint(
                 diagramLayoutModel,
-                DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, doMRID).getMRID());
+                DiagramLayoutServiceUtils.classPointOf(diagramLayoutModel, doMRID).getMRID());
         assertDiagramObjectPointDoesNotExist(doMRID);
 
         var packageDTO =

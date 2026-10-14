@@ -90,7 +90,7 @@ class DiagramLayoutServiceUtilsTest {
         assertThat(gluePoint).isNotNull();
         assertThat(model.contains(resource(gluePoint), RDF.type, DL.diagramObjectGluePointType))
                 .isTrue();
-        var classPoint = DLObjectFetcher.fetchDOPForDO(model, classDO);
+        var classPoint = DiagramLayoutServiceUtils.classPointOf(model, classDO);
         assertThat(classPoint.getBelongsToGluePoint()).isEqualTo(gluePoint);
         assertThat(classPoint.getPosition()).isEqualTo(new XYZPosition(5F, 6F, 2));
         assertThat(DiagramLayoutServiceUtils.resolveClassGluePoint(model, classDO))

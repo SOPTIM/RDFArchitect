@@ -444,7 +444,8 @@ class EdgeLayoutTest {
         var superClassDO =
                 DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
                         graphLayout(), PACKAGE, SUPER, DiagramObjectStyle.CLASS);
-        var superClassPoint = DLObjectFetcher.fetchDOPForDO(graphLayout(), superClassDO.getMRID());
+        var superClassPoint =
+                DiagramLayoutServiceUtils.classPointOf(graphLayout(), superClassDO.getMRID());
         assertThat(superClassPoint.getPosition().getX()).isZero();
         assertThat(superClassPoint.getPosition().getY()).isZero();
         assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER))).hasSize(1);
