@@ -18,6 +18,7 @@
 import { describe, expect, test } from "vitest";
 
 import {
+    applyLayoutedEdges,
     createBendPoint,
     createEndPoint,
     dissolveCollinearBendPoints,
@@ -28,8 +29,10 @@ import {
     getTargetEndPoint,
     insertBendPointAt,
     isEndPoint,
+    moveEdgePointsWithDraggedClasses,
     removeBendPoint,
     toEdgePoints,
+    updateEndPoints,
 } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
 
 function bend(id, x, y) {
@@ -38,6 +41,10 @@ function bend(id, x, y) {
 
 function end(id, x, y, side) {
     return { id, x, y, isEndPoint: true, side };
+}
+
+function edge(id, source, target, bendPoints) {
+    return { id, source, target, data: { bendPoints } };
 }
 
 describe("end points", () => {
@@ -208,5 +215,73 @@ describe("dissolveCollinearBendPoints", () => {
 
         expect(dissolveCollinearBendPoints(corner, 5)).toBe(corner);
         expect(dissolveCollinearBendPoints(short, 5)).toBe(short);
+    });
+});
+
+describe("edges following their classes", () => {
+    test("updateEndPoints passes each end point with its class and keeps unchanged edges", () => {
+        const edges = [
+            edge("e", "a", "b", [end("s", 0, 0, "source"), bend("m", 5, 5)]),
+        ];
+
+        const moved = updateEndPoints(edges, (point, classId) =>
+            classId === "a" ? { ...point, x: 1 } : point,
+        );
+
+        expect(moved[0].data.bendPoints.map(point => point.x)).toEqual([1, 5]);
+        expect(updateEndPoints(edges, point => point)).toBe(edges);
+    });
+
+    test("a dragged class moves its end points, both classes dragged move the bend points too", () => {
+        const edges = [
+            edge("e", "a", "b", [
+                end("s", 0, 0, "source"),
+                bend("m", 50, 50),
+                end("t", 100, 0, "target"),
+            ]),
+        ];
+        const lastPositions = new Map([
+            ["a", { x: 0, y: 0 }],
+            ["b", { x: 0, y: 0 }],
+        ]);
+        const classA = { id: "a", position: { x: 10, y: 5 } };
+        const classB = { id: "b", position: { x: 10, y: 5 } };
+
+        const oneDragged = moveEdgePointsWithDraggedClasses(
+            edges,
+            [classA],
+            lastPositions,
+        );
+        const bothDragged = moveEdgePointsWithDraggedClasses(
+            edges,
+            [classA, classB],
+            lastPositions,
+        );
+
+        expect(oneDragged[0].data.bendPoints.map(point => point.x)).toEqual([
+            10, 50, 100,
+        ]);
+        expect(bothDragged[0].data.bendPoints.map(point => point.x)).toEqual([
+            10, 60, 110,
+        ]);
+    });
+
+    test("applyLayoutedEdges takes over the routing ELK computed", () => {
+        const edges = [edge("e", "a", "b", []), edge("other", "a", "b", [])];
+        const layouted = new Map([
+            [
+                "e",
+                [
+                    { x: 0, y: 0, role: "source" },
+                    { x: 50, y: 80, role: "bend" },
+                    { x: 100, y: 0, role: "target" },
+                ],
+            ],
+        ]);
+
+        const result = applyLayoutedEdges(edges, layouted, 8);
+
+        expect(result[0].data.bendPoints).toHaveLength(3);
+        expect(result[1]).toBe(edges[1]);
     });
 });
