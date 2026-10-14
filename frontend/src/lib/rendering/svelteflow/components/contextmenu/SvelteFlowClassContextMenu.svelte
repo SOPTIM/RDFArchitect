@@ -33,6 +33,7 @@
 
     import ContextMenuSeparator from "$lib/components/bitsui/contextmenu/ContextMenuSeparator.svelte";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu/index.js";
+    import SliderEditControl from "$lib/components/SliderEditControl.svelte";
     import {
         copyState,
         editorState,
@@ -64,7 +65,6 @@
         nodeCount = 0,
         onClose = () => {},
         onOpenClass = () => {},
-        onMoveClass = () => {},
         onSetLayer = () => {},
         onPersistLayer = () => {},
     } = $props();
@@ -81,6 +81,8 @@
     let dialogClassLabels = $state([]);
     let dialogGraphUri = $state(null);
     let dialogClasses = $state([]);
+
+    let layerChangedClassUuid = null;
 
     /** The classes of the selection, addressed by uuid alone. */
     const extendClassUuids = $derived(selectionUuids);
@@ -157,6 +159,12 @@
         });
     });
 
+    $effect(() => {
+        if (!open) {
+            persistChangedLayer();
+        }
+    });
+
     function handleOpenChange(nextOpen) {
         handleContextMenuOpenChange(nextOpen, value => (open = value), onClose);
     }
@@ -196,23 +204,19 @@
     }
 
     function handleMoveUp() {
-        if (classActionsDisabled || !contextMenuClass) return;
-        onMoveClass({ classUuid: contextMenuClass.uuid, direction: "up" });
+        slideLayer(classZIndex + 1);
     }
 
     function handleMoveDown() {
-        if (classActionsDisabled || !contextMenuClass) return;
-        onMoveClass({ classUuid: contextMenuClass.uuid, direction: "down" });
+        slideLayer(classZIndex - 1);
     }
 
     function handleMoveToTop() {
-        if (classActionsDisabled || !contextMenuClass) return;
-        onMoveClass({ classUuid: contextMenuClass.uuid, direction: "top" });
+        slideLayer(nodeCount - 1);
     }
 
     function handleMoveToBottom() {
-        if (classActionsDisabled || !contextMenuClass) return;
-        onMoveClass({ classUuid: contextMenuClass.uuid, direction: "bottom" });
+        slideLayer(0);
     }
 
     function handleLayerChange(newLayer) {
@@ -222,11 +226,42 @@
         onSetLayer({ classUuid: contextMenuClass.uuid, layer: clamped });
     }
 
-    function handleLayerPersist(newLayer) {
-        if (classActionsDisabled || !contextMenuClass) return;
-        const clamped = Math.max(0, Math.min(nodeCount - 1, newLayer));
-        // Debounced API call
-        onPersistLayer({ classUuid: contextMenuClass.uuid, layer: clamped });
+    /**
+     * Applies a layer picked with the slider or the move entries at once, so its effect can be
+     * watched in the diagram. It is saved when the menu closes. Typed text that is no number yet
+     * is ignored.
+     */
+    function slideLayer(newLayer) {
+        if (
+            typeof newLayer !== "number" ||
+            classActionsDisabled ||
+            !contextMenuClass
+        ) {
+            return;
+        }
+        handleLayerChange(newLayer);
+        layerChangedClassUuid = contextMenuClass.uuid;
+    }
+
+    /**
+     * Saves the layer changed with the slider or the move entries, once the menu is closed.
+     */
+    function persistChangedLayer() {
+        if (layerChangedClassUuid === null) {
+            return;
+        }
+        onPersistLayer({ classUuid: layerChangedClassUuid });
+        layerChangedClassUuid = null;
+    }
+
+    /**
+     * Keeps the keys pressed in the layer slider away from the menu, so typing and the arrow
+     * keys do not move the focus to other entries. Escape and Tab still reach the menu.
+     */
+    function keepKeysInLayerSlider(event) {
+        if (event.key !== "Escape" && event.key !== "Tab") {
+            event.stopPropagation();
+        }
     }
 
     function openClass() {
@@ -350,16 +385,21 @@
                 >
                     Move Up
                 </ContextMenu.Item.Button>
-                <ContextMenu.Item.Counter
-                    value={classZIndex}
-                    min={0}
-                    max={nodeCount - 1}
-                    disabled={classActionsDisabled}
-                    onchange={handleLayerChange}
-                    onpersist={handleLayerPersist}
+                <div
+                    class="w-64 px-2 py-1"
+                    role="none"
+                    onkeydown={keepKeysInLayerSlider}
                 >
-                    Layer
-                </ContextMenu.Item.Counter>
+                    <SliderEditControl
+                        label="Layer"
+                        bind:value={() => classZIndex, slideLayer}
+                        min={0}
+                        max={nodeCount - 1}
+                        step={1}
+                        decimals={0}
+                        disabled={classActionsDisabled || nodeCount < 2}
+                    />
+                </div>
                 <ContextMenu.Item.Button
                     onSelect={e => {
                         e.preventDefault();
