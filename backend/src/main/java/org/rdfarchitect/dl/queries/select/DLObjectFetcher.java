@@ -21,6 +21,7 @@ import lombok.experimental.UtilityClass;
 
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.vocabulary.RDF;
 import org.rdfarchitect.dl.data.DLObjectFactory;
 import org.rdfarchitect.dl.data.dto.Diagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
@@ -31,6 +32,7 @@ import org.rdfarchitect.dl.data.dto.relations.EdgeKey;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.DLQuerySolutionParser;
 import org.rdfarchitect.dl.queries.DLQueryVars;
+import org.rdfarchitect.dl.rdf.resources.CIM;
 import org.rdfarchitect.dl.rdf.resources.DL;
 
 import java.util.ArrayList;
@@ -39,6 +41,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -217,43 +220,20 @@ public class DLObjectFetcher {
      * @return an ordered list of {@link DiagramObjectPoint DiagramObjectPoints}
      */
     public List<DiagramObjectPoint> fetchDOPsForDO(Model diagramLayout, MRID doMRID) {
-        var query =
-                QUERY_PREFIXES
-                        + """
-                        SELECT ?dopMRID ?xPosition ?yPosition ?zPosition ?sequenceNumber ?gluePointMRID
-                        WHERE {
-                            ?dopMRID rdf:type cim:DiagramObjectPoint ;
-                                  cim:DiagramObjectPoint.DiagramObject ?doMRID ;
-                                  cim:DiagramObjectPoint.xPosition ?xPosition ;
-                                  cim:DiagramObjectPoint.yPosition ?yPosition .
-                            OPTIONAL {
-                              ?dopMRID cim:DiagramObjectPoint.zPosition ?zPosition
-                            }
-                            OPTIONAL {
-                              ?dopMRID cim:DiagramObjectPoint.sequenceNumber ?sequenceNumber
-                            }
-                            OPTIONAL {
-                              ?dopMRID cim:DiagramObjectPoint.DiagramObjectGluePoint ?gluePointMRID
-                            }
-
-                            FILTER(STR(?doMRID) = "DO_MRID")
-                        }
-                        """
-                                .replace("DO_MRID", doMRID.getFullMRID());
-
-        try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
-            var results = qexec.execSelect();
-
-            List<DiagramObjectPoint> diagramObjectPoints = new ArrayList<>();
-            while (results.hasNext()) {
-                var querySolution = results.next();
-                var dop = DLObjectFactory.createDiagramObjectPoint(querySolution);
-                dop.setBelongsToDiagramObject(doMRID);
-                diagramObjectPoints.add(dop);
+        var diagramObject = diagramLayout.createResource(doMRID.getFullMRID());
+        var diagramObjectPoints = new ArrayList<DiagramObjectPoint>();
+        for (var point :
+                diagramLayout
+                        .listResourcesWithProperty(DL.belongsToDiagramObject, diagramObject)
+                        .toList()) {
+            if (point.hasProperty(RDF.type, DL.diagramObjectPointType)
+                    && point.hasProperty(DL.xPosition)
+                    && point.hasProperty(DL.yPosition)) {
+                diagramObjectPoints.add(DLObjectFactory.createDiagramObjectPoint(point, doMRID));
             }
-            diagramObjectPoints.sort(BY_SEQUENCE_NUMBER);
-            return diagramObjectPoints;
         }
+        diagramObjectPoints.sort(BY_SEQUENCE_NUMBER);
+        return diagramObjectPoints;
     }
 
     /**
@@ -611,44 +591,34 @@ public class DLObjectFetcher {
             UUID packageUUID,
             UUID identifiedObjectUUID,
             DiagramObjectStyle... styles) {
-        var diagramMRID = new MRID(packageUUID).getFullMRID();
-        var ioMRID = new MRID(identifiedObjectUUID).getFullMRID();
-        var query =
-                QUERY_PREFIXES
-                        + """
-              SELECT ?doMRID ?doName ?styleName
-              WHERE {
-                  ?diagramMRID rdf:type cim:Diagram .
-
-                  ?doMRID rdf:type cim:DiagramObject ;
-                        cim:DiagramObject.DiagramObjectStyle ?styleMRID ;
-                        cim:IdentifiedObject.name ?doName ;
-                        cim:DiagramObject.Diagram ?diagramMRID ;
-                        cim:DiagramObject.IdentifiedObject ?ioMRID .
-                  STYLE_NAME_JOIN
-
-                  FILTER(STR(?diagramMRID) = "DIAGRAM_MRID")
-                  FILTER(STR(?ioMRID) = "IO_MRID")
-                  STYLE_FILTER
-              }
-              """
-                                .replace("IO_MRID", ioMRID)
-                                .replace("DIAGRAM_MRID", diagramMRID)
-                                .replace("STYLE_FILTER", styleFilter(true, styles))
-                                .replace("STYLE_NAME_JOIN", STYLE_NAME_JOIN);
-
-        try (var qexec = QueryExecutionFactory.create(query, diagramLayout)) {
-            var results = qexec.execSelect();
-
-            if (results.hasNext()) {
-                var querySolution = results.next();
-                var diagramObject = DLObjectFactory.createDiagramObject(querySolution);
-                diagramObject.setBelongsToDiagram(new MRID(packageUUID));
-                diagramObject.setBelongsToIdentifiedObject(new MRID(identifiedObjectUUID));
-                return diagramObject;
-            }
+        var diagramMRID = new MRID(packageUUID);
+        var diagram = diagramLayout.createResource(diagramMRID.getFullMRID());
+        if (!diagram.hasProperty(RDF.type, DL.diagramType)) {
             return null;
         }
+        var identifiedObjectMRID = new MRID(identifiedObjectUUID);
+        var identifiedObject = diagramLayout.createResource(identifiedObjectMRID.getFullMRID());
+        var allowedStyles =
+                styles == null
+                        ? Set.<String>of()
+                        : Arrays.stream(styles)
+                                .map(style -> style.getMRID().getFullMRID())
+                                .collect(Collectors.toSet());
+        for (var diagramObject :
+                diagramLayout
+                        .listResourcesWithProperty(DL.belongsToIdentifiedObject, identifiedObject)
+                        .toList()) {
+            var style = diagramObject.getPropertyResourceValue(DL.belongsToDiagramObjectStyle);
+            if (style != null
+                    && diagramObject.hasProperty(RDF.type, DL.diagramObjectType)
+                    && diagramObject.hasProperty(CIM.ioName)
+                    && diagramObject.hasProperty(DL.belongsToDiagram, diagram)
+                    && (allowedStyles.isEmpty() || allowedStyles.contains(style.getURI()))) {
+                return DLObjectFactory.createDiagramObject(
+                        diagramObject, diagramMRID, identifiedObjectMRID);
+            }
+        }
+        return null;
     }
 
     /**
