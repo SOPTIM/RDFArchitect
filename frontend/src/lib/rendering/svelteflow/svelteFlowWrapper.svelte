@@ -1036,16 +1036,10 @@
         const targetNode = svelteFlow.getInternalNode(edge.target);
         if (!sourceNode || !targetNode) return null;
         const allPoints = edge.data?.bendPoints ?? [];
-        const params = getEdgeParams(
-            sourceNode,
-            targetNode,
-            0,
-            innerBendPoints,
-            {
-                source: getSourceEndPoint(allPoints),
-                target: getTargetEndPoint(allPoints),
-            },
-        );
+        const params = getEdgeParams(sourceNode, targetNode, innerBendPoints, {
+            source: getSourceEndPoint(allPoints),
+            target: getTargetEndPoint(allPoints),
+        });
         return {
             source: { x: params.sx, y: params.sy },
             target: { x: params.tx, y: params.ty },

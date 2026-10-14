@@ -89,7 +89,6 @@
             return getEdgeParams(
                 sourceNode.current,
                 targetNode.current,
-                0,
                 bendPoints,
                 {
                     source: sourceEndPoint,
