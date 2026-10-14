@@ -27,6 +27,7 @@ import {
     getRoundedCornerPolylinePath,
     moveEndPointWithBorder,
     projectPointOntoNodeBorder,
+    projectPointOntoRectBorder,
 } from "$lib/rendering/svelteflow/components/edge/edgeUtils.ts";
 
 const CORNER = [
@@ -191,6 +192,19 @@ describe("class borders", () => {
         expect(moveEndPointWithBorder({ x: 0, y: 50 }, before, after)).toEqual({
             x: 0,
             y: 20,
+        });
+    });
+
+    test("a detached end point is docked onto the nearest side of its class", () => {
+        const rect = { x: 100, y: 100, width: 200, height: 100 };
+
+        expect(projectPointOntoRectBorder(rect, { x: 40, y: 150 })).toEqual({
+            x: 100,
+            y: 150,
+        });
+        expect(projectPointOntoRectBorder(rect, { x: 200, y: 180 })).toEqual({
+            x: 200,
+            y: 200,
         });
     });
 });

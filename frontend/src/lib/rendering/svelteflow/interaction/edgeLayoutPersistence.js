@@ -235,8 +235,9 @@ export class EdgeLayoutPersistence {
 
     /**
      * Saves the given classes and labels together with the unsaved edges of the shown diagram, or
-     * with all of its edges, e.g. after the diagram was laid out anew. Classes that moved without
-     * any edge or label are saved on their own.
+     * with all of its edges, e.g. after the diagram was laid out anew. The backend then drops the
+     * points of the edges hidden by a filter, which do not fit the new layout. Classes that moved
+     * without any edge or label are saved on their own.
      */
     saveDiagramLayout({ classes = [], labels = [], allEdges = false }) {
         this.#nodeDragActive = false;
@@ -272,7 +273,7 @@ export class EdgeLayoutPersistence {
             return;
         }
         const target = this.#target;
-        if (labels.length + changedEdges.length === 0) {
+        if (!allEdges && labels.length + changedEdges.length === 0) {
             this.#enqueue([], () => requestClassPositions(target, classes));
             return;
         }
@@ -283,6 +284,7 @@ export class EdgeLayoutPersistence {
                     classes,
                     labels,
                     edges: changedEdges.map(edge => this.#toSentLayout(edge)),
+                    allEdges,
                 }),
         );
     }

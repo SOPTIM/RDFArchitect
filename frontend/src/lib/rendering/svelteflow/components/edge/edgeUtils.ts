@@ -439,13 +439,29 @@ export function projectPointOntoNodeBorder(
     point: { x: number; y: number },
 ): { x: number; y: number } {
     const pos = node.internals.positionAbsolute ?? { x: 0, y: 0 };
-    const width = node.measured.width ?? 0;
-    const height = node.measured.height ?? 0;
+    return projectPointOntoRectBorder(
+        {
+            x: pos.x,
+            y: pos.y,
+            width: node.measured.width ?? 0,
+            height: node.measured.height ?? 0,
+        },
+        point,
+    );
+}
 
-    const left = pos.x;
-    const right = pos.x + width;
-    const top = pos.y;
-    const bottom = pos.y + height;
+/**
+ * Projects an arbitrary point onto the outline of a rectangle, see
+ * {@link projectPointOntoNodeBorder}.
+ */
+export function projectPointOntoRectBorder(
+    rect: Rect,
+    point: { x: number; y: number },
+): { x: number; y: number } {
+    const left = rect.x;
+    const right = rect.x + rect.width;
+    const top = rect.y;
+    const bottom = rect.y + rect.height;
 
     const clampedX = Math.max(left, Math.min(right, point.x));
     const clampedY = Math.max(top, Math.min(bottom, point.y));
