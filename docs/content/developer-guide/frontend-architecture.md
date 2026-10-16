@@ -12,7 +12,7 @@ sidebar_position: 4
 - **Tailwind CSS** for styling, with project-specific design tokens (CSS variables) in `src/lib/styles/`.
 - **bits-ui** for headless dialog, menubar, and dropdown primitives, wrapped in project-local components under `src/lib/components/bitsui/`.
 - **SvelteFlow** for diagram rendering, with **elkjs** for auto-layout.
-- **Mermaid** as the alternative renderer.
+- **Mermaid** for the obsolete alternative renderer, which is no longer developed.
 - **CodeMirror 6** with `codemirror-lang-turtle` for the TTL editors.
 - **Asciidoctor.js** for rendering class comments.
 - **Vitest** for unit tests, **jsdom** for the DOM environment.
@@ -78,6 +78,8 @@ The SvelteFlow diagram lives in `lib/rendering/svelteflow/`. Its node and edge c
 A property opened from the diagram is requested through `lib/propertyEditorRequest.svelte.js` and answered by `routes/mainpage/classEditor/PropertyEditorHost.svelte`, which shows the attribute, association, or enum entry editor without the class editor. Those editors read everything through the `classEditor` context, which both the class editor and the host build with `class-editor-context.js`. When the class editor already holds the class, the host uses that class instead of loading a second copy, so the two editors share one unsaved state.
 
 To identify a property, the rendering DTOs carry the UUID of every attribute, association end, and enum entry, and every edge label carries `associationEndUUID`. That one differs from `identifiedObjectUUID`, the key label positions are stored under, in merged diagrams. The owning class is resolved to the schema a property lives in, so merged class UUIDs work as well.
+
+Edges are drawn as polylines through their edge points (`components/edge/PolylineEdge.svelte`, geometry in `edgeUtils.ts`): the docking points that pin the ends of an edge to the class border, and the bend points in between. The backend delivers the stored edge points of every edge, which `diagram/diagramElements.js` flattens. The edge points are edited by `interaction/edgePoints.svelte.js` (context menu, Ctrl+Q and Ctrl+Shift+Q) and by the handles in `EdgePointHandles.svelte`; pure point operations live in `interaction/edgePointOperations.js`. `interaction/edgeLayoutPersistence.js` saves an edge once it is deselected, holds edges back while a class or a point is dragged, sends the requests of one edge one after another, and flushes unsaved edges on `pagehide`. The automatic layout in `layout/elkLayout.js` (ELK Layered, in a web worker) runs only when every class sits at (0,0) or when **Reset Layout** is clicked.
 
 ## Svelte script ordering
 
