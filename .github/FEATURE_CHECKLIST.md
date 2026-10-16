@@ -52,15 +52,33 @@ Reference document for manual testing. Verify the areas relevant to your change 
 ## Editor – Package View
 
 - Class diagram renders correctly
-- Moving nodes persists after reload
+- Moving classes, edge points and labels persists after reload
 - Loading animation shown while loading
 - Info cards shown when no package or no classes available
 - Drag and zoom
-- Reset View, Filter View, Reset Layout buttons
+- Reset View, Filter View, Reset Layout buttons; Reset Layout replaces class positions, edge points and label positions
 - Click on class opens class editor
+- Class context menu: Move to Front/Up/Down/Bottom; Layer slider
 - Multi-select: Ctrl/Cmd+click toggles a class, Shift+click adds a class, Ctrl/Cmd+drag toggles a selection box, Shift+drag adds, plain drag on the pane replaces the selection
 - Right-drag pans the diagram, right-click opens the context menu without selecting the class
 - Pane context menu: Add class, Paste class
+
+## Editor – Edges
+
+- Click selects only that edge; selected edge drawn above the classes
+- Edge points only on a single selected edge; bend points blue, docking points green; box selection in large diagrams does not lag
+- Drag inactive bend point (faint blue, segment middle) creates a bend point; bend points draggable
+- Drag inactive docking point (faint green, class border) pins the edge end; docking point slides along the border
+- Ctrl+Q: one bend point per key press; Ctrl+Shift+Q: deletes the edge point under the cursor, held it works as a brush
+- Point context menu: Delete edge point; deleted docking point docks on its own again
+- Edge context menu: Add bend point here; Remove all bend points (docking points stay); Remove docking points; Remove all edge points; Edit/View Association or Inheritance; remove entries disabled when nothing to remove
+- Double-click on edge: association editor, or class editor of the sub class with Derived from focused
+- Docking points follow moved and resized classes; bend points move along when both classes are dragged
+- Collinear bend points removed on save
+- Dragging a point near the border pans the view
+- Edges hidden by a filter keep their edge points; straight after Reset Layout
+- Settings: Smoothed edges; Corner rounding (%) slider; segments stay straight, only corners rounded
+- Readonly: no inactive edge points; edge point entries disabled; nothing saved
 
 ## Editor – Paste
 
@@ -93,14 +111,14 @@ Reference document for manual testing. Verify the areas relevant to your change 
 ## Editor – Custom Diagram View
 
 - Class diagram renders correctly
-- Moving nodes persists after reload
+- Moving classes, edge points and labels persists after reload
 - Loading animation shown while loading
 - Info cards shown when no diagram or no classes available
 - Drag and zoom
 - Reset View, Filter View, Reset Layout buttons
 - Click on class opens class editor
 - Multi-select: works the same as in the package view
-- Class context menu: Delete class, Remove from diagram, Move between layers
+- Class context menu: Delete class, Remove from diagram, Move between layers; Layer slider
 - Pane context menu: Add class
 
 ## Prefixes Page
