@@ -20,8 +20,8 @@ package org.rdfarchitect.services.rendering.svelteflow;
 import lombok.experimental.UtilityClass;
 
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
-import org.rdfarchitect.api.dto.rendering.svelteflow.sub.BendPointDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.sub.SvelteFlowEdgePointDTO;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.EdgeKey;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher.EdgePoint;
@@ -32,8 +32,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Assembles the stored points of an edge, its bend points and the end points at the borders of its
- * classes, for inheritance and association edges alike.
+ * Assembles the stored edge points of an edge, its bend points and the docking points at the
+ * borders of its classes, for inheritance and association edges alike.
  */
 @UtilityClass
 public class SvelteFlowEdgePoints {
@@ -44,7 +44,7 @@ public class SvelteFlowEdgePoints {
     /**
      * The stored points of an edge in the order the edge is rendered, from its source to its target
      * class. The id of a point is its mRID, which is what lets the frontend send the point back to
-     * update it. An end point carries the side of the class it is glued to.
+     * update it. A docking point carries the side of the class it is pinned to.
      *
      * @param layoutData the layout data of the diagram, may be null
      * @param style {@link DiagramObjectStyle#INHERITANCE} or {@link DiagramObjectStyle#ASSOCIATION}
@@ -54,7 +54,7 @@ public class SvelteFlowEdgePoints {
      * @param targetClass the class the edge ends at
      * @return the points of the edge, empty if it has none stored in the diagram
      */
-    public List<BendPointDTO> forEdge(
+    public List<SvelteFlowEdgePointDTO> forEdge(
             RenderingLayoutData layoutData,
             DiagramObjectStyle style,
             UUID sourceObject,
@@ -77,11 +77,11 @@ public class SvelteFlowEdgePoints {
             Collections.reverse(points);
         }
         var lastIndex = points.size() - 1;
-        var bendPoints = new ArrayList<BendPointDTO>();
+        var edgePoints = new ArrayList<SvelteFlowEdgePointDTO>();
         for (var index = 0; index < points.size(); index++) {
             var point = points.get(index);
-            bendPoints.add(
-                    BendPointDTO.builder()
+            edgePoints.add(
+                    SvelteFlowEdgePointDTO.builder()
                             .id(point.point().getMRID().getUuid().toString())
                             .position(
                                     PositionDTO.builder()
@@ -91,13 +91,13 @@ public class SvelteFlowEdgePoints {
                             .side(sideOf(point, index, lastIndex, sourceClass, targetClass))
                             .build());
         }
-        return bendPoints;
+        return edgePoints;
     }
 
     /**
-     * The side of an end point, taken from the class it is glued to. Where that is ambiguous, for
-     * an edge from a class to itself or a glue point whose class is unknown, the first point is
-     * taken as the source end point and the last one as the target end point.
+     * The side of a docking point, taken from the class it is glued to. Where that is ambiguous,
+     * for an edge from a class to itself or a glue point whose class is unknown, the first point is
+     * taken as the source docking point and the last one as the target docking point.
      *
      * @return the side, or null for a bend point
      */

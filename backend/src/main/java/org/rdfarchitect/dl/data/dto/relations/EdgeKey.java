@@ -43,10 +43,24 @@ import java.util.UUID;
  */
 public record EdgeKey(DiagramObjectStyle style, UUID identifiedObject, UUID otherClass) {
 
+    /**
+     * The key of the inheritance edge from a sub class to one of its super classes.
+     *
+     * @param subClass the sub class
+     * @param superClass the super class
+     * @return the key
+     */
     public static EdgeKey inheritance(UUID subClass, UUID superClass) {
         return new EdgeKey(DiagramObjectStyle.INHERITANCE, subClass, superClass);
     }
 
+    /**
+     * The key of an association edge, the same for both of its ends given in either order.
+     *
+     * @param associationEnd one end of the association
+     * @param inverseAssociationEnd the other end of the association
+     * @return the key
+     */
     public static EdgeKey association(UUID associationEnd, UUID inverseAssociationEnd) {
         if (associationEnd.compareTo(inverseAssociationEnd) <= 0) {
             return new EdgeKey(

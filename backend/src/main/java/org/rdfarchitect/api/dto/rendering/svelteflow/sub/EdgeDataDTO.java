@@ -50,5 +50,10 @@ public class EdgeDataDTO {
     private String graphUri;
     private String graphKeyword;
     private String color;
-    private List<BendPointDTO> bendPoints;
+
+    /**
+     * The stored edge points of the edge from its source to its target: the docking points at its
+     * ends, if pinned, and the bend points in between.
+     */
+    private List<SvelteFlowEdgePointDTO> edgePoints;
 }

@@ -24,30 +24,30 @@ import {
     elevateEdges,
     onlySelectedEdgeId,
 } from "$lib/rendering/svelteflow/diagram/diagramElements.js";
-import {
-    getSourceEndPoint,
-    getTargetEndPoint,
-} from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
 import { toEdgeLayoutDTO } from "$lib/rendering/svelteflow/interaction/edgeLayoutPersistence.js";
+import {
+    getSourceDockingPoint,
+    getTargetDockingPoint,
+} from "$lib/rendering/svelteflow/interaction/edgePointOperations.js";
 
 function renderedPoint(id, x, y, side = null) {
     return { id, position: { x, y, z: 0 }, side };
 }
 
-function renderedEdge(bendPoints) {
+function renderedEdge(edgePoints) {
     return {
         id: "edge",
         type: "association",
         source: "source-class",
         target: "target-class",
-        data: { sourceObject: "a", targetObject: "b", bendPoints },
+        data: { sourceObject: "a", targetObject: "b", edgePoints },
     };
 }
 
 vi.mock("$lib/api/generated/index.ts", () => ({}));
 
 describe("decorateEdges", () => {
-    test("flattens the rendered points and keeps the side of the end points", () => {
+    test("flattens the rendered edge points and keeps the side of the docking points", () => {
         const [edge] = decorateEdges([
             renderedEdge([
                 renderedPoint("s", 0, 0, "source"),
@@ -56,14 +56,14 @@ describe("decorateEdges", () => {
             ]),
         ]);
 
-        expect(edge.data.bendPoints).toEqual([
-            { id: "s", x: 0, y: 0, isEndPoint: true, side: "source" },
+        expect(edge.data.edgePoints).toEqual([
+            { id: "s", x: 0, y: 0, isDockingPoint: true, side: "source" },
             { id: "m", x: 50, y: 50 },
-            { id: "t", x: 100, y: 100, isEndPoint: true, side: "target" },
+            { id: "t", x: 100, y: 100, isDockingPoint: true, side: "target" },
         ]);
     });
 
-    test("recognizes a lone end point at the target", () => {
+    test("recognizes a lone docking point at the target", () => {
         const [edge] = decorateEdges([
             renderedEdge([
                 renderedPoint("m", 50, 50),
@@ -71,8 +71,8 @@ describe("decorateEdges", () => {
             ]),
         ]);
 
-        expect(getSourceEndPoint(edge.data.bendPoints)).toBeNull();
-        expect(getTargetEndPoint(edge.data.bendPoints).id).toBe("t");
+        expect(getSourceDockingPoint(edge.data.edgePoints)).toBeNull();
+        expect(getTargetDockingPoint(edge.data.edgePoints).id).toBe("t");
     });
 
     test("sends the rendered points back as they were rendered", () => {

@@ -20,10 +20,10 @@ package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 import lombok.Builder;
 import lombok.Data;
 
-/** DTO representing a single bend point or end point of a SvelteFlow edge. */
+/** DTO representing a single edge point, a bend or a docking point, of a SvelteFlow edge. */
 @Data
 @Builder
-public class BendPointDTO {
+public class SvelteFlowEdgePointDTO {
 
     /** The mRID of the point, sent back unchanged when the layout of the edge is saved. */
     private String id;
@@ -31,8 +31,8 @@ public class BendPointDTO {
     private PositionDTO position;
 
     /**
-     * The side of an end point, {@code source} or {@code target}: the point is glued to the border
-     * of the source or the target class of the edge. Null for a bend point.
+     * The side of a docking point, {@code source} or {@code target}: the point is pinned to the
+     * border of the source or the target class of the edge. Null for a bend point.
      */
     private String side;
 }

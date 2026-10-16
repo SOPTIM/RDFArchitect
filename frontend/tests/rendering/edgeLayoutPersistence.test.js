@@ -24,15 +24,15 @@ import {
     updateEdgeLayouts,
 } from "$lib/api/generated/index.ts";
 import {
-    createBendPoint,
-    createEndPoint,
-} from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
-import {
     EdgeLayoutPersistence,
     edgePointDrag,
     toEdgeLayoutDTO,
     withStoredIds,
 } from "$lib/rendering/svelteflow/interaction/edgeLayoutPersistence.js";
+import {
+    createBendPoint,
+    createDockingPoint,
+} from "$lib/rendering/svelteflow/interaction/edgePointOperations.js";
 
 const GRAPH_TARGET = {
     datasetName: "ds",
@@ -40,7 +40,7 @@ const GRAPH_TARGET = {
     diagramUUID: "diagram",
 };
 
-function edge(id, bendPoints = [], selected = false) {
+function edge(id, edgePoints = [], selected = false) {
     return {
         id,
         type: "association",
@@ -50,13 +50,13 @@ function edge(id, bendPoints = [], selected = false) {
         data: {
             sourceObject: `${id}-source-object`,
             targetObject: `${id}-target-object`,
-            bendPoints,
+            edgePoints,
         },
     };
 }
 
-function withPoints(shownEdge, bendPoints) {
-    return { ...shownEdge, data: { ...shownEdge.data, bendPoints } };
+function withPoints(shownEdge, edgePoints) {
+    return { ...shownEdge, data: { ...shownEdge.data, edgePoints } };
 }
 
 function selected(shownEdge, isSelected) {
@@ -114,10 +114,10 @@ beforeEach(() => {
 });
 
 describe("toEdgeLayoutDTO", () => {
-    test("sends the points in order with the side of each end point", () => {
-        const source = createEndPoint(0, 0, "source");
+    test("sends the edge points in order with the side of each docking point", () => {
+        const source = createDockingPoint(0, 0, "source");
         const bend = createBendPoint(50, 50);
-        const target = createEndPoint(100, 100, "target");
+        const target = createDockingPoint(100, 100, "target");
 
         const layout = toEdgeLayoutDTO(edge("e", [source, bend, target]));
 
@@ -140,9 +140,9 @@ describe("toEdgeLayoutDTO", () => {
         });
     });
 
-    test("keeps the side of a lone end point at the target", () => {
+    test("keeps the side of a lone docking point at the target", () => {
         const bend = createBendPoint(50, 50);
-        const target = createEndPoint(100, 100, "target");
+        const target = createDockingPoint(100, 100, "target");
 
         const layout = toEdgeLayoutDTO(edge("e", [bend, target]));
 
@@ -227,7 +227,7 @@ describe("EdgeLayoutPersistence", () => {
         const classes = [{ classUUID: "c", xPosition: 1, yPosition: 2 }];
 
         persistence.beginNodeDrag();
-        show([withPoints(shown, [createEndPoint(5, 5, "source")])]);
+        show([withPoints(shown, [createDockingPoint(5, 5, "source")])]);
         persistence.saveDiagramLayout({ classes, labels: [] });
         await settle();
 
@@ -299,7 +299,7 @@ describe("EdgeLayoutPersistence", () => {
 
         expect(updateEdgeLayouts).toHaveBeenCalledTimes(2);
         expect(sentEdges(updateEdgeLayouts, 1)[0].points[0].id).toBe("mrid");
-        expect(state.edges[0].data.bendPoints[0].id).toBe("mrid");
+        expect(state.edges[0].data.edgePoints[0].id).toBe("mrid");
     });
 
     test("keeps the ids of a selected edge, which may be dragged right now", async () => {
@@ -314,7 +314,7 @@ describe("EdgeLayoutPersistence", () => {
         state.edges = [selected(state.edges[0], true)];
         await settle();
 
-        expect(state.edges[0].data.bendPoints[0].id).toBe(bend.id);
+        expect(state.edges[0].data.edgePoints[0].id).toBe(bend.id);
         persistence.track(state.edges);
         expect(updateEdgeLayouts).toHaveBeenCalledTimes(1);
     });
@@ -322,8 +322,8 @@ describe("EdgeLayoutPersistence", () => {
     test("dissolves a bend point that was never moved off the line before saving", async () => {
         const shown = edge("e");
         const { state, persistence, show } = persistenceFor([shown]);
-        const source = createEndPoint(0, 0, "source");
-        const target = createEndPoint(100, 100, "target");
+        const source = createDockingPoint(0, 0, "source");
+        const target = createDockingPoint(100, 100, "target");
 
         show([withPoints(shown, [source, createBendPoint(50, 52), target])]);
         await settle();
@@ -331,14 +331,14 @@ describe("EdgeLayoutPersistence", () => {
         expect(
             sentEdges(updateEdgeLayouts)[0].points.map(point => point.id),
         ).toEqual([source.id, target.id]);
-        expect(state.edges[0].data.bendPoints).toEqual([source, target]);
+        expect(state.edges[0].data.edgePoints).toEqual([source, target]);
         persistence.track(state.edges);
         expect(updateEdgeLayouts).toHaveBeenCalledTimes(1);
     });
 
     test("sends nothing if the edge ends up with the points it was saved with", async () => {
-        const source = createEndPoint(0, 0, "source");
-        const target = createEndPoint(100, 100, "target");
+        const source = createDockingPoint(0, 0, "source");
+        const target = createDockingPoint(100, 100, "target");
         const shown = edge("e", [source, target], true);
         const { show } = persistenceFor([shown]);
 
@@ -355,9 +355,9 @@ describe("EdgeLayoutPersistence", () => {
     });
 
     test("does not save points the diagram moved on its own", async () => {
-        const shown = edge("e", [createEndPoint(0, 0, "source")]);
+        const shown = edge("e", [createDockingPoint(0, 0, "source")]);
         const { state, persistence, show } = persistenceFor([shown]);
-        const docked = withPoints(shown, [createEndPoint(0, 5, "source")]);
+        const docked = withPoints(shown, [createDockingPoint(0, 5, "source")]);
 
         state.edges = [docked];
         persistence.acceptWithoutSaving(state.edges);
