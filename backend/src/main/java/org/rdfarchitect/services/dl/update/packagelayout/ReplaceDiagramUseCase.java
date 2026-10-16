@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.services.dl.update;
+package org.rdfarchitect.services.dl.update.packagelayout;
 
 import org.rdfarchitect.database.GraphIdentifier;
 

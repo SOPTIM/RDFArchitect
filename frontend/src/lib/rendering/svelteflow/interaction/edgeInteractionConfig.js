@@ -1,0 +1,67 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+/**
+ * Central configuration for edge interaction behaviour (bend points, docking
+ * points and the auto-pan while dragging them). Kept separate from the geometric edge
+ * rendering constants in edgeUtils.ts, which describe how edges are drawn rather
+ * than how the user interacts with them.
+ */
+export const EDGE_INTERACTION_CONFIG = {
+    /** Radius (in flow units) of the handle of an edge point. */
+    activePointRadiusPx: 8,
+    /** Radius (in flow units) of an inactive bend or docking point. */
+    inactivePointRadiusPx: 7,
+
+    /**
+     * Base hit radius (in screen pixels) for detecting an edge point under the
+     * cursor on right-click and for the delete hotkey. Divided by the zoom level so the felt hit area
+     * stays constant across zoom levels.
+     */
+    pointHitRadiusPx: 10,
+    /**
+     * Base hit radius (in screen pixels) for detecting the edge line closest to
+     * the cursor for the on-cursor bend point hotkeys. Divided by the zoom level
+     * so the felt hit area stays constant across zoom levels.
+     */
+    edgeHitRadiusPx: 20,
+
+    /**
+     * Maximum perpendicular distance (in flow units) of a bend point to the
+     * straight line between its neighbours for it to count as redundant and be
+     * dissolved. Larger values dissolve points that are only roughly collinear,
+     * smaller values only near-exactly collinear ones.
+     */
+    collinearBendPointTolerancePx: 8,
+
+    /**
+     * Maximum distance (in flow units) of a stored docking point to the border of its class for it
+     * to count as docked. A docking point further off is put back onto the border when the diagram
+     * is loaded.
+     */
+    dockingPointBorderTolerancePx: 1,
+
+    /** Auto-pan behaviour while dragging an edge point near the border. */
+    autoPan: {
+        /** Distance from the container edge within which auto-pan triggers. */
+        edgeZonePx: 40,
+        /** Minimum pan speed (px per frame) at the outer border of the zone. */
+        minSpeedPx: 0.5,
+        /** Maximum pan speed (px per frame) at (or past) the container edge. */
+        maxSpeedPx: 22,
+    },
+};

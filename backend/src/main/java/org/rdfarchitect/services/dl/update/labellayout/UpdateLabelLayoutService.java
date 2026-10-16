@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.shared.Lock;
 import org.rdfarchitect.api.dto.dl.LabelPositionDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -72,18 +73,28 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
     @Override
     public void updateLabelPositions(
             String datasetName, UUID diagramUUID, List<LabelPositionDTO> labelPositionDTOList) {
-        applyLabelPositions(
-                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel(),
-                diagramUUID,
-                labelPositionDTOList);
+        var diagramLayoutModel =
+                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
+        diagramLayoutModel.enterCriticalSection(Lock.WRITE);
+        try {
+            applyLabelPositions(diagramLayoutModel, diagramUUID, labelPositionDTOList);
+        } finally {
+            diagramLayoutModel.leaveCriticalSection();
+        }
     }
 
     /**
-     * Replaces each addressed label wholesale instead of patching its position, which keeps the
-     * stored text in sync with the model and makes a reset (an entry without an offset) fall out of
-     * the same code path.
+     * Places or resets the given labels of a diagram, inside a transaction the caller holds. A
+     * label with a position replaces the stored one, a label without position is reset to its
+     * default place by deleting the stored one. Labels are replaced wholesale instead of patching
+     * their position, which keeps the stored text in sync with the model and lets a reset take the
+     * same code path.
+     *
+     * @param diagramLayoutModel the diagram layout holding the diagram
+     * @param diagramUUID the UUID of the diagram
+     * @param labelPositions the labels to place or reset
      */
-    private void applyLabelPositions(
+    public static void applyLabelPositions(
             Model diagramLayoutModel, UUID diagramUUID, List<LabelPositionDTO> labelPositions) {
         if (labelPositions.isEmpty()) {
             return;
@@ -94,7 +105,7 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
         var existingLabelsByKey = existingLabelsByKey(diagramLayoutModel, diagramUUID);
         for (var labelPosition : labelPositions) {
             var style = DiagramObjectStyle.byName(labelPosition.getKind());
-            if (style == null || style == DiagramObjectStyle.CLASS) {
+            if (style == null || !style.isLabel()) {
                 continue;
             }
             var labelKey = new LabelKey(labelPosition.getIdentifiedObjectUUID(), style);
@@ -119,7 +130,7 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
      * Fetches every existing label of the diagram in one query instead of one {@code fetchLabelDO}
      * query per label being applied.
      */
-    private Map<LabelKey, DiagramObject> existingLabelsByKey(
+    private static Map<LabelKey, DiagramObject> existingLabelsByKey(
             Model diagramLayoutModel, UUID diagramUUID) {
         Map<LabelKey, DiagramObject> byKey = new HashMap<>();
         for (var label : DLObjectFetcher.fetchDiagramLabelDOs(diagramLayoutModel, diagramUUID)) {

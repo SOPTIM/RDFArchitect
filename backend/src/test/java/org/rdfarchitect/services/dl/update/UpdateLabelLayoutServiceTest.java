@@ -104,7 +104,7 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
                         PACKAGE_A_UUID,
                         new LabelKey(ASSOCIATION_END_UUID, DiagramObjectStyle.MULTIPLICITY));
         assertThat(labelDO).isNotNull();
-        assertThat(DLObjectFetcher.fetchDOPForDO(model(), labelDO.getMRID())).isNotNull();
+        assertThat(DLObjectFetcher.fetchDOPsForDO(model(), labelDO.getMRID())).isNotEmpty();
 
         var labelResource = model().getResource(labelDO.getMRID().getFullMRID());
         assertThat(labelResource.hasProperty(RDF.type, DL.diagramObjectType)).isTrue();
@@ -186,7 +186,10 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
         assertThat(DLObjectFetcher.fetchDiagramClassDOs(model(), new MRID(PACKAGE_A_UUID)))
                 .extracting(diagramObject -> diagramObject.getBelongsToIdentifiedObject().getUuid())
                 .containsExactly(CLASS_A_UUID);
-        assertThat(DLObjectFetcher.fetchAllDOs(model(), ASSOCIATION_END_UUID)).isEmpty();
+        assertThat(
+                        DLObjectFetcher.fetchAllDOs(
+                                model(), ASSOCIATION_END_UUID, DiagramObjectStyle.CLASS))
+                .isEmpty();
     }
 
     /**
@@ -207,10 +210,16 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
         assertThat(DLObjectFetcher.fetchDiagramClassDOs(model(), new MRID(PACKAGE_A_UUID)))
                 .isEmpty();
-        assertThat(DLObjectFetcher.fetchAllDOs(model(), ASSOCIATION_END_UUID)).isEmpty();
         assertThat(
-                        DLObjectFetcher.fetchDiagramDOForClass(
-                                model(), PACKAGE_A_UUID, ASSOCIATION_END_UUID))
+                        DLObjectFetcher.fetchAllDOs(
+                                model(), ASSOCIATION_END_UUID, DiagramObjectStyle.CLASS))
+                .isEmpty();
+        assertThat(
+                        DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                                model(),
+                                PACKAGE_A_UUID,
+                                ASSOCIATION_END_UUID,
+                                DiagramObjectStyle.CLASS))
                 .isNull();
     }
 

@@ -27,7 +27,7 @@ Classes complete the hierarchy shown in the navigation tree: *"Workspace → Gra
 
 ## How this guide is organised
 
-1. **[The editor and importing data](./workspace-and-importing)** — the editor layout and how to get content in.
+1. **[The editor and importing data](./workspace-and-importing)** — the editor layout, arranging diagrams, and how to get content in.
 2. **[Organising a schema](./organising-schemas)** — workspaces, graphs, packages.
 3. **[Editing classes](./editing-classes)** — the right-hand class editor.
 4. **[Working with namespaces](./namespaces)**.

@@ -24,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
 import org.rdfarchitect.services.update.graph.DeleteGraphService;
 import org.springframework.mock.web.MockMultipartFile;
 
@@ -37,7 +38,8 @@ class DeleteGraphServiceTest {
     @BeforeEach
     void setUp() {
         mockDatabasePort = mock(DatabasePort.class);
-        deleteGraphService = new DeleteGraphService(mockDatabasePort);
+        deleteGraphService =
+                new DeleteGraphService(mockDatabasePort, mock(SyncDiagramLayoutUseCase.class));
     }
 
     @Test
