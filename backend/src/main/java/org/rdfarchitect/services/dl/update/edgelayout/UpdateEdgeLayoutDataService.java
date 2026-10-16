@@ -110,8 +110,8 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
      *   <li>any other point is new and stored under an mRID of its own, which is returned for the
      *       id it was sent with
      *   <li>stored points that are not sent anymore are deleted
-     *   <li>an end point is glued to the glue point of the source or the target class, depending on
-     *       its side
+     *   <li>a docking point is glued to the glue point of the source or the target class, depending
+     *       on its side
      * </ul>
      *
      * The sequence numbers count from the side of the identified object of the edge diagram object,
@@ -303,7 +303,7 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
     }
 
     /**
-     * The class an end point of the given side is glued to.
+     * The class a docking point of the given side is glued to.
      *
      * @return the source or the target class of the edge, or null for a bend point
      */
@@ -346,8 +346,8 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
     }
 
     /**
-     * The glue point of a class in the diagram, the point an end point at the border of the class
-     * is glued to.
+     * The glue point of a class in the diagram, the point a docking point at the border of the
+     * class is glued to.
      *
      * @return the glue point, or null if the class has no layout data in the diagram
      */

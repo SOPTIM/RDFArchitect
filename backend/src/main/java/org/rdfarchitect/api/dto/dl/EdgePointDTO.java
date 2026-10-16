@@ -24,8 +24,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * A point of an edge: an end point at the border of a class or a bend point in between. The
- * position of the point within {@link EdgeLayoutDTO#getPoints()} is its sequence number.
+ * An edge point: a docking point at the border of a class or a bend point in between. The position
+ * of the point within {@link EdgeLayoutDTO#getPoints()} is its sequence number.
  */
 @Data
 @NoArgsConstructor
@@ -47,8 +47,8 @@ public class EdgePointDTO {
     private float yPosition;
 
     /**
-     * The side of an end point, {@code source} or {@code target}: the point is glued to the border
-     * of the source or the target class of the edge. Null for a bend point.
+     * The side of a docking point, {@code source} or {@code target}: the point is pinned to the
+     * border of the source or the target class of the edge. Null for a bend point.
      */
     @JsonProperty("side")
     private String side;

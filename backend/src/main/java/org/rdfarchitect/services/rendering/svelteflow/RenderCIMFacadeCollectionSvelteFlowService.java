@@ -356,7 +356,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                         EdgeDataDTO.builder()
                                                 .sourceObject(merged.uuid())
                                                 .targetObject(superClass.uuid())
-                                                .bendPoints(
+                                                .edgePoints(
                                                         SvelteFlowEdgePoints.forEdge(
                                                                 layoutData,
                                                                 DiagramObjectStyle.INHERITANCE,
@@ -421,7 +421,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                     .graphUri(source.graphUri())
                                     .graphKeyword(source.keyword())
                                     .color(source.color())
-                                    .bendPoints(
+                                    .edgePoints(
                                             SvelteFlowEdgePoints.forEdge(
                                                     layoutData,
                                                     DiagramObjectStyle.ASSOCIATION,
@@ -709,7 +709,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                         EdgeDataDTO.builder()
                                                 .sourceObject(cimClass.getUuid())
                                                 .targetObject(superClass.getUuid())
-                                                .bendPoints(
+                                                .edgePoints(
                                                         SvelteFlowEdgePoints.forEdge(
                                                                 renderContext.layoutingData(),
                                                                 DiagramObjectStyle.INHERITANCE,
@@ -774,7 +774,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                         .targetAssociationLabel(labels.targetAssociationLabel())
                         .useToAssociation(getAssociationUsedValue(from.getAssociationUsed()))
                         .useFromAssociation(getAssociationUsedValue(to.getAssociationUsed()))
-                        .bendPoints(
+                        .edgePoints(
                                 SvelteFlowEdgePoints.forEdge(
                                         layoutData,
                                         DiagramObjectStyle.ASSOCIATION,

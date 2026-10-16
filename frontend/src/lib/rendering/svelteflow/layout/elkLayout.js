@@ -78,7 +78,7 @@ function initializeELK() {
  * layouted result. The nodes come back in SvelteFlow format with updated
  * positions. The layouted edges are returned separately as raw geometric points
  * (tagged source/bend/target) per edge id, so that the rendering layer can turn
- * them into the actual end and bend point objects. This file stays purely
+ * them into the actual docking and bend point objects. This file stays purely
  * geometric and does not deal with the frontend's point representation.
  *
  * @param {Array} nodes SvelteFlow nodes
@@ -103,11 +103,11 @@ export async function layoutDiagram(nodes, edges) {
 
 /**
  * Extracts the routing ELK computed for every edge. For each edge the first
- * section is used, since UML association edges are simple one-to-one edges whose
- * full path is described by a single section. The result maps an edge id to an
- * ordered list of raw points, each tagged with a role: "source" for the start
- * point at the source class border, "bend" for the interior bend points, and
- * "target" for the end point at the target class border.
+ * section is used, since every edge connects exactly two classes and its full
+ * path is described by a single section. The result maps an edge id to an
+ * ordered list of raw points, each tagged with a role: "source" for the point at
+ * the source class border, "bend" for the bend points in between, and "target"
+ * for the point at the target class border.
  *
  * @param {object} elkGraph the graph returned by ELK after layout
  * @returns {Map<string, {x: number, y: number, role: "source"|"bend"|"target"}[]>}
@@ -148,7 +148,7 @@ function extractLayoutedEdges(elkGraph) {
 /**
  * Builds the ELK graph input structure from the SvelteFlow nodes and edges.
  * A pure SvelteFlow-to-ELK transformation. Classes with edges come first, so
- * that ELK places the classes without any edge behind the diagram.
+ * that ELK places the classes without any edge after them, beside the diagram.
  *
  * @param {Array} nodes SvelteFlow nodes
  * @param {Array} edges SvelteFlow edges

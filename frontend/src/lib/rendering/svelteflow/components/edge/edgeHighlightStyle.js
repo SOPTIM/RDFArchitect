@@ -38,10 +38,9 @@ const DECAY_TRANSITION =
     "transition: stroke 450ms ease-out, stroke-width 450ms ease-out;";
 
 /**
- * The stroke style of an edge's own path, replacing the previous dashed overlay: selecting an
- * edge, or holding one of its labels, swells it and turns it blue instead. Shared by every edge
- * type so inheritance and association edges swell identically instead of drifting apart in width,
- * colour or timing.
+ * The stroke style of an edge's own path: selecting an edge, or holding one of its labels, swells
+ * it and turns it blue. Shared by every edge type so inheritance and association edges swell
+ * identically instead of drifting apart in width, colour or timing.
  *
  * @param baseColor the stroke colour the edge has while neither selected nor highlighted
  * @param highlighted whether the edge is currently selected or one of its labels is held

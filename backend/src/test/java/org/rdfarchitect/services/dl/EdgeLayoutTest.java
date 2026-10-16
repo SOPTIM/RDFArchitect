@@ -37,8 +37,8 @@ import org.rdfarchitect.api.dto.dl.EdgePointIdDTO;
 import org.rdfarchitect.api.dto.dl.LabelPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
-import org.rdfarchitect.api.dto.rendering.svelteflow.sub.BendPointDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.sub.SvelteFlowEdgePointDTO;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
@@ -248,7 +248,7 @@ class EdgeLayoutTest {
     }
 
     @Test
-    void savingAnEdge_storesItsPointsInOrderAndGluesItsEndPoints() {
+    void savingAnEdge_storesItsPointsInOrderAndGluesItsDockingPoints() {
         layoutClasses(SUB, SUPER);
 
         var newPointIds =
@@ -281,7 +281,7 @@ class EdgeLayoutTest {
     }
 
     @Test
-    void anEndPointIsGluedByItsSide_evenIfTheEdgeHasNoEndPointAtTheOtherSide() {
+    void aDockingPointIsGluedByItsSide_evenIfTheEdgeHasNoDockingPointAtTheOtherSide() {
         layoutClasses(SUB, SUPER);
 
         edgeLayoutService.updateEdgeLayouts(
@@ -493,18 +493,20 @@ class EdgeLayoutTest {
                                                 point("m", 50, 50),
                                                 point("t", 100, 100, TARGET_SIDE)))));
 
-        var bendPoints = renderedEdge(EdgeKey.inheritance(SUB, SUPER)).getData().getBendPoints();
+        var edgePoints = renderedEdge(EdgeKey.inheritance(SUB, SUPER)).getData().getEdgePoints();
 
-        assertThat(bendPoints).extracting(BendPointDTO::getId).containsExactlyElementsOf(ids);
-        assertThat(bendPoints)
+        assertThat(edgePoints)
+                .extracting(SvelteFlowEdgePointDTO::getId)
+                .containsExactlyElementsOf(ids);
+        assertThat(edgePoints)
                 .extracting(point -> point.getPosition().getX())
                 .containsExactly(0D, 50D, 100D);
-        assertThat(bendPoints)
-                .extracting(BendPointDTO::getSide)
+        assertThat(edgePoints)
+                .extracting(SvelteFlowEdgePointDTO::getSide)
                 .containsExactly(SOURCE_SIDE, null, TARGET_SIDE);
 
         var sentBack =
-                bendPoints.stream()
+                edgePoints.stream()
                         .map(
                                 point ->
                                         point(
@@ -537,7 +539,7 @@ class EdgeLayoutTest {
         assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER)))
                 .extracting(point -> point.getPosition().getX())
                 .containsExactlyElementsOf(expectedX);
-        assertThat(renderedEdge(EdgeKey.inheritance(SUB, SUPER)).getData().getBendPoints())
+        assertThat(renderedEdge(EdgeKey.inheritance(SUB, SUPER)).getData().getEdgePoints())
                 .extracting(point -> (float) point.getPosition().getX())
                 .containsExactlyElementsOf(expectedX);
     }
@@ -563,11 +565,11 @@ class EdgeLayoutTest {
 
         var expectedX =
                 SUB.equals(edge.getSource()) ? List.of(100D, 50D, 0D) : List.of(0D, 50D, 100D);
-        assertThat(edge.getData().getBendPoints())
+        assertThat(edge.getData().getEdgePoints())
                 .extracting(point -> point.getPosition().getX())
                 .containsExactlyElementsOf(expectedX);
-        assertThat(edge.getData().getBendPoints())
-                .extracting(BendPointDTO::getSide)
+        assertThat(edge.getData().getEdgePoints())
+                .extracting(SvelteFlowEdgePointDTO::getSide)
                 .containsExactly(SOURCE_SIDE, null, TARGET_SIDE);
     }
 
@@ -592,7 +594,7 @@ class EdgeLayoutTest {
     }
 
     @Test
-    void movingAClass_movesTheEndPointsGluedToIt() {
+    void movingAClass_movesTheDockingPointsGluedToIt() {
         layoutClasses(SUB, SUPER);
         edgeLayoutService.updateEdgeLayouts(
                 graphOne,
@@ -925,13 +927,15 @@ class EdgeLayoutTest {
                                         datasetName -> List.of())
                                 .renderCrossProfileDiagram(DATASET);
 
-        var bendPoints =
+        var edgePoints =
                 edgeIn(rendering, EdgeKey.inheritance(merged("Sub"), merged("Super")))
                         .getData()
-                        .getBendPoints();
-        assertThat(bendPoints).extracting(BendPointDTO::getId).containsExactlyElementsOf(ids);
-        assertThat(bendPoints)
-                .extracting(BendPointDTO::getSide)
+                        .getEdgePoints();
+        assertThat(edgePoints)
+                .extracting(SvelteFlowEdgePointDTO::getId)
+                .containsExactlyElementsOf(ids);
+        assertThat(edgePoints)
+                .extracting(SvelteFlowEdgePointDTO::getSide)
                 .containsExactly(SOURCE_SIDE, null, TARGET_SIDE);
     }
 

@@ -41,9 +41,10 @@
         onClose = () => {},
         onEditEdge = () => {},
         onAddBendPoint = () => {},
-        onDeleteBendPoint = () => {},
-        onDeleteEndPoint = () => {},
-        onClearBendPoints = () => {},
+        onDeleteEdgePoint = () => {},
+        onRemoveBendPoints = () => {},
+        onRemoveDockingPoints = () => {},
+        onRemoveAllEdgePoints = () => {},
     } = $props();
 
     let triggerRef = $state(null);
@@ -55,8 +56,9 @@
         `${readOnly ? "View" : "Edit"} ${edgeKind === "inheritance" ? "Inheritance" : "Association"}`,
     );
 
-    let onBendPoint = $derived(!!request?.hitBendPointId);
-    let onEndPoint = $derived(!!request?.hitEndPointId);
+    let onEdgePoint = $derived(!!request?.hitEdgePointId);
+    let hasBendPoints = $derived((request?.bendPointCount ?? 0) > 0);
+    let hasDockingPoints = $derived((request?.dockingPointCount ?? 0) > 0);
 
     $effect(() => {
         syncContextMenuTrigger({
@@ -80,20 +82,11 @@
         onClose();
     }
 
-    function deleteBendPoint() {
-        if (!request?.hitBendPointId) return;
-        onDeleteBendPoint({
+    function deleteEdgePoint() {
+        if (!request?.hitEdgePointId) return;
+        onDeleteEdgePoint({
             edgeId: request.edgeId,
-            bendPointId: request.hitBendPointId,
-        });
-        onClose();
-    }
-
-    function deleteEndPoint() {
-        if (!request?.hitEndPointId) return;
-        onDeleteEndPoint({
-            edgeId: request.edgeId,
-            endPointId: request.hitEndPointId,
+            pointId: request.hitEdgePointId,
         });
         onClose();
     }
@@ -104,9 +97,21 @@
         onClose();
     }
 
-    function clearBendPoints() {
+    function removeBendPoints() {
         if (!request) return;
-        onClearBendPoints({ edgeId: request.edgeId });
+        onRemoveBendPoints({ edgeId: request.edgeId });
+        onClose();
+    }
+
+    function removeDockingPoints() {
+        if (!request) return;
+        onRemoveDockingPoints({ edgeId: request.edgeId });
+        onClose();
+    }
+
+    function removeAllEdgePoints() {
+        if (!request) return;
+        onRemoveAllEdgePoints({ edgeId: request.edgeId });
         onClose();
     }
 </script>
@@ -119,23 +124,15 @@
         {disabled}
     />
     <ContextMenu.Content>
-        {#if onEndPoint}
+        {#if onEdgePoint}
             <ContextMenu.Item.Button
-                onSelect={deleteEndPoint}
+                onSelect={deleteEdgePoint}
                 faIcon={faTrash}
+                altText={"Ctrl+Shift+Q"}
                 variant="danger"
                 disabled={readOnly}
             >
-                Delete end point
-            </ContextMenu.Item.Button>
-        {:else if onBendPoint}
-            <ContextMenu.Item.Button
-                onSelect={deleteBendPoint}
-                faIcon={faTrash}
-                variant="danger"
-                disabled={readOnly}
-            >
-                Delete bend point
+                Delete edge point
             </ContextMenu.Item.Button>
         {:else}
             <ContextMenu.Item.Button
@@ -149,12 +146,28 @@
         {/if}
         <ContextMenu.Separator />
         <ContextMenu.Item.Button
-            onSelect={clearBendPoints}
+            onSelect={removeBendPoints}
             faIcon={faEraser}
             variant="danger"
-            disabled={readOnly}
+            disabled={readOnly || !hasBendPoints}
         >
             Remove all bend points
+        </ContextMenu.Item.Button>
+        <ContextMenu.Item.Button
+            onSelect={removeDockingPoints}
+            faIcon={faEraser}
+            variant="danger"
+            disabled={readOnly || !hasDockingPoints}
+        >
+            Remove docking points
+        </ContextMenu.Item.Button>
+        <ContextMenu.Item.Button
+            onSelect={removeAllEdgePoints}
+            faIcon={faEraser}
+            variant="danger"
+            disabled={readOnly || !(hasBendPoints || hasDockingPoints)}
+        >
+            Remove all edge points
         </ContextMenu.Item.Button>
         {#if canEdit}
             <ContextMenu.Separator />

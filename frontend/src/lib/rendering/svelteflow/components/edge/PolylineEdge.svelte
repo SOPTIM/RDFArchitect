@@ -18,17 +18,17 @@
 <script>
     import { getStraightPath, useEdges, useInternalNode } from "@xyflow/svelte";
 
-    import {
-        getInnerBendPoints,
-        getSourceEndPoint,
-        getTargetEndPoint,
-        dissolveCollinearBendPoints,
-    } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
     import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
+    import {
+        getBendPoints,
+        getSourceDockingPoint,
+        getTargetDockingPoint,
+        dissolveCollinearBendPoints,
+    } from "$lib/rendering/svelteflow/interaction/edgePointOperations.js";
     import { labelHighlight } from "$lib/rendering/svelteflow/interaction/labelHighlight.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
 
-    import EdgeBendPoints from "./EdgeBendPoints.svelte";
+    import EdgePointHandles from "./EdgePointHandles.svelte";
     import {
         getEdgeParams,
         getPolylinePath,
@@ -51,10 +51,10 @@
     let sourceNode = useInternalNode(source);
     let targetNode = useInternalNode(target);
 
-    let allPoints = $derived(data?.bendPoints ?? []);
-    let bendPoints = $derived(getInnerBendPoints(allPoints));
-    let sourceEndPoint = $derived(getSourceEndPoint(allPoints));
-    let targetEndPoint = $derived(getTargetEndPoint(allPoints));
+    let edgePoints = $derived(data?.edgePoints ?? []);
+    let bendPoints = $derived(getBendPoints(edgePoints));
+    let sourceDockingPoint = $derived(getSourceDockingPoint(edgePoints));
+    let targetDockingPoint = $derived(getTargetDockingPoint(edgePoints));
     let readOnly = $derived(data?.readOnly ?? false);
 
     /**
@@ -67,7 +67,7 @@
     let highlighted = $derived(selected || held);
 
     /**
-     * Whether the bend point handles are shown: only on an edge that is selected alone. With several
+     * Whether the edge point handles are shown: only on an edge that is selected alone. With several
      * edges selected, e.g. after a box selection over a large diagram, no edge shows them, so they
      * are not mounted and moved for hundreds of edges at once. Only a selected edge looks for a
      * second selected one and stops at the first it finds.
@@ -91,8 +91,8 @@
                 targetNode.current,
                 bendPoints,
                 {
-                    source: sourceEndPoint,
-                    target: targetEndPoint,
+                    source: sourceDockingPoint,
+                    target: targetDockingPoint,
                 },
             );
         }
@@ -155,18 +155,18 @@
         );
     }
 
-    function handleBendPointsChange(nextPoints) {
-        patchEdgeData({ bendPoints: nextPoints });
+    function handleEdgePointsChange(nextPoints) {
+        patchEdgeData({ edgePoints: nextPoints });
     }
 
-    function handleBendPointsCommit() {
-        const current = data?.bendPoints ?? [];
+    function handleEdgePointsCommit() {
+        const current = data?.edgePoints ?? [];
         const dissolved = dissolveCollinearBendPoints(
             current,
             EDGE_INTERACTION_CONFIG.collinearBendPointTolerancePx,
         );
         if (dissolved !== current) {
-            patchEdgeData({ bendPoints: dissolved });
+            patchEdgeData({ edgePoints: dissolved });
         }
     }
 </script>
@@ -174,20 +174,20 @@
 {@render children(path, highlighted, edgeParams)}
 
 {#if edited && edgeParams && target !== source}
-    <EdgeBendPoints
+    <EdgePointHandles
         edgeId={id}
         sourcePoint={{ x: edgeParams.sx, y: edgeParams.sy }}
         targetPoint={{ x: edgeParams.tx, y: edgeParams.ty }}
         sourceBorderPoint={{ x: edgeParams.borderSx, y: edgeParams.borderSy }}
         targetBorderPoint={{ x: edgeParams.borderTx, y: edgeParams.borderTy }}
-        {allPoints}
+        {edgePoints}
         {bendPoints}
-        {sourceEndPoint}
-        {targetEndPoint}
+        {sourceDockingPoint}
+        {targetDockingPoint}
         {readOnly}
         sourceNodeId={source}
         targetNodeId={target}
-        onPointsChange={handleBendPointsChange}
-        onPointsCommit={handleBendPointsCommit}
+        onPointsChange={handleEdgePointsChange}
+        onPointsCommit={handleEdgePointsCommit}
     />
 {/if}

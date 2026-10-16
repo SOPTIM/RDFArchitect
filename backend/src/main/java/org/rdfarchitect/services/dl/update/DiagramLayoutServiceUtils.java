@@ -144,8 +144,8 @@ public class DiagramLayoutServiceUtils {
 
     /**
      * Helper method for creating and inserting a point {@link DiagramObjectPoint} of an edge. Edge
-     * points carry a sequence number instead of a z position and, unless they are end points, no
-     * glue point reference.
+     * points carry a sequence number instead of a z position and, unless they are docking points,
+     * no glue point reference.
      *
      * @param diagramLayoutModel the model into which the diagram object point is inserted
      * @param pointMRID the mRID of the point
@@ -153,8 +153,8 @@ public class DiagramLayoutServiceUtils {
      * @param xPosition the x position of the point
      * @param yPosition the y position of the point
      * @param sequenceNumber the position of the point within the edge's point chain
-     * @param gluePointMRID the glue point of the class an end point is glued to, or null for a bend
-     *     point
+     * @param gluePointMRID the glue point of the class a docking point is glued to, or null for a
+     *     bend point
      */
     public void insertEdgePoint(
             Model diagramLayoutModel,
@@ -177,7 +177,7 @@ public class DiagramLayoutServiceUtils {
 
     /**
      * The point of a class diagram object. A class is placed by a single point, unlike an edge,
-     * whose diagram object owns the chain of its bend and end points.
+     * whose diagram object owns the chain of its edge points.
      *
      * @param diagramLayoutModel the model holding the class diagram object
      * @param classDoMRID the mRID of the class diagram object
@@ -189,8 +189,8 @@ public class DiagramLayoutServiceUtils {
     }
 
     /**
-     * Resolves the glue point of a class diagram object, the point end points of edges are glued
-     * to. A class point without glue point, created before glue points existed, gets one.
+     * Resolves the glue point of a class diagram object, the point docking points of edges are
+     * glued to. A class point without glue point, created before glue points existed, gets one.
      *
      * @param diagramLayoutModel the model holding the class diagram object
      * @param classDoMRID the mRID of the class diagram object
@@ -247,7 +247,7 @@ public class DiagramLayoutServiceUtils {
 
     /**
      * Creates the diagram object of an edge. The edge gets no points: the edge is drawn straight
-     * between its classes until bend points are stored for it.
+     * between its classes until edge points are stored for it.
      *
      * @param diagramLayoutModel the model into which the diagram object is inserted
      * @param diagramUUID the UUID of the diagram the edge belongs to
@@ -275,8 +275,8 @@ public class DiagramLayoutServiceUtils {
      * Helper method that deletes an edge {@link DiagramObject} together with its {@link
      * DiagramObjectPoint DiagramObjectPoints}, but deliberately leaves any referenced {@link
      * DiagramObjectGluePoint DiagramObjectGluePoints} untouched. This is the counterpart to the
-     * class cascade delete: an edge only references glue points (via its end points) that are owned
-     * by classes, so deleting an edge must never remove them.
+     * class cascade delete: an edge only references glue points (via its docking points) that are
+     * owned by classes, so deleting an edge must never remove them.
      *
      * @param diagramLayoutModel the model from which the objects are deleted
      * @param doMRID the mRID of the edge diagram object to delete

@@ -178,8 +178,8 @@ public class UpdateClassLayoutService
 
     /**
      * Moves the classes of a diagram, creating the layout data of classes that have none yet,
-     * inside a transaction the caller holds. The end points glued to a moved class move along, see
-     * {@link #shiftGluedEdgePoints}.
+     * inside a transaction the caller holds. The docking points glued to a moved class move along,
+     * see {@link #shiftGluedEdgePoints}.
      *
      * @return whether layout data was created for a class, in which case the classes may have
      *     gained edges in the diagram
@@ -228,40 +228,40 @@ public class UpdateClassLayoutService
     }
 
     /**
-     * Moves the end points glued to the moved classes by the distance their class moved, and the
-     * bend points of an edge whose end points at both sides moved by the same distance, as the
-     * frontend does for the edges it shows. Edges hidden by a filter are not sent by the frontend,
-     * so without this their end points would stay where the class was. The points of edges the
-     * frontend does send are overwritten with the sent ones afterwards.
+     * Moves the docking points glued to the moved classes by the distance their class moved, and
+     * the bend points of an edge whose docking points at both sides moved by the same distance, as
+     * the frontend does for the edges it shows. Edges hidden by a filter are not sent by the
+     * frontend, so without this their docking points would stay where the class was. The points of
+     * edges the frontend does send are overwritten with the sent ones afterwards.
      */
     private static void shiftGluedEdgePoints(Model diagramLayoutModel, List<ClassShift> shifts) {
-        var endPointShiftsByEdge = new HashMap<Resource, List<ClassShift>>();
+        var dockingPointShiftsByEdge = new HashMap<Resource, List<ClassShift>>();
         for (var shift : shifts) {
             if (shift.isZero()) {
                 continue;
             }
             var gluePoint = diagramLayoutModel.createResource(shift.gluePoint().getFullMRID());
             var classPoint = diagramLayoutModel.createResource(shift.classPoint().getFullMRID());
-            for (var endPoint :
+            for (var dockingPoint :
                     diagramLayoutModel
                             .listResourcesWithProperty(DL.belongsToGluePoint, gluePoint)
                             .toList()) {
-                if (endPoint.equals(classPoint)) {
+                if (dockingPoint.equals(classPoint)) {
                     continue;
                 }
-                shiftPoint(endPoint, shift);
-                var edgeDO = endPoint.getPropertyResourceValue(DL.belongsToDiagramObject);
+                shiftPoint(dockingPoint, shift);
+                var edgeDO = dockingPoint.getPropertyResourceValue(DL.belongsToDiagramObject);
                 if (edgeDO != null) {
-                    endPointShiftsByEdge
+                    dockingPointShiftsByEdge
                             .computeIfAbsent(edgeDO, edge -> new ArrayList<>())
                             .add(shift);
                 }
             }
         }
-        for (var entry : endPointShiftsByEdge.entrySet()) {
-            var endPointShifts = entry.getValue();
-            if (endPointShifts.size() != 2
-                    || !endPointShifts.get(0).sameDistance(endPointShifts.get(1))) {
+        for (var entry : dockingPointShiftsByEdge.entrySet()) {
+            var dockingPointShifts = entry.getValue();
+            if (dockingPointShifts.size() != 2
+                    || !dockingPointShifts.get(0).sameDistance(dockingPointShifts.get(1))) {
                 continue;
             }
             for (var bendPoint :
@@ -269,7 +269,7 @@ public class UpdateClassLayoutService
                             .listResourcesWithProperty(DL.belongsToDiagramObject, entry.getKey())
                             .toList()) {
                 if (!bendPoint.hasProperty(DL.belongsToGluePoint)) {
-                    shiftPoint(bendPoint, endPointShifts.get(0));
+                    shiftPoint(bendPoint, dockingPointShifts.get(0));
                 }
             }
         }
@@ -300,8 +300,8 @@ public class UpdateClassLayoutService
     }
 
     /**
-     * The distance a class moved, with the point of the class and the glue point its end points are
-     * glued to.
+     * The distance a class moved, with the point of the class and the glue point its docking points
+     * are glued to.
      */
     private record ClassShift(MRID classPoint, MRID gluePoint, float dx, float dy) {
 

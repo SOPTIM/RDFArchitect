@@ -16,20 +16,20 @@
  */
 
 /**
- * Central configuration for edge interaction behaviour (bend points, end points
- * and the auto-pan while dragging them). Kept separate from the geometric edge
+ * Central configuration for edge interaction behaviour (bend points, docking
+ * points and the auto-pan while dragging them). Kept separate from the geometric edge
  * rendering constants in edgeUtils.ts, which describe how edges are drawn rather
  * than how the user interacts with them.
  */
 export const EDGE_INTERACTION_CONFIG = {
-    /** Radius (in flow units) of an active bend/end point handle. */
+    /** Radius (in flow units) of the handle of an edge point. */
     activePointRadiusPx: 8,
-    /** Radius (in flow units) of an inactive bend/end point hint. */
+    /** Radius (in flow units) of an inactive bend or docking point. */
     inactivePointRadiusPx: 7,
 
     /**
-     * Base hit radius (in screen pixels) for detecting a bend or end point under
-     * the cursor on right-click. Divided by the zoom level so the felt hit area
+     * Base hit radius (in screen pixels) for detecting an edge point under the
+     * cursor on right-click and for the delete hotkey. Divided by the zoom level so the felt hit area
      * stays constant across zoom levels.
      */
     pointHitRadiusPx: 10,
@@ -41,7 +41,7 @@ export const EDGE_INTERACTION_CONFIG = {
     edgeHitRadiusPx: 20,
 
     /**
-     * Maximum perpendicular distance (in flow units) of an inner bend point to the
+     * Maximum perpendicular distance (in flow units) of a bend point to the
      * straight line between its neighbours for it to count as redundant and be
      * dissolved. Larger values dissolve points that are only roughly collinear,
      * smaller values only near-exactly collinear ones.
@@ -49,13 +49,13 @@ export const EDGE_INTERACTION_CONFIG = {
     collinearBendPointTolerancePx: 8,
 
     /**
-     * Maximum distance (in flow units) of a stored end point to the border of its class for it to
-     * count as docked. An end point further off is put back onto the border when the diagram is
-     * loaded.
+     * Maximum distance (in flow units) of a stored docking point to the border of its class for it
+     * to count as docked. A docking point further off is put back onto the border when the diagram
+     * is loaded.
      */
-    endPointBorderTolerancePx: 1,
+    dockingPointBorderTolerancePx: 1,
 
-    /** Auto-pan behaviour while dragging a bend or end point near the border. */
+    /** Auto-pan behaviour while dragging an edge point near the border. */
     autoPan: {
         /** Distance from the container edge within which auto-pan triggers. */
         edgeZonePx: 40,

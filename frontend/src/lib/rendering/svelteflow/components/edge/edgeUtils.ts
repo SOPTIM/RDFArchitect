@@ -56,21 +56,21 @@ const LABEL_ALONG_EDGE_DISTANCE = 20;
 const LABEL_PERPENDICULAR_DISTANCE = 14;
 
 /**
- * Returns all parameters needed to render an edge and its labels: the start and
- * end point of the edge, the points where it crosses the class borders, and the
- * offsets of the labels at both ends.
+ * Returns all parameters needed to render an edge and its labels: the two ends
+ * of the edge, the points where it crosses the class borders, and the offsets
+ * of the labels at both ends.
  *
- * When bend points are provided, the source endpoint aims at the first bend point
- * and the target endpoint aims at the last bend point, so the edge docks correctly
+ * When bend points are provided, the source end aims at the first bend point
+ * and the target end aims at the last bend point, so the edge docks correctly
  * on the node borders facing its actual routing instead of the opposite node.
- * Active end points override the automatic border intersection of their side; the
- * border points stay available for snapping them back.
+ * Docking points override the automatic border intersection of their side; the
+ * border points stay available for inactive docking points.
  */
 export function getEdgeParams(
     source: InternalNode,
     target: InternalNode,
     bendPoints: Point[] = [],
-    activeEndPoints: {
+    dockingPoints: {
         source?: Point | null;
         target?: Point | null;
     } = {},
@@ -87,8 +87,8 @@ export function getEdgeParams(
         lastBendPoint ? makePointNode(lastBendPoint) : source,
     );
 
-    const sourcePoint = activeEndPoints.source ?? sourceIntersection;
-    const targetPoint = activeEndPoints.target ?? targetIntersection;
+    const sourcePoint = dockingPoints.source ?? sourceIntersection;
+    const targetPoint = dockingPoints.target ?? targetIntersection;
 
     const startOffset = getSingleLabelOffset(
         sourcePoint,
@@ -117,7 +117,7 @@ export function getEdgeParams(
 
 /**
  * Calculates the intersection point between a line (from the target to the node center)
- * and the border of the intersection node. Used to determine edge start and end points.
+ * and the border of the intersection node. Used to determine where an edge docks on its own.
  * If both node centres coincide, there is no unique border intersection and the shared
  * centre is returned, which is what the edge visibly collapses to.
  * Adapted from the SvelteFlow "Easy Connect" example.
@@ -202,8 +202,8 @@ function getSingleLabelOffset(from: Point, toward: Point): Point {
 
 /**
  * Builds a direct (diagonal) polyline SVG path through the given ordered points.
- * The points array must already include the source endpoint first and the
- * target endpoint last, with any bend points in between.
+ * The points array must already include the source end first and the target
+ * end last, with any bend points in between.
  */
 export function getPolylinePath(points: Point[]): string {
     if (points.length < 2) return "";
@@ -215,8 +215,8 @@ export function getPolylinePath(points: Point[]): string {
 /**
  * Builds a polyline whose corners at the bend points are rounded off.
  * The segments themselves stay straight, only each interior corner is replaced
- * by a quadratic Bézier arc. `points` must include the source endpoint first and
- * the target endpoint last.
+ * by a quadratic Bézier arc. `points` must include the source end first and the
+ * target end last.
  *
  * `roundingPercent` is a value in [0, 100] that controls how far the rounding
  * reaches into the two adjacent segments: 0 keeps the corner sharp, 100 applies
@@ -408,8 +408,8 @@ export function distanceToSegment(
 
 /**
  * Projects an arbitrary point onto the border of a node's rectangle. Used to keep
- * end points sticky on the class border while they are dragged. Returns the point
- * on the rectangle outline closest to the given position.
+ * docking points sticky on the class border while they are dragged. Returns the
+ * point on the rectangle outline closest to the given position.
  */
 export function projectPointOntoNodeBorder(
     node: InternalNode,
@@ -453,11 +453,11 @@ export function projectPointOntoRectBorder(rect: Rect, point: Point): Point {
 }
 
 /**
- * Moves an end point along with the border of a class whose bounds changed, e.g. because it shrank
- * after its attributes were deleted. The point keeps the side of the class it was docked to and its
- * relative position along that side.
+ * Moves a docking point along with the border of a class whose bounds changed, e.g. because it
+ * shrank after its attributes were deleted. The point keeps the side of the class it is pinned to
+ * and its relative position along that side.
  */
-export function moveEndPointWithBorder(
+export function moveDockingPointWithBorder(
     point: Point,
     oldRect: Rect,
     newRect: Rect,

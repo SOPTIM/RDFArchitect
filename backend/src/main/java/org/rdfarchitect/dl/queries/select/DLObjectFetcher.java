@@ -192,8 +192,8 @@ public class DLObjectFetcher {
 
     /**
      * Fetches all {@link DiagramObjectPoint DiagramObjectPoints} belonging to a given diagram
-     * object, ordered by their sequence number. This is used for edge diagram objects which, unlike
-     * class diagram objects, own multiple points (the bend and end points of the edge).
+     * object, ordered by their sequence number. An edge diagram object owns the edge points of its
+     * edge, a class diagram object a single point.
      *
      * @param diagramLayout the model from where the object(s) will be fetched
      * @param doMRID the diagram object MRID used for fetching
@@ -366,7 +366,7 @@ public class DLObjectFetcher {
     public record EdgePoints(MRID identifiedObject, List<EdgePoint> points) {}
 
     /**
-     * A point of an edge together with the class it is glued to, if it is an end point.
+     * A point of an edge together with the class it is glued to, if it is a docking point.
      *
      * @param point the point
      * @param gluedClass the identified object of the class diagram object owning the glue point the
@@ -814,9 +814,9 @@ public class DLObjectFetcher {
             "OPTIONAL { ?styleMRID cim:IdentifiedObject.name ?styleName . }";
 
     /**
-     * * A filter restricting {@code ?styleMRID} to (or, negated, away from) one of the given
-     * styles. * With no styles given, no filter is applied at all — the SPARQL query then matches
-     * diagram * objects of any style.
+     * A filter restricting {@code ?styleMRID} to (or, negated, away from) one of the given styles.
+     * With no styles given, no filter is applied at all and the query matches diagram objects of
+     * any style.
      */
     private static String styleFilter(boolean equals, DiagramObjectStyle... styles) {
         if (styles == null || styles.length == 0) {

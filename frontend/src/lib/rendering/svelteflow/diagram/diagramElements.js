@@ -17,7 +17,13 @@
 
 import { LABEL_NODE_TYPE } from "./labelNodes.js";
 
+/** Edges are drawn below every class. */
 export const EDGE_Z_INDEX = -1;
+
+/**
+ * Raised edges are drawn above every class, including a selected one, but below the labels. See
+ * NodeOrderController for the z indices classes are given.
+ */
 export const ELEVATED_EDGE_Z_INDEX = 1_500_000;
 
 export function hasDefaultNodeLayout(diagramNodes) {
@@ -30,6 +36,10 @@ export function hasDefaultNodeLayout(diagramNodes) {
     );
 }
 
+/**
+ * Prepares the edges from the backend for SvelteFlow: drawn below the classes, with their points
+ * flattened, see {@link normalizeEdgeData}.
+ */
 export function decorateEdges(edges) {
     return edges.map(decorateEdge);
 }
@@ -75,7 +85,7 @@ export function onlySelectedEdgeId(edges) {
 }
 
 /**
- * The bounds of a diagram including the bend and end points of its edges, which may lie outside
+ * The bounds of a diagram including the edge points of its edges, which may lie outside
  * of the classes.
  *
  * @param nodes the diagram nodes
@@ -102,11 +112,11 @@ export function getDiagramBounds(nodes, edges, getInternalNode) {
     }
 
     for (const edge of edges) {
-        for (const bendPoint of edge.data?.bendPoints ?? []) {
-            minX = Math.min(minX, bendPoint.x);
-            minY = Math.min(minY, bendPoint.y);
-            maxX = Math.max(maxX, bendPoint.x);
-            maxY = Math.max(maxY, bendPoint.y);
+        for (const edgePoint of edge.data?.edgePoints ?? []) {
+            minX = Math.min(minX, edgePoint.x);
+            minY = Math.min(minY, edgePoint.y);
+            maxX = Math.max(maxX, edgePoint.x);
+            maxY = Math.max(maxY, edgePoint.y);
         }
     }
     if (
@@ -137,29 +147,29 @@ function decorateEdge(edge) {
 /**
  * Normalizes edge data coming from the backend. Points arrive with a nested
  * position ({ id, position: { x, y, z }, side }) and are flattened to the shape
- * used throughout the frontend, see {@link flattenBendPoint}.
+ * used throughout the frontend, see {@link flattenEdgePoint}.
  */
 function normalizeEdgeData(data) {
     if (!data) {
         return data;
     }
-    if (!Array.isArray(data.bendPoints)) {
+    if (!Array.isArray(data.edgePoints)) {
         return data;
     }
     return {
         ...data,
-        bendPoints: data.bendPoints.map(flattenBendPoint),
+        edgePoints: data.edgePoints.map(flattenEdgePoint),
     };
 }
 
 /**
- * Flattens a single point from the backend's nested position shape to the shape
- * the frontend creates points in: { id, x, y } for a bend point and
- * { id, x, y, isEndPoint, side } for an end point, which the backend marks with
- * the side of the class it is glued to. Points that are already flat (e.g.
+ * Flattens a single edge point from the backend's nested position shape to the
+ * shape the frontend creates points in: { id, x, y } for a bend point and
+ * { id, x, y, isDockingPoint, side } for a docking point, which the backend marks
+ * with the side of the class it is pinned to. Points that are already flat (e.g.
  * created in the frontend during interaction) are returned unchanged.
  */
-function flattenBendPoint(point) {
+function flattenEdgePoint(point) {
     if (!point || !point.position) {
         return point;
     }
@@ -171,5 +181,5 @@ function flattenBendPoint(point) {
     if (!point.side) {
         return flatPoint;
     }
-    return { ...flatPoint, isEndPoint: true, side: point.side };
+    return { ...flatPoint, isDockingPoint: true, side: point.side };
 }

@@ -17,10 +17,10 @@
 
 import { getEdgeParams } from "../components/edge/edgeUtils.ts";
 import {
-    getInnerBendPoints,
-    getSourceEndPoint,
-    getTargetEndPoint,
-} from "../interaction/bendPointOperations.js";
+    getBendPoints,
+    getSourceDockingPoint,
+    getTargetDockingPoint,
+} from "../interaction/edgePointOperations.js";
 
 export const LABEL_NODE_TYPE = "label";
 
@@ -292,16 +292,17 @@ export function clampToAnchor(position, anchorPoint) {
  */
 function cachedEdgePlacements(source, target, edgeData, cache) {
     const key = `${source.id}|${target.id}`;
-    const bendPoints = getInnerBendPoints(edgeData?.bendPoints ?? []);
-    const activeEndPoints = {
-        source: getSourceEndPoint(edgeData?.bendPoints ?? []),
-        target: getTargetEndPoint(edgeData?.bendPoints ?? []),
+    const edgePoints = edgeData?.edgePoints ?? [];
+    const bendPoints = getBendPoints(edgePoints);
+    const dockingPoints = {
+        source: getSourceDockingPoint(edgePoints),
+        target: getTargetDockingPoint(edgePoints),
     };
     const cached = cache.get(key);
     if (
         cached &&
         samePlacementInputs(cached, source, target) &&
-        sameBendPointInputs(cached, bendPoints, activeEndPoints)
+        sameEdgePointInputs(cached, bendPoints, dockingPoints)
     ) {
         return cached.placements;
     }
@@ -309,7 +310,7 @@ function cachedEdgePlacements(source, target, edgeData, cache) {
         source,
         target,
         bendPoints,
-        activeEndPoints,
+        dockingPoints,
     );
     cache.set(key, {
         placements,
@@ -318,16 +319,15 @@ function cachedEdgePlacements(source, target, edgeData, cache) {
         targetPosition: target.position,
         targetMeasured: target.measured,
         bendPoints,
-        activeEndPoints,
+        dockingPoints,
     });
     return placements;
 }
 
-function sameBendPointInputs(cached, bendPoints, activeEndPoints) {
+function sameEdgePointInputs(cached, bendPoints, dockingPoints) {
     return (
         JSON.stringify(cached.bendPoints) === JSON.stringify(bendPoints) &&
-        JSON.stringify(cached.activeEndPoints) ===
-            JSON.stringify(activeEndPoints)
+        JSON.stringify(cached.dockingPoints) === JSON.stringify(dockingPoints)
     );
 }
 
@@ -349,7 +349,7 @@ function samePlacementInputs(cached, source, target) {
  * edge meets the class; the default placement of the multiplicity is the one it had before an
  * edge end carried more than one label.
  */
-function edgePlacements(source, target, bendPoints = [], activeEndPoints = {}) {
+function edgePlacements(source, target, bendPoints = [], dockingPoints = {}) {
     if (source.id === target.id) {
         const position = source.position;
         const width = source.measured.width ?? 100;
@@ -372,12 +372,7 @@ function edgePlacements(source, target, bendPoints = [], activeEndPoints = {}) {
         };
     }
 
-    const edgeParams = getEdgeParams(
-        source,
-        target,
-        bendPoints,
-        activeEndPoints,
-    );
+    const edgeParams = getEdgeParams(source, target, bendPoints, dockingPoints);
     const stacked = { x: 0, y: LABEL_STACK_SPACING };
     return {
         source: placement(

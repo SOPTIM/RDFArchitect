@@ -84,7 +84,7 @@
                     keys: ["Ctrl", "Q"],
                 },
                 {
-                    description: "Delete Bend Point at Cursor",
+                    description: "Delete Edge Point at Cursor",
                     keys: ["Ctrl", "Shift", "Q"],
                 },
             ],
