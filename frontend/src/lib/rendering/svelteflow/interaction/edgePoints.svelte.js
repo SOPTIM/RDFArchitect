@@ -21,22 +21,23 @@ import {
     getEdgeParams,
 } from "$lib/rendering/svelteflow/components/edge/edgeUtils.ts";
 
+import { EDGE_INTERACTION_CONFIG } from "./edgeInteractionConfig.js";
 import {
     createBendPoint,
-    findBendPointAtPosition,
+    findEdgePointAtPosition,
     getBendPoints,
-    getInnerBendPoints,
-    getSourceEndPoint,
-    getTargetEndPoint,
+    getEdgePoints,
+    getSourceDockingPoint,
+    getTargetDockingPoint,
     insertBendPointAt,
-    isEndPoint,
-    removeBendPoint,
-} from "./bendPointOperations.js";
-import { EDGE_INTERACTION_CONFIG } from "./edgeInteractionConfig.js";
+    removeBendPoints,
+    removeDockingPoints,
+    removeEdgePoint,
+} from "./edgePointOperations.js";
 
 /**
- * Edits the bend and end points of the edges of a diagram: the actions of the edge context menu,
- * the hotkeys that add or delete a point at the cursor, and the context menu on the point handles.
+ * Edits the edge points of the edges of a diagram: the actions of the edge context menu, the
+ * hotkeys that add or delete a point at the cursor, and the context menu on the point handles.
  */
 export class EdgePointController {
     #getEdges;
@@ -66,8 +67,8 @@ export class EdgePointController {
     }
 
     /**
-     * Remembers the cursor for the hotkeys and, while the delete brush is active, deletes the point
-     * under the cursor.
+     * Remembers the cursor for the hotkeys and, while the delete brush is active, deletes the edge
+     * point under the cursor.
      */
     handlePointerMove(event) {
         this.#lastCursorPosition = { x: event.clientX, y: event.clientY };
@@ -76,19 +77,19 @@ export class EdgePointController {
         }
         this.stopDeleteBrush(event);
         if (this.#deleteBrushActive && !this.#isReadOnly()) {
-            this.#deleteBendPointUnderCursor();
+            this.#deleteEdgePointUnderCursor();
         }
     }
 
     /** Opens the edge context menu on a right-click on one of the point handles of an edge. */
-    routeBendPointContextMenu(event) {
+    routeEdgePointContextMenu(event) {
         const target = event.target;
         if (!(target instanceof Element)) return;
 
-        const bendPointCircle = target.closest("[data-edge-id]");
-        if (!bendPointCircle) return;
+        const pointHandle = target.closest("[data-edge-id]");
+        if (!pointHandle) return;
 
-        const edgeId = bendPointCircle.getAttribute("data-edge-id");
+        const edgeId = pointHandle.getAttribute("data-edge-id");
         const edge = this.#getEdges().find(e => e.id === edgeId);
         if (!edge) return;
 
@@ -99,53 +100,49 @@ export class EdgePointController {
     handleEdgeAddBendPoint = ({ edgeId, flowPosition }) => {
         const edge = this.#getEdges().find(e => e.id === edgeId);
         if (!edge) return;
-        const allPoints = getBendPoints(edge);
-        const innerBendPoints = getInnerBendPoints(allPoints);
+        const edgePoints = getEdgePoints(edge);
+        const bendPoints = getBendPoints(edgePoints);
 
-        const endpoints = this.#edgeEndpoints(edge, innerBendPoints);
-        let insertionIndex = innerBendPoints.length;
-        if (endpoints) {
-            const orderedPoints = [
-                endpoints.source,
-                ...innerBendPoints,
-                endpoints.target,
-            ];
+        const ends = this.#drawnEnds(edge, bendPoints);
+        let insertionIndex = bendPoints.length;
+        if (ends) {
+            const orderedPoints = [ends.source, ...bendPoints, ends.target];
             insertionIndex = getClosestSegmentInsertionIndex(
                 orderedPoints,
                 flowPosition,
             );
         }
 
-        this.#patchBendPoints(
+        this.#patchEdgePoints(
             edgeId,
             insertBendPointAt(
-                allPoints,
+                edgePoints,
                 insertionIndex,
                 createBendPoint(flowPosition.x, flowPosition.y),
             ),
         );
     };
 
-    handleEdgeDeleteBendPoint = ({ edgeId, bendPointId }) => {
-        const edge = this.#getEdges().find(e => e.id === edgeId);
-        if (!edge) return;
-        this.#patchBendPoints(
-            edgeId,
-            removeBendPoint(getBendPoints(edge), bendPointId),
+    /** Deletes a single bend or docking point of an edge. */
+    handleEdgeDeleteEdgePoint = ({ edgeId, pointId }) => {
+        this.#updateEdgePoints(edgeId, points =>
+            removeEdgePoint(points, pointId),
         );
     };
 
-    handleEdgeClearBendPoints = ({ edgeId }) => {
-        this.#patchBendPoints(edgeId, []);
+    /** Deletes the bend points of an edge, its docking points stay where they are pinned. */
+    handleEdgeRemoveBendPoints = ({ edgeId }) => {
+        this.#updateEdgePoints(edgeId, removeBendPoints);
     };
 
-    handleEdgeDeleteEndPoint = ({ edgeId, endPointId }) => {
-        const edge = this.#getEdges().find(e => e.id === edgeId);
-        if (!edge) return;
-        this.#patchBendPoints(
-            edgeId,
-            getBendPoints(edge).filter(point => point.id !== endPointId),
-        );
+    /** Deletes the docking points of an edge, so it docks on its own at both ends. */
+    handleEdgeRemoveDockingPoints = ({ edgeId }) => {
+        this.#updateEdgePoints(edgeId, removeDockingPoints);
+    };
+
+    /** Deletes all edge points of an edge, so it is drawn straight between its classes. */
+    handleEdgeRemoveAllEdgePoints = ({ edgeId }) => {
+        this.#patchEdgePoints(edgeId, []);
     };
 
     /**
@@ -172,14 +169,14 @@ export class EdgePointController {
     };
 
     /**
-     * Ctrl+Shift+Q: deletes the bend or end point under the cursor. While the keys are held it
-     * works like a brush: every point the cursor passes over is deleted, until Q, Ctrl or Shift is
+     * Ctrl+Shift+Q: deletes the edge point under the cursor. While the keys are held it works like
+     * a brush: every edge point the cursor passes over is deleted, until Q, Ctrl or Shift is
      * released.
      */
-    deleteBendPointAtCursor = () => {
+    deleteEdgePointAtCursor = () => {
         if (this.#isReadOnly()) return;
         this.#deleteBrushActive = true;
-        this.#deleteBendPointUnderCursor();
+        this.#deleteEdgePointUnderCursor();
     };
 
     /** Ends the delete brush once Q, Ctrl or Shift is released or the window loses focus. */
@@ -195,35 +192,28 @@ export class EdgePointController {
     };
 
     /**
-     * Deletes the bend or end point under the cursor, across all edges. Selects the affected edge
-     * if it was not selected yet.
+     * Deletes the edge point under the cursor, across all edges. Selects the affected edge if it
+     * was not selected yet.
      */
-    #deleteBendPointUnderCursor() {
+    #deleteEdgePointUnderCursor() {
         const context = this.#cursorFlowContext(
             EDGE_INTERACTION_CONFIG.pointHitRadiusPx,
         );
         if (!context) return;
 
         for (const edge of this.#getEdges()) {
-            const hitPoint = findBendPointAtPosition(
-                getBendPoints(edge),
+            const hitPoint = findEdgePointAtPosition(
+                getEdgePoints(edge),
                 context.flowPosition,
                 context.hitRadius,
             );
             if (!hitPoint) continue;
 
             if (!edge.selected) this.#selectEdge(edge.id);
-            if (isEndPoint(hitPoint)) {
-                this.handleEdgeDeleteEndPoint({
-                    edgeId: edge.id,
-                    endPointId: hitPoint.id,
-                });
-            } else {
-                this.handleEdgeDeleteBendPoint({
-                    edgeId: edge.id,
-                    bendPointId: hitPoint.id,
-                });
-            }
+            this.handleEdgeDeleteEdgePoint({
+                edgeId: edge.id,
+                pointId: hitPoint.id,
+            });
             return;
         }
     }
@@ -239,13 +229,13 @@ export class EdgePointController {
         let closestDistance = Infinity;
         for (const edge of this.#getEdges()) {
             if (edge.source === edge.target) continue;
-            const innerBendPoints = getInnerBendPoints(getBendPoints(edge));
-            const endpoints = this.#edgeEndpoints(edge, innerBendPoints);
-            if (!endpoints) continue;
+            const bendPoints = getBendPoints(getEdgePoints(edge));
+            const ends = this.#drawnEnds(edge, bendPoints);
+            if (!ends) continue;
             const distance = distanceToPolyline(flowPosition, [
-                endpoints.source,
-                ...innerBendPoints,
-                endpoints.target,
+                ends.source,
+                ...bendPoints,
+                ends.target,
             ]);
             if (distance < closestDistance) {
                 closestDistance = distance;
@@ -273,20 +263,21 @@ export class EdgePointController {
     }
 
     /**
-     * The start and end point the edge is drawn with, see {@link getEdgeParams}.
+     * The two ends the edge is drawn with: its docking points, or where it docks on its own, see
+     * {@link getEdgeParams}.
      *
-     * @returns the source and target point, or null if a class of the edge is not rendered
+     * @returns the source and target end, or null if a class of the edge is not rendered
      */
-    #edgeEndpoints(edge, innerBendPoints) {
+    #drawnEnds(edge, bendPoints) {
         const svelteFlow = this.#getSvelteFlow();
         if (!svelteFlow?.getInternalNode) return null;
         const sourceNode = svelteFlow.getInternalNode(edge.source);
         const targetNode = svelteFlow.getInternalNode(edge.target);
         if (!sourceNode || !targetNode) return null;
-        const allPoints = getBendPoints(edge);
-        const params = getEdgeParams(sourceNode, targetNode, innerBendPoints, {
-            source: getSourceEndPoint(allPoints),
-            target: getTargetEndPoint(allPoints),
+        const edgePoints = getEdgePoints(edge);
+        const params = getEdgeParams(sourceNode, targetNode, bendPoints, {
+            source: getSourceDockingPoint(edgePoints),
+            target: getTargetDockingPoint(edgePoints),
         });
         return {
             source: { x: params.sx, y: params.sy },
@@ -294,11 +285,17 @@ export class EdgePointController {
         };
     }
 
-    #patchBendPoints(edgeId, bendPoints) {
+    #updateEdgePoints(edgeId, update) {
+        const edge = this.#getEdges().find(e => e.id === edgeId);
+        if (!edge) return;
+        this.#patchEdgePoints(edgeId, update(getEdgePoints(edge)));
+    }
+
+    #patchEdgePoints(edgeId, edgePoints) {
         this.#setEdges(
             this.#getEdges().map(edge =>
                 edge.id === edgeId
-                    ? { ...edge, data: { ...edge.data, bendPoints } }
+                    ? { ...edge, data: { ...edge.data, edgePoints } }
                     : edge,
             ),
         );

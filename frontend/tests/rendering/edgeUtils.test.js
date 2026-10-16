@@ -25,7 +25,7 @@ import {
     getInactiveBendPoints,
     getPolylinePath,
     getRoundedCornerPolylinePath,
-    moveEndPointWithBorder,
+    moveDockingPointWithBorder,
     projectPointOntoNodeBorder,
     projectPointOntoRectBorder,
 } from "$lib/rendering/svelteflow/components/edge/edgeUtils.ts";
@@ -164,7 +164,7 @@ describe("class borders", () => {
         expect([params.tx, params.ty]).toEqual([350, 50]);
     });
 
-    test("active end points replace the docking, the border point stays available", () => {
+    test("docking points replace the automatic docking, the border point stays available", () => {
         const params = getEdgeParams(
             node(0, 0, 100, 50),
             node(300, 0, 100, 50),
@@ -177,23 +177,25 @@ describe("class borders", () => {
         expect([params.tx, params.ty]).toEqual([300, 25]);
     });
 
-    test("an end point stays on its side of a class whose size changed", () => {
+    test("a docking point stays on its side of a class whose size changed", () => {
         const before = { x: 0, y: 0, width: 200, height: 100 };
         const after = { x: 0, y: 0, width: 100, height: 40 };
 
         expect(
-            moveEndPointWithBorder({ x: 200, y: 25 }, before, after),
+            moveDockingPointWithBorder({ x: 200, y: 25 }, before, after),
         ).toEqual({ x: 100, y: 10 });
         expect(
-            moveEndPointWithBorder({ x: 50, y: 100 }, before, after),
+            moveDockingPointWithBorder({ x: 50, y: 100 }, before, after),
         ).toEqual({ x: 25, y: 40 });
-        expect(moveEndPointWithBorder({ x: 0, y: 50 }, before, after)).toEqual({
+        expect(
+            moveDockingPointWithBorder({ x: 0, y: 50 }, before, after),
+        ).toEqual({
             x: 0,
             y: 20,
         });
     });
 
-    test("a detached end point is docked onto the nearest side of its class", () => {
+    test("a detached docking point is put onto the nearest side of its class", () => {
         const rect = { x: 100, y: 100, width: 200, height: 100 };
 
         expect(projectPointOntoRectBorder(rect, { x: 40, y: 150 })).toEqual({

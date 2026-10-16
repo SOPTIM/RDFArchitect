@@ -57,7 +57,7 @@
     import AssociationEdge from "./components/edge/AssociationEdge.svelte";
     import EdgeMarkers from "./components/edge/EdgeMarkers.svelte";
     import {
-        moveEndPointWithBorder,
+        moveDockingPointWithBorder,
         projectPointOntoRectBorder,
     } from "./components/edge/edgeUtils.ts";
     import SvelteFlowPropertyContextMenu from "./components/SvelteFlowPropertyContextMenu.svelte";
@@ -78,11 +78,6 @@
         labelNodesChanged,
         labelsOf,
     } from "./diagram/labelNodes.js";
-    import {
-        applyLayoutedEdges,
-        moveEdgePointsWithDraggedClasses,
-        updateEndPoints,
-    } from "./interaction/bendPointOperations.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
     import {
         DIAGRAM_SELECTION_CONTEXT,
@@ -93,6 +88,11 @@
         isEditableEdge,
     } from "./interaction/edgeEditing.js";
     import { EdgeLayoutPersistence } from "./interaction/edgeLayoutPersistence.js";
+    import {
+        applyLayoutedEdges,
+        moveEdgePointsWithDraggedClasses,
+        updateDockingPoints,
+    } from "./interaction/edgePointOperations.js";
     import { EdgePointController } from "./interaction/edgePoints.svelte.js";
     import { labelHighlight } from "./interaction/labelHighlight.svelte.js";
     import {
@@ -195,7 +195,7 @@
     let lastDragPositions = new Map();
     let classBounds = new Map();
     let classBoundsDiagramId = null;
-    let endPointsCheckPending = false;
+    let dockingPointsCheckPending = false;
 
     let hasFittedInitially = false;
     let labelPositions = new SvelteMap();
@@ -240,8 +240,8 @@
     $effect(() => {
         const currentNodes = nodes;
         untrack(() => {
-            moveEndPointsOfResizedClasses(currentNodes);
-            dockDetachedEndPoints(currentNodes);
+            moveDockingPointsOfResizedClasses(currentNodes);
+            redockDetachedDockingPoints(currentNodes);
         });
     });
 
@@ -333,10 +333,10 @@
             ["ctrl", "q"],
             edgePoints.addBendPointAtCursor,
         );
-        const unregisterDeleteBendPoint = shortcutStore.register(
-            "diagram-delete-bend-point-at-cursor",
+        const unregisterDeleteEdgePoint = shortcutStore.register(
+            "diagram-delete-edge-point-at-cursor",
             ["ctrl", "shift", "q"],
-            edgePoints.deleteBendPointAtCursor,
+            edgePoints.deleteEdgePointAtCursor,
         );
 
         return () => {
@@ -348,7 +348,7 @@
             window.removeEventListener("keyup", edgePoints.stopDeleteBrush);
             window.removeEventListener("blur", edgePoints.stopDeleteBrush);
             unregisterAddBendPoint();
-            unregisterDeleteBendPoint();
+            unregisterDeleteEdgePoint();
         };
     });
 
@@ -382,7 +382,7 @@
         if (event.defaultPrevented) {
             return;
         }
-        edgePoints.routeBendPointContextMenu(event);
+        edgePoints.routeEdgePointContextMenu(event);
     }
 
     function applyAutoLayoutIfNeeded() {
@@ -399,7 +399,7 @@
             return;
         }
         hasFittedInitially = true;
-        untrack(() => fitViewIncludingBendPoints({ duration: 0 }));
+        untrack(() => fitViewIncludingEdgePoints({ duration: 0 }));
     }
 
     async function refreshReadOnlyState() {
@@ -487,7 +487,7 @@
         const nextEdges = decorateEdges(inputEdges);
         edgeLayouts.load(nextEdges);
         edges = nextEdges;
-        endPointsCheckPending = true;
+        dockingPointsCheckPending = true;
         resetDiagramSyncState(nextHasDefaultLayout);
     }
 
@@ -539,13 +539,13 @@
     }
 
     /**
-     * Keeps the end points on the border of classes whose size changed, e.g. a class that shrank
+     * Keeps the docking points on the border of classes whose size changed, e.g. a class that shrank
      * after its attributes were deleted. The bounds of each class are remembered per diagram, also
      * across a reload of the diagram, so a class that is rendered smaller than before is noticed.
-     * The moved end points are not saved on their own, see
+     * The moved docking points are not saved on their own, see
      * {@link EdgeLayoutPersistence#acceptWithoutSaving}.
      */
-    function moveEndPointsOfResizedClasses(currentNodes) {
+    function moveDockingPointsOfResizedClasses(currentNodes) {
         const resizedClasses = new Map();
         for (const node of currentNodes) {
             if (node.type === LABEL_NODE_TYPE || !node.measured?.width) {
@@ -570,14 +570,14 @@
         if (resizedClasses.size === 0) {
             return;
         }
-        edges = updateEndPoints(edges, (point, classId) => {
+        edges = updateDockingPoints(edges, (point, classId) => {
             const resized = resizedClasses.get(classId);
             if (!resized) {
                 return point;
             }
             return {
                 ...point,
-                ...moveEndPointWithBorder(
+                ...moveDockingPointWithBorder(
                     point,
                     resized.previous,
                     resized.bounds,
@@ -588,14 +588,14 @@
     }
 
     /**
-     * Puts stored end points that are off the border of their class back onto it, once per loaded
-     * diagram as soon as its classes are measured. An end point comes off the border when its class
-     * changed while the edge was not shown, e.g. the class grew while a filter hid the edge, or when
-     * the layout data was changed outside of this diagram. The docked end points are not saved on
-     * their own, see {@link EdgeLayoutPersistence#acceptWithoutSaving}.
+     * Puts stored docking points that are off the border of their class back onto it, once per
+     * loaded diagram as soon as its classes are measured. A docking point comes off the border when
+     * its class changed while the edge was not shown, e.g. the class grew while a filter hid the
+     * edge, or when the layout data was changed outside of this diagram. The redocked docking
+     * points are not saved on their own, see {@link EdgeLayoutPersistence#acceptWithoutSaving}.
      */
-    function dockDetachedEndPoints(currentNodes) {
-        if (!endPointsCheckPending) {
+    function redockDetachedDockingPoints(currentNodes) {
+        if (!dockingPointsCheckPending) {
             return;
         }
         const classRects = new Map();
@@ -613,15 +613,18 @@
                 height: node.measured.height,
             });
         }
-        endPointsCheckPending = false;
-        edges = updateEndPoints(edges, (point, classId) => {
+        dockingPointsCheckPending = false;
+        edges = updateDockingPoints(edges, (point, classId) => {
             const rect = classRects.get(classId);
             if (!rect) {
                 return point;
             }
             const docked = projectPointOntoRectBorder(rect, point);
             const distance = Math.hypot(docked.x - point.x, docked.y - point.y);
-            if (distance <= EDGE_INTERACTION_CONFIG.endPointBorderTolerancePx) {
+            if (
+                distance <=
+                EDGE_INTERACTION_CONFIG.dockingPointBorderTolerancePx
+            ) {
                 return point;
             }
             return { ...point, ...docked };
@@ -921,7 +924,7 @@
             });
             syncLabelNodes(nodes, edges);
             await tick();
-            await fitViewIncludingBendPoints();
+            await fitViewIncludingEdgePoints();
         } catch (error) {
             // The diagram keeps the positions it has; leaving the spinner up would only look
             // like a layout that never finishes.
@@ -937,7 +940,11 @@
         }
     }
 
-    export async function fitViewIncludingBendPoints({ duration = 400 } = {}) {
+    /**
+     * Fits the view to the diagram including the edge points of its edges, which may lie outside of
+     * the classes.
+     */
+    export async function fitViewIncludingEdgePoints({ duration = 400 } = {}) {
         const bounds = getDiagramBounds(nodes, edges, id =>
             svelteFlowAPI.svelteFlow.getInternalNode(id),
         );
@@ -1090,9 +1097,10 @@
         onClose={() => contextMenus.close()}
         onEditEdge={handleEditEdge}
         onAddBendPoint={edgePoints.handleEdgeAddBendPoint}
-        onDeleteBendPoint={edgePoints.handleEdgeDeleteBendPoint}
-        onDeleteEndPoint={edgePoints.handleEdgeDeleteEndPoint}
-        onClearBendPoints={edgePoints.handleEdgeClearBendPoints}
+        onDeleteEdgePoint={edgePoints.handleEdgeDeleteEdgePoint}
+        onRemoveBendPoints={edgePoints.handleEdgeRemoveBendPoints}
+        onRemoveDockingPoints={edgePoints.handleEdgeRemoveDockingPoints}
+        onRemoveAllEdgePoints={edgePoints.handleEdgeRemoveAllEdgePoints}
     />
 </div>
 

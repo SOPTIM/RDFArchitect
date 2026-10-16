@@ -24,12 +24,12 @@ import {
     updateEdgeLayouts,
 } from "$lib/api/generated/index.ts";
 
+import { EDGE_INTERACTION_CONFIG } from "./edgeInteractionConfig.js";
 import {
     dissolveCollinearBendPoints,
-    getSourceEndPoint,
-    getTargetEndPoint,
-} from "./bendPointOperations.js";
-import { EDGE_INTERACTION_CONFIG } from "./edgeInteractionConfig.js";
+    getSourceDockingPoint,
+    getTargetDockingPoint,
+} from "./edgePointOperations.js";
 
 /**
  * Whether a point of an edge is being dragged right now. Set by the component that drags the
@@ -38,13 +38,13 @@ import { EDGE_INTERACTION_CONFIG } from "./edgeInteractionConfig.js";
 export const edgePointDrag = { active: false };
 
 /**
- * The layout of an edge as the backend stores it: the full, ordered list of its points from the
- * source to the target, each end point with the side of the class it is glued to.
+ * The layout of an edge as the backend stores it: the full, ordered list of its edge points from
+ * the source to the target, each docking point with the side of the class it is pinned to.
  */
 export function toEdgeLayoutDTO(edge) {
-    const points = edge.data?.bendPoints ?? [];
-    const sourceEndPoint = getSourceEndPoint(points);
-    const targetEndPoint = getTargetEndPoint(points);
+    const points = edge.data?.edgePoints ?? [];
+    const sourceDockingPoint = getSourceDockingPoint(points);
+    const targetDockingPoint = getTargetDockingPoint(points);
     return {
         kind: edge.type,
         sourceObject: edge.data?.sourceObject,
@@ -55,16 +55,16 @@ export function toEdgeLayoutDTO(edge) {
             id: point.id,
             xPosition: point.x,
             yPosition: point.y,
-            side: sideOf(point, sourceEndPoint, targetEndPoint),
+            side: sideOf(point, sourceDockingPoint, targetDockingPoint),
         })),
     };
 }
 
-function sideOf(point, sourceEndPoint, targetEndPoint) {
-    if (point === sourceEndPoint) {
+function sideOf(point, sourceDockingPoint, targetDockingPoint) {
+    if (point === sourceDockingPoint) {
         return "source";
     }
-    if (point === targetEndPoint) {
+    if (point === targetDockingPoint) {
         return "target";
     }
     return null;
@@ -153,7 +153,7 @@ function requestDiagramLayout(target, diagramLayout) {
 /**
  * Saves the points of the edges of the shown diagram. An edge is saved as soon as it can no longer
  * be edited, i.e. when it is deselected, when another diagram is loaded and when the page is left.
- * While classes are dragged, the end points of their edges move along; those edges are saved
+ * While classes are dragged, the docking points of their edges move along; those edges are saved
  * together with the classes once the drag ends. Neither a class drag nor a point drag is saved
  * before the drop.
  *
@@ -205,7 +205,7 @@ export class EdgeLayoutPersistence {
         }
         this.#target = this.#getTarget();
         this.#savedPoints = new Map(
-            edges.map(edge => [edge.id, edge.data?.bendPoints]),
+            edges.map(edge => [edge.id, edge.data?.edgePoints]),
         );
         this.#persistedPoints = new Map(
             edges.map(edge => [edge.id, toEdgeLayoutDTO(edge).points]),
@@ -230,7 +230,7 @@ export class EdgeLayoutPersistence {
 
     /**
      * Takes the points of the given edges as saved without sending them, for points the diagram
-     * moved on its own, e.g. end points kept on the border of a resized class. Saving them would
+     * moved on its own, e.g. docking points kept on the border of a resized class. Saving them would
      * clear the redo stack of the backend, e.g. right after an undo. They are sent with the next
      * change of their edge. Edges with unsaved changes are left to be saved as usual.
      */
@@ -240,7 +240,7 @@ export class EdgeLayoutPersistence {
                 this.#savedPoints.has(edge.id) &&
                 !this.#unsavedEdges.has(edge.id)
             ) {
-                this.#savedPoints.set(edge.id, edge.data?.bendPoints);
+                this.#savedPoints.set(edge.id, edge.data?.edgePoints);
             }
         }
     }
@@ -263,7 +263,7 @@ export class EdgeLayoutPersistence {
         if (allEdges) {
             changedEdges = edges;
             for (const edge of edges) {
-                this.#savedPoints.set(edge.id, edge.data?.bendPoints);
+                this.#savedPoints.set(edge.id, edge.data?.edgePoints);
                 this.#persistedPoints.set(
                     edge.id,
                     toEdgeLayoutDTO(edge).points,
@@ -330,7 +330,7 @@ export class EdgeLayoutPersistence {
         }
         const readOnly = this.#isReadOnly();
         for (const edge of edges) {
-            const points = edge.data?.bendPoints;
+            const points = edge.data?.edgePoints;
             if (
                 !this.#savedPoints.has(edge.id) ||
                 this.#savedPoints.get(edge.id) === points
@@ -428,7 +428,7 @@ export class EdgeLayoutPersistence {
      * is saved with, the shown edge loses them too.
      */
     #withoutUnnecessaryBendPoints(edge) {
-        const points = edge.data?.bendPoints ?? [];
+        const points = edge.data?.edgePoints ?? [];
         const dissolved = dissolveCollinearBendPoints(
             points,
             EDGE_INTERACTION_CONFIG.collinearBendPointTolerancePx,
@@ -442,17 +442,17 @@ export class EdgeLayoutPersistence {
         if (!this.#disposed) {
             this.#replaceShownPoints(edge.id, points, dissolved);
         }
-        return { ...edge, data: { ...edge.data, bendPoints: dissolved } };
+        return { ...edge, data: { ...edge.data, edgePoints: dissolved } };
     }
 
     #replaceShownPoints(edgeId, points, nextPoints) {
         let changed = false;
         const edges = this.#getEdges().map(edge => {
-            if (edge.id !== edgeId || edge.data?.bendPoints !== points) {
+            if (edge.id !== edgeId || edge.data?.edgePoints !== points) {
                 return edge;
             }
             changed = true;
-            return { ...edge, data: { ...edge.data, bendPoints: nextPoints } };
+            return { ...edge, data: { ...edge.data, edgePoints: nextPoints } };
         });
         if (changed) {
             this.#setEdges(edges);
@@ -469,7 +469,8 @@ export class EdgeLayoutPersistence {
 
     /**
      * Sends a request once the earlier requests of the given edges are answered, and takes over
-     * the mRIDs of the new points it answers with.
+     * the mRIDs of the new points it answers with. If the request fails, its edges no longer count
+     * as saved, so their next save sends them in any case.
      */
     #enqueue(edgeIds, send) {
         const earlierRequests = edgeIds
@@ -518,7 +519,7 @@ export class EdgeLayoutPersistence {
         }
         let changed = false;
         const edges = this.#getEdges().map(edge => {
-            const points = edge.data?.bendPoints;
+            const points = edge.data?.edgePoints;
             const nextPoints = edge.selected
                 ? points
                 : withStoredIds(points, this.#storedIds);
@@ -529,7 +530,7 @@ export class EdgeLayoutPersistence {
             if (this.#savedPoints.get(edge.id) === points) {
                 this.#savedPoints.set(edge.id, nextPoints);
             }
-            return { ...edge, data: { ...edge.data, bendPoints: nextPoints } };
+            return { ...edge, data: { ...edge.data, edgePoints: nextPoints } };
         });
         if (changed) {
             this.#setEdges(edges);

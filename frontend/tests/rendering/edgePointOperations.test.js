@@ -20,84 +20,87 @@ import { describe, expect, test } from "vitest";
 import {
     applyLayoutedEdges,
     createBendPoint,
-    createEndPoint,
+    createDockingPoint,
     dissolveCollinearBendPoints,
-    findBendPointAtPosition,
+    findEdgePointAtPosition,
     getBendPoints,
-    getInnerBendPoints,
-    getSourceEndPoint,
-    getTargetEndPoint,
+    getEdgePoints,
+    getSourceDockingPoint,
+    getTargetDockingPoint,
     insertBendPointAt,
-    isEndPoint,
+    isDockingPoint,
     moveEdgePointsWithDraggedClasses,
-    removeBendPoint,
+    removeBendPoints,
+    removeDockingPoints,
+    removeEdgePoint,
     toEdgePoints,
-    updateEndPoints,
-} from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
+    updateDockingPoints,
+} from "$lib/rendering/svelteflow/interaction/edgePointOperations.js";
 
 function bend(id, x, y) {
     return { id, x, y };
 }
 
-function end(id, x, y, side) {
-    return { id, x, y, isEndPoint: true, side };
+function docking(id, x, y, side) {
+    return { id, x, y, isDockingPoint: true, side };
 }
 
-function edge(id, source, target, bendPoints) {
-    return { id, source, target, data: { bendPoints } };
+function edge(id, source, target, edgePoints) {
+    return { id, source, target, data: { edgePoints } };
 }
 
-describe("end points", () => {
+describe("docking points", () => {
     test("are recognized by their flag", () => {
-        expect(isEndPoint(end("e", 0, 0, "source"))).toBe(true);
-        expect(isEndPoint({ id: "e", endPoint: true })).toBe(true);
-        expect(isEndPoint(bend("b", 0, 0))).toBe(false);
-        expect(isEndPoint(undefined)).toBe(false);
+        expect(isDockingPoint(docking("e", 0, 0, "source"))).toBe(true);
+        expect(isDockingPoint(bend("b", 0, 0))).toBe(false);
+        expect(isDockingPoint(undefined)).toBe(false);
     });
 
     test("are found at their side", () => {
-        const source = end("s", 0, 0, "source");
-        const target = end("t", 9, 9, "target");
+        const source = docking("s", 0, 0, "source");
+        const target = docking("t", 9, 9, "target");
         const points = [source, bend("b", 5, 5), target];
 
-        expect(getSourceEndPoint(points)).toBe(source);
-        expect(getTargetEndPoint(points)).toBe(target);
-        expect(getInnerBendPoints(points).map(point => point.id)).toEqual([
-            "b",
-        ]);
+        expect(getSourceDockingPoint(points)).toBe(source);
+        expect(getTargetDockingPoint(points)).toBe(target);
+        expect(getBendPoints(points).map(point => point.id)).toEqual(["b"]);
     });
 
-    test("a lone end point belongs to its own side only", () => {
-        const lonelyTarget = [end("t", 9, 9, "target")];
-        const lonelySource = [end("s", 0, 0, "source")];
+    test("a lone docking point belongs to its own side only", () => {
+        const lonelyTarget = [docking("t", 9, 9, "target")];
+        const lonelySource = [docking("s", 0, 0, "source")];
 
-        expect(getSourceEndPoint(lonelyTarget)).toBeNull();
-        expect(getTargetEndPoint(lonelyTarget).id).toBe("t");
-        expect(getSourceEndPoint(lonelySource).id).toBe("s");
-        expect(getTargetEndPoint(lonelySource)).toBeNull();
+        expect(getSourceDockingPoint(lonelyTarget)).toBeNull();
+        expect(getTargetDockingPoint(lonelyTarget).id).toBe("t");
+        expect(getSourceDockingPoint(lonelySource).id).toBe("s");
+        expect(getTargetDockingPoint(lonelySource)).toBeNull();
     });
 
     test("without a side, the first and the last point are taken", () => {
-        const first = { id: "f", x: 0, y: 0, isEndPoint: true };
-        const last = { id: "l", x: 9, y: 9, isEndPoint: true };
+        const first = { id: "f", x: 0, y: 0, isDockingPoint: true };
+        const last = { id: "l", x: 9, y: 9, isDockingPoint: true };
 
-        expect(getSourceEndPoint([first, bend("b", 5, 5), last])).toBe(first);
-        expect(getTargetEndPoint([first, bend("b", 5, 5), last])).toBe(last);
-        expect(getTargetEndPoint([first])).toBeNull();
+        expect(getSourceDockingPoint([first, bend("b", 5, 5), last])).toBe(
+            first,
+        );
+        expect(getTargetDockingPoint([first, bend("b", 5, 5), last])).toBe(
+            last,
+        );
+        expect(getTargetDockingPoint([first])).toBeNull();
     });
 
-    test("an edge without points has none", () => {
-        expect(getSourceEndPoint([])).toBeNull();
-        expect(getTargetEndPoint([])).toBeNull();
-        expect(getBendPoints({ data: {} })).toEqual([]);
-        expect(getBendPoints(undefined)).toEqual([]);
+    test("an edge without edge points has none", () => {
+        expect(getSourceDockingPoint([])).toBeNull();
+        expect(getTargetDockingPoint([])).toBeNull();
+        expect(getEdgePoints({ data: {} })).toEqual([]);
+        expect(getEdgePoints(undefined)).toEqual([]);
     });
 });
 
 describe("editing points", () => {
-    test("a bend point is inserted between the inner points, behind a source end point", () => {
+    test("a bend point is inserted between the bend points, behind a source docking point", () => {
         const points = [
-            end("s", 0, 0, "source"),
+            docking("s", 0, 0, "source"),
             bend("a", 1, 1),
             bend("b", 2, 2),
         ];
@@ -115,27 +118,43 @@ describe("editing points", () => {
         expect(points).toHaveLength(3);
     });
 
-    test("a point is removed by its id", () => {
+    test("an edge point is removed by its id", () => {
         const points = [bend("a", 1, 1), bend("b", 2, 2)];
 
-        expect(removeBendPoint(points, "a").map(point => point.id)).toEqual([
+        expect(removeEdgePoint(points, "a").map(point => point.id)).toEqual([
             "b",
         ]);
-        expect(removeBendPoint(points, "unknown")).toEqual(points);
+        expect(removeEdgePoint(points, "unknown")).toEqual(points);
     });
 
-    test("created points get unique ids, end points their side", () => {
+    test("bend points and docking points are removed separately", () => {
+        const points = [
+            docking("s", 0, 0, "source"),
+            bend("b", 5, 5),
+            docking("t", 9, 9, "target"),
+        ];
+
+        expect(removeBendPoints(points).map(point => point.id)).toEqual([
+            "s",
+            "t",
+        ]);
+        expect(removeDockingPoints(points).map(point => point.id)).toEqual([
+            "b",
+        ]);
+    });
+
+    test("created points get unique ids, docking points their side", () => {
         const first = createBendPoint(1, 2);
         const second = createBendPoint(1, 2);
-        const endPoint = createEndPoint(3, 4, "target");
+        const dockingPoint = createDockingPoint(3, 4, "target");
 
         expect(first.id).not.toBe(second.id);
         expect(first).toEqual({ id: first.id, x: 1, y: 2 });
-        expect(endPoint).toEqual({
-            id: endPoint.id,
+        expect(dockingPoint).toEqual({
+            id: dockingPoint.id,
             x: 3,
             y: 4,
-            isEndPoint: true,
+            isDockingPoint: true,
             side: "target",
         });
     });
@@ -143,13 +162,13 @@ describe("editing points", () => {
     test("the point under the cursor is found within the hit radius", () => {
         const points = [bend("a", 0, 0), bend("b", 100, 0)];
 
-        expect(findBendPointAtPosition(points, { x: 98, y: 3 }, 5).id).toBe(
+        expect(findEdgePointAtPosition(points, { x: 98, y: 3 }, 5).id).toBe(
             "b",
         );
-        expect(findBendPointAtPosition(points, { x: 50, y: 0 }, 5)).toBeNull();
+        expect(findEdgePointAtPosition(points, { x: 50, y: 0 }, 5)).toBeNull();
     });
 
-    test("routing points of the layout become sided end points and bend points", () => {
+    test("routing points of the layout become sided docking points and bend points", () => {
         const points = toEdgePoints([
             { x: 0, y: 0, role: "source" },
             { x: 5, y: 5, role: "bend" },
@@ -161,13 +180,13 @@ describe("editing points", () => {
             undefined,
             "target",
         ]);
-        expect(points.map(isEndPoint)).toEqual([true, false, true]);
+        expect(points.map(isDockingPoint)).toEqual([true, false, true]);
         expect(points[1]).toMatchObject({ x: 5, y: 5 });
     });
 });
 
 describe("dissolveCollinearBendPoints", () => {
-    test("removes inner points on the line between their neighbours", () => {
+    test("removes bend points on the line between their neighbours", () => {
         const points = [
             bend("a", 0, 0),
             bend("b", 50, 2),
@@ -193,10 +212,10 @@ describe("dissolveCollinearBendPoints", () => {
         ).toEqual(["a", "d"]);
     });
 
-    test("never removes end points", () => {
+    test("never removes docking points", () => {
         const points = [
-            end("s", 0, 0, "source"),
-            end("t", 50, 0, "target"),
+            docking("s", 0, 0, "source"),
+            docking("t", 50, 0, "target"),
             bend("c", 100, 0),
         ];
 
@@ -219,25 +238,28 @@ describe("dissolveCollinearBendPoints", () => {
 });
 
 describe("edges following their classes", () => {
-    test("updateEndPoints passes each end point with its class and keeps unchanged edges", () => {
+    test("updateDockingPoints passes each docking point with its class and keeps unchanged edges", () => {
         const edges = [
-            edge("e", "a", "b", [end("s", 0, 0, "source"), bend("m", 5, 5)]),
+            edge("e", "a", "b", [
+                docking("s", 0, 0, "source"),
+                bend("m", 5, 5),
+            ]),
         ];
 
-        const moved = updateEndPoints(edges, (point, classId) =>
+        const moved = updateDockingPoints(edges, (point, classId) =>
             classId === "a" ? { ...point, x: 1 } : point,
         );
 
-        expect(moved[0].data.bendPoints.map(point => point.x)).toEqual([1, 5]);
-        expect(updateEndPoints(edges, point => point)).toBe(edges);
+        expect(moved[0].data.edgePoints.map(point => point.x)).toEqual([1, 5]);
+        expect(updateDockingPoints(edges, point => point)).toBe(edges);
     });
 
-    test("a dragged class moves its end points, both classes dragged move the bend points too", () => {
+    test("a dragged class moves its docking points, both classes dragged move the bend points too", () => {
         const edges = [
             edge("e", "a", "b", [
-                end("s", 0, 0, "source"),
+                docking("s", 0, 0, "source"),
                 bend("m", 50, 50),
-                end("t", 100, 0, "target"),
+                docking("t", 100, 0, "target"),
             ]),
         ];
         const lastPositions = new Map([
@@ -258,10 +280,10 @@ describe("edges following their classes", () => {
             lastPositions,
         );
 
-        expect(oneDragged[0].data.bendPoints.map(point => point.x)).toEqual([
+        expect(oneDragged[0].data.edgePoints.map(point => point.x)).toEqual([
             10, 50, 100,
         ]);
-        expect(bothDragged[0].data.bendPoints.map(point => point.x)).toEqual([
+        expect(bothDragged[0].data.edgePoints.map(point => point.x)).toEqual([
             10, 60, 110,
         ]);
     });
@@ -281,7 +303,7 @@ describe("edges following their classes", () => {
 
         const result = applyLayoutedEdges(edges, layouted, 8);
 
-        expect(result[0].data.bendPoints).toHaveLength(3);
+        expect(result[0].data.edgePoints).toHaveLength(3);
         expect(result[1]).toBe(edges[1]);
     });
 });

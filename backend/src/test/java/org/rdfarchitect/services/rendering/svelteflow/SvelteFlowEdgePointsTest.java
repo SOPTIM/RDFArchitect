@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
-import org.rdfarchitect.api.dto.rendering.svelteflow.sub.BendPointDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.sub.SvelteFlowEdgePointDTO;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.EdgeKey;
@@ -51,9 +51,9 @@ class SvelteFlowEdgePointsTest {
 
     @Test
     void storedPoints_areRenderedInOrderWithTheirMRIDsAndSides() {
-        var source = endPoint(0, 0, SUB);
+        var source = dockingPoint(0, 0, SUB);
         var bend = bendPoint(50, 50);
-        var target = endPoint(100, 100, SUPER);
+        var target = dockingPoint(100, 100, SUPER);
         var layoutData =
                 layoutData(
                         Map.of(
@@ -63,10 +63,10 @@ class SvelteFlowEdgePointsTest {
         var points = inheritancePoints(layoutData);
 
         assertThat(points)
-                .extracting(BendPointDTO::getId)
+                .extracting(SvelteFlowEdgePointDTO::getId)
                 .containsExactly(idOf(source), idOf(bend), idOf(target));
         assertThat(points)
-                .extracting(BendPointDTO::getSide)
+                .extracting(SvelteFlowEdgePointDTO::getSide)
                 .containsExactly("source", null, "target");
         assertThat(points)
                 .extracting(point -> point.getPosition().getX())
@@ -75,9 +75,9 @@ class SvelteFlowEdgePointsTest {
 
     @Test
     void anEdgeRenderedFromTheOtherSide_getsItsPointsReversed_andTheSidesOfItsOwnClasses() {
-        var atTarget = endPoint(0, 0, SUPER);
+        var atTarget = dockingPoint(0, 0, SUPER);
         var bend = bendPoint(50, 50);
-        var atSub = endPoint(100, 100, SUB);
+        var atSub = dockingPoint(100, 100, SUB);
         var layoutData =
                 layoutData(
                         Map.of(
@@ -90,17 +90,17 @@ class SvelteFlowEdgePointsTest {
                         layoutData, DiagramObjectStyle.ASSOCIATION, END, INVERSE_END, SUB, SUPER);
 
         assertThat(points)
-                .extracting(BendPointDTO::getId)
+                .extracting(SvelteFlowEdgePointDTO::getId)
                 .containsExactly(idOf(atSub), idOf(bend), idOf(atTarget));
         assertThat(points)
-                .extracting(BendPointDTO::getSide)
+                .extracting(SvelteFlowEdgePointDTO::getSide)
                 .containsExactly("source", null, "target");
     }
 
     @Test
-    void aLoneEndPoint_getsTheSideOfTheClassItIsGluedTo() {
+    void aLoneDockingPoint_getsTheSideOfTheClassItIsGluedTo() {
         var bend = bendPoint(50, 50);
-        var target = endPoint(100, 100, SUPER);
+        var target = dockingPoint(100, 100, SUPER);
         var layoutData =
                 layoutData(
                         Map.of(
@@ -108,7 +108,7 @@ class SvelteFlowEdgePointsTest {
                                 new EdgePoints(new MRID(SUB), List.of(target))));
 
         assertThat(inheritancePoints(layoutData))
-                .extracting(BendPointDTO::getSide)
+                .extracting(SvelteFlowEdgePointDTO::getSide)
                 .containsExactly("target");
         assertThat(
                         inheritancePoints(
@@ -117,15 +117,15 @@ class SvelteFlowEdgePointsTest {
                                                 EdgeKey.inheritance(SUB, SUPER),
                                                 new EdgePoints(
                                                         new MRID(SUB), List.of(bend, target))))))
-                .extracting(BendPointDTO::getSide)
+                .extracting(SvelteFlowEdgePointDTO::getSide)
                 .containsExactly(null, "target");
     }
 
     @Test
-    void endPointsOfAnEdgeFromAClassToItself_takeTheirSideFromTheirPosition() {
-        var first = endPoint(0, 0, SUB);
+    void dockingPointsOfAnEdgeFromAClassToItself_takeTheirSideFromTheirPosition() {
+        var first = dockingPoint(0, 0, SUB);
         var bend = bendPoint(50, 50);
-        var last = endPoint(100, 100, SUB);
+        var last = dockingPoint(100, 100, SUB);
         var layoutData =
                 layoutData(
                         Map.of(
@@ -137,14 +137,14 @@ class SvelteFlowEdgePointsTest {
                         layoutData, DiagramObjectStyle.ASSOCIATION, END, INVERSE_END, SUB, SUB);
 
         assertThat(points)
-                .extracting(BendPointDTO::getSide)
+                .extracting(SvelteFlowEdgePointDTO::getSide)
                 .containsExactly("source", null, "target");
     }
 
     @Test
-    void endPointsGluedToAnUnknownClass_takeTheirSideFromTheirPosition() {
-        var first = endPoint(0, 0, null);
-        var last = endPoint(100, 100, null);
+    void dockingPointsGluedToAnUnknownClass_takeTheirSideFromTheirPosition() {
+        var first = dockingPoint(0, 0, null);
+        var last = dockingPoint(100, 100, null);
         var layoutData =
                 layoutData(
                         Map.of(
@@ -152,11 +152,11 @@ class SvelteFlowEdgePointsTest {
                                 new EdgePoints(new MRID(SUB), List.of(first, last))));
 
         assertThat(inheritancePoints(layoutData))
-                .extracting(BendPointDTO::getSide)
+                .extracting(SvelteFlowEdgePointDTO::getSide)
                 .containsExactly("source", "target");
     }
 
-    private static List<BendPointDTO> inheritancePoints(RenderingLayoutData layoutData) {
+    private static List<SvelteFlowEdgePointDTO> inheritancePoints(RenderingLayoutData layoutData) {
         return SvelteFlowEdgePoints.forEdge(
                 layoutData, DiagramObjectStyle.INHERITANCE, SUB, SUPER, SUB, SUPER);
     }
@@ -165,7 +165,7 @@ class SvelteFlowEdgePointsTest {
         return RenderingLayoutData.builder().edgeLayoutingData(edgePoints).build();
     }
 
-    private static EdgePoint endPoint(float x, float y, UUID gluedClass) {
+    private static EdgePoint dockingPoint(float x, float y, UUID gluedClass) {
         return new EdgePoint(
                 point(x, y).belongsToGluePoint(GLUE_POINT).build(),
                 gluedClass != null ? new MRID(gluedClass) : null);

@@ -18,15 +18,15 @@
     import { useSvelteFlow } from "@xyflow/svelte";
 
     import { AutoPanController } from "$lib/rendering/svelteflow/interaction/autoPanController.svelte.js";
-    import {
-        createBendPoint,
-        createEndPoint,
-        insertBendPointAt,
-        getSourceEndPoint,
-        getTargetEndPoint,
-    } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
     import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
     import { edgePointDrag } from "$lib/rendering/svelteflow/interaction/edgeLayoutPersistence.js";
+    import {
+        createBendPoint,
+        createDockingPoint,
+        insertBendPointAt,
+        getSourceDockingPoint,
+        getTargetDockingPoint,
+    } from "$lib/rendering/svelteflow/interaction/edgePointOperations.js";
 
     import {
         getInactiveBendPoints,
@@ -39,10 +39,10 @@
         targetPoint,
         sourceBorderPoint,
         targetBorderPoint,
-        allPoints = [],
+        edgePoints = [],
         bendPoints = [],
-        sourceEndPoint = null,
-        targetEndPoint = null,
+        sourceDockingPoint = null,
+        targetDockingPoint = null,
         readOnly = false,
         sourceNodeId,
         targetNodeId,
@@ -68,14 +68,14 @@
         readOnly ? [] : getInactiveBendPoints(fullPoints),
     );
 
-    let inactiveEndPoints = $derived(
+    let inactiveDockingPoints = $derived(
         readOnly
             ? []
             : [
-                  sourceEndPoint
+                  sourceDockingPoint
                       ? null
                       : { side: "source", ...sourceBorderPoint },
-                  targetEndPoint
+                  targetDockingPoint
                       ? null
                       : { side: "target", ...targetBorderPoint },
               ].filter(Boolean),
@@ -97,7 +97,7 @@
         });
         const newBendPoint = createBendPoint(flowPosition.x, flowPosition.y);
         const newPoints = insertBendPointAt(
-            allPoints,
+            edgePoints,
             insertionIndex,
             newBendPoint,
         );
@@ -106,7 +106,7 @@
         addDragListeners();
     }
 
-    function activateInactiveEndPoint(side, event) {
+    function activateInactiveDockingPoint(side, event) {
         if (event.button === 2) return;
         event.stopPropagation();
         const flowPosition = screenToFlowPosition({
@@ -114,13 +114,17 @@
             y: event.clientY,
         });
         const projected = projectOntoSide(side, flowPosition);
-        const newEndPoint = createEndPoint(projected.x, projected.y, side);
+        const newDockingPoint = createDockingPoint(
+            projected.x,
+            projected.y,
+            side,
+        );
         const newPoints =
             side === "source"
-                ? [newEndPoint, ...allPoints]
-                : [...allPoints, newEndPoint];
+                ? [newDockingPoint, ...edgePoints]
+                : [...edgePoints, newDockingPoint];
         onPointsChange(newPoints);
-        drag = { id: newEndPoint.id };
+        drag = { id: newDockingPoint.id };
         addDragListeners();
     }
 
@@ -157,19 +161,19 @@
             y: event.clientY,
         });
 
-        const draggedSource = getSourceEndPoint(allPoints);
-        const draggedTarget = getTargetEndPoint(allPoints);
-        const isSourceEnd = draggedSource?.id === drag.id;
-        const isTargetEnd = draggedTarget?.id === drag.id;
+        const isSourceDocking =
+            getSourceDockingPoint(edgePoints)?.id === drag.id;
+        const isTargetDocking =
+            getTargetDockingPoint(edgePoints)?.id === drag.id;
 
         let position = flowPosition;
-        if (isSourceEnd) {
+        if (isSourceDocking) {
             position = projectOntoSide("source", flowPosition);
-        } else if (isTargetEnd) {
+        } else if (isTargetDocking) {
             position = projectOntoSide("target", flowPosition);
         }
 
-        const newPoints = allPoints.map(point =>
+        const newPoints = edgePoints.map(point =>
             point.id === drag.id
                 ? { ...point, x: position.x, y: position.y }
                 : point,
@@ -189,7 +193,7 @@
 <g>
     {#each inactiveBendPoints as inactivePoint (inactivePoint.insertionIndex)}
         <circle
-            class="bend-point-handle nodrag nopan fill-bendpoint cursor-pointer opacity-50"
+            class="edge-point-handle nodrag nopan fill-bendpoint cursor-pointer opacity-50"
             role="button"
             aria-label="Add bend point"
             tabindex="-1"
@@ -203,24 +207,25 @@
         />
     {/each}
 
-    {#each inactiveEndPoints as inactiveEnd (inactiveEnd.side)}
+    {#each inactiveDockingPoints as inactiveDocking (inactiveDocking.side)}
         <circle
-            class="bend-point-handle nodrag nopan fill-endpoint cursor-pointer opacity-50"
+            class="edge-point-handle nodrag nopan fill-dockingpoint cursor-pointer opacity-50"
             role="button"
-            aria-label="Activate end point"
+            aria-label="Pin docking point"
             tabindex="-1"
             data-edge-id={edgeId}
-            cx={inactiveEnd.x}
-            cy={inactiveEnd.y}
+            cx={inactiveDocking.x}
+            cy={inactiveDocking.y}
             r={EDGE_INTERACTION_CONFIG.inactivePointRadiusPx}
             style="pointer-events: all;"
-            onpointerdown={e => activateInactiveEndPoint(inactiveEnd.side, e)}
+            onpointerdown={e =>
+                activateInactiveDockingPoint(inactiveDocking.side, e)}
         />
     {/each}
 
     {#each bendPoints as bendPoint (bendPoint.id)}
         <circle
-            class={`bend-point-handle nodrag nopan stroke-white stroke-[1.5] ${
+            class={`edge-point-handle nodrag nopan stroke-white stroke-[1.5] ${
                 readOnly
                     ? "fill-text-subtle cursor-default"
                     : "fill-bendpoint cursor-grab"
@@ -239,52 +244,52 @@
         />
     {/each}
 
-    {#if sourceEndPoint}
+    {#if sourceDockingPoint}
         <circle
-            class={`bend-point-handle nodrag nopan stroke-white stroke-[1.5] ${
+            class={`edge-point-handle nodrag nopan stroke-white stroke-[1.5] ${
                 readOnly
                     ? "fill-text-subtle cursor-default"
-                    : "fill-endpoint cursor-grab"
+                    : "fill-dockingpoint cursor-grab"
             }`}
             role="button"
-            aria-label="Move source end point"
+            aria-label="Move source docking point"
             tabindex="-1"
             data-edge-id={edgeId}
-            cx={sourceEndPoint.x}
-            cy={sourceEndPoint.y}
+            cx={sourceDockingPoint.x}
+            cy={sourceDockingPoint.y}
             r={EDGE_INTERACTION_CONFIG.activePointRadiusPx}
             style="pointer-events: all;"
             onpointerdown={readOnly
                 ? undefined
-                : e => beginPointDrag(sourceEndPoint.id, e)}
+                : e => beginPointDrag(sourceDockingPoint.id, e)}
         />
     {/if}
 
-    {#if targetEndPoint}
+    {#if targetDockingPoint}
         <circle
-            class={`bend-point-handle nodrag nopan stroke-white stroke-[1.5] ${
+            class={`edge-point-handle nodrag nopan stroke-white stroke-[1.5] ${
                 readOnly
                     ? "fill-text-subtle cursor-default"
-                    : "fill-endpoint cursor-grab"
+                    : "fill-dockingpoint cursor-grab"
             }`}
             role="button"
-            aria-label="Move target end point"
+            aria-label="Move target docking point"
             tabindex="-1"
             data-edge-id={edgeId}
-            cx={targetEndPoint.x}
-            cy={targetEndPoint.y}
+            cx={targetDockingPoint.x}
+            cy={targetDockingPoint.y}
             r={EDGE_INTERACTION_CONFIG.activePointRadiusPx}
             style="pointer-events: all;"
             onpointerdown={readOnly
                 ? undefined
-                : e => beginPointDrag(targetEndPoint.id, e)}
+                : e => beginPointDrag(targetDockingPoint.id, e)}
         />
     {/if}
 </g>
 
 <style>
-    .bend-point-handle:focus,
-    .bend-point-handle:focus-visible {
+    .edge-point-handle:focus,
+    .edge-point-handle:focus-visible {
         outline: none;
     }
 </style>
