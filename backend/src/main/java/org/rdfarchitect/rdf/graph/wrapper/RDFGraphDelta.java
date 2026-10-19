@@ -31,6 +31,7 @@ import org.jetbrains.annotations.NotNull;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphNotInAWriteTransactionException;
 import org.rdfarchitect.exception.graph.GraphVersionControlException;
+import org.rdfarchitect.models.changelog.CapturedState;
 import org.rdfarchitect.models.changelog.ChangeLogParticipant;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 import org.slf4j.Logger;
@@ -38,6 +39,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -219,6 +223,47 @@ public class RDFGraphDelta
     }
 
     @Override
+    public CapturedState capture(int versionsBack) {
+        var version = versionAt(versionsBack);
+        var triples = version.find().toList();
+        var prefixes = Map.copyOf(version.getPrefixMapping().getNsPrefixMap());
+        return () -> reinstate(triples, prefixes);
+    }
+
+    /**
+     * Returns a committed version of this graph without stepping to it.
+     *
+     * <p>A delta's base is the delta before it, so every version in the chain already composes to
+     * the state it left behind: reading one is a read, not a rewind.
+     */
+    private DeltaCompressible versionAt(int versionsBack) {
+        return RetainedVersions.at(pastDeltas, versionsBack);
+    }
+
+    /**
+     * Writes a captured state back as the smallest change that reaches it, so that the commit
+     * recording the change shows what really differs rather than the whole graph twice over.
+     */
+    private void reinstate(List<Triple> triples, Map<String, String> prefixes) {
+        var wanted = new HashSet<>(triples);
+        var present = currentDelta.find().toList();
+        present.stream().filter(triple -> !wanted.contains(triple)).forEach(this::delete);
+        present.forEach(wanted::remove);
+        wanted.forEach(this::add);
+        reinstatePrefixes(prefixes);
+    }
+
+    private void reinstatePrefixes(Map<String, String> prefixes) {
+        var mapping = currentDelta.getPrefixMapping();
+        if (mapping.getNsPrefixMap().equals(prefixes)) {
+            return;
+        }
+        checkWriteTransaction();
+        mapping.clearNsPrefixMap();
+        mapping.setNsPrefixes(prefixes);
+    }
+
+    @Override
     public void undo() {
         if (currentVersion() == 0) {
             throw new GraphVersionControlException("Cannot undo: already at the oldest version.");
@@ -242,9 +287,8 @@ public class RDFGraphDelta
     }
 
     @Override
-    public UUID currentVersionId() {
-        var head = pastDeltas.peek();
-        return head != null ? head.getVersionId() : null;
+    public UUID versionIdAt(int versionsBack) {
+        return versionAt(versionsBack).getVersionId();
     }
 
     @Override

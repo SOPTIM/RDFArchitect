@@ -22,6 +22,7 @@ import org.apache.jena.graph.Triple;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.rdfarchitect.models.changelog.ContextDelta;
+import org.rdfarchitect.models.changelog.ValueChange;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
@@ -37,6 +38,10 @@ public interface ChangeLogEntryMapper {
     @Mapping(
             target = "affectedGraphUris",
             expression = "java(java.util.List.copyOf(entry.affectedGraphUris()))")
+    @Mapping(
+            target = "restorableGraphUris",
+            expression = "java(java.util.List.copyOf(entry.restorableGraphUris()))")
+    @Mapping(target = "affectedKinds", expression = "java(entry.affectedKinds())")
     ChangeLogEntryDTO toDTO(WorkspaceChangeLogEntry entry);
 
     List<ChangeLogEntryDTO> toDTOList(List<WorkspaceChangeLogEntry> entries);
@@ -49,10 +54,18 @@ public interface ChangeLogEntryMapper {
         dto.setGraphUri(contextDelta.graphUri());
         dto.setAdditions(mapTriples(contextDelta.additions()));
         dto.setDeletions(mapTriples(contextDelta.deletions()));
+        dto.setValues(contextDelta.values().stream().map(this::mapValueChange).toList());
         return dto;
     }
 
+    default ValueChangeDTO mapValueChange(ValueChange valueChange) {
+        return new ValueChangeDTO(valueChange.key(), valueChange.before(), valueChange.after());
+    }
+
     default List<TripleDTO> mapTriples(WeakReference<Graph> graphReference) {
+        if (graphReference == null) {
+            return null;
+        }
         var graph = graphReference.get();
         if (graph == null) {
             return null;

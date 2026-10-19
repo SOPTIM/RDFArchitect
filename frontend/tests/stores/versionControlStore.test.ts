@@ -41,6 +41,7 @@ vi.mock("$lib/api/generated", () => ({
     canUndo: vi.fn(),
     canRedo: vi.fn(),
     getPendingUndo: vi.fn(),
+    restoreVersion: vi.fn(),
 }));
 
 vi.mock("$lib/sharedState.svelte.js", () => ({
@@ -760,6 +761,135 @@ describe("versionControlStore", () => {
 
             expect(result.error).toBe("No redo target selected.");
             expect(api.redo).not.toHaveBeenCalled();
+        });
+    });
+    // -------------------------------------------------------------------------
+    describe("restore", () => {
+        const CHANGE_ID = "11111111-1111-1111-1111-111111111111";
+
+        test("restores the whole workspace and says what came back", async () => {
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: {
+                    change: {
+                        changeId: CHANGE_ID,
+                        message: "added a class",
+                        affectedGraphUris: [],
+                    },
+                    canUndo: true,
+                    canRedo: false,
+                },
+                error: undefined,
+            });
+
+            const result = await store.restore(CHANGE_ID, [], WORKSPACE);
+
+            expect(result.error).toBeNull();
+            expect(api.restoreVersion).toHaveBeenCalledWith({
+                path: { datasetName: WORKSPACE },
+                body: { versionId: CHANGE_ID, graphUris: [] },
+            });
+            expect(toastStore.info).toHaveBeenCalledWith(
+                "Version restored",
+                expect.stringContaining("added a class"),
+            );
+        });
+
+        test("passes the graphs a restricted restore is held to", async () => {
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: { change: { changeId: CHANGE_ID }, canUndo: true },
+                error: undefined,
+            });
+
+            await store.restore(CHANGE_ID, ["http://example.org/a"], WORKSPACE);
+
+            expect(api.restoreVersion).toHaveBeenCalledWith({
+                path: { datasetName: WORKSPACE },
+                body: {
+                    versionId: CHANGE_ID,
+                    graphUris: ["http://example.org/a"],
+                },
+            });
+        });
+
+        test("reloads the whole workspace, because a restore can reach all of it", async () => {
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: { change: { changeId: CHANGE_ID }, canUndo: true },
+                error: undefined,
+            });
+
+            await store.restore(CHANGE_ID, [], WORKSPACE);
+
+            expect(classStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+            expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+            expect(crossProfileStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+            expect(workspaceStore.invalidate).toHaveBeenCalled();
+        });
+
+        test("takes over the flags the restore reports", async () => {
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: {
+                    change: { changeId: CHANGE_ID },
+                    canUndo: true,
+                    canRedo: false,
+                },
+                error: undefined,
+            });
+
+            await store.restore(CHANGE_ID, [], WORKSPACE);
+
+            expect(await store.canUndo(WORKSPACE)).toBe(true);
+            expect(await store.canRedo(WORKSPACE)).toBe(false);
+            expect(api.canUndo).not.toHaveBeenCalled();
+        });
+
+        test("says nothing was restored when the scope covered nothing", async () => {
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: { change: null, canUndo: true, canRedo: false },
+                error: undefined,
+            });
+
+            const result = await store.restore(
+                CHANGE_ID,
+                ["http://example.org/b"],
+                WORKSPACE,
+            );
+
+            expect(result.skipped).toBe(true);
+            expect(toastStore.info).toHaveBeenCalledWith(
+                "Nothing to restore",
+                expect.any(String),
+            );
+            expect(classStore.invalidateWorkspace).not.toHaveBeenCalled();
+        });
+
+        test("returns error and prevents invalidation if SDK fails", async () => {
+            const error = new Error("Cannot restore");
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: undefined,
+                error,
+            });
+
+            const result = await store.restore(CHANGE_ID, [], WORKSPACE);
+
+            expect(result.error).toBe(error);
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Restore failed",
+                "Could not restore the selected version.",
+            );
+            expect(classStore.invalidateWorkspace).not.toHaveBeenCalled();
+        });
+
+        test("fails early if no workspace resolves", async () => {
+            const result = await store.restore(CHANGE_ID);
+
+            expect(result.error).toBe("No workspace selected.");
+            expect(api.restoreVersion).not.toHaveBeenCalled();
         });
     });
 });

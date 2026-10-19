@@ -34,6 +34,7 @@
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { ontologyStore } from "$lib/stores/ontologyStore.ts";
     import { packageStore } from "$lib/stores/packageStore.ts";
+    import { plural } from "$lib/utils/plural.js";
 
     import { getDefaultAction } from "./deleteDependencyDefaults.js";
     import DeleteDependencyNode from "./DeleteDependencyNode.svelte";
@@ -216,7 +217,7 @@
             multiSelectState.clear();
             const noun = isSingle
                 ? (type ?? "resource")
-                : pluralize(type ?? "resource");
+                : plural(type ?? "resource");
             toastStore.success(
                 `${capitalize(noun)} deleted`,
                 label
@@ -248,10 +249,6 @@
         selectedActions = new Map(selectedActions);
     }
 
-    function pluralize(word) {
-        return word.endsWith("s") ? `${word}es` : `${word}s`;
-    }
-
     function capitalize(word) {
         return word.charAt(0).toUpperCase() + word.slice(1);
     }
@@ -262,7 +259,7 @@
             return `Delete ${noun} "${roots[0].resourceIdentifier.label}"?`;
         }
         if (roots.length > 1) {
-            return `Delete ${roots.length} ${capitalize(pluralize(type ?? "resource"))}?`;
+            return `Delete ${roots.length} ${capitalize(plural(type ?? "resource"))}?`;
         }
         return "Delete Resource?";
     }
