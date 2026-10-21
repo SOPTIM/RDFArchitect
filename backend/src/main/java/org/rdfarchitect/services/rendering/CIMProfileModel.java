@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.services.rendering;
 
-import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelReader;
 
 public record CIMProfileModel(
-        String graphUri, String color, String keyword, ICIMModelFacade model) {}
+        String graphUri, String color, String keyword, ICIMModelReader model) {}

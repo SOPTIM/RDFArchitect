@@ -241,8 +241,11 @@
             },
             "type" : "array"
           },
-          "superClass" : {
-            "$ref" : "#/components/schemas/RDFSSubClassOf"
+          "superClasses" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RDFSSubClassOf"
+            },
+            "type" : "array"
           },
           "uri" : {
             "$ref" : "#/components/schemas/URI"

@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.ClassDTO;
 import org.rdfarchitect.api.dto.ClassMapper;
@@ -39,6 +40,7 @@ import org.rdfarchitect.models.cim.umladapted.CIMUMLObjectFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -108,25 +110,44 @@ public class QueryClassService
     public List<ClassDTO> listSuperClasses(GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             var graph = ctx.getRdfGraph();
-            var superClassList = new ArrayList<CIMClass>();
+            var model = ModelFactory.createModelForGraph(graph);
             var cimObjectFetcher =
                     new CIMObjectFetcher(
                             graph,
                             graphIdentifier.graphUri(),
                             databasePort.getPrefixMapping(graphIdentifier.datasetName()));
-            var baseClass = cimObjectFetcher.fetchCIMClass(classUUID.toString());
-            superClassList.add(
-                    cimObjectFetcher.fetchCIMClass(baseClass.getSuperClass().getUri().toString()));
+            var superClassList = new ArrayList<CIMClass>();
+            var visited = new HashSet<String>();
+            visited.add(classUUID.toString());
 
-            for (var i = 0; i < superClassList.size(); i++) {
-                var superClass = superClassList.get(i);
-                if (superClass != null) {
-                    superClassList.add(
-                            cimObjectFetcher.fetchCIMClass(superClass.getUri().toString()));
+            var cimClass = cimObjectFetcher.fetchCIMClass(classUUID.toString());
+            // Only the first one of each: a DTO chain holds a single lineage. The chain ends where
+            // a superclass is not defined in this graph, and the visited set ends it where the
+            // hierarchy comes round on itself.
+            while (cimClass != null && cimClass.firstSuperClass() != null) {
+                var superClassUUID = uuidOf(model, cimClass.firstSuperClass().getUri());
+                if (superClassUUID == null || !visited.add(superClassUUID)) {
+                    break;
                 }
+                cimClass = cimObjectFetcher.fetchCIMClass(superClassUUID);
+                if (cimClass == null) {
+                    break;
+                }
+                superClassList.add(cimClass);
             }
             return mapper.toDTOList(superClassList);
         }
+    }
+
+    /**
+     * The uuid the graph gives the class named by {@code uri}, which is what a class is looked up
+     * by; null where the graph names none, meaning the class is only referenced and not defined.
+     */
+    private String uuidOf(Model model, URI uri) {
+        var statement = model.getResource(uri.toString()).getProperty(RDFA.uuid);
+        return statement == null || !statement.getObject().isLiteral()
+                ? null
+                : statement.getString();
     }
 
     @Override

@@ -19,14 +19,14 @@ package org.rdfarchitect.services.rendering;
 
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
-import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelReader;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 
 import java.util.List;
 import java.util.Set;
 
 /**
- * Converts a {@link ICIMModelFacade} to a DTO that contains data required to render a UML diagram.
+ * Converts a {@link ICIMModelReader} to a DTO that contains data required to render a UML diagram.
  */
 public interface RenderCIMFacadeCollectionUseCase {
 
@@ -46,7 +46,7 @@ public interface RenderCIMFacadeCollectionUseCase {
      * @return a dto that contains all data required to render a UML diagram for the given model
      */
     RenderingDataDTO renderUML(
-            ICIMModelFacade cimModel,
+            ICIMModelReader cimModel,
             GraphFilter filter,
             RenderingLayoutData layoutData,
             List<CIMProfileModel> otherProfiles,

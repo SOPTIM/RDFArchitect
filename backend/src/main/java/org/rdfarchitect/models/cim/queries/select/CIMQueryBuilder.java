@@ -172,7 +172,12 @@ public class CIMQueryBuilder {
         return this;
     }
 
-    /** */
+    /**
+     * Appends query for the uuid as {@link CIMQueryVars UUID}.
+     *
+     * @param mode Whether the result of this is mode.
+     * @return {@link CIMQueryBuilder this}
+     */
     public CIMQueryBuilder appendUUIDQuery(Mode mode) {
         return appendSingleQuery(RDFA.uuid, CIMQueryVars.UUID, mode);
     }

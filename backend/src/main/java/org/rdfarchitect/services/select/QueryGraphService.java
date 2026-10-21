@@ -43,6 +43,7 @@ import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.models.cim.CIMModifyingUtils;
 import org.rdfarchitect.models.cim.CIMQuerySolutionParser;
 import org.rdfarchitect.models.cim.data.CIMObjectFactory;
+import org.rdfarchitect.models.cim.data.CIMObjectFetcher;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
@@ -113,7 +114,7 @@ public class QueryGraphService
               PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
               PREFIX  dc:   <http://purl.org/dc/elements/1.1/>
 
-              SELECT DISTINCT ?uri ?uuid ?label ?packageURI ?packageLabel ?packageUUID ?comment ?superClassURI ?superClassLabel
+              SELECT DISTINCT ?uri ?uuid ?label ?packageURI ?packageLabel ?packageUUID ?comment
               WHERE
                 {
               """
@@ -131,12 +132,6 @@ public class QueryGraphService
             }
           OPTIONAL
             { ?uri  rdfs:comment  ?comment}
-          OPTIONAL
-            { ?uri  rdfs:subClassOf  ?superClassURI
-              OPTIONAL
-                { ?superClassURI
-                            rdfs:label  ?superClassLabel}
-            }
         }
       ORDER BY ?uri
       """;
@@ -149,7 +144,10 @@ public class QueryGraphService
                         null);
 
         // format results
-        var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
+        var cimClassList =
+                withSuperClasses(
+                        graphIdentifier,
+                        CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet));
         var referencedClassList = getReferencedClassList(graphIdentifier);
         var existingUuids =
                 cimClassList.stream().map(CIMClassUMLAdapted::getUuid).collect(Collectors.toSet());
@@ -162,6 +160,22 @@ public class QueryGraphService
 
         cimClassList.forEach(CIMClassUMLAdapted::nullEmptyLists);
         return classMapper.toDTOList(cimClassList);
+    }
+
+    /**
+     * Resolves the superclasses of classes that were built straight from a result set. The class
+     * queries here cannot bind them: a class may declare several, which would multiply its rows and
+     * hand the same class back once per superclass.
+     */
+    private List<CIMClassUMLAdapted> withSuperClasses(
+            GraphIdentifier graphIdentifier, List<CIMClassUMLAdapted> classes) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            return new CIMObjectFetcher(
+                            ctx.getRdfGraph(),
+                            graphIdentifier.graphUri(),
+                            databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                    .resolveSuperClassesForList(classes);
+        }
     }
 
     private List<CIMClassUMLAdapted> getReferencedClassList(GraphIdentifier graphIdentifier) {
@@ -183,7 +197,8 @@ public class QueryGraphService
                         graphIdentifier.graphUri());
 
         // format results
-        return CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
+        return withSuperClasses(
+                graphIdentifier, CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet));
     }
 
     @Override
@@ -226,7 +241,6 @@ public class QueryGraphService
                         .appendLabelQuery(OPTIONAL)
                         .appendPackageQuery(OPTIONAL)
                         .appendCommentQuery(OPTIONAL)
-                        .appendSuperClassQuery(OPTIONAL)
                         .build();
 
         // execute query
@@ -237,7 +251,10 @@ public class QueryGraphService
                         graphIdentifier.graphUri());
 
         // format results
-        var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
+        var cimClassList =
+                withSuperClasses(
+                        graphIdentifier,
+                        CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet));
         cimClassList.forEach(CIMClassUMLAdapted::nullEmptyLists);
 
         return classMapper.toDTOList(cimClassList);
@@ -347,7 +364,6 @@ public class QueryGraphService
                         .appendLabelQuery(REQUIRED)
                         .appendPackageQuery(OPTIONAL)
                         .appendCommentQuery(OPTIONAL)
-                        .appendSuperClassQuery(OPTIONAL)
                         .build();
 
         // execute query
@@ -358,7 +374,10 @@ public class QueryGraphService
                         graphIdentifier.graphUri());
 
         // format results
-        var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
+        var cimClassList =
+                withSuperClasses(
+                        graphIdentifier,
+                        CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet));
         cimClassList.forEach(CIMClassUMLAdapted::nullEmptyLists);
 
         return classMapper.toDTOList(cimClassList);
