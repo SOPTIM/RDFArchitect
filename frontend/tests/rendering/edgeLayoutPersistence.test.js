@@ -78,7 +78,7 @@ function settle() {
 /** A persistence over a mutable list of shown edges, like the edges state of the wrapper. */
 function persistenceFor(
     initialEdges,
-    { target = GRAPH_TARGET, readOnly = false } = {},
+    { target = GRAPH_TARGET, readOnly = false, getLabelsOf } = {},
 ) {
     const state = { edges: initialEdges, target, readOnly };
     const persistence = new EdgeLayoutPersistence({
@@ -86,6 +86,7 @@ function persistenceFor(
         setEdges: value => (state.edges = value),
         getTarget: () => state.target,
         isReadOnly: () => state.readOnly,
+        getLabelsOf,
     });
     persistence.load(initialEdges);
     const show = nextEdges => {
@@ -190,6 +191,30 @@ describe("EdgeLayoutPersistence", () => {
         expect(sentEdges(updateEdgeLayouts)[0].points).toEqual([
             { id: bend.id, xPosition: 10, yPosition: 20, side: null },
         ]);
+    });
+
+    test("saves the manually placed labels of an edge together with it", async () => {
+        const shown = edge("e", [], true);
+        const label = {
+            identifiedObjectUUID: "end",
+            kind: "multiplicity",
+            x: 3,
+            y: 4,
+        };
+        const getLabelsOf = vi.fn(edges =>
+            edges.some(saved => saved.id === "e") ? [label] : [],
+        );
+        const { show } = persistenceFor([shown], { getLabelsOf });
+        const docking = createDockingPoint(0, 5, "source");
+
+        show([selected(withPoints(shown, [docking]), false)]);
+        await settle();
+
+        expect(updateEdgeLayouts).not.toHaveBeenCalled();
+        expect(updateDiagramLayout).toHaveBeenCalledTimes(1);
+        const body = updateDiagramLayout.mock.calls[0][0].body;
+        expect(body.labels).toEqual([label]);
+        expect(body.edges[0].points[0]).toMatchObject({ side: "source" });
     });
 
     test("saves a diagram across the dataset over the dataset route", async () => {
@@ -360,11 +385,30 @@ describe("EdgeLayoutPersistence", () => {
         const docked = withPoints(shown, [createDockingPoint(0, 5, "source")]);
 
         state.edges = [docked];
-        persistence.acceptWithoutSaving(state.edges);
+        persistence.acceptWithoutSaving([shown], state.edges);
         show(state.edges);
         await settle();
 
         expect(updateEdgeLayouts).not.toHaveBeenCalled();
+    });
+
+    test("still saves a dragged point the diagram moved on its own before it was recorded", async () => {
+        const shown = edge("e", [createDockingPoint(0, 0, "source")]);
+        const { state, persistence, show } = persistenceFor([shown]);
+        const dragged = withPoints(shown, [
+            createDockingPoint(0, 20, "source"),
+        ]);
+        const docked = withPoints(shown, [createDockingPoint(0, 25, "source")]);
+
+        edgePointDrag.active = true;
+        show([dragged]);
+        edgePointDrag.active = false;
+        state.edges = [docked];
+        persistence.acceptWithoutSaving([dragged], state.edges);
+        show(state.edges);
+        await settle();
+
+        expect(sentEdges(updateEdgeLayouts)[0].points[0].yPosition).toBe(25);
     });
 
     test("does not save a point while it is dragged", async () => {

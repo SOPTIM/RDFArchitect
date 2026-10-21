@@ -130,7 +130,7 @@ function requestClassPositions(target, classes) {
     });
 }
 
-function requestDiagramLayout(target, diagramLayout) {
+function requestDiagramLayout(target, diagramLayout, keepalive) {
     if (target.graphURI) {
         return updateDiagramLayout({
             path: {
@@ -139,6 +139,7 @@ function requestDiagramLayout(target, diagramLayout) {
                 diagramUUID: target.diagramUUID,
             },
             body: diagramLayout,
+            keepalive,
         });
     }
     return updateDatasetDiagramLayout({
@@ -147,6 +148,19 @@ function requestDiagramLayout(target, diagramLayout) {
             diagramUUID: target.diagramUUID,
         },
         body: diagramLayout,
+        keepalive,
+    });
+}
+
+function withoutDuplicateLabels(labels) {
+    const seen = new Set();
+    return labels.filter(label => {
+        const key = `${label.identifiedObjectUUID}:${label.kind}`;
+        if (seen.has(key)) {
+            return false;
+        }
+        seen.add(key);
+        return true;
     });
 }
 
@@ -164,12 +178,17 @@ function requestDiagramLayout(target, diagramLayout) {
  * Changes are detected by the identity of the points array of an edge, which every edit replaces.
  * The requests of an edge are sent one after another, so the mRIDs the backend returns for new
  * points are known before the edge is sent again.
+ *
+ * Manually placed labels sit relative to the point where their edge meets the class, so they move
+ * along when the edge points of their edge change. They are saved together with their edge in one
+ * request.
  */
 export class EdgeLayoutPersistence {
     #getEdges;
     #setEdges;
     #getTarget;
     #isReadOnly;
+    #getLabelsOf;
 
     #target = null;
     #savedPoints = new Map();
@@ -187,12 +206,21 @@ export class EdgeLayoutPersistence {
      * @param {() => {datasetName: string, graphURI: string, diagramUUID: string}} options.getTarget
      *     the diagram currently shown, without graphURI for a diagram across the whole dataset
      * @param {() => boolean} options.isReadOnly whether the workspace may not be changed
+     * @param {(edges: Array) => Array} [options.getLabelsOf] the positions of the manually placed
+     *     labels of the given shown edges, saved together with them
      */
-    constructor({ getEdges, setEdges, getTarget, isReadOnly }) {
+    constructor({
+        getEdges,
+        setEdges,
+        getTarget,
+        isReadOnly,
+        getLabelsOf = () => [],
+    }) {
         this.#getEdges = getEdges;
         this.#setEdges = setEdges;
         this.#getTarget = getTarget;
         this.#isReadOnly = isReadOnly;
+        this.#getLabelsOf = getLabelsOf;
     }
 
     /**
@@ -232,13 +260,21 @@ export class EdgeLayoutPersistence {
      * Takes the points of the given edges as saved without sending them, for points the diagram
      * moved on its own, e.g. docking points kept on the border of a resized class. Saving them would
      * clear the redo stack of the backend, e.g. right after an undo. They are sent with the next
-     * change of their edge. Edges with unsaved changes are left to be saved as usual.
+     * change of their edge. An edge whose points were changed before, by the user, keeps that change
+     * to be saved as usual, even if it was not recorded yet because a drag held it back.
+     *
+     * @param {Array} previousEdges the edges before the diagram moved their points
+     * @param {Array} edges the edges with the moved points
      */
-    acceptWithoutSaving(edges) {
+    acceptWithoutSaving(previousEdges, edges) {
+        const previousPoints = new Map(
+            previousEdges.map(edge => [edge.id, edge.data?.edgePoints]),
+        );
         for (const edge of edges) {
             if (
                 this.#savedPoints.has(edge.id) &&
-                !this.#unsavedEdges.has(edge.id)
+                !this.#unsavedEdges.has(edge.id) &&
+                this.#savedPoints.get(edge.id) === previousPoints.get(edge.id)
             ) {
                 this.#savedPoints.set(edge.id, edge.data?.edgePoints);
             }
@@ -281,6 +317,10 @@ export class EdgeLayoutPersistence {
                         .map(([edgeId]) => edgeId),
                 ).map(unsaved => unsaved.edge),
             );
+            labels = withoutDuplicateLabels([
+                ...labels,
+                ...this.#getLabelsOf(changedEdges),
+            ]);
         }
         if (
             this.#isReadOnly() ||
@@ -369,12 +409,18 @@ export class EdgeLayoutPersistence {
             if (edges.length === 0) {
                 continue;
             }
-            const send = () =>
-                requestEdgeLayouts(
-                    target,
-                    edges.map(edge => this.#toSentLayout(edge)),
-                    keepalive,
-                );
+            const labels =
+                target === this.#target ? this.#getLabelsOf(edges) : [];
+            const send = () => {
+                const edgeLayouts = edges.map(edge => this.#toSentLayout(edge));
+                return labels.length > 0
+                    ? requestDiagramLayout(
+                          target,
+                          { labels, edges: edgeLayouts },
+                          keepalive,
+                      )
+                    : requestEdgeLayouts(target, edgeLayouts, keepalive);
+            };
             if (keepalive) {
                 send();
             } else {
