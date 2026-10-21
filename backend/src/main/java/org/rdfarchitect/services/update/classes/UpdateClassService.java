@@ -45,6 +45,7 @@ import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUs
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -157,7 +158,7 @@ public class UpdateClassService
                 CIMClass.builder()
                         .uri(new URI(classURIPrefix + classLabel))
                         .label(new RDFSLabel(classLabel, "en"))
-                        .superClass(null)
+                        .superClasses(List.of())
                         .comment(null);
         if (cimPackage != null) {
             cimClass.belongsToCategory(

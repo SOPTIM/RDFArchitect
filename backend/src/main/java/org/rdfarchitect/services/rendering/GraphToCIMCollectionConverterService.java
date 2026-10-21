@@ -37,6 +37,7 @@ import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSSubClassOf;
 import org.rdfarchitect.models.cim.queries.CIMQueryVars;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
 import org.rdfarchitect.models.cim.queries.select.CIMQueries;
@@ -50,6 +51,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 /** Implementation of {@link GraphToCIMCollectionConverterUseCase}. */
 @Service
@@ -178,7 +180,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
             return;
         }
         for (var cimClass : cimCollection.getClasses()) {
-            cimClass.setSuperClass(null);
+            cimClass.setSuperClasses(new ArrayList<>());
         }
     }
 
@@ -189,34 +191,38 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         }
         // remove superClass relation of classes that have a superclass that is not in the package
         for (var cimClass : cimCollection.getClasses()) {
-            if (cimClass.getSuperClass() != null
-                    && (cimCollection.getClasses().stream()
-                                    .noneMatch(
-                                            otherClass ->
-                                                    otherClass
-                                                            .getUri()
-                                                            .equals(
-                                                                    cimClass.getSuperClass()
-                                                                            .getUri()))
-                            || !isClassInPackage(
-                                    cimClass.getSuperClass().getUri().toString(), cimCollection))) {
-                cimClass.setSuperClass(null);
-            }
+            keepSuperClasses(
+                    cimClass,
+                    superClass ->
+                            isCollected(superClass, cimCollection)
+                                    && isClassInPackage(
+                                            superClass.getUri().toString(), cimCollection));
         }
     }
 
     private void clearInheritanceToNonExistingClasses(CIMCollection cimCollection) {
         for (var cimClass : cimCollection.getClasses()) {
-            if (cimClass.getSuperClass() != null
-                    && cimCollection.getClasses().stream()
-                            .noneMatch(
-                                    otherClass ->
-                                            otherClass
-                                                    .getUri()
-                                                    .equals(cimClass.getSuperClass().getUri()))) {
-                cimClass.setSuperClass(null);
+            keepSuperClasses(cimClass, superClass -> isCollected(superClass, cimCollection));
+        }
+    }
+
+    /**
+     * Drops the superclasses of a class that {@code keep} rejects. A class may declare several, and
+     * each is judged on its own: one superclass outside the package does not remove the others.
+     */
+    private void keepSuperClasses(CIMClass cimClass, Predicate<RDFSSubClassOf> keep) {
+        var kept = new ArrayList<RDFSSubClassOf>();
+        for (var superClass : cimClass.getSuperClasses()) {
+            if (keep.test(superClass)) {
+                kept.add(superClass);
             }
         }
+        cimClass.setSuperClasses(kept);
+    }
+
+    private boolean isCollected(RDFSSubClassOf superClass, CIMCollection cimCollection) {
+        return cimCollection.getClasses().stream()
+                .anyMatch(otherClass -> otherClass.getUri().equals(superClass.getUri()));
     }
 
     private boolean isClassInPackage(String classUri, CIMCollection cimCollection) {

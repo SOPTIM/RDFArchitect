@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RequiredArgsConstructor
-public class CIMModelFacade implements ICIMModelFacade {
+public class CIMModelFacade implements ICIMModelReader {
 
     private final String graphUri;
 

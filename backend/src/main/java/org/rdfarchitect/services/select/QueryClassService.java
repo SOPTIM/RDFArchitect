@@ -115,8 +115,12 @@ public class QueryClassService
                             graphIdentifier.graphUri(),
                             databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             var baseClass = cimObjectFetcher.fetchCIMClass(classUUID.toString());
-            superClassList.add(
-                    cimObjectFetcher.fetchCIMClass(baseClass.getSuperClass().getUri().toString()));
+            // Only the first one: a DTO chain holds a single lineage.
+            var firstSuperClass = baseClass == null ? null : baseClass.firstSuperClass();
+            if (firstSuperClass != null) {
+                superClassList.add(
+                        cimObjectFetcher.fetchCIMClass(firstSuperClass.getUri().toString()));
+            }
 
             for (var i = 0; i < superClassList.size(); i++) {
                 var superClass = superClassList.get(i);
