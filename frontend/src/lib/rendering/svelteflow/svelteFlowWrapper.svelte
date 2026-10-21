@@ -170,6 +170,7 @@
             diagramUUID: editorState.selectedDiagram.getProperty("id"),
         }),
         isReadOnly: () => isWorkspaceReadOnly ?? false,
+        getLabelsOf: savedEdges => manuallyPlacedLabelsOfEdges(savedEdges),
     });
 
     // svelte-ignore state_referenced_locally
@@ -470,7 +471,14 @@
         }
     }
 
+    /**
+     * Takes over the nodes and edges of a newly loaded diagram. The edges of the diagram shown
+     * before are saved first, while their classes and labels are still shown, so the labels moved
+     * along with them are saved at the right place.
+     */
     function syncDiagramElements() {
+        const nextEdges = decorateEdges(inputEdges);
+        edgeLayouts.load(nextEdges);
         const diagramId = editorState.selectedDiagram.getProperty("id");
         if (diagramId !== classBoundsDiagramId) {
             classBoundsDiagramId = diagramId;
@@ -484,8 +492,6 @@
         nodeOrderCtrl.sync(nextNodes);
         nodes = nodeOrderCtrl.applyZIndices(nextNodes);
         selectionZKey = selectionContentKey(selectedNodeIdSet());
-        const nextEdges = decorateEdges(inputEdges);
-        edgeLayouts.load(nextEdges);
         edges = nextEdges;
         dockingPointsCheckPending = true;
         resetDiagramSyncState(nextHasDefaultLayout);
@@ -570,6 +576,7 @@
         if (resizedClasses.size === 0) {
             return;
         }
+        const previousEdges = edges;
         edges = updateDockingPoints(edges, (point, classId) => {
             const resized = resizedClasses.get(classId);
             if (!resized) {
@@ -584,7 +591,7 @@
                 ),
             };
         });
-        edgeLayouts.acceptWithoutSaving(edges);
+        edgeLayouts.acceptWithoutSaving(previousEdges, edges);
     }
 
     /**
@@ -614,6 +621,7 @@
             });
         }
         dockingPointsCheckPending = false;
+        const previousEdges = edges;
         edges = updateDockingPoints(edges, (point, classId) => {
             const rect = classRects.get(classId);
             if (!rect) {
@@ -629,7 +637,7 @@
             }
             return { ...point, ...docked };
         });
-        edgeLayouts.acceptWithoutSaving(edges);
+        edgeLayouts.acceptWithoutSaving(previousEdges, edges);
     }
 
     function handleNodeDragStart({ nodes: draggedNodes }) {
@@ -814,12 +822,26 @@
         });
     }
 
-    /**
-     * The positions of the manually placed labels of the edges of the moved classes, which move
-     * along with their anchor.
-     */
+    /** The positions of the manually placed labels of the edges of the moved classes. */
     function manuallyPlacedLabelsOf(movedClassNodes) {
         const movedClassIds = new Set(movedClassNodes.map(node => node.id));
+        return manuallyPlacedLabelsWhere(
+            ({ sourceId, targetId }) =>
+                movedClassIds.has(sourceId) || movedClassIds.has(targetId),
+        );
+    }
+
+    /** The positions of the manually placed labels of the given edges, e.g. after an edit. */
+    function manuallyPlacedLabelsOfEdges(savedEdges) {
+        const edgeIds = new Set(savedEdges.map(edge => edge.id));
+        return manuallyPlacedLabelsWhere(({ edgeId }) => edgeIds.has(edgeId));
+    }
+
+    /**
+     * The positions of the manually placed labels of the edges that match, which move along with
+     * their anchor, the point where the edge meets the class.
+     */
+    function manuallyPlacedLabelsWhere(isAffectedEdge) {
         const rebuilt = buildLabelNodes(
             nodes,
             edges,
@@ -829,10 +851,12 @@
         const rebuiltById = new Map(rebuilt.map(node => [node.id, node]));
 
         const affectedLabels = [];
-        for (const { label, sourceId, targetId } of collectLabels(edges)) {
-            const edgeAffected =
-                movedClassIds.has(sourceId) || movedClassIds.has(targetId);
-            if (!edgeAffected || !hasManualPlacement(label, labelPositions)) {
+        for (const entry of collectLabels(edges)) {
+            const { label } = entry;
+            if (
+                !isAffectedEdge(entry) ||
+                !hasManualPlacement(label, labelPositions)
+            ) {
                 continue;
             }
             const labelNode = rebuiltById.get(labelNodeId(label));

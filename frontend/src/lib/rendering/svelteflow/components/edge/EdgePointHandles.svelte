@@ -131,8 +131,21 @@
     function addDragListeners() {
         edgePointDrag.active = true;
         window.addEventListener("pointermove", onMove);
-        window.addEventListener("pointerup", endDrag, { once: true });
+        window.addEventListener("pointerup", releaseDrag, {
+            capture: true,
+            once: true,
+        });
         window.addEventListener("contextmenu", endDrag, { once: true });
+    }
+
+    /**
+     * Ends the drag before anything else hears the release. A quick drag is often released beside
+     * the handle, over the empty pane, where SvelteFlow would deselect the edge while the drag
+     * still holds its save back, so the edge would end up neither selected nor saved.
+     */
+    function releaseDrag(event) {
+        event.stopPropagation();
+        endDrag();
     }
 
     function endDrag() {
@@ -141,7 +154,7 @@
         edgePointDrag.active = false;
         autoPan.stop();
         window.removeEventListener("pointermove", onMove);
-        window.removeEventListener("pointerup", endDrag);
+        window.removeEventListener("pointerup", releaseDrag, { capture: true });
         window.removeEventListener("contextmenu", endDrag);
         if (wasDragging) {
             onPointsCommit?.();

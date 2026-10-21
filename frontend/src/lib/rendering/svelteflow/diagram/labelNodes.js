@@ -111,6 +111,7 @@ export function collectLabels(edges) {
             labels.push({
                 label,
                 anchorClassId: anchorClassId(edge, label),
+                edgeId: edge.id,
                 sourceId: edge.source,
                 targetId: edge.target,
             });
