@@ -58,8 +58,8 @@ public interface ImportGraphsUseCase {
      * @param files The list of files containing the graph data to be imported. A zip archive is
      *     unpacked and each graph file in it imported on its own.
      * @param graphUris The list of graph URIs corresponding to each file.
-     * @param listener Receives the progress of the import and can cancel it; pass {@link
-     *     ImportProgressListener#NOOP} when neither is needed.
+     * @param listener Receives the progress of the import, answers the namespace prefix question
+     *     and can cancel it; pass {@link GraphImportListener#NOOP} when none of that is needed.
      * @return A record storing both the successfully imported graph URIs and the filenames of files
      *     that failed to import.
      */
@@ -67,5 +67,5 @@ public interface ImportGraphsUseCase {
             String datasetName,
             List<MultipartFile> files,
             List<String> graphUris,
-            ImportProgressListener listener);
+            GraphImportListener listener);
 }

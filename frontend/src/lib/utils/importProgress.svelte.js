@@ -29,6 +29,8 @@ export const FileState = {
     PENDING: "PENDING",
     RUNNING: "RUNNING",
     IMPORTED: "IMPORTED",
+    /** Read and reported on, but not stored. An export is scanned before anything is chosen. */
+    SCANNED: "SCANNED",
     FAILED: "FAILED",
     SKIPPED: "SKIPPED",
 };
@@ -41,6 +43,15 @@ export const JobState = {
     COMPLETED: "COMPLETED",
     CANCELLED: "CANCELLED",
     FAILED: "FAILED",
+};
+
+/**
+ * What a finished job produced, by the discriminator the backend writes. The values are the names
+ * of the generated schemas, which is what the contract says the discriminator carries.
+ */
+export const OutcomeKind = {
+    GRAPHS_IMPORTED: "GraphsImported",
+    PACKAGES_SCANNED: "PackagesScanned",
 };
 
 /** Which phase a job state puts the import in; everything else has it finished. */
@@ -58,6 +69,7 @@ const PHASE_SHARE = { upload: 25, import: 75 };
 
 const FINISHED_STATES = [
     FileState.IMPORTED,
+    FileState.SCANNED,
     FileState.FAILED,
     FileState.SKIPPED,
 ];
@@ -71,9 +83,12 @@ function fileProgress(file) {
     if (FINISHED_STATES.includes(file.state)) {
         return 1;
     }
+    if (file.total > 0) {
+        // A step that says how far it is: reading an export, which is one long pass over a file.
+        return Math.min(1, file.done / file.total);
+    }
     if (file.state === FileState.RUNNING) {
-        // Halfway is as good a guess as any: a file reports that it is being imported, not how
-        // far into it the import is.
+        // Halfway is as good a guess as any: a step that reports nothing is either done or not.
         return 0.5;
     }
     return 0;
@@ -88,13 +103,23 @@ function fileProgress(file) {
 export class ImportProgress {
     phase = $state(ImportPhase.UPLOADING);
     uploadPercent = $state(0);
-    /** @type {{index: number, fileName: string, sizeBytes: number, state: string, graphUri: string|null}[]} */
+    /** @type {{index: number, fileName: string, sizeBytes: number, state: string, graphUri: string|null, done: number, total: number}[]} */
     files = $state([]);
     jobState = $state(JobState.RUNNING);
     importedGraphUris = $state([]);
     failedImports = $state([]);
     /** @type {{fileName: string, undisplayableProperties: string[]}[]} */
     warnings = $state([]);
+    /**
+     * The packages the uploaded Enterprise Architect exports hold, each of which can become a
+     * schema; empty for an import of RDF files. Nothing of them is stored yet.
+     *
+     * Flat, with `parentId` making it a tree. `declaredClasses` is what the package holds and
+     * `dependencyClasses` what its attribute types and superclasses require — a schema gets both.
+     *
+     * @type {{fileIndex: number, fileName: string, id: string, parentId: string|null, name: string, profile: boolean, namespaceCandidates: string[], declaredClasses: number, dependencyClasses: number}[]}
+     */
+    packages = $state([]);
     /**
      * Every prefix of the workspace and of the import, side by side; empty unless the import is
      * waiting for a decision on them.
@@ -120,6 +145,11 @@ export class ImportProgress {
 
     get finished() {
         return this.phase === ImportPhase.FINISHED;
+    }
+
+    /** The packages that declare a profile, which is what most imports are after. */
+    get profiles() {
+        return this.packages.filter(scanned => scanned.profile);
     }
 
     /** Whether the import is held up by prefixes the user has to decide on. */
@@ -184,11 +214,11 @@ export class ImportProgress {
             sizeBytes: file.sizeBytes ?? -1,
             state: file.state ?? FileState.PENDING,
             graphUri: file.graphUri ?? null,
+            done: file.done ?? 0,
+            total: file.total ?? 0,
         }));
         this.jobState = status.state ?? JobState.RUNNING;
-        this.importedGraphUris = status.importedGraphUris ?? [];
-        this.failedImports = status.failedImports ?? [];
-        this.warnings = status.warnings ?? [];
+        this.#applyOutcome(status.outcome);
         const reportedComparison = status.prefixComparison ?? [];
         if (
             reportedComparison.length === 0 ||
@@ -200,6 +230,32 @@ export class ImportProgress {
             this.errorMessage =
                 status.errorMessage ?? "The import ended unexpectedly.";
         }
+    }
+
+    /**
+     * Unpacks what the job produced. A job produces one kind of outcome and none until it has
+     * finished, so everything the other kind would have carried is cleared rather than left over
+     * from a job this one replaced.
+     *
+     * @param {{kind: string}|null|undefined} outcome what the job reported
+     */
+    #applyOutcome(outcome) {
+        this.importedGraphUris =
+            outcome?.kind === OutcomeKind.GRAPHS_IMPORTED
+                ? (outcome.graphUris ?? [])
+                : [];
+        this.failedImports =
+            outcome?.kind === OutcomeKind.GRAPHS_IMPORTED
+                ? (outcome.failedFileNames ?? [])
+                : [];
+        this.warnings =
+            outcome?.kind === OutcomeKind.GRAPHS_IMPORTED
+                ? (outcome.warnings ?? [])
+                : [];
+        this.packages =
+            outcome?.kind === OutcomeKind.PACKAGES_SCANNED
+                ? (outcome.packages ?? [])
+                : [];
     }
 
     uploadProgress(percent) {
@@ -259,6 +315,10 @@ export class ImportProgress {
     }
 
     #finishedText() {
+        if (this.packages.length > 0) {
+            const found = this.packages.length;
+            return `Found ${found} package${found === 1 ? "" : "s"}`;
+        }
         const imported = this.importedGraphUris.length;
         const schemas = `${imported} schema${imported === 1 ? "" : "s"}`;
         if (this.jobState === JobState.FAILED) {

@@ -30,6 +30,7 @@
 				<packagedElement xmi:type="uml:Enumeration" xmi:id="EAID_UNITSYMBOL" name="UnitSymbol">
 					<ownedLiteral xmi:type="uml:EnumerationLiteral" xmi:id="EAID_LIT_W" name="W"/>
 					<ownedLiteral xmi:type="uml:EnumerationLiteral" xmi:id="EAID_LIT_VA" name="VA"/>
+					<ownedLiteral xmi:type="uml:EnumerationLiteral" xmi:id="EAID_LIT_TB" name="TB 170"/>
 				</packagedElement>
 			</packagedElement>
 			<packagedElement xmi:type="uml:Package" xmi:id="EAPK_TOPOLOGY" name="Topology">
@@ -80,9 +81,27 @@
 					<packagedElement xmi:type="uml:Class" xmi:id="EAID_TERMINAL" name="Terminal">
 						<generalization xmi:type="uml:Generalization" xmi:id="EAID_G02" general="EAID_IDENTIFIEDOBJECT" isSubstitutable="true"/>
 					</packagedElement>
+					<packagedElement xmi:type="uml:Class" xmi:id="EAID_RESERVOIR" name="Reservoir">
+						<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A40" name="grossCapacity">
+							<type xmi:idref="EAID_GONE"/>
+							<lowerValue xmi:type="uml:LiteralInteger" xmi:id="EAID_L40" value="0"/>
+							<upperValue xmi:type="uml:LiteralUnlimitedNatural" xmi:id="EAID_U40" value="1"/>
+						</ownedAttribute>
+						<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A42" name="spillwayCapacity ">
+							<type xmi:idref="EAID_FLOAT"/>
+							<lowerValue xmi:type="uml:LiteralInteger" xmi:id="EAID_L42" value="0"/>
+							<upperValue xmi:type="uml:LiteralUnlimitedNatural" xmi:id="EAID_U42" value="1"/>
+						</ownedAttribute>
+						<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A41" name="createdAt">
+							<type xmi:idref="EAJava_DateTime"/>
+							<lowerValue xmi:type="uml:LiteralInteger" xmi:id="EAID_L41" value="0"/>
+							<upperValue xmi:type="uml:LiteralUnlimitedNatural" xmi:id="EAID_U41" value="1"/>
+						</ownedAttribute>
+					</packagedElement>
 					<packagedElement xmi:type="uml:Class" xmi:id="EAID_BOUNDARY" name="TopologyOverview"/>
 					<packagedElement xmi:type="uml:Class" xmi:id="EAID_TEXT" name="static power system model"/>
 					<packagedElement xmi:type="uml:Class" xmi:id="EAID_STRING" name="String"/>
+					<packagedElement xmi:type="uml:Class" xmi:id="EAID_STRING2" name="String"/>
 				</packagedElement>
 			</packagedElement>
 			<packagedElement xmi:type="uml:Package" xmi:id="EAPK_MESSWERTE" name="Meßwerte">
@@ -264,6 +283,12 @@
 				</elements>
 			</diagram>
 		</diagrams>
+		<EAStub xmi:id="EAID_GONE" name="Volume" UMLType="Class"/>
+		<primitivetypes>
+			<packagedElement xmi:type="uml:Package" xmi:id="EAPrimitiveTypesPackage" name="EA_PrimitiveTypes_Package">
+				<packagedElement xmi:type="uml:PrimitiveType" xmi:id="EAJava_DateTime" name="DateTime"/>
+			</packagedElement>
+		</primitivetypes>
 	</xmi:Extension>
 	<thecustomprofile:Description base_Class="EAID_TOPOLOGICALNODE"/>
 	<thecustomprofile:Entsoe base_Class="EAID_TOPOLOGICALNODE"/>

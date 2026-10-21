@@ -35,11 +35,14 @@
     import WorkspaceTab from "./WorkspaceTab.svelte";
     import ImportDialog from "../../ImportDialog.svelte";
     import NewWorkspaceDialog from "../../NewWorkspaceDialog.svelte";
-    import { acceptSchemaDrop } from "../schemaDrop.js";
+    import XmiImportDialog from "../../XmiImportDialog.svelte";
+    import { acceptNewWorkspaceDrop } from "../schemaDrop.js";
 
     let showNewWorkspaceDialog = $state(false);
     let showImportDialog = $state(false);
+    let showXmiImportDialog = $state(false);
     let droppedItems = $state(null);
+    let droppedExport = $state(null);
     let draggedOver = $state(false);
 
     let workspaces = $state([]);
@@ -99,7 +102,11 @@
         draggedOver = false;
     }
 
-    /** Imports what was dropped into a workspace that the import itself brings into existence. */
+    /**
+     * Imports what was dropped into a workspace that the import itself brings into existence. An
+     * Enterprise Architect export is read by its own import, which this button is the only place
+     * to drop one on.
+     */
     function handleDrop(event) {
         if (!dragHasFiles(event) || !fileDragState.active) {
             return;
@@ -108,13 +115,18 @@
         draggedOver = false;
         endFileDrag();
 
-        const accepted = acceptSchemaDrop(
+        const accepted = acceptNewWorkspaceDrop(
             extractDroppedItems(event.dataTransfer),
         );
         if (!accepted) {
             return;
         }
-        droppedItems = accepted;
+        if (accepted.kind === "export") {
+            droppedExport = accepted.file;
+            showXmiImportDialog = true;
+            return;
+        }
+        droppedItems = accepted.items;
         showImportDialog = true;
     }
 </script>
@@ -170,4 +182,9 @@
     bind:showDialog={showImportDialog}
     {droppedItems}
     forNewWorkspace
+/>
+
+<XmiImportDialog
+    bind:showDialog={showXmiImportDialog}
+    droppedFile={droppedExport}
 />

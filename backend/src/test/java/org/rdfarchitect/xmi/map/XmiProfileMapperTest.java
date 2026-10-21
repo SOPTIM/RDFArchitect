@@ -19,10 +19,13 @@ package org.rdfarchitect.xmi.map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeAll;
@@ -30,7 +33,10 @@ import org.junit.jupiter.api.Test;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelWriter;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.xmi.map.XmiProfileMapper.UntypedAttribute;
+import org.rdfarchitect.xmi.map.XmiProfileMapper.WrittenProfile;
 import org.rdfarchitect.xmi.read.XmiIndex;
+import org.rdfarchitect.xmi.read.XmiPackageScope;
 import org.rdfarchitect.xmi.read.XmiProfile;
 import org.rdfarchitect.xmi.read.XmiReader;
 
@@ -299,6 +305,131 @@ class XmiProfileMapperTest {
 
     // -------------------------------------------------------------------------
 
+    @Test
+    void write_withPackageOnly_leavesTheSubPackagesClassesOut() {
+        // What a container's own classes become. TopologyCore sits below Topology and is chosen on
+        // its own, so its classes are not part of this schema.
+        var model = ModelFactory.createDefaultModel();
+        XmiProfileMapper.write(
+                index,
+                profileNamed("Topology"),
+                XmiPackageScope.PACKAGE_ONLY,
+                new CIMModelWriter("g", model),
+                EXTENSION_NS);
+
+        assertThat(model.contains(resource(MODEL_NS + "TopologyVersion"), RDF.type, RDFS.Class))
+                .isTrue();
+        assertThat(model.contains(resource(MODEL_NS + "Terminal"), RDF.type, RDFS.Class)).isFalse();
+    }
+
+    @Test
+    void write_withPackageOnly_stillPullsInWhatItsOwnClassesNeed() {
+        // The closure runs either way; only where it starts differs.
+        var model = ModelFactory.createDefaultModel();
+        XmiProfileMapper.write(
+                index,
+                profileNamed("Topology"),
+                XmiPackageScope.PACKAGE_ONLY,
+                new CIMModelWriter("g", model),
+                EXTENSION_NS);
+
+        assertThat(
+                        model.contains(
+                                resource(MODEL_NS + "Package_Topology"),
+                                RDF.type,
+                                CIMS.classCategory))
+                .isTrue();
+    }
+
+    // -------------------------------------------------------------------------
+    // The ontology header
+    // -------------------------------------------------------------------------
+
+    @Test
+    void write_turnsTheMetadataClassIntoAnOntologyHeader() {
+        // A CGMES 3.0 profile describes itself through a class stating a versionIRI, and a release
+        // writes that as an owl:Ontology rather than as a class.
+        var model = written("CoreEquipment-EU");
+        var ontology = resource("http://iec.ch/TC57/ns/CIM/CoreEquipment-EU#Ontology");
+
+        assertThat(model.contains(ontology, RDF.type, OWL2.Ontology)).isTrue();
+        assertThat(
+                        model.contains(
+                                ontology,
+                                model.createProperty(OWL2.versionIRI.getURI()),
+                                resource("http://iec.ch/TC57/ns/CIM/CoreEquipment-EU/3.0")))
+                .isTrue();
+    }
+
+    @Test
+    void write_doesNotAlsoWriteTheMetadataClassAsAClass() {
+        // Writing both would put the header's fields into the schema as properties, which a
+        // release has no concept of.
+        assertThat(
+                        written("CoreEquipment-EU")
+                                .contains(
+                                        resource(MODEL_NS + "CoreEquipment-EU_Ontology"),
+                                        RDF.type,
+                                        RDFS.Class))
+                .isFalse();
+    }
+
+    @Test
+    void write_leavesTheMetadataClassOfTheOtherConventionAlone() {
+        // A CGMES 2.4.15 profile states a baseURI and a shortName and no versionIRI; its
+        // <Profile>Version is a class in the release too, which the graph comparison measures.
+        assertThat(
+                        written("Topology")
+                                .contains(
+                                        resource(MODEL_NS + "TopologyVersion"),
+                                        RDF.type,
+                                        RDFS.Class))
+                .isTrue();
+    }
+
+    // -------------------------------------------------------------------------
+    // Types the model section does not declare
+    // -------------------------------------------------------------------------
+
+    @Test
+    void write_typesAnAttributeWithADatatypeOfEnterpriseArchitectsOwn() {
+        // The type sits in the extension, not in the model section. It becomes a cims:dataType
+        // without the stereotype that decides this for a declared classifier, because UML has it:
+        // a uml:PrimitiveType is primitive by definition.
+        assertThat(
+                        written("Topology")
+                                .contains(
+                                        resource(MODEL_NS + "Reservoir.createdAt"),
+                                        CIMS.datatype,
+                                        resource(MODEL_NS + "DateTime")))
+                .isTrue();
+    }
+
+    @Test
+    void write_leavesAnAttributeUntypedWhenTheExportDoesNotHoldItsType() {
+        // Guessing between cims:dataType and rdfs:range off a name would misclassify silently; the
+        // stubs of one export hold datatypes and enumerations side by side.
+        var attribute = resource(MODEL_NS + "Reservoir.grossCapacity");
+
+        assertThat(written("Topology").listStatements(attribute, CIMS.datatype, (RDFNode) null))
+                .isExhausted();
+        assertThat(written("Topology").listStatements(attribute, RDFS.range, (RDFNode) null))
+                .isExhausted();
+    }
+
+    @Test
+    void write_reportsAnUntypedAttributeUnderTheNameTheExportGivesItsType() {
+        // Named where a stub says what is missing, unnamed where the export states no type at all
+        // — a metadata attribute of this fixture carries a default value and nothing else.
+        assertThat(writtenProfile("Topology").untypedAttributes())
+                .extracting(UntypedAttribute::attributeUri, UntypedAttribute::missingType)
+                .contains(
+                        tuple(MODEL_NS + "Reservoir.grossCapacity", "Volume"),
+                        tuple(MODEL_NS + "TopologyVersion.shortName", null));
+    }
+
+    // -------------------------------------------------------------------------
+
     private static Model written(String profileName) {
         return write(profileName, EXTENSION_NS);
     }
@@ -308,9 +439,19 @@ class XmiProfileMapperTest {
         XmiProfileMapper.write(
                 index,
                 profileNamed(profileName),
+                XmiPackageScope.WITH_SUB_PACKAGES,
                 new CIMModelWriter("g", model),
                 extensionNamespace);
         return model;
+    }
+
+    private static WrittenProfile writtenProfile(String profileName) {
+        return XmiProfileMapper.write(
+                index,
+                profileNamed(profileName),
+                XmiPackageScope.WITH_SUB_PACKAGES,
+                new CIMModelWriter("g", ModelFactory.createDefaultModel()),
+                EXTENSION_NS);
     }
 
     private static XmiProfile profileNamed(String name) {

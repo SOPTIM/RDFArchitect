@@ -115,7 +115,8 @@ public final class XmiReader {
     }
 
     private static boolean isUnusableName(String name) {
-        return name == null || name.isBlank() || name.chars().anyMatch(Character::isWhitespace);
+        // The model part has already normalised what it could and left null for what it could not.
+        return name == null;
     }
 
     /** Which part of the file the walk is in. */

@@ -63,13 +63,30 @@ class XmiDataTypes {
     CIMSDataType of(XmiAttribute attribute) {
         var type = index.getClasses().get(attribute.getTypeId());
         if (type == null) {
-            return null;
+            return ofPrimitiveType(attribute.getTypeId());
         }
         var uri = new URI(uris.of(type));
         var label = new RDFSLabel(type.getName(), "en");
         return XmiStereotypes.isDatatype(type.getStereotypes()) && !type.isEnumeration()
                 ? new CIMSPrimitiveDataType(uri, label)
                 : new RDFSRange(uri, label);
+    }
+
+    /**
+     * The type of an attribute pointing at one of Enterprise Architect's own datatypes, which sit
+     * outside the model section. It becomes a {@code cims:dataType} without the stereotype that
+     * decides this for a declared classifier, because UML has it: a {@code uml:PrimitiveType} is
+     * primitive by definition and cannot be an enumeration.
+     *
+     * @return null when the export names no type that can be resolved at all
+     */
+    private CIMSDataType ofPrimitiveType(String typeId) {
+        var name = index.getPrimitiveTypeNames().get(typeId);
+        if (name == null) {
+            return null;
+        }
+        return new CIMSPrimitiveDataType(
+                new URI(uris.ofPrimitiveType(name)), new RDFSLabel(name, "en"));
     }
 
     /** Whether a classifier is one of the datatype kinds, which is also what keeps it concrete. */

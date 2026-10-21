@@ -17,7 +17,6 @@
 
 package org.rdfarchitect.services.update.graph;
 
-import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportWarning;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -55,6 +54,8 @@ public interface ImportJobUseCase {
         PENDING,
         RUNNING,
         IMPORTED,
+        /** Read and reported on, but not stored. */
+        SCANNED,
         FAILED,
         SKIPPED
     }
@@ -64,9 +65,18 @@ public interface ImportJobUseCase {
      *
      * @param sizeBytes size of the file, or {@code -1} when a zip archive does not declare it
      * @param graphUri the uri the file was imported as, {@code null} until it was imported
+     * @param done how much of this step is behind it, {@code 0} for a step that cannot say
+     * @param total how much there is in all, {@code 0} for a step that cannot say. Only one long
+     *     pass over a file can; everything else is known by being finished or not
      */
     record ImportFileStatus(
-            int index, String fileName, long sizeBytes, FileState state, String graphUri) {}
+            int index,
+            String fileName,
+            long sizeBytes,
+            FileState state,
+            String graphUri,
+            long done,
+            long total) {}
 
     /**
      * Progress of an import job.
@@ -74,6 +84,8 @@ public interface ImportJobUseCase {
      * @param files one entry per graph file, in the order the import processes them
      * @param prefixComparison the prefixes waiting to be decided on, empty unless the state is
      *     {@code AWAITING_PREFIX_RESOLUTION}
+     * @param outcome what the job produced, {@code null} while it is still running. Which kind it
+     *     is says what the job was started to do
      * @param errorMessage why the job failed, {@code null} unless its state is {@code FAILED}
      */
     record ImportJobStatus(
@@ -81,18 +93,40 @@ public interface ImportJobUseCase {
             String datasetName,
             JobState state,
             List<ImportFileStatus> files,
-            List<String> importedGraphUris,
-            List<String> failedImports,
-            List<ImportWarning> warnings,
             List<PrefixComparison> prefixComparison,
+            ImportOutcome outcome,
             String errorMessage) {}
 
     /**
      * Starts an import and returns immediately.
      *
-     * @return the id of the started job, to be passed to {@link #getStatus(UUID)}
+     * @return the id of the started job, to be passed to {@link #getStatus(String, UUID)}
      */
     UUID startImport(String datasetName, List<MultipartFile> files, List<String> graphUris);
+
+    /**
+     * Starts reading Enterprise Architect exports and returns immediately. The job reports the
+     * packages the exports hold in an {@link ImportOutcome.PackagesScanned} outcome and stores
+     * nothing.
+     *
+     * @return the id of the started job, to be passed to {@link #getStatus(String, UUID)}
+     */
+    UUID startXmiScan(String datasetName, List<MultipartFile> files);
+
+    /**
+     * Starts building schemas from the packages chosen out of the exports a previous {@link
+     * #startXmiScan} read, and returns immediately. The exports are the ones that read kept, so
+     * nothing has to be uploaded again — and they are handed over, so one read can be chosen from
+     * once.
+     *
+     * @param readJobId the job that read the exports
+     * @param selection the packages to build, in the order they are to be built
+     * @return the id of the started job, or empty if the session has no such read for the dataset
+     * @throws org.rdfarchitect.exception.database.ResourceConflictException if the exports of that
+     *     read are no longer available
+     */
+    Optional<UUID> startPackageImport(
+            String datasetName, UUID readJobId, List<SelectedPackageDTO> selection);
 
     /** The current progress of the job, or empty if the session has no such job for the dataset. */
     Optional<ImportJobStatus> getStatus(String datasetName, UUID jobId);

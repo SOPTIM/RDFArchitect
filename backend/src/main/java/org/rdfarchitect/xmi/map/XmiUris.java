@@ -20,6 +20,7 @@ package org.rdfarchitect.xmi.map;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.xmi.read.XmiClass;
+import org.rdfarchitect.xmi.read.XmiNaming;
 import org.rdfarchitect.xmi.read.XmiPackage;
 
 import java.util.Set;
@@ -69,6 +70,23 @@ class XmiUris {
      */
     String ofAssociationHalf(XmiClass domain, String roleName, Set<String> stereotypes) {
         return memberNamespace(domain, stereotypes) + domain.getName() + "." + roleName;
+    }
+
+    /**
+     * The URI of a datatype named but not declared in the model section, which is where Enterprise
+     * Architect's own datatypes end up. They carry no stereotypes, so the model namespace is the
+     * only one they can take — and the one a class of that name would take anyway.
+     */
+    String ofPrimitiveType(String name) {
+        return namespaces.getModel() + name;
+    }
+
+    /**
+     * Whether a package can be given a URI at all. Its name goes into the resource verbatim, and
+     * CGMES 3.0 has one named {@code GeoSPARQL - Profile}.
+     */
+    boolean canName(XmiPackage cimPackage) {
+        return cimPackage != null && XmiNaming.usableOrNull(cimPackage.getName()) != null;
     }
 
     /** The URI of the package resource standing for the profile. */

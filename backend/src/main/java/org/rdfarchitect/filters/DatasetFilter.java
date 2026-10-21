@@ -71,7 +71,7 @@ public class DatasetFilter implements Filter {
         }
         // an import creates the dataset it imports into, and its progress stays readable even when
         // the import failed before the dataset came into existence
-        if (uri.matches("/api/datasets/[^/]+/graphs/content/imports(/.*)?")) {
+        if (uri.matches("/api/datasets/[^/]+/imports(/.*)?")) {
             return true;
         }
         var datasets = databasePort.listDatasets();

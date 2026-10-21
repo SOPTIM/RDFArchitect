@@ -15,7 +15,7 @@ The authoritative configuration is `backend/src/main/resources/application.yml`.
 | Default dataset name               | `database.defaultDataset`               | `default`                    |
 | Frontend URL (CORS allow-list)     | `frontend.url`                          | `http://localhost:1407`      |
 | API base path                      | `frontend.accessRoute`                  | `/api`                       |
-| Max uploaded schema size           | `spring.servlet.multipart.max-file-size`| `50MB`                       |
+| Max uploaded schema size           | `spring.servlet.multipart.max-file-size`| `256MB`                      |
 | History depth per graph            | `graph.maxVersions`                     | `256`                        |
 | Diagram renderer                   | `rendering.renderer`                    | `svelteflow` (or `mermaid`)  |
 | Session cookie name                | `server.servlet.session.cookie.name`    | `RDFA_SESSION_ID`            |

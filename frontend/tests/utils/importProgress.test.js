@@ -22,6 +22,7 @@ import {
     ImportPhase,
     ImportProgress,
     JobState,
+    OutcomeKind,
 } from "$lib/utils/importProgress.svelte.js";
 
 function file(overrides) {
@@ -41,10 +42,22 @@ function running(status) {
         datasetName: "ds",
         state: JobState.RUNNING,
         files: [],
-        importedGraphUris: [],
-        failedImports: [],
-        warnings: [],
+        outcome: null,
         ...status,
+    };
+}
+
+/** The outcome a finished graph import reports. */
+function graphsImported({
+    graphUris = [],
+    failedFileNames = [],
+    warnings = [],
+}) {
+    return {
+        kind: OutcomeKind.GRAPHS_IMPORTED,
+        graphUris,
+        failedFileNames,
+        warnings,
     };
 }
 
@@ -92,6 +105,29 @@ describe("ImportProgress", () => {
         expect(progress.finishedCount).toBe(1);
     });
 
+    test("uses the share a step reports instead of guessing at it", () => {
+        // Reading an export is one long step that says how far it is; without that the bar
+        // would jump from a quarter to two thirds and then to done.
+        const progress = new ImportProgress();
+        progress.uploaded();
+
+        progress.apply(
+            running({
+                files: [
+                    file({
+                        index: 0,
+                        sizeBytes: -1,
+                        state: FileState.RUNNING,
+                        done: 40,
+                        total: 200,
+                    }),
+                ],
+            }),
+        );
+
+        expect(progress.percent).toBe(25 + 75 * 0.2);
+    });
+
     test("counts the file it is on as half done and names it", () => {
         const progress = new ImportProgress();
         progress.uploaded();
@@ -135,7 +171,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.COMPLETED,
                 files: [file({ state: FileState.IMPORTED })],
-                importedGraphUris: ["http://graph#first"],
+                outcome: graphsImported({ graphUris: ["http://graph#first"] }),
             }),
         );
 
@@ -150,8 +186,10 @@ describe("ImportProgress", () => {
         progress.apply(
             running({
                 state: JobState.COMPLETED,
-                importedGraphUris: ["http://graph#first"],
-                failedImports: ["broken.ttl"],
+                outcome: graphsImported({
+                    graphUris: ["http://graph#first"],
+                    failedFileNames: ["broken.ttl"],
+                }),
             }),
         );
 
@@ -164,10 +202,9 @@ describe("ImportProgress", () => {
         progress.apply(
             running({
                 state: JobState.CANCELLED,
-                importedGraphUris: [
-                    "http://graph#first",
-                    "http://graph#second",
-                ],
+                outcome: graphsImported({
+                    graphUris: ["http://graph#first", "http://graph#second"],
+                }),
             }),
         );
 
@@ -181,7 +218,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.FAILED,
                 errorMessage: "out of memory",
-                importedGraphUris: ["http://graph#first"],
+                outcome: graphsImported({ graphUris: ["http://graph#first"] }),
             }),
         );
 
