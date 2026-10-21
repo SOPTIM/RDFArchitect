@@ -16,17 +16,19 @@
   -->
 
 <script>
-    import { v4 as uuidv4 } from "uuid";
-
-    import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import FileDropZone from "$lib/components/FileDropZone.svelte";
     import ImportProgressPanel from "$lib/components/ImportProgressPanel.svelte";
-    import SelectedFileRow from "$lib/components/SelectedFileRow.svelte";
+    import XmiExportPicker from "$lib/components/XmiExportPicker.svelte";
+    import XmiImportConfirm from "$lib/components/XmiImportConfirm.svelte";
+    import XmiSchemaChoice from "$lib/components/XmiSchemaChoice.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { graphStore } from "$lib/stores/graphStore";
-    import { isXmiExportFile, xmiFileExtensions } from "$lib/utils/fileUtils";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
+    import { importChoiceOf } from "$lib/utils/importChoice.js";
     import { ImportProgress } from "$lib/utils/importProgress.svelte.js";
+    import { applyImportResult } from "$lib/utils/importResult.js";
     import { ImportStatusPoller } from "$lib/utils/importStatusPoller.js";
+    import { selectionOf } from "$lib/utils/packageTree.js";
+    import { hasInvalidCharacters } from "$lib/utils/workspaceName.js";
 
     let {
         showDialog = $bindable(),
@@ -34,114 +36,151 @@
         droppedFile = null,
     } = $props();
 
-    const uniqueId = uuidv4();
-    const workspaceInputId = `workspaceNameXmi-${uniqueId}`;
-    const fileInputId = `actual-export-input-${uniqueId}`;
-    const invalidCharacters = /[/\\?#]/;
-    const allowedFileExtensions = xmiFileExtensions.join(", ");
     const poller = new ImportStatusPoller();
 
     let workspaceNameUserInput = $state("");
     let selectedFile = $state(null);
-    let fileInputValue = $state("");
-    let rejectedFiles = $state([]);
     let progress = $state(null);
     let jobId = $state(null);
+    let readJobId = $state(null);
     let scanWorkspaceName = $state(null);
-    let suggestedName = $state("");
+    let importing = $state(false);
+    let selectedIds = $state(new Set());
+    // What was ticked away rather than what is ticked: which diagrams are available follows the
+    // packages, and an import takes every available one unless it was turned down.
+    let deselectedDiagramIds = $state(new Set());
+    /** The workspaces there already are; an export becomes one of its own, not one of these. */
+    let takenNames = $state([]);
+    let modelNamespace = $state("");
+    let extensionNamespace = $state("");
+    // Held here rather than in the views, so that stepping away and back leaves the tree opened
+    // as it was and the summary showing what it showed.
+    let expandedPackages = $state(new Set());
+    let openedSummaryRows = $state(new Set());
+    /** Whether the choice has been made and only the namespaces are left to confirm. */
+    let confirming = $state(false);
 
     const trimmedName = $derived(workspaceNameUserInput.trim());
-    const nameHasInvalidCharacters = $derived(
-        invalidCharacters.test(trimmedName),
-    );
-    const reading = $derived(progress !== null && !progress.finished);
+    const running = $derived(progress !== null && !progress.finished);
     const enableSubmit = $derived(
         !!trimmedName &&
-            !nameHasInvalidCharacters &&
+            !hasInvalidCharacters(trimmedName) &&
+            !takenNames.includes(trimmedName) &&
             selectedFile !== null &&
             progress === null,
     );
-    const primaryLabel = $derived(progress?.finished ? "Close" : "Read");
-    const primaryAction = $derived(
-        progress?.finished ? closeAfterRead : readExport,
+    /** Between the read and the import: the export has been read and nothing is stored yet. */
+    const picking = $derived(
+        !importing &&
+            progress !== null &&
+            progress.finished &&
+            progress.packages.length > 0,
     );
-    const primaryDisabled = $derived(!progress?.finished && !enableSubmit);
+    const choosing = $derived(picking && !confirming);
+    const onLastStep = $derived(picking && confirming);
+    const choice = $derived(
+        importChoiceOf(progress, selectedIds, deselectedDiagramIds),
+    );
+    const primaryLabel = $derived(
+        choosing
+            ? "Next"
+            : onLastStep
+              ? "Import"
+              : progress?.finished
+                ? "Close"
+                : "Read",
+    );
+    const primaryAction = $derived(
+        choosing
+            ? () => (confirming = true)
+            : onLastStep
+              ? importChosen
+              : progress?.finished
+                ? closeAfterRead
+                : readExport,
+    );
+    const primaryDisabled = $derived(
+        picking
+            ? choice.schemas.length === 0
+            : !progress?.finished && !enableSubmit,
+    );
+    /** Going back a step while choosing, and cancelling a job while one runs. */
+    const secondaryLabel = $derived(
+        onLastStep ? "Back" : running ? "Cancel" : undefined,
+    );
 
+    /**
+     * Opens on nothing, whatever was left of a previous run. The dialog is mounted once and
+     * reopened, so without this a run that was not torn down would be on screen again — and a
+     * dialog closing itself is not told about it, {@link closeDialog} being the only caller of
+     * {@link onClose}.
+     */
     function onOpen() {
+        teardown();
         workspaceNameUserInput = initialWorkspaceName ?? "";
-        suggestedName = "";
-        clearInputs();
-        if (droppedFile) {
-            addFiles([droppedFile]);
-        }
+        void loadTakenNames();
+    }
+
+    /** What the workspaces are called, which is what keeps an export out of an existing one. */
+    async function loadTakenNames() {
+        takenNames = ((await workspaceStore.getWorkspaces()) ?? []).map(
+            workspace => workspace.label,
+        );
     }
 
     function onClose() {
-        poller.stop();
-        if (reading) {
-            progress?.cancel();
-            void graphStore.cancelImport(scanWorkspaceName, jobId);
-        }
-        progress = null;
-        jobId = null;
-    }
-
-    function clearInputs() {
-        selectedFile = null;
-        fileInputValue = "";
-        rejectedFiles = [];
-        progress = null;
-        jobId = null;
-    }
-
-    /** The workspace name an export suggests: its file name without path and extension. */
-    function nameFrom(fileName) {
-        const lastSegment = fileName.split(/[\\/]/).pop() ?? fileName;
-        const lastDot = lastSegment.lastIndexOf(".");
-        const base = lastDot > 0 ? lastSegment.slice(0, lastDot) : lastSegment;
-        return base.replace(/[/\\?#]/g, "_").trim();
+        teardown();
     }
 
     /**
-     * Fills the workspace name from the chosen export, unless the name was typed or handed over.
-     * A name this dialog suggested is replaced by the next one, a name someone else put there is
-     * left alone.
+     * Closes the dialog from within, which has to tear the import down itself: setting the flag
+     * takes the dialog off screen without anything calling {@link onClose}.
      */
-    function suggestName(fileName) {
-        if (trimmedName && workspaceNameUserInput !== suggestedName) {
+    function close() {
+        showDialog = false;
+        teardown();
+    }
+
+    /**
+     * Lets go of the import, stopping the job where one is still running. Written to be callable
+     * at any time: it is what both ending the import and starting another one go through.
+     */
+    function teardown() {
+        poller.stop();
+        if (running) {
+            progress?.cancel();
+            void cancelJob(scanWorkspaceName, jobId);
+        } else if (readJobId !== null && !importing) {
+            // Stepping away from the choice leaves a read that has finished and still holds the
+            // export it was made from. Nothing is going to be built from it any more, so let it
+            // go rather than leave it spooled until the job expires.
+            void cancelJob(scanWorkspaceName, readJobId);
+        }
+        progress = null;
+        jobId = null;
+        readJobId = null;
+        importing = false;
+        confirming = false;
+        selectedFile = null;
+        selectedIds = new Set();
+        deselectedDiagramIds = new Set();
+        expandedPackages = new Set();
+        openedSummaryRows = new Set();
+        modelNamespace = "";
+        extensionNamespace = "";
+    }
+
+    /** Asks the backend to stop a job, where there is one to stop. */
+    async function cancelJob(workspaceName, id) {
+        if (!workspaceName || !id) {
             return;
         }
-        suggestedName = nameFrom(fileName);
-        workspaceNameUserInput = suggestedName;
-    }
-
-    /** Takes the first export of a selection; one export is read at a time. */
-    function addFiles(newFiles, directoryNames = []) {
-        const candidates = Array.from(newFiles ?? []);
-        const accepted = candidates.filter(file => isXmiExportFile(file.name));
-        rejectedFiles = [
-            ...directoryNames.map(name => `${name} (folder)`),
-            ...candidates
-                .filter(file => !isXmiExportFile(file.name))
-                .map(file => file.name),
-        ];
-        if (accepted.length > 0) {
-            selectedFile = accepted[0];
-            suggestName(selectedFile.name);
-        }
-    }
-
-    function removeFile() {
-        selectedFile = null;
-        if (workspaceNameUserInput === suggestedName) {
-            workspaceNameUserInput = "";
-            suggestedName = "";
-        }
+        await graphStore.cancelImport(workspaceName, id);
     }
 
     /**
      * Reads the chosen export. The workspace is not created here: nothing is stored until the
-     * profiles have been chosen.
+     * packages have been chosen.
      */
     async function readExport() {
         if (!enableSubmit) {
@@ -165,21 +204,71 @@
         }
         current.uploaded();
         jobId = data.jobId;
+        readJobId = data.jobId;
         poller.follow(
             () => graphStore.getImportStatus(scanWorkspaceName, jobId),
             current,
         );
     }
 
+    /**
+     * Imports what was ticked. The export stays where it is — the read job holds it — so this
+     * starts a second job rather than uploading anything again.
+     */
+    async function importChosen() {
+        // Worked out against the read that was ticked, which the progress of the import is about
+        // to take the place of. Asked afterwards it would be empty.
+        const read = progress;
+        const chosen = importChoiceOf(read, selectedIds, deselectedDiagramIds);
+        const selection = selectionOf(read?.packages ?? [], selectedIds, {
+            model: modelNamespace,
+            extension: extensionNamespace,
+        });
+        if (selection.length === 0) {
+            return;
+        }
+        poller.stop();
+        const current = new ImportProgress();
+        current.uploaded();
+        importing = true;
+        progress = current;
+
+        const { data, error } = await graphStore.importSelectedPackages(
+            scanWorkspaceName,
+            readJobId,
+            selection,
+            chosen.diagramIds,
+        );
+        if (error || !data) {
+            current.fail(
+                error?.message ?? "The packages could not be imported.",
+            );
+            return;
+        }
+        jobId = data.jobId;
+        poller.follow(
+            () => graphStore.getImportStatus(scanWorkspaceName, jobId),
+            current,
+        );
+    }
+
+    /**
+     * Asks the job to stop and closes. The job notices between packages and between diagrams,
+     * which can take a moment on a large export, and waiting for it with the dialog open would
+     * leave a cancel button that does not appear to do anything. {@link onClose} does the rest.
+     */
     function requestCancel() {
-        progress?.cancel();
-        void graphStore.cancelImport(scanWorkspaceName, jobId);
+        close();
     }
 
     function closeAfterRead() {
-        poller.stop();
-        clearInputs();
-        showDialog = false;
+        // Read before closing, which lets go of the progress the two are taken from.
+        const imported = progress?.importedGraphUris ?? [];
+        const workspaceName = scanWorkspaceName;
+        close();
+        if (imported.length > 0) {
+            applyImportResult(imported, workspaceName);
+        }
     }
 </script>
 
@@ -190,107 +279,37 @@
     {primaryLabel}
     onPrimary={primaryAction}
     disablePrimary={primaryDisabled}
-    secondaryLabel={reading ? "Cancel" : undefined}
-    onSecondary={requestCancel}
+    {secondaryLabel}
+    onSecondary={onLastStep ? () => (confirming = false) : requestCancel}
     disableSecondary={progress?.cancelling}
     closeOnPrimary={false}
     title="Import Model (Enterprise Architect XMI)"
-    size="w-1/3"
+    size={choosing ? "w-5/6 h-4/5" : onLastStep ? "w-1/2" : "w-1/3"}
 >
-    {#if progress}
+    {#if choosing}
+        <XmiSchemaChoice
+            read={progress}
+            {choice}
+            bind:selectedIds
+            bind:deselectedDiagramIds
+            bind:expandedPackages
+            bind:openedSummaryRows
+        />
+    {:else if onLastStep}
+        <XmiImportConfirm
+            read={progress}
+            {choice}
+            bind:modelNamespace
+            bind:extensionNamespace
+        />
+    {:else if progress}
         <ImportProgressPanel {progress} />
     {:else}
-        <div class="mx-2 flex h-full max-h-[80vh] flex-col">
-            <label for={workspaceInputId} class="mb-1">Workspace</label>
-            <input
-                class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
-                type="text"
-                id={workspaceInputId}
-                placeholder="Workspace name"
-                autocomplete="off"
-                bind:value={workspaceNameUserInput}
-            />
-            {#if nameHasInvalidCharacters}
-                <div class="text-red mt-1 mb-1 h-6 text-sm">
-                    Name must not contain / \ ? or #
-                </div>
-            {/if}
-
-            <div class="mt-4">
-                <input
-                    class="hidden"
-                    type="file"
-                    id={fileInputId}
-                    accept={xmiFileExtensions.join(",")}
-                    onchange={event => {
-                        addFiles(event.target.files);
-                        event.target.value = "";
-                    }}
-                    bind:value={fileInputValue}
-                />
-                <FileDropZone
-                    class="hover:border-blue flex w-full flex-col px-4 py-6"
-                    onFiles={items =>
-                        addFiles(items.files, items.directoryNames)}
-                >
-                    <div
-                        class="flex flex-col items-start space-y-2 md:flex-row md:items-center md:space-y-0 md:space-x-3"
-                    >
-                        <div class="h-9 w-24">
-                            <ButtonControl
-                                height={9}
-                                callOnClick={() => {
-                                    document
-                                        .getElementById(fileInputId)
-                                        .click();
-                                }}
-                            >
-                                Select File
-                            </ButtonControl>
-                        </div>
-                        <p class="text-font-secondary text-sm">
-                            or drag and drop an export
-                        </p>
-                    </div>
-                    <p class="text-font-secondary mt-2 text-xs">
-                        The export is read, not imported: its profiles are
-                        listed and nothing is stored yet. A full model reaches
-                        100 MB.
-                        <br />
-                        Supported:
-                        <b>{allowedFileExtensions}</b>
-                        . One export is read at a time.
-                    </p>
-                    {#if rejectedFiles.length > 0}
-                        <div
-                            class="bg-red-background text-red-text border-red-border mt-3 rounded border px-3 py-2 text-xs"
-                        >
-                            <p class="font-semibold">
-                                Skipped, these will not be read:
-                            </p>
-                            <ul class="list-disc pl-5">
-                                {#each rejectedFiles as fileName}
-                                    <li>{fileName}</li>
-                                {/each}
-                            </ul>
-                        </div>
-                    {/if}
-                </FileDropZone>
-
-                {#if selectedFile}
-                    <div class="mt-3">
-                        <SelectedFileRow
-                            value={selectedFile.name}
-                            disabled
-                            onRemove={removeFile}
-                        />
-                    </div>
-                {:else}
-                    <p class="text-font-secondary mt-2 text-sm">
-                        No file selected yet.
-                    </p>
-                {/if}
-            </div>
-        </div>
+        <XmiExportPicker
+            bind:workspaceName={workspaceNameUserInput}
+            bind:selectedFile
+            {droppedFile}
+            {takenNames}
+        />
     {/if}
 </ActionDialog>
