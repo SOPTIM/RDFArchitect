@@ -267,10 +267,16 @@ class ImportXmiServiceTest {
 
         private final List<String> planned = new java.util.ArrayList<>();
         private final List<String> finished = new java.util.ArrayList<>();
+        private final List<Long> progressed = new java.util.ArrayList<>();
 
         @Override
         public void planned(List<PlannedImport> plannedImports) {
             plannedImports.forEach(plannedImport -> planned.add(plannedImport.fileName()));
+        }
+
+        @Override
+        public void progressed(int index, long done, long total) {
+            progressed.add(done);
         }
 
         @Override

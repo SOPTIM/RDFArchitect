@@ -31,10 +31,12 @@ import {
     renameGraph as sdkRenameGraph,
     cancelImport as sdkCancelImport,
     getImportStatus as sdkGetImportStatus,
+    importSelectedPackages as sdkImportSelectedPackages,
     resolvePrefixConflicts as sdkResolvePrefixConflicts,
     type GraphDto,
     type ImportJobStatus,
     type PrefixResolutionDto,
+    type SelectedPackageDto,
 } from "../api/generated";
 import { PUBLIC_BACKEND_URL } from "../config/runtime";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
@@ -209,6 +211,7 @@ function createGraphStore() {
         renameGraph,
         startImport,
         startXmiScan,
+        importSelectedPackages,
         getImportStatus,
         resolvePrefixConflicts,
         cancelImport,
@@ -307,6 +310,41 @@ async function startXmiScan(
         console.error(`${LOG_PREFIX} Failed to read the export`, error);
         return { error };
     }
+}
+
+/**
+ * Imports the packages chosen out of the exports a read job holds, each becoming one schema.
+ * Nothing is uploaded again, and a read can be chosen from once.
+ *
+ * @returns the id of the import job, which is a different one from the read
+ */
+async function importSelectedPackages(
+    workspaceName: string,
+    readJobId: string,
+    packages: SelectedPackageDto[],
+): Promise<Result<{ jobId: string }>> {
+    console.log(
+        `${LOG_PREFIX} Importing ${packages.length} package(s) of read job "${readJobId}"`,
+    );
+
+    const { data, error } = await sdkImportSelectedPackages({
+        path: { datasetName: workspaceName, jobId: readJobId },
+        body: packages,
+    });
+
+    if (error || !data?.jobId) {
+        console.error(
+            `${LOG_PREFIX} Failed to import the chosen packages of read job "${readJobId}"`,
+            await describeError(error),
+        );
+        toastStore.error(
+            "Import failed",
+            "The chosen packages could not be imported.",
+        );
+        return { error: error ?? new Error("The import did not start.") };
+    }
+
+    return { error: null, data: { jobId: data.jobId } };
 }
 
 async function getImportStatus(

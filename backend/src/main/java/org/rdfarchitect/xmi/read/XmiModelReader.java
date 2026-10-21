@@ -102,14 +102,16 @@ final class XmiModelReader {
      */
     private void startPackagedElement(XMLStreamReader reader) {
         var id = XmiStreams.attribute(reader, XmiNames.ID);
-        // Normalised here rather than only judged later: a name the rule trims and the index keeps
-        // raw passes every check and still reaches the URI with the whitespace in it.
-        var name = XmiNaming.usableOrNull(XmiStreams.attribute(reader, XmiNames.NAME));
+        var name = XmiStreams.attribute(reader, XmiNames.NAME);
         var type = XmiStreams.attribute(reader, XmiNames.TYPE);
         switch (type == null ? "" : type) {
             case XmiNames.UML_PACKAGE -> {
                 packagedElements.push(Kind.PACKAGE);
                 var parent = packageStack.peek();
+                // The raw name: a package is a name in a tree first and a URI only if it becomes
+                // a schema, which XmiUris decides. Thirty-seven of the CGMES 3.0 model's are
+                // called things like "AE Regions", and dropping those would leave the tree with
+                // rows that have nothing to show.
                 var created = new XmiPackage(id, parent == null ? null : parent.getId(), name);
                 context.getIndex().getPackages().put(id, created);
                 packageStack.push(created);
@@ -117,7 +119,14 @@ final class XmiModelReader {
             case XmiNames.UML_CLASS, XmiNames.UML_ENUMERATION -> {
                 packagedElements.push(Kind.CLASS);
                 var owner = packageStack.peek();
-                currentClass = new XmiClass(id, name, owner == null ? null : owner.getId());
+                // Normalised here rather than only judged later: a name the rule trims and the
+                // index keeps raw passes every check and still reaches the URI with the whitespace
+                // in it.
+                currentClass =
+                        new XmiClass(
+                                id,
+                                XmiNaming.usableOrNull(name),
+                                owner == null ? null : owner.getId());
                 currentClass.setEnumeration(XmiNames.UML_ENUMERATION.equals(type));
                 context.getIndex().getClasses().put(id, currentClass);
             }
