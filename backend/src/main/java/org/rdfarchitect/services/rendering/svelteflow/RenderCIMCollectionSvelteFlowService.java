@@ -54,7 +54,11 @@ import java.util.UUID;
 /**
  * Converts a {@link CIMCollection} to a DTO Record that contains two JSON arrays with nodes and
  * edges used to render a UML diagram using the JavaScript library SvelteFlow.
+ *
+ * @deprecated nothing injects {@link RenderCIMCollectionUseCase} anymore, the diagrams are rendered
+ *     by {@link RenderCIMFacadeCollectionSvelteFlowService}. Make changes to rendering there.
  */
+@Deprecated
 @RequiredArgsConstructor
 @Service
 @ConditionalOnProperty(

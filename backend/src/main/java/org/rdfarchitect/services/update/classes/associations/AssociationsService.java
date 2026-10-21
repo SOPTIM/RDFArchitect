@@ -31,6 +31,7 @@ import org.rdfarchitect.database.inmemory.SessionDataStore;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
+import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -42,6 +43,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
 
     private final DatabasePort databasePort;
     private final AssociationPairMapper associationPairMapper;
+    private final SyncDiagramLayoutUseCase syncDiagramLayoutUseCase;
 
     public record AssociationUUIDs(UUID fromUUID, UUID toUUID) {}
 
@@ -68,6 +70,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
             ctx.commit(
                     buildAssociationMessage("Created", ctx, associationPair, cimAssociationPair));
         }
+        syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
         return new AssociationUUIDs(from.getUuid(), to.getUuid());
     }
 
@@ -86,6 +89,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
             ctx.commit(
                     buildAssociationMessage("Replaced", ctx, associationPair, cimAssociationPair));
         }
+        syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
         return new AssociationUUIDs(
                 cimAssociationPair.getFrom().getUuid(), cimAssociationPair.getTo().getUuid());
     }
@@ -113,6 +117,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                     "Replaced all associations for class \"%s\" (%s)"
                             .formatted(classLabel, classUUID));
         }
+        syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
     }
 
     /**

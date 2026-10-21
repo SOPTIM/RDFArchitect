@@ -27,6 +27,12 @@ import org.rdfarchitect.dl.rdf.resources.CIM;
 
 import java.util.UUID;
 
+/**
+ * The diagram layout of the diagrams defined on a dataset, shared by all requests of a session.
+ * Every access to its model has to hold the lock of the model ({@code
+ * enterCriticalSection(Lock.READ)} or {@code enterCriticalSection(Lock.WRITE)}): concurrent writes
+ * create duplicate diagram objects and corrupt the model.
+ */
 public class DiagramLayout {
 
     @Getter private final Model diagramLayoutModel;

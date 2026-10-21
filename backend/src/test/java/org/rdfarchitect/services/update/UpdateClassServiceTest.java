@@ -51,6 +51,7 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.diagrams.CustomDiagramService;
+import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.update.classes.UpdateClassService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -90,7 +91,8 @@ class UpdateClassServiceTest {
                         mockUpdateClassLayoutService,
                         false,
                         mockUpdateClassLayoutService,
-                        mockCustomDiagramService);
+                        mockCustomDiagramService,
+                        mock(SyncDiagramLayoutUseCase.class));
         var file = readMultipartFileFromFile(PATH, "class.ttl");
         var graphSource =
                 new GraphFileSourceBuilderImpl()

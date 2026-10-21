@@ -38,9 +38,9 @@ import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
-import org.rdfarchitect.services.dl.update.ReplaceDiagramUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.CreatePackageLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.DeletePackageLayoutDataUseCase;
+import org.rdfarchitect.services.dl.update.packagelayout.ReplaceDiagramUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;

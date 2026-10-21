@@ -31,5 +31,5 @@ public class XYZPosition {
 
     @Getter private float y;
 
-    @Getter private int z;
+    @Getter private Integer z;
 }
