@@ -29,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -824,6 +825,32 @@ class CimSortedModelTest {
                     .contains("http://example.org/A")
                     .contains("http://example.org/B")
                     .contains("http://example.org/C");
+        }
+
+        @Test
+        void write_rdfxmlFormat_startsWithXmlDeclaration() {
+            // Arrange
+            // Act
+            model.write(outputStream, "RDF/XML");
+            var result = outputStream.toString(StandardCharsets.UTF_8);
+            // Assert
+            assertThat(result).startsWith("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+        }
+
+        @Test
+        void write_rdfxmlFormat_roundTripsNonAsciiLiterals() {
+            // Arrange
+            var m = ModelFactory.createDefaultModel();
+            m.add(
+                    m.createResource("http://example.org/A"),
+                    m.createProperty("http://example.org/comment"),
+                    "Größe in €");
+            // Act
+            new CimSortedModel(m).write(outputStream, "RDF/XML");
+            var reread = ModelFactory.createDefaultModel();
+            reread.read(new ByteArrayInputStream(outputStream.toByteArray()), null, "RDF/XML");
+            // Assert
+            assertThat(reread.isIsomorphicWith(m)).isTrue();
         }
 
         @Test

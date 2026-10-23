@@ -61,6 +61,9 @@ import java.util.stream.Collectors;
  */
 public class CimSortedModel implements Model {
 
+    private static final String XML_DECLARATION =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + System.lineSeparator();
+
     @Delegate private final Model model;
 
     public CimSortedModel() {
@@ -125,7 +128,13 @@ public class CimSortedModel implements Model {
             throw new IllegalArgumentException("Unsupported language: " + lang);
         }
         if (rdfLang == Lang.RDFXML) {
+            try {
+                out.write(XML_DECLARATION.getBytes(StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
             var w = new RDFXML_Basic();
+            w.setProperty("showXmlDeclaration", "false");
             w.write(this, out, base);
         } else {
             RDFDataMgr.write(out, this, rdfLang);
