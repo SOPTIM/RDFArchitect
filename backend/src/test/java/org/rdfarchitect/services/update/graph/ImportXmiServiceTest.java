@@ -33,6 +33,7 @@ import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.UncarriedItem;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -59,6 +60,18 @@ class ImportXmiServiceTest {
     private static final String TOPOLOGY = "EAPK_TOPOLOGY";
     private static final String MODEL_NS = "http://example.com/ns/CIM#";
     private static final String EXTENSION_NS = "http://example.com/ns/Extension#";
+
+    /** Every diagram the export offers, which is what an unqualified import takes. */
+    private static final List<String> ALL_DIAGRAMS = List.of("EAID_DIAG_TP", "EAID_DIAG_PACKAGES");
+
+    /** A caller that has asked to stop. */
+    private static final ImportProgressListener CANCELLED =
+            new ImportProgressListener() {
+                @Override
+                public boolean isCancelled() {
+                    return true;
+                }
+            };
 
     private DatabasePort databasePort;
     private ImportXmiService service;
@@ -105,7 +118,10 @@ class ImportXmiServiceTest {
                 service.importPackages(
                         DATASET,
                         List.of(export()),
-                        List.of(new SelectedPackageDTO(0, TOPOLOGY, "Topology", null, null, null)),
+                        List.of(
+                                new SelectedPackageDTO(
+                                        0, TOPOLOGY, "Topology", null, null, null, null)),
+                        ALL_DIAGRAMS,
                         ImportProgressListener.NOOP);
 
         assertThat(result.importedGraphUris()).isEmpty();
@@ -122,7 +138,8 @@ class ImportXmiServiceTest {
                         List.of(export()),
                         List.of(
                                 new SelectedPackageDTO(
-                                        7, TOPOLOGY, "Topology", null, null, EXTENSION_NS)),
+                                        7, TOPOLOGY, "Topology", null, null, null, EXTENSION_NS)),
+                        ALL_DIAGRAMS,
                         ImportProgressListener.NOOP);
 
         assertThat(result.importedGraphUris()).isEmpty();
@@ -136,7 +153,10 @@ class ImportXmiServiceTest {
         service.importPackages(
                 DATASET,
                 List.of(export()),
-                List.of(new SelectedPackageDTO(0, TOPOLOGY, "Topology", null, null, EXTENSION_NS)),
+                List.of(
+                        new SelectedPackageDTO(
+                                0, TOPOLOGY, "Topology", null, null, null, EXTENSION_NS)),
+                ALL_DIAGRAMS,
                 listener);
 
         // The diagrams are a step of their own: on a large schema they take longer than the
@@ -148,6 +168,35 @@ class ImportXmiServiceTest {
     // -------------------------------------------------------------------------
     // Diagrams
     // -------------------------------------------------------------------------
+
+    @Test
+    void importPackages_cancelled_takesTheSchemasBackOut() throws IOException {
+        // An import of an export is one act carried out in steps, not one act per step: stopping
+        // it halfway must not leave a workspace nobody asked for.
+        var result = importTopology(null, ALL_DIAGRAMS, CANCELLED);
+
+        assertThat(result.importedGraphUris()).isEmpty();
+        assertThat(databasePort.listDatasets()).doesNotContain(DATASET);
+    }
+
+    @Test
+    void importPackages_cancelledInAWorkspaceThatWasAlreadyThere_leavesItStanding()
+            throws IOException {
+        // Its other schemas are no business of this import's.
+        databasePort.createWorkspaceIfAbsent(DATASET);
+
+        importTopology(null, ALL_DIAGRAMS, CANCELLED);
+
+        assertThat(databasePort.listDatasets()).contains(DATASET);
+        assertThat(databasePort.listGraphUris(DATASET)).isEmpty();
+    }
+
+    @Test
+    void importPackages_storesOnlyTheDiagramsThatWereChosen() throws IOException {
+        importTopology(null, List.of(), ImportProgressListener.NOOP);
+
+        assertThat(diagramsOf(RDFA.GRAPH_URI + "Topology")).isEmpty();
+    }
 
     @Test
     void importPackages_storesADiagramOfTheExportWithTheSchemaItDraws() throws IOException {
@@ -179,9 +228,11 @@ class ImportXmiServiceTest {
             var layout = ctx.getDiagramLayout().getDiagramLayoutModel();
             var positions = DLObjectFetcher.fetchDiagramDOPPerClass(layout, diagramId);
 
+            // The export draws them at 100 and 300; the import pulls a diagram apart as it goes
+            // in, a class of ours needing more room than the editor gave it.
             assertThat(positions.values())
                     .extracting(point -> point.getPosition().getX())
-                    .containsExactlyInAnyOrder(100f, 300f);
+                    .containsExactlyInAnyOrder(150f, 450f);
         }
     }
 
@@ -201,9 +252,11 @@ class ImportXmiServiceTest {
                 .anySatisfy(
                         warning -> {
                             assertThat(warning.fileName()).isEqualTo("Topology");
-                            assertThat(warning.undisplayableProperties())
+                            assertThat(warning.items())
                                     .contains(
-                                            "Reservoir.grossCapacity (Volume is not in the export)");
+                                            new UncarriedItem(
+                                                    "Reservoir.grossCapacity",
+                                                    "Volume is not in the export"));
                         });
     }
 
@@ -214,10 +267,12 @@ class ImportXmiServiceTest {
         assertThat(result.warnings())
                 .anySatisfy(
                         warning ->
-                                assertThat(warning.undisplayableProperties())
+                                assertThat(warning.items())
                                         .contains(
-                                                "String (declared more than once; the first is"
-                                                        + " kept)"));
+                                                new UncarriedItem(
+                                                        "String",
+                                                        "declared more than once; the first is"
+                                                                + " kept")));
     }
 
     @Test
@@ -234,13 +289,20 @@ class ImportXmiServiceTest {
     // -------------------------------------------------------------------------
 
     private ImportGraphsUseCase.ImportResult importTopology(String graphUri) throws IOException {
+        return importTopology(graphUri, ALL_DIAGRAMS, ImportProgressListener.NOOP);
+    }
+
+    private ImportGraphsUseCase.ImportResult importTopology(
+            String graphUri, List<String> diagramIds, ImportProgressListener listener)
+            throws IOException {
         return service.importPackages(
                 DATASET,
                 List.of(export()),
                 List.of(
                         new SelectedPackageDTO(
-                                0, TOPOLOGY, "Topology", null, graphUri, EXTENSION_NS)),
-                ImportProgressListener.NOOP);
+                                0, TOPOLOGY, "Topology", null, graphUri, null, EXTENSION_NS)),
+                diagramIds,
+                listener);
     }
 
     private MultipartFile export() throws IOException {

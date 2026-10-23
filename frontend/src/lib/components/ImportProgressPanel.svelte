@@ -23,9 +23,11 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
+    import ImportWarningsDialog from "$lib/components/ImportWarningsDialog.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import ProgressBar from "$lib/components/ProgressBar.svelte";
     import { FileState } from "$lib/utils/importProgress.svelte.js";
+    import { countUncarried } from "$lib/utils/importWarnings.js";
 
     let { progress } = $props();
 
@@ -47,15 +49,16 @@
         [FileState.FAILED]: "could not be imported",
         [FileState.SKIPPED]: "not imported",
     };
+    let showWarnings = $state(false);
 
     let total = $derived(progress.files.length);
     let packages = $derived(progress.packages ?? []);
     let profiles = $derived(progress.profiles ?? []);
+
     let warnings = $derived(
-        progress.warnings.filter(
-            warning => (warning.undisplayableProperties ?? []).length > 0,
-        ),
+        progress.warnings.filter(warning => (warning.items ?? []).length > 0),
     );
+    let warningCount = $derived(countUncarried(warnings));
 </script>
 
 <div class="mx-2 mt-2 flex min-h-0 flex-col">
@@ -65,11 +68,30 @@
         ariaLabel="Import progress"
     />
 
-    {#if total}
-        <p class="text-text-subtle mt-1 text-xs tabular-nums">
-            {progress.finishedCount} of {total} files
+    <!-- Beside the count of files rather than in a box of its own: what could not be carried
+         over belongs to the result, and is read once the import is done. -->
+    {#if total || warnings.length > 0}
+        <p class="text-text-subtle mt-1 flex items-baseline gap-2 text-xs">
+            {#if total}
+                <span class="tabular-nums">
+                    {progress.finishedCount} of {total} files
+                </span>
+            {/if}
+            {#if warnings.length > 0}
+                <button
+                    type="button"
+                    class="border-orange bg-orange/10 text-orange hover:bg-orange/20 flex cursor-pointer items-center justify-start! gap-1.5 rounded border px-2 py-0.5 font-semibold"
+                    onclick={() => (showWarnings = true)}
+                >
+                    <Fa icon={faTriangleExclamation} />
+                    {warningCount}
+                    {warningCount === 1 ? "warning" : "warnings"}
+                </button>
+            {/if}
         </p>
+    {/if}
 
+    {#if total}
         <div
             class="border-border bg-background-subtle mt-3 max-h-56 min-h-0 overflow-y-auto rounded border p-1"
         >
@@ -148,28 +170,6 @@
             </ul>
         </div>
     {/if}
-
-    {#if warnings.length > 0}
-        <div
-            class="border-orange bg-background-subtle text-default-text mt-3 max-h-40 overflow-y-auto rounded border px-3 py-2 text-xs"
-        >
-            <p class="flex items-center gap-2 font-semibold">
-                <Fa class="text-orange" icon={faTriangleExclamation} />
-                Some properties will not be displayed
-            </p>
-            <p class="mt-1">
-                They are stored, but they are missing the CIM stereotype or
-                association metadata RDFArchitect needs to show them.
-            </p>
-            <ul class="mt-1 list-disc pl-5">
-                {#each warnings as warning}
-                    <li>
-                        {warning.fileName}: {warning.undisplayableProperties.join(
-                            ", ",
-                        )}
-                    </li>
-                {/each}
-            </ul>
-        </div>
-    {/if}
 </div>
+
+<ImportWarningsDialog bind:showDialog={showWarnings} {warnings} />

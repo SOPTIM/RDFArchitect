@@ -89,9 +89,9 @@ class XmiDiagramStore {
     }
 
     private void storeOne(String datasetName, ImportedDiagram diagram) {
-        var graphUris = diagram.classes().stream().map(this::graphUriOf).distinct().toList();
-        if (graphUris.size() == 1) {
-            storeInGraph(new GraphIdentifier(datasetName, graphUris.getFirst()), diagram);
+        var schemaUri = diagram.schemaUri();
+        if (schemaUri != null) {
+            storeInGraph(new GraphIdentifier(datasetName, schemaUri), diagram);
         } else {
             storeInDataset(datasetName, diagram);
         }
@@ -156,9 +156,5 @@ class XmiDiagramStore {
                                         placed.location().uuid(),
                                         new URI(placed.location().graphUri())))
                 .toList();
-    }
-
-    private String graphUriOf(PlacedClass placed) {
-        return placed.location().graphUri();
     }
 }

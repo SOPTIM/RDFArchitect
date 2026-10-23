@@ -1107,14 +1107,35 @@
           "kind"
         ]
       },
+      "ImportSelectionDTO" : {
+        "description" : "What to import out of the export.",
+        "properties" : {
+          "diagramIds" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "packages" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SelectedPackageDTO"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "ImportWarning" : {
         "properties" : {
           "fileName" : {
             "type" : "string"
           },
-          "undisplayableProperties" : {
+          "graphUri" : {
+            "type" : "string"
+          },
+          "items" : {
             "items" : {
-              "type" : "string"
+              "$ref" : "#/components/schemas/UncarriedItem"
             },
             "type" : "array"
           }
@@ -1325,9 +1346,33 @@
           },
           {
             "properties" : {
+              "classNames" : {
+                "items" : {
+                  "type" : "string"
+                },
+                "type" : "array"
+              },
+              "diagrams" : {
+                "items" : {
+                  "$ref" : "#/components/schemas/ScannedDiagram"
+                },
+                "type" : "array"
+              },
               "packages" : {
                 "items" : {
                   "$ref" : "#/components/schemas/ScannedPackage"
+                },
+                "type" : "array"
+              },
+              "prefixes" : {
+                "items" : {
+                  "$ref" : "#/components/schemas/ScannedPrefix"
+                },
+                "type" : "array"
+              },
+              "supplierGroups" : {
+                "items" : {
+                  "$ref" : "#/components/schemas/SupplierGroup"
                 },
                 "type" : "array"
               }
@@ -1897,6 +1942,35 @@
         },
         "type" : "object"
       },
+      "ScannedDiagram" : {
+        "properties" : {
+          "classes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "fileIndex" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "packageId" : {
+            "type" : "string"
+          },
+          "supplierGroups" : {
+            "items" : {
+              "format" : "int32",
+              "type" : "integer"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "ScannedPackage" : {
         "properties" : {
           "declaredClasses" : {
@@ -1907,6 +1981,9 @@
             "format" : "int32",
             "type" : "integer"
           },
+          "extensionNamespace" : {
+            "type" : "string"
+          },
           "fileIndex" : {
             "format" : "int32",
             "type" : "integer"
@@ -1914,7 +1991,13 @@
           "fileName" : {
             "type" : "string"
           },
+          "hasExtensionElements" : {
+            "type" : "boolean"
+          },
           "id" : {
+            "type" : "string"
+          },
+          "modelNamespace" : {
             "type" : "string"
           },
           "name" : {
@@ -1927,18 +2010,39 @@
             "type" : "array"
           },
           "ownClasses" : {
-            "format" : "int32",
-            "type" : "integer"
+            "items" : {
+              "format" : "int32",
+              "type" : "integer"
+            },
+            "type" : "array"
           },
-          "ownDependencyClasses" : {
-            "format" : "int32",
-            "type" : "integer"
+          "ownDependencies" : {
+            "items" : {
+              "format" : "int32",
+              "type" : "integer"
+            },
+            "type" : "array"
           },
           "parentId" : {
             "type" : "string"
           },
           "profile" : {
             "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "ScannedPrefix" : {
+        "properties" : {
+          "fileIndex" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "namespace" : {
+            "type" : "string"
+          },
+          "prefix" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -2030,6 +2134,9 @@
             "type" : "integer"
           },
           "graphUri" : {
+            "type" : "string"
+          },
+          "modelNamespace" : {
             "type" : "string"
           },
           "name" : {
@@ -2320,6 +2427,31 @@
         },
         "type" : "object"
       },
+      "SupplierGroup" : {
+        "properties" : {
+          "fileIndex" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "index" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "packageIds" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "packageOnlyIds" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "TripleClassChange" : {
         "properties" : {
           "associations" : {
@@ -2419,6 +2551,17 @@
             "type" : "string"
           },
           "suffix" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "UncarriedItem" : {
+        "properties" : {
+          "reason" : {
+            "type" : "string"
+          },
+          "resource" : {
             "type" : "string"
           }
         },
@@ -8388,11 +8531,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "description" : "The packages to import, in the order they are to be built.",
-                "items" : {
-                  "$ref" : "#/components/schemas/SelectedPackageDTO"
-                },
-                "type" : "array"
+                "$ref" : "#/components/schemas/ImportSelectionDTO"
               }
             }
           },

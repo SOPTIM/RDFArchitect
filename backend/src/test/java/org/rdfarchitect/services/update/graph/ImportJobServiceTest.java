@@ -672,7 +672,8 @@ class ImportJobServiceTest {
         var readJobId = service.startXmiScan(DATASET, List.of(export()));
         awaitFinished(readJobId);
 
-        var importJobId = service.startPackageImport(DATASET, readJobId, List.of(topology()));
+        var importJobId =
+                service.startPackageImport(DATASET, readJobId, List.of(topology()), List.of());
 
         assertThat(importJobId).isPresent();
         var status = awaitFinished(importJobId.orElseThrow());
@@ -686,7 +687,8 @@ class ImportJobServiceTest {
         var readJobId = service.startXmiScan(DATASET, List.of(export()));
         awaitFinished(readJobId);
 
-        var importJobId = service.startPackageImport(DATASET, readJobId, List.of(topology()));
+        var importJobId =
+                service.startPackageImport(DATASET, readJobId, List.of(topology()), List.of());
 
         assertThat(awaitFinished(importJobId.orElseThrow()).files())
                 .extracting(file -> file.fileName() + ":" + file.state())
@@ -701,10 +703,13 @@ class ImportJobServiceTest {
         var readJobId = service.startXmiScan(DATASET, List.of(export()));
         awaitFinished(readJobId);
         awaitFinished(
-                service.startPackageImport(DATASET, readJobId, List.of(topology())).orElseThrow());
+                service.startPackageImport(DATASET, readJobId, List.of(topology()), List.of())
+                        .orElseThrow());
 
         assertThatThrownBy(
-                        () -> service.startPackageImport(DATASET, readJobId, List.of(topology())))
+                        () ->
+                                service.startPackageImport(
+                                        DATASET, readJobId, List.of(topology()), List.of()))
                 .isInstanceOf(ResourceConflictException.class);
     }
 
@@ -712,13 +717,21 @@ class ImportJobServiceTest {
     void startPackageImport_forAJobTheSessionDoesNotHave_isEmpty() {
         service = jobService(realImportService());
 
-        assertThat(service.startPackageImport(DATASET, UUID.randomUUID(), List.of(topology())))
+        assertThat(
+                        service.startPackageImport(
+                                DATASET, UUID.randomUUID(), List.of(topology()), List.of()))
                 .isEmpty();
     }
 
     private static SelectedPackageDTO topology() {
         return new SelectedPackageDTO(
-                0, "EAPK_TOPOLOGY", "Topology", null, null, "http://example.com/ns/Extension#");
+                0,
+                "EAPK_TOPOLOGY",
+                "Topology",
+                null,
+                null,
+                null,
+                "http://example.com/ns/Extension#");
     }
 
     @Test

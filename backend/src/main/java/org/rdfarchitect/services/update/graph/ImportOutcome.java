@@ -21,7 +21,10 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportWarning;
+import org.rdfarchitect.services.update.graph.ImportXmiUseCase.ScannedDiagram;
 import org.rdfarchitect.services.update.graph.ImportXmiUseCase.ScannedPackage;
+import org.rdfarchitect.services.update.graph.ImportXmiUseCase.ScannedPrefix;
+import org.rdfarchitect.services.update.graph.ImportXmiUseCase.SupplierGroup;
 
 import java.util.List;
 
@@ -62,12 +65,27 @@ public sealed interface ImportOutcome {
      * become schemas is a later decision.
      *
      * @param packages the packages the exports hold, in the order the exports declare them
+     * @param diagrams the class diagrams they hold, each saying what its availability depends on
+     * @param supplierGroups the sets of packages the diagrams refer to, shared between them
+     * @param classNames every class name the exports hold, which the packages refer to by position.
+     *     Pooled rather than repeated per package: the CGMES 3.0 model holds 6425 classes and its
+     *     packages name them 35863 times between them
+     * @param prefixes the namespace prefix table of the exports, which the import carries over as
+     *     the workspace's. Reported so that a caller can show what it would be creating: only the
+     *     model and the extension namespace decide what a resource is called, the rest are
+     *     declarations and can be changed any time afterwards
      */
-    record PackagesScanned(List<ScannedPackage> packages) implements ImportOutcome {
+    record PackagesScanned(
+            List<ScannedPackage> packages,
+            List<ScannedDiagram> diagrams,
+            List<SupplierGroup> supplierGroups,
+            List<String> classNames,
+            List<ScannedPrefix> prefixes)
+            implements ImportOutcome {
 
         /** What a read that never ran produced. */
         static PackagesScanned nothing() {
-            return new PackagesScanned(List.of());
+            return new PackagesScanned(List.of(), List.of(), List.of(), List.of(), List.of());
         }
     }
 }

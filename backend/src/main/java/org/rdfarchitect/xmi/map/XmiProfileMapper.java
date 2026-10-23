@@ -130,11 +130,14 @@ public final class XmiProfileMapper {
             List<UnmappedOntologyField> unmappedOntologyFields) {}
 
     private XmiProfileMapper(
-            XmiIndex index, XmiProfile profile, XmiPackageScope scope, String suppliedExtension) {
+            XmiIndex index,
+            XmiProfile profile,
+            XmiPackageScope scope,
+            XmiNamespaces.Supplied supplied) {
         this.index = index;
         this.profile = profile;
         this.scope = scope;
-        this.namespaces = XmiNamespaces.of(index, profile, suppliedExtension);
+        this.namespaces = XmiNamespaces.of(index, profile, supplied);
         this.uris = new XmiUris(namespaces);
         this.dataTypes = new XmiDataTypes(index, uris);
     }
@@ -149,15 +152,19 @@ public final class XmiProfileMapper {
      * @throws XmiImportRefusal when the export does not hold enough of the profile to build it
      */
     public static WrittenProfile write(XmiIndex index, XmiProfile profile, ICIMModelWriter writer) {
-        return write(index, profile, XmiPackageScope.WITH_SUB_PACKAGES, writer, null);
+        return write(
+                index,
+                profile,
+                XmiPackageScope.WITH_SUB_PACKAGES,
+                writer,
+                XmiNamespaces.Supplied.NONE);
     }
 
     /**
-     * Writes one profile, with the extension namespace supplied from outside.
+     * Writes one profile, with namespaces supplied from outside.
      *
      * @param scope whether the package's sub-packages are part of the schema
-     * @param suppliedExtension what the elements stereotyped as extensions are named with, where
-     *     the export itself states nothing — a CGMES 2.4.15 profiles-only export does not
+     * @param supplied what to name the resources with, overruling what the export states
      * @return what was written, and what could not be written fully
      */
     public static WrittenProfile write(
@@ -165,8 +172,8 @@ public final class XmiProfileMapper {
             XmiProfile profile,
             XmiPackageScope scope,
             ICIMModelWriter writer,
-            String suppliedExtension) {
-        return new XmiProfileMapper(index, profile, scope, suppliedExtension).writeTo(writer);
+            XmiNamespaces.Supplied supplied) {
+        return new XmiProfileMapper(index, profile, scope, supplied).writeTo(writer);
     }
 
     /**

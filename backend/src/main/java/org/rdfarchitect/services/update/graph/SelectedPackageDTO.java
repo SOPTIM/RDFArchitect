@@ -37,8 +37,12 @@ import org.rdfarchitect.xmi.read.XmiPackageScope;
  * @param graphUri what the schema is to be called, or {@code null} to name it after the package. A
  *     package declaring a profile commonly offers several candidates and only the caller can say
  *     which one is meant
- * @param extensionNamespace what the extension-stereotyped elements are named with, for an export
- *     that states it nowhere. Ignored where the export does state it
+ * @param modelNamespace what nearly every resource of the schema is named with, {@code null} to
+ *     leave the export its own
+ * @param extensionNamespace what the extension-stereotyped elements are named with, {@code null} to
+ *     leave the export its own. Both take precedence over what the export states, an export
+ *     carrying the namespaces of the generation it was made in rather than the ones the schema is
+ *     to be written in
  */
 public record SelectedPackageDTO(
         int fileIndex,
@@ -46,6 +50,7 @@ public record SelectedPackageDTO(
         String name,
         XmiPackageScope scope,
         String graphUri,
+        String modelNamespace,
         String extensionNamespace) {
 
     /** The scope as it was asked for, defaulting to the package with its sub-packages. */

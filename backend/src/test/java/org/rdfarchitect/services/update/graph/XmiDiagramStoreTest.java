@@ -150,7 +150,7 @@ class XmiDiagramStoreTest {
     // -------------------------------------------------------------------------
 
     private static ImportedDiagram diagram(PlacedClass... classes) {
-        return new ImportedDiagram(UUID.randomUUID(), "D", List.of(classes));
+        return new ImportedDiagram(UUID.randomUUID(), "EAID_D", "D", List.of(classes));
     }
 
     private static PlacedClass placed(String name, String graphUri) {

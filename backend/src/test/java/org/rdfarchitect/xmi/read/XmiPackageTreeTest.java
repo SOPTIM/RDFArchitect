@@ -26,6 +26,8 @@ import org.rdfarchitect.xmi.read.XmiPackageTree.XmiPackageNode;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashSet;
+import java.util.List;
 
 /**
  * What the choice of what to import is made over.
@@ -87,8 +89,8 @@ class XmiPackageTreeTest {
         // the CGMES 3.0 model, 162 classes sit like that and would be unreachable otherwise.
         var topology = nodeNamed("Topology");
 
-        assertThat(topology.ownClasses()).isLessThan(topology.declaredClasses());
-        assertThat(topology.ownClasses() + topology.ownDependencyClasses())
+        assertThat(topology.ownClassIds().size()).isLessThan(topology.declaredClasses());
+        assertThat(topology.ownClassIds().size() + topology.ownDependencyClassIds().size())
                 .isEqualTo(
                         XmiProfileSlice.classIdsOf(
                                         index, topology.id(), XmiPackageScope.PACKAGE_ONLY)
@@ -96,8 +98,52 @@ class XmiPackageTreeTest {
     }
 
     @Test
+    void of_listsThePackagesOwnClassesRatherThanCountingThem() {
+        // A caller showing what a schema holds has to name them, and what a package holds with
+        // its sub-packages is the union of these down the tree. Ordered by the name they carry.
+        assertThat(named(nodeNamed("Topology").ownClassIds()))
+                .containsExactly("TopologyExtensionVersion", "TopologyVersion");
+    }
+
+    @Test
+    void of_listsTheDependenciesOfThoseClassesApart() {
+        // TopologyCore types an attribute with ActivePower, which brings Float and its unit.
+        assertThat(named(nodeNamed("TopologyCore").ownDependencyClassIds()))
+                .containsExactly("ActivePower", "Float", "UnitSymbol");
+    }
+
+    @Test
+    void of_keepsTwoClassesOfOneNameApart() {
+        // The fixture declares String twice, as the CGMES 3.0 model does: by id they stay two,
+        // which is what the counts beside them are taken over.
+        assertThat(named(nodeNamed("TopologyCore").ownClassIds()))
+                .filteredOn("String"::equals)
+                .hasSize(2);
+    }
+
+    @Test
+    void of_leavesWhatAPackageHoldsWithItsSubPackagesDerivableFromTheOwnNames() {
+        // What the caller shows for a package taken whole is the union of the own names down the
+        // tree, and the counts reported here are what it puts beside them. The two have to agree.
+        var topology = nodeNamed("Topology");
+        var held = new LinkedHashSet<String>();
+        var dependencies = new LinkedHashSet<String>();
+        for (var node : XmiPackageTree.of(index)) {
+            if (isAtOrUnder(node, topology)) {
+                held.addAll(node.ownClassIds());
+                dependencies.addAll(node.ownClassIds());
+                dependencies.addAll(node.ownDependencyClassIds());
+            }
+        }
+        dependencies.removeAll(held);
+
+        assertThat(held).hasSize(topology.declaredClasses());
+        assertThat(dependencies).hasSize(topology.dependencyClasses());
+    }
+
+    @Test
     void of_reportsNoOwnClassesForAPackageThatOnlyHoldsOthers() {
-        assertThat(nodeNamed("ExampleStandard").ownClasses()).isZero();
+        assertThat(nodeNamed("ExampleStandard").ownClassIds()).isEmpty();
     }
 
     @Test
@@ -137,6 +183,28 @@ class XmiPackageTreeTest {
     }
 
     // -------------------------------------------------------------------------
+
+    private static List<String> named(List<String> classIds) {
+        return classIds.stream().map(id -> index.getClasses().get(id).getName()).toList();
+    }
+
+    private static boolean isAtOrUnder(XmiPackageNode node, XmiPackageNode root) {
+        for (var at = node; at != null; at = nodeWithId(at.parentId())) {
+            if (at.id().equals(root.id())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static XmiPackageNode nodeWithId(String id) {
+        return id == null
+                ? null
+                : XmiPackageTree.of(index).stream()
+                        .filter(node -> node.id().equals(id))
+                        .findFirst()
+                        .orElse(null);
+    }
 
     private static XmiPackageNode nodeNamed(String name) {
         return XmiPackageTree.of(index).stream()

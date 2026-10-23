@@ -20,7 +20,12 @@
     import { Tooltip } from "bits-ui";
     import { Fa } from "svelte-fa";
 
-    let { text, side = "top", label = "More information" } = $props();
+    let {
+        /** What to show. Blank lines are kept, so a text may be several paragraphs. */
+        text,
+        side = "top",
+        label = "More information",
+    } = $props();
 </script>
 
 <Tooltip.Root>
@@ -35,7 +40,7 @@
         <Tooltip.Content
             {side}
             sideOffset={6}
-            class="border-border bg-window-background text-default-text z-[80] max-w-xs rounded border px-2 py-1 text-xs shadow"
+            class="border-border bg-window-background text-default-text z-[80] max-w-xs rounded border px-2 py-1 text-xs whitespace-pre-line shadow"
         >
             {text}
         </Tooltip.Content>

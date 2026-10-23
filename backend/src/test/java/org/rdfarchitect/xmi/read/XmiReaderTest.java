@@ -351,7 +351,9 @@ class XmiReaderTest {
     void read_takesTheClassDiagramsAndNothingElse() {
         // A package diagram has no counterpart, because a package here is a diagram rather than a
         // node on one.
-        assertThat(index.getDiagrams()).containsOnlyKeys("EAID_DIAG_TP");
+        assertThat(index.getDiagrams())
+                .containsOnlyKeys(
+                        "EAID_DIAG_NOTES", "EAID_DIAG_INNER", "EAID_DIAG_CONFIG", "EAID_DIAG_TP");
     }
 
     @Test

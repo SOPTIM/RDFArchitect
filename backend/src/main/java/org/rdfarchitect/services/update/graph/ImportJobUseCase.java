@@ -121,12 +121,16 @@ public interface ImportJobUseCase {
      *
      * @param readJobId the job that read the exports
      * @param selection the packages to build, in the order they are to be built
+     * @param diagramIds the class diagrams to keep, by {@code xmi:id}
      * @return the id of the started job, or empty if the session has no such read for the dataset
      * @throws org.rdfarchitect.exception.database.ResourceConflictException if the exports of that
      *     read are no longer available
      */
     Optional<UUID> startPackageImport(
-            String datasetName, UUID readJobId, List<SelectedPackageDTO> selection);
+            String datasetName,
+            UUID readJobId,
+            List<SelectedPackageDTO> selection,
+            List<String> diagramIds);
 
     /** The current progress of the job, or empty if the session has no such job for the dataset. */
     Optional<ImportJobStatus> getStatus(String datasetName, UUID jobId);

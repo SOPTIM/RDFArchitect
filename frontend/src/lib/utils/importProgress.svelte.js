@@ -108,7 +108,12 @@ export class ImportProgress {
     jobState = $state(JobState.RUNNING);
     importedGraphUris = $state([]);
     failedImports = $state([]);
-    /** @type {{fileName: string, undisplayableProperties: string[]}[]} */
+    /**
+     * What the import could not carry over as the file states it, by the file or profile it was
+     * found in; empty where everything came over.
+     *
+     * @type {{fileName: string, graphUri: string, items: {resource: string, reason: string}[]}[]}
+     */
     warnings = $state([]);
     /**
      * The packages the uploaded Enterprise Architect exports hold, each of which can become a
@@ -116,10 +121,18 @@ export class ImportProgress {
      *
      * Flat, with `parentId` making it a tree. `declaredClasses` is what the package holds and
      * `dependencyClasses` what its attribute types and superclasses require — a schema gets both.
+     * `extensionNamespace` describes the export rather than the package and repeats across them.
      *
-     * @type {{fileIndex: number, fileName: string, id: string, parentId: string|null, name: string, profile: boolean, namespaceCandidates: string[], declaredClasses: number, dependencyClasses: number}[]}
+     * @type {{fileIndex: number, fileName: string, id: string, parentId: string|null, name: string, profile: boolean, namespaceCandidates: string[], declaredClasses: number, dependencyClasses: number, ownClasses: number[], ownDependencies: number[], modelNamespace: string|null, extensionNamespace: string|null, hasExtensionElements: boolean}[]}
      */
     packages = $state([]);
+    /**
+     * Every class the exports hold, by the position the packages refer to it under. Pooled rather
+     * than repeated per package, which would name the same class many times over.
+     *
+     * @type {string[]}
+     */
+    classNames = $state([]);
     /**
      * Every prefix of the workspace and of the import, side by side; empty unless the import is
      * waiting for a decision on them.
@@ -127,6 +140,19 @@ export class ImportProgress {
      * @type {{prefix: string, workspace: object|null, imported: object[], contested: boolean}[]}
      */
     prefixComparison = $state([]);
+    /**
+     * The class diagrams the exports hold, each saying which packages would have to be picked for
+     * it to be importable; empty for an import of RDF files.
+     *
+     * @type {{fileIndex: number, id: string, packageId: string, name: string, classes: number, supplierGroups: number[]}[]}
+     */
+    diagrams = $state([]);
+    /**
+     * The sets of packages the diagrams refer to, shared between them.
+     *
+     * @type {{fileIndex: number, index: number, packageIds: string[], packageOnlyIds: string[]}[]}
+     */
+    supplierGroups = $state([]);
     /** Set when the import could not be started or ended unexpectedly. */
     errorMessage = $state(null);
     cancelling = $state(false);
@@ -154,7 +180,7 @@ export class ImportProgress {
 
     /** Whether the import is held up by prefixes the user has to decide on. */
     get awaitingPrefixResolution() {
-        return this.phase === ImportPhase.RESOLVING;
+        return this.jobState === JobState.AWAITING_PREFIX_RESOLUTION;
     }
 
     get failed() {
@@ -252,10 +278,11 @@ export class ImportProgress {
             outcome?.kind === OutcomeKind.GRAPHS_IMPORTED
                 ? (outcome.warnings ?? [])
                 : [];
-        this.packages =
-            outcome?.kind === OutcomeKind.PACKAGES_SCANNED
-                ? (outcome.packages ?? [])
-                : [];
+        const read = outcome?.kind === OutcomeKind.PACKAGES_SCANNED;
+        this.packages = read ? (outcome.packages ?? []) : [];
+        this.diagrams = read ? (outcome.diagrams ?? []) : [];
+        this.supplierGroups = read ? (outcome.supplierGroups ?? []) : [];
+        this.classNames = read ? (outcome.classNames ?? []) : [];
     }
 
     uploadProgress(percent) {

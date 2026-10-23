@@ -38,9 +38,9 @@ import java.util.UUID;
 /**
  * Which diagrams of an export survive the import, and what they hold.
  *
- * <p>The fixture's class diagram draws two classes and one boundary, and its package diagram draws
- * a package — between them that is every case there is: a shape standing for a class, one standing
- * for something the editor has no concept of, and a diagram with no class on it at all.
+ * <p>The fixture's topology diagram draws two classes and one boundary, and its package diagram
+ * draws a package — between them that is every case there is: a shape standing for a class, one
+ * standing for something the editor has no concept of, and a diagram with no class on it at all.
  */
 class XmiDiagramsTest {
 
@@ -48,6 +48,7 @@ class XmiDiagramsTest {
             Path.of("src/test/java/org/rdfarchitect/xmi/read/testdata/profiles-export.xml");
 
     private static final String GRAPH = "urn:graph:topology";
+    private static final String TOPOLOGY_DIAGRAM = "Topology overview";
 
     private static XmiIndex index;
 
@@ -60,12 +61,25 @@ class XmiDiagramsTest {
 
     @Test
     void of_takesTheClassesADiagramDrawsWhereItDrawsThem() {
-        var diagram = onlyDiagram(everythingWritten());
+        // Pulled apart by half as it goes in: a class of ours needs more room than the editor
+        // gave it, and the arrangement is kept by moving every class by the same factor.
+        var diagram = topologyDiagram(everythingWritten());
 
         assertThat(diagram.classes())
                 .extracting(PlacedClass::name, PlacedClass::x, PlacedClass::y)
                 .containsExactlyInAnyOrder(
-                        tuple("TopologicalNode", 100f, 200f), tuple("Terminal", 300f, 400f));
+                        tuple("TopologicalNode", 150f, 300f), tuple("Terminal", 450f, 600f));
+    }
+
+    @Test
+    void of_keepsTheArrangementWhilePullingItApart() {
+        // Whatever the factor, what was twice as far away stays twice as far away.
+        var placed = topologyDiagram(everythingWritten()).classes();
+        var one = placed.getFirst();
+        var other = placed.getLast();
+
+        assertThat((other.x() - one.x()) / (other.y() - one.y()))
+                .isEqualTo((300f - 100f) / (400f - 200f));
     }
 
     @Test
@@ -73,7 +87,7 @@ class XmiDiagramsTest {
         // The drawing lists TopologicalNode first and the extension gives Terminal the lower
         // seqno. Stored positions carry no z, so the order they go in is the only thing left to
         // reproduce it with.
-        var diagram = onlyDiagram(everythingWritten());
+        var diagram = topologyDiagram(everythingWritten());
 
         assertThat(diagram.classes())
                 .extracting(PlacedClass::name)
@@ -83,14 +97,14 @@ class XmiDiagramsTest {
     @Test
     void of_passesOverAShapeThatStandsForNoClass() {
         // The diagram also draws a boundary, which the reader has already dropped from the index.
-        var diagram = onlyDiagram(everythingWritten());
+        var diagram = topologyDiagram(everythingWritten());
 
         assertThat(diagram.classes()).hasSize(2);
     }
 
     @Test
     void of_namesADiagramAsTheExtensionDoes() {
-        assertThat(onlyDiagram(everythingWritten()).name()).isEqualTo("Topology overview");
+        assertThat(topologyDiagram(everythingWritten()).name()).isEqualTo("Topology overview");
     }
 
     @Test
@@ -99,7 +113,9 @@ class XmiDiagramsTest {
         var withoutTerminal = everythingWritten();
         withoutTerminal.remove("EAID_TERMINAL");
 
-        assertThat(XmiDiagrams.of(index, withoutTerminal)).isEmpty();
+        assertThat(XmiDiagrams.of(index, withoutTerminal))
+                .extracting(ImportedDiagram::name)
+                .doesNotContain(TOPOLOGY_DIAGRAM);
     }
 
     @Test
@@ -112,18 +128,19 @@ class XmiDiagramsTest {
 
     @Test
     void of_givesEveryDiagramAnIdentityOfItsOwn() {
-        var first = onlyDiagram(everythingWritten());
-        var second = onlyDiagram(everythingWritten());
+        var first = topologyDiagram(everythingWritten());
+        var second = topologyDiagram(everythingWritten());
 
         assertThat(first.id()).isNotEqualTo(second.id());
     }
 
     // -------------------------------------------------------------------------
 
-    private static ImportedDiagram onlyDiagram(Map<String, ClassLocation> locations) {
-        var diagrams = XmiDiagrams.of(index, locations);
-        assertThat(diagrams).hasSize(1);
-        return diagrams.getFirst();
+    private static ImportedDiagram topologyDiagram(Map<String, ClassLocation> locations) {
+        return XmiDiagrams.of(index, locations).stream()
+                .filter(diagram -> TOPOLOGY_DIAGRAM.equals(diagram.name()))
+                .findFirst()
+                .orElseThrow();
     }
 
     /** Every class of the export written into one schema, which is the uneventful case. */

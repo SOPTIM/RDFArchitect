@@ -48,8 +48,12 @@ class ImportOutcomeSerializationTest {
     }
 
     @Test
-    void profilesScanned_carriesItsSchemaNameAsTheKind() throws Exception {
-        var json = objectMapper.writeValueAsString((ImportOutcome) new PackagesScanned(List.of()));
+    void packagesScanned_carriesItsSchemaNameAsTheKind() throws Exception {
+        var json =
+                objectMapper.writeValueAsString(
+                        (ImportOutcome)
+                                new PackagesScanned(
+                                        List.of(), List.of(), List.of(), List.of(), List.of()));
 
         assertThat(objectMapper.readTree(json).get("kind").asText()).isEqualTo("PackagesScanned");
     }

@@ -322,6 +322,7 @@ async function importSelectedPackages(
     workspaceName: string,
     readJobId: string,
     packages: SelectedPackageDto[],
+    diagramIds: string[],
 ): Promise<Result<{ jobId: string }>> {
     console.log(
         `${LOG_PREFIX} Importing ${packages.length} package(s) of read job "${readJobId}"`,
@@ -329,7 +330,7 @@ async function importSelectedPackages(
 
     const { data, error } = await sdkImportSelectedPackages({
         path: { datasetName: workspaceName, jobId: readJobId },
-        body: packages,
+        body: { packages, diagramIds },
     });
 
     if (error || !data?.jobId) {

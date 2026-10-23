@@ -447,7 +447,9 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             result.importedGraphUris().add(graphUri);
             if (!undisplayableProperties.isEmpty()) {
                 result.warnings()
-                        .add(new ImportWarning(plannedFile.fileName(), undisplayableProperties));
+                        .add(
+                                new ImportWarning(
+                                        plannedFile.fileName(), graphUri, undisplayableProperties));
             }
             listener.finished(plannedFile.index(), Outcome.IMPORTED, graphUri);
         } catch (RuntimeException exception) {
@@ -492,18 +494,26 @@ public class ImportGraphsService implements ImportGraphsUseCase {
      * invisible, so we surface it as a warning instead of dropping it silently.
      *
      * @param graph the parsed graph to inspect
-     * @return the names (labels, falling back to URIs) of properties that will not be displayed
+     * @return one item per such property, each saying which it is and why it stays invisible
      */
-    private List<String> findUndisplayableProperties(Graph graph) {
+    /** Why such a property stays invisible, which the warning carries as its reason. */
+    private static final String NOT_DISPLAYABLE =
+            "stored, but carries no CIM stereotype or association use";
+
+    private List<UncarriedItem> findUndisplayableProperties(Graph graph) {
         var model = ModelFactory.createModelForGraph(graph);
-        var undisplayableProperties = new ArrayList<String>();
+        var undisplayableProperties = new ArrayList<UncarriedItem>();
         model.listSubjectsWithProperty(RDF.type, RDF.Property)
                 .filterKeep(Resource::isURIResource)
                 .filterKeep(property -> property.hasProperty(RDFS.domain))
                 .filterDrop(
                         property -> property.hasProperty(CIMS.stereotype, CIMStereotypes.attribute))
                 .filterDrop(property -> property.hasProperty(CIMS.associationUsed))
-                .forEachRemaining(property -> undisplayableProperties.add(propertyName(property)));
+                .forEachRemaining(
+                        property ->
+                                undisplayableProperties.add(
+                                        new UncarriedItem(
+                                                propertyName(property), NOT_DISPLAYABLE)));
         return undisplayableProperties;
     }
 

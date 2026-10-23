@@ -72,6 +72,28 @@ export function nest(packages) {
     return roots;
 }
 
+/**
+ * The tree without the one package every export wraps everything in, which is a folder nobody
+ * chooses and one level of indentation on everything below it. Its name is handed back instead,
+ * for a caller that has somewhere to say which model is being looked at.
+ *
+ * <p>Only resolved where it costs nothing: a single outermost package that becomes no schema and
+ * declares no classes of its own. Measured across the CGMES exports, that is what it always is —
+ * `Model` with five children in the 3.0 full model, `TC57CIMProfiles` with eight in the
+ * profiles-only one, `Model` with three in CGMES 2.4.15.
+ *
+ * @param {object[]} packages as the read reported them
+ * @returns {{title: string|null, nodes: object[]}} what to call the tree and what to show in it
+ */
+export function withoutWrapper(packages) {
+    const roots = nest(packages);
+    const only = roots.length === 1 ? roots[0] : null;
+    if (only && !isSchema(only) && !hasOwnRow(only)) {
+        return { title: only.name, nodes: only.children };
+    }
+    return { title: null, nodes: roots };
+}
+
 /** Whether this row becomes a schema of its own, as opposed to grouping others. */
 export function isSchema(node) {
     return node.profile || node.children.length === 0;
@@ -82,7 +104,7 @@ export function isSchema(node) {
  * A profile needs none: it is taken whole.
  */
 export function hasOwnRow(node) {
-    return !isSchema(node) && (node.ownClasses ?? 0) > 0;
+    return !isSchema(node) && (node.ownClasses?.length ?? 0) > 0;
 }
 
 /** Every row at or below this one that becomes a schema, the own-classes row included. */
@@ -152,23 +174,91 @@ export function toggledSchema(rowId, selectedIds) {
  * @param {string} scope which shape of it is meant
  */
 export function describeSize(node, scope = PackageScope.WITH_SUB_PACKAGES) {
-    const own = scope === PackageScope.PACKAGE_ONLY;
-    const declared = (own ? node.ownClasses : node.declaredClasses) ?? 0;
-    const dependencies =
-        (own ? node.ownDependencyClasses : node.dependencyClasses) ?? 0;
+    const declared = declaredOf(node, scope);
+    const dependencies = dependenciesOf(node, scope);
     const classes = `${declared} class${declared === 1 ? "" : "es"}`;
     return dependencies > 0
         ? `${classes} + ${dependencies} ${dependencies === 1 ? "dependency" : "dependencies"}`
         : classes;
 }
 
+/** How many classes a row's schema declares itself. */
+export function declaredOf(node, scope = PackageScope.WITH_SUB_PACKAGES) {
+    return scope === PackageScope.PACKAGE_ONLY
+        ? (node.ownClasses?.length ?? 0)
+        : (node.declaredClasses ?? 0);
+}
+
+/** How many classes a row's schema takes on top of those, to close over the types they use. */
+export function dependenciesOf(node, scope = PackageScope.WITH_SUB_PACKAGES) {
+    return scope === PackageScope.PACKAGE_ONLY
+        ? (node.ownDependencies?.length ?? 0)
+        : (node.dependencyClasses ?? 0);
+}
+
+/**
+ * The classes a row's schema declares, by name and in alphabetical order.
+ *
+ * <p>The read reports what each package declares on its own, so what a package holds with its
+ * sub-packages is the union of those down the tree. A class is referred to by its position in the
+ * pool of names, two classes of one name staying two.
+ *
+ * <p>For a row that becomes a schema this is exactly what the read counted, which is what is shown
+ * beside it. It is not for a package that only groups others: the read leaves a profile's ontology
+ * header out of what the profile declares but counts it in what the packages around it hold. Such
+ * a package is no row of its own here anyway.
+ *
+ * @param node the row's package, nested as {@link nest} leaves it
+ * @param scope whether the schema is the package with its sub-packages or the package alone
+ * @param classNames the pool of names the read reported
+ */
+export function classNamesOf(node, scope, classNames) {
+    return named(heldBy(node, scope).held, classNames);
+}
+
+/** The classes a row's schema takes on top of those, by name and in alphabetical order. */
+export function dependencyNamesOf(node, scope, classNames) {
+    return named(heldBy(node, scope).dependencies, classNames);
+}
+
+function heldBy(node, scope) {
+    const held = new Set();
+    const withDependencies = new Set();
+    const packages =
+        scope === PackageScope.PACKAGE_ONLY ? [node] : subtreeOf(node);
+    for (const inScope of packages) {
+        for (const index of inScope.ownClasses ?? []) {
+            held.add(index);
+            withDependencies.add(index);
+        }
+        for (const index of inScope.ownDependencies ?? []) {
+            withDependencies.add(index);
+        }
+    }
+    return {
+        held,
+        dependencies: [...withDependencies].filter(index => !held.has(index)),
+    };
+}
+
+function subtreeOf(node) {
+    const packages = [node];
+    for (const child of node.children ?? []) {
+        packages.push(...subtreeOf(child));
+    }
+    return packages;
+}
+
+function named(indexes, classNames) {
+    return [...indexes]
+        .map(index => classNames?.[index] ?? "")
+        .filter(name => name !== "")
+        .sort((one, other) => one.localeCompare(other));
+}
+
 /** How many classes a row's schema ends up holding. */
 export function sizeOf(node, scope = PackageScope.WITH_SUB_PACKAGES) {
-    const own = scope === PackageScope.PACKAGE_ONLY;
-    return (
-        ((own ? node.ownClasses : node.declaredClasses) ?? 0) +
-        ((own ? node.ownDependencyClasses : node.dependencyClasses) ?? 0)
-    );
+    return declaredOf(node, scope) + dependenciesOf(node, scope);
 }
 
 /**
@@ -199,17 +289,18 @@ export function selectedSchemas(packages, selectedIds) {
  *
  * @param {object[]} packages as the read reported them
  * @param {Set<string>} selectedIds the ticked row ids
- * @param {string|null} extensionNamespace what to name extension-stereotyped elements with, for an
- *     export that states it nowhere
+ * @param {{model?: string, extension?: string}} namespaces what to name the resources with, each
+ *     overruling what the export states; anything left out leaves the export its own
  */
-export function selectionOf(packages, selectedIds, extensionNamespace = null) {
-    const supplied = extensionNamespace?.trim() || null;
+export function selectionOf(packages, selectedIds, namespaces = {}) {
+    const supplied = what => namespaces[what]?.trim() || null;
     return selectedSchemas(packages, selectedIds).map(row => ({
         fileIndex: row.node.fileIndex ?? 0,
         packageId: row.node.id,
         name: row.node.name,
         scope: row.scope,
         graphUri: null,
-        extensionNamespace: supplied,
+        modelNamespace: supplied("model"),
+        extensionNamespace: supplied("extension"),
     }));
 }

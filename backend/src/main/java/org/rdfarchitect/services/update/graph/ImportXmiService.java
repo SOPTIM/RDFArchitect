@@ -25,10 +25,14 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelWriter;
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportResult;
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportWarning;
+import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.UncarriedItem;
+import org.rdfarchitect.services.update.graph.ImportOutcome.PackagesScanned;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
+import org.rdfarchitect.xmi.map.XmiDiagramAvailability;
 import org.rdfarchitect.xmi.map.XmiDiagrams;
 import org.rdfarchitect.xmi.map.XmiDiagrams.ClassLocation;
+import org.rdfarchitect.xmi.map.XmiNamespaces;
 import org.rdfarchitect.xmi.map.XmiProfileMapper;
 import org.rdfarchitect.xmi.map.XmiProfileMapper.UntypedAttribute;
 import org.rdfarchitect.xmi.map.XmiProfileMapper.WrittenProfile;
@@ -61,11 +65,19 @@ public class ImportXmiService implements ImportXmiUseCase {
     private final XmiDiagramStore diagramStore;
 
     @Override
-    public List<ScannedPackage> scanPackages(
+    public PackagesScanned scanPackages(
             List<MultipartFile> files, ImportProgressListener listener) {
         listener.planned(plan(files));
 
         var packages = new ArrayList<ScannedPackage>();
+        var diagrams = new ArrayList<ScannedDiagram>();
+        var supplierGroups = new ArrayList<SupplierGroup>();
+        // A pool shared by every package of every export: a package refers to a class by its
+        // position here rather than carrying its name, which it would repeat many times over.
+        // Keyed by the class rather than by the name, two classes of one name being two classes.
+        var classNames = new LinkedHashMap<String, Integer>();
+        var pooledNames = new ArrayList<String>();
+        var prefixes = new ArrayList<ScannedPrefix>();
         for (var index = 0; index < files.size(); index++) {
             var file = files.get(index);
             if (listener.isCancelled()) {
@@ -73,9 +85,23 @@ public class ImportXmiService implements ImportXmiUseCase {
                 continue;
             }
             listener.started(index);
-            scanFile(file, index, packages, listener);
+            scanFile(
+                    file,
+                    index,
+                    packages,
+                    diagrams,
+                    supplierGroups,
+                    classNames,
+                    pooledNames,
+                    prefixes,
+                    listener);
         }
-        return packages;
+        return new PackagesScanned(
+                List.copyOf(packages),
+                List.copyOf(diagrams),
+                List.copyOf(supplierGroups),
+                List.copyOf(pooledNames),
+                List.copyOf(prefixes));
     }
 
     /**
@@ -90,6 +116,11 @@ public class ImportXmiService implements ImportXmiUseCase {
             MultipartFile file,
             int index,
             List<ScannedPackage> packages,
+            List<ScannedDiagram> diagrams,
+            List<SupplierGroup> supplierGroups,
+            Map<String, Integer> classNames,
+            List<String> pooledNames,
+            List<ScannedPrefix> prefixes,
             ImportProgressListener listener) {
         var fileName = file.getOriginalFilename();
         if (!XmiFiles.isXmiFile(file)) {
@@ -102,7 +133,34 @@ public class ImportXmiService implements ImportXmiUseCase {
                         file.getInputStream(),
                         file.getSize(),
                         done -> listener.progressed(index, done, file.getSize()))) {
-            var found = XmiPackageTree.of(XmiReader.read(xmi));
+            var read = XmiReader.read(xmi);
+            var found = XmiPackageTree.of(read);
+            var modelNamespace = XmiNamespaces.modelNamespaceOf(read);
+            var extensionNamespace = XmiNamespaces.extensionNamespaceOf(read);
+            var hasExtensions = XmiNamespaces.hasExtensionElements(read);
+            read.getPrefixes()
+                    .forEach(
+                            (prefix, namespace) ->
+                                    prefixes.add(new ScannedPrefix(index, prefix, namespace)));
+            var availability = XmiDiagramAvailability.of(read);
+            availability
+                    .diagrams()
+                    .forEach(
+                            drawn ->
+                                    diagrams.add(
+                                            new ScannedDiagram(
+                                                    index,
+                                                    drawn.id(),
+                                                    drawn.packageId(),
+                                                    drawn.name(),
+                                                    drawn.classes(),
+                                                    drawn.supplierGroups())));
+            for (var group = 0; group < availability.supplierGroups().size(); group++) {
+                var suppliers = availability.supplierGroups().get(group);
+                supplierGroups.add(
+                        new SupplierGroup(
+                                index, group, suppliers.packageIds(), suppliers.packageOnlyIds()));
+            }
             for (var node : found) {
                 packages.add(
                         new ScannedPackage(
@@ -115,8 +173,11 @@ public class ImportXmiService implements ImportXmiUseCase {
                                 node.namespaceCandidates(),
                                 node.declaredClasses(),
                                 node.dependencyClasses(),
-                                node.ownClasses(),
-                                node.ownDependencyClasses()));
+                                pooled(node.ownClassIds(), read, classNames, pooledNames),
+                                pooled(node.ownDependencyClassIds(), read, classNames, pooledNames),
+                                modelNamespace,
+                                extensionNamespace,
+                                hasExtensions));
             }
             logger.info(
                     "Export '{}' holds {} package(s), {} of them a profile.",
@@ -130,6 +191,21 @@ public class ImportXmiService implements ImportXmiUseCase {
         }
     }
 
+    /** The classes as positions in the pool, adding the ones the pool does not hold yet. */
+    private List<Integer> pooled(
+            List<String> classIds, XmiIndex index, Map<String, Integer> pool, List<String> names) {
+        return classIds.stream()
+                .map(
+                        classId ->
+                                pool.computeIfAbsent(
+                                        classId,
+                                        _ -> {
+                                            names.add(index.getClasses().get(classId).getName());
+                                            return names.size() - 1;
+                                        }))
+                .toList();
+    }
+
     // -------------------------------------------------------------------------
     // Importing the chosen packages
     // -------------------------------------------------------------------------
@@ -138,22 +214,70 @@ public class ImportXmiService implements ImportXmiUseCase {
      * Works through the selection one export at a time. The progress is reported per chosen package
      * rather than per file, because a package is what becomes a schema and what can fail on its
      * own; which export it came out of is of no further interest once it has been read.
+     *
+     * <p>Cancelling takes the schemas back out again. An import of rdf files keeps what it wrote,
+     * because each file is a thing the caller asked for on its own; this one is a single act
+     * carried out in steps, and stopping it halfway would leave a workspace that was never asked
+     * for.
      */
     @Override
     public ImportResult importPackages(
             String datasetName,
             List<MultipartFile> files,
             List<SelectedPackageDTO> selection,
+            List<String> diagramIds,
             ImportProgressListener listener) {
+        var chosenDiagrams = Set.copyOf(diagramIds);
         var work = plan(selection, files);
         listener.planned(work.stream().flatMap(export -> export.plannedSteps().stream()).toList());
 
         var result = new ImportResult();
+        var workspaceExisted = workspaceExists(datasetName);
         var reservedGraphUris = loadExistingGraphUris(datasetName);
         for (var export : work) {
-            importFrom(datasetName, export, reservedGraphUris, listener, result);
+            importFrom(datasetName, export, reservedGraphUris, chosenDiagrams, listener, result);
+        }
+        if (listener.isCancelled()) {
+            rollBack(datasetName, result, workspaceExisted);
         }
         return result;
+    }
+
+    /**
+     * Undoes what the import wrote. Only its own graphs, and the workspace only where the import
+     * brought it into being: one that was already there holds schemas this import has no say over.
+     */
+    private void rollBack(String datasetName, ImportResult result, boolean workspaceExisted) {
+        for (var graphUri : result.importedGraphUris()) {
+            try {
+                databasePort.deleteGraph(new GraphIdentifier(datasetName, graphUri));
+            } catch (RuntimeException exception) {
+                logger.warn(
+                        "Unable to take back the schema \"{}\": {}",
+                        graphUri,
+                        exception.getMessage());
+            }
+        }
+        logger.info("Import cancelled: took back {} schema(s).", result.importedGraphUris().size());
+        result.importedGraphUris().clear();
+        if (!workspaceExisted) {
+            try {
+                databasePort.deleteDataset(datasetName);
+            } catch (RuntimeException exception) {
+                logger.warn(
+                        "Unable to take back the workspace \"{}\": {}",
+                        datasetName,
+                        exception.getMessage());
+            }
+        }
+    }
+
+    private boolean workspaceExists(String datasetName) {
+        try {
+            return databasePort.listDatasets().contains(datasetName);
+        } catch (RuntimeException _) {
+            return false;
+        }
     }
 
     /**
@@ -165,6 +289,7 @@ public class ImportXmiService implements ImportXmiUseCase {
             String datasetName,
             ExportWork export,
             Set<String> reservedGraphUris,
+            Set<String> chosenDiagrams,
             ImportProgressListener listener,
             ImportResult result) {
         XmiIndex index;
@@ -198,7 +323,7 @@ public class ImportXmiService implements ImportXmiUseCase {
                     result,
                     locations);
         }
-        storeDiagrams(datasetName, export, index, locations, listener);
+        storeDiagrams(datasetName, export, index, locations, chosenDiagrams, listener);
     }
 
     private void writePackage(
@@ -230,7 +355,9 @@ public class ImportXmiService implements ImportXmiUseCase {
                             profile,
                             plannedProfile.selected().scopeOrDefault(),
                             writer,
-                            plannedProfile.selected().extensionNamespace());
+                            new XmiNamespaces.Supplied(
+                                    plannedProfile.selected().modelNamespace(),
+                                    plannedProfile.selected().extensionNamespace()));
             written.classes()
                     .forEach(
                             (classId, writtenClass) ->
@@ -240,9 +367,9 @@ public class ImportXmiService implements ImportXmiUseCase {
                                                     writtenClass.uuid(),
                                                     writtenClass.uri(),
                                                     graphUri)));
-            warnAboutUntypedAttributes(plannedProfile, written, result);
-            warnAboutDuplicateClasses(plannedProfile, written, result);
-            warnAboutUnmappedOntologyFields(plannedProfile, written, result);
+            warnAboutUntypedAttributes(plannedProfile, graphUri, written, result);
+            warnAboutDuplicateClasses(plannedProfile, graphUri, written, result);
+            warnAboutUnmappedOntologyFields(plannedProfile, graphUri, written, result);
 
             replaceGraph(datasetName, graphUri, writer);
             result.importedGraphUris().add(graphUri);
@@ -272,7 +399,10 @@ public class ImportXmiService implements ImportXmiUseCase {
      * next time.
      */
     private void warnAboutUntypedAttributes(
-            PlannedProfile plannedProfile, WrittenProfile written, ImportResult result) {
+            PlannedProfile plannedProfile,
+            String graphUri,
+            WrittenProfile written,
+            ImportResult result) {
         if (written.untypedAttributes().isEmpty()) {
             return;
         }
@@ -284,8 +414,8 @@ public class ImportXmiService implements ImportXmiUseCase {
                         .sorted()
                         .toList();
         var described =
-                written.untypedAttributes().stream().map(ImportXmiService::describe).toList();
-        result.warnings().add(new ImportWarning(plannedProfile.profileName(), described));
+                written.untypedAttributes().stream().map(ImportXmiService::uncarried).toList();
+        result.warnings().add(new ImportWarning(plannedProfile.profileName(), graphUri, described));
         logger.warn(
                 "Profile '{}': {} attribute(s) written without a datatype. The export refers to {}"
                         + " but does not contain {}.",
@@ -303,7 +433,10 @@ public class ImportXmiService implements ImportXmiUseCase {
      * rather than passed over.
      */
     private void warnAboutDuplicateClasses(
-            PlannedProfile plannedProfile, WrittenProfile written, ImportResult result) {
+            PlannedProfile plannedProfile,
+            String graphUri,
+            WrittenProfile written,
+            ImportResult result) {
         if (written.duplicateClasses().isEmpty()) {
             return;
         }
@@ -311,10 +444,11 @@ public class ImportXmiService implements ImportXmiUseCase {
                 written.duplicateClasses().stream()
                         .map(
                                 duplicate ->
-                                        duplicate.name()
-                                                + " (declared more than once; the first is kept)")
+                                        new UncarriedItem(
+                                                duplicate.name(),
+                                                "declared more than once; the first is kept"))
                         .toList();
-        result.warnings().add(new ImportWarning(plannedProfile.profileName(), described));
+        result.warnings().add(new ImportWarning(plannedProfile.profileName(), graphUri, described));
         logger.warn(
                 "Profile '{}': {} class(es) the export declares more than once; the first"
                         + " declaration of each is kept.",
@@ -327,24 +461,32 @@ public class ImportXmiService implements ImportXmiUseCase {
      * predicate for, so they are not written.
      */
     private void warnAboutUnmappedOntologyFields(
-            PlannedProfile plannedProfile, WrittenProfile written, ImportResult result) {
+            PlannedProfile plannedProfile,
+            String graphUri,
+            WrittenProfile written,
+            ImportResult result) {
         if (written.unmappedOntologyFields().isEmpty()) {
             return;
         }
         var described =
                 written.unmappedOntologyFields().stream()
-                        .map(field -> field.name() + " (no ontology field of that name)")
+                        .map(
+                                field ->
+                                        new UncarriedItem(
+                                                field.name(), "no ontology field of that name"))
                         .toList();
-        result.warnings().add(new ImportWarning(plannedProfile.profileName(), described));
+        result.warnings().add(new ImportWarning(plannedProfile.profileName(), graphUri, described));
     }
 
     /** An untyped attribute as the dialog shows it: the attribute and what it wanted to be. */
-    private static String describe(UntypedAttribute untyped) {
+    private static UncarriedItem uncarried(UntypedAttribute untyped) {
         var name = untyped.attributeUri();
         var local = name.substring(name.indexOf('#') + 1);
-        return untyped.missingType() == null
-                ? local + " (the export states no type that is in the file)"
-                : local + " (" + untyped.missingType() + " is not in the export)";
+        return new UncarriedItem(
+                local,
+                untyped.missingType() == null
+                        ? "the export states no type that is in the file"
+                        : untyped.missingType() + " is not in the export");
     }
 
     /**
@@ -359,19 +501,27 @@ public class ImportXmiService implements ImportXmiUseCase {
             ExportWork export,
             XmiIndex index,
             Map<String, ClassLocation> locations,
+            Set<String> chosenDiagrams,
             ImportProgressListener listener) {
         if (locations.isEmpty() || listener.isCancelled()) {
             listener.finished(export.diagramIndex(), Outcome.SKIPPED, null);
             return;
         }
         listener.started(export.diagramIndex());
-        var diagrams = XmiDiagrams.of(index, locations);
-        var stored = diagramStore.store(datasetName, diagrams, listener::isCancelled);
+        var offered = XmiDiagrams.of(index, locations);
+        var stored =
+                diagramStore.store(
+                        datasetName,
+                        offered.stream()
+                                .filter(diagram -> chosenDiagrams.contains(diagram.exportId()))
+                                .toList(),
+                        listener::isCancelled);
         listener.finished(export.diagramIndex(), Outcome.IMPORTED, null);
         logger.info(
-                "Stored {} of the export's {} diagram(s); the rest draw classes that were not"
-                        + " imported.",
+                "Stored {} of the {} diagram(s) offered, out of the export's {}; the rest draw"
+                        + " classes that were not imported.",
                 stored,
+                offered.size(),
                 index.getDiagrams().size());
     }
 

@@ -315,7 +315,7 @@ class XmiProfileMapperTest {
                 profileNamed("Topology"),
                 XmiPackageScope.PACKAGE_ONLY,
                 new CIMModelWriter("g", model),
-                EXTENSION_NS);
+                new XmiNamespaces.Supplied(null, EXTENSION_NS));
 
         assertThat(model.contains(resource(MODEL_NS + "TopologyVersion"), RDF.type, RDFS.Class))
                 .isTrue();
@@ -331,7 +331,7 @@ class XmiProfileMapperTest {
                 profileNamed("Topology"),
                 XmiPackageScope.PACKAGE_ONLY,
                 new CIMModelWriter("g", model),
-                EXTENSION_NS);
+                new XmiNamespaces.Supplied(null, EXTENSION_NS));
 
         assertThat(
                         model.contains(
@@ -441,7 +441,7 @@ class XmiProfileMapperTest {
                 profileNamed(profileName),
                 XmiPackageScope.WITH_SUB_PACKAGES,
                 new CIMModelWriter("g", model),
-                extensionNamespace);
+                new XmiNamespaces.Supplied(null, extensionNamespace));
         return model;
     }
 
@@ -451,7 +451,7 @@ class XmiProfileMapperTest {
                 profileNamed(profileName),
                 XmiPackageScope.WITH_SUB_PACKAGES,
                 new CIMModelWriter("g", ModelFactory.createDefaultModel()),
-                EXTENSION_NS);
+                new XmiNamespaces.Supplied(null, EXTENSION_NS));
     }
 
     private static XmiProfile profileNamed(String name) {

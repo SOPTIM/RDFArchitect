@@ -33,6 +33,7 @@
 					<ownedLiteral xmi:type="uml:EnumerationLiteral" xmi:id="EAID_LIT_TB" name="TB 170"/>
 				</packagedElement>
 			</packagedElement>
+			<packagedElement xmi:type="uml:Package" xmi:id="EAPK_NOTES" name="Notes"/>
 			<packagedElement xmi:type="uml:Package" xmi:id="EAPK_TOPOLOGY" name="Topology">
 				<packagedElement xmi:type="uml:Class" xmi:id="EAID_TOPOLOGYVERSION" name="TopologyVersion" isAbstract="true">
 					<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A03" name="baseUML" isStatic="true" isReadOnly="true">
@@ -119,12 +120,33 @@
 					<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A11" name="keyword">
 						<defaultValue xmi:type="uml:LiteralString" xmi:id="EAID_V11" value="EQ"/>
 					</ownedAttribute>
+					<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A12" name="describes">
+						<type xmi:idref="EAID_CONFIGDATASET"/>
+					</ownedAttribute>
 				</packagedElement>
+			</packagedElement>
+			<packagedElement xmi:type="uml:Package" xmi:id="EAPK_CONFIG" name="Configuration">
+				<packagedElement xmi:type="uml:Class" xmi:id="EAID_CONFIGDATASET" name="ConfigurationDataset"/>
 			</packagedElement>
 		</packagedElement>
 		<umldi:Diagram xmi:type="umldi:UMLPackageDiagram" xmi:id="EAID_DIAG_PACKAGES" isFrame="false" modelElement="EAPK_ROOT">
 			<ownedElement xmi:type="umldi:UMLCompartmentableShape" xmi:id="EAID_SH_PKG" modelElement="EAPK_TOPOLOGY">
 				<bounds xmi:type="dc:bounds" xmi:id="EAID_DB_PKG" x="7" y="7" width="100" height="40"/>
+			</ownedElement>
+		</umldi:Diagram>
+		<umldi:Diagram xmi:type="umldi:UMLClassDiagram" xmi:id="EAID_DIAG_NOTES" isFrame="false" modelElement="EAPK_NOTES">
+			<ownedElement xmi:type="umldi:UMLClassifierShape" xmi:id="EAID_SH_AP" modelElement="EAID_ACTIVEPOWER">
+				<bounds xmi:type="dc:bounds" xmi:id="EAID_DB_AP" x="40" y="50" width="254" height="86"/>
+			</ownedElement>
+		</umldi:Diagram>
+		<umldi:Diagram xmi:type="umldi:UMLClassDiagram" xmi:id="EAID_DIAG_INNER" isFrame="false" modelElement="EAPK_TOPOLOGY_INNER">
+			<ownedElement xmi:type="umldi:UMLClassifierShape" xmi:id="EAID_SH_TE2" modelElement="EAID_TERMINAL">
+				<bounds xmi:type="dc:bounds" xmi:id="EAID_DB_TE2" x="60" y="70" width="254" height="86"/>
+			</ownedElement>
+		</umldi:Diagram>
+		<umldi:Diagram xmi:type="umldi:UMLClassDiagram" xmi:id="EAID_DIAG_CONFIG" isFrame="false" modelElement="EAPK_CONFIG">
+			<ownedElement xmi:type="umldi:UMLClassifierShape" xmi:id="EAID_SH_CD" modelElement="EAID_CONFIGDATASET">
+				<bounds xmi:type="dc:bounds" xmi:id="EAID_DB_CD" x="20" y="30" width="254" height="86"/>
 			</ownedElement>
 		</umldi:Diagram>
 		<umldi:Diagram xmi:type="umldi:UMLClassDiagram" xmi:id="EAID_DIAG_TP" isFrame="false" modelElement="EAPK_TOPOLOGY">

@@ -84,7 +84,10 @@ public class ImportJobService implements ImportJobUseCase {
 
     @Override
     public Optional<UUID> startPackageImport(
-            String datasetName, UUID readJobId, List<SelectedPackageDTO> selection) {
+            String datasetName,
+            UUID readJobId,
+            List<SelectedPackageDTO> selection,
+            List<String> diagramIds) {
         dropExpiredJobs();
         var readJob = findJob(datasetName, readJobId).orElse(null);
         if (readJob == null) {
@@ -101,7 +104,7 @@ public class ImportJobService implements ImportJobUseCase {
                         exports,
                         false,
                         ImportKind.PACKAGE_IMPORT,
-                        (job, owned) -> importPackages(job, owned, selection)));
+                        (job, owned) -> importPackages(job, owned, selection, diagramIds)));
     }
 
     /**
@@ -239,7 +242,7 @@ public class ImportJobService implements ImportJobUseCase {
      * the packages become schemas is a decision that has not been made at this point.
      */
     private PackagesScanned readExports(ImportJob job, List<MultipartFile> files) {
-        return new PackagesScanned(importXmiUseCase.scanPackages(files, job));
+        return importXmiUseCase.scanPackages(files, job);
     }
 
     private GraphsImported importGraphs(
@@ -251,8 +254,13 @@ public class ImportJobService implements ImportJobUseCase {
 
     /** Builds the chosen packages out of the exports the read that found them kept. */
     private GraphsImported importPackages(
-            ImportJob job, List<MultipartFile> files, List<SelectedPackageDTO> selection) {
-        var result = importXmiUseCase.importPackages(job.getDatasetName(), files, selection, job);
+            ImportJob job,
+            List<MultipartFile> files,
+            List<SelectedPackageDTO> selection,
+            List<String> diagramIds) {
+        var result =
+                importXmiUseCase.importPackages(
+                        job.getDatasetName(), files, selection, diagramIds, job);
         return new GraphsImported(
                 result.importedGraphUris(), result.failedFileNames(), result.warnings());
     }

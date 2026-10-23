@@ -20,6 +20,7 @@ package org.rdfarchitect.xmi.read;
 import lombok.experimental.UtilityClass;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -61,8 +62,12 @@ public class XmiPackageTree {
      *     that is no profile
      * @param declaredClasses the classes in the package and its sub-packages
      * @param dependencyClasses what the closure adds on top of those
-     * @param ownClasses the classes the package declares itself, its sub-packages left out
-     * @param ownDependencyClasses what the closure adds on top of those
+     * @param ownClassIds the classes the package declares itself, its sub-packages left out, by
+     *     {@code xmi:id}. Listed rather than counted because a caller showing what a schema holds
+     *     has to name them; what the package holds with its sub-packages is the union of these down
+     *     the tree, and is not repeated here. By id and not by name, so that the two classes an
+     *     export may both call {@code String} stay two
+     * @param ownDependencyClassIds what the closure adds on top of those, the same way
      */
     public record XmiPackageNode(
             String id,
@@ -72,8 +77,8 @@ public class XmiPackageTree {
             List<String> namespaceCandidates,
             int declaredClasses,
             int dependencyClasses,
-            int ownClasses,
-            int ownDependencyClasses) {}
+            List<String> ownClassIds,
+            List<String> ownDependencyClassIds) {}
 
     /**
      * Every package that would make a schema, in the order the model declares them.
@@ -111,10 +116,23 @@ public class XmiPackageTree {
                             profile == null ? List.of() : profile.namespaceCandidates(),
                             declaredWithoutHeader.size(),
                             slice.size() - declaredWithoutHeader.size(),
-                            own.size(),
-                            ownSlice.size() - own.size()));
+                            byName(index, own),
+                            byName(index, without(ownSlice, own))));
         }
         return nodes;
+    }
+
+    /** The class ids in the order a caller would list them, which is by the name they carry. */
+    private List<String> byName(XmiIndex index, Set<String> classIds) {
+        return classIds.stream()
+                .filter(classId -> index.getClasses().containsKey(classId))
+                .sorted(Comparator.comparing(classId -> nameOf(index, classId)))
+                .toList();
+    }
+
+    private String nameOf(XmiIndex index, String classId) {
+        var name = index.getClasses().get(classId).getName();
+        return name == null ? "" : name;
     }
 
     private Set<String> without(Set<String> classes, Set<String> excluded) {

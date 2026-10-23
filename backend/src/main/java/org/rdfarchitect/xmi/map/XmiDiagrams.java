@@ -50,6 +50,23 @@ import java.util.UUID;
 public class XmiDiagrams {
 
     /**
+     * How far apart to pull what the export drew close together.
+     *
+     * <p>Both editors size a class box to its contents, and RDFArchitect's is the larger of the
+     * two: a box of ours is at least 180 pixels wide against a median of 153 across the CGMES 3.0
+     * model, and its rows are set at 20 pixels against some 10 there. Placed at the coordinates as
+     * drawn, the boxes crowd each other and overlap. Multiplying the coordinates leaves the
+     * arrangement exactly as it was and gives them the room they need.
+     *
+     * <p>One factor for every diagram, not one worked out per diagram from the boxes it draws. That
+     * the exports draw boxes of different sizes is not a difference in scale to correct for: the
+     * editor sizes them by content, 70 pixels high for a class with no attributes and 174 for one
+     * with eleven, and ours grow with the same content. Dividing by what a diagram happens to draw
+     * would squash the diagrams of large classes and blow up those of small ones.
+     */
+    private static final float SPREAD = 1.5f;
+
+    /**
      * Where one class of the export ended up.
      *
      * @param uuid the uuid it was written under
@@ -68,9 +85,23 @@ public class XmiDiagrams {
     /**
      * A diagram of the export, ready to be stored.
      *
+     * @param exportId the diagram's {@code xmi:id}, which is how a caller names it when choosing;
+     *     {@link #id} is minted here and means nothing to anyone who has not seen it
      * @param classes in the z-order the export draws them, backmost first
      */
-    public record ImportedDiagram(UUID id, String name, List<PlacedClass> classes) {}
+    public record ImportedDiagram(
+            UUID id, String exportId, String name, List<PlacedClass> classes) {
+
+        /** The schema this belongs to, or {@code null} when it draws across several. */
+        public String schemaUri() {
+            var schemas =
+                    classes.stream()
+                            .map(placed -> placed.location().graphUri())
+                            .distinct()
+                            .toList();
+            return schemas.size() == 1 ? schemas.getFirst() : null;
+        }
+    }
 
     /**
      * The diagrams of the export that the written classes fully account for.
@@ -101,7 +132,10 @@ public class XmiDiagrams {
             drawn.add(
                     new DrawnClass(
                             new PlacedClass(
-                                    location, cimClass.getName(), shape.getX(), shape.getY()),
+                                    location,
+                                    cimClass.getName(),
+                                    shape.getX() * SPREAD,
+                                    shape.getY() * SPREAD),
                             shape.getZPosition()));
         }
         if (drawn.isEmpty()) {
@@ -113,6 +147,7 @@ public class XmiDiagrams {
         return Optional.of(
                 new ImportedDiagram(
                         UUID.randomUUID(),
+                        diagram.getId(),
                         nameOf(index, diagram),
                         drawn.stream().map(DrawnClass::placed).toList()));
     }

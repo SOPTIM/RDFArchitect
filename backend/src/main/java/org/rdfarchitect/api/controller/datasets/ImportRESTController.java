@@ -24,8 +24,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.services.update.graph.ImportJobUseCase;
+import org.rdfarchitect.services.update.graph.ImportSelectionDTO;
 import org.rdfarchitect.services.update.graph.PrefixResolutionDTO;
-import org.rdfarchitect.services.update.graph.SelectedPackageDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -164,17 +164,18 @@ public class ImportRESTController {
                     String datasetName,
             @Parameter(description = "The id of the job that read the exports.") @PathVariable
                     UUID jobId,
-            @Parameter(description = "The packages to import, in the order they are to be built.")
-                    @RequestBody
-                    List<SelectedPackageDTO> packages) {
+            @Parameter(description = "What to import out of the export.") @RequestBody
+                    ImportSelectionDTO selection) {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/imports/{{}}/packages\" from \"{}\": {} package(s).",
                 datasetName,
                 jobId,
                 originURL,
-                packages.size());
+                selection.packages().size());
 
-        var importJobId = importJobUseCase.startPackageImport(datasetName, jobId, packages);
+        var importJobId =
+                importJobUseCase.startPackageImport(
+                        datasetName, jobId, selection.packages(), selection.diagramIds());
 
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/imports/{{}}/packages\" to \"{}\": job {}.",

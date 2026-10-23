@@ -18,6 +18,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+    classNamesOf,
+    declaredOf,
+    dependenciesOf,
+    dependencyNamesOf,
     describeSize,
     groupState,
     hasOwnRow,
@@ -30,6 +34,7 @@ import {
     sizeOf,
     toggledGroup,
     toggledSchema,
+    withoutWrapper,
 } from "../../src/lib/utils/packageTree.svelte.js";
 
 /**
@@ -39,7 +44,11 @@ import {
 const PACKAGES = [
     pkg("model", null, "Model", { declared: 100 }),
     pkg("cim", "model", "TC57CIM", { declared: 60 }),
-    pkg("iec", "cim", "IEC61970", { declared: 40, own: 7, ownDeps: 2 }),
+    pkg("iec", "cim", "IEC61970", {
+        declared: 40,
+        own: [0, 1, 2, 3, 4, 5, 6],
+        ownDeps: [7, 8],
+    }),
     pkg("core", "iec", "Core", { declared: 10, dependencies: 3 }),
     pkg("profiles", "model", "TC57CIMProfiles", { declared: 40 }),
     pkg("topology", "profiles", "TopologyProfile", {
@@ -57,8 +66,8 @@ function pkg(
     {
         declared = 0,
         dependencies = 0,
-        own = 0,
-        ownDeps = 0,
+        own = [],
+        ownDeps = [],
         profile = false,
         candidates = [],
     } = {},
@@ -74,7 +83,7 @@ function pkg(
         declaredClasses: declared,
         dependencyClasses: dependencies,
         ownClasses: own,
-        ownDependencyClasses: ownDeps,
+        ownDependencies: ownDeps,
     };
 }
 
@@ -104,6 +113,46 @@ describe("nest", () => {
         const orphaned = [pkg("core", "missing", "Core", { declared: 10 })];
 
         expect(nest(orphaned).map(found => found.name)).toEqual(["Core"]);
+    });
+});
+
+describe("withoutWrapper", () => {
+    it("resolves the one package everything hangs under, naming the tree after it", () => {
+        const tree = withoutWrapper(PACKAGES);
+
+        expect(tree.title).toBe("Model");
+        expect(tree.nodes.map(node => node.id)).toEqual(["cim", "profiles"]);
+    });
+
+    it("keeps a single outermost package that becomes a schema itself", () => {
+        const alone = [pkg("solo", null, "Solo", { declared: 4 })];
+
+        expect(withoutWrapper(alone)).toEqual({
+            title: null,
+            nodes: nest(alone),
+        });
+    });
+
+    it("keeps one that declares classes beside its sub-packages, which are pickable", () => {
+        const wrapping = [
+            pkg("root", null, "Root", { declared: 9, own: [0, 1] }),
+            pkg("inner", "root", "Inner", { declared: 7 }),
+        ];
+
+        expect(withoutWrapper(wrapping).title).toBeNull();
+    });
+
+    it("keeps several outermost packages apart, there being no one wrapper", () => {
+        const two = [
+            pkg("one", null, "One", { declared: 3 }),
+            pkg("two", null, "Two", { declared: 3 }),
+        ];
+
+        expect(withoutWrapper(two).nodes).toHaveLength(2);
+    });
+
+    it("reports nothing for an export that was never read", () => {
+        expect(withoutWrapper([])).toEqual({ title: null, nodes: [] });
     });
 });
 
@@ -229,21 +278,34 @@ describe("selectionOf", () => {
         expect(entry.name).toBe("TopologyProfile");
     });
 
-    it("passes a supplied extension namespace to every chosen package", () => {
-        const selection = selectionOf(
-            PACKAGES,
-            new Set(["core", "topology"]),
-            "  https://example.com/eu#  ",
-        );
+    it("passes the supplied namespaces to every chosen package", () => {
+        const selection = selectionOf(PACKAGES, new Set(["core", "topology"]), {
+            model: "  https://example.com/cim#  ",
+            extension: "  https://example.com/eu#  ",
+        });
 
-        expect(selection.map(entry => entry.extensionNamespace)).toEqual([
-            "https://example.com/eu#",
-            "https://example.com/eu#",
+        expect(
+            selection.map(entry => [
+                entry.modelNamespace,
+                entry.extensionNamespace,
+            ]),
+        ).toEqual([
+            ["https://example.com/cim#", "https://example.com/eu#"],
+            ["https://example.com/cim#", "https://example.com/eu#"],
         ]);
     });
 
+    it("sends no namespace at all when none was given", () => {
+        const [entry] = selectionOf(PACKAGES, new Set(["topology"]));
+
+        expect(entry.modelNamespace).toBeNull();
+        expect(entry.extensionNamespace).toBeNull();
+    });
+
     it("sends no extension namespace when none was typed", () => {
-        const [entry] = selectionOf(PACKAGES, new Set(["topology"]), "   ");
+        const [entry] = selectionOf(PACKAGES, new Set(["topology"]), {
+            extension: "   ",
+        });
 
         expect(entry.extensionNamespace).toBeNull();
     });
@@ -270,6 +332,90 @@ describe("describeSize", () => {
         expect(describeSize(node("iec"), PackageScope.PACKAGE_ONLY)).toBe(
             "7 classes + 2 dependencies",
         );
+    });
+});
+
+describe("declaredOf and dependenciesOf", () => {
+    it("report the two halves of what a schema holds", () => {
+        expect(declaredOf(node("topology"))).toBe(26);
+        expect(dependenciesOf(node("topology"))).toBe(7);
+    });
+
+    it("count only the package itself for an own-classes row", () => {
+        expect(declaredOf(node("iec"), PackageScope.PACKAGE_ONLY)).toBe(7);
+        expect(dependenciesOf(node("iec"), PackageScope.PACKAGE_ONLY)).toBe(2);
+    });
+
+    it("read a package that states neither as holding nothing", () => {
+        expect(declaredOf({})).toBe(0);
+        expect(dependenciesOf({})).toBe(0);
+    });
+});
+
+describe("classNamesOf and dependencyNamesOf", () => {
+    // What the read reports: a pool of names, and per package the classes it declares on its own.
+    // Two classes of one name stay two, which is why they are referred to by position.
+    const NAMES = ["Terminal", "TopologicalNode", "String", "String", "Float"];
+    const CORE = {
+        id: "core",
+        ownClasses: [1],
+        ownDependencies: [2],
+        children: [],
+    };
+    const TOPOLOGY = {
+        id: "topology",
+        ownClasses: [0],
+        ownDependencies: [2, 4],
+        children: [CORE],
+    };
+
+    it("unions what the package and its sub-packages declare", () => {
+        expect(
+            classNamesOf(TOPOLOGY, PackageScope.WITH_SUB_PACKAGES, NAMES),
+        ).toEqual(["Terminal", "TopologicalNode"]);
+    });
+
+    it("takes only the package itself for an own-classes row", () => {
+        expect(
+            classNamesOf(TOPOLOGY, PackageScope.PACKAGE_ONLY, NAMES),
+        ).toEqual(["Terminal"]);
+    });
+
+    it("unions the dependencies and names each of them once", () => {
+        // Both packages depend on the same String; it is one dependency, not two.
+        expect(
+            dependencyNamesOf(TOPOLOGY, PackageScope.WITH_SUB_PACKAGES, NAMES),
+        ).toEqual(["Float", "String"]);
+    });
+
+    it("leaves out a dependency the selection declares anyway", () => {
+        const declaringIt = {
+            ...TOPOLOGY,
+            children: [{ ...CORE, ownClasses: [1, 2], ownDependencies: [] }],
+        };
+
+        expect(
+            dependencyNamesOf(
+                declaringIt,
+                PackageScope.WITH_SUB_PACKAGES,
+                NAMES,
+            ),
+        ).toEqual(["Float"]);
+    });
+
+    it("keeps two classes of one name apart", () => {
+        const both = { ...CORE, ownClasses: [2, 3], ownDependencies: [] };
+
+        expect(classNamesOf(both, PackageScope.PACKAGE_ONLY, NAMES)).toEqual([
+            "String",
+            "String",
+        ]);
+    });
+
+    it("reads a package the pool says nothing about as holding nothing", () => {
+        expect(
+            classNamesOf({ children: [] }, PackageScope.WITH_SUB_PACKAGES, []),
+        ).toEqual([]);
     });
 });
 

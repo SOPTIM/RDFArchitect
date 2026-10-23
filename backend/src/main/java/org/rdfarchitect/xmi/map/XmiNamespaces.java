@@ -53,9 +53,33 @@ import java.util.Objects;
  * under {@code http://entsoe.eu/CIM/SchemaExtension/3/1#} — a value the file does not contain and
  * nothing in it implies. It is therefore left empty rather than guessed at, and whoever runs the
  * import has to supply it.
+ *
+ * <p>The model and the extension namespace can both be overruled. An export carries the namespaces
+ * of the generation it was made in, which are not always the ones the schema is to be written in —
+ * the CGMES 3.0 model states {@code https://cim.ucaiug.io/ns#} and {@code
+ * https://cim.ucaiug.io/ns/eu#} where its released RDFS uses {@code http://iec.ch/TC57/CIM100#} and
+ * {@code http://iec.ch/TC57/CIM100-European#}. The stated values are what the caller is offered;
+ * which ones are meant is the caller's to say. The profile namespace is not among them: it names
+ * one profile rather than a generation, and the export is the only thing that knows it.
  */
 @Getter
 public final class XmiNamespaces {
+
+    /**
+     * Namespaces handed to the import, each taking precedence over what the export states.
+     *
+     * <p>An export carries the namespaces of the generation it was made in, which is not always the
+     * one a schema is to be written in: the CGMES 3.0 model states {@code
+     * https://cim.ucaiug.io/ns#} and {@code https://cim.ucaiug.io/ns/eu#} where its released RDFS
+     * uses {@code http://iec.ch/TC57/CIM100#} and {@code http://iec.ch/TC57/CIM100-European#}.
+     * Which is meant is the caller's to say, so either can be overruled; {@code null} leaves the
+     * stated one.
+     */
+    public record Supplied(String model, String extension) {
+
+        /** Nothing supplied, which leaves the export to state both. */
+        public static final Supplied NONE = new Supplied(null, null);
+    }
 
     /** What the prefix table calls the namespace nearly every resource of a profile gets. */
     private static final String MODEL_PREFIX = "cim";
@@ -85,30 +109,74 @@ public final class XmiNamespaces {
      *     of the profile can be given a URI
      */
     public static XmiNamespaces of(XmiIndex index, XmiProfile profile) {
-        return of(index, profile, null);
+        return of(index, profile, Supplied.NONE);
     }
 
     /**
-     * Works out the namespaces of one profile, with the extension namespace supplied from outside.
+     * Works out the namespaces of one profile, with what the caller supplied taking precedence.
      *
-     * @param suppliedExtension what to use where the export states no extension namespace of its
-     *     own, or {@code null} to leave it absent
-     * @throws XmiImportRefusal when the export states no model namespace
+     * @param supplied what to name the resources with, see {@link Supplied}
+     * @throws XmiImportRefusal when neither the caller nor the export states a model namespace
      */
-    public static XmiNamespaces of(XmiIndex index, XmiProfile profile, String suppliedExtension) {
-        var model = modelNamespace(index);
+    public static XmiNamespaces of(XmiIndex index, XmiProfile profile, Supplied supplied) {
+        var model = isUsable(supplied.model()) ? supplied.model().strip() : modelNamespace(index);
         if (model == null) {
             throw new XmiImportRefusal(
                     profile.name(),
-                    "The export states no model namespace. It declares neither a 'cim' entry in a"
-                            + " namespace prefix table nor a 'namespaceUML' attribute on one of its"
-                            + " metadata classes, and without one no class can be given a URI.");
+                    "No model namespace was given and the export states none. It declares"
+                            + " neither a 'cim' entry in a namespace prefix table nor a"
+                            + " 'namespaceUML' attribute on one of its metadata classes, and"
+                            + " without one no class can be given a URI.");
         }
-        var stated = extensionNamespace(index);
         return new XmiNamespaces(
                 model,
-                stated != null ? stated : suppliedExtension,
+                isUsable(supplied.extension())
+                        ? supplied.extension().strip()
+                        : extensionNamespace(index),
                 profileNamespace(index, profile));
+    }
+
+    /**
+     * Whether the export holds anything the extension namespace would name, which is what makes
+     * asking for one worthwhile at all.
+     *
+     * <p>An element needs it when it is stereotyped {@code Entsoe} or {@code European}: a class, in
+     * which case so is everything it holds, an attribute, or an association end. Nothing else does
+     * — the enum literals carry no stereotype of their own and follow their class.
+     */
+    public static boolean hasExtensionElements(XmiIndex index) {
+        for (var end : index.getAssociationEnds()) {
+            if (XmiStereotypes.isExtension(end.getStereotypes())) {
+                return true;
+            }
+        }
+        for (var cimClass : index.getClasses().values()) {
+            if (XmiStereotypes.isExtension(cimClass.getStereotypes())
+                    || cimClass.getAttributes().stream()
+                            .anyMatch(
+                                    attribute ->
+                                            XmiStereotypes.isExtension(
+                                                    attribute.getStereotypes()))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** What the export names nearly every resource with, or {@code null} when it states none. */
+    public static String modelNamespaceOf(XmiIndex index) {
+        return modelNamespace(index);
+    }
+
+    /**
+     * What the export names its extension-stereotyped elements with, or {@code null} when it states
+     * none and one has to be supplied with the import.
+     *
+     * <p>A property of the export as a whole, so it can be answered before a profile is chosen —
+     * which is what lets a caller show it rather than ask for it.
+     */
+    public static String extensionNamespaceOf(XmiIndex index) {
+        return extensionNamespace(index);
     }
 
     /** Whether the elements stereotyped as extensions can be given a URI at all. */
