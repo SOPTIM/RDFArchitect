@@ -21,7 +21,7 @@ A colour legend and classic diagram conventions are used throughout: stereotypes
 
 ## Getting data into RDFArchitect
 
-There are three ways content lands in the editor.
+There are four ways content lands in the editor.
 
 ### Import a schema (File → Import → Schema (RDFS))
 
@@ -32,6 +32,29 @@ Supported input formats are **RDF/XML (.rdf)**, **Turtle (.ttl)**, and **N-Tripl
 The dialog stays open while the import runs and shows a progress bar together with one row per file, so you can see which file is being read, checked and stored. When it is done, the same list reports what was imported, which files could not be imported, and which properties were stored but will not be displayed (properties without the CIM stereotype or association metadata). Cancelling stops the import after the file it is currently working on and keeps the schemas that were already imported. Closing the dialog opens the first imported schema.
 
 ![Import schema dialog](/img/screenshots/import-schema.png)
+
+### Import a model (File → Import → Model (Enterprise Architect XMI)) {#xmi-import}
+
+The other entry point for CGMES: the Enterprise Architect export the profiles are maintained in,
+rather than the RDFS released from it. One export becomes **one workspace of its own**, so a name a
+workspace already has is refused. Upload the entire model including any possible metadata to
+prevent missing references; which packages are actually imported is chosen afterwards.
+
+Every package can become a schema, and a schema is the package you pick plus everything its classes
+need, which is what the two numbers per row mean: `26 classes + 7 dependencies`. A package marked
+`profile` declares a namespace of its own and is taken whole, the way a release ships it. The
+export's class diagrams sit in the tree under their package; one drawing a class you did not pick
+is greyed out.
+
+Two namespaces decide what the resources are called, **Model** and **Extension**, and both can be
+changed in the last step: an export carries the namespaces of the generation it was made in, which
+are not always the ones a schema is to be written in. The rest of the prefix table comes along
+unchanged.
+
+Where something could not be carried over as the export states it, the import reports it as
+`n warnings`: attributes typed with something the export does not declare, classes declared more
+than once, and header fields no ontology field matches. Such an attribute keeps its type as a
+dangling reference, so importing the package that declares the type completes it.
 
 ### Import a SHACL file (File → Import → Constraints (SHACL))
 
