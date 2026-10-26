@@ -59,7 +59,7 @@
         "elkjs": "^0.12.0",
         "html-to-image": "^1.11.13",
         "jszip": "^3.10.1",
-        "mermaid": "^11.2.1",
+        "mermaid": "^12.0.0",
         "svelte-collapsible": "^0.3.1",
         "svelte-fa": "^4.0.4",
         "svelte-splitpanes": "^8.0.9",
