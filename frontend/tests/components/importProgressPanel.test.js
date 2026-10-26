@@ -15,8 +15,8 @@
  *
  */
 
-import { mount, unmount } from "svelte";
-import { afterEach, describe, expect, test } from "vitest";
+import { flushSync, mount, unmount } from "svelte";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import ImportProgressPanel from "$lib/components/ImportProgressPanel.svelte";
 import {
@@ -33,7 +33,22 @@ function render(progress) {
     target = document.createElement("div");
     document.body.appendChild(target);
     mounted = mount(ImportProgressPanel, { target, props: { progress } });
+    // The panel derives from derived state, which settles a tick after mounting.
+    flushSync();
     return target;
+}
+
+/** The rendered text with its line breaks collapsed, which is how one reads it. */
+function textOf(node) {
+    return node.textContent.replace(/\s+/g, " ").trim();
+}
+
+/** Clicks the line that opens the list of what could not be carried over. */
+function openWarnings(panel) {
+    [...panel.querySelectorAll("button")]
+        .find(button => button.textContent.includes("warning"))
+        .click();
+    flushSync();
 }
 
 function statusOf(files, state) {
@@ -66,6 +81,13 @@ function fileOf(index, fileName, state, extra = {}) {
         ...extra,
     };
 }
+
+// The issue table can open the schema a finding points to, which drags in the generated client
+// and the router. Neither is what these tests are about.
+vi.mock("$lib/actions/validationActions.js", () => ({
+    canOpenOccurrence: () => false,
+    openOccurrence: () => {},
+}));
 
 afterEach(() => {
     if (mounted) unmount(mounted);
@@ -132,7 +154,7 @@ describe("ImportProgressPanel", () => {
         expect(panel.textContent).toContain("could not be imported");
     });
 
-    test("lists the properties that will not be displayed", () => {
+    test("lists what could not be carried over, with the reason each line gives", () => {
         const progress = new ImportProgress();
         progress.uploaded();
         const status = statusOf(
@@ -142,17 +164,34 @@ describe("ImportProgressPanel", () => {
         status.outcome.warnings = [
             {
                 fileName: "schema.ttl",
-                undisplayableProperties: ["color", "owner"],
+                graphUri: "http://graph#schema",
+                items: [
+                    {
+                        resource: "color",
+                        reason: "stored, but carries no CIM stereotype",
+                    },
+                    {
+                        resource: "license",
+                        reason: "no ontology field of that name",
+                    },
+                ],
             },
         ];
         progress.apply(status);
 
         const panel = render(progress);
 
-        expect(panel.textContent).toContain(
-            "Some properties will not be displayed",
-        );
-        expect(panel.textContent).toContain("schema.ttl: color, owner");
+        // The panel says how many there are; the list itself is a click away.
+        expect(textOf(panel)).toContain("2 warnings");
+        expect(textOf(panel)).not.toContain("license");
+
+        openWarnings(panel);
+
+        // The dialog lists them the way the validation report lists its findings.
+        const dialog = textOf(document.querySelector("[role='dialog']"));
+        expect(dialog).toContain("schema.ttl");
+        expect(dialog).toContain("license");
+        expect(dialog).toContain("no ontology field of that name");
     });
 
     test("lists a warning per file even when the same file was imported twice", () => {
@@ -168,15 +207,25 @@ describe("ImportProgressPanel", () => {
             JobState.COMPLETED,
         );
         status.outcome.warnings = [
-            { fileName: "schema.ttl", undisplayableProperties: ["color"] },
-            { fileName: "schema.ttl", undisplayableProperties: ["owner"] },
+            {
+                fileName: "schema.ttl",
+                graphUri: "http://graph#schema",
+                items: [{ resource: "color", reason: "no stereotype" }],
+            },
+            {
+                fileName: "schema.ttl",
+                graphUri: "http://graph#schema_1",
+                items: [{ resource: "owner", reason: "no stereotype" }],
+            },
         ];
         progress.apply(status);
 
         const panel = render(progress);
+        openWarnings(panel);
 
-        expect(panel.textContent).toContain("schema.ttl: color");
-        expect(panel.textContent).toContain("schema.ttl: owner");
+        const dialog = textOf(document.querySelector("[role='dialog']"));
+        expect(dialog).toContain("color");
+        expect(dialog).toContain("owner");
     });
 
     test("explains an import that ended unexpectedly", () => {
