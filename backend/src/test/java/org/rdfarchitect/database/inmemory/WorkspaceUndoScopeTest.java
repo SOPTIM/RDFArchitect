@@ -245,17 +245,17 @@ class WorkspaceUndoScopeTest {
             createGraph(GRAPH_A);
             String generated;
             try (var transaction = workspace.begin(ReadWrite.READ)) {
-                generated = transaction.crossProfileInfo().getColor(GRAPH_A);
+                generated = transaction.crossProfileColors().getColor(GRAPH_A);
             }
             try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-                transaction.crossProfileInfo().setColor(GRAPH_A, "#123456");
+                transaction.crossProfileColors().setColor(GRAPH_A, "#123456");
                 transaction.commit("changed the colour");
             }
 
             workspace.undo();
 
             try (var transaction = workspace.begin(ReadWrite.READ)) {
-                assertThat(transaction.crossProfileInfo().getColor(GRAPH_A)).isEqualTo(generated);
+                assertThat(transaction.crossProfileColors().getColor(GRAPH_A)).isEqualTo(generated);
             }
         }
 

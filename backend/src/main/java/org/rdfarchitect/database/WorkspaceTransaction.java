@@ -70,11 +70,19 @@ public interface WorkspaceTransaction extends AutoCloseable {
     DiagramLayout layout();
 
     /**
-     * Returns the cross-profile diagram of the workspace.
+     * Returns the colours the graphs of the workspace are drawn in on its cross-profile diagram.
      *
-     * @return the cross-profile diagram information
+     * @return the cross-profile colours
      */
-    CrossProfileColors crossProfileInfo();
+    CrossProfileColors crossProfileColors();
+
+    /**
+     * Returns the id of the workspace's cross-profile diagram. It identifies the workspace's merged
+     * view for as long as the session lasts and is not something a change can alter.
+     *
+     * @return the diagram id
+     */
+    UUID crossProfileDiagramId();
 
     /**
      * Returns the namespace prefixes shared by all graphs of the workspace.

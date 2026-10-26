@@ -95,7 +95,7 @@ public class CustomDiagramService
     @Override
     public UUID getCrossProfileDiagramId(String datasetName) {
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
-            return transaction.crossProfileInfo().getCrossProfileDiagramUUID();
+            return transaction.crossProfileDiagramId();
         }
     }
 
@@ -124,7 +124,7 @@ public class CustomDiagramService
         UUID crossProfileDiagramUUID;
         Map<String, MergedClassDTO> mergeMap;
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
-            crossProfileDiagramUUID = transaction.crossProfileInfo().getCrossProfileDiagramUUID();
+            crossProfileDiagramUUID = transaction.crossProfileDiagramId();
             mergeMap = mergeProfiles(profiles, graphDTOsMap);
         }
         if (doLayout) {
@@ -365,7 +365,7 @@ public class CustomDiagramService
             for (var graphUri : transaction.graphUris()) {
                 colorsDTO
                         .getGraphColors()
-                        .put(graphUri, transaction.crossProfileInfo().getColor(graphUri));
+                        .put(graphUri, transaction.crossProfileColors().getColor(graphUri));
             }
         }
         return colorsDTO;
@@ -377,7 +377,7 @@ public class CustomDiagramService
             for (var graphUri : transaction.graphUris()) {
                 if (dto.getGraphColors().containsKey(graphUri)) {
                     transaction
-                            .crossProfileInfo()
+                            .crossProfileColors()
                             .setColor(graphUri, dto.getGraphColors().get(graphUri));
                 }
             }

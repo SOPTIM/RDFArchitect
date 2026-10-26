@@ -586,7 +586,7 @@ public class UpdateClassLayoutService
             var model = transaction.layout().getDiagramLayoutModel();
 
             var diagramUUIDs = new LinkedHashSet<UUID>();
-            diagramUUIDs.add(transaction.crossProfileInfo().getCrossProfileDiagramUUID());
+            diagramUUIDs.add(transaction.crossProfileDiagramId());
             diagramUUIDs.addAll(transaction.diagrams().keySet());
 
             for (var diagram : diagramUUIDs) {

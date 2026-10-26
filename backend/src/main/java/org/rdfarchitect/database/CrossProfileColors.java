@@ -17,10 +17,10 @@
 
 package org.rdfarchitect.database;
 
-import java.util.UUID;
-
 /**
- * How the graphs of a workspace are told apart on its cross-profile diagram.
+ * How the graphs of a workspace are told apart on its cross-profile diagram: a colour per graph,
+ * which takes part in the transaction and can be undone like any other change. The id of the
+ * diagram they are drawn on is not a colour and is asked of the transaction instead.
  *
  * <p>What a caller may do with the colours, as opposed to what the implementation also has to offer
  * its workspace. The implementation is a transaction participant and therefore carries {@code
@@ -45,7 +45,4 @@ public interface CrossProfileColors {
      * @param color the colour to use
      */
     void setColor(String graphUri, String color);
-
-    /** Returns the id of the workspace's cross-profile diagram. */
-    UUID getCrossProfileDiagramUUID();
 }

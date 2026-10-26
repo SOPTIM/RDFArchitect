@@ -217,8 +217,13 @@ public class Workspace {
         }
 
         @Override
-        public CrossProfileDiagramInfo crossProfileInfo() {
+        public CrossProfileDiagramInfo crossProfileColors() {
             return crossProfileDiagramInfo;
+        }
+
+        @Override
+        public UUID crossProfileDiagramId() {
+            return crossProfileDiagramInfo.getCrossProfileDiagramUUID();
         }
 
         @Override
