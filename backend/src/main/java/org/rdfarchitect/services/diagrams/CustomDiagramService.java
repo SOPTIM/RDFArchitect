@@ -93,6 +93,13 @@ public class CustomDiagramService
     }
 
     @Override
+    public UUID getCrossProfileDiagramId(String datasetName) {
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            return transaction.crossProfileInfo().getCrossProfileDiagramUUID();
+        }
+    }
+
+    @Override
     public CrossProfileDiagramDTO getCrossProfileDiagram(String datasetName, boolean doLayout) {
         return getCrossProfileDiagram(datasetName, doLayout, loadProfiles(datasetName));
     }

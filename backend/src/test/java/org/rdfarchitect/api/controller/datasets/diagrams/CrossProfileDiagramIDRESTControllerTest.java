@@ -20,40 +20,32 @@ package org.rdfarchitect.api.controller.datasets.diagrams;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.WorkspaceTransaction;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
+import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
 import org.springframework.http.HttpHeaders;
 
 import java.util.UUID;
 
 class CrossProfileDiagramIDRESTControllerTest {
 
-    private DatabasePort databasePort;
+    private GetCustomDiagramsUseCase getCustomDiagramsUseCase;
     private CrossProfileDiagramIDRESTController controller;
 
     @BeforeEach
     void setUp() {
-        databasePort = mock(DatabasePort.class);
-        controller = new CrossProfileDiagramIDRESTController(databasePort);
+        getCustomDiagramsUseCase = mock(GetCustomDiagramsUseCase.class);
+        controller = new CrossProfileDiagramIDRESTController(getCustomDiagramsUseCase);
     }
 
     @Test
     void getCrossProfileDiagramId_validDataset_returnsUUIDString() {
         var uuid = UUID.randomUUID();
-        var crossProfileDiagramInfo = mock(CrossProfileDiagramInfo.class);
-        when(crossProfileDiagramInfo.getCrossProfileDiagramUUID()).thenReturn(uuid);
-        var transaction = mock(WorkspaceTransaction.class);
-        when(transaction.crossProfileInfo()).thenReturn(crossProfileDiagramInfo);
-        when(databasePort.beginTransaction("my-dataset", ReadWrite.READ)).thenReturn(transaction);
+        when(getCustomDiagramsUseCase.getCrossProfileDiagramId("my-dataset")).thenReturn(uuid);
 
         var result = controller.getCrossProfileDiagramId(HttpHeaders.ORIGIN, "my-dataset");
 
         assertThat(result).isEqualTo(uuid.toString());
-        verify(databasePort).beginTransaction("my-dataset", ReadWrite.READ);
-        verify(crossProfileDiagramInfo).getCrossProfileDiagramUUID();
+        verify(getCustomDiagramsUseCase).getCrossProfileDiagramId("my-dataset");
     }
 }
