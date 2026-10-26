@@ -348,7 +348,7 @@ public class Workspace {
 
     /** Returns whether the workspace has a change that can be undone. */
     public boolean canUndo() {
-        try (var transaction = begin(ReadWrite.READ)) {
+        try (var _ = begin(ReadWrite.READ)) {
             return changeLog.canUndo();
         }
     }
@@ -359,14 +359,14 @@ public class Workspace {
      * @return the change an undo would take back
      */
     public WorkspaceChangeLogEntry undoPreview() {
-        try (var transaction = begin(ReadWrite.READ)) {
+        try (var _ = begin(ReadWrite.READ)) {
             return changeLog.undoPreview();
         }
     }
 
     /** Returns whether the workspace has an undone change that can be reapplied. */
     public boolean canRedo() {
-        try (var transaction = begin(ReadWrite.READ)) {
+        try (var _ = begin(ReadWrite.READ)) {
             return changeLog.canRedo();
         }
     }
@@ -377,7 +377,7 @@ public class Workspace {
      * @return what was undone and what is left to undo or redo
      */
     public WorkspaceHistoryStep undo() {
-        try (var transaction = begin(ReadWrite.WRITE)) {
+        try (var _ = begin(ReadWrite.WRITE)) {
             return stepOf(changeLog.undo());
         }
     }
@@ -388,7 +388,7 @@ public class Workspace {
      * @return what was redone and what is left to undo or redo
      */
     public WorkspaceHistoryStep redo() {
-        try (var transaction = begin(ReadWrite.WRITE)) {
+        try (var _ = begin(ReadWrite.WRITE)) {
             return stepOf(changeLog.redo());
         }
     }
@@ -403,14 +403,14 @@ public class Workspace {
      * @param versionId the change to restore to
      */
     public void restoreToVersion(UUID versionId) {
-        try (var transaction = begin(ReadWrite.WRITE)) {
+        try (var _ = begin(ReadWrite.WRITE)) {
             changeLog.restoreTo(versionId);
         }
     }
 
     /** Returns the recorded changes of the workspace, newest first. */
     public List<WorkspaceChangeLogEntry> getChangeHistory() {
-        try (var transaction = begin(ReadWrite.READ)) {
+        try (var _ = begin(ReadWrite.READ)) {
             return changeLog.undoHistory();
         }
     }
@@ -505,7 +505,7 @@ public class Workspace {
 
     /** Returns a snapshot of the current graph URIs. */
     public List<String> listGraphUris() {
-        try (var transaction = begin(ReadWrite.READ)) {
+        try (var _ = begin(ReadWrite.READ)) {
             return graphs.uris();
         }
     }
@@ -516,7 +516,7 @@ public class Workspace {
 
     /** Returns the namespace prefixes shared by all graphs of the workspace. */
     public PrefixMappingReadOnly getPrefixMapping() {
-        try (var transaction = begin(ReadWrite.READ)) {
+        try (var _ = begin(ReadWrite.READ)) {
             return prefixes.readOnlyView();
         }
     }
