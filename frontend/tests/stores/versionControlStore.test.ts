@@ -436,7 +436,7 @@ describe("versionControlStore", () => {
     });
 
     // -------------------------------------------------------------------------
-    describe("one step at a time", () => {
+    describe("presses that follow one another", () => {
         beforeEach(() => {
             vi.mocked(editorState.selectedWorkspace.getValue).mockReturnValue(
                 WORKSPACE,
@@ -451,9 +451,23 @@ describe("versionControlStore", () => {
             });
         });
 
-        test("a held shortcut does not put several undos on the wire at once", async () => {
-            // Every request takes the workspace lock, so overlapping steps queue
-            // up on it and hold a request thread each until they time out.
+        test("every press takes a step of its own", async () => {
+            vi.mocked(api.undo).mockResolvedValue({
+                data: { change: { message: "a change" } },
+                error: undefined,
+            });
+
+            await store.undo(WORKSPACE);
+            const second = await store.undo(WORKSPACE);
+
+            expect(second.skipped).toBeUndefined();
+            expect(api.undo).toHaveBeenCalledTimes(2);
+        });
+
+        test("a press during a running step waits for it instead of being dropped", async () => {
+            // Both steps run, but never at the same time: one takes the
+            // workspace lock and sets off a reload of the editor, and two of
+            // those at once only make each other slower.
             let running = 0;
             let highWaterMark = 0;
             vi.mocked(api.undo).mockImplementation(async () => {
@@ -467,16 +481,15 @@ describe("versionControlStore", () => {
                 };
             });
 
-            await Promise.all([
-                store.undo(WORKSPACE),
-                store.undo(WORKSPACE),
-                store.undo(WORKSPACE),
-            ]);
+            await Promise.all(
+                Array.from({ length: 5 }, () => store.undo(WORKSPACE)),
+            );
 
+            expect(api.undo).toHaveBeenCalledTimes(5);
             expect(highWaterMark).toBe(1);
         });
 
-        test("a press that was ignored says so, so nothing reloads for it", async () => {
+        test("a press that waited reports its own result, so it reloads too", async () => {
             vi.mocked(api.undo).mockImplementation(async () => {
                 await new Promise(resolve => setTimeout(resolve, 0));
                 return {
@@ -490,81 +503,30 @@ describe("versionControlStore", () => {
                 store.undo(WORKSPACE),
             ]);
 
+            expect(first.error).toBeNull();
             expect(first.skipped).toBeUndefined();
-            expect(second.skipped).toBe(true);
+            expect(second.error).toBeNull();
+            expect(second.skipped).toBeUndefined();
         });
 
-        test("presses made while one runs are ignored, not collected", async () => {
-            // Key repeat fires far faster than a step completes. Remembering
-            // the presses would keep the editor busy long after the key was
-            // released.
+        test("a redo pressed during an undo runs after it", async () => {
+            const order: string[] = [];
             vi.mocked(api.undo).mockImplementation(async () => {
                 await new Promise(resolve => setTimeout(resolve, 0));
-                return {
-                    data: { change: { message: "a change" } },
-                    error: undefined,
-                };
+                order.push("undo");
+                return { data: {}, error: undefined };
             });
-
-            await Promise.all(
-                Array.from({ length: 20 }, () => store.undo(WORKSPACE)),
-            );
-
-            expect(api.undo).toHaveBeenCalledTimes(1);
-        });
-
-        test("a press right after a finished step is still ignored", async () => {
-            // The reload a step sets off outlasts the step itself, so the next
-            // press has to wait for more than the response.
-            vi.mocked(api.undo).mockResolvedValue({
-                data: { change: { message: "a change" } },
-                error: undefined,
-            });
-
-            await store.undo(WORKSPACE);
-            const second = await store.undo(WORKSPACE);
-
-            expect(second.skipped).toBe(true);
-            expect(api.undo).toHaveBeenCalledTimes(1);
-        });
-
-        test("the next press goes through once the interval has passed", async () => {
-            vi.useFakeTimers();
-            try {
-                vi.mocked(api.undo).mockResolvedValue({
-                    data: { change: { message: "a change" } },
-                    error: undefined,
-                });
-
-                await store.undo(WORKSPACE);
-                vi.advanceTimersByTime(1000);
-                await store.undo(WORKSPACE);
-
-                expect(api.undo).toHaveBeenCalledTimes(2);
-            } finally {
-                vi.useRealTimers();
-            }
-        });
-
-        test("a redo pressed during an undo is ignored too", async () => {
-            vi.mocked(api.undo).mockImplementation(async () => {
-                await new Promise(resolve => setTimeout(resolve, 0));
-                return {
-                    data: { change: { message: "a change" } },
-                    error: undefined,
-                };
-            });
-            vi.mocked(api.redo).mockResolvedValue({
-                data: { change: { message: "a change" } },
-                error: undefined,
+            vi.mocked(api.redo).mockImplementation(async () => {
+                order.push("redo");
+                return { data: {}, error: undefined };
             });
 
             await Promise.all([store.undo(WORKSPACE), store.redo(WORKSPACE)]);
 
-            expect(api.redo).not.toHaveBeenCalled();
+            expect(order).toEqual(["undo", "redo"]);
         });
 
-        test("a failed step does not block the next one", async () => {
+        test("a failed step does not spoil the next one", async () => {
             vi.mocked(api.undo).mockRejectedValueOnce(new Error("boom"));
 
             await store.undo(WORKSPACE).catch(() => {});
@@ -626,7 +588,6 @@ describe("versionControlStore", () => {
             expect(api.undo).not.toHaveBeenCalled();
             expect(classStore.invalidateWorkspace).not.toHaveBeenCalled();
             expect(toastStore.info).not.toHaveBeenCalled();
-            expect(result.cancelled).toBe(true);
             expect(result.error).toBeNull();
         });
 

@@ -218,9 +218,9 @@
                 if (isDialogOpen()) {
                     return;
                 }
-                // A held key repeats faster than a step completes, so the
-                // in-flight guard in the store reopens between two repeats and
-                // they go through as further undos. Only real presses count.
+                // Auto-repeat fires every thirty or so milliseconds and would
+                // walk the whole history in a second. Only real presses count;
+                // every one of those takes a step.
                 if (event.repeat) {
                     event.preventDefault();
                     return;
