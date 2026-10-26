@@ -31,6 +31,7 @@ import org.rdfarchitect.database.inmemory.SessionDataStore;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -116,8 +117,10 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
             executeOnGraph(ctx, graphIdentifier, update);
 
             transaction.commit(
-                    "Replaced all associations for class \"%s\" (%s)"
-                            .formatted(classLabel, classUUID));
+                    ChangeDescriptions.actionOn(
+                            "Replaced all associations of",
+                            "class",
+                            ChangeDescriptions.name(classLabel)));
         }
     }
 

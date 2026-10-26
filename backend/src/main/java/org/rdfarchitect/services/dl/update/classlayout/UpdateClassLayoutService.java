@@ -110,7 +110,9 @@ public class UpdateClassLayoutService
                             classLayoutPosition.getXPosition(),
                             classLayoutPosition.getYPosition(),
                             null);
-                    transaction.commit("Laid out class \"%s\"".formatted(className));
+                    transaction.commit(
+                            ChangeDescriptions.actionOn(
+                                    "Laid out", "class", ChangeDescriptions.name(className)));
                 }
                 return;
             }
@@ -122,7 +124,9 @@ public class UpdateClassLayoutService
             float yPosition = classLayoutPosition != null ? classLayoutPosition.getYPosition() : 0;
             DiagramLayoutServiceUtils.insertDiagramObjectPoint(
                     diagramLayoutModel, doMRID, packageUUID, xPosition, yPosition);
-            transaction.commit("Laid out class \"%s\"".formatted(className));
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Laid out", "class", ChangeDescriptions.name(className)));
         }
     }
 
@@ -209,7 +213,7 @@ public class UpdateClassLayoutService
             commitLayout(
                     transaction,
                     firstLayout,
-                    ChangeDescriptions.in(
+                    ChangeDescriptions.actionIn(
                             "Moved classes",
                             "package",
                             ChangeDescriptions.packageName(
@@ -225,7 +229,12 @@ public class UpdateClassLayoutService
             var firstLayout = DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null;
             applyClassPositions(diagramLayoutModel, diagramUUID, classPositionDTOList);
             commitLayout(
-                    transaction, firstLayout, "moved classes in diagram %s".formatted(diagramUUID));
+                    transaction,
+                    firstLayout,
+                    ChangeDescriptions.actionIn(
+                            "Moved classes",
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagramLayoutModel, diagramUUID)));
         }
     }
 
@@ -292,7 +301,9 @@ public class UpdateClassLayoutService
             for (var diagramObject : DLObjectFetcher.fetchAllDOs(diagramLayoutModel, classUUID)) {
                 DLUpdates.updateDiagramObjectName(diagramLayoutModel, diagramObject, name);
             }
-            transaction.commit("Renamed class \"%s\" in the diagrams".formatted(name));
+            transaction.commit(
+                    ChangeDescriptions.actionOn("Renamed", "class", ChangeDescriptions.name(name))
+                            + " in the diagrams");
         }
     }
 
@@ -305,8 +316,10 @@ public class UpdateClassLayoutService
             for (var diagramObject : DLObjectFetcher.fetchAllDOs(diagramLayoutModel, classUUID)) {
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
             }
+            var className = ChangeDescriptions.className(ctx.getRdfGraph(), classUUID);
             deleteOrphanedLabels(diagramLayoutModel, ctx.getRdfGraph(), classUUID);
-            transaction.commit("Removed the layout of a class");
+            transaction.commit(
+                    ChangeDescriptions.actionOn("Removed the layout of", "class", className));
         }
     }
 
@@ -389,7 +402,7 @@ public class UpdateClassLayoutService
                             .map(ClassInDiagram::getUuid)
                             .collect(Collectors.toCollection(LinkedHashSet::new)));
             transaction.commit(
-                    ChangeDescriptions.in(
+                    ChangeDescriptions.actionOn(
                             "Added classes to",
                             "diagram",
                             ChangeDescriptions.diagramName(diagram)));
@@ -445,7 +458,7 @@ public class UpdateClassLayoutService
             deleteLayoutForClasses(
                     ctx.getDiagramLayout().getDiagramLayoutModel(), diagramUUID, classUUIDs);
             transaction.commit(
-                    ChangeDescriptions.in(
+                    ChangeDescriptions.actionOn(
                             "Removed classes from",
                             "diagram",
                             ChangeDescriptions.diagramName(diagram)));
@@ -501,7 +514,7 @@ public class UpdateClassLayoutService
                     diagramUUID,
                     mergedUuidsOf(classes, classUriByUuid(datasetName, classes)));
             transaction.commit(
-                    ChangeDescriptions.in(
+                    ChangeDescriptions.actionOn(
                             "Added classes to",
                             "diagram",
                             ChangeDescriptions.diagramName(diagram)));
@@ -559,7 +572,7 @@ public class UpdateClassLayoutService
                         classUUIDs.stream().filter(uuid -> !stillRendered.contains(uuid)).toList());
             }
             transaction.commit(
-                    ChangeDescriptions.in(
+                    ChangeDescriptions.actionOn(
                             "Removed classes from",
                             "diagram",
                             ChangeDescriptions.diagramName(diagram)));
@@ -581,8 +594,10 @@ public class UpdateClassLayoutService
                         model, diagram, oldMergedUuid, newMergedUuid, newClassUri);
             }
             transaction.commit(
-                    "Moved the layout of class \"%s\""
-                            .formatted(ChangeDescriptions.localName(newClassUri)));
+                    ChangeDescriptions.actionOn(
+                            "Moved the layout of",
+                            "class",
+                            ChangeDescriptions.localName(newClassUri)));
         }
     }
 

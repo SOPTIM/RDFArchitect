@@ -77,7 +77,9 @@ public class UpdatePackageService
                     newPackage);
             createPackageLayoutData.createPackageLayoutData(
                     graphIdentifier, packageDTO, newPackageUUID);
-            transaction.commit("Added package " + packageDTO.getLabel());
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Added", "package", ChangeDescriptions.name(packageDTO.getLabel())));
         }
 
         return newPackageUUID;

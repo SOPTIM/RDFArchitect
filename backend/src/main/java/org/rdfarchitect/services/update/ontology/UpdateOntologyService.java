@@ -74,7 +74,7 @@ public class UpdateOntologyService
             }
             transaction.setPrefixes(pm);
 
-            transaction.commit("Created Ontology");
+            transaction.commit("Created the ontology");
         }
     }
 
@@ -97,7 +97,7 @@ public class UpdateOntologyService
                 }
             }
             new OntologyFacade(model).replaceOntology(ontologyDTO);
-            transaction.commit("Replaced Ontology");
+            transaction.commit("Replaced the ontology");
         }
     }
 
@@ -110,7 +110,7 @@ public class UpdateOntologyService
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             new OntologyFacade(model).deleteOntology();
-            transaction.commit("Deleted Ontology");
+            transaction.commit("Deleted the ontology");
         }
     }
 

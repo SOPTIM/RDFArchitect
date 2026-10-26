@@ -67,7 +67,7 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
             var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
             applyLabelPositions(diagramLayoutModel, resolvedDiagramUUID, labelPositionDTOList);
             transaction.commit(
-                    ChangeDescriptions.in(
+                    ChangeDescriptions.actionIn(
                             "Moved labels",
                             "diagram",
                             ChangeDescriptions.diagramName(
@@ -82,7 +82,7 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
             var diagramLayoutModel = transaction.layout().getDiagramLayoutModel();
             applyLabelPositions(diagramLayoutModel, diagramUUID, labelPositionDTOList);
             transaction.commit(
-                    ChangeDescriptions.in(
+                    ChangeDescriptions.actionIn(
                             "Moved labels",
                             "diagram",
                             ChangeDescriptions.diagramName(diagramLayoutModel, diagramUUID)));

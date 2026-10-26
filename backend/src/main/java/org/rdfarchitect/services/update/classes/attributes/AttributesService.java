@@ -29,8 +29,10 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.SessionDataStore;
 import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -81,9 +83,10 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
                     .execute();
             var classLabel = findClassLabel(graph, attributeDTO.getDomain());
             transaction.commit(
-                    "Created attribute \"%s.%s\" (%s)"
-                            .formatted(
-                                    classLabel, cimAttribute.getLabel(), cimAttribute.getUuid()));
+                    ChangeDescriptions.actionOn(
+                            "Created",
+                            "attribute",
+                            attributeName(classLabel, cimAttribute.getLabel())));
         }
         return cimAttribute.getUuid();
     }
@@ -105,11 +108,10 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
                     .execute();
             var classLabel = findClassLabel(graph, attributeDTO.getDomain());
             transaction.commit(
-                    "Replaced attribute \"%s.%s\" (%s)"
-                            .formatted(
-                                    classLabel,
-                                    cimAttribute.getLabel().getValue(),
-                                    cimAttribute.getUuid()));
+                    ChangeDescriptions.actionOn(
+                            "Replaced",
+                            "attribute",
+                            attributeName(classLabel, cimAttribute.getLabel())));
         }
         return cimAttribute.getUuid();
     }
@@ -138,9 +140,22 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
             var classResource = CIMResourceUtils.findResourceForUuid(graph, classUUID);
             var classLabel = CIMResourceUtils.findLabelForResource(classResource);
             transaction.commit(
-                    "Replaced all attributes for class \"%s\" (%s)"
-                            .formatted(classLabel, classUUID));
+                    ChangeDescriptions.actionOn(
+                            "Replaced all attributes of",
+                            "class",
+                            ChangeDescriptions.name(classLabel)));
         }
+    }
+
+    /** {@code Class.attribute}, or {@code ""} when the attribute itself has no name to show. */
+    private static String attributeName(String classLabel, RDFSLabel attributeLabel) {
+        var attribute =
+                attributeLabel == null ? "" : ChangeDescriptions.name(attributeLabel.getValue());
+        var owner = ChangeDescriptions.name(classLabel);
+        if (attribute.isEmpty() || owner.isEmpty()) {
+            return attribute;
+        }
+        return owner + "." + attribute;
     }
 
     private String findClassLabel(Graph graph, String domainUri) {
