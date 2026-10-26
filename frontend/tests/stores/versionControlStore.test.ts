@@ -40,7 +40,7 @@ vi.mock("$lib/api/generated", () => ({
     redo: vi.fn(),
     canUndo: vi.fn(),
     canRedo: vi.fn(),
-    getPendingUndo: vi.fn(),
+    getUndoPreview: vi.fn(),
 }));
 
 vi.mock("$lib/sharedState.svelte.js", () => ({
@@ -110,7 +110,7 @@ describe("versionControlStore", () => {
         );
 
         // Nothing disappears unless a test says so, so undo goes through unasked.
-        vi.mocked(api.getPendingUndo).mockResolvedValue({
+        vi.mocked(api.getUndoPreview).mockResolvedValue({
             data: { message: "a change", removedOnUndo: [] },
             error: undefined,
         });
@@ -596,7 +596,7 @@ describe("versionControlStore", () => {
                 data: true,
                 error: undefined,
             });
-            vi.mocked(api.getPendingUndo).mockResolvedValue({
+            vi.mocked(api.getUndoPreview).mockResolvedValue({
                 data: {
                     message: "imported graph http://example.org/a",
                     removedOnUndo: ["http://example.org/a"],
@@ -650,7 +650,7 @@ describe("versionControlStore", () => {
         });
 
         test("does not ask when nothing would disappear", async () => {
-            vi.mocked(api.getPendingUndo).mockResolvedValue({
+            vi.mocked(api.getUndoPreview).mockResolvedValue({
                 data: { message: "renamed a class", removedOnUndo: [] },
                 error: undefined,
             });
@@ -663,7 +663,7 @@ describe("versionControlStore", () => {
 
         test("undoes rather than blocks when the peek fails", async () => {
             // A failed peek must not stand between the user and their undo.
-            vi.mocked(api.getPendingUndo).mockResolvedValue({
+            vi.mocked(api.getUndoPreview).mockResolvedValue({
                 data: undefined,
                 error: new Error("Server down"),
             });
@@ -682,7 +682,7 @@ describe("versionControlStore", () => {
 
             await store.redo(WORKSPACE);
 
-            expect(api.getPendingUndo).not.toHaveBeenCalled();
+            expect(api.getUndoPreview).not.toHaveBeenCalled();
             expect(undoConfirmStore.confirm).not.toHaveBeenCalled();
         });
     });

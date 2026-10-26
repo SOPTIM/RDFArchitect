@@ -356,11 +356,11 @@ public class Workspace {
     /**
      * Returns the change the next undo would take back, or {@code null} if there is none.
      *
-     * @return the pending change
+     * @return the change an undo would take back
      */
-    public WorkspaceChangeLogEntry pendingUndo() {
+    public WorkspaceChangeLogEntry undoPreview() {
         try (var transaction = begin(ReadWrite.READ)) {
-            return changeLog.pendingUndo();
+            return changeLog.undoPreview();
         }
     }
 

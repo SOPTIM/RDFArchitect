@@ -36,7 +36,7 @@ public interface ChangeLogUseCase {
      * that makes something disappear.
      *
      * @param workspaceName the workspace to inspect
-     * @return the pending change, or {@code null} if there is nothing to undo
+     * @return the change an undo would take back, or {@code null} if there is nothing to undo
      */
-    ChangeLogEntryDTO pendingUndo(String workspaceName);
+    ChangeLogEntryDTO undoPreview(String workspaceName);
 }

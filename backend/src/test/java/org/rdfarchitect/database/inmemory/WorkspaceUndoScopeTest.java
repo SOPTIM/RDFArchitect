@@ -302,7 +302,7 @@ class WorkspaceUndoScopeTest {
         void afterCreatingAGraph_namesTheGraphThatWouldDisappear() {
             createGraph(GRAPH_A);
 
-            assertThat(workspace.pendingUndo().removedOnUndo()).containsExactly(GRAPH_A);
+            assertThat(workspace.undoPreview().removedOnUndo()).containsExactly(GRAPH_A);
         }
 
         @Test
@@ -315,7 +315,7 @@ class WorkspaceUndoScopeTest {
                 transaction.commit("created a diagram");
             }
 
-            assertThat(workspace.pendingUndo().removedOnUndo()).containsExactly("overview");
+            assertThat(workspace.undoPreview().removedOnUndo()).containsExactly("overview");
         }
 
         @Test
@@ -324,7 +324,7 @@ class WorkspaceUndoScopeTest {
             createGraph(GRAPH_A);
             deleteGraph(GRAPH_A);
 
-            assertThat(workspace.pendingUndo().removedOnUndo()).isEmpty();
+            assertThat(workspace.undoPreview().removedOnUndo()).isEmpty();
         }
 
         @Test
@@ -332,7 +332,7 @@ class WorkspaceUndoScopeTest {
             createGraph(GRAPH_A);
             commitTriple(GRAPH_A, triple);
 
-            assertThat(workspace.pendingUndo().removedOnUndo()).isEmpty();
+            assertThat(workspace.undoPreview().removedOnUndo()).isEmpty();
         }
 
         @Test
@@ -353,7 +353,7 @@ class WorkspaceUndoScopeTest {
                 transaction.commit("added a class to the diagram");
             }
 
-            assertThat(workspace.pendingUndo().removedOnUndo()).isEmpty();
+            assertThat(workspace.undoPreview().removedOnUndo()).isEmpty();
         }
 
         @Test
@@ -364,7 +364,7 @@ class WorkspaceUndoScopeTest {
                 transaction.commit("renamed the graph");
             }
 
-            assertThat(workspace.pendingUndo().removedOnUndo()).isEmpty();
+            assertThat(workspace.undoPreview().removedOnUndo()).isEmpty();
         }
 
         @Test
@@ -374,16 +374,16 @@ class WorkspaceUndoScopeTest {
             createGraph(GRAPH_A);
             createGraph(GRAPH_B);
 
-            assertThat(workspace.pendingUndo().removedOnUndo()).containsExactly(GRAPH_B);
+            assertThat(workspace.undoPreview().removedOnUndo()).containsExactly(GRAPH_B);
 
             workspace.undo();
 
-            assertThat(workspace.pendingUndo().removedOnUndo()).containsExactly(GRAPH_A);
+            assertThat(workspace.undoPreview().removedOnUndo()).containsExactly(GRAPH_A);
         }
 
         @Test
         void withNothingLeftToUndo_thereIsNoPendingChange() {
-            assertThat(new Workspace("fresh").pendingUndo()).isNull();
+            assertThat(new Workspace("fresh").undoPreview()).isNull();
         }
     }
 
@@ -404,8 +404,8 @@ class WorkspaceUndoScopeTest {
                 transaction.commit("created a diagram");
             }
 
-            assertThat(workspace.pendingUndo().removedOnUndo()).containsExactly("Overview");
-            assertThat(workspace.pendingUndo().removedOnUndo().getFirst())
+            assertThat(workspace.undoPreview().removedOnUndo()).containsExactly("Overview");
+            assertThat(workspace.undoPreview().removedOnUndo().getFirst())
                     .doesNotContain(diagramId.toString());
         }
     }

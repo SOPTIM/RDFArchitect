@@ -33,7 +33,7 @@ import {
     redo as sdkRedo,
     canUndo as sdkCanUndo,
     canRedo as sdkCanRedo,
-    getPendingUndo as sdkPendingUndo,
+    getUndoPreview as sdkUndoPreview,
 } from "../api/generated";
 import { type ChangeLogEntryDTO } from "../api/generated/types.gen";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
@@ -272,11 +272,11 @@ function createVersionControlStore() {
      * the common case and must not become a click-through habit.
      */
     async function confirmedIfDestructive(workspace: string): Promise<boolean> {
-        const { data, error } = await sdkPendingUndo({
+        const { data, error } = await sdkUndoPreview({
             path: { datasetName: workspace },
         });
         if (error) {
-            console.error(`${LOG} could not read the pending undo`, error);
+            console.error(`${LOG} could not read the undo preview`, error);
             return true;
         }
         const removed = data?.removedOnUndo ?? [];

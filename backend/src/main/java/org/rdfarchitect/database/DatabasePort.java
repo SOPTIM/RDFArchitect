@@ -50,9 +50,9 @@ public interface DatabasePort {
      * Returns the change the next undo would take back, or {@code null} if there is none.
      *
      * @param workspaceName the workspace to inspect
-     * @return the pending change
+     * @return the change an undo would take back
      */
-    WorkspaceChangeLogEntry pendingUndo(String workspaceName);
+    WorkspaceChangeLogEntry undoPreview(String workspaceName);
 
     /**
      * Returns whether the workspace has an undone change that can be reapplied.

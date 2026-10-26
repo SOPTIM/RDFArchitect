@@ -94,8 +94,8 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
-    public WorkspaceChangeLogEntry pendingUndo(String workspaceName) {
-        return getOrCreateSessionDataStore().pendingUndo(workspaceName);
+    public WorkspaceChangeLogEntry undoPreview(String workspaceName) {
+        return getOrCreateSessionDataStore().undoPreview(workspaceName);
     }
 
     @Override
