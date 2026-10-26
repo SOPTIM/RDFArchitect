@@ -21,8 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
-import org.apache.jena.graph.Graph;
-import org.apache.jena.query.ReadWrite;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.assertj.core.api.InstanceOfAssertFactories;
@@ -41,6 +39,8 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.compare.SchemaComparisonService;
 import org.springframework.web.multipart.MultipartFile;
+
+import utils.TestWorkspaces;
 
 import java.util.List;
 
@@ -68,7 +68,7 @@ class SchemaComparisonServiceTest {
                         .setFile(file)
                         .setGraphName(GRAPH_IDENTIFIER.graphUri())
                         .build();
-        createGraph(GRAPH_IDENTIFIER, graphSource.graph());
+        TestWorkspaces.createGraph(databasePort, GRAPH_IDENTIFIER, graphSource.graph());
     }
 
     @Test
@@ -431,7 +431,7 @@ class SchemaComparisonServiceTest {
                         .setFile(otherGraphFile)
                         .setGraphName(OTHER_GRAPH_IDENTIFIER.graphUri())
                         .build();
-        createGraph(OTHER_GRAPH_IDENTIFIER, graphSource.graph());
+        TestWorkspaces.createGraph(databasePort, OTHER_GRAPH_IDENTIFIER, graphSource.graph());
 
         // act
         var result = service.compareSchemas(GRAPH_IDENTIFIER, OTHER_GRAPH_IDENTIFIER);
@@ -464,15 +464,5 @@ class SchemaComparisonServiceTest {
 
         // assert
         assertThat(result).asInstanceOf(InstanceOfAssertFactories.LIST).isEmpty();
-    }
-
-    /** Creates a workspace and a graph in it, the way an upload does. */
-    private void createGraph(GraphIdentifier identifier, Graph graph) {
-        databasePort.createWorkspaceIfAbsent(identifier.datasetName());
-        try (var transaction =
-                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(identifier.graphUri(), graph);
-            transaction.commit("created graph %s".formatted(identifier.graphUri()));
-        }
     }
 }

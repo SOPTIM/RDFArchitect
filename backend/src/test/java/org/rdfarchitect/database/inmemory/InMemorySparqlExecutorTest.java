@@ -40,6 +40,8 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.TestRDFUtils;
 
+import utils.TestWorkspaces;
+
 import java.util.List;
 
 class InMemorySparqlExecutorTest {
@@ -56,7 +58,10 @@ class InMemorySparqlExecutorTest {
     void setUp() {
         setUpGraph = GraphFactory.createDefaultGraph();
         inMemoryDatabase = new SessionDataStoreImpl();
-        createGraph(new GraphIdentifier(WORKSPACE, "Http://validBeforeEach.uri"), setUpGraph);
+        TestWorkspaces.createGraph(
+                inMemoryDatabase,
+                new GraphIdentifier(WORKSPACE, "Http://validBeforeEach.uri"),
+                setUpGraph);
     }
 
     @AfterEach
@@ -98,7 +103,7 @@ class InMemorySparqlExecutorTest {
         String graphUri = "default";
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
-        createGraph(identifier, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
         String queryString = "SELECT * WHERE { ?s ?p ?o }";
         var query = QueryFactory.create(queryString);
 
@@ -123,7 +128,7 @@ class InMemorySparqlExecutorTest {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
-        createGraph(identifier, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
         String queryString = "SELECT * FROM <" + graphUri + "> WHERE { ?s ?p ?o }";
         var query = QueryFactory.create(queryString);
 
@@ -148,7 +153,7 @@ class InMemorySparqlExecutorTest {
         String graphUri = "default";
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
-        createGraph(identifier, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
         String queryString = "SELECT * WHERE { ?s ?p ?o . FILTER(?p = <http://nonexisting>) }";
         var query = QueryFactory.create(queryString);
 
@@ -168,7 +173,7 @@ class InMemorySparqlExecutorTest {
         String graphUri = "http://example.org/graph";
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
-        createGraph(identifier, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
         String queryString =
                 "SELECT * FROM <"
                         + graphUri
@@ -191,7 +196,7 @@ class InMemorySparqlExecutorTest {
         String graphUri = "default";
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
-        createGraph(identifier, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
         String queryString = "SELECT * FROM <http://nonexisting> WHERE { ?s ?p ?o }";
         var query = QueryFactory.create(queryString);
 
@@ -211,7 +216,7 @@ class InMemorySparqlExecutorTest {
         String graphUri = "default";
         exampleGraphs = List.of(createExampleGraph(), GraphFactory.createDefaultGraph());
         var identifier = new GraphIdentifier(WORKSPACE, graphUri);
-        createGraph(identifier, exampleGraphs.get(1));
+        TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.get(1));
 
         // Act
         for (var t : exampleGraphs.getFirst().find().toList()) {
@@ -237,16 +242,6 @@ class InMemorySparqlExecutorTest {
                                     .getRdfGraph()
                                     .isIsomorphicWith(exampleGraphs.getFirst()))
                     .isTrue();
-        }
-    }
-
-    /** Creates a workspace and a graph in it, the way an upload does. */
-    private void createGraph(GraphIdentifier id, Graph graph) {
-        inMemoryDatabase.createDataset(id.datasetName());
-        try (var transaction =
-                inMemoryDatabase.beginTransaction(id.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(id.graphUri(), graph);
-            transaction.commit("created graph %s".formatted(id.graphUri()));
         }
     }
 }

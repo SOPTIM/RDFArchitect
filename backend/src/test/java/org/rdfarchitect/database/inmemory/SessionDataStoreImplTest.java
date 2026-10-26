@@ -35,6 +35,8 @@ import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.rdf.TestRDFUtils;
 
+import utils.TestWorkspaces;
+
 import java.util.List;
 import java.util.Map;
 
@@ -111,7 +113,10 @@ class SessionDataStoreImplTest {
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
 
         // Act
-        createGraph(new GraphIdentifier(name, DEFAULT_GRAPH_NAME), exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(
+                inMemoryDatabase,
+                new GraphIdentifier(name, DEFAULT_GRAPH_NAME),
+                exampleGraphs.getFirst());
 
         // Assert
         assertThat(inMemoryDatabase.listDatasets()).contains(name);
@@ -121,7 +126,7 @@ class SessionDataStoreImplTest {
     void deleteDataset_validName_removesDataset() {
         // Arrange
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
         inMemoryDatabase.deleteDataset(NAME);
@@ -134,7 +139,10 @@ class SessionDataStoreImplTest {
     void deleteDataset_nonExistingName_doesNothing() {
         // Arrange
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
-        createGraph(new GraphIdentifier("any", DEFAULT_GRAPH_NAME), exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(
+                inMemoryDatabase,
+                new GraphIdentifier("any", DEFAULT_GRAPH_NAME),
+                exampleGraphs.getFirst());
 
         // Act
         inMemoryDatabase.deleteDataset("other");
@@ -148,7 +156,8 @@ class SessionDataStoreImplTest {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
         var graphUri = "http://example.org/graph1";
-        createGraph(new GraphIdentifier(NAME, graphUri), exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(
+                inMemoryDatabase, new GraphIdentifier(NAME, graphUri), exampleGraphs.getFirst());
         inMemoryDatabase.disableEditing(NAME);
 
         // Act
@@ -183,7 +192,7 @@ class SessionDataStoreImplTest {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
         var graphIdentifier = new GraphIdentifier(NAME, "http://example.org/graph1");
-        createGraph(graphIdentifier, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, graphIdentifier, exampleGraphs.getFirst());
 
         // Act
         renameGraph(graphIdentifier, "http://example.org/graph2");
@@ -220,8 +229,11 @@ class SessionDataStoreImplTest {
         // Arrange
         exampleGraphs =
                 List.of(GraphFactory.createDefaultGraph(), GraphFactory.createDefaultGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
-        createGraph(new GraphIdentifier("b", DEFAULT_GRAPH_NAME), exampleGraphs.get(1));
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(
+                inMemoryDatabase,
+                new GraphIdentifier("b", DEFAULT_GRAPH_NAME),
+                exampleGraphs.get(1));
 
         // Act
         var datasets = inMemoryDatabase.listDatasets();
@@ -234,7 +246,7 @@ class SessionDataStoreImplTest {
     void beginTransaction_existingDataset_exposesTheGraph() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act/Assert
         try (var transaction =
@@ -255,7 +267,7 @@ class SessionDataStoreImplTest {
     @Test
     void deleteGraph_lastGraphOfAWorkspace_keepsTheWorkspace() {
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         deleteGraph(GRAPH_IDENTIFIER);
 
@@ -275,7 +287,7 @@ class SessionDataStoreImplTest {
     void remove_existingGraphFromExistingDataset_removesGraph() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
         deleteGraph(GRAPH_IDENTIFIER);
@@ -287,7 +299,7 @@ class SessionDataStoreImplTest {
     @Test
     void remove_graphFromNonExistingWorkspace_throwsException() {
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         assertThatExceptionOfType(ResourceNotFoundException.class)
                 .isThrownBy(() -> deleteGraph(new GraphIdentifier("b", DEFAULT_GRAPH_NAME)));
@@ -297,7 +309,7 @@ class SessionDataStoreImplTest {
     void remove_nonExistingGraphFromExistingDataset_doesNothing() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
         deleteGraph(new GraphIdentifier(NAME, "http://example.com/graph"));
@@ -310,7 +322,7 @@ class SessionDataStoreImplTest {
     void remove_lastExistingGraph_keepsEmptyDataset() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
         deleteGraph(GRAPH_IDENTIFIER);
@@ -336,7 +348,7 @@ class SessionDataStoreImplTest {
     void createDataset_existingName_keepsExistingGraphs() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
         inMemoryDatabase.createDataset(NAME);
@@ -349,7 +361,7 @@ class SessionDataStoreImplTest {
     void containsGraph_validNameAndGraph_returnsTrue() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
         var contains = inMemoryDatabase.containsGraph(GRAPH_IDENTIFIER);
@@ -363,8 +375,11 @@ class SessionDataStoreImplTest {
         // Arrange
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
 
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
-        createGraph(new GraphIdentifier(NAME, "http://example.com/graph"), exampleGraphs.get(1));
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(
+                inMemoryDatabase,
+                new GraphIdentifier(NAME, "http://example.com/graph"),
+                exampleGraphs.get(1));
 
         // Act
         var graphUris = inMemoryDatabase.listGraphUris(NAME);
@@ -386,7 +401,7 @@ class SessionDataStoreImplTest {
     void getPrefixMapping_validDataset_returnsPrefixMapping() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         var prefixes =
                 Map.of(
@@ -418,7 +433,7 @@ class SessionDataStoreImplTest {
         // Arrange
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
 
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
         var prefixMapping = inMemoryDatabase.getPrefixMapping(NAME);
@@ -431,7 +446,7 @@ class SessionDataStoreImplTest {
     void setPrefixMapping_modifyPrefixMapping_hasNoChangeOnCollection() {
         // Arrange
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         var prefixes = new PrefixMappingImpl();
         prefixes.setNsPrefix("ex", "http://example.com/");
@@ -451,7 +466,7 @@ class SessionDataStoreImplTest {
     void setPrefixMapping_emptyPrefixMapping_setsNoPrefixes() {
         // Arrange
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
         setPrefixes(NAME, new PrefixMappingMem());
@@ -464,7 +479,7 @@ class SessionDataStoreImplTest {
     void setPrefixMapping_emptyPrefixMappingIntoNonEmptyGraph_deletesPrefixes() {
         // Arrange
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         var prefixes = new PrefixMappingImpl();
         prefixes.setNsPrefix("ex", "http://example.com/");
@@ -483,7 +498,7 @@ class SessionDataStoreImplTest {
     void setPrefixMapping_nonEmptyPrefixMapping_setsPrefixes() {
         // Arrange
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         var prefixes = new PrefixMappingImpl();
         prefixes.setNsPrefix("ex", "http://example.com/");
@@ -501,7 +516,7 @@ class SessionDataStoreImplTest {
     void setPrefixMapping_nonEmptyPrefixMappingIntoNonEmptyGraph_overridesPrefixes() {
         // Arrange
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
-        createGraph(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+        TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         var prefixes = new PrefixMappingImpl();
         prefixes.setNsPrefix("ex", "http://example.com/");
@@ -540,16 +555,6 @@ class SessionDataStoreImplTest {
                 inMemoryDatabase.beginTransaction(id.datasetName(), ReadWrite.WRITE)) {
             transaction.renameGraph(id.graphUri(), newGraphUri);
             transaction.commit("renamed graph %s".formatted(id.graphUri()));
-        }
-    }
-
-    /** Creates a workspace and a graph in it, the way an upload does. */
-    private void createGraph(GraphIdentifier id, Graph graph) {
-        inMemoryDatabase.createDataset(id.datasetName());
-        try (var transaction =
-                inMemoryDatabase.beginTransaction(id.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(id.graphUri(), graph);
-            transaction.commit("created graph %s".formatted(id.graphUri()));
         }
     }
 }
