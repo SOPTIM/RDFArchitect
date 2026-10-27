@@ -17,24 +17,19 @@
 
 package org.rdfarchitect.database.inmemory;
 
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.config.GraphCompressionConfig;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.WorkspaceTransaction;
-import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagramCollection;
-import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
 import org.rdfarchitect.exception.graph.GraphVersionControlException;
@@ -47,23 +42,20 @@ import org.rdfarchitect.models.changelog.WorkspaceChangeLog;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLog.HistorySince;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 import org.rdfarchitect.rdf.graph.wrapper.TransactionParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
-import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Stream;
 
@@ -81,26 +73,38 @@ public class Workspace {
     private static final Logger logger = LoggerFactory.getLogger(Workspace.class);
 
     private static final String DEFAULT_GRAPH_NAME = "default";
-    private static final String INITIAL_CHANGE_MESSAGE = "loaded workspace";
+    private static final String INITIAL_CHANGE_MESSAGE = "Loaded the workspace";
 
     @Setter @Getter private volatile boolean isReadOnly = true;
 
     private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
-    private final WorkspaceTransactionContext txnContext;
-
     private final WorkspaceChangeLog changeLog;
 
+    /**
+     * The parts a transaction works on, from here down. They are read by {@link
+     * WorkspaceTransactionImpl}, which is the workspace's own handle rather than something a caller
+     * can build.
+     */
+    @Getter(AccessLevel.PACKAGE)
+    private final WorkspaceTransactionContext txnContext;
+
+    @Getter(AccessLevel.PACKAGE)
     private final TransactionCoordinator coordinator;
 
+    @Getter(AccessLevel.PACKAGE)
     private final GraphCollection graphs;
 
+    @Getter(AccessLevel.PACKAGE)
     private final CustomDiagramCollection customDiagrams;
 
+    @Getter(AccessLevel.PACKAGE)
     private final DiagramLayoutDelta diagramLayout;
 
+    @Getter(AccessLevel.PACKAGE)
     private final CrossProfileDiagramInfo crossProfileDiagramInfo;
 
+    @Getter(AccessLevel.PACKAGE)
     private final WorkspacePrefixes prefixes;
 
     public Workspace(String workspaceName) {
@@ -159,7 +163,7 @@ public class Workspace {
             acquireLock(mode);
             txnContext.onOutermostBegun(() -> abandonStaleTransaction(mode));
         }
-        return new Transaction();
+        return new WorkspaceTransactionImpl(this);
     }
 
     /**
@@ -178,13 +182,20 @@ public class Workspace {
         } catch (RuntimeException e) {
             logger.error("Could not roll back an abandoned transaction.", e);
         } finally {
-            var lock = mode == ReadWrite.READ ? rwLock.readLock() : rwLock.writeLock();
-            lock.unlock();
+            lockFor(mode).unlock();
         }
     }
 
+    /** The lock a transaction in this mode holds, taken on begin and given back on close. */
+    Lock lockFor(ReadWrite mode) {
+        return mode == ReadWrite.READ ? rwLock.readLock() : rwLock.writeLock();
+    }
+
+    // The lock is held for as long as the transaction runs, so it is released by whoever ends it:
+    // the transaction's own close, or the sweep of one that was abandoned.
+    @SuppressWarnings("java:S2222")
     private void acquireLock(ReadWrite mode) {
-        var lock = mode == ReadWrite.READ ? rwLock.readLock() : rwLock.writeLock();
+        var lock = lockFor(mode);
         var timeoutLength = GraphCompressionConfig.getLockTimeoutSeconds();
         try {
             if (!lock.tryLock(timeoutLength, TimeUnit.SECONDS)) {
@@ -200,108 +211,9 @@ public class Workspace {
         }
     }
 
-    /** A running transaction on this workspace. */
-    private final class Transaction implements WorkspaceTransaction {
-
-        private boolean closed;
-
-        @Override
-        public GraphContext graph(String graphUri) {
-            return getGraphWithContext(graphUri);
-        }
-
-        @Override
-        public List<String> graphUris() {
-            return graphs.uris();
-        }
-
-        @Override
-        public Map<UUID, CustomDiagram> diagrams() {
-            return customDiagrams.get();
-        }
-
-        @Override
-        public DiagramLayoutDelta layout() {
-            return diagramLayout;
-        }
-
-        @Override
-        public CrossProfileDiagramInfo crossProfileInfo() {
-            return crossProfileDiagramInfo;
-        }
-
-        @Override
-        public PrefixMapping prefixes() {
-            return prefixes.readOnlyView();
-        }
-
-        @Override
-        public void createGraph(String graphUri, Graph graph) {
-            Workspace.this.createGraph(graphUri, graph);
-        }
-
-        @Override
-        public void deleteGraph(String graphUri) {
-            Workspace.this.deleteGraph(graphUri);
-        }
-
-        @Override
-        public void renameGraph(String oldGraphUri, String newGraphUri) {
-            Workspace.this.renameGraph(oldGraphUri, newGraphUri);
-        }
-
-        @Override
-        public void setPrefixes(PrefixMapping prefixMapping) {
-            prefixes.setAll(prefixMapping);
-        }
-
-        @Override
-        public ReadWrite mode() {
-            return txnContext.transactionMode();
-        }
-
-        @Override
-        public void commit(String message) {
-            coordinator.commit(message);
-        }
-
-        @Override
-        public void commitWithoutHistory() {
-            coordinator.commitWithoutHistory();
-        }
-
-        @Override
-        public void abort() {
-            coordinator.abort();
-        }
-
-        @Override
-        public void close() {
-            if (closed) {
-                return;
-            }
-            closed = true;
-            doEnd();
-        }
-    }
-
     // -------------------------------------------------------------------------
-    // Commit, abort, end
+    // Changelog participants
     // -------------------------------------------------------------------------
-
-    private void doEnd() {
-        var mode = txnContext.transactionMode();
-        try {
-            if (txnContext.isOutermost() && mode == ReadWrite.WRITE && !txnContext.isAborted()) {
-                coordinator.finishOutermostWrite();
-            }
-        } finally {
-            if (txnContext.end()) {
-                var lock = mode == ReadWrite.READ ? rwLock.readLock() : rwLock.writeLock();
-                lock.unlock();
-            }
-        }
-    }
 
     /**
      * Works out what a participant represents by looking it up among the workspace's graphs. Done
@@ -372,7 +284,7 @@ public class Workspace {
 
     /** Returns whether the workspace has a change that can be undone. */
     public boolean canUndo() {
-        try (var transaction = begin(ReadWrite.READ)) {
+        try (var _ = begin(ReadWrite.READ)) {
             return changeLog.canUndo();
         }
     }
@@ -380,18 +292,18 @@ public class Workspace {
     /**
      * Returns the change the next undo would take back, or {@code null} if there is none.
      *
-     * @return the pending change
+     * @return the change an undo would take back
      */
-    public WorkspaceChangeLogEntry pendingUndo() {
-        try (var transaction = begin(ReadWrite.READ)) {
-            var pending = changeLog.pendingUndo();
-            return pending == null ? null : asCurrentlyIdentified(pending);
+    public WorkspaceChangeLogEntry undoPreview() {
+        try (var _ = begin(ReadWrite.READ)) {
+            var preview = changeLog.undoPreview();
+            return preview == null ? null : asCurrentlyIdentified(preview);
         }
     }
 
     /** Returns whether the workspace has an undone change that can be reapplied. */
     public boolean canRedo() {
-        try (var transaction = begin(ReadWrite.READ)) {
+        try (var _ = begin(ReadWrite.READ)) {
             return changeLog.canRedo();
         }
     }
@@ -402,7 +314,7 @@ public class Workspace {
      * @return what was undone and what is left to undo or redo
      */
     public WorkspaceHistoryStep undo() {
-        try (var transaction = begin(ReadWrite.WRITE)) {
+        try (var _ = begin(ReadWrite.WRITE)) {
             return stepOf(changeLog.undo());
         }
     }
@@ -413,7 +325,7 @@ public class Workspace {
      * @return what was redone and what is left to undo or redo
      */
     public WorkspaceHistoryStep redo() {
-        try (var transaction = begin(ReadWrite.WRITE)) {
+        try (var _ = begin(ReadWrite.WRITE)) {
             return stepOf(changeLog.redo());
         }
     }
@@ -671,7 +583,7 @@ public class Workspace {
      * their work disappear from the record of it.
      */
     public List<WorkspaceChangeLogEntry> getChangeHistory() {
-        try (var transaction = begin(ReadWrite.READ)) {
+        try (var _ = begin(ReadWrite.READ)) {
             return Stream.concat(
                             // Furthest ahead first: the redo stack hands out the next one to
                             // reapply first, which is the other way round from newest first.
@@ -714,66 +626,9 @@ public class Workspace {
         return defaultGraph;
     }
 
-    private void createGraph(String graphUri, Graph newGraph) {
-        var expanded = prefixes.expandPrefix(graphUri);
-        assertValidGraphName(expanded);
-        graphs.put(expanded, new GraphWithContext(newGraph, txnContext));
-        prefixes.addAll(newGraph.getPrefixMapping());
-        crossProfileDiagramInfo.setColor(expanded, CrossProfileUtils.generateRandomDarkColor());
-    }
-
-    private void renameGraph(String oldGraphUri, String newGraphUri) {
-        var oldUri = prefixes.expandPrefix(oldGraphUri);
-        var newUri = prefixes.expandPrefix(newGraphUri);
-        assertValidGraphName(oldUri);
-        assertValidGraphName(newUri);
-        if (oldUri.equals(newUri)) {
-            return;
-        }
-        if (!graphs.contains(oldUri)) {
-            throw new ResourceNotFoundException("Graph URI " + oldUri + " does not exist.");
-        }
-        if (graphs.contains(newUri)) {
-            throw new ResourceConflictException("Graph URI " + newUri + " already exists.");
-        }
-        graphs.rename(oldUri, newUri);
-        renameGraphInDiagrams(oldUri, newUri);
-        crossProfileDiagramInfo.renameGraph(oldUri, newUri);
-    }
-
-    private void renameGraphInDiagrams(String oldGraphUri, String newGraphUri) {
-        var oldUri = new URI(oldGraphUri);
-        var newUri = new URI(newGraphUri);
-        rewriteGraphUri(customDiagrams.get().values(), oldUri, newUri);
-        for (var graph : graphs.view().values()) {
-            rewriteGraphUri(graph.getCustomDiagrams().values(), oldUri, newUri);
-        }
-    }
-
-    private void rewriteGraphUri(Collection<CustomDiagram> diagrams, URI oldUri, URI newUri) {
-        for (var diagram : diagrams) {
-            var classes = diagram.getClasses();
-            if (classes.stream().noneMatch(entry -> oldUri.equals(entry.getGraphUri()))) {
-                continue;
-            }
-            diagram.setClasses(
-                    classes.stream()
-                            .map(
-                                    entry ->
-                                            oldUri.equals(entry.getGraphUri())
-                                                    ? new ClassInDiagram(entry.getUuid(), newUri)
-                                                    : entry)
-                            .toList());
-        }
-    }
-
-    private void deleteGraph(String graphUri) {
-        graphs.remove(prefixes.expandPrefix(graphUri));
-    }
-
     /** Returns a snapshot of the current graph URIs. */
     public List<String> listGraphUris() {
-        try (var transaction = begin(ReadWrite.READ)) {
+        try (var _ = begin(ReadWrite.READ)) {
             return graphs.uris();
         }
     }
@@ -784,12 +639,12 @@ public class Workspace {
 
     /** Returns the namespace prefixes shared by all graphs of the workspace. */
     public PrefixMappingReadOnly getPrefixMapping() {
-        try (var transaction = begin(ReadWrite.READ)) {
+        try (var _ = begin(ReadWrite.READ)) {
             return prefixes.readOnlyView();
         }
     }
 
-    private void assertValidGraphName(String graphUri) {
+    static void assertValidGraphName(String graphUri) {
         if (!graphUri.equals(DEFAULT_GRAPH_NAME) && !RDFUtils.isURL(graphUri)) {
             throw new IllegalArgumentException("Graph Uri " + graphUri + " is not a valid URI");
         }

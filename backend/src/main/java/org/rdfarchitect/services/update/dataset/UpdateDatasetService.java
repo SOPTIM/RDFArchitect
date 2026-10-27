@@ -66,7 +66,7 @@ public class UpdateDatasetService
         }
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
             transaction.setPrefixes(prefixMapping);
-            transaction.commit("changed the namespace prefixes");
+            transaction.commit("Changed the namespace prefixes");
         }
     }
 }

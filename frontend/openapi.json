@@ -8677,10 +8677,10 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/undo/pending" : {
+    "/api/datasets/{datasetName}/undo/preview" : {
       "get" : {
         "description" : "Get the change that the next undo would take back, so that the editor can ask before an undo that makes something disappear. Returns nothing when there is no history left.",
-        "operationId" : "getPendingUndo",
+        "operationId" : "getUndoPreview",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",

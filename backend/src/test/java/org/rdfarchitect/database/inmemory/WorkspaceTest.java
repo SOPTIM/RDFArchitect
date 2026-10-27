@@ -428,7 +428,7 @@ class WorkspaceTest {
         exampleGraphs = List.of(createExampleGraph());
         createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.crossProfileInfo().setColor("http://example.org/graph1", "#123456");
+            transaction.crossProfileColors().setColor("http://example.org/graph1", "#123456");
             transaction.commit("assigned a colour");
         }
 
@@ -437,7 +437,7 @@ class WorkspaceTest {
 
         // Assert
         try (var transaction = workspace.begin(ReadWrite.READ)) {
-            var info = transaction.crossProfileInfo();
+            var info = transaction.crossProfileColors();
             assertThat(info.getColor("http://example.org/graph2")).isEqualTo("#123456");
             assertThat(info.getColor("http://example.org/graph1")).isNull();
         }

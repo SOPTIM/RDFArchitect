@@ -149,12 +149,12 @@ class ChangeLogAttributionTest {
         }
 
         @Test
-        void aPendingUndo_isAttributedToTheNameTheGraphHasNow() {
+        void anUndoPreview_isAttributedToTheNameTheGraphHasNow() {
             createGraph(GRAPH_A);
             renameGraph(GRAPH_A, GRAPH_B);
             commitClass(GRAPH_B);
 
-            assertThat(workspace.pendingUndo().affectedGraphUris()).containsExactly(GRAPH_B);
+            assertThat(workspace.undoPreview().affectedGraphUris()).containsExactly(GRAPH_B);
         }
 
         @Test
@@ -257,7 +257,7 @@ class ChangeLogAttributionTest {
             var generated = colorOf(GRAPH_A);
 
             try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-                transaction.crossProfileInfo().setColor(GRAPH_A, "#123456");
+                transaction.crossProfileColors().setColor(GRAPH_A, "#123456");
                 transaction.commit("recoloured graph a");
             }
 
@@ -271,7 +271,7 @@ class ChangeLogAttributionTest {
             createGraph(GRAPH_B);
 
             try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-                transaction.crossProfileInfo().setColor(GRAPH_A, "#123456");
+                transaction.crossProfileColors().setColor(GRAPH_A, "#123456");
                 transaction.commit("recoloured graph a");
             }
 
@@ -306,7 +306,7 @@ class ChangeLogAttributionTest {
 
     private String colorOf(String graphUri) {
         try (var transaction = workspace.begin(ReadWrite.READ)) {
-            return transaction.crossProfileInfo().getColor(graphUri);
+            return transaction.crossProfileColors().getColor(graphUri);
         }
     }
 

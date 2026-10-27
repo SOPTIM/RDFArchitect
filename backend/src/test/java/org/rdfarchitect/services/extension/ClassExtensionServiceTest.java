@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
@@ -42,6 +41,8 @@ import org.rdfarchitect.services.ClassExtensionService;
 import org.rdfarchitect.services.select.ClassLocatorService;
 import org.rdfarchitect.services.select.QueryDatasetService;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import utils.TestWorkspaces;
 
 import java.util.List;
 import java.util.UUID;
@@ -77,7 +78,7 @@ class ClassExtensionServiceTest {
                         .setFile(sourceFile)
                         .setGraphName(sourceGraphId.graphUri())
                         .build();
-        createGraph(sourceGraphId, sourceGraphSource.graph());
+        TestWorkspaces.createGraph(databasePort, sourceGraphId, sourceGraphSource.graph());
 
         var targetFile = readMultipartFileFromFile(PATH, "class-extension-target-with-core.ttl");
         var targetGraphSource =
@@ -85,7 +86,7 @@ class ClassExtensionServiceTest {
                         .setFile(targetFile)
                         .setGraphName(targetGraphId.graphUri())
                         .build();
-        createGraph(targetGraphId, targetGraphSource.graph());
+        TestWorkspaces.createGraph(databasePort, targetGraphId, targetGraphSource.graph());
 
         // act
         var results =
@@ -211,7 +212,7 @@ class ClassExtensionServiceTest {
                         .setFile(sourceFile)
                         .setGraphName(sourceGraphId.graphUri())
                         .build();
-        createGraph(sourceGraphId, sourceGraphSource.graph());
+        TestWorkspaces.createGraph(databasePort, sourceGraphId, sourceGraphSource.graph());
 
         // target already contains Base class with existing UUID; should not be replaced
         var targetFile =
@@ -221,7 +222,7 @@ class ClassExtensionServiceTest {
                         .setFile(targetFile)
                         .setGraphName(targetGraphId.graphUri())
                         .build();
-        createGraph(targetGraphId, targetGraphSource.graph());
+        TestWorkspaces.createGraph(databasePort, targetGraphId, targetGraphSource.graph());
 
         var ex = "http://example.org#";
         var rdfa = "http://example.org#uuid";
@@ -304,7 +305,7 @@ class ClassExtensionServiceTest {
                         .setFile(sourceFile)
                         .setGraphName(sourceGraphId.graphUri())
                         .build();
-        createGraph(sourceGraphId, sourceGraphSource.graph());
+        TestWorkspaces.createGraph(databasePort, sourceGraphId, sourceGraphSource.graph());
 
         var targetFile = readMultipartFileFromFile(PATH, "class-extension-target-no-core.ttl");
         var targetGraphSource =
@@ -312,7 +313,7 @@ class ClassExtensionServiceTest {
                         .setFile(targetFile)
                         .setGraphName(targetGraphId.graphUri())
                         .build();
-        createGraph(targetGraphId, targetGraphSource.graph());
+        TestWorkspaces.createGraph(databasePort, targetGraphId, targetGraphSource.graph());
 
         // act
         var results =
@@ -464,7 +465,7 @@ class ClassExtensionServiceTest {
                         .setFile(file)
                         .setGraphName(graphIdentifier.graphUri())
                         .build();
-        createGraph(graphIdentifier, graphSource.graph());
+        TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }
 
     private Model copyOf(GraphIdentifier identifier) {
@@ -474,16 +475,6 @@ class ClassExtensionServiceTest {
                     .add(
                             ModelFactory.createModelForGraph(
                                     transaction.graph(identifier.graphUri()).getRdfGraph()));
-        }
-    }
-
-    /** Creates a workspace and a graph in it, the way an upload does. */
-    private void createGraph(GraphIdentifier identifier, Graph graph) {
-        databasePort.createWorkspaceIfAbsent(identifier.datasetName());
-        try (var transaction =
-                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(identifier.graphUri(), graph);
-            transaction.commit("created graph %s".formatted(identifier.graphUri()));
         }
     }
 }

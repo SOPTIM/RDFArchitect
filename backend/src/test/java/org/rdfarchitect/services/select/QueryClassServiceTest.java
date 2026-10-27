@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -41,6 +40,8 @@ import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import utils.TestWorkspaces;
 
 import java.util.UUID;
 
@@ -72,7 +73,7 @@ class QueryClassServiceTest {
                         .setFile(file)
                         .setGraphName(graphIdentifier.graphUri())
                         .build();
-        createGraph(graphIdentifier, graphSource.graph());
+        TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }
 
     @Test
@@ -130,16 +131,6 @@ class QueryClassServiceTest {
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             return UUID.fromString(
                     model.getResource(PREFIX + label).getProperty(RDFA.uuid).getString());
-        }
-    }
-
-    /** Creates a workspace and a graph in it, the way an upload does. */
-    private void createGraph(GraphIdentifier identifier, Graph graph) {
-        databasePort.createWorkspaceIfAbsent(identifier.datasetName());
-        try (var transaction =
-                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(identifier.graphUri(), graph);
-            transaction.commit("created graph %s".formatted(identifier.graphUri()));
         }
     }
 }

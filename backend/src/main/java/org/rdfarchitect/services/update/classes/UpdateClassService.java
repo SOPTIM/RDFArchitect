@@ -158,7 +158,9 @@ public class UpdateClassService
                             newClass);
             createClassLayoutDataUseCase.createClassLayoutData(
                     graphIdentifier, packageDTO, className, newClassUUID, classLayoutPosition);
-            transaction.commit("Added class \"%s\"".formatted(newClass.getLabel()));
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Added", "class", ChangeDescriptions.name(newClass.getLabel())));
         }
 
         return newClassUUID;

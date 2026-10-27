@@ -24,6 +24,7 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 
 import java.util.UUID;
@@ -51,13 +52,34 @@ public final class ChangeDescriptions {
      */
     public static String packageName(Graph schema, Model diagramLayoutModel, UUID packageUUID) {
         var fromLayout = diagramName(diagramLayoutModel, packageUUID);
-        if (!fromLayout.isEmpty()) {
+        if (!fromLayout.isEmpty() || schema == null) {
             return fromLayout;
         }
         try {
             return name(
                     CIMResourceUtils.findLabelForResource(
                             CIMResourceUtils.findResourceForUuid(schema, packageUUID)));
+        } catch (IllegalStateException _) {
+            return "";
+        }
+    }
+
+    /**
+     * Returns the name of a class as the editor labels it.
+     *
+     * @param schema the graph the class is declared in
+     * @param classUUID the class
+     * @return the label, or {@code ""} for a class the graph does not declare — a change that
+     *     removes one is described after the fact, when there is nothing left to look up
+     */
+    public static String className(Graph schema, UUID classUUID) {
+        if (schema == null) {
+            return "";
+        }
+        try {
+            return name(
+                    CIMResourceUtils.findLabelForResource(
+                            CIMResourceUtils.findResourceForUuid(schema, classUUID)));
         } catch (IllegalStateException _) {
             return "";
         }
@@ -97,16 +119,45 @@ public final class ChangeDescriptions {
     }
 
     /**
-     * Describes an action on something that may or may not have a name, without ever falling back
-     * to an identifier.
+     * Returns the text of a label. A description must never print the label object itself, which is
+     * what an unguarded {@code "%s"} does with it.
+     *
+     * @param label the label, possibly {@code null}
+     * @return the text, or {@code ""} for a resource that carries none
+     */
+    public static String name(RDFSLabel label) {
+        return label == null ? "" : name(label.getValue());
+    }
+
+    /**
+     * Describes an action on a thing that may or may not have a name, without ever falling back to
+     * an identifier.
+     *
+     * @param action what happened to it, e.g. {@code "Deleted"} or {@code "Added classes to"}
+     * @param targetKind the kind of thing it happened to, e.g. {@code "diagram"}
+     * @param targetName its name, possibly empty
+     * @return {@code Deleted diagram "Overview"}, or {@code Deleted a diagram} when unnamed
+     */
+    public static String actionOn(String action, String targetKind, String targetName) {
+        return targetName.isEmpty()
+                ? "%s a %s".formatted(action, targetKind)
+                : "%s %s \"%s\"".formatted(action, targetKind, targetName);
+    }
+
+    /**
+     * Describes an action inside a thing that may or may not have a name. Where {@link
+     * #actionOn(String, String, String)} names what was changed, this names where the change
+     * happened — and says nothing about the place rather than naming it by identifier.
      *
      * @param action what happened, e.g. {@code "Moved classes"}
-     * @param what the kind of thing, e.g. {@code "diagram"}
-     * @param name its name, possibly empty
-     * @return {@code Moved classes in diagram "Overview"}, or {@code Moved classes} when unnamed
+     * @param containerKind the kind of thing it happened in, e.g. {@code "package"}
+     * @param containerName its name, possibly empty
+     * @return {@code Moved classes in package "Core"}, or {@code Moved classes} when unnamed
      */
-    public static String in(String action, String what, String name) {
-        return name.isEmpty() ? action : "%s in %s \"%s\"".formatted(action, what, name);
+    public static String actionIn(String action, String containerKind, String containerName) {
+        return containerName.isEmpty()
+                ? action
+                : "%s in %s \"%s\"".formatted(action, containerKind, containerName);
     }
 
     /**

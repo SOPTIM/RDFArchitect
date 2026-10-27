@@ -48,19 +48,16 @@ public class GenerateOntologyEntriesService implements GenerateOntologyEntriesUs
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             return new OntologyGeneratableEntriesBuilder(model)
                     .generateDCTModified(
-                            changeLogEntryMapper.toDTOList(changesTouching(graphIdentifier)))
+                            changeLogEntryMapper.toDTOList(changesAffecting(graphIdentifier)))
                     .generateDCTIssued()
                     .build();
         }
     }
 
-    /**
-     * The changes that touched this graph, newest first. The log is workspace-wide, but
-     * dcterms:modified speaks for one graph: an edit in a neighbouring one must not restamp it.
-     */
-    private List<WorkspaceChangeLogEntry> changesTouching(GraphIdentifier graphIdentifier) {
+    /** The changes that reached this graph, newest first. */
+    private List<WorkspaceChangeLogEntry> changesAffecting(GraphIdentifier graphIdentifier) {
         return databasePort.listChanges(graphIdentifier.datasetName()).stream()
-                .filter(entry -> entry.affectedGraphUris().contains(graphIdentifier.graphUri()))
+                .filter(entry -> entry.affectsGraph(graphIdentifier.graphUri()))
                 .toList();
     }
 }

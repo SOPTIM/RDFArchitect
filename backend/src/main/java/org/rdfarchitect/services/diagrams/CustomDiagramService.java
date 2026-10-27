@@ -29,6 +29,7 @@ import org.rdfarchitect.api.dto.cross_profile_diagram.MergedClassDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.DiagramLayout;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
@@ -92,6 +93,13 @@ public class CustomDiagramService
     }
 
     @Override
+    public UUID getCrossProfileDiagramId(String datasetName) {
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            return transaction.crossProfileDiagramId();
+        }
+    }
+
+    @Override
     public CrossProfileDiagramDTO getCrossProfileDiagram(String datasetName, boolean doLayout) {
         return getCrossProfileDiagram(datasetName, doLayout, loadProfiles(datasetName));
     }
@@ -116,7 +124,7 @@ public class CustomDiagramService
         UUID crossProfileDiagramUUID;
         Map<String, MergedClassDTO> mergeMap;
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
-            crossProfileDiagramUUID = transaction.crossProfileInfo().getCrossProfileDiagramUUID();
+            crossProfileDiagramUUID = transaction.crossProfileDiagramId();
             mergeMap = mergeProfiles(profiles, graphDTOsMap);
         }
         if (doLayout) {
@@ -196,7 +204,7 @@ public class CustomDiagramService
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
             var removed = transaction.diagrams().remove(UUID.fromString(diagramId));
             transaction.commit(
-                    ChangeDescriptions.in(
+                    ChangeDescriptions.actionOn(
                             "Deleted", "diagram", ChangeDescriptions.diagramName(removed)));
         }
     }
@@ -220,7 +228,7 @@ public class CustomDiagramService
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
             transaction.diagrams().put(UUID.fromString(diagramId), diagram);
             transaction.commit(
-                    ChangeDescriptions.in(
+                    ChangeDescriptions.actionOn(
                             "Updated", "diagram", ChangeDescriptions.diagramName(diagram)));
         }
     }
@@ -229,6 +237,7 @@ public class CustomDiagramService
     public void removeFromCustomDatasetDiagram(String datasetName, String diagramId, UUID classId) {
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
             var diagram = transaction.diagrams().get(UUID.fromString(diagramId));
+            var className = classNameIn(transaction, diagram, classId);
             if (diagram != null) {
                 var classes = diagram.getClasses();
                 classes.removeIf(c -> c.getUuid().equals(classId));
@@ -237,11 +246,36 @@ public class CustomDiagramService
             // Reading the diagrams enrolled them, so the transaction has to be committed either
             // way; a commit that changed nothing records nothing.
             transaction.commit(
-                    ChangeDescriptions.in(
-                            "Removed a class from",
+                    ChangeDescriptions.actionOn(
+                            ChangeDescriptions.actionOn("Removed", "class", className) + " from",
                             "diagram",
                             ChangeDescriptions.diagramName(diagram)));
         }
+    }
+
+    /**
+     * The label of a class on a workspace diagram. Such a diagram draws from several graphs, so the
+     * entry that is about to go says which graph to ask; one that is already gone leaves the change
+     * unnamed rather than identified.
+     */
+    private static String classNameIn(
+            WorkspaceTransaction transaction, CustomDiagram diagram, UUID classId) {
+        if (diagram == null) {
+            return "";
+        }
+        return diagram.getClasses().stream()
+                .filter(cls -> cls.getUuid().equals(classId) && cls.getGraphUri() != null)
+                .findFirst()
+                .map(cls -> classNameInGraph(transaction, cls.getGraphUri().toString(), classId))
+                .orElse("");
+    }
+
+    private static String classNameInGraph(
+            WorkspaceTransaction transaction, String graphUri, UUID classId) {
+        if (!transaction.graphUris().contains(graphUri)) {
+            return "";
+        }
+        return ChangeDescriptions.className(transaction.graph(graphUri).getRdfGraph(), classId);
     }
 
     @Override
@@ -251,7 +285,7 @@ public class CustomDiagramService
             var ctx = transaction.graph(graphIdentifier.graphUri());
             var removed = ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
             transaction.commit(
-                    ChangeDescriptions.in(
+                    ChangeDescriptions.actionOn(
                             "Deleted", "diagram", ChangeDescriptions.diagramName(removed)));
         }
     }
@@ -279,7 +313,7 @@ public class CustomDiagramService
                             diagramDTO.getClasses());
             ctx.getCustomDiagrams().put(UUID.fromString(diagramId), diagram);
             transaction.commit(
-                    ChangeDescriptions.in(
+                    ChangeDescriptions.actionOn(
                             "Updated", "diagram", ChangeDescriptions.diagramName(diagram)));
         }
     }
@@ -291,14 +325,15 @@ public class CustomDiagramService
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagram = ctx.getCustomDiagrams().get(UUID.fromString(diagramId));
+            var className = ChangeDescriptions.className(ctx.getRdfGraph(), classId);
             if (diagram != null) {
                 var classes = diagram.getClasses();
                 classes.removeIf(c -> c.getUuid().equals(classId));
                 diagram.setClasses(classes);
             }
             transaction.commit(
-                    ChangeDescriptions.in(
-                            "Removed a class from",
+                    ChangeDescriptions.actionOn(
+                            ChangeDescriptions.actionOn("Removed", "class", className) + " from",
                             "diagram",
                             ChangeDescriptions.diagramName(diagram)));
         }
@@ -330,7 +365,7 @@ public class CustomDiagramService
             for (var graphUri : transaction.graphUris()) {
                 colorsDTO
                         .getGraphColors()
-                        .put(graphUri, transaction.crossProfileInfo().getColor(graphUri));
+                        .put(graphUri, transaction.crossProfileColors().getColor(graphUri));
             }
         }
         return colorsDTO;
@@ -342,7 +377,7 @@ public class CustomDiagramService
             for (var graphUri : transaction.graphUris()) {
                 if (dto.getGraphColors().containsKey(graphUri)) {
                     transaction
-                            .crossProfileInfo()
+                            .crossProfileColors()
                             .setColor(graphUri, dto.getGraphColors().get(graphUri));
                 }
             }

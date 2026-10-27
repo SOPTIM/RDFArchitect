@@ -130,6 +130,20 @@ public record WorkspaceChangeLogEntry(
     }
 
     /**
+     * Returns whether this commit changed anything in the given graph.
+     *
+     * <p>The log is workspace-wide, but a reader that speaks for one graph — {@code
+     * dcterms:modified} in its ontology header, its own changelog — must not be told about an edit
+     * in a neighbouring one.
+     *
+     * @param graphUri the graph to ask about
+     * @return {@code true} if the commit changed anything in that graph
+     */
+    public boolean affectsGraph(String graphUri) {
+        return affectedGraphUris().contains(graphUri);
+    }
+
+    /**
      * Returns the URIs of the graphs this commit touched.
      *
      * <p>Includes the graphs a workspace-scoped participant named: creating, deleting and renaming

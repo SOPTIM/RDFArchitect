@@ -41,9 +41,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.rdfarchitect.api.dto.delete.DeleteAction;
 import org.rdfarchitect.api.dto.delete.ResourceDeleteRequest;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.Workspace;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
@@ -90,7 +88,6 @@ class DeleteResourcesServiceTest {
             UUID.fromString("bc0bc228-f5cd-5925-ab6b-4bfe83ef9b3e");
 
     @Mock private DatabasePort databasePort;
-    @Mock private WorkspaceTransaction transaction;
 
     @InjectMocks private DeleteResourcesService service;
 
@@ -418,11 +415,5 @@ class DeleteResourcesServiceTest {
         } finally {
             endRead();
         }
-    }
-
-    private void stubTransaction(GraphContext graph) {
-        when(transaction.graph(anyString())).thenReturn(graph);
-        when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))
-                .thenReturn(transaction);
     }
 }

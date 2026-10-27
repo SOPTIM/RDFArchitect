@@ -53,6 +53,8 @@ import org.rdfarchitect.services.update.classes.CopyClassService;
 import org.rdfarchitect.services.update.classes.CopyClassSourceReader;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import utils.TestWorkspaces;
+
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -102,7 +104,7 @@ class CopyClassServiceTest {
                         .setFile(file)
                         .setGraphName(graphIdentifier.graphUri())
                         .build();
-        createGraph(graphIdentifier, graphSource.graph());
+        TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }
 
     private void setUpReferenceGraphs() {
@@ -112,7 +114,8 @@ class CopyClassServiceTest {
                         .setFile(file)
                         .setGraphName(referenceSourceGraphIdentifier.graphUri())
                         .build();
-        createGraph(referenceSourceGraphIdentifier, graphSource.graph());
+        TestWorkspaces.createGraph(
+                databasePort, referenceSourceGraphIdentifier, graphSource.graph());
 
         var targetGraph = GraphFactory.createDefaultGraph();
         var packageNode = NodeFactory.createURI(PREFIX + "newPackage");
@@ -125,7 +128,7 @@ class CopyClassServiceTest {
                 packageNode,
                 RDFA.uuid.asNode(),
                 NodeFactory.createLiteralString(TARGET_PACKAGE_UUID.toString()));
-        createGraph(targetGraphIdentifier, targetGraph);
+        TestWorkspaces.createGraph(databasePort, targetGraphIdentifier, targetGraph);
     }
 
     private PasteClassesRequestDTO referenceRequest(String... referencesToCopy) {
@@ -915,15 +918,5 @@ class CopyClassServiceTest {
     private boolean containsClass(Graph graph, String classUri) {
         return graph.contains(
                 NodeFactory.createURI(classUri), RDF.type.asNode(), RDFS.Class.asNode());
-    }
-
-    /** Creates a workspace and a graph in it, the way an upload does. */
-    private void createGraph(GraphIdentifier identifier, Graph graph) {
-        databasePort.createWorkspaceIfAbsent(identifier.datasetName());
-        try (var transaction =
-                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(identifier.graphUri(), graph);
-            transaction.commit("created graph %s".formatted(identifier.graphUri()));
-        }
     }
 }

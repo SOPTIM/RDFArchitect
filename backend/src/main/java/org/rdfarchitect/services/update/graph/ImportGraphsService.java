@@ -32,6 +32,7 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
 import org.rdfarchitect.services.update.graph.PrefixScanner.ScannedFile;
@@ -513,8 +514,9 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     private static String importMessage(List<ParsedGraph> parsed) {
         return parsed.size() == 1
-                ? "imported graph %s".formatted(parsed.getFirst().uri())
-                : "imported %d graphs".formatted(parsed.size());
+                ? ChangeDescriptions.actionOn(
+                        "Imported", "schema", ChangeDescriptions.localName(parsed.getFirst().uri()))
+                : "Imported %d schemas".formatted(parsed.size());
     }
 
     /** A graph that has been read but not yet hung into the workspace. */

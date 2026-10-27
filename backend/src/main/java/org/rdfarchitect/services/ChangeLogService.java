@@ -39,8 +39,8 @@ public class ChangeLogService implements ChangeLogUseCase {
     }
 
     @Override
-    public ChangeLogEntryDTO pendingUndo(String workspaceName) {
-        var pending = databasePort.pendingUndo(workspaceName);
-        return pending == null ? null : mapper.toDTO(pending);
+    public ChangeLogEntryDTO undoPreview(String workspaceName) {
+        var preview = databasePort.undoPreview(workspaceName);
+        return preview == null ? null : mapper.toDTO(preview);
     }
 }

@@ -111,7 +111,7 @@ public class WorkspaceChangeLog {
      * Returns the commit the next {@link #undo()} would take back, or {@code null} if there is
      * none. Lets a caller see what an undo is about to do before doing it.
      */
-    public WorkspaceChangeLogEntry pendingUndo() {
+    public WorkspaceChangeLogEntry undoPreview() {
         return canUndo() ? undoStack.peek() : null;
     }
 

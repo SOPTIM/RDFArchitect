@@ -24,7 +24,6 @@ import static org.mockito.Mockito.verify;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +38,8 @@ import org.rdfarchitect.services.ExpandURIService;
 import org.rdfarchitect.services.update.classes.CopyClassSource;
 import org.rdfarchitect.services.update.classes.CopyClassSourceReader;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import utils.TestWorkspaces;
 
 import java.util.List;
 import java.util.UUID;
@@ -68,7 +69,7 @@ class CopyClassSourceReaderTest {
                         .setFile(file)
                         .setGraphName(graphIdentifier.graphUri())
                         .build();
-        createGraph(graphIdentifier, graphSource.graph());
+        TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }
 
     private List<CopyClassSource> sources(String classUUID) {
@@ -100,15 +101,5 @@ class CopyClassSourceReaderTest {
         var resolved = sourceReader.readSources(sources(UNKNOWN_CLASS_UUID));
 
         assertThat(resolved).isEmpty();
-    }
-
-    /** Creates a workspace and a graph in it, the way an upload does. */
-    private void createGraph(GraphIdentifier identifier, Graph graph) {
-        databasePort.createWorkspaceIfAbsent(identifier.datasetName());
-        try (var transaction =
-                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(identifier.graphUri(), graph);
-            transaction.commit("created graph %s".formatted(identifier.graphUri()));
-        }
     }
 }

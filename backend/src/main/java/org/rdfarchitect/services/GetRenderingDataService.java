@@ -122,7 +122,7 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
                         databasePort, keywords, datasetName, graphIdentifier.graphUri());
         String primaryColor;
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
-            primaryColor = transaction.crossProfileInfo().getColor(graphIdentifier.graphUri());
+            primaryColor = transaction.crossProfileColors().getColor(graphIdentifier.graphUri());
         }
 
         return renderer.renderUML(

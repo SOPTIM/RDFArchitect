@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.tuple;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -48,6 +47,8 @@ import org.rdfarchitect.services.update.classes.CopyClassReferenceResolver;
 import org.rdfarchitect.services.update.classes.CopyClassSourceReader;
 import org.rdfarchitect.services.update.classes.PastePreviewService;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import utils.TestWorkspaces;
 
 import java.util.List;
 import java.util.UUID;
@@ -87,8 +88,9 @@ class PastePreviewServiceTest {
                         .setFile(file)
                         .setGraphName(sourceGraphIdentifier.graphUri())
                         .build();
-        createGraph(sourceGraphIdentifier, graphSource.graph());
-        createGraph(targetGraphIdentifier, GraphFactory.createDefaultGraph());
+        TestWorkspaces.createGraph(databasePort, sourceGraphIdentifier, graphSource.graph());
+        TestWorkspaces.createGraph(
+                databasePort, targetGraphIdentifier, GraphFactory.createDefaultGraph());
     }
 
     private PasteSourceClassDTO source(String classUUID) {
@@ -294,15 +296,5 @@ class PastePreviewServiceTest {
         assertThat(missing(preview, Kind.DATA_TYPE)).isEmpty();
         assertThat(missing(preview, Kind.ASSOCIATION_TARGET)).isEmpty();
         assertThat(missing(preview, Kind.SUPER_CLASS)).isEmpty();
-    }
-
-    /** Creates a workspace and a graph in it, the way an upload does. */
-    private void createGraph(GraphIdentifier identifier, Graph graph) {
-        databasePort.createWorkspaceIfAbsent(identifier.datasetName());
-        try (var transaction =
-                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(identifier.graphUri(), graph);
-            transaction.commit("created graph %s".formatted(identifier.graphUri()));
-        }
     }
 }

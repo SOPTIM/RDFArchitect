@@ -48,8 +48,8 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
-    public WorkspaceChangeLogEntry pendingUndo(String workspaceName) {
-        return database.pendingUndo(workspaceName);
+    public WorkspaceChangeLogEntry undoPreview(String workspaceName) {
+        return database.undoPreview(workspaceName);
     }
 
     @Override

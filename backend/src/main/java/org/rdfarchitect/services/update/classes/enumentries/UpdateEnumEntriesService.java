@@ -25,6 +25,7 @@ import org.rdfarchitect.api.dto.enumentries.EnumEntryMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -58,7 +59,11 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
                         graph,
                         databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                         cimEnumEntry);
-                message = "Created enum entry \"%s\" (%s)".formatted(cimEnumEntry.getLabel(), uuid);
+                message =
+                        ChangeDescriptions.actionOn(
+                                "Created",
+                                "enum entry",
+                                ChangeDescriptions.name(cimEnumEntry.getLabel().getValue()));
             } else {
                 uuid = enumEntryDTO.getUuid();
                 CIMUpdates.replaceEnumEntry(
@@ -66,7 +71,10 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
                         databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                         cimEnumEntry);
                 message =
-                        "Replaced enum entry \"%s\" (%s)".formatted(cimEnumEntry.getLabel(), uuid);
+                        ChangeDescriptions.actionOn(
+                                "Replaced",
+                                "enum entry",
+                                ChangeDescriptions.name(cimEnumEntry.getLabel().getValue()));
             }
 
             transaction.commit(message);

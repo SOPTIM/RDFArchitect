@@ -85,7 +85,7 @@ class RenameGraphServiceTest {
         renameGraphService.renameGraph(new GraphIdentifier(DATASET, OLD_URI), NEW_URI);
 
         verify(transaction).renameGraph(OLD_URI, NEW_URI);
-        verify(transaction).commit("renamed schema to " + NEW_URI);
+        verify(transaction).commit("Renamed the schema to \"%s\"".formatted("new"));
     }
 
     /**

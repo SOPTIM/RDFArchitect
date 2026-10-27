@@ -37,11 +37,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/undo/pending")
+@RequestMapping("api/datasets/{datasetName}/undo/preview")
 @RequiredArgsConstructor
-public class PendingUndoRESTController {
+public class UndoPreviewRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(PendingUndoRESTController.class);
+    private static final Logger logger = LoggerFactory.getLogger(UndoPreviewRESTController.class);
 
     private final ChangeLogUseCase changelogUseCase;
 
@@ -61,7 +61,7 @@ public class PendingUndoRESTController {
                                         schema = @Schema(implementation = ChangeLogEntryDTO.class)))
             })
     @GetMapping
-    public ChangeLogEntryDTO getPendingUndo(
+    public ChangeLogEntryDTO getUndoPreview(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -71,16 +71,16 @@ public class PendingUndoRESTController {
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/undo/pending\" from \"{}\".",
+                "Received GET request: \"/api/datasets/{{}}/undo/preview\" from \"{}\".",
                 datasetName,
                 originURL);
 
-        var pending = changelogUseCase.pendingUndo(datasetName);
+        var preview = changelogUseCase.undoPreview(datasetName);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/undo/pending\" to \"{}\".",
+                "Sending response to GET request: \"/api/datasets/{{}}/undo/preview\" to \"{}\".",
                 datasetName,
                 originURL);
-        return pending;
+        return preview;
     }
 }

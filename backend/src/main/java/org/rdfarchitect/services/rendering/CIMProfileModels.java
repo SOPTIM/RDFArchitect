@@ -86,7 +86,7 @@ public final class CIMProfileModels {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
             graphCopy = GraphUtils.deepCopy(transaction.graph(graphUri).getRdfGraph());
-            color = transaction.crossProfileInfo().getColor(graphUri);
+            color = transaction.crossProfileColors().getColor(graphUri);
         }
 
         var model = new CIMModelFacade(graphUri, ModelFactory.createModelForGraph(graphCopy));

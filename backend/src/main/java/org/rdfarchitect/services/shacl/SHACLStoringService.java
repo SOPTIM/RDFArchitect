@@ -39,6 +39,7 @@ import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.merge.ModelResourceExclusiveMerge;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.shacl.PropertyShapeToClassAssigner;
 import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 import org.rdfarchitect.shacl.SHACLShapesFetcher;
@@ -92,7 +93,7 @@ public class SHACLStoringService
             storedModel.add(newModel);
             storedModel.setNsPrefixes(newModel);
 
-            transaction.commit("Replace custom SHACL");
+            transaction.commit("Replaced the custom SHACL");
         }
     }
 
@@ -370,7 +371,9 @@ public class SHACLStoringService
             copySHACLShapeToNewModel(
                     customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
             customSHACL.remove(deleteModel);
-            transaction.commit("Delete SHACL shape");
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Deleted", "SHACL shape", ChangeDescriptions.localName(shaclShapeURI)));
         }
     }
 
@@ -387,7 +390,11 @@ public class SHACLStoringService
                     customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
             customSHACL.remove(deleteModel);
             customSHACL.add(insertModel);
-            transaction.commit("Replace SHACL shape");
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Replaced",
+                            "SHACL shape",
+                            ChangeDescriptions.localName(shaclShapeURI)));
         }
     }
 
@@ -416,7 +423,11 @@ public class SHACLStoringService
             customSHACL.clearNsPrefixMap();
             customSHACL.setNsPrefixes(insertModel);
             customSHACL.add(insertModel);
-            transaction.commit("Update class SHACL");
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Updated the SHACL of",
+                            "class",
+                            ChangeDescriptions.className(ctx.getRdfGraph(), classUUID)));
         }
     }
 
@@ -445,7 +456,7 @@ public class SHACLStoringService
             customSHACL.clearNsPrefixMap();
             customSHACL.setNsPrefixes(insertModel);
             customSHACL.add(insertModel);
-            transaction.commit("Update property SHACL");
+            transaction.commit("Updated the SHACL of a property");
         }
     }
 
