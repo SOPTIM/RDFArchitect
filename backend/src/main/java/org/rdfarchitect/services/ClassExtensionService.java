@@ -158,16 +158,23 @@ public class ClassExtensionService implements ClassExtensionUseCase {
                 }
                 CIMUpdates.insertClass(newGraph, newGraph.getPrefixMapping(), stub);
                 insertedUris.add(stub.getUri().toString());
-                labels.add(stub.getLabel().getValue());
+                var label = ChangeDescriptions.name(stub.getLabel());
+                if (!label.isEmpty()) {
+                    labels.add(label);
+                }
             }
             if (insertedUris.isEmpty()) {
                 return insertedUris;
             }
+            var added =
+                    labels.isEmpty()
+                            ? "%d classes".formatted(insertedUris.size())
+                            : String.join(", ", labels);
             transaction.commit(
-                    "Added "
-                            + String.join(", ", labels)
-                            + " to graph "
-                            + newGraphIdentifier.graphUri());
+                    ChangeDescriptions.actionOn(
+                            "Added " + added + " to",
+                            "schema",
+                            ChangeDescriptions.localName(newGraphIdentifier.graphUri())));
         }
         return insertedUris;
     }

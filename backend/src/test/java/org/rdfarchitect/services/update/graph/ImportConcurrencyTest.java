@@ -167,7 +167,7 @@ class ImportConcurrencyTest {
                 .first()
                 .satisfies(
                         entry -> {
-                            assertThat(entry.message()).isEqualTo("imported 2 graphs");
+                            assertThat(entry.message()).isEqualTo("Imported 2 schemas");
                             assertThat(entry.affectedGraphUris()).hasSize(2);
                         });
     }

@@ -72,7 +72,7 @@ public class Workspace {
     private static final Logger logger = LoggerFactory.getLogger(Workspace.class);
 
     private static final String DEFAULT_GRAPH_NAME = "default";
-    private static final String INITIAL_CHANGE_MESSAGE = "loaded workspace";
+    private static final String INITIAL_CHANGE_MESSAGE = "Loaded the workspace";
 
     @Setter @Getter private volatile boolean isReadOnly = true;
 
