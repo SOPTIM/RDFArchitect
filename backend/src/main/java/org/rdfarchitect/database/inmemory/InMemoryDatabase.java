@@ -40,7 +40,8 @@ public interface InMemoryDatabase {
     void createDataset(String datasetName);
 
     /**
-     * Creates the workspace unless it already exists.
+     * Creates the workspace unless it already exists, readying a new one for editing just like
+     * {@link #createDataset(String)} does.
      *
      * @param workspaceName the literal workspace name
      */

@@ -37,6 +37,24 @@ export const sparqlMediaType: MediaType = {
     fileExtension: ".sparql",
 };
 
+/** Whether the file is a ZIP archive, which the import unpacks on its own. */
+export function isZipFile(fileName: string): boolean {
+    return (fileName ?? "").toLowerCase().endsWith(".zip");
+}
+
+/** Whether the file holds a graph in one of the RDF syntaxes the import reads. */
+export function isSupportedGraphFile(fileName: string): boolean {
+    const lowered = (fileName ?? "").toLowerCase();
+    return supportedRDFMediaTypes.some(type =>
+        lowered.endsWith(type.fileExtension),
+    );
+}
+
+/** Whether the import takes the file at all, be it as a graph or as an archive of graphs. */
+export function isImportableFile(fileName: string): boolean {
+    return isZipFile(fileName) || isSupportedGraphFile(fileName);
+}
+
 export function saveFile(
     blob: Blob,
     suggestedFilename: string,

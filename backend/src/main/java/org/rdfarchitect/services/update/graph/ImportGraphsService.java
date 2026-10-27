@@ -72,7 +72,6 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             List<MultipartFile> files,
             List<String> graphUris,
             ImportProgressListener listener) {
-        databasePort.createWorkspaceIfAbsent(datasetName);
         var sources = planSources(files, graphUris);
         listener.planned(
                 sources.stream()
@@ -482,6 +481,10 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         if (parsed.isEmpty()) {
             return;
         }
+        // The import may name a workspace that does not exist yet, and one it works in must not be
+        // left read-only. Created at the first write, not up front: an import that writes nothing
+        // leaves nothing behind, and a new workspace's prefixes cannot contest the first file's.
+        databasePort.createWorkspaceIfAbsent(datasetName);
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
             resolved.rewriteWorkspacePrefixes(transaction.prefixes())
                     .ifPresent(transaction::setPrefixes);

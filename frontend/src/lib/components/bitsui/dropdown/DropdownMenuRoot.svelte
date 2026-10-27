@@ -16,7 +16,17 @@
   -->
 <script>
     import { DropdownMenu as BitsUiDropdownMenu } from "bits-ui";
-    let { children } = $props();
+
+    import { fileDragState } from "$lib/fileDragState.svelte.js";
+
+    let { children, open = $bindable(false) } = $props();
+
+    // A menu left open would cover the drop zones the files are headed for.
+    $effect(() => {
+        if (fileDragState.active) {
+            open = false;
+        }
+    });
 </script>
 
-<BitsUiDropdownMenu.Root {children} />
+<BitsUiDropdownMenu.Root bind:open {children} />
