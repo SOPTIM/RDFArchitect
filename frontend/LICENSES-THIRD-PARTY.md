@@ -68,7 +68,7 @@
 
 ### @sveltejs/vite-plugin-svelte
 - **Package:** @sveltejs/vite-plugin-svelte
-- **Version:** 7.3.0
+- **Version:** 7.3.1
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/vite-plugin-svelte#readme](https://github.com/sveltejs/vite-plugin-svelte#readme)
 
@@ -86,30 +86,30 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.70.0
+- **Version:** 8.71.2
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
 ### @xyflow/svelte
 - **Package:** @xyflow/svelte
-- **Version:** 1.6.6
+- **Version:** 1.7.0
 - **License:** MIT
 - **URL:** [https://svelteflow.dev](https://svelteflow.dev)
 
 ### asciidoctor
 - **Package:** asciidoctor
-- **Version:** 4.0.11
+- **Version:** 4.1.1
 - **License:** MIT
 - **URL:** [https://github.com/asciidoctor/asciidoctor.js](https://github.com/asciidoctor/asciidoctor.js)
 
 ### autoprefixer
 - **Package:** autoprefixer
-- **Version:** 10.6.0
+- **Version:** 10.6.1
 - **License:** MIT
 
 ### bits-ui
 - **Package:** bits-ui
-- **Version:** 2.19.2
+- **Version:** 2.19.5
 - **License:** MIT
 
 ### codemirror
@@ -132,7 +132,7 @@
 
 ### eslint
 - **Package:** eslint
-- **Version:** 10.10.0
+- **Version:** 10.13.0
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -150,7 +150,7 @@
 
 ### eslint-plugin-svelte
 - **Package:** eslint-plugin-svelte
-- **Version:** 3.23.0
+- **Version:** 3.23.1
 - **License:** MIT
 - **URL:** [https://sveltejs.github.io/eslint-plugin-svelte](https://sveltejs.github.io/eslint-plugin-svelte)
 
@@ -162,7 +162,7 @@
 
 ### globals
 - **Package:** globals
-- **Version:** 17.12.0
+- **Version:** 17.13.0
 - **License:** MIT
 
 ### html-to-image
@@ -173,7 +173,7 @@
 
 ### jsdom
 - **Package:** jsdom
-- **Version:** 30.0.1
+- **Version:** 30.1.3
 - **License:** MIT
 - **URL:** [https://github.com/jsdom/jsdom](https://github.com/jsdom/jsdom)
 
@@ -191,13 +191,13 @@
 
 ### postcss
 - **Package:** postcss
-- **Version:** 8.5.28
+- **Version:** 8.5.31
 - **License:** MIT
 - **URL:** [https://postcss.org/](https://postcss.org/)
 
 ### prettier
 - **Package:** prettier
-- **Version:** 3.9.6
+- **Version:** 3.9.10
 - **License:** MIT
 - **URL:** [https://prettier.io](https://prettier.io)
 
@@ -215,7 +215,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.57.0
+- **Version:** 5.57.2
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -227,7 +227,7 @@
 
 ### svelte-eslint-parser
 - **Package:** svelte-eslint-parser
-- **Version:** 1.8.1
+- **Version:** 1.9.0
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/svelte-eslint-parser#readme](https://github.com/sveltejs/svelte-eslint-parser#readme)
 
@@ -257,13 +257,13 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.70.0
+- **Version:** 8.71.2
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
 ### uuid
 - **Package:** uuid
-- **Version:** 14.0.2
+- **Version:** 14.0.3
 - **License:** MIT
 - **URL:** [https://github.com/uuidjs/uuid](https://github.com/uuidjs/uuid)
 
@@ -275,13 +275,13 @@
 
 ### vite
 - **Package:** vite
-- **Version:** 8.3.0
+- **Version:** 8.3.3
 - **License:** MIT
 - **URL:** [https://vite.dev](https://vite.dev)
 
 ### vitest
 - **Package:** vitest
-- **Version:** 5.0.0
+- **Version:** 5.0.5
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 

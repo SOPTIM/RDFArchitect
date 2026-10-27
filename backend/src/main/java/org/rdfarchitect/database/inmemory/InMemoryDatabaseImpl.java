@@ -61,7 +61,7 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
 
     @Override
     public void createWorkspaceIfAbsent(String workspaceName) {
-        // The store decides who creates it; looking first would let both callers through.
+        // The store decides who creates it; looking first would let two concurrent calls through.
         var store = getOrCreateSessionDataStore();
         if (store.createDatasetIfAbsent(workspaceName)) {
             initializeNewDataset(store, workspaceName);

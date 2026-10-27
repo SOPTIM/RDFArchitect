@@ -33,6 +33,7 @@
     import CrossProfileDiagramsSection from "./CrossProfileDiagramsSection.svelte";
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
     import GraphSection from "./GraphSection.svelte";
+    import SchemaDropZone from "../SchemaDropZone.svelte";
     import WorkspaceActionsMenu from "../workspaceActions/WorkspaceActionsMenu.svelte";
 
     const localReloadTrigger = new SimpleTrigger();
@@ -114,8 +115,10 @@
             class="m-0 flex h-full w-full flex-1 flex-col items-stretch gap-0 p-0"
         >
             <div class="flex h-full w-full">
-                <div
-                    class="border-nav-border bg-color-nav-surface flex h-full min-h-0 w-full flex-1 flex-col border-r"
+                <SchemaDropZone
+                    workspaceName={activeWorkspace}
+                    {readonly}
+                    class="border-nav-border bg-nav-surface flex h-full min-h-0 w-full flex-1 flex-col border-r"
                 >
                     <div
                         class="no-scrollbar min-h-0 flex-1 overflow-y-auto py-[0.4rem]"
@@ -150,7 +153,7 @@
                             {/key}
                         {/if}
                     </div>
-                </div>
+                </SchemaDropZone>
             </div>
         </ContextMenu.TriggerArea>
         <WorkspaceActionsMenu workspaceName={activeWorkspace} {readonly} />
