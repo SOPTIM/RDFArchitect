@@ -21,10 +21,10 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.shared.Lock;
 import org.rdfarchitect.api.dto.dl.EdgeLayoutDTO;
 import org.rdfarchitect.api.dto.dl.EdgePointDTO;
-import org.rdfarchitect.api.dto.dl.EdgePointIdDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
@@ -53,13 +53,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
 
-    private static final String SOURCE_SIDE = "source";
-    private static final String TARGET_SIDE = "target";
-
     private final DatabasePort databasePort;
 
     @Override
-    public List<EdgePointIdDTO> updateEdgeLayouts(
+    public void updateEdgeLayouts(
             GraphIdentifier graphIdentifier, UUID diagramUUID, List<EdgeLayoutDTO> edges) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagramLayout = ctx.getDiagramLayout();
@@ -67,29 +64,25 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
                     diagramUUID != null
                             ? diagramUUID
                             : diagramLayout.getDefaultPackageMRID().getUuid();
-            var newPointIds =
-                    applyEdgeLayouts(
-                            diagramLayout.getDiagramLayoutModel(),
-                            resolvedDiagramUUID,
-                            edges,
-                            EdgeResolver.lazily(
-                                    () ->
-                                            EdgeResolver.forGraph(
-                                                    graphIdentifier.graphUri(),
-                                                    ctx.getRdfGraph())));
+            applyEdgeLayouts(
+                    diagramLayout.getDiagramLayoutModel(),
+                    resolvedDiagramUUID,
+                    edges,
+                    EdgeResolver.lazily(
+                            () ->
+                                    EdgeResolver.forGraph(
+                                            graphIdentifier.graphUri(), ctx.getRdfGraph())));
             ctx.commit();
-            return newPointIds;
         }
     }
 
     @Override
-    public List<EdgePointIdDTO> updateEdgeLayouts(
-            String datasetName, UUID diagramUUID, List<EdgeLayoutDTO> edges) {
+    public void updateEdgeLayouts(String datasetName, UUID diagramUUID, List<EdgeLayoutDTO> edges) {
         var diagramLayoutModel =
                 databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
         diagramLayoutModel.enterCriticalSection(Lock.WRITE);
         try {
-            return applyEdgeLayouts(
+            applyEdgeLayouts(
                     diagramLayoutModel,
                     diagramUUID,
                     edges,
@@ -107,8 +100,9 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
      * <ul>
      *   <li>a point whose id is the mRID of a stored point of the edge updates that point, and is
      *       left untouched if neither position, sequence number nor glue point changed
-     *   <li>any other point is new and stored under an mRID of its own, which is returned for the
-     *       id it was sent with
+     *   <li>any other point is new and stored under the id it was sent with, a UUID the frontend
+     *       created it with. Only if the id is no UUID or already names another resource of the
+     *       diagram layout, the point gets an mRID of its own
      *   <li>stored points that are not sent anymore are deleted
      *   <li>a docking point is glued to the glue point of the source or the target class, depending
      *       on its side
@@ -126,9 +120,8 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
      * @param edges the edges to store
      * @param edgeResolver resolves the edges between the classes of the diagram, only needed if
      *     class layout data or edge diagram objects have to be created
-     * @return the mRIDs the new points are stored under
      */
-    public static List<EdgePointIdDTO> applyEdgeLayouts(
+    public static void applyEdgeLayouts(
             Model diagramLayoutModel,
             UUID diagramUUID,
             List<EdgeLayoutDTO> edges,
@@ -136,29 +129,24 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
         var completeEdges =
                 edges.stream().filter(UpdateEdgeLayoutDataService::identifiesItsEdge).toList();
         if (completeEdges.isEmpty()) {
-            return List.of();
+            return;
         }
         var createdClassLayoutData =
                 ensureClassLayoutData(diagramLayoutModel, diagramUUID, completeEdges);
         var edgeDOs = edgeDOsByKey(diagramLayoutModel, diagramUUID);
         var sentEdges = completeEdges.stream().map(UpdateEdgeLayoutDataService::keyOf).toList();
         if (createdClassLayoutData || !edgeDOs.keySet().containsAll(sentEdges)) {
-            EdgeLayoutReconciler.reconcileEdges(
-                    diagramLayoutModel, diagramUUID, edgeResolver.get());
+            EdgeLayoutSync.syncEdges(diagramLayoutModel, diagramUUID, edgeResolver.get());
             edgeDOs = edgeDOsByKey(diagramLayoutModel, diagramUUID);
         }
 
         var gluePoints = new HashMap<UUID, MRID>();
-        var newPointIds = new ArrayList<EdgePointIdDTO>();
         for (var edge : completeEdges) {
             var edgeDO = edgeDOs.get(keyOf(edge));
-            if (edgeDO == null) {
-                continue;
+            if (edgeDO != null) {
+                applyEdgeLayout(diagramLayoutModel, diagramUUID, edgeDO, edge, gluePoints);
             }
-            newPointIds.addAll(
-                    applyEdgeLayout(diagramLayoutModel, diagramUUID, edgeDO, edge, gluePoints));
         }
-        return newPointIds;
     }
 
     /**
@@ -174,12 +162,7 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
         var keptEdges =
                 edges.stream()
                         .filter(UpdateEdgeLayoutDataService::identifiesItsEdge)
-                        .map(
-                                edge ->
-                                        EdgeKey.of(
-                                                DiagramObjectStyle.byName(edge.getKind()),
-                                                edge.getSourceObject(),
-                                                edge.getTargetObject()))
+                        .map(UpdateEdgeLayoutDataService::keyOf)
                         .collect(Collectors.toSet());
         for (var edgeDO : edgeDOsByKey(diagramLayoutModel, diagramUUID).entrySet()) {
             if (keptEdges.contains(edgeDO.getKey())) {
@@ -234,10 +217,13 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
     }
 
     private static EdgeKey keyOf(EdgeLayoutDTO edge) {
-        return EdgeKey.of(
-                DiagramObjectStyle.byName(edge.getKind()),
-                edge.getSourceObject(),
-                edge.getTargetObject());
+        var style =
+                switch (edge.getKind()) {
+                    case null -> null;
+                    case INHERITANCE -> DiagramObjectStyle.INHERITANCE;
+                    case ASSOCIATION -> DiagramObjectStyle.ASSOCIATION;
+                };
+        return EdgeKey.of(style, edge.getSourceObject(), edge.getTargetObject());
     }
 
     private static Map<EdgeKey, DiagramObject> edgeDOsByKey(
@@ -257,9 +243,8 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
      * Replaces the stored points of one edge, see {@link #applyEdgeLayouts}.
      *
      * @param gluePoints the glue points of the classes of the diagram resolved so far
-     * @return the mRIDs the new points of the edge are stored under
      */
-    private static List<EdgePointIdDTO> applyEdgeLayout(
+    private static void applyEdgeLayout(
             Model diagramLayoutModel,
             UUID diagramUUID,
             DiagramObject edgeDO,
@@ -276,7 +261,6 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
             storedPoints.put(storedPoint.getMRID().getUuid().toString(), storedPoint);
         }
 
-        var newPointIds = new ArrayList<EdgePointIdDTO>();
         for (var index = 0; index < points.size(); index++) {
             var point = points.get(index);
             var gluedClass = classOfSide(edge, point.getSide());
@@ -287,9 +271,13 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
 
             var storedPoint = point.getId() != null ? storedPoints.remove(point.getId()) : null;
             if (storedPoint == null) {
-                var pointMRID = new MRID(UUID.randomUUID());
-                insertPoint(diagramLayoutModel, pointMRID, edgeDO, point, index, gluePoint);
-                newPointIds.add(new EdgePointIdDTO(point.getId(), pointMRID.getUuid().toString()));
+                insertPoint(
+                        diagramLayoutModel,
+                        mridOfNewPoint(diagramLayoutModel, point.getId()),
+                        edgeDO,
+                        point,
+                        index,
+                        gluePoint);
             } else if (!isUnchanged(storedPoint, point, index, gluePoint)) {
                 DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, storedPoint.getMRID());
                 insertPoint(
@@ -299,7 +287,27 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
         for (var removedPoint : storedPoints.values()) {
             DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, removedPoint.getMRID());
         }
-        return newPointIds;
+    }
+
+    /**
+     * The mRID a new point is stored under: the UUID the frontend created the point with, so it can
+     * send the point again without learning another id first. A point whose id is no UUID or
+     * already names another resource of the diagram layout gets a new mRID instead; the frontend
+     * then sends it as a new point once more, and the point stored now is replaced.
+     */
+    private static MRID mridOfNewPoint(Model diagramLayoutModel, String id) {
+        if (id != null) {
+            try {
+                var mrid = new MRID(UUID.fromString(id));
+                if (!diagramLayoutModel.containsResource(
+                        ResourceFactory.createResource(mrid.getFullMRID()))) {
+                    return mrid;
+                }
+            } catch (IllegalArgumentException _) {
+                return new MRID(UUID.randomUUID());
+            }
+        }
+        return new MRID(UUID.randomUUID());
     }
 
     /**
@@ -307,14 +315,12 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
      *
      * @return the source or the target class of the edge, or null for a bend point
      */
-    private static UUID classOfSide(EdgeLayoutDTO edge, String side) {
-        if (SOURCE_SIDE.equals(side)) {
-            return edge.getSourceClass();
-        }
-        if (TARGET_SIDE.equals(side)) {
-            return edge.getTargetClass();
-        }
-        return null;
+    private static UUID classOfSide(EdgeLayoutDTO edge, EdgePointDTO.Side side) {
+        return switch (side) {
+            case null -> null;
+            case SOURCE -> edge.getSourceClass();
+            case TARGET -> edge.getTargetClass();
+        };
     }
 
     private static void insertPoint(
@@ -328,8 +334,8 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
                 diagramLayoutModel,
                 pointMRID,
                 edgeDO.getMRID(),
-                point.getXPosition(),
-                point.getYPosition(),
+                point.getX(),
+                point.getY(),
                 sequenceNumber,
                 gluePoint);
     }
@@ -339,8 +345,8 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
             EdgePointDTO point,
             int sequenceNumber,
             MRID gluePoint) {
-        return Float.compare(storedPoint.getPosition().getX(), point.getXPosition()) == 0
-                && Float.compare(storedPoint.getPosition().getY(), point.getYPosition()) == 0
+        return Double.compare(storedPoint.getPosition().getX(), point.getX()) == 0
+                && Double.compare(storedPoint.getPosition().getY(), point.getY()) == 0
                 && Objects.equals(storedPoint.getSequenceNumber(), sequenceNumber)
                 && Objects.equals(storedPoint.getBelongsToGluePoint(), gluePoint);
     }

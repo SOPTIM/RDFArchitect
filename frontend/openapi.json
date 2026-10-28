@@ -457,11 +457,11 @@
       "ClassLayoutPositionDTO" : {
         "properties" : {
           "xposition" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           },
           "yposition" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           }
         },
@@ -474,19 +474,19 @@
             "type" : "string"
           },
           "xPosition" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           },
           "xposition" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           },
           "yPosition" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           },
           "yposition" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           },
           "zPosition" : {
@@ -844,6 +844,10 @@
       "EdgeLayoutDTO" : {
         "properties" : {
           "kind" : {
+            "enum" : [
+              "inheritance",
+              "association"
+            ],
             "type" : "string"
           },
           "points" : {
@@ -877,34 +881,19 @@
             "type" : "string"
           },
           "side" : {
+            "enum" : [
+              "source",
+              "target"
+            ],
             "type" : "string"
           },
-          "xPosition" : {
-            "format" : "float",
+          "x" : {
+            "format" : "double",
             "type" : "number"
           },
-          "xposition" : {
-            "format" : "float",
+          "y" : {
+            "format" : "double",
             "type" : "number"
-          },
-          "yPosition" : {
-            "format" : "float",
-            "type" : "number"
-          },
-          "yposition" : {
-            "format" : "float",
-            "type" : "number"
-          }
-        },
-        "type" : "object"
-      },
-      "EdgePointIdDTO" : {
-        "properties" : {
-          "clientId" : {
-            "type" : "string"
-          },
-          "id" : {
-            "type" : "string"
           }
         },
         "type" : "object"
@@ -1231,11 +1220,11 @@
             "type" : "string"
           },
           "x" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           },
           "y" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           }
         },
@@ -6351,7 +6340,7 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}" : {
       "put" : {
-        "description" : "Updates the layout of the classes, edges and labels in the request body in one step. Every part is optional, only the elements sent are updated. Returns the ids new edge points are stored under.",
+        "description" : "Updates the layout of the classes, edges and labels in the request body in one step. Every part is optional, only the elements sent are updated.",
         "operationId" : "updateDiagramLayout",
         "parameters" : [
           {
@@ -6408,10 +6397,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/EdgePointIdDTO"
-                  },
-                  "type" : "array"
+                  "type" : "string"
                 }
               }
             },
@@ -6504,7 +6490,7 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}/edges" : {
       "put" : {
-        "description" : "Replaces the points of the edges in the request body with the full, ordered list of points sent for each. Returns the ids new edge points are stored under.",
+        "description" : "Replaces the points of the edges in the request body with the full, ordered list of points sent for each.",
         "operationId" : "updateEdgeLayouts",
         "parameters" : [
           {
@@ -6564,10 +6550,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/EdgePointIdDTO"
-                  },
-                  "type" : "array"
+                  "type" : "string"
                 }
               }
             },
@@ -8332,7 +8315,7 @@
     },
     "/api/datasets/{datasetName}/layout/{diagramUUID}" : {
       "put" : {
-        "description" : "Updates the layout of the classes, edges and labels in the request body in one step. Every part is optional, only the elements sent are updated. Returns the ids new edge points are stored under.",
+        "description" : "Updates the layout of the classes, edges and labels in the request body in one step. Every part is optional, only the elements sent are updated.",
         "operationId" : "updateDatasetDiagramLayout",
         "parameters" : [
           {
@@ -8380,10 +8363,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/EdgePointIdDTO"
-                  },
-                  "type" : "array"
+                  "type" : "string"
                 }
               }
             },
@@ -8467,7 +8447,7 @@
     },
     "/api/datasets/{datasetName}/layout/{diagramUUID}/edges" : {
       "put" : {
-        "description" : "Replaces the points of the edges in the request body with the full, ordered list of points sent for each. Returns the ids new edge points are stored under.",
+        "description" : "Replaces the points of the edges in the request body with the full, ordered list of points sent for each.",
         "operationId" : "updateDatasetEdgeLayouts",
         "parameters" : [
           {
@@ -8518,10 +8498,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/EdgePointIdDTO"
-                  },
-                  "type" : "array"
+                  "type" : "string"
                 }
               }
             },

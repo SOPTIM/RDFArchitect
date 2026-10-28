@@ -70,8 +70,8 @@ public class DLQuerySolutionParser {
         if (!qs.contains(DLQueryVars.X_POSITION) || !qs.contains(DLQueryVars.Y_POSITION)) {
             return null;
         }
-        var xPosition = qs.getLiteral(DLQueryVars.X_POSITION).getFloat();
-        var yPosition = qs.getLiteral(DLQueryVars.Y_POSITION).getFloat();
+        var xPosition = qs.getLiteral(DLQueryVars.X_POSITION).getDouble();
+        var yPosition = qs.getLiteral(DLQueryVars.Y_POSITION).getDouble();
         var zPositionLiteral = qs.getLiteral(DLQueryVars.Z_POSITION);
         var zPosition = 0;
         if (zPositionLiteral != null) {

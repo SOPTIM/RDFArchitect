@@ -37,8 +37,8 @@ export function hasDefaultNodeLayout(diagramNodes) {
 }
 
 /**
- * Prepares the edges from the backend for SvelteFlow: drawn below the classes, with their points
- * flattened, see {@link normalizeEdgeData}.
+ * Prepares the edges from the backend for SvelteFlow: drawn below the classes, with their docking
+ * points marked, see {@link normalizeEdgeData}.
  */
 export function decorateEdges(edges) {
     return edges.map(decorateEdge);
@@ -145,9 +145,8 @@ function decorateEdge(edge) {
 }
 
 /**
- * Normalizes edge data coming from the backend. Points arrive with a nested
- * position ({ id, position: { x, y, z }, side }) and are flattened to the shape
- * used throughout the frontend, see {@link flattenEdgePoint}.
+ * Normalizes edge data coming from the backend. Points arrive as { id, x, y, side } and are
+ * brought into the shape used throughout the frontend, see {@link toFrontendEdgePoint}.
  */
 function normalizeEdgeData(data) {
     if (!data) {
@@ -158,28 +157,19 @@ function normalizeEdgeData(data) {
     }
     return {
         ...data,
-        edgePoints: data.edgePoints.map(flattenEdgePoint),
+        edgePoints: data.edgePoints.map(toFrontendEdgePoint),
     };
 }
 
 /**
- * Flattens a single edge point from the backend's nested position shape to the
- * shape the frontend creates points in: { id, x, y } for a bend point and
- * { id, x, y, isDockingPoint, side } for a docking point, which the backend marks
- * with the side of the class it is pinned to. Points that are already flat (e.g.
- * created in the frontend during interaction) are returned unchanged.
+ * Brings a single edge point from the backend into the shape the frontend creates points in:
+ * { id, x, y } for a bend point and { id, x, y, isDockingPoint, side } for a docking point, which
+ * the backend marks with the side of the class it is pinned to.
  */
-function flattenEdgePoint(point) {
-    if (!point || !point.position) {
-        return point;
-    }
-    const flatPoint = {
-        id: point.id,
-        x: point.position.x,
-        y: point.position.y,
-    };
+function toFrontendEdgePoint(point) {
+    const edgePoint = { id: point.id, x: point.x, y: point.y };
     if (!point.side) {
-        return flatPoint;
+        return edgePoint;
     }
-    return { ...flatPoint, isDockingPoint: true, side: point.side };
+    return { ...edgePoint, isDockingPoint: true, side: point.side };
 }

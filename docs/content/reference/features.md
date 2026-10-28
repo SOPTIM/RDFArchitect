@@ -39,7 +39,7 @@ Edit the ontology metadata block (title, version, conformsTo, keyword, license, 
 
 ### UML-style diagrams
 
-Diagrams render classes with full attribute and association detail, inheritance arrows, stereotypes, and cardinalities. Diagrams are rendered with SvelteFlow (pan/zoom/auto-layout). The Mermaid renderer is obsolete: it can still be switched on in the configuration, but it is no longer developed and lacks the newer diagram features, such as arranging edges.
+Diagrams render classes with full attribute and association detail, inheritance arrows, stereotypes, and cardinalities. Diagrams are rendered with SvelteFlow (pan/zoom/auto-layout). The Mermaid renderer is deprecated: it can still be switched on in the configuration, but it is no longer developed and lacks the newer diagram features, such as arranging edges.
 
 In the SvelteFlow diagram, classes, attributes, associations, enum entries, the multiplicities and role names on association edges, and the edges themselves open their editors directly, without a detour through the class editor.
 

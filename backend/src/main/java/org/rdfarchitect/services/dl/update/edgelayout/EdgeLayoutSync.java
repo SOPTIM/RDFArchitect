@@ -36,11 +36,11 @@ import java.util.stream.Collectors;
 /**
  * Keeps the edge diagram objects of a diagram in line with the schema. Edge layout data is created
  * lazily, like the layout data of classes: an edge gets its diagram object as soon as both classes
- * it connects have one in the diagram. Reconciling a diagram is idempotent, so it is simply run
- * wherever class layout data or the edges between classes may have changed.
+ * it connects have one in the diagram. Syncing the edges of a diagram is idempotent, so it is
+ * simply run wherever class layout data or the edges between classes may have changed.
  */
 @UtilityClass
-public class EdgeLayoutReconciler {
+public class EdgeLayoutSync {
 
     /**
      * Brings the edge diagram objects of a diagram in line with the edges between its classes:
@@ -59,8 +59,7 @@ public class EdgeLayoutReconciler {
      * @param diagramUUID the UUID of the diagram
      * @param edgeResolver resolves the edges between the classes of the diagram from the schema
      */
-    public void reconcileEdges(
-            Model diagramLayoutModel, UUID diagramUUID, EdgeResolver edgeResolver) {
+    public void syncEdges(Model diagramLayoutModel, UUID diagramUUID, EdgeResolver edgeResolver) {
         var classUUIDs =
                 DLObjectFetcher.fetchDiagramClassDOs(diagramLayoutModel, new MRID(diagramUUID))
                         .stream()

@@ -34,29 +34,31 @@ import java.util.UUID;
 @NoArgsConstructor
 public class EdgeLayoutDTO {
 
-    /** The type of the edge, {@code inheritance} or {@code association}. */
-    @JsonProperty("kind")
-    private String kind;
+    private Kind kind;
 
     /**
      * The sub class of an inheritance or the association end whose domain is the source of the
      * edge, as the edge was rendered with.
      */
-    @JsonProperty("sourceObject")
     private UUID sourceObject;
 
     /** The super class of an inheritance or the inverse association end. */
-    @JsonProperty("targetObject")
     private UUID targetObject;
 
     /** The class the edge starts at, the docking point on the source side is pinned to it. */
-    @JsonProperty("sourceClass")
     private UUID sourceClass;
 
     /** The class the edge ends at, the docking point on the target side is pinned to it. */
-    @JsonProperty("targetClass")
     private UUID targetClass;
 
-    @JsonProperty("points")
     private List<EdgePointDTO> points;
+
+    /** The type of an edge. */
+    public enum Kind {
+        @JsonProperty("inheritance")
+        INHERITANCE,
+
+        @JsonProperty("association")
+        ASSOCIATION
+    }
 }

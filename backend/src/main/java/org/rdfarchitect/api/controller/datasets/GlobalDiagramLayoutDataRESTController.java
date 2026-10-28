@@ -25,9 +25,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import lombok.RequiredArgsConstructor;
 
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.dl.DiagramLayoutDTO;
 import org.rdfarchitect.api.dto.dl.EdgeLayoutDTO;
-import org.rdfarchitect.api.dto.dl.EdgePointIdDTO;
 import org.rdfarchitect.services.dl.update.UpdateDiagramLayoutUseCase;
 import org.rdfarchitect.services.dl.update.edgelayout.UpdateEdgeLayoutUseCase;
 import org.slf4j.Logger;
@@ -57,11 +57,10 @@ public class GlobalDiagramLayoutDataRESTController {
             summary = "updates the layout of a diagram on dataset level",
             description =
                     "Updates the layout of the classes, edges and labels in the request body in one"
-                            + " step. Every part is optional, only the elements sent are updated."
-                            + " Returns the ids new edge points are stored under.",
+                            + " step. Every part is optional, only the elements sent are updated.",
             tags = {"diagram", "layout"})
     @PutMapping
-    public List<EdgePointIdDTO> updateDatasetDiagramLayout(
+    public String updateDatasetDiagramLayout(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,
@@ -88,26 +87,24 @@ public class GlobalDiagramLayoutDataRESTController {
                 datasetName,
                 diagramUUID,
                 originURL);
-        var newPointIds =
-                updateDiagramLayoutUseCase.updateDiagramLayout(
-                        datasetName, UUID.fromString(diagramUUID), diagramLayoutDTO);
+        updateDiagramLayoutUseCase.updateDiagramLayout(
+                datasetName, UUID.fromString(diagramUUID), diagramLayoutDTO);
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/layout/{{}}\" from \"{}\".",
                 datasetName,
                 diagramUUID,
                 originURL);
-        return newPointIds;
+        return Response.SUCCESS;
     }
 
     @Operation(
             summary = "updates the layout of edges on dataset level",
             description =
                     "Replaces the points of the edges in the request body with the full, ordered"
-                            + " list of points sent for each. Returns the ids new edge points are"
-                            + " stored under.",
+                            + " list of points sent for each.",
             tags = {"diagram", "layout", "edge"})
     @PutMapping("/edges")
-    public List<EdgePointIdDTO> updateDatasetEdgeLayouts(
+    public String updateDatasetEdgeLayouts(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,
@@ -137,14 +134,13 @@ public class GlobalDiagramLayoutDataRESTController {
                 datasetName,
                 diagramUUID,
                 originURL);
-        var newPointIds =
-                updateEdgeLayoutUseCase.updateEdgeLayouts(
-                        datasetName, UUID.fromString(diagramUUID), edgeLayoutDTOList);
+        updateEdgeLayoutUseCase.updateEdgeLayouts(
+                datasetName, UUID.fromString(diagramUUID), edgeLayoutDTOList);
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/layout/{{}}/edges\" from \"{}\".",
                 datasetName,
                 diagramUUID,
                 originURL);
-        return newPointIds;
+        return Response.SUCCESS;
     }
 }

@@ -25,7 +25,7 @@ public interface SyncDiagramLayoutUseCase {
      * Brings the layout data of the diagrams of a graph and of the merged diagrams of its dataset
      * in line with the schema, after the schema of the graph or one of its custom diagrams changed.
      * Layout data of classes a diagram no longer shows is deleted, diagrams without owner are
-     * deleted as a whole, and the edge diagram objects are reconciled with the edges between the
+     * deleted as a whole, and the edge diagram objects are synced with the edges between the
      * remaining classes. Layout data is never created for classes, that stays lazy.
      *
      * @param graphIdentifier the graph whose schema or custom diagrams changed
