@@ -19,17 +19,21 @@ package org.rdfarchitect.dl.data.dto.relations;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * A position in a diagram, as the diagram layout stores it and as the diagram is rendered with. The
+ * z position orders overlapping classes; it is null where the diagram layout stores none, e.g. for
+ * the points of edges.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class XYZPosition {
 
-    @Getter private float x;
+    private double x;
 
-    @Getter private float y;
+    private double y;
 
-    @Getter private Integer z;
+    private Integer z;
 }

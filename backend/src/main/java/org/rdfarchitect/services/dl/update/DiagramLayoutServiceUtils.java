@@ -100,8 +100,8 @@ public class DiagramLayoutServiceUtils {
             Model diagramLayoutModel,
             MRID diagramObjectMRID,
             UUID diagrammUUID,
-            float xPosition,
-            float yPosition,
+            double xPosition,
+            double yPosition,
             Integer sequenceNumber,
             MRID gluePointMRID) {
 
@@ -160,8 +160,8 @@ public class DiagramLayoutServiceUtils {
             Model diagramLayoutModel,
             MRID pointMRID,
             MRID edgeDoMRID,
-            float xPosition,
-            float yPosition,
+            double xPosition,
+            double yPosition,
             int sequenceNumber,
             MRID gluePointMRID) {
         var point =
@@ -230,8 +230,8 @@ public class DiagramLayoutServiceUtils {
             UUID diagramUUID,
             String className,
             UUID classUUID,
-            float xPosition,
-            float yPosition) {
+            double xPosition,
+            double yPosition) {
         var gluePointMRID = insertDiagramObjectGluePoint(diagramLayoutModel);
         var doMRID =
                 insertDiagramObject(
@@ -304,8 +304,8 @@ public class DiagramLayoutServiceUtils {
             UUID diagramUUID,
             UUID identifiedObjectUUID,
             DiagramObjectStyle style,
-            float x,
-            float y) {
+            double x,
+            double y) {
         var labelMRID = new MRID(UUID.randomUUID());
         DLUpdates.insertDiagramObject(
                 diagramLayoutModel,

@@ -25,9 +25,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import lombok.RequiredArgsConstructor;
 
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.dl.DiagramLayoutDTO;
 import org.rdfarchitect.api.dto.dl.EdgeLayoutDTO;
-import org.rdfarchitect.api.dto.dl.EdgePointIdDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.dl.update.UpdateDiagramLayoutUseCase;
@@ -60,11 +60,10 @@ public class DiagramLayoutDataRESTController {
             summary = "updates the layout of a diagram",
             description =
                     "Updates the layout of the classes, edges and labels in the request body in one"
-                            + " step. Every part is optional, only the elements sent are updated."
-                            + " Returns the ids new edge points are stored under.",
+                            + " step. Every part is optional, only the elements sent are updated.",
             tags = {"diagram", "layout"})
     @PutMapping
-    public List<EdgePointIdDTO> updateDiagramLayout(
+    public String updateDiagramLayout(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,
@@ -95,29 +94,27 @@ public class DiagramLayoutDataRESTController {
                 graphURI,
                 diagramUUID,
                 originURL);
-        var newPointIds =
-                updateDiagramLayoutUseCase.updateDiagramLayout(
-                        graphIdentifier(datasetName, graphURI),
-                        resolveDiagramUUID(diagramUUID),
-                        diagramLayoutDTO);
+        updateDiagramLayoutUseCase.updateDiagramLayout(
+                graphIdentifier(datasetName, graphURI),
+                resolveDiagramUUID(diagramUUID),
+                diagramLayoutDTO);
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}\" from \"{}\".",
                 datasetName,
                 graphURI,
                 diagramUUID,
                 originURL);
-        return newPointIds;
+        return Response.SUCCESS;
     }
 
     @Operation(
             summary = "updates the layout of edges",
             description =
                     "Replaces the points of the edges in the request body with the full, ordered"
-                            + " list of points sent for each. Returns the ids new edge points are"
-                            + " stored under.",
+                            + " list of points sent for each.",
             tags = {"diagram", "layout", "edge"})
     @PutMapping("/edges")
-    public List<EdgePointIdDTO> updateEdgeLayouts(
+    public String updateEdgeLayouts(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,
@@ -151,18 +148,17 @@ public class DiagramLayoutDataRESTController {
                 graphURI,
                 diagramUUID,
                 originURL);
-        var newPointIds =
-                updateEdgeLayoutUseCase.updateEdgeLayouts(
-                        graphIdentifier(datasetName, graphURI),
-                        resolveDiagramUUID(diagramUUID),
-                        edgeLayoutDTOList);
+        updateEdgeLayoutUseCase.updateEdgeLayouts(
+                graphIdentifier(datasetName, graphURI),
+                resolveDiagramUUID(diagramUUID),
+                edgeLayoutDTOList);
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/edges\" from \"{}\".",
                 datasetName,
                 graphURI,
                 diagramUUID,
                 originURL);
-        return newPointIds;
+        return Response.SUCCESS;
     }
 
     private GraphIdentifier graphIdentifier(String datasetName, String graphURI) {

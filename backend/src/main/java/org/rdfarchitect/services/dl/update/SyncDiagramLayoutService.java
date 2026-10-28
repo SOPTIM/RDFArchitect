@@ -35,7 +35,7 @@ import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
-import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutReconciler;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutSync;
 import org.rdfarchitect.services.dl.update.edgelayout.EdgeResolver;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
 import org.rdfarchitect.services.rendering.CIMProfileModels;
@@ -127,8 +127,8 @@ public class SyncDiagramLayoutService implements SyncDiagramLayoutUseCase {
 
     /**
      * Syncs a single diagram: a diagram without owner is deleted together with all its layout data,
-     * otherwise the layout data of classes it no longer shows is deleted and its edges are
-     * reconciled with the classes that remain.
+     * otherwise the layout data of classes it no longer shows is deleted and its edges are synced
+     * with the classes that remain.
      *
      * @param shownClasses the classes the diagram shows without any filter, or empty if the diagram
      *     has no owner anymore
@@ -143,8 +143,7 @@ public class SyncDiagramLayoutService implements SyncDiagramLayoutUseCase {
             return;
         }
         syncClassLayout(diagramLayoutModel, diagramMRID, shownClasses.get());
-        EdgeLayoutReconciler.reconcileEdges(
-                diagramLayoutModel, diagramMRID.getUuid(), edgeResolver);
+        EdgeLayoutSync.syncEdges(diagramLayoutModel, diagramMRID.getUuid(), edgeResolver);
     }
 
     /**

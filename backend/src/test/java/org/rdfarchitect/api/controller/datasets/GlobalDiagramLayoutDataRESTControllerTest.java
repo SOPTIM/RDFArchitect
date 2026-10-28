@@ -19,13 +19,13 @@ package org.rdfarchitect.api.controller.datasets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.dl.DiagramLayoutDTO;
 import org.rdfarchitect.api.dto.dl.EdgeLayoutDTO;
-import org.rdfarchitect.api.dto.dl.EdgePointIdDTO;
 import org.rdfarchitect.services.dl.update.UpdateDiagramLayoutUseCase;
 import org.rdfarchitect.services.dl.update.edgelayout.UpdateEdgeLayoutUseCase;
 import org.springframework.http.HttpHeaders;
@@ -49,32 +49,29 @@ class GlobalDiagramLayoutDataRESTControllerTest {
     }
 
     @Test
-    void updateDatasetDiagramLayout_passesTheLayoutAndReturnsTheNewPointIds() {
+    void updateDatasetDiagramLayout_passesTheLayout() {
         var diagramUUID = UUID.randomUUID();
         var diagramLayout = new DiagramLayoutDTO();
-        var newPointIds = List.of(new EdgePointIdDTO("client", UUID.randomUUID().toString()));
-        when(updateDiagramLayoutUseCase.updateDiagramLayout("dataset", diagramUUID, diagramLayout))
-                .thenReturn(newPointIds);
 
         var response =
                 controller.updateDatasetDiagramLayout(
                         HttpHeaders.ORIGIN, "dataset", diagramUUID.toString(), diagramLayout);
 
-        assertThat(response).isEqualTo(newPointIds);
+        verify(updateDiagramLayoutUseCase)
+                .updateDiagramLayout("dataset", diagramUUID, diagramLayout);
+        assertThat(response).isEqualTo(Response.SUCCESS);
     }
 
     @Test
-    void updateDatasetEdgeLayouts_passesTheEdgesAndReturnsTheNewPointIds() {
+    void updateDatasetEdgeLayouts_passesTheEdges() {
         var diagramUUID = UUID.randomUUID();
         var edgeLayouts = List.of(new EdgeLayoutDTO());
-        var newPointIds = List.of(new EdgePointIdDTO("client", UUID.randomUUID().toString()));
-        when(updateEdgeLayoutUseCase.updateEdgeLayouts("dataset", diagramUUID, edgeLayouts))
-                .thenReturn(newPointIds);
 
         var response =
                 controller.updateDatasetEdgeLayouts(
                         HttpHeaders.ORIGIN, "dataset", diagramUUID.toString(), edgeLayouts);
 
-        assertThat(response).isEqualTo(newPointIds);
+        verify(updateEdgeLayoutUseCase).updateEdgeLayouts("dataset", diagramUUID, edgeLayouts);
+        assertThat(response).isEqualTo(Response.SUCCESS);
     }
 }

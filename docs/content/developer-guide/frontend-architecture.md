@@ -12,7 +12,7 @@ sidebar_position: 4
 - **Tailwind CSS** for styling, with project-specific design tokens (CSS variables) in `src/lib/styles/`.
 - **bits-ui** for headless dialog, menubar, and dropdown primitives, wrapped in project-local components under `src/lib/components/bitsui/`.
 - **SvelteFlow** for diagram rendering, with **elkjs** for auto-layout.
-- **Mermaid** for the obsolete alternative renderer, which is no longer developed.
+- **Mermaid** for the deprecated alternative renderer, which is no longer developed.
 - **CodeMirror 6** with `codemirror-lang-turtle` for the TTL editors.
 - **Asciidoctor.js** for rendering class comments.
 - **Vitest** for unit tests, **jsdom** for the DOM environment.

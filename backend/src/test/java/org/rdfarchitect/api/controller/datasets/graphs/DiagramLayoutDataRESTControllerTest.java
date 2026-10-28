@@ -19,14 +19,15 @@ package org.rdfarchitect.api.controller.datasets.graphs;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.controller.datasets.graphs.rendering.DiagramLayoutDataRESTController;
 import org.rdfarchitect.api.dto.dl.DiagramLayoutDTO;
 import org.rdfarchitect.api.dto.dl.EdgeLayoutDTO;
-import org.rdfarchitect.api.dto.dl.EdgePointIdDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.dl.update.UpdateDiagramLayoutUseCase;
@@ -56,12 +57,9 @@ class DiagramLayoutDataRESTControllerTest {
     }
 
     @Test
-    void updateDiagramLayout_passesTheLayoutAndReturnsTheNewPointIds() {
+    void updateDiagramLayout_passesTheLayout() {
         var diagramUUID = UUID.randomUUID();
         var diagramLayout = new DiagramLayoutDTO();
-        var newPointIds = List.of(new EdgePointIdDTO("client", UUID.randomUUID().toString()));
-        when(updateDiagramLayoutUseCase.updateDiagramLayout(GRAPH, diagramUUID, diagramLayout))
-                .thenReturn(newPointIds);
 
         var response =
                 controller.updateDiagramLayout(
@@ -71,20 +69,19 @@ class DiagramLayoutDataRESTControllerTest {
                         diagramUUID.toString(),
                         diagramLayout);
 
-        assertThat(response).isEqualTo(newPointIds);
+        verify(updateDiagramLayoutUseCase).updateDiagramLayout(GRAPH, diagramUUID, diagramLayout);
+        assertThat(response).isEqualTo(Response.SUCCESS);
     }
 
     @Test
     void updateEdgeLayouts_resolvesTheDefaultDiagram() {
         var edgeLayouts = List.of(new EdgeLayoutDTO());
-        var newPointIds = List.of(new EdgePointIdDTO("client", UUID.randomUUID().toString()));
-        when(updateEdgeLayoutUseCase.updateEdgeLayouts(GRAPH, null, edgeLayouts))
-                .thenReturn(newPointIds);
 
         var response =
                 controller.updateEdgeLayouts(
                         HttpHeaders.ORIGIN, "dataset", "graph", "default", edgeLayouts);
 
-        assertThat(response).isEqualTo(newPointIds);
+        verify(updateEdgeLayoutUseCase).updateEdgeLayouts(GRAPH, null, edgeLayouts);
+        assertThat(response).isEqualTo(Response.SUCCESS);
     }
 }

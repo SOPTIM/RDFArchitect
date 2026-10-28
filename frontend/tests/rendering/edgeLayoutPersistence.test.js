@@ -27,7 +27,6 @@ import {
     EdgeLayoutPersistence,
     edgePointDrag,
     toEdgeLayoutDTO,
-    withStoredIds,
 } from "$lib/rendering/svelteflow/interaction/edgeLayoutPersistence.js";
 import {
     createBendPoint,
@@ -129,12 +128,12 @@ describe("toEdgeLayoutDTO", () => {
             sourceClass: "e-source-class",
             targetClass: "e-target-class",
             points: [
-                { id: source.id, xPosition: 0, yPosition: 0, side: "source" },
-                { id: bend.id, xPosition: 50, yPosition: 50, side: null },
+                { id: source.id, x: 0, y: 0, side: "source" },
+                { id: bend.id, x: 50, y: 50, side: null },
                 {
                     id: target.id,
-                    xPosition: 100,
-                    yPosition: 100,
+                    x: 100,
+                    y: 100,
                     side: "target",
                 },
             ],
@@ -151,20 +150,6 @@ describe("toEdgeLayoutDTO", () => {
             null,
             "target",
         ]);
-    });
-});
-
-describe("withStoredIds", () => {
-    test("replaces only the ids that were stored under an mRID", () => {
-        const points = [
-            { id: "new", x: 1, y: 1 },
-            { id: "stored", x: 2, y: 2 },
-        ];
-
-        const replaced = withStoredIds(points, new Map([["new", "mrid"]]));
-
-        expect(replaced.map(point => point.id)).toEqual(["mrid", "stored"]);
-        expect(withStoredIds(points, new Map())).toBe(points);
     });
 });
 
@@ -189,7 +174,7 @@ describe("EdgeLayoutPersistence", () => {
         expect(updateEdgeLayouts).toHaveBeenCalledTimes(1);
         expect(updateEdgeLayouts.mock.calls[0][0].path).toEqual(GRAPH_TARGET);
         expect(sentEdges(updateEdgeLayouts)[0].points).toEqual([
-            { id: bend.id, xPosition: 10, yPosition: 20, side: null },
+            { id: bend.id, x: 10, y: 20, side: null },
         ]);
     });
 
@@ -305,9 +290,9 @@ describe("EdgeLayoutPersistence", () => {
         expect(updateEdgeLayouts.mock.calls[0][0].keepalive).toBe(true);
     });
 
-    test("takes over the mRIDs of new points and sends them in the next request", async () => {
+    test("sends a new point under the id it was created with, in every request", async () => {
         const shown = edge("e");
-        const { state, show } = persistenceFor([shown]);
+        const { show } = persistenceFor([shown]);
         const bend = createBendPoint(1, 1);
         let answerFirstRequest;
         updateEdgeLayouts.mockImplementationOnce(
@@ -319,29 +304,12 @@ describe("EdgeLayoutPersistence", () => {
         await settle();
         expect(updateEdgeLayouts).toHaveBeenCalledTimes(1);
 
-        answerFirstRequest({ data: [{ clientId: bend.id, id: "mrid" }] });
+        answerFirstRequest({ data: "success" });
         await settle();
 
         expect(updateEdgeLayouts).toHaveBeenCalledTimes(2);
-        expect(sentEdges(updateEdgeLayouts, 1)[0].points[0].id).toBe("mrid");
-        expect(state.edges[0].data.edgePoints[0].id).toBe("mrid");
-    });
-
-    test("keeps the ids of a selected edge, which may be dragged right now", async () => {
-        const shown = edge("e");
-        const { state, persistence, show } = persistenceFor([shown]);
-        const bend = createBendPoint(1, 1);
-        updateEdgeLayouts.mockImplementationOnce(() =>
-            answer([{ clientId: bend.id, id: "mrid" }]),
-        );
-
-        show([withPoints(shown, [bend])]);
-        state.edges = [selected(state.edges[0], true)];
-        await settle();
-
-        expect(state.edges[0].data.edgePoints[0].id).toBe(bend.id);
-        persistence.track(state.edges);
-        expect(updateEdgeLayouts).toHaveBeenCalledTimes(1);
+        expect(sentEdges(updateEdgeLayouts, 0)[0].points[0].id).toBe(bend.id);
+        expect(sentEdges(updateEdgeLayouts, 1)[0].points[0].id).toBe(bend.id);
     });
 
     test("dissolves a bend point that was never moved off the line before saving", async () => {
@@ -408,7 +376,7 @@ describe("EdgeLayoutPersistence", () => {
         show(state.edges);
         await settle();
 
-        expect(sentEdges(updateEdgeLayouts)[0].points[0].yPosition).toBe(25);
+        expect(sentEdges(updateEdgeLayouts)[0].points[0].y).toBe(25);
     });
 
     test("does not save a point while it is dragged", async () => {
@@ -423,7 +391,7 @@ describe("EdgeLayoutPersistence", () => {
 
         edgePointDrag.active = false;
         persistence.saveAll({ keepalive: true });
-        expect(sentEdges(updateEdgeLayouts)[0].points[0].xPosition).toBe(5);
+        expect(sentEdges(updateEdgeLayouts)[0].points[0].x).toBe(5);
     });
 
     test("saves classes that moved without any edge or label over the class route", async () => {

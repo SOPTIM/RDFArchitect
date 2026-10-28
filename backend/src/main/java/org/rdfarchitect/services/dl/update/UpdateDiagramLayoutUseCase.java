@@ -18,10 +18,8 @@
 package org.rdfarchitect.services.dl.update;
 
 import org.rdfarchitect.api.dto.dl.DiagramLayoutDTO;
-import org.rdfarchitect.api.dto.dl.EdgePointIdDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface UpdateDiagramLayoutUseCase {
@@ -36,9 +34,8 @@ public interface UpdateDiagramLayoutUseCase {
      * @param graphIdentifier the identifier of the graph
      * @param diagramUUID the UUID of the diagram, or null for the diagram of the default package
      * @param diagramLayout the layout of the changed elements
-     * @return the mRIDs the new points of the edges are stored under
      */
-    List<EdgePointIdDTO> updateDiagramLayout(
+    void updateDiagramLayout(
             GraphIdentifier graphIdentifier, UUID diagramUUID, DiagramLayoutDTO diagramLayout);
 
     /**
@@ -49,8 +46,6 @@ public interface UpdateDiagramLayoutUseCase {
      * @param datasetName the name of the dataset
      * @param diagramUUID the UUID of the cross-profile or custom diagram of the dataset
      * @param diagramLayout the layout of the changed elements
-     * @return the mRIDs the new points of the edges are stored under
      */
-    List<EdgePointIdDTO> updateDiagramLayout(
-            String datasetName, UUID diagramUUID, DiagramLayoutDTO diagramLayout);
+    void updateDiagramLayout(String datasetName, UUID diagramUUID, DiagramLayoutDTO diagramLayout);
 }

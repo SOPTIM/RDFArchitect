@@ -20,6 +20,8 @@ package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 import lombok.Builder;
 import lombok.Data;
 
+import org.rdfarchitect.api.dto.dl.EdgePointDTO;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -55,5 +57,5 @@ public class EdgeDataDTO {
      * The stored edge points of the edge from its source to its target: the docking points at its
      * ends, if pinned, and the bend points in between.
      */
-    private List<SvelteFlowEdgePointDTO> edgePoints;
+    private List<EdgePointDTO> edgePoints;
 }

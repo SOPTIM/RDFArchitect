@@ -19,9 +19,9 @@ package org.rdfarchitect.services.rendering.svelteflow;
 
 import lombok.experimental.UtilityClass;
 
+import org.rdfarchitect.api.dto.dl.EdgePointDTO;
+import org.rdfarchitect.api.dto.dl.EdgePointDTO.Side;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
-import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
-import org.rdfarchitect.api.dto.rendering.svelteflow.sub.SvelteFlowEdgePointDTO;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.EdgeKey;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher.EdgePoint;
@@ -38,9 +38,6 @@ import java.util.UUID;
 @UtilityClass
 public class SvelteFlowEdgePoints {
 
-    private static final String SOURCE_SIDE = "source";
-    private static final String TARGET_SIDE = "target";
-
     /**
      * The stored points of an edge in the order the edge is rendered, from its source to its target
      * class. The id of a point is its mRID, which is what lets the frontend send the point back to
@@ -54,7 +51,7 @@ public class SvelteFlowEdgePoints {
      * @param targetClass the class the edge ends at
      * @return the points of the edge, empty if it has none stored in the diagram
      */
-    public List<SvelteFlowEdgePointDTO> forEdge(
+    public List<EdgePointDTO> forEdge(
             RenderingLayoutData layoutData,
             DiagramObjectStyle style,
             UUID sourceObject,
@@ -77,19 +74,16 @@ public class SvelteFlowEdgePoints {
             Collections.reverse(points);
         }
         var lastIndex = points.size() - 1;
-        var edgePoints = new ArrayList<SvelteFlowEdgePointDTO>();
+        var edgePoints = new ArrayList<EdgePointDTO>();
         for (var index = 0; index < points.size(); index++) {
             var point = points.get(index);
+            var position = point.point().getPosition();
             edgePoints.add(
-                    SvelteFlowEdgePointDTO.builder()
-                            .id(point.point().getMRID().getUuid().toString())
-                            .position(
-                                    PositionDTO.builder()
-                                            .x(point.point().getPosition().getX())
-                                            .y(point.point().getPosition().getY())
-                                            .build())
-                            .side(sideOf(point, index, lastIndex, sourceClass, targetClass))
-                            .build());
+                    new EdgePointDTO(
+                            point.point().getMRID().getUuid().toString(),
+                            position.getX(),
+                            position.getY(),
+                            sideOf(point, index, lastIndex, sourceClass, targetClass)));
         }
         return edgePoints;
     }
@@ -101,7 +95,7 @@ public class SvelteFlowEdgePoints {
      *
      * @return the side, or null for a bend point
      */
-    private String sideOf(
+    private Side sideOf(
             EdgePoint point, int index, int lastIndex, UUID sourceClass, UUID targetClass) {
         if (point.point().getBelongsToGluePoint() == null) {
             return null;
@@ -109,17 +103,17 @@ public class SvelteFlowEdgePoints {
         var gluedClass = point.gluedClass() != null ? point.gluedClass().getUuid() : null;
         if (gluedClass != null && !sourceClass.equals(targetClass)) {
             if (gluedClass.equals(sourceClass)) {
-                return SOURCE_SIDE;
+                return Side.SOURCE;
             }
             if (gluedClass.equals(targetClass)) {
-                return TARGET_SIDE;
+                return Side.TARGET;
             }
         }
         if (index == 0) {
-            return SOURCE_SIDE;
+            return Side.SOURCE;
         }
         if (index == lastIndex) {
-            return TARGET_SIDE;
+            return Side.TARGET;
         }
         return null;
     }

@@ -20,8 +20,9 @@ package org.rdfarchitect.services.rendering.svelteflow;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.api.dto.dl.EdgePointDTO;
+import org.rdfarchitect.api.dto.dl.EdgePointDTO.Side;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
-import org.rdfarchitect.api.dto.rendering.svelteflow.sub.SvelteFlowEdgePointDTO;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.EdgeKey;
@@ -63,14 +64,12 @@ class SvelteFlowEdgePointsTest {
         var points = inheritancePoints(layoutData);
 
         assertThat(points)
-                .extracting(SvelteFlowEdgePointDTO::getId)
+                .extracting(EdgePointDTO::getId)
                 .containsExactly(idOf(source), idOf(bend), idOf(target));
         assertThat(points)
-                .extracting(SvelteFlowEdgePointDTO::getSide)
-                .containsExactly("source", null, "target");
-        assertThat(points)
-                .extracting(point -> point.getPosition().getX())
-                .containsExactly(0D, 50D, 100D);
+                .extracting(EdgePointDTO::getSide)
+                .containsExactly(Side.SOURCE, null, Side.TARGET);
+        assertThat(points).extracting(EdgePointDTO::getX).containsExactly(0D, 50D, 100D);
     }
 
     @Test
@@ -90,11 +89,11 @@ class SvelteFlowEdgePointsTest {
                         layoutData, DiagramObjectStyle.ASSOCIATION, END, INVERSE_END, SUB, SUPER);
 
         assertThat(points)
-                .extracting(SvelteFlowEdgePointDTO::getId)
+                .extracting(EdgePointDTO::getId)
                 .containsExactly(idOf(atSub), idOf(bend), idOf(atTarget));
         assertThat(points)
-                .extracting(SvelteFlowEdgePointDTO::getSide)
-                .containsExactly("source", null, "target");
+                .extracting(EdgePointDTO::getSide)
+                .containsExactly(Side.SOURCE, null, Side.TARGET);
     }
 
     @Test
@@ -108,8 +107,8 @@ class SvelteFlowEdgePointsTest {
                                 new EdgePoints(new MRID(SUB), List.of(target))));
 
         assertThat(inheritancePoints(layoutData))
-                .extracting(SvelteFlowEdgePointDTO::getSide)
-                .containsExactly("target");
+                .extracting(EdgePointDTO::getSide)
+                .containsExactly(Side.TARGET);
         assertThat(
                         inheritancePoints(
                                 layoutData(
@@ -117,8 +116,8 @@ class SvelteFlowEdgePointsTest {
                                                 EdgeKey.inheritance(SUB, SUPER),
                                                 new EdgePoints(
                                                         new MRID(SUB), List.of(bend, target))))))
-                .extracting(SvelteFlowEdgePointDTO::getSide)
-                .containsExactly(null, "target");
+                .extracting(EdgePointDTO::getSide)
+                .containsExactly(null, Side.TARGET);
     }
 
     @Test
@@ -137,8 +136,8 @@ class SvelteFlowEdgePointsTest {
                         layoutData, DiagramObjectStyle.ASSOCIATION, END, INVERSE_END, SUB, SUB);
 
         assertThat(points)
-                .extracting(SvelteFlowEdgePointDTO::getSide)
-                .containsExactly("source", null, "target");
+                .extracting(EdgePointDTO::getSide)
+                .containsExactly(Side.SOURCE, null, Side.TARGET);
     }
 
     @Test
@@ -152,11 +151,11 @@ class SvelteFlowEdgePointsTest {
                                 new EdgePoints(new MRID(SUB), List.of(first, last))));
 
         assertThat(inheritancePoints(layoutData))
-                .extracting(SvelteFlowEdgePointDTO::getSide)
-                .containsExactly("source", "target");
+                .extracting(EdgePointDTO::getSide)
+                .containsExactly(Side.SOURCE, Side.TARGET);
     }
 
-    private static List<SvelteFlowEdgePointDTO> inheritancePoints(RenderingLayoutData layoutData) {
+    private static List<EdgePointDTO> inheritancePoints(RenderingLayoutData layoutData) {
         return SvelteFlowEdgePoints.forEdge(
                 layoutData, DiagramObjectStyle.INHERITANCE, SUB, SUPER, SUB, SUPER);
     }
@@ -165,17 +164,17 @@ class SvelteFlowEdgePointsTest {
         return RenderingLayoutData.builder().edgeLayoutingData(edgePoints).build();
     }
 
-    private static EdgePoint dockingPoint(float x, float y, UUID gluedClass) {
+    private static EdgePoint dockingPoint(double x, double y, UUID gluedClass) {
         return new EdgePoint(
                 point(x, y).belongsToGluePoint(GLUE_POINT).build(),
                 gluedClass != null ? new MRID(gluedClass) : null);
     }
 
-    private static EdgePoint bendPoint(float x, float y) {
+    private static EdgePoint bendPoint(double x, double y) {
         return new EdgePoint(point(x, y).build(), null);
     }
 
-    private static DiagramObjectPoint.DiagramObjectPointBuilder point(float x, float y) {
+    private static DiagramObjectPoint.DiagramObjectPointBuilder point(double x, double y) {
         return DiagramObjectPoint.builder()
                 .mRID(new MRID(UUID.randomUUID()))
                 .position(new XYZPosition(x, y, 0));

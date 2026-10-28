@@ -88,15 +88,15 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
     @Test
     void updateLabelPositions_labelMoved_storesThePosition() {
         service.updateLabelPositions(
-                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-37.5F, 62.25F)));
+                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-37.5D, 62.25D)));
 
-        assertThat(storedPositions()).containsExactly(entryOf(-37.5F, 62.25F));
+        assertThat(storedPositions()).containsExactly(entryOf(-37.5D, 62.25D));
     }
 
     @Test
     void updateLabelPositions_labelMoved_isPlacedAsADiagramObjectWithAPoint() {
         service.updateLabelPositions(
-                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(10F, 20F)));
+                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(10D, 20D)));
 
         var labelDO =
                 DLObjectFetcher.fetchLabelDO(
@@ -120,18 +120,18 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
     @Test
     void updateLabelPositions_labelMovedTwice_replacesThePositionWithoutDuplicating() {
         service.updateLabelPositions(
-                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-37.5F, 62.25F)));
+                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-37.5D, 62.25D)));
 
         service.updateLabelPositions(
-                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(10F, -20F)));
+                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(10D, -20D)));
 
-        assertThat(storedPositions()).containsExactly(entryOf(10F, -20F));
+        assertThat(storedPositions()).containsExactly(entryOf(10D, -20D));
     }
 
     @Test
     void updateLabelPositions_positionIsNull_resetsTheLabelToItsDefaultPlacement() {
         service.updateLabelPositions(
-                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-37.5F, 62.25F)));
+                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-37.5D, 62.25D)));
 
         service.updateLabelPositions(
                 graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(null, null)));
@@ -144,11 +144,11 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
         var second = new LabelPositionDTO();
         second.setIdentifiedObjectUUID(OTHER_ASSOCIATION_END_UUID);
         second.setKind(DiagramObjectStyle.MULTIPLICITY.getStyleName());
-        second.setX(1F);
-        second.setY(2F);
+        second.setX(1D);
+        second.setY(2D);
 
         service.updateLabelPositions(
-                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-1F, -2F), second));
+                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-1D, -2D), second));
 
         assertThat(
                         model().containsResource(
@@ -173,13 +173,13 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void updateLabelPositions_labelPlaced_isInvisibleToTheClassLayout() {
         var classPosition = new ClassPositionDTO();
         classPosition.setClassUUID(CLASS_A_UUID);
-        classPosition.setXPosition(11F);
-        classPosition.setYPosition(22F);
+        classPosition.setXPosition(11D);
+        classPosition.setYPosition(22D);
         classLayoutService.updateClassPositions(
                 graphIdentifier, PACKAGE_A_UUID, List.of(classPosition));
 
         service.updateLabelPositions(
-                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-37.5F, 62.25F)));
+                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-37.5D, 62.25D)));
 
         assertThat(DLObjectFetcher.fetchDiagramDOPPerClass(model(), PACKAGE_A_UUID))
                 .containsOnlyKeys(CLASS_A_UUID);
@@ -229,18 +229,18 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
         var inverseEndLabel = new LabelPositionDTO();
         inverseEndLabel.setIdentifiedObjectUUID(OTHER_ASSOCIATION_END_UUID);
         inverseEndLabel.setKind(DiagramObjectStyle.MULTIPLICITY.getStyleName());
-        inverseEndLabel.setX(5F);
-        inverseEndLabel.setY(6F);
+        inverseEndLabel.setX(5D);
+        inverseEndLabel.setY(6D);
         var unrelatedLabel = new LabelPositionDTO();
         unrelatedLabel.setIdentifiedObjectUUID(PACKAGE_A_UUID);
         unrelatedLabel.setKind(DiagramObjectStyle.MULTIPLICITY.getStyleName());
-        unrelatedLabel.setX(3F);
-        unrelatedLabel.setY(4F);
+        unrelatedLabel.setX(3D);
+        unrelatedLabel.setY(4D);
 
         service.updateLabelPositions(
                 graphIdentifier,
                 PACKAGE_A_UUID,
-                List.of(labelPosition(-37.5F, 62.25F), inverseEndLabel, unrelatedLabel));
+                List.of(labelPosition(-37.5D, 62.25D), inverseEndLabel, unrelatedLabel));
 
         classLayoutService.deleteClassLayoutData(graphIdentifier, CLASS_A_UUID);
 
@@ -307,14 +307,14 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
     @Test
     void deletePackageLayoutData_packageDeleted_dropsTheLabelsOfItsDiagram() {
         service.updateLabelPositions(
-                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-37.5F, 62.25F)));
+                graphIdentifier, PACKAGE_A_UUID, List.of(labelPosition(-37.5D, 62.25D)));
 
         packageLayoutService.deletePackageLayoutData(graphIdentifier, PACKAGE_A_UUID);
 
         assertThat(storedPositions()).isEmpty();
     }
 
-    private static LabelPositionDTO labelPosition(Float x, Float y) {
+    private static LabelPositionDTO labelPosition(Double x, Double y) {
         var labelPosition = new LabelPositionDTO();
         labelPosition.setIdentifiedObjectUUID(ASSOCIATION_END_UUID);
         labelPosition.setKind(DiagramObjectStyle.MULTIPLICITY.getStyleName());
@@ -323,7 +323,7 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
         return labelPosition;
     }
 
-    private static Map.Entry<LabelKey, XYZPosition> entryOf(float x, float y) {
+    private static Map.Entry<LabelKey, XYZPosition> entryOf(double x, double y) {
         return Map.entry(
                 new LabelKey(ASSOCIATION_END_UUID, DiagramObjectStyle.MULTIPLICITY),
                 new XYZPosition(x, y, 0));

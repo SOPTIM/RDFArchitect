@@ -27,9 +27,9 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EnumEntryDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDataDTO;
-import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.SuperClassDTO;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
+import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;
@@ -210,14 +210,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                 layoutData != null && layoutData.getClassLayoutingData() != null
                         ? layoutData.getClassLayoutingData().get(merged.uuid())
                         : null;
-        var positionDTO =
-                dop != null
-                        ? PositionDTO.builder()
-                                .x(dop.getPosition().getX())
-                                .y(dop.getPosition().getY())
-                                .z(dop.getPosition().getZ())
-                                .build()
-                        : PositionDTO.builder().x(0).y(0).z(0).build();
+        var positionDTO = dop != null ? dop.getPosition() : new XYZPosition(0, 0, 0);
 
         var nodeDataDTO =
                 NodeDataDTO.builder()
@@ -465,14 +458,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                 .get(cimClass.getUuid())
                         : null;
 
-        var positionDTO =
-                dop != null
-                        ? PositionDTO.builder()
-                                .x(dop.getPosition().getX())
-                                .y(dop.getPosition().getY())
-                                .z(dop.getPosition().getZ())
-                                .build()
-                        : PositionDTO.builder().x(0).y(0).z(0).build();
+        var positionDTO = dop != null ? dop.getPosition() : new XYZPosition(0, 0, 0);
 
         var nodeDataDTO =
                 NodeDataDTO.builder()
