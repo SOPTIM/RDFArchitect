@@ -49,6 +49,12 @@ import org.rdfarchitect.xmi.read.XmiIndex;
  * stereotype and is not part of any profile. A release never writes an {@code xsd:} IRI for one; it
  * points at the profile's own {@code Primitive} class of the same name, so that is what is looked
  * for.
+ *
+ * <p>A type the export stubs rather than declares is written all the same, as an {@code rdfs:range}
+ * pointing at a resource nothing defines. Of the 32 names a CGMES 3.0 profiles-only export stubs,
+ * the library writes 19 as datatypes and 13 as enumerations, so neither predicate is the safe
+ * guess; {@code rdfs:range} is the weaker claim of the two, saying what the values are without
+ * calling the missing type primitive.
  */
 @RequiredArgsConstructor
 class XmiDataTypes {
@@ -57,19 +63,56 @@ class XmiDataTypes {
     private final XmiUris uris;
 
     /**
-     * The type of an attribute, or {@code null} when the export states none that can be resolved —
-     * a few attributes of every release point at a classifier that is not in the file.
+     * What an attribute's type became.
+     *
+     * @param type what is written, {@code null} where the export names nothing that can be resolved
+     * @param undeclared the name it points at where nothing in the export declares it, {@code null}
+     *     otherwise
      */
-    CIMSDataType of(XmiAttribute attribute) {
+    record Typing(CIMSDataType type, String undeclared) {
+
+        static final Typing NONE = new Typing(null, null);
+
+        static Typing declared(CIMSDataType type) {
+            return new Typing(type, null);
+        }
+    }
+
+    /** The type of an attribute, and whether the export declares what it points at. */
+    Typing of(XmiAttribute attribute) {
         var type = index.getClasses().get(attribute.getTypeId());
         if (type == null) {
-            return null;
+            return ofUndeclared(attribute.getTypeId());
         }
         var uri = new URI(uris.of(type));
         var label = new RDFSLabel(type.getName(), "en");
-        return XmiStereotypes.isDatatype(type.getStereotypes()) && !type.isEnumeration()
-                ? new CIMSPrimitiveDataType(uri, label)
-                : new RDFSRange(uri, label);
+        return Typing.declared(
+                XmiStereotypes.isDatatype(type.getStereotypes()) && !type.isEnumeration()
+                        ? new CIMSPrimitiveDataType(uri, label)
+                        : new RDFSRange(uri, label));
+    }
+
+    /**
+     * The type of an attribute pointing at a classifier the model section does not declare.
+     *
+     * <p>One of Enterprise Architect's own datatypes becomes a {@code cims:dataType} without the
+     * stereotype that decides this for a declared classifier, because UML has it: a {@code
+     * uml:PrimitiveType} is primitive by definition and cannot be an enumeration. A stub carries
+     * nothing to decide on, so it becomes a range pointing at a resource nothing defines.
+     */
+    private Typing ofUndeclared(String typeId) {
+        var primitive = index.getPrimitiveTypeNames().get(typeId);
+        if (primitive != null) {
+            return Typing.declared(
+                    new CIMSPrimitiveDataType(
+                            new URI(uris.ofUndeclared(primitive)), new RDFSLabel(primitive, "en")));
+        }
+        var stub = index.getStubNames().get(typeId);
+        if (stub == null) {
+            return Typing.NONE;
+        }
+        return new Typing(
+                new RDFSRange(new URI(uris.ofUndeclared(stub)), new RDFSLabel(stub, "en")), stub);
     }
 
     /** Whether a classifier is one of the datatype kinds, which is also what keeps it concrete. */

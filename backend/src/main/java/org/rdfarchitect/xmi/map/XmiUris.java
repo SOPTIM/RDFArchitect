@@ -20,6 +20,7 @@ package org.rdfarchitect.xmi.map;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.xmi.read.XmiClass;
+import org.rdfarchitect.xmi.read.XmiNaming;
 import org.rdfarchitect.xmi.read.XmiPackage;
 
 import java.util.Set;
@@ -71,16 +72,29 @@ class XmiUris {
         return memberNamespace(domain, stereotypes) + domain.getName() + "." + roleName;
     }
 
+    /**
+     * The URI of a classifier named but not declared in the model section: one of Enterprise
+     * Architect's own datatypes, or one a partial export leaves out and stubs. Neither carries a
+     * stereotype, so the model namespace is the only one it can take, and it is the one a class of
+     * that name would take anyway.
+     */
+    String ofUndeclared(String name) {
+        return namespaces.getModel() + name;
+    }
+
+    /**
+     * Whether a package can be given a URI at all. Its name goes into the resource verbatim, and
+     * CGMES 3.0 has one named {@code GeoSPARQL - Profile}.
+     */
+    boolean canName(XmiPackage cimPackage) {
+        return cimPackage != null && XmiNaming.usableOrNull(cimPackage.getName()) != null;
+    }
+
     /** The URI of the package resource standing for the profile. */
     String of(XmiPackage profilePackage) {
         var namespace =
                 namespaces.getProfile() != null ? namespaces.getProfile() : namespaces.getModel();
         return namespace + PACKAGE_PREFIX + profilePackage.getName();
-    }
-
-    /** The IRI of the ontology header, which a release fixes rather than letting anyone choose. */
-    String ofOntology() {
-        return namespaces.getProfile() + "Ontology";
     }
 
     /**

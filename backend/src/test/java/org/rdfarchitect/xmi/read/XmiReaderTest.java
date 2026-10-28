@@ -351,7 +351,9 @@ class XmiReaderTest {
     void read_takesTheClassDiagramsAndNothingElse() {
         // A package diagram has no counterpart, because a package here is a diagram rather than a
         // node on one.
-        assertThat(index.getDiagrams()).containsOnlyKeys("EAID_DIAG_TP");
+        assertThat(index.getDiagrams())
+                .containsOnlyKeys(
+                        "EAID_DIAG_NOTES", "EAID_DIAG_INNER", "EAID_DIAG_CONFIG", "EAID_DIAG_TP");
     }
 
     @Test
@@ -429,6 +431,58 @@ class XmiReaderTest {
     @Test
     void slice_leavesAProfileItDoesNotReferToAlone() {
         assertThat(sliceOfTopology()).doesNotContain("MesswerteVersion", "DomainVersion");
+    }
+
+    // -------------------------------------------------------------------------
+
+    // -------------------------------------------------------------------------
+    // What the export refers to but does not declare
+    // -------------------------------------------------------------------------
+
+    @Test
+    void read_stripsTheTrailingSpaceAnExportPutsOnAMemberName() {
+        // Four attributes of the CGMES 3.0 model are named "lossPercentage " and mean the name
+        // without it.
+        assertThat(classNamed("Reservoir").getAttributes())
+                .extracting(XmiAttribute::getName)
+                .contains("spillwayCapacity");
+    }
+
+    @Test
+    void read_dropsAMemberWhoseNameNoUriCanHold() {
+        // Fourteen enum literals of the CGMES 3.0 model are named things like "TB 170". Trimming
+        // cannot save those, and a name no URI accepts costs the whole schema it sits in.
+        assertThat(classNamed("UnitSymbol").getLiterals())
+                .extracting(XmiEnumLiteral::getName)
+                .doesNotContainNull()
+                .doesNotContain("TB 170");
+    }
+
+    @Test
+    void read_keepsTheNameOfAnElementTheExportDoesNotContain() {
+        // A partial export writes an EAStub per missing target. It is the only thing that can say
+        // what an attribute wanted to be typed with.
+        assertThat(index.getStubNames()).containsEntry("EAID_GONE", "Volume");
+    }
+
+    @Test
+    void read_doesNotMakeAClassOutOfAStub() {
+        // A stub carries no stereotypes and no package, so neither a namespace nor a datatype kind
+        // follows from it. Written as a class it would be a guess under a real name.
+        assertThat(classNames()).doesNotContain("Volume");
+    }
+
+    @Test
+    void read_takesTheDatatypesEnterpriseArchitectKeepsOfItsOwn() {
+        // They sit in the extension rather than in the model section and are referenced from it.
+        assertThat(index.getPrimitiveTypeNames()).containsEntry("EAJava_DateTime", "DateTime");
+    }
+
+    @Test
+    void read_doesNotMakeAClassOutOfAPrimitiveType() {
+        // A model commonly declares a class of the same name, and two definitions under one uri
+        // would write each other's triples.
+        assertThat(classNames()).doesNotContain("DateTime");
     }
 
     // -------------------------------------------------------------------------

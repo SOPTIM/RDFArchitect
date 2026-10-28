@@ -101,6 +101,8 @@ final class XmiExtensionReader {
             case XmiNames.ROLE -> applyEndRole(reader);
             case XmiNames.TYPE -> applyEndType(reader);
             case XmiNames.STYLE -> applyEndStyle(reader);
+            case XmiNames.EA_STUB -> collectStub(reader);
+            case XmiNames.PACKAGED_ELEMENT -> collectPrimitiveType(reader);
             default -> {
                 // Styles, coordinates, cross references and project data are not imported.
             }
@@ -193,6 +195,35 @@ final class XmiExtensionReader {
     }
 
     /**
+     * An element the export refers to but does not contain, kept by name so that the import can say
+     * what is missing. It is not made into a class: a stub says nothing that would let one be
+     * written, and inventing a namespace or a datatype kind for it is worse than leaving the
+     * attribute untyped and saying so.
+     */
+    private void collectStub(XMLStreamReader reader) {
+        var id = XmiStreams.attribute(reader, XmiNames.ID);
+        var name = XmiStreams.attribute(reader, XmiNames.NAME);
+        if (id != null && name != null && !name.isBlank()) {
+            context.getIndex().getStubNames().put(id, name.strip());
+        }
+    }
+
+    /**
+     * A datatype of Enterprise Architect's own. They live in the extension rather than in the model
+     * section, and the only {@code packagedElement} the extension holds is one of these.
+     */
+    private void collectPrimitiveType(XMLStreamReader reader) {
+        if (!XmiNames.UML_PRIMITIVE_TYPE.equals(XmiStreams.attribute(reader, XmiNames.TYPE))) {
+            return;
+        }
+        var id = XmiStreams.attribute(reader, XmiNames.ID);
+        var name = XmiStreams.attribute(reader, XmiNames.NAME);
+        if (id != null && name != null && !name.isBlank()) {
+            context.getIndex().getPrimitiveTypeNames().put(id, name.strip());
+        }
+    }
+
+    /**
      * A tagged value, read for two different things.
      *
      * <p>An entry of the namespace prefix table is taken wherever it sits, because it does not
@@ -276,7 +307,8 @@ final class XmiExtensionReader {
 
     private void applyEndRole(XMLStreamReader reader) {
         if (currentEnd != null) {
-            currentEnd.roleName = XmiStreams.attribute(reader, XmiNames.NAME);
+            currentEnd.roleName =
+                    XmiNaming.usableOrNull(XmiStreams.attribute(reader, XmiNames.NAME));
         }
     }
 

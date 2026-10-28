@@ -27,6 +27,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -44,7 +45,10 @@ import java.util.UUID;
  *
  * <p>A shape the export draws that is no class is not such a hole. An Enterprise Architect diagram
  * carries boundaries, notes and free text beside its classes, and the reader has already dropped
- * those from the index; they are passed over here rather than taken for a missing class.
+ * those from the index; they are passed over here rather than taken for a missing class. Neither is
+ * a profile's own metadata class, which is written as the ontology header and never as a class —
+ * every CGMES 3.0 profile diagram draws one, and taking it for a hole would leave the import with
+ * no diagram at all.
  */
 @UtilityClass
 public class XmiDiagrams {
@@ -110,15 +114,19 @@ public class XmiDiagrams {
      * @param locations where each written class ended up, by its {@code xmi:id}
      */
     public List<ImportedDiagram> of(XmiIndex index, Map<String, ClassLocation> locations) {
+        var headers = index.headerClassIds();
         var imported = new ArrayList<ImportedDiagram>();
         for (var diagram : index.getDiagrams().values()) {
-            importedFrom(index, diagram, locations).ifPresent(imported::add);
+            importedFrom(index, diagram, locations, headers).ifPresent(imported::add);
         }
         return imported;
     }
 
     private Optional<ImportedDiagram> importedFrom(
-            XmiIndex index, XmiDiagram diagram, Map<String, ClassLocation> locations) {
+            XmiIndex index,
+            XmiDiagram diagram,
+            Map<String, ClassLocation> locations,
+            Set<String> headers) {
         var drawn = new ArrayList<DrawnClass>();
         for (var shape : diagram.getShapes()) {
             var cimClass = index.getClasses().get(shape.getClassId());
@@ -127,6 +135,11 @@ public class XmiDiagrams {
             }
             var location = locations.get(shape.getClassId());
             if (location == null) {
+                if (headers.contains(shape.getClassId())) {
+                    // The profile's own metadata class, which went in as the ontology header. A
+                    // diagram drawing it is not reaching into a profile that was left out.
+                    continue;
+                }
                 return Optional.empty();
             }
             drawn.add(

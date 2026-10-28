@@ -20,6 +20,7 @@ package org.rdfarchitect.xmi.map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.xmi.map.XmiDiagrams.ClassLocation;
@@ -116,6 +117,23 @@ class XmiDiagramsTest {
         assertThat(XmiDiagrams.of(index, withoutTerminal))
                 .extracting(ImportedDiagram::name)
                 .doesNotContain(TOPOLOGY_DIAGRAM);
+    }
+
+    @Test
+    void of_passesOverAShapeStandingForAProfilesOwnMetadataClass() {
+        // The Configuration diagram also draws CoreEquipment-EU_Ontology, which went in as that
+        // profile's ontology header and so has no class to place. Taking it for a hole would cost
+        // the diagram, and every CGMES 3.0 profile diagram draws one.
+        var written = everythingWritten();
+        written.remove("EAID_COREONTOLOGY");
+
+        assertThat(XmiDiagrams.of(index, written))
+                .filteredOn(diagram -> "Configuration".equals(diagram.name()))
+                .singleElement()
+                .extracting(ImportedDiagram::classes)
+                .asInstanceOf(InstanceOfAssertFactories.list(PlacedClass.class))
+                .extracting(PlacedClass::name)
+                .containsExactly("ConfigurationDataset");
     }
 
     @Test

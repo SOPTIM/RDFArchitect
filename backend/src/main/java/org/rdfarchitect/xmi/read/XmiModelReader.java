@@ -102,7 +102,9 @@ final class XmiModelReader {
      */
     private void startPackagedElement(XMLStreamReader reader) {
         var id = XmiStreams.attribute(reader, XmiNames.ID);
-        var name = XmiStreams.attribute(reader, XmiNames.NAME);
+        // Normalised here rather than only judged later: a name the rule trims and the index keeps
+        // raw passes every check and still reaches the URI with the whitespace in it.
+        var name = XmiNaming.usableOrNull(XmiStreams.attribute(reader, XmiNames.NAME));
         var type = XmiStreams.attribute(reader, XmiNames.TYPE);
         switch (type == null ? "" : type) {
             case XmiNames.UML_PACKAGE -> {
@@ -140,8 +142,12 @@ final class XmiModelReader {
         if (currentClass == null || XmiStreams.attribute(reader, XmiNames.ASSOCIATION) != null) {
             return;
         }
+        var name = XmiNaming.usableOrNull(XmiStreams.attribute(reader, XmiNames.NAME));
+        if (name == null) {
+            return;
+        }
         var id = XmiStreams.attribute(reader, XmiNames.ID);
-        currentAttribute = new XmiAttribute(id, XmiStreams.attribute(reader, XmiNames.NAME));
+        currentAttribute = new XmiAttribute(id, name);
         currentClass.getAttributes().add(currentAttribute);
         context.getAttributesById().put(id, currentAttribute);
     }
@@ -150,10 +156,11 @@ final class XmiModelReader {
         if (currentClass == null) {
             return;
         }
-        var literal =
-                new XmiEnumLiteral(
-                        XmiStreams.attribute(reader, XmiNames.ID),
-                        XmiStreams.attribute(reader, XmiNames.NAME));
+        var name = XmiNaming.usableOrNull(XmiStreams.attribute(reader, XmiNames.NAME));
+        if (name == null) {
+            return;
+        }
+        var literal = new XmiEnumLiteral(XmiStreams.attribute(reader, XmiNames.ID), name);
         currentClass.getLiterals().add(literal);
         context.getLiteralsById().put(literal.getId(), literal);
     }

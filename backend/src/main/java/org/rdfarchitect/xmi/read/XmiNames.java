@@ -86,6 +86,12 @@ final class XmiNames {
     static final String ROLE = "role";
     static final String STYLE = "style";
 
+    /**
+     * An element the export refers to but does not contain. A partial export writes one per missing
+     * target, carrying nothing but its id and its name.
+     */
+    static final String EA_STUB = "EAStub";
+
     /** A tagged value of whatever it sits in; the only carrier of a package's namespace. */
     static final String TAG = "tag";
 
@@ -146,6 +152,9 @@ final class XmiNames {
     static final String UML_PACKAGE = "uml:Package";
     static final String UML_CLASS = "uml:Class";
     static final String UML_ENUMERATION = "uml:Enumeration";
+
+    /** A datatype Enterprise Architect keeps of its own, outside the model section. */
+    static final String UML_PRIMITIVE_TYPE = "uml:PrimitiveType";
 
     // -------------------------------------------------------------------------
     // Values of the type attribute of a UMLDI element

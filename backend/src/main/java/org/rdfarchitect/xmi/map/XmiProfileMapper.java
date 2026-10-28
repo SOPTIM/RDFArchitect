@@ -42,6 +42,7 @@ import org.rdfarchitect.xmi.read.XmiAssociationEnd;
 import org.rdfarchitect.xmi.read.XmiAttribute;
 import org.rdfarchitect.xmi.read.XmiClass;
 import org.rdfarchitect.xmi.read.XmiIndex;
+import org.rdfarchitect.xmi.read.XmiPackageScope;
 import org.rdfarchitect.xmi.read.XmiProfile;
 import org.rdfarchitect.xmi.read.XmiProfileSlice;
 
@@ -75,14 +76,89 @@ public final class XmiProfileMapper {
 
     private final XmiIndex index;
     private final XmiProfile profile;
+    private final XmiPackageScope scope;
     private final XmiNamespaces namespaces;
     private final XmiUris uris;
     private final XmiDataTypes dataTypes;
+    private final List<UnresolvedType> unresolvedTypes = new ArrayList<>();
+    private final List<DuplicateClass> duplicateClasses = new ArrayList<>();
+    private final Map<String, WrittenClass> sharedClasses = new LinkedHashMap<>();
+    private final List<DroppedMember> droppedMembers = new ArrayList<>();
+    private final List<UnmappedOntologyField> unmappedOntologyFields = new ArrayList<>();
 
-    private XmiProfileMapper(XmiIndex index, XmiProfile profile, String suppliedExtension) {
+    /**
+     * A class as it was written.
+     *
+     * @param uuid the uuid it was minted under, which exists nowhere else
+     * @param uri what it is called in the graph
+     */
+    public record WrittenClass(UUID uuid, String uri) {}
+
+    /**
+     * An attribute the export gives a type the file does not contain. It is written pointing at
+     * that type all the same, where the export names it; where it does not, the attribute goes in
+     * without a type at all.
+     *
+     * @param attributeUri the attribute as it was written
+     * @param missingType what the export calls the type it points at, or {@code null} when the
+     *     export does not even say that
+     */
+    public record UnresolvedType(String attributeUri, String missingType) {}
+
+    /**
+     * A class the export declares twice under one name, so that both would be written as the same
+     * resource.
+     *
+     * @param classUri what the two share
+     * @param name the name they share
+     */
+    public record DuplicateClass(String classUri, String name) {}
+
+    /**
+     * A member of a written class that could not be written itself, which happens for one reason:
+     * it is stereotyped as an extension while the export states no extension namespace. Its class
+     * is not, or {@link #refuseIfUnnameable} would have stopped the import, so what is lost is the
+     * member alone.
+     *
+     * @param memberName the member as the export names it, qualified by its class
+     * @param stereotypes what it carries, which is why it could not be named
+     */
+    public record DroppedMember(String memberName, List<String> stereotypes) {}
+
+    /** An ontology header field the export states under a name no known field matches. */
+    public record UnmappedOntologyField(String name) {}
+
+    /**
+     * What writing one profile produced.
+     *
+     * @param classes every class that was written, by its {@code xmi:id}
+     * @param sharedClasses the declarations that were left out as duplicates, each pointing at the
+     *     class written in its place. The resource exists, so whoever addresses the export by
+     *     {@code xmi:id} finds it under either declaration
+     * @param unresolvedTypes the attributes whose type the export does not declare, for the import
+     *     to report
+     * @param duplicateClasses the classes that were left out for sharing a name with one already
+     *     written
+     * @param droppedMembers the members of written classes that could not be written themselves
+     * @param unmappedOntologyFields the header fields that were not carried
+     */
+    public record WrittenProfile(
+            Map<String, WrittenClass> classes,
+            Map<String, WrittenClass> sharedClasses,
+            List<UnresolvedType> unresolvedTypes,
+            List<DuplicateClass> duplicateClasses,
+            List<DroppedMember> droppedMembers,
+            List<UnmappedOntologyField> unmappedOntologyFields) {}
+
+    private XmiProfileMapper(
+            XmiIndex index,
+            XmiProfile profile,
+            XmiPackageScope scope,
+            XmiNamespaces.Supplied supplied) {
         this.index = index;
         this.profile = profile;
-        this.namespaces = XmiNamespaces.of(index, profile, suppliedExtension);
+        this.scope = scope;
+        this.namespaces = XmiNamespaces.of(index, profile, supplied);
         this.uris = new XmiUris(namespaces);
         this.dataTypes = new XmiDataTypes(index, uris);
     }
@@ -93,31 +169,58 @@ public final class XmiProfileMapper {
      * @param index the export, already read
      * @param profile which of its profiles to write
      * @param writer where the resources go
+     * @return what was written, and what could not be written fully
      * @throws XmiImportRefusal when the export does not hold enough of the profile to build it
      */
-    public static void write(XmiIndex index, XmiProfile profile, ICIMModelWriter writer) {
-        write(index, profile, writer, null);
+    public static WrittenProfile write(XmiIndex index, XmiProfile profile, ICIMModelWriter writer) {
+        return write(
+                index,
+                profile,
+                XmiPackageScope.WITH_SUB_PACKAGES,
+                writer,
+                XmiNamespaces.Supplied.NONE);
     }
 
     /**
-     * Writes one profile, with the extension namespace supplied from outside.
+     * Writes one profile, with namespaces supplied from outside.
      *
-     * @param suppliedExtension what the elements stereotyped as extensions are named with, where
-     *     the export itself states nothing — a CGMES 2.4.15 profiles-only export does not
+     * @param scope whether the package's sub-packages are part of the schema
+     * @param supplied what to name the resources with, overruling what the export states
+     * @return what was written, and what could not be written fully
      */
-    public static void write(
-            XmiIndex index, XmiProfile profile, ICIMModelWriter writer, String suppliedExtension) {
-        new XmiProfileMapper(index, profile, suppliedExtension).writeTo(writer);
+    public static WrittenProfile write(
+            XmiIndex index,
+            XmiProfile profile,
+            XmiPackageScope scope,
+            ICIMModelWriter writer,
+            XmiNamespaces.Supplied supplied) {
+        return new XmiProfileMapper(index, profile, scope, supplied).writeTo(writer);
     }
 
-    private void writeTo(ICIMModelWriter writer) {
+    /**
+     * The classes are the only record of what was written: the uuids are minted here and a diagram
+     * of the export addresses its classes by {@code xmi:id}.
+     */
+    private WrittenProfile writeTo(ICIMModelWriter writer) {
         index.getPrefixes().forEach(writer::bindPrefix);
 
-        var slice = XmiProfileSlice.classIdsOf(index, profile.id());
+        // The header class is left out of the closure too: its attribute types and its superclass
+        // describe the header, not the profile.
+        var slice =
+                XmiProfileSlice.classIdsOf(
+                        index, profile.id(), scope, index.headerClassIdsOf(profile));
         refuseIfUnnameable(slice);
         var categories = writePackages(writer, slice);
         var written = writeClasses(writer, slice, categories);
-        writeAssociations(writer, written);
+        writeAssociations(writer, written.keySet());
+        writeOntology(writer);
+        return new WrittenProfile(
+                written,
+                Map.copyOf(sharedClasses),
+                List.copyOf(unresolvedTypes),
+                List.copyOf(duplicateClasses),
+                List.copyOf(droppedMembers),
+                List.copyOf(unmappedOntologyFields));
     }
 
     /**
@@ -131,12 +234,20 @@ public final class XmiProfileMapper {
      *
      * <p>The nesting is written too, which is more than the editing path can keep — see {@link
      * ICIMModelWriter}.
+     *
+     * @return the category per package, without the packages no URI can be built from
      */
     private Map<String, CIMSBelongsToCategory> writePackages(
             ICIMModelWriter writer, Set<String> slice) {
         var categories = new LinkedHashMap<String, CIMSBelongsToCategory>();
         for (var packageId : packagesOf(slice)) {
             var cimPackage = index.getPackages().get(packageId);
+            if (!uris.canName(cimPackage)) {
+                // A package no URI can be built from, such as the CGMES 3.0 "GeoSPARQL - Profile".
+                // The classes in it are written all the same, without a category: a class without
+                // one is a smaller loss than a schema without the class.
+                continue;
+            }
             categories.put(
                     packageId,
                     new CIMSBelongsToCategory(
@@ -148,7 +259,7 @@ public final class XmiProfileMapper {
                 (packageId, category) -> {
                     if (!index.isWithin(packageId, profile.id())) {
                         // A package the closure reached into rather than one the profile owns. A
-                        // release references it from the classes it pulled in and declares it no
+                        // release references it from the classes it depends on and declares it no
                         // more than this does — it belongs to the profile it came from.
                         return;
                     }
@@ -165,7 +276,6 @@ public final class XmiProfileMapper {
         return categories;
     }
 
-    /** The profile's own package, and every package a class of the slice is declared in. */
     private Set<String> packagesOf(Set<String> slice) {
         var packageIds = new LinkedHashSet<String>();
         packageIds.add(profile.id());
@@ -212,24 +322,42 @@ public final class XmiProfileMapper {
 
     /**
      * Writes every class of the slice together with its members, and reports which of them made it.
-     * A class the export names in a way no URI can hold has already been dropped by the reader; one
-     * whose namespace the export does not state is dropped here, because naming it wrongly is worse
-     * than leaving it out.
+     * A class the export names in a way no URI can hold has already been dropped by the reader, and
+     * one the export cannot name at all stops the import in {@link #refuseIfUnnameable}, so every
+     * class reaching this point is one that can be written.
+     *
+     * <p>Not so a second class under a name one already written shares. An export may declare the
+     * same datatype in two packages — CGMES 3.0 declares {@code String} and {@code Date} both in
+     * {@code Datatypes} and in a profile — and both carry the same URI. Writing the second adds a
+     * second label, a second category and a second uuid to one resource, which the facade refuses
+     * to read at all. The first is kept, the other reported and recorded as sharing it: the class
+     * is in the schema either way, and a diagram drawing the second declaration draws something
+     * that was written.
      */
-    private Set<String> writeClasses(
+    private Map<String, WrittenClass> writeClasses(
             ICIMModelWriter writer,
             Set<String> slice,
             Map<String, CIMSBelongsToCategory> categories) {
-        var written = new LinkedHashSet<String>();
+        var written = new LinkedHashMap<String, WrittenClass>();
+        var byUri = new LinkedHashMap<String, WrittenClass>();
         for (var classId : slice) {
             var cimClass = index.getClasses().get(classId);
-            if (cimClass == null || !uris.canName(cimClass)) {
+            if (cimClass == null) {
                 continue;
             }
+            var uuid = UUID.randomUUID();
+            var uri = uris.of(cimClass);
+            var alreadyWritten = byUri.get(uri);
+            if (alreadyWritten != null) {
+                duplicateClasses.add(new DuplicateClass(uri, cimClass.getName()));
+                sharedClasses.put(classId, alreadyWritten);
+                continue;
+            }
+            byUri.put(uri, new WrittenClass(uuid, uri));
             writer.writeClass(
                     CIMClass.builder()
-                            .uuid(UUID.randomUUID())
-                            .uri(new URI(uris.of(cimClass)))
+                            .uuid(uuid)
+                            .uri(new URI(uri))
                             .label(new RDFSLabel(cimClass.getName(), "en"))
                             .superClasses(superClassesOf(cimClass, slice))
                             .comment(commentOf(cimClass.getDocumentation()))
@@ -240,11 +368,34 @@ public final class XmiProfileMapper {
                                             cimClass.isAbstract(),
                                             XmiStereotypes.isDatatype(cimClass.getStereotypes())))
                             .build());
-            written.add(classId);
+            written.put(classId, new WrittenClass(uuid, uri));
             writeAttributes(writer, cimClass);
             writeEnumEntries(writer, cimClass);
         }
         return written;
+    }
+
+    /**
+     * Writes the ontology header, where the profile describes itself through a class that states a
+     * {@code versionIRI}. That class is not written as a class — see {@link XmiOntology}.
+     */
+    private void writeOntology(ICIMModelWriter writer) {
+        for (var metadataClassId : index.headerClassIdsOf(profile)) {
+            var metadataClass = index.getClasses().get(metadataClassId);
+            if (metadataClass == null) {
+                continue;
+            }
+            XmiOntology.of(metadataClass, namespaces.getProfile())
+                    .ifPresent(
+                            built -> {
+                                writer.writeOntology(built.ontology());
+                                built.unmappedFields()
+                                        .forEach(
+                                                name ->
+                                                        unmappedOntologyFields.add(
+                                                                new UnmappedOntologyField(name)));
+                            });
+        }
     }
 
     /** Only the superclasses the profile also holds; one outside it would point at nothing. */
@@ -264,20 +415,28 @@ public final class XmiProfileMapper {
 
     private void writeAttributes(ICIMModelWriter writer, XmiClass cimClass) {
         for (var attribute : cimClass.getAttributes()) {
-            if (attribute.getName() == null
-                    || attribute.getName().isBlank()
-                    || !uris.canName(attribute.getStereotypes())) {
+            if (attribute.getName() == null || attribute.getName().isBlank()) {
                 continue;
+            }
+            if (!uris.canName(attribute.getStereotypes())) {
+                // An extension attribute on a class that is none, with no extension namespace
+                // stated. The class is written and the attribute cannot be, so the schema comes
+                // out holding less than the export does; saying so is the least that is owed.
+                droppedMembers.add(
+                        new DroppedMember(
+                                cimClass.getName() + "." + attribute.getName(),
+                                List.copyOf(attribute.getStereotypes())));
+                continue;
+            }
+            var attributeUri = uris.of(cimClass, attribute.getName(), attribute.getStereotypes());
+            var typing = dataTypes.of(attribute);
+            if (typing.type() == null || typing.undeclared() != null) {
+                unresolvedTypes.add(new UnresolvedType(attributeUri, typing.undeclared()));
             }
             writer.writeAttribute(
                     CIMAttribute.builder()
                             .uuid(UUID.randomUUID())
-                            .uri(
-                                    new URI(
-                                            uris.of(
-                                                    cimClass,
-                                                    attribute.getName(),
-                                                    attribute.getStereotypes())))
+                            .uri(new URI(attributeUri))
                             .label(new RDFSLabel(attribute.getName(), "en"))
                             .domain(
                                     new RDFSDomain(
@@ -286,7 +445,7 @@ public final class XmiProfileMapper {
                             .multiplicity(
                                     XmiMultiplicities.ofBounds(
                                             attribute.getLowerBound(), attribute.getUpperBound()))
-                            .dataType(dataTypes.of(attribute))
+                            .dataType(typing.type())
                             .comment(commentOf(attribute.getDocumentation()))
                             .fixedValue(fixedValueOf(attribute))
                             .defaultValue(defaultValueOf(attribute))
@@ -390,11 +549,18 @@ public final class XmiProfileMapper {
         return stereotypes;
     }
 
+    /**
+     * Whether a half can be written. Both halves of a pair have to be, so one that cannot takes the
+     * other with it: a single half names an inverse role that is not there.
+     *
+     * <p>A multiplicity is required rather than defaulted. Every released half states one, and a
+     * connector that states none — the CGMES 3.0 extensions hold such — says nothing that a default
+     * would not be inventing.
+     */
     private boolean isWritable(XmiAssociationEnd end, Set<String> written) {
         return end.getRoleName() != null
-                && !end.getRoleName().isBlank()
                 && end.getOppositeRoleName() != null
-                && !end.getOppositeRoleName().isBlank()
+                && end.getMultiplicity() != null
                 && written.contains(end.getClassId())
                 && written.contains(end.getOppositeClassId());
     }
