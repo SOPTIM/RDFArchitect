@@ -116,10 +116,32 @@ public class DiagramLayoutServiceUtils {
                         .max(Integer::compare)
                         .orElse(0);
 
+        insertDiagramObjectPointAt(
+                diagramLayoutModel, diagramObjectMRID, xPosition, yPosition, maxZPosition + 1);
+    }
+
+    /**
+     * Helper method for creating and inserting a {@link DiagramObjectPoint} whose z position the
+     * caller already knows.
+     *
+     * <p>Reading the highest z of a diagram costs a query over every point it holds, which a caller
+     * filling a whole diagram pays once per point. One laying out a known order knows the z without
+     * asking.
+     *
+     * @param diagramLayoutModel the model into which the diagram object point is inserted
+     * @param diagramObjectMRID the mRID of the diagram object the point belongs to
+     * @param zPosition the z position, where a higher one is drawn in front
+     */
+    public void insertDiagramObjectPointAt(
+            Model diagramLayoutModel,
+            MRID diagramObjectMRID,
+            float xPosition,
+            float yPosition,
+            int zPosition) {
         var diagramObjectPoint =
                 DiagramObjectPoint.builder()
                         .mRID(new MRID(UUID.randomUUID()))
-                        .position(new XYZPosition(xPosition, yPosition, maxZPosition + 1))
+                        .position(new XYZPosition(xPosition, yPosition, zPosition))
                         .belongsToDiagramObject(diagramObjectMRID)
                         .build();
         DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);

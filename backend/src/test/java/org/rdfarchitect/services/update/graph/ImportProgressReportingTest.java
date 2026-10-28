@@ -181,7 +181,7 @@ class ImportProgressReportingTest {
     void importGraphs_noListenerGiven_stillImports() {
         var result =
                 importGraphsUseCase.importGraphs(
-                        "ds", List.of(graphFile("first.ttl")), null, ImportProgressListener.NOOP);
+                        "ds", List.of(graphFile("first.ttl")), null, GraphImportListener.NOOP);
 
         assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "first");
     }
@@ -243,7 +243,7 @@ class ImportProgressReportingTest {
     }
 
     /** Collects everything the import reports, and can cancel it once a file is done. */
-    private static final class RecordingListener implements ImportProgressListener {
+    private static final class RecordingListener implements GraphImportListener {
 
         private final List<PlannedImport> planned = new ArrayList<>();
         private final Map<Integer, Outcome> outcomes = new LinkedHashMap<>();

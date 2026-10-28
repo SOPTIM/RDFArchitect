@@ -41,6 +41,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.UncarriedItem;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
 import org.rdfarchitect.services.update.graph.PrefixResolutionDTO.Action;
 import org.springframework.mock.web.MockMultipartFile;
@@ -89,7 +90,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        datasetName, List.of(file1, file2), null, ImportProgressListener.NOOP);
+                        datasetName, List.of(file1, file2), null, GraphImportListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedGraphUris())
@@ -120,7 +121,7 @@ class ImportGraphsServiceTest {
                 .thenThrow(new RuntimeException("dataset does not exist"));
 
         importGraphsUseCase.importGraphs(
-                datasetName, List.of(file), null, ImportProgressListener.NOOP);
+                datasetName, List.of(file), null, GraphImportListener.NOOP);
 
         var inOrder = inOrder(databasePortMock);
         inOrder.verify(databasePortMock).createWorkspaceIfAbsent(datasetName);
@@ -143,7 +144,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        datasetName, List.of(file), null, ImportProgressListener.NOOP);
+                        datasetName, List.of(file), null, GraphImportListener.NOOP);
 
         assertThat(result.importedGraphUris()).isEmpty();
         verify(databasePortMock, never()).createWorkspaceIfAbsent(datasetName);
@@ -198,7 +199,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        datasetName, List.of(file), null, ImportProgressListener.NOOP);
+                        datasetName, List.of(file), null, GraphImportListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "schema");
@@ -206,7 +207,12 @@ class ImportGraphsServiceTest {
 
         var warning = result.warnings().getFirst();
         assertThat(warning.fileName()).isEqualTo("schema.ttl");
-        assertThat(warning.undisplayableProperties()).containsExactlyInAnyOrder("color", "owner");
+        // Each item carries its own reason: an import has several of them and a caller groups
+        // by what they have in common.
+        assertThat(warning.items())
+                .allSatisfy(item -> assertThat(item.reason()).contains("no CIM stereotype"))
+                .extracting(UncarriedItem::resource)
+                .containsExactlyInAnyOrder("color", "owner");
     }
 
     private MockMultipartFile schemaFile(String fileName, String cimNamespace) {
@@ -263,7 +269,7 @@ class ImportGraphsServiceTest {
     /**
      * Answers the prefix question with a fixed set of decisions and remembers what it was asked.
      */
-    private final class RecordingListener implements ImportProgressListener {
+    private final class RecordingListener implements GraphImportListener {
 
         private final List<PrefixResolutionDTO> resolutions;
         private final Map<Integer, String> plannedFileNames = new LinkedHashMap<>();
@@ -523,7 +529,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        datasetName, List.of(file), null, ImportProgressListener.NOOP);
+                        datasetName, List.of(file), null, GraphImportListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "schema");
