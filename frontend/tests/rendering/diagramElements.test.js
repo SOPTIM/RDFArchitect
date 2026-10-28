@@ -31,7 +31,7 @@ import {
 } from "$lib/rendering/svelteflow/interaction/edgePointOperations.js";
 
 function renderedPoint(id, x, y, side = null) {
-    return { id, position: { x, y, z: 0 }, side };
+    return { id, x, y, side };
 }
 
 function renderedEdge(edgePoints) {
@@ -47,7 +47,7 @@ function renderedEdge(edgePoints) {
 vi.mock("$lib/api/generated/index.ts", () => ({}));
 
 describe("decorateEdges", () => {
-    test("flattens the rendered edge points and keeps the side of the docking points", () => {
+    test("marks the rendered docking points with their side", () => {
         const [edge] = decorateEdges([
             renderedEdge([
                 renderedPoint("s", 0, 0, "source"),
@@ -84,8 +84,8 @@ describe("decorateEdges", () => {
         ]);
 
         expect(toEdgeLayoutDTO(edge).points).toEqual([
-            { id: "s", xPosition: 0, yPosition: 0, side: "source" },
-            { id: "t", xPosition: 100, yPosition: 100, side: "target" },
+            { id: "s", x: 0, y: 0, side: "source" },
+            { id: "t", x: 100, y: 100, side: "target" },
         ]);
     });
 });

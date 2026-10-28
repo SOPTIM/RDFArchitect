@@ -24,11 +24,10 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.shared.Lock;
 import org.rdfarchitect.api.dto.dl.DiagramLayoutDTO;
 import org.rdfarchitect.api.dto.dl.EdgeLayoutDTO;
-import org.rdfarchitect.api.dto.dl.EdgePointIdDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
-import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutReconciler;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutSync;
 import org.rdfarchitect.services.dl.update.edgelayout.EdgeResolver;
 import org.rdfarchitect.services.dl.update.edgelayout.UpdateEdgeLayoutDataService;
 import org.rdfarchitect.services.dl.update.labellayout.UpdateLabelLayoutService;
@@ -46,35 +45,32 @@ public class UpdateDiagramLayoutService implements UpdateDiagramLayoutUseCase {
     private final DatabasePort databasePort;
 
     @Override
-    public List<EdgePointIdDTO> updateDiagramLayout(
+    public void updateDiagramLayout(
             GraphIdentifier graphIdentifier, UUID diagramUUID, DiagramLayoutDTO diagramLayout) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var layout = ctx.getDiagramLayout();
             var resolvedDiagramUUID =
                     diagramUUID != null ? diagramUUID : layout.getDefaultPackageMRID().getUuid();
-            var newPointIds =
-                    applyDiagramLayout(
-                            layout.getDiagramLayoutModel(),
-                            resolvedDiagramUUID,
-                            diagramLayout,
-                            EdgeResolver.lazily(
-                                    () ->
-                                            EdgeResolver.forGraph(
-                                                    graphIdentifier.graphUri(),
-                                                    ctx.getRdfGraph())));
+            applyDiagramLayout(
+                    layout.getDiagramLayoutModel(),
+                    resolvedDiagramUUID,
+                    diagramLayout,
+                    EdgeResolver.lazily(
+                            () ->
+                                    EdgeResolver.forGraph(
+                                            graphIdentifier.graphUri(), ctx.getRdfGraph())));
             ctx.commit();
-            return newPointIds;
         }
     }
 
     @Override
-    public List<EdgePointIdDTO> updateDiagramLayout(
+    public void updateDiagramLayout(
             String datasetName, UUID diagramUUID, DiagramLayoutDTO diagramLayout) {
         var diagramLayoutModel =
                 databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
         diagramLayoutModel.enterCriticalSection(Lock.WRITE);
         try {
-            return applyDiagramLayout(
+            applyDiagramLayout(
                     diagramLayoutModel,
                     diagramUUID,
                     diagramLayout,
@@ -87,7 +83,7 @@ public class UpdateDiagramLayoutService implements UpdateDiagramLayoutUseCase {
     /**
      * Stores classes, then edges, then labels of a diagram, inside a transaction the caller holds.
      */
-    private static List<EdgePointIdDTO> applyDiagramLayout(
+    private static void applyDiagramLayout(
             Model diagramLayoutModel,
             UUID diagramUUID,
             DiagramLayoutDTO diagramLayout,
@@ -96,21 +92,18 @@ public class UpdateDiagramLayoutService implements UpdateDiagramLayoutUseCase {
                 diagramLayoutModel,
                 diagramUUID,
                 Objects.requireNonNullElse(diagramLayout.getClasses(), List.of()))) {
-            EdgeLayoutReconciler.reconcileEdges(
-                    diagramLayoutModel, diagramUUID, edgeResolver.get());
+            EdgeLayoutSync.syncEdges(diagramLayoutModel, diagramUUID, edgeResolver.get());
         }
         var edges = Objects.requireNonNullElse(diagramLayout.getEdges(), List.<EdgeLayoutDTO>of());
         if (diagramLayout.isAllEdges()) {
             UpdateEdgeLayoutDataService.deletePointsOfOtherEdges(
                     diagramLayoutModel, diagramUUID, edges);
         }
-        var newPointIds =
-                UpdateEdgeLayoutDataService.applyEdgeLayouts(
-                        diagramLayoutModel, diagramUUID, edges, edgeResolver);
+        UpdateEdgeLayoutDataService.applyEdgeLayouts(
+                diagramLayoutModel, diagramUUID, edges, edgeResolver);
         UpdateLabelLayoutService.applyLabelPositions(
                 diagramLayoutModel,
                 diagramUUID,
                 Objects.requireNonNullElse(diagramLayout.getLabels(), List.of()));
-        return newPointIds;
     }
 }

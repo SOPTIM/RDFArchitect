@@ -53,8 +53,8 @@ export function toEdgeLayoutDTO(edge) {
         targetClass: edge.target,
         points: points.map(point => ({
             id: point.id,
-            xPosition: point.x,
-            yPosition: point.y,
+            x: point.x,
+            y: point.y,
             side: sideOf(point, sourceDockingPoint, targetDockingPoint),
         })),
     };
@@ -68,24 +68,6 @@ function sideOf(point, sourceDockingPoint, targetDockingPoint) {
         return "target";
     }
     return null;
-}
-
-/**
- * Replaces the ids of points the backend stored under an mRID of their own by that mRID.
- *
- * @param {Array<{id: string}>} points the points of an edge
- * @param {Map<string, string>} storedIds the mRIDs by the ids the points were sent with
- * @returns the points, or the same array if none of them got an mRID
- */
-export function withStoredIds(points, storedIds) {
-    if (!points?.some(point => storedIds.has(point.id))) {
-        return points;
-    }
-    return points.map(point =>
-        storedIds.has(point.id)
-            ? { ...point, id: storedIds.get(point.id) }
-            : point,
-    );
 }
 
 function requestEdgeLayouts(target, edgeLayouts, keepalive) {
@@ -194,7 +176,6 @@ export class EdgeLayoutPersistence {
     #savedPoints = new Map();
     #persistedPoints = new Map();
     #unsavedEdges = new Map();
-    #storedIds = new Map();
     #pendingRequests = new Map();
     #nodeDragActive = false;
     #disposed = false;
@@ -340,7 +321,7 @@ export class EdgeLayoutPersistence {
                 requestDiagramLayout(target, {
                     classes,
                     labels,
-                    edges: changedEdges.map(edge => this.#toSentLayout(edge)),
+                    edges: changedEdges.map(toEdgeLayoutDTO),
                     allEdges,
                 }),
         );
@@ -412,7 +393,7 @@ export class EdgeLayoutPersistence {
             const labels =
                 target === this.#target ? this.#getLabelsOf(edges) : [];
             const send = () => {
-                const edgeLayouts = edges.map(edge => this.#toSentLayout(edge));
+                const edgeLayouts = edges.map(toEdgeLayoutDTO);
                 return labels.length > 0
                     ? requestDiagramLayout(
                           target,
@@ -457,16 +438,12 @@ export class EdgeLayoutPersistence {
         return points.every((point, index) => {
             const persisted = persistedPoints[index];
             return (
-                this.#storedIdOf(point.id) === this.#storedIdOf(persisted.id) &&
-                point.xPosition === persisted.xPosition &&
-                point.yPosition === persisted.yPosition &&
+                point.id === persisted.id &&
+                point.x === persisted.x &&
+                point.y === persisted.y &&
                 point.side === persisted.side
             );
         });
-    }
-
-    #storedIdOf(id) {
-        return this.#storedIds.get(id) ?? id;
     }
 
     /**
@@ -505,18 +482,9 @@ export class EdgeLayoutPersistence {
         }
     }
 
-    #toSentLayout(edge) {
-        const layout = toEdgeLayoutDTO(edge);
-        for (const point of layout.points) {
-            point.id = this.#storedIdOf(point.id);
-        }
-        return layout;
-    }
-
     /**
-     * Sends a request once the earlier requests of the given edges are answered, and takes over
-     * the mRIDs of the new points it answers with. If the request fails, its edges no longer count
-     * as saved, so their next save sends them in any case.
+     * Sends a request once the earlier requests of the given edges are answered. If the request
+     * fails, its edges no longer count as saved, so their next save sends them in any case.
      */
     #enqueue(edgeIds, send) {
         const earlierRequests = edgeIds
@@ -524,11 +492,10 @@ export class EdgeLayoutPersistence {
             .filter(Boolean);
         const request = Promise.all(earlierRequests)
             .then(send)
-            .then(({ data, error }) => {
+            .then(({ error }) => {
                 if (error) {
                     throw error;
                 }
-                this.#acceptStoredIds(data);
             })
             .catch(error => {
                 for (const edgeId of edgeIds) {
@@ -545,41 +512,6 @@ export class EdgeLayoutPersistence {
             });
         for (const edgeId of edgeIds) {
             this.#pendingRequests.set(edgeId, request);
-        }
-    }
-
-    /**
-     * Remembers the mRIDs of new points and puts them into the shown edges. A selected edge keeps
-     * the ids it has, as one of its points may be dragged right now; its points are sent with
-     * their mRIDs nonetheless.
-     */
-    #acceptStoredIds(storedIds) {
-        if (!storedIds?.length) {
-            return;
-        }
-        for (const { clientId, id } of storedIds) {
-            this.#storedIds.set(clientId, id);
-        }
-        if (this.#disposed) {
-            return;
-        }
-        let changed = false;
-        const edges = this.#getEdges().map(edge => {
-            const points = edge.data?.edgePoints;
-            const nextPoints = edge.selected
-                ? points
-                : withStoredIds(points, this.#storedIds);
-            if (nextPoints === points) {
-                return edge;
-            }
-            changed = true;
-            if (this.#savedPoints.get(edge.id) === points) {
-                this.#savedPoints.set(edge.id, nextPoints);
-            }
-            return { ...edge, data: { ...edge.data, edgePoints: nextPoints } };
-        });
-        if (changed) {
-            this.#setEdges(edges);
         }
     }
 }

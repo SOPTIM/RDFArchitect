@@ -17,8 +17,6 @@
 
 package org.rdfarchitect.api.dto.dl;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -33,10 +31,8 @@ import java.util.List;
 @NoArgsConstructor
 public class DiagramLayoutDTO {
 
-    @JsonProperty("classes")
     private List<ClassPositionDTO> classes;
 
-    @JsonProperty("edges")
     private List<EdgeLayoutDTO> edges;
 
     /**
@@ -44,9 +40,7 @@ public class DiagramLayoutDTO {
      * The stored points of any other edge of the diagram, i.e. one hidden by a filter, are deleted
      * then, so it is drawn straight once it is shown again instead of along the old layout.
      */
-    @JsonProperty("allEdges")
     private boolean allEdges;
 
-    @JsonProperty("labels")
     private List<LabelPositionDTO> labels;
 }

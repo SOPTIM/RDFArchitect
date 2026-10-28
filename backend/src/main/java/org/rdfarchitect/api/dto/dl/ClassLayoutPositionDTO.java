@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ClassLayoutPositionDTO {
 
-    private float xPosition;
+    private double xPosition;
 
-    private float yPosition;
+    private double yPosition;
 }

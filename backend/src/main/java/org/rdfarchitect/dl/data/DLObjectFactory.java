@@ -138,8 +138,8 @@ public class DLObjectFactory {
                 .mRID(new MRID(DLUtils.extractUUIDFromMRID(point.getURI())))
                 .position(
                         new XYZPosition(
-                                point.getProperty(DL.xPosition).getFloat(),
-                                point.getProperty(DL.yPosition).getFloat(),
+                                point.getProperty(DL.xPosition).getDouble(),
+                                point.getProperty(DL.yPosition).getDouble(),
                                 zPosition != null ? zPosition.getInt() : 0))
                 .belongsToDiagramObject(diagramObject)
                 .sequenceNumber(sequenceNumber != null ? sequenceNumber.getInt() : null)

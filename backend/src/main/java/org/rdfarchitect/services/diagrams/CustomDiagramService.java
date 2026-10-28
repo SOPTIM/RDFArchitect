@@ -39,7 +39,7 @@ import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
-import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutReconciler;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutSync;
 import org.rdfarchitect.services.dl.update.edgelayout.EdgeResolver;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
 import org.rdfarchitect.services.rendering.CIMProfileModels;
@@ -223,7 +223,7 @@ public class CustomDiagramService
             }
         }
         if (createdClassLayoutData) {
-            EdgeLayoutReconciler.reconcileEdges(
+            EdgeLayoutSync.syncEdges(
                     model, crossProfileDiagramUUID, EdgeResolver.forMergedProfiles(profiles));
         }
     }
@@ -265,6 +265,7 @@ public class CustomDiagramService
             classes.removeIf(c -> c.getUuid().equals(classId));
             diagram.setClasses(classes);
         }
+        syncDiagramLayoutUseCase.syncDatasetDiagramLayout(datasetName);
     }
 
     @Override
@@ -373,6 +374,7 @@ public class CustomDiagramService
                             "diagram",
                             ChangeDescriptions.diagramName(diagram)));
         }
+        syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
     }
 
     @Override

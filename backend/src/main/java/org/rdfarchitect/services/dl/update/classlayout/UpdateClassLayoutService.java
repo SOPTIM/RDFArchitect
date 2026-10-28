@@ -52,7 +52,7 @@ import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
-import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutReconciler;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutSync;
 import org.rdfarchitect.services.dl.update.edgelayout.EdgeResolver;
 import org.rdfarchitect.services.rendering.MergedClasses;
 import org.springframework.stereotype.Service;
@@ -131,7 +131,7 @@ public class UpdateClassLayoutService
                     classUUID,
                     classLayoutPosition != null ? classLayoutPosition.getXPosition() : 0,
                     classLayoutPosition != null ? classLayoutPosition.getYPosition() : 0);
-            EdgeLayoutReconciler.reconcileEdges(
+            EdgeLayoutSync.syncEdges(
                     diagramLayoutModel,
                     packageUUID,
                     EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
@@ -158,7 +158,7 @@ public class UpdateClassLayoutService
 
             if (applyClassPositions(
                     diagramLayoutModel, resolvedPackageUUID, classPositionDTOList)) {
-                EdgeLayoutReconciler.reconcileEdges(
+                EdgeLayoutSync.syncEdges(
                         diagramLayoutModel,
                         resolvedPackageUUID,
                         EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
@@ -183,7 +183,7 @@ public class UpdateClassLayoutService
         diagramLayoutModel.enterCriticalSection(Lock.WRITE);
         try {
             if (applyClassPositions(diagramLayoutModel, diagramUUID, classPositionDTOList)) {
-                EdgeLayoutReconciler.reconcileEdges(
+                EdgeLayoutSync.syncEdges(
                         diagramLayoutModel,
                         diagramUUID,
                         EdgeResolver.forDataset(databasePort, datasetName));
@@ -301,14 +301,14 @@ public class UpdateClassLayoutService
      * Shifts one coordinate of a point. A coordinate that is no number is left as it is, so a
      * broken point does not abort moving the classes.
      */
-    private static void shiftCoordinate(Resource point, Property coordinate, float distance) {
+    private static void shiftCoordinate(Resource point, Property coordinate, double distance) {
         var statement = point.getProperty(coordinate);
         if (statement == null) {
             return;
         }
-        float value;
+        double value;
         try {
-            value = Float.parseFloat(statement.getString());
+            value = Double.parseDouble(statement.getString());
         } catch (NumberFormatException e) {
             return;
         }
@@ -320,7 +320,7 @@ public class UpdateClassLayoutService
      * The distance a class moved, with the point of the class and the glue point its docking points
      * are glued to.
      */
-    private record ClassShift(MRID classPoint, MRID gluePoint, float dx, float dy) {
+    private record ClassShift(MRID classPoint, MRID gluePoint, double dx, double dy) {
 
         boolean isZero() {
             return dx == 0 && dy == 0;
@@ -343,8 +343,8 @@ public class UpdateClassLayoutService
             Model diagramLayoutModel,
             DiagramObject diagramObject,
             UUID diagramUUID,
-            float xPosition,
-            float yPosition,
+            double xPosition,
+            double yPosition,
             Integer zPosition) {
         var diagramObjectPoint =
                 DiagramLayoutServiceUtils.classPointOf(diagramLayoutModel, diagramObject.getMRID());
@@ -426,7 +426,7 @@ public class UpdateClassLayoutService
             deleteOrphanedLabels(diagramLayoutModel, ctx.getRdfGraph(), classUUID);
             var edgeResolver = EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph());
             for (var diagramUUID : diagramUUIDs) {
-                EdgeLayoutReconciler.reconcileEdges(diagramLayoutModel, diagramUUID, edgeResolver);
+                EdgeLayoutSync.syncEdges(diagramLayoutModel, diagramUUID, edgeResolver);
             }
             ctx.commit();
         }
@@ -502,7 +502,7 @@ public class UpdateClassLayoutService
                     classes.stream()
                             .map(ClassInDiagram::getUuid)
                             .collect(Collectors.toCollection(LinkedHashSet::new)));
-            EdgeLayoutReconciler.reconcileEdges(
+            EdgeLayoutSync.syncEdges(
                     diagramLayoutModel,
                     diagramUUID,
                     EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
@@ -556,7 +556,7 @@ public class UpdateClassLayoutService
             }
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             deleteLayoutForClasses(diagramLayoutModel, diagramUUID, classUUIDs);
-            EdgeLayoutReconciler.reconcileEdges(
+            EdgeLayoutSync.syncEdges(
                     diagramLayoutModel,
                     diagramUUID,
                     EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
@@ -626,7 +626,7 @@ public class UpdateClassLayoutService
                     diagramLayoutModel,
                     diagramUUID,
                     mergedUuidsOf(classes, classUriByUuid(datasetName, classes)));
-            EdgeLayoutReconciler.reconcileEdges(
+            EdgeLayoutSync.syncEdges(
                     diagramLayoutModel,
                     diagramUUID,
                     EdgeResolver.forDataset(databasePort, datasetName));
@@ -686,7 +686,7 @@ public class UpdateClassLayoutService
                         diagramUUID,
                         classUUIDs.stream().filter(uuid -> !stillRendered.contains(uuid)).toList());
             }
-            EdgeLayoutReconciler.reconcileEdges(
+            EdgeLayoutSync.syncEdges(
                     model, diagramUUID, EdgeResolver.forDataset(databasePort, datasetName));
         } finally {
             model.leaveCriticalSection();

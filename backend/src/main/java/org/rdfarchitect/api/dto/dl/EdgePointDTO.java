@@ -24,8 +24,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * An edge point: a docking point at the border of a class or a bend point in between. The position
- * of the point within {@link EdgeLayoutDTO#getPoints()} is its sequence number.
+ * An edge point: a docking point at the border of a class or a bend point in between. The backend
+ * renders the stored points of an edge in this form, and the frontend sends them back in the same
+ * form to save the layout of the edge. The position of a point within the list of points of its
+ * edge is its sequence number.
  */
 @Data
 @NoArgsConstructor
@@ -33,23 +35,26 @@ import lombok.NoArgsConstructor;
 public class EdgePointDTO {
 
     /**
-     * The id the frontend knows the point by. If it is the mRID of a stored point of the edge, that
-     * point is updated. Otherwise the point is new, gets an mRID of its own and the id is reported
-     * back in an {@link EdgePointIdDTO}.
+     * The mRID of the point. A point the frontend creates gets a new UUID there, which becomes its
+     * mRID once the point is saved.
      */
-    @JsonProperty("id")
     private String id;
 
-    @JsonProperty("xPosition")
-    private float xPosition;
+    private double x;
 
-    @JsonProperty("yPosition")
-    private float yPosition;
+    private double y;
 
-    /**
-     * The side of a docking point, {@code source} or {@code target}: the point is pinned to the
-     * border of the source or the target class of the edge. Null for a bend point.
-     */
-    @JsonProperty("side")
-    private String side;
+    /** The side of a docking point. Null for a bend point. */
+    private Side side;
+
+    /** The class a docking point is pinned to the border of. */
+    public enum Side {
+        /** The source class of the edge. */
+        @JsonProperty("source")
+        SOURCE,
+
+        /** The target class of the edge. */
+        @JsonProperty("target")
+        TARGET
+    }
 }
