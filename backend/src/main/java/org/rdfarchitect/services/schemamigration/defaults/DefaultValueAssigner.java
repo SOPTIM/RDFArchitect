@@ -72,7 +72,9 @@ public class DefaultValueAssigner {
         for (var attributeChange : attributes) {
             if (attributeChange.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETE
                     || attributeChange.getSemanticResourceChangeType()
-                            == SemanticResourceChangeType.DELETED_FROM_INHERITANCE) {
+                            == SemanticResourceChangeType.DELETED_FROM_INHERITANCE
+                    || attributeChange.getSemanticResourceChangeType()
+                            == SemanticResourceChangeType.DELETED_FROM_MAPPING) {
                 continue;
             }
 
@@ -87,7 +89,9 @@ public class DefaultValueAssigner {
             if (associationChange.getSemanticResourceChangeType()
                             == SemanticResourceChangeType.DELETE
                     || associationChange.getSemanticResourceChangeType()
-                            == SemanticResourceChangeType.DELETED_FROM_INHERITANCE) {
+                            == SemanticResourceChangeType.DELETED_FROM_INHERITANCE
+                    || associationChange.getSemanticResourceChangeType()
+                            == SemanticResourceChangeType.DELETED_FROM_MAPPING) {
                 continue;
             }
 

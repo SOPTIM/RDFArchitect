@@ -50,11 +50,7 @@ import java.util.List;
     @JsonSubTypes.Type(value = SemanticEnumEntryChange.class, name = "enumEntryChange")
 })
 public sealed class SemanticResourceChange
-        permits SemanticClassChange,
-                SemanticPackageChange,
-                SemanticAttributeChange,
-                SemanticAssociationChange,
-                SemanticEnumEntryChange {
+        permits SemanticClassChange, SemanticPackageChange, SemanticPropertyChange {
 
     protected SemanticResourceChangeType semanticResourceChangeType;
 
@@ -64,6 +60,10 @@ public sealed class SemanticResourceChange
 
     // only set in case of a rename
     protected String oldIRI;
+
+    // the other old resources folded into this one, for a merge of more than one old resource
+    // into a single new resource
+    @Builder.Default protected List<String> additionalOldIRIs = new ArrayList<>();
 
     protected String iri;
 
@@ -83,10 +83,21 @@ public sealed class SemanticResourceChange
     public SemanticResourceChange(SemanticResourceChange other) {
         this.label = other.getLabel();
         this.oldIRI = other.getOldIRI();
+        this.additionalOldIRIs = other.getAdditionalOldIRIs();
         this.iri = other.getIri();
         this.semanticResourceChangeType = other.getSemanticResourceChangeType();
         this.changes = other.getChanges();
         this.comment = other.getComment();
+    }
+
+    public List<String> getAllOldIRIs() {
+        if (oldIRI == null) {
+            return additionalOldIRIs;
+        }
+        var allOldIRIs = new ArrayList<String>();
+        allOldIRIs.add(oldIRI);
+        allOldIRIs.addAll(additionalOldIRIs);
+        return allOldIRIs;
     }
 
     public SemanticResourceChange(Resource resource, SemanticResourceChangeType changeType) {

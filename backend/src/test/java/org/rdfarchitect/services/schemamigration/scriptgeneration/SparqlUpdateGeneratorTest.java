@@ -23,6 +23,7 @@ import static org.mockito.Mockito.lenient;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.update.UpdateAction;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,8 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.services.schemamigration.artifacts.SparqlUpdateGenerator;
+
+import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 class SparqlUpdateGeneratorTest {
@@ -164,6 +167,78 @@ class SparqlUpdateGeneratorTest {
 
         assertThat(generator.generateDatatypeChangedUpdate(attributeChange)).isEmpty();
         assertThat(generator.generateEnumDatatypeChangedUpdate(attributeChange)).isEmpty();
+    }
+
+    @Test
+    void generateSplitAttributeUpdate_threeTargets_onlyPopulatesTheInstanceActualClass() {
+        // Each instance must only receive the one target property matching its own rdf:type -
+        // not every sibling target's property, which was the original bug (RDFA-729).
+        concreteClass("ClassA");
+        concreteClass("ClassB");
+        concreteClass("ClassC");
+
+        var oldAttribute = schema.createProperty(PREFIX + "OldClass.voltage");
+        var newAttribute0 = schema.createProperty(PREFIX + "ClassA.voltage");
+        var newAttribute1 = schema.createProperty(PREFIX + "ClassB.voltage");
+        var newAttribute2 = schema.createProperty(PREFIX + "ClassC.voltage");
+        var instance = schema.createResource(PREFIX + "instance1");
+        instance.addProperty(RDF.type, schema.createResource(PREFIX + "ClassB"));
+        instance.addProperty(oldAttribute, "400");
+
+        var siblings =
+                List.of(
+                        splitSibling(
+                                PREFIX + "OldClass.voltage", PREFIX + "ClassA.voltage", "ClassA"),
+                        splitSibling(
+                                PREFIX + "OldClass.voltage", PREFIX + "ClassB.voltage", "ClassB"),
+                        splitSibling(
+                                PREFIX + "OldClass.voltage", PREFIX + "ClassC.voltage", "ClassC"));
+
+        var update = generator.generateSplitPropertyUpdate(siblings);
+        UpdateAction.parseExecute(update, schema);
+
+        assertThat(instance.hasProperty(oldAttribute)).isFalse();
+        assertThat(instance.hasProperty(newAttribute0)).isFalse();
+        assertThat(instance.getProperty(newAttribute1).getString()).isEqualTo("400");
+        assertThat(instance.hasProperty(newAttribute2)).isFalse();
+    }
+
+    @Test
+    void generateSplitAttributeUpdate_targetWithSubclass_scopesToWholeHierarchy() {
+        // A class that derived from the split's old domain both before and after keeps its value
+        // under the rewritten predicate - the split update must reach its subclasses too, not
+        // only the exact target class named on the sibling.
+        var classB = concreteClass("ClassB");
+        var classBSub = concreteClass("ClassBSub");
+        classBSub.addProperty(RDFS.subClassOf, classB);
+
+        var oldAttribute = schema.createProperty(PREFIX + "OldClass.voltage");
+        var newAttribute1 = schema.createProperty(PREFIX + "ClassB.voltage");
+        var instance = schema.createResource(PREFIX + "instance1");
+        instance.addProperty(RDF.type, classBSub);
+        instance.addProperty(oldAttribute, "400");
+
+        var siblings =
+                List.of(
+                        splitSibling(
+                                PREFIX + "OldClass.voltage", PREFIX + "ClassA.voltage", "ClassA"),
+                        splitSibling(
+                                PREFIX + "OldClass.voltage", PREFIX + "ClassB.voltage", "ClassB"));
+
+        var update = generator.generateSplitPropertyUpdate(siblings);
+        UpdateAction.parseExecute(update, schema);
+
+        assertThat(instance.hasProperty(oldAttribute)).isFalse();
+        assertThat(instance.getProperty(newAttribute1).getString()).isEqualTo("400");
+    }
+
+    private SemanticAttributeChange splitSibling(
+            String oldIri, String newIri, String domainLocalName) {
+        return SemanticAttributeChange.builder()
+                .iri(newIri)
+                .oldIRI(oldIri)
+                .domain(PREFIX + domainLocalName)
+                .build();
     }
 
     private Resource concreteClass(String localName) {

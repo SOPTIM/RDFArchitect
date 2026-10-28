@@ -28,6 +28,7 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticPropertyChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.cim.queries.templates.SparqlTemplateLoader;
 import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
@@ -113,10 +114,29 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateRenameAttributeUpdate(SemanticAttributeChange attributeChange) {
-        var pss = SparqlTemplateLoader.loadTemplate("migration/attribute-renamed");
-        pss.setIri("oldAttribute", attributeChange.getOldIRI());
-        pss.setIri("newAttribute", attributeChange.getIri());
-        return pss.toString();
+        var result = new UpdateRequest();
+        for (var oldIri : attributeChange.getAllOldIRIs()) {
+            var pss = SparqlTemplateLoader.loadTemplate("migration/attribute-renamed");
+            pss.setIri("oldAttribute", oldIri);
+            pss.setIri("newAttribute", attributeChange.getIri());
+            result.add(pss.toString());
+        }
+        return result.toString();
+    }
+
+    public <T extends SemanticPropertyChange> String generateSplitPropertyUpdate(List<T> siblings) {
+        var oldAttribute = siblings.getFirst().getOldIRI();
+        var result = new UpdateRequest();
+        for (var sibling : siblings) {
+            for (var classIri : getClassHierarchy(sibling.getDomain())) {
+                var pss = SparqlTemplateLoader.loadTemplate("migration/property-split");
+                pss.setIri("oldProperty", oldAttribute);
+                pss.setIri("newProperty", sibling.getIri());
+                pss.setIri("domain", classIri);
+                result.add(pss.toString());
+            }
+        }
+        return result.toString();
     }
 
     public String generateDatatypeChangedUpdate(SemanticAttributeChange attributeChange) {
@@ -158,10 +178,14 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateRenameEnumEntryUpdate(SemanticEnumEntryChange enumEntryChange) {
-        var pss = SparqlTemplateLoader.loadTemplate("migration/enum-entry-renamed");
-        pss.setIri("oldEnumEntry", enumEntryChange.getOldIRI());
-        pss.setIri("newEnumEntry", enumEntryChange.getIri());
-        return pss.toString();
+        var result = new UpdateRequest();
+        for (var oldIri : enumEntryChange.getAllOldIRIs()) {
+            var pss = SparqlTemplateLoader.loadTemplate("migration/enum-entry-renamed");
+            pss.setIri("oldEnumEntry", oldIri);
+            pss.setIri("newEnumEntry", enumEntryChange.getIri());
+            result.add(pss.toString());
+        }
+        return result.toString();
     }
 
     public String generateDeleteEnumEntryUpdate(SemanticEnumEntryChange enumEntryChange) {
@@ -205,10 +229,14 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateRenameAssociationUpdate(SemanticAssociationChange associationChange) {
-        var pss = SparqlTemplateLoader.loadTemplate("migration/association-renamed");
-        pss.setIri("oldAssociation", associationChange.getOldIRI());
-        pss.setIri("newAssociation", associationChange.getIri());
-        return pss.toString();
+        var result = new UpdateRequest();
+        for (var oldIri : associationChange.getAllOldIRIs()) {
+            var pss = SparqlTemplateLoader.loadTemplate("migration/association-renamed");
+            pss.setIri("oldAssociation", oldIri);
+            pss.setIri("newAssociation", associationChange.getIri());
+            result.add(pss.toString());
+        }
+        return result.toString();
     }
 
     public String generateAssociationTargetChangeUpdate(
@@ -217,13 +245,6 @@ public class SparqlUpdateGenerator {
                 + generateAddAssociationUpdate(associationChange);
     }
 
-    /**
-     * Whether the attribute is left without a default value. A required attribute may be waived on
-     * purpose when no default makes sense for it (RDFA-714), and then nothing is generated for it:
-     * the instances stay uninitialized instead of being filled with an invented value, and the
-     * existing ones keep the values they have. Without this guard the missing value would either
-     * end up in the script as an ill-typed empty literal or break generation altogether.
-     */
     private boolean lacksDefaultValue(SemanticAttributeChange attributeChange) {
         return attributeChange.getDefaultValue() == null
                 || attributeChange.getDefaultValue().isBlank();

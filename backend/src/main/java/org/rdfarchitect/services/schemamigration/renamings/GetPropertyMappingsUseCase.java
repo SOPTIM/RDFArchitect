@@ -17,17 +17,10 @@
 
 package org.rdfarchitect.services.schemamigration.renamings;
 
-import org.rdfarchitect.api.dto.migration.ResourceRenameOverview;
-import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
+import org.rdfarchitect.api.dto.migration.ClassPropertyMappingOverview;
 
-/** Interface for fetching a view that displays the various class changes between two schemas */
-public interface GetClassRenamingsUseCase {
+import java.util.List;
 
-    /**
-     * Returns the aggregated information on class changes between two schemas, including added,
-     * deleted and renamed classes.
-     *
-     * @return A view comprised of several lists of Class Changes and Rename Candidates
-     */
-    ResourceRenameOverview<SemanticClassChange> getClassRenamings();
+public interface GetPropertyMappingsUseCase {
+    List<ClassPropertyMappingOverview> getPropertyMappings();
 }

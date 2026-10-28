@@ -19,8 +19,8 @@ package org.rdfarchitect.api.dto.migration;
 
 import lombok.Data;
 
-import org.rdfarchitect.models.changes.RenameCandidate;
-import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
+import org.rdfarchitect.models.changes.ResourceMapping;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 
 import java.util.ArrayList;
@@ -28,13 +28,15 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Data
-public class ResourceRenameOverview<T extends SemanticResourceChange> {
+public class ClassMappingOverview {
 
-    private List<T> added;
+    private List<SemanticClassChange> added;
 
-    private List<RenameCandidate<T>> deletedAndRenamed;
+    private List<ResourceMapping<SemanticClassChange>> deletedAndRemapped;
 
-    public ResourceRenameOverview(List<T> changes, List<RenameCandidate<T>> renameCandidates) {
+    public ClassMappingOverview(
+            List<SemanticClassChange> changes,
+            List<ResourceMapping<SemanticClassChange>> resourceMappings) {
         this.added =
                 changes.stream()
                         .filter(
@@ -50,18 +52,21 @@ public class ResourceRenameOverview<T extends SemanticResourceChange> {
                                                 == SemanticResourceChangeType.DELETE)
                         .toList();
         var mappedDeleted =
-                renameCandidates.stream()
-                        .map(r -> r.getOldResource().getLabel())
+                resourceMappings.stream()
+                        .flatMap(
+                                r ->
+                                        r.getOldResources().stream()
+                                                .map(SemanticClassChange::getLabel))
                         .collect(Collectors.toSet());
 
         // Add all unmapped deletions as potential renamingCandidates with confidenceScore 0
-        var deletedAndRenamedCandidates = new ArrayList<>(renameCandidates);
+        var deletedAndRenamedCandidates = new ArrayList<>(resourceMappings);
         for (var change : deleted) {
             var label = change.getLabel();
             if (!mappedDeleted.contains(label)) {
-                deletedAndRenamedCandidates.add(new RenameCandidate<>(change));
+                deletedAndRenamedCandidates.add(new ResourceMapping<>(change));
             }
         }
-        this.deletedAndRenamed = deletedAndRenamedCandidates;
+        this.deletedAndRemapped = deletedAndRenamedCandidates;
     }
 }

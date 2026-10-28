@@ -19,18 +19,17 @@ package org.rdfarchitect.api.controller.datasets.graphs.migration;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.migration.ResourceRenameOverview;
-import org.rdfarchitect.models.changes.RenameCandidate;
+import org.rdfarchitect.api.dto.migration.ClassMappingOverview;
+import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.services.schemamigration.renamings.ClassRenamingsUseCase;
-import org.rdfarchitect.services.schemamigration.renamings.GetClassRenamingsUseCase;
+import org.rdfarchitect.services.schemamigration.renamings.GetClassMappingsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,13 +44,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/migrations/class-renamings")
 @RequiredArgsConstructor
-public class ClassRenamingsRESTController {
+public class ClassMappingsRESTController {
 
-    private static final Logger logger =
-            LoggerFactory.getLogger(ClassRenamingsRESTController.class);
+    private static final Logger logger = LoggerFactory.getLogger(ClassMappingsRESTController.class);
 
     private final ClassRenamingsUseCase classRenamingsUseCase;
-    private final GetClassRenamingsUseCase getClassRenamingsUseCase;
+    private final GetClassMappingsUseCase getClassMappingsUseCase;
 
     @Operation(
             summary = "migration class overview",
@@ -64,16 +62,13 @@ public class ClassRenamingsRESTController {
                         content =
                                 @Content(
                                         mediaType = "application/json",
-                                        array =
-                                                @ArraySchema(
-                                                        schema =
-                                                                @Schema(
-                                                                        implementation =
-                                                                                ResourceRenameOverview
-                                                                                        .class))))
+                                        schema =
+                                                @Schema(
+                                                        implementation =
+                                                                ClassMappingOverview.class)))
             })
     @GetMapping
-    public ResourceRenameOverview<SemanticClassChange> getClassRenamings(
+    public ClassMappingOverview getClassMappings(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL) {
@@ -81,7 +76,7 @@ public class ClassRenamingsRESTController {
                 "Received GET request: \"/api/migrations/class-renamings\" from \"{}\".",
                 originURL);
 
-        var classes = getClassRenamingsUseCase.getClassRenamings();
+        var classes = getClassMappingsUseCase.getClassMappings();
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/migrations/class-renamings\" from \"{}\".",
@@ -101,7 +96,7 @@ public class ClassRenamingsRESTController {
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The updated class renamings") @RequestBody
-                    List<RenameCandidate<SemanticClassChange>> classRenamings) {
+                    List<ResourceMapping<SemanticClassChange>> classRenamings) {
         logger.info(
                 "Received POST request: \"/api/migrations/class-renamings\" from \"{}\".",
                 originURL);
