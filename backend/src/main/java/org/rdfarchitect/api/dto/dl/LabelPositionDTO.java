@@ -17,8 +17,6 @@
 
 package org.rdfarchitect.api.dto.dl;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -29,16 +27,12 @@ import java.util.UUID;
 @NoArgsConstructor
 public class LabelPositionDTO {
 
-    @JsonProperty("identifiedObjectUUID")
     private UUID identifiedObjectUUID;
 
-    @JsonProperty("kind")
     private String kind;
 
     /** The absolute position in the diagram. Null resets the label to its default placement. */
-    @JsonProperty("x")
-    private Float x;
+    private Double x;
 
-    @JsonProperty("y")
-    private Float y;
+    private Double y;
 }

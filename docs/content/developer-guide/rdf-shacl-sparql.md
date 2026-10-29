@@ -24,7 +24,14 @@ When fixing a SHACL bug, the most useful starting point is `SHACLFromCIMGenerato
 
 ## Diagram layout
 
-Layout positions are persisted as RDF using a small custom vocabulary under `dl/rdf/` (Diagram Layout). Layout DTOs live in `api/dto/rendering/` with renderer-specific subdirectories (`svelteflow/`, `mermaid/`). When changing the layout schema, update both the `dl/` model and any code that reads or writes layout data.
+Layout positions are persisted as RDF following the Diagram Layout profile of CGMES (IEC 61970-453), with the vocabulary in `dl/rdf/`. The DTOs the renderers read live in `api/dto/rendering/` with renderer-specific subdirectories (`svelteflow/`, `mermaid/`), the DTOs for saving a layout in `api/dto/dl/`. When changing the layout schema, update both the `dl/` model and any code that reads or writes layout data.
+
+- **Classes.** A class has one `DiagramObject` per diagram with a single `DiagramObjectPoint`, which references a `DiagramObjectGluePoint` of the class.
+- **Edges.** Every inheritance and association edge between two classes of a diagram has a `DiagramObject` of its own. It references one end of the edge as its identified object and the other through `rdfa:DiagramObject.otherClass`, which is not part of the profile (`dl.data.dto.relations.EdgeKey`). Its edge points carry a `sequenceNumber` and are ordered numerically, counted from the side of the identified object. The first and the last point may be docking points, which pin an end of the edge to the class border: they reference the glue point of their class, and a moved class moves them along. The points in between are bend points.
+- **Lazy creation.** Layout data of a class is created when the class is moved or laid out in the diagram for the first time. The edge diagram objects follow: `EdgeLayoutSync` brings them in line with the schema whenever classes get layout data. After a schema change, `SyncDiagramLayoutService` deletes the layout data of classes a diagram no longer shows and syncs the edges as well.
+- **Saving.** The frontend saves the full, ordered list of edge points of an edge (`PUT …/layout/{diagram}/edges`), or classes, edges and labels changed by one action together (`PUT …/layout/{diagram}`). New points are answered with the mRIDs they are stored under.
+
+Most `DLObjectFetcher` queries match IRIs with `FILTER(STR(?x) = "...")` and scan the whole layout model, which holds every diagram of the graph. A lookup that runs per edge or per class should follow the model index instead (`listResourcesWithProperty`), like `fetchDOPsForDO` does, or saving a layout gets slow.
 
 ## Migration scripts
 

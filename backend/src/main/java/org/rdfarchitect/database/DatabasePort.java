@@ -46,7 +46,9 @@ public interface DatabasePort {
     Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName);
 
     /**
-     * Get the {@link DiagramLayout} for all custom diagrams defined on a dataset
+     * Get the {@link DiagramLayout} for all custom diagrams defined on a dataset. Unlike the
+     * diagram layout of a graph it is not guarded by a transaction, so its model must only be read
+     * and written inside a critical section of the model, see {@link DiagramLayout}.
      *
      * @param datasetName literal dataset name
      * @return diagram layout for the dataset

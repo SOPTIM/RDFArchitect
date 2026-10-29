@@ -23,7 +23,10 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.shared.Lock;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
@@ -34,10 +37,12 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
+import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
+import org.rdfarchitect.dl.rdf.resources.DL;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
@@ -45,9 +50,12 @@ import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutSync;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeResolver;
 import org.rdfarchitect.services.rendering.MergedClasses;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -92,14 +100,14 @@ public class UpdateClassLayoutService
             }
 
             var existingDiagramObject =
-                    DLObjectFetcher.fetchDiagramDOForClass(
-                            diagramLayoutModel, packageUUID, classUUID);
+                    DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                            diagramLayoutModel, packageUUID, classUUID, DiagramObjectStyle.CLASS);
             if (existingDiagramObject != null) {
                 // The class takes over an uri that already had layout data, for example because a
                 // class of that name was deleted while references to it remained. Keeping that
                 // layout data avoids a second diagram object for the same class.
                 if (classLayoutPosition != null) {
-                    moveDiagramObject(
+                    moveClassDOPPosition(
                             diagramLayoutModel,
                             existingDiagramObject,
                             packageUUID,
@@ -110,44 +118,19 @@ public class UpdateClassLayoutService
                 }
                 return;
             }
-
-            var doMRID =
-                    DiagramLayoutServiceUtils.insertDiagramObject(
-                            diagramLayoutModel, packageUUID, className, classUUID);
-            float xPosition = classLayoutPosition != null ? classLayoutPosition.getXPosition() : 0;
-            float yPosition = classLayoutPosition != null ? classLayoutPosition.getYPosition() : 0;
-            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                    diagramLayoutModel, doMRID, packageUUID, xPosition, yPosition);
+            DiagramLayoutServiceUtils.insertClassLayoutData(
+                    diagramLayoutModel,
+                    packageUUID,
+                    className,
+                    classUUID,
+                    classLayoutPosition != null ? classLayoutPosition.getXPosition() : 0,
+                    classLayoutPosition != null ? classLayoutPosition.getYPosition() : 0);
+            EdgeLayoutSync.syncEdges(
+                    diagramLayoutModel,
+                    packageUUID,
+                    EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
             ctx.commit();
         }
-    }
-
-    /**
-     * Moves the point of an existing diagram object.
-     *
-     * @param zPosition the stacking order to apply, or {@code null} to keep the current one.
-     */
-    private void moveDiagramObject(
-            Model diagramLayoutModel,
-            DiagramObject diagramObject,
-            UUID diagramUUID,
-            float xPosition,
-            float yPosition,
-            Integer zPosition) {
-        var diagramObjectPoint =
-                DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, diagramObject.getMRID());
-        if (diagramObjectPoint == null) {
-            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                    diagramLayoutModel, diagramObject.getMRID(), diagramUUID, xPosition, yPosition);
-            return;
-        }
-        DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint.getMRID());
-        diagramObjectPoint.setPosition(
-                new XYZPosition(
-                        xPosition,
-                        yPosition,
-                        zPosition != null ? zPosition : diagramObjectPoint.getPosition().getZ()));
-        DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);
     }
 
     @Override
@@ -163,39 +146,12 @@ public class UpdateClassLayoutService
                             ? packageUUID
                             : diagramLayout.getDefaultPackageMRID().getUuid();
 
-            for (var classPositionDTO : classPositionDTOList) {
-                var diagramObject =
-                        DLObjectFetcher.fetchDiagramDOForClass(
-                                diagramLayoutModel,
-                                resolvedPackageUUID,
-                                classPositionDTO.getClassUUID());
-                if (diagramObject == null) {
-                    if (DLObjectFetcher.fetchDiagram(diagramLayoutModel, resolvedPackageUUID)
-                            == null) {
-                        DiagramLayoutServiceUtils.insertDiagram(
-                                diagramLayoutModel, resolvedPackageUUID, "");
-                    }
-                    var doMRID =
-                            DiagramLayoutServiceUtils.insertDiagramObject(
-                                    diagramLayoutModel,
-                                    resolvedPackageUUID,
-                                    "",
-                                    classPositionDTO.getClassUUID());
-                    DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                            diagramLayoutModel,
-                            doMRID,
-                            resolvedPackageUUID,
-                            classPositionDTO.getXPosition(),
-                            classPositionDTO.getYPosition());
-                    continue;
-                }
-                moveDiagramObject(
+            if (applyClassPositions(
+                    diagramLayoutModel, resolvedPackageUUID, classPositionDTOList)) {
+                EdgeLayoutSync.syncEdges(
                         diagramLayoutModel,
-                        diagramObject,
                         resolvedPackageUUID,
-                        classPositionDTO.getXPosition(),
-                        classPositionDTO.getYPosition(),
-                        classPositionDTO.getZPosition());
+                        EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
             }
 
             ctx.commit();
@@ -205,39 +161,217 @@ public class UpdateClassLayoutService
     @Override
     public void updateClassPositions(
             String datasetName, UUID diagramUUID, List<ClassPositionDTO> classPositionDTOList) {
-        var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
-        var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
+        var diagramLayoutModel =
+                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
+        diagramLayoutModel.enterCriticalSection(Lock.WRITE);
+        try {
+            if (applyClassPositions(diagramLayoutModel, diagramUUID, classPositionDTOList)) {
+                EdgeLayoutSync.syncEdges(
+                        diagramLayoutModel,
+                        diagramUUID,
+                        EdgeResolver.forDataset(databasePort, datasetName));
+            }
+        } finally {
+            diagramLayoutModel.leaveCriticalSection();
+        }
+    }
 
+    /**
+     * Moves the classes of a diagram, creating the layout data of classes that have none yet,
+     * inside a transaction the caller holds. The docking points glued to a moved class move along,
+     * see {@link #shiftGluedEdgePoints}.
+     *
+     * @return whether layout data was created for a class, in which case the classes may have
+     *     gained edges in the diagram
+     */
+    public static boolean applyClassPositions(
+            Model diagramLayoutModel,
+            UUID diagramUUID,
+            List<ClassPositionDTO> classPositionDTOList) {
+        var createdClassLayoutData = false;
+        var shifts = new ArrayList<ClassShift>();
         for (var classPositionDTO : classPositionDTOList) {
             var diagramObject =
-                    DLObjectFetcher.fetchDiagramDOForClass(
-                            diagramLayoutModel, diagramUUID, classPositionDTO.getClassUUID());
+                    DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                            diagramLayoutModel,
+                            diagramUUID,
+                            classPositionDTO.getClassUUID(),
+                            DiagramObjectStyle.CLASS);
             if (diagramObject == null) {
                 if (DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null) {
                     DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, diagramUUID, "");
                 }
-                var doMRID =
-                        DiagramLayoutServiceUtils.insertDiagramObject(
-                                diagramLayoutModel,
-                                diagramUUID,
-                                "",
-                                classPositionDTO.getClassUUID());
-                DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                DiagramLayoutServiceUtils.insertClassLayoutData(
                         diagramLayoutModel,
-                        doMRID,
                         diagramUUID,
+                        "",
+                        classPositionDTO.getClassUUID(),
                         classPositionDTO.getXPosition(),
                         classPositionDTO.getYPosition());
+                createdClassLayoutData = true;
                 continue;
             }
-            moveDiagramObject(
-                    diagramLayoutModel,
-                    diagramObject,
-                    diagramUUID,
-                    classPositionDTO.getXPosition(),
-                    classPositionDTO.getYPosition(),
-                    classPositionDTO.getZPosition());
+            var shift =
+                    moveClassDOPPosition(
+                            diagramLayoutModel,
+                            diagramObject,
+                            diagramUUID,
+                            classPositionDTO.getXPosition(),
+                            classPositionDTO.getYPosition(),
+                            classPositionDTO.getZPosition());
+            if (shift != null) {
+                shifts.add(shift);
+            }
         }
+        shiftGluedEdgePoints(diagramLayoutModel, shifts);
+        return createdClassLayoutData;
+    }
+
+    /**
+     * Moves the docking points glued to the moved classes by the distance their class moved, and
+     * the bend points of an edge whose docking points at both sides moved by the same distance, as
+     * the frontend does for the edges it shows. Edges hidden by a filter are not sent by the
+     * frontend, so without this their docking points would stay where the class was. The points of
+     * edges the frontend does send are overwritten with the sent ones afterwards.
+     */
+    private static void shiftGluedEdgePoints(Model diagramLayoutModel, List<ClassShift> shifts) {
+        var dockingPointShiftsByEdge = new HashMap<Resource, List<ClassShift>>();
+        for (var shift : shifts) {
+            if (shift.isZero()) {
+                continue;
+            }
+            var gluePoint = diagramLayoutModel.createResource(shift.gluePoint().getFullMRID());
+            var classPoint = diagramLayoutModel.createResource(shift.classPoint().getFullMRID());
+            for (var dockingPoint :
+                    diagramLayoutModel
+                            .listResourcesWithProperty(DL.belongsToGluePoint, gluePoint)
+                            .toList()) {
+                if (dockingPoint.equals(classPoint)) {
+                    continue;
+                }
+                shiftPoint(dockingPoint, shift);
+                var edgeDO = dockingPoint.getPropertyResourceValue(DL.belongsToDiagramObject);
+                if (edgeDO != null) {
+                    dockingPointShiftsByEdge
+                            .computeIfAbsent(edgeDO, edge -> new ArrayList<>())
+                            .add(shift);
+                }
+            }
+        }
+        for (var entry : dockingPointShiftsByEdge.entrySet()) {
+            var dockingPointShifts = entry.getValue();
+            if (dockingPointShifts.size() != 2
+                    || !dockingPointShifts.get(0).sameDistance(dockingPointShifts.get(1))) {
+                continue;
+            }
+            for (var bendPoint :
+                    diagramLayoutModel
+                            .listResourcesWithProperty(DL.belongsToDiagramObject, entry.getKey())
+                            .toList()) {
+                if (!bendPoint.hasProperty(DL.belongsToGluePoint)) {
+                    shiftPoint(bendPoint, dockingPointShifts.get(0));
+                }
+            }
+        }
+    }
+
+    private static void shiftPoint(Resource point, ClassShift shift) {
+        shiftCoordinate(point, DL.xPosition, shift.dx());
+        shiftCoordinate(point, DL.yPosition, shift.dy());
+    }
+
+    /**
+     * Shifts one coordinate of a point. A coordinate that is no number is left as it is, so a
+     * broken point does not abort moving the classes.
+     */
+    private static void shiftCoordinate(Resource point, Property coordinate, double distance) {
+        var statement = point.getProperty(coordinate);
+        if (statement == null) {
+            return;
+        }
+        double value;
+        try {
+            value = Double.parseDouble(statement.getString());
+        } catch (NumberFormatException e) {
+            return;
+        }
+        statement.changeObject(
+                ResourceFactory.createPlainLiteral(String.valueOf(value + distance)));
+    }
+
+    /**
+     * The distance a class moved, with the point of the class and the glue point its docking points
+     * are glued to.
+     */
+    private record ClassShift(MRID classPoint, MRID gluePoint, double dx, double dy) {
+
+        boolean isZero() {
+            return dx == 0 && dy == 0;
+        }
+
+        boolean sameDistance(ClassShift other) {
+            return dx == other.dx && dy == other.dy;
+        }
+    }
+
+    /**
+     * Moves the diagram object point of an existing class diagram object. If the diagram object has
+     * no point yet, a new one is created. The glue point invariant is upheld: the (re)created point
+     * always references the class' glue point, reusing an existing one or creating it if missing.
+     *
+     * @param zPosition the stacking order to apply, or {@code null} to keep the current one.
+     * @return the distance the class moved, or null if it had no point before
+     */
+    private static ClassShift moveClassDOPPosition(
+            Model diagramLayoutModel,
+            DiagramObject diagramObject,
+            UUID diagramUUID,
+            double xPosition,
+            double yPosition,
+            Integer zPosition) {
+        var diagramObjectPoint =
+                DiagramLayoutServiceUtils.classPointOf(diagramLayoutModel, diagramObject.getMRID());
+
+        if (diagramObjectPoint == null) {
+            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                    diagramLayoutModel,
+                    diagramObject.getMRID(),
+                    diagramUUID,
+                    xPosition,
+                    yPosition,
+                    null,
+                    resolveGluePointMRID(diagramLayoutModel, diagramObject.getMRID()));
+            return null;
+        }
+
+        var previousPosition = diagramObjectPoint.getPosition();
+        DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint.getMRID());
+        diagramObjectPoint.setPosition(
+                new XYZPosition(
+                        xPosition,
+                        yPosition,
+                        zPosition != null ? zPosition : diagramObjectPoint.getPosition().getZ()));
+        if (diagramObjectPoint.getBelongsToGluePoint() == null) {
+            diagramObjectPoint.setBelongsToGluePoint(
+                    resolveGluePointMRID(diagramLayoutModel, diagramObject.getMRID()));
+        }
+        DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);
+        return new ClassShift(
+                diagramObjectPoint.getMRID(),
+                diagramObjectPoint.getBelongsToGluePoint(),
+                xPosition - previousPosition.getX(),
+                yPosition - previousPosition.getY());
+    }
+
+    /**
+     * Resolves the glue point mRID for a class diagram object, reusing the existing glue point or
+     * creating a new one if the class does not have one yet.
+     */
+    private static MRID resolveGluePointMRID(Model diagramLayoutModel, MRID diagramObjectMRID) {
+        var gluePoint = DLObjectFetcher.fetchGluePointForDO(diagramLayoutModel, diagramObjectMRID);
+        return gluePoint != null
+                ? gluePoint.getMRID()
+                : DiagramLayoutServiceUtils.insertDiagramObjectGluePoint(diagramLayoutModel);
     }
 
     @Override
@@ -245,7 +379,9 @@ public class UpdateClassLayoutService
             GraphIdentifier graphIdentifier, UUID classUUID, String name) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
-            for (var diagramObject : DLObjectFetcher.fetchAllDOs(diagramLayoutModel, classUUID)) {
+            for (var diagramObject :
+                    DLObjectFetcher.fetchAllDOs(
+                            diagramLayoutModel, classUUID, DiagramObjectStyle.CLASS)) {
                 DLUpdates.updateDiagramObjectName(diagramLayoutModel, diagramObject, name);
             }
             ctx.commit();
@@ -256,10 +392,18 @@ public class UpdateClassLayoutService
     public void deleteClassLayoutData(GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
-            for (var diagramObject : DLObjectFetcher.fetchAllDOs(diagramLayoutModel, classUUID)) {
+            var diagramUUIDs = new LinkedHashSet<UUID>();
+            for (var diagramObject :
+                    DLObjectFetcher.fetchAllDOs(
+                            diagramLayoutModel, classUUID, DiagramObjectStyle.CLASS)) {
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
+                diagramUUIDs.add(diagramObject.getBelongsToDiagram().getUuid());
             }
             deleteOrphanedLabels(diagramLayoutModel, ctx.getRdfGraph(), classUUID);
+            var edgeResolver = EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph());
+            for (var diagramUUID : diagramUUIDs) {
+                EdgeLayoutSync.syncEdges(diagramLayoutModel, diagramUUID, edgeResolver);
+            }
             ctx.commit();
         }
     }
@@ -272,15 +416,7 @@ public class UpdateClassLayoutService
      */
     private void deleteOrphanedLabels(Model diagramLayoutModel, Graph rdfGraph, UUID classUUID) {
         var danglingAssociationEndUuids = danglingAssociationEndUuids(rdfGraph, classUUID);
-        if (danglingAssociationEndUuids.isEmpty()) {
-            return;
-        }
-        for (var label : DLObjectFetcher.fetchAllLabelDOs(diagramLayoutModel)) {
-            if (danglingAssociationEndUuids.contains(
-                    label.getBelongsToIdentifiedObject().getUuid())) {
-                DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, label.getMRID());
-            }
-        }
+        DiagramLayoutServiceUtils.deleteLabelsFor(diagramLayoutModel, danglingAssociationEndUuids);
     }
 
     /**
@@ -340,6 +476,10 @@ public class UpdateClassLayoutService
                     classes.stream()
                             .map(ClassInDiagram::getUuid)
                             .collect(Collectors.toCollection(LinkedHashSet::new)));
+            EdgeLayoutSync.syncEdges(
+                    diagramLayoutModel,
+                    diagramUUID,
+                    EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
             ctx.commit();
         }
     }
@@ -362,15 +502,13 @@ public class UpdateClassLayoutService
             DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, diagramUUID, "");
         }
         for (var mergedUuid : mergedUuids) {
-            if (DLObjectFetcher.fetchDiagramDOForClass(diagramLayoutModel, diagramUUID, mergedUuid)
+            if (DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                            diagramLayoutModel, diagramUUID, mergedUuid, DiagramObjectStyle.CLASS)
                     != null) {
                 continue;
             }
-            var doMRID =
-                    DiagramLayoutServiceUtils.insertDiagramObject(
-                            diagramLayoutModel, diagramUUID, "", mergedUuid);
-            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                    diagramLayoutModel, diagramUUID, doMRID);
+            DiagramLayoutServiceUtils.insertClassLayoutData(
+                    diagramLayoutModel, diagramUUID, "", mergedUuid, 0, 0);
         }
     }
 
@@ -388,8 +526,12 @@ public class UpdateClassLayoutService
                 updated.removeIf(cls -> classUUIDs.contains(cls.getUuid()));
                 diagram.setClasses(updated);
             }
-            deleteLayoutForClasses(
-                    ctx.getDiagramLayout().getDiagramLayoutModel(), diagramUUID, classUUIDs);
+            var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
+            deleteLayoutForClasses(diagramLayoutModel, diagramUUID, classUUIDs);
+            EdgeLayoutSync.syncEdges(
+                    diagramLayoutModel,
+                    diagramUUID,
+                    EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
             ctx.commit();
         }
     }
@@ -409,8 +551,8 @@ public class UpdateClassLayoutService
             Model diagramLayoutModel, UUID diagramUUID, List<UUID> classUUIDs) {
         for (var classUUID : classUUIDs) {
             var diagramObject =
-                    DLObjectFetcher.fetchDiagramDOForClass(
-                            diagramLayoutModel, diagramUUID, classUUID);
+                    DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                            diagramLayoutModel, diagramUUID, classUUID, DiagramObjectStyle.CLASS);
             if (diagramObject != null) {
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
             }
@@ -439,10 +581,19 @@ public class UpdateClassLayoutService
         }
         var diagramLayoutModel =
                 databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        insertLayoutForClasses(
-                diagramLayoutModel,
-                diagramUUID,
-                mergedUuidsOf(classes, classUriByUuid(datasetName, classes)));
+        diagramLayoutModel.enterCriticalSection(Lock.WRITE);
+        try {
+            insertLayoutForClasses(
+                    diagramLayoutModel,
+                    diagramUUID,
+                    mergedUuidsOf(classes, classUriByUuid(datasetName, classes)));
+            EdgeLayoutSync.syncEdges(
+                    diagramLayoutModel,
+                    diagramUUID,
+                    EdgeResolver.forDataset(databasePort, datasetName));
+        } finally {
+            diagramLayoutModel.leaveCriticalSection();
+        }
     }
 
     private Map<UUID, String> classUriByUuid(String datasetName, List<ClassInDiagram> classes) {
@@ -477,22 +628,28 @@ public class UpdateClassLayoutService
         }
 
         var model = databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        var diagram = databasePort.getDatasetDiagrams(datasetName).get(diagramUUID);
-        if (diagram == null) {
-            deleteLayoutForClasses(model, diagramUUID, classUUIDs);
-            return;
+        model.enterCriticalSection(Lock.WRITE);
+        try {
+            var diagram = databasePort.getDatasetDiagrams(datasetName).get(diagramUUID);
+            if (diagram == null) {
+                deleteLayoutForClasses(model, diagramUUID, classUUIDs);
+            } else {
+                var updated = diagram.getClasses();
+                var classUriByUuid = classUriByUuid(datasetName, updated);
+                updated.removeIf(removedByAnyOf(classUUIDs, classUriByUuid));
+                diagram.setClasses(updated);
+
+                var stillRendered = mergedUuidsOf(updated, classUriByUuid);
+                deleteLayoutForClasses(
+                        model,
+                        diagramUUID,
+                        classUUIDs.stream().filter(uuid -> !stillRendered.contains(uuid)).toList());
+            }
+            EdgeLayoutSync.syncEdges(
+                    model, diagramUUID, EdgeResolver.forDataset(databasePort, datasetName));
+        } finally {
+            model.leaveCriticalSection();
         }
-
-        var updated = diagram.getClasses();
-        var classUriByUuid = classUriByUuid(datasetName, updated);
-        updated.removeIf(removedByAnyOf(classUUIDs, classUriByUuid));
-        diagram.setClasses(updated);
-
-        var stillRendered = mergedUuidsOf(updated, classUriByUuid);
-        deleteLayoutForClasses(
-                model,
-                diagramUUID,
-                classUUIDs.stream().filter(uuid -> !stillRendered.contains(uuid)).toList());
     }
 
     @Override
@@ -505,9 +662,14 @@ public class UpdateClassLayoutService
                 databasePort.getCrossProfileDiagramInfo(datasetName).getCrossProfileDiagramUUID());
         diagramUUIDs.addAll(databasePort.getDatasetDiagrams(datasetName).keySet());
 
-        for (var diagramUUID : diagramUUIDs) {
-            migrateLayoutToNewClassUri(
-                    model, diagramUUID, oldMergedUuid, newMergedUuid, newClassUri);
+        model.enterCriticalSection(Lock.WRITE);
+        try {
+            for (var diagramUUID : diagramUUIDs) {
+                migrateLayoutToNewClassUri(
+                        model, diagramUUID, oldMergedUuid, newMergedUuid, newClassUri);
+            }
+        } finally {
+            model.leaveCriticalSection();
         }
     }
 
@@ -521,22 +683,27 @@ public class UpdateClassLayoutService
             return;
         }
 
-        var existingNew = DLObjectFetcher.fetchDiagramDOForClass(model, diagramUUID, newMergedUuid);
+        var existingNew =
+                DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                        model, diagramUUID, newMergedUuid, DiagramObjectStyle.CLASS);
         if (existingNew != null) {
             return;
         }
 
-        var oldDO = DLObjectFetcher.fetchDiagramDOForClass(model, diagramUUID, oldMergedUuid);
+        var oldDO =
+                DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
+                        model, diagramUUID, oldMergedUuid, DiagramObjectStyle.CLASS);
         if (oldDO == null) {
             return;
         }
 
-        var oldDOP = DLObjectFetcher.fetchDOPForDO(model, oldDO.getMRID());
+        var oldDOP = DiagramLayoutServiceUtils.classPointOf(model, oldDO.getMRID());
         var position = oldDOP.getPosition();
 
+        var gluePointMRID = DiagramLayoutServiceUtils.insertDiagramObjectGluePoint(model);
         var newDoMRID =
                 DiagramLayoutServiceUtils.insertDiagramObject(
-                        model, diagramUUID, newClassUri, newMergedUuid);
+                        model, diagramUUID, newClassUri, newMergedUuid, DiagramObjectStyle.CLASS);
 
         var newDiagramObjectPoint =
                 DiagramObjectPoint.builder()
@@ -545,6 +712,7 @@ public class UpdateClassLayoutService
                                 new XYZPosition(
                                         position.getX(), position.getY(), position.getZ() + 1))
                         .belongsToDiagramObject(newDoMRID)
+                        .belongsToGluePoint(gluePointMRID)
                         .build();
         DLUpdates.insertDiagramObjectPoint(model, newDiagramObjectPoint);
     }

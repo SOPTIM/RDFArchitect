@@ -447,11 +447,11 @@
       "ClassLayoutPositionDTO" : {
         "properties" : {
           "xposition" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           },
           "yposition" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           }
         },
@@ -464,19 +464,19 @@
             "type" : "string"
           },
           "xPosition" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           },
           "xposition" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           },
           "yPosition" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           },
           "yposition" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           },
           "zPosition" : {
@@ -802,6 +802,89 @@
         },
         "type" : "object"
       },
+      "DiagramLayoutDTO" : {
+        "properties" : {
+          "allEdges" : {
+            "type" : "boolean"
+          },
+          "classes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ClassPositionDTO"
+            },
+            "type" : "array"
+          },
+          "edges" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EdgeLayoutDTO"
+            },
+            "type" : "array"
+          },
+          "labels" : {
+            "items" : {
+              "$ref" : "#/components/schemas/LabelPositionDTO"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "EdgeLayoutDTO" : {
+        "properties" : {
+          "kind" : {
+            "enum" : [
+              "inheritance",
+              "association"
+            ],
+            "type" : "string"
+          },
+          "points" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EdgePointDTO"
+            },
+            "type" : "array"
+          },
+          "sourceClass" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "sourceObject" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "targetClass" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "targetObject" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "EdgePointDTO" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "side" : {
+            "enum" : [
+              "source",
+              "target"
+            ],
+            "type" : "string"
+          },
+          "x" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "y" : {
+            "format" : "double",
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
       "EnumEntryDTO" : {
         "properties" : {
           "comment" : {
@@ -1110,11 +1193,11 @@
             "type" : "string"
           },
           "x" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           },
           "y" : {
-            "format" : "float",
+            "format" : "double",
             "type" : "number"
           }
         },
@@ -6212,6 +6295,79 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}" : {
+      "put" : {
+        "description" : "Updates the layout of the classes, edges and labels in the request body in one step. Every part is optional, only the elements sent are updated.",
+        "operationId" : "updateDiagramLayout",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The UUID of the package or custom diagram being updated.",
+            "in" : "path",
+            "name" : "diagramUUID",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DiagramLayoutDTO"
+              }
+            }
+          },
+          "description" : "The layout of the changed classes, edges and labels",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "updates the layout of a diagram",
+        "tags" : [
+          "diagram",
+          "layout"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}/classes" : {
       "put" : {
         "description" : "Updates the positions for all the classes provided in the request body with the provided coordinates.",
@@ -6286,6 +6442,83 @@
           "diagram",
           "layout",
           "class"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}/edges" : {
+      "put" : {
+        "description" : "Replaces the points of the edges in the request body with the full, ordered list of points sent for each.",
+        "operationId" : "updateEdgeLayouts",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The UUID of the package or custom diagram being updated.",
+            "in" : "path",
+            "name" : "diagramUUID",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "items" : {
+                  "$ref" : "#/components/schemas/EdgeLayoutDTO"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "description" : "The layout of the changed edges",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "updates the layout of edges",
+        "tags" : [
+          "diagram",
+          "layout",
+          "edge"
         ]
       }
     },
@@ -8204,6 +8437,70 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/layout/{diagramUUID}" : {
+      "put" : {
+        "description" : "Updates the layout of the classes, edges and labels in the request body in one step. Every part is optional, only the elements sent are updated.",
+        "operationId" : "updateDatasetDiagramLayout",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The UUID of the cross-profile or custom diagram being updated.",
+            "in" : "path",
+            "name" : "diagramUUID",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DiagramLayoutDTO"
+              }
+            }
+          },
+          "description" : "The layout of the changed classes, edges and labels",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "updates the layout of a diagram on dataset level",
+        "tags" : [
+          "diagram",
+          "layout"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/layout/{diagramUUID}/classes" : {
       "put" : {
         "description" : "Updates the positions for all the classes provided in the request body with the provided coordinates.",
@@ -8269,6 +8566,74 @@
           "diagram",
           "layout",
           "class"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/layout/{diagramUUID}/edges" : {
+      "put" : {
+        "description" : "Replaces the points of the edges in the request body with the full, ordered list of points sent for each.",
+        "operationId" : "updateDatasetEdgeLayouts",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The UUID of the cross-profile or custom diagram being updated.",
+            "in" : "path",
+            "name" : "diagramUUID",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "items" : {
+                  "$ref" : "#/components/schemas/EdgeLayoutDTO"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "description" : "The layout of the changed edges",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "updates the layout of edges on dataset level",
+        "tags" : [
+          "diagram",
+          "layout",
+          "edge"
         ]
       }
     },

@@ -20,6 +20,8 @@ package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 import lombok.Builder;
 import lombok.Data;
 
+import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
+
 import java.util.UUID;
 
 /**
@@ -49,5 +51,5 @@ public class EdgeLabelDTO {
      * The manually placed absolute position of the label, or {@code null} when the label has never
      * been moved and falls back to its default placement.
      */
-    private PositionDTO position;
+    private XYZPosition position;
 }

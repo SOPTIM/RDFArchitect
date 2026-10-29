@@ -20,22 +20,23 @@
     import {
         Background,
         SvelteFlow,
+        useEdges,
         useNodes,
         useNodesInitialized,
         useSvelteFlow,
     } from "@xyflow/svelte";
     import { onDestroy, onMount, setContext, tick, untrack } from "svelte";
-    import { SvelteMap } from "svelte/reactivity";
 
-    import {
-        updateClassPositions,
-        updateDatasetClassPositions,
-        updateDatasetLabelPositions,
-        updateLabelPositions,
-    } from "$lib/api/generated/index.ts";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { renderOptions } from "$lib/renderOptions.svelte.js";
+    import {
+        propertyEditorRequest,
+        superClassFocusRequest,
+    } from "$lib/propertyEditorRequest.svelte.js";
+    import SvelteFlowEdgeContextMenu from "$lib/rendering/svelteflow/components/contextmenu/SvelteFlowEdgeContextMenu.svelte";
+    import InheritanceEdge from "$lib/rendering/svelteflow/components/edge/InheritanceEdge.svelte";
+    import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -43,33 +44,43 @@
     } from "$lib/sharedState.svelte.js";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
-    import AssociationEdge from "./components/AssociationEdge.svelte";
     import ClassNode from "./components/ClassNode.svelte";
+    import SvelteFlowClassContextMenu from "./components/contextmenu/SvelteFlowClassContextMenu.svelte";
+    import SvelteFlowPaneContextMenu from "./components/contextmenu/SvelteFlowPaneContextMenu.svelte";
     import DiagramLabelNode from "./components/DiagramLabelNode.svelte";
-    import EdgeMarkers from "./components/EdgeMarkers.svelte";
-    import InheritanceEdge from "./components/InheritanceEdge.svelte";
-    import SvelteFlowClassContextMenu from "./components/SvelteFlowClassContextMenu.svelte";
-    import SvelteFlowPaneContextMenu from "./components/SvelteFlowPaneContextMenu.svelte";
+    import AssociationEdge from "./components/edge/AssociationEdge.svelte";
+    import EdgeMarkers from "./components/edge/EdgeMarkers.svelte";
+    import {
+        moveDockingPointWithBorder,
+        projectPointOntoRectBorder,
+    } from "./components/edge/edgeUtils.ts";
     import SvelteFlowPropertyContextMenu from "./components/SvelteFlowPropertyContextMenu.svelte";
     import {
         decorateEdges,
+        elevateEdges,
+        getDiagramBounds,
         hasDefaultNodeLayout,
+        onlySelectedEdgeId,
     } from "./diagram/diagramElements.js";
-    import {
-        buildLabelNodes,
-        clampToAnchor,
-        collectLabels,
-        hasManualPlacement,
-        LABEL_NODE_TYPE,
-        labelNodeId,
-        labelNodesChanged,
-    } from "./diagram/labelNodes.js";
+    import { LABEL_NODE_TYPE, labelsOf } from "./diagram/labelNodes.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
     import {
         DIAGRAM_SELECTION_CONTEXT,
         DiagramSelectionController,
     } from "./interaction/diagramSelection.svelte.js";
+    import {
+        associationEditTarget,
+        isEditableEdge,
+    } from "./interaction/edgeEditing.js";
+    import { EdgeLayoutPersistence } from "./interaction/edgeLayoutPersistence.js";
+    import {
+        applyLayoutedEdges,
+        moveEdgePointsWithDraggedClasses,
+        updateDockingPoints,
+    } from "./interaction/edgePointOperations.js";
+    import { EdgePointController } from "./interaction/edgePoints.svelte.js";
     import { labelHighlight } from "./interaction/labelHighlight.svelte.js";
+    import { LabelLayoutController } from "./interaction/labelLayout.js";
     import {
         clearHeldModifiers,
         heldModifiers,
@@ -81,7 +92,7 @@
         propertyContextMenu,
         propertySelection,
     } from "./interaction/propertyInteraction.svelte.js";
-    import { getLayoutedNodes } from "./layout/elkLayout.js";
+    import { layoutDiagram } from "./layout/elkLayout.js";
 
     let {
         nodes: inputNodes,
@@ -108,6 +119,17 @@
     const contextMenus = new ContextMenuController({
         getSvelteFlow: () => svelteFlowAPI?.svelteFlow,
         getIsReadOnly: () => isWorkspaceReadOnly,
+        getEdges: () => edges,
+        selectEdge: edgeId => selectOnlyEdge(edgeId),
+    });
+
+    const edgePoints = new EdgePointController({
+        getEdges: () => edges,
+        setEdges: value => (edges = value),
+        getSvelteFlow: () => svelteFlowAPI?.svelteFlow,
+        isReadOnly: () => isWorkspaceReadOnly ?? false,
+        selectEdge: edgeId => selectOnlyEdge(edgeId),
+        contextMenus,
     });
 
     const pan = new PanController({
@@ -118,9 +140,27 @@
     const selection = new DiagramSelectionController({
         getNodes: () => nodes,
         setNodes: value => (nodes = value),
+        getEdges: () => edges,
+        setEdges: value => (edges = value),
         pan,
         contextMenus,
         nodeOrder: nodeOrderCtrl,
+    });
+
+    const labelLayout = new LabelLayoutController({
+        getNodes: () => nodes,
+        setNodes: value => (nodes = value),
+        getEdges: () => edges,
+        getTarget: () => diagramTarget(),
+    });
+
+    const edgeLayouts = new EdgeLayoutPersistence({
+        getEdges: () => edges,
+        setEdges: value => (edges = value),
+        getTarget: () => diagramTarget(),
+        isReadOnly: () => isWorkspaceReadOnly ?? false,
+        getLabelsOf: savedEdges =>
+            labelLayout.manuallyPlacedLabelsOfEdges(savedEdges),
     });
 
     // svelte-ignore state_referenced_locally
@@ -134,22 +174,32 @@
 
     let selectionZKey = "";
 
-    let nodesInit = useNodesInitialized();
+    let nodesInitialized = useNodesInitialized();
     let layouted = $state(false);
 
     let selectionZFrame = null;
-    let boxSelecting = false;
-    let labelPositions = new SvelteMap();
-    // Memorizes edge-intersection geometry per class pair, so dragging one class does not
-    // recompute the placement of every other edge in the diagram.
-    let labelPlacementCache = new Map();
-    let labelDragActive = false;
+    let boxSelecting = $state(false);
+    /**
+     * The last seen position per dragged node id, to compute the delta for moving attached end
+     * points live during a class drag.
+     */
+    let lastDragPositions = new Map();
+    let classBounds = new Map();
+    let classBoundsDiagramId = null;
+    let dockingPointsCheckPending = false;
+
+    let hasFittedInitially = false;
+    let contextMenuEdge = $derived(
+        contextMenus.edgeRequest
+            ? edges.find(edge => edge.id === contextMenus.edgeRequest.edgeId)
+            : null,
+    );
     let classNodes = $derived(
         nodes.filter(node => node.type !== LABEL_NODE_TYPE),
     );
     let hasDefaultLayout = $derived(hasDefaultNodeLayout(nodes));
     let applyLayout = $derived(
-        nodesInit.current && !layouted && hasDefaultLayout,
+        nodesInitialized.current && !layouted && hasDefaultLayout,
     );
 
     $effect(() => {
@@ -165,12 +215,26 @@
     });
 
     $effect(() => {
-        syncLabelNodes(nodes, edges);
+        labelLayout.sync(nodes, edges);
+    });
+
+    $effect(() => {
+        const currentEdges = edges;
+        untrack(() => edgeLayouts.track(currentEdges));
+    });
+
+    $effect(() => {
+        const currentNodes = nodes;
+        untrack(() => {
+            moveDockingPointsOfResizedClasses(currentNodes);
+            redockDetachedDockingPoints(currentNodes);
+        });
     });
 
     $effect(() => {
         forceReloadTrigger.subscribe();
         editorState.selectedWorkspace.subscribe();
+        editorState.selectedDiagram.subscribe();
         refreshReadOnlyState();
     });
 
@@ -201,33 +265,106 @@
         untrack(keepEscapeHandlerOnTop);
     });
 
+    $effect(() => {
+        const readOnly = isWorkspaceReadOnly ?? false;
+        const currentEdges = edges;
+        untrack(() => {
+            let changed = false;
+            const next = currentEdges.map(edge => {
+                if ((edge.data?.readOnly ?? false) === readOnly) {
+                    return edge;
+                }
+                changed = true;
+                return { ...edge, data: { ...edge.data, readOnly } };
+            });
+            if (changed) {
+                edges = next;
+            }
+        });
+    });
+
+    $effect(() => {
+        const currentEdges = edges;
+        const editedEdgeId = onlySelectedEdgeId(currentEdges);
+        const next = elevateEdges(
+            currentEdges,
+            edge =>
+                edge.id === editedEdgeId ||
+                labelHighlight.isHeld(labelsOf(edge.data)),
+        );
+        if (next !== currentEdges) {
+            edges = next;
+        }
+    });
+
     onMount(() => {
         svelteFlowAPI = {
             svelteFlow: useSvelteFlow(),
             nodes: useNodes(),
+            edges: useEdges(),
+            useNodesInitialized: useNodesInitialized(),
         };
 
         const el = containerEl;
         el.addEventListener("pointerdown", onContainerPointerDown, true);
+        el.addEventListener("pointermove", onContainerPointerMove, true);
         el.addEventListener("click", onContainerClick, true);
         el.addEventListener("contextmenu", onContainerContextMenu, true);
+        window.addEventListener("pagehide", saveEdgeLayoutsOnPageHide);
+        window.addEventListener("keyup", edgePoints.stopDeleteBrush);
+        window.addEventListener("blur", edgePoints.stopDeleteBrush);
+
+        const unregisterAddBendPoint = shortcutStore.register(
+            "diagram-add-bend-point-at-cursor",
+            ["ctrl", "q"],
+            edgePoints.addBendPointAtCursor,
+        );
+        const unregisterDeleteEdgePoint = shortcutStore.register(
+            "diagram-delete-edge-point-at-cursor",
+            ["ctrl", "shift", "q"],
+            edgePoints.deleteEdgePointAtCursor,
+        );
+
         return () => {
             el.removeEventListener("pointerdown", onContainerPointerDown, true);
+            el.removeEventListener("pointermove", onContainerPointerMove, true);
             el.removeEventListener("click", onContainerClick, true);
             el.removeEventListener("contextmenu", onContainerContextMenu, true);
+            window.removeEventListener("pagehide", saveEdgeLayoutsOnPageHide);
+            window.removeEventListener("keyup", edgePoints.stopDeleteBrush);
+            window.removeEventListener("blur", edgePoints.stopDeleteBrush);
+            unregisterAddBendPoint();
+            unregisterDeleteEdgePoint();
         };
     });
 
     onDestroy(() => {
+        edgeLayouts.dispose();
         eventStack.removeEvent(selection.escapeClearSelection);
         if (selectionZFrame !== null) {
             cancelAnimationFrame(selectionZFrame);
         }
     });
 
+    function diagramTarget() {
+        return {
+            datasetName: editorState.selectedWorkspace.getValue(),
+            graphURI: editorState.selectedGraph.getValue(),
+            diagramUUID: editorState.selectedDiagram.getProperty("id"),
+        };
+    }
+
+    function saveEdgeLayoutsOnPageHide() {
+        edgeLayouts.saveAll({ keepalive: true });
+    }
+
     function onContainerPointerDown(event) {
         selection.notifyPointerDown();
         pan.handleContainerPointerDown(event);
+    }
+
+    function onContainerPointerMove(event) {
+        edgePoints.handlePointerMove(event);
     }
 
     function onContainerClick(event) {
@@ -236,6 +373,10 @@
 
     function onContainerContextMenu(event) {
         pan.handleContainerContextMenuCapture(event);
+        if (event.defaultPrevented) {
+            return;
+        }
+        edgePoints.routeEdgePointContextMenu(event);
     }
 
     function applyAutoLayoutIfNeeded() {
@@ -243,7 +384,16 @@
             applyELKLayout();
         } else if (!hasDefaultLayout) {
             isLoading = false;
+            fitInitiallyIfNeeded();
         }
+    }
+
+    function fitInitiallyIfNeeded() {
+        if (hasFittedInitially || !nodesInitialized.current) {
+            return;
+        }
+        hasFittedInitially = true;
+        untrack(() => fitViewIncludingEdgePoints({ duration: 0 }));
     }
 
     async function refreshReadOnlyState() {
@@ -314,16 +464,28 @@
         }
     }
 
+    /**
+     * Takes over the nodes and edges of a newly loaded diagram. The edges of the diagram shown
+     * before are saved first, while their classes and labels are still shown, so the labels moved
+     * along with them are saved at the right place.
+     */
     function syncDiagramElements() {
-        labelPositions = new SvelteMap();
-        labelPlacementCache = new Map();
+        const nextEdges = decorateEdges(inputEdges);
+        edgeLayouts.load(nextEdges);
+        const diagramId = editorState.selectedDiagram.getProperty("id");
+        if (diagramId !== classBoundsDiagramId) {
+            classBoundsDiagramId = diagramId;
+            classBounds = new Map();
+        }
+        labelLayout.reset();
         const nextNodes = [...inputNodes];
         const nextHasDefaultLayout = hasDefaultNodeLayout(nextNodes);
 
         nodeOrderCtrl.sync(nextNodes);
         nodes = nodeOrderCtrl.applyZIndices(nextNodes);
         selectionZKey = selectionContentKey(selectedNodeIdSet());
-        edges = decorateEdges(inputEdges);
+        edges = nextEdges;
+        dockingPointsCheckPending = true;
         resetDiagramSyncState(nextHasDefaultLayout);
     }
 
@@ -339,6 +501,7 @@
 
     function resetDiagramSyncState(hasDefaultLayoutAfterSync) {
         layouted = false;
+        hasFittedInitially = false;
 
         // Keep the loading state active until persisted positions or ELK layout
         if (!hasDefaultLayoutAfterSync) {
@@ -348,7 +511,7 @@
 
     function focusRequestedClassInDiagram() {
         const focusClassUUID = editorState.focusedClassUUID.getValue();
-        if (!focusClassUUID || !nodesInit.current) {
+        if (!focusClassUUID || !nodesInitialized.current) {
             return;
         }
 
@@ -374,134 +537,122 @@
     }
 
     /**
-     * Rebuilds the label nodes whenever the classes they are anchored to move. Skipped while a
-     * label itself is being dragged, which would otherwise pull it back to its stored offset.
+     * Keeps the docking points on the border of classes whose size changed, e.g. a class that shrank
+     * after its attributes were deleted. The bounds of each class are remembered per diagram, also
+     * across a reload of the diagram, so a class that is rendered smaller than before is noticed.
+     * The moved docking points are not saved on their own, see
+     * {@link EdgeLayoutPersistence#acceptWithoutSaving}.
      */
-    function syncLabelNodes(currentNodes, currentEdges) {
-        if (labelDragActive) {
+    function moveDockingPointsOfResizedClasses(currentNodes) {
+        const resizedClasses = new Map();
+        for (const node of currentNodes) {
+            if (node.type === LABEL_NODE_TYPE || !node.measured?.width) {
+                continue;
+            }
+            const bounds = {
+                x: node.position.x,
+                y: node.position.y,
+                width: node.measured.width,
+                height: node.measured.height,
+            };
+            const previous = classBounds.get(node.id);
+            if (
+                previous &&
+                (previous.width !== bounds.width ||
+                    previous.height !== bounds.height)
+            ) {
+                resizedClasses.set(node.id, { previous, bounds });
+            }
+            classBounds.set(node.id, bounds);
+        }
+        if (resizedClasses.size === 0) {
             return;
         }
-        const nextLabelNodes = buildLabelNodes(
-            currentNodes,
-            currentEdges,
-            labelPositions,
-            labelPlacementCache,
-            renderOptions.get("showAssociationLabels"),
-        );
-        if (!labelNodesChanged(currentNodes, nextLabelNodes)) {
-            return;
-        }
-        nodes = [
-            ...currentNodes.filter(node => node.type !== LABEL_NODE_TYPE),
-            ...nextLabelNodes,
-        ];
+        const previousEdges = edges;
+        edges = updateDockingPoints(edges, (point, classId) => {
+            const resized = resizedClasses.get(classId);
+            if (!resized) {
+                return point;
+            }
+            return {
+                ...point,
+                ...moveDockingPointWithBorder(
+                    point,
+                    resized.previous,
+                    resized.bounds,
+                ),
+            };
+        });
+        edgeLayouts.acceptWithoutSaving(previousEdges, edges);
     }
 
     /**
-     * Holds a dragged label within its maximum distance from the anchor point. SvelteFlow can only
-     * constrain a node to a rectangle, so the radial limit is applied per drag event instead.
-     *
-     * This relies on the drag event firing after SvelteFlow has written its own position, so that
-     * the clamped one is what the frame ends on. The drag itself keeps following the pointer
-     * unclamped, which is what lets the label pick it up again on the way back in.
+     * Puts stored docking points that are off the border of their class back onto it, once per
+     * loaded diagram as soon as its classes are measured. A docking point comes off the border when
+     * its class changed while the edge was not shown, e.g. the class grew while a filter hid the
+     * edge, or when the layout data was changed outside of this diagram. The redocked docking
+     * points are not saved on their own, see {@link EdgeLayoutPersistence#acceptWithoutSaving}.
      */
-    function clampDraggedLabels(draggedNodes) {
-        const clampedById = new Map();
-        for (const dragged of draggedNodes) {
-            if (dragged.type !== LABEL_NODE_TYPE) {
-                continue;
-            }
-            const clamped = clampToAnchor(
-                dragged.position,
-                dragged.data.anchorPoint,
-            );
-            if (clamped !== dragged.position) {
-                clampedById.set(dragged.id, clamped);
-            }
-        }
-        if (clampedById.size === 0) {
+    function redockDetachedDockingPoints(currentNodes) {
+        if (!dockingPointsCheckPending) {
             return;
         }
-        nodes = nodes.map(node =>
-            clampedById.has(node.id)
-                ? { ...node, position: clampedById.get(node.id) }
-                : node,
-        );
-    }
-
-    function toLabelPositionDTO(identifiedObjectUUID, kind, position) {
-        return {
-            identifiedObjectUUID,
-            kind,
-            x: position?.x ?? null,
-            y: position?.y ?? null,
-        };
-    }
-
-    function handleLabelMove(movedLabelNodes) {
-        const movedLabels = [];
-        for (const labelNode of movedLabelNodes) {
-            const position = clampToAnchor(
-                labelNode.position,
-                labelNode.data.anchorPoint,
-            );
-            const delta = {
-                x: position.x - labelNode.data.anchorPoint.x,
-                y: position.y - labelNode.data.anchorPoint.y,
-            };
-            labelPositions.set(labelNode.id, delta);
-            movedLabels.push(
-                toLabelPositionDTO(
-                    labelNode.data.identifiedObjectUUID,
-                    labelNode.data.kind,
-                    position,
-                ),
-            );
-        }
-        persistLabelPositions(movedLabels);
-    }
-
-    /** Drops the manual placement of every label, so they return to their default placement. */
-    function resetLabelPositions() {
-        const resetLabels = [];
-        for (const { label } of collectLabels(edges)) {
-            if (!hasManualPlacement(label, labelPositions)) {
+        const classRects = new Map();
+        for (const node of currentNodes) {
+            if (node.type === LABEL_NODE_TYPE) {
                 continue;
             }
-            labelPositions.set(labelNodeId(label), null);
-            resetLabels.push(
-                toLabelPositionDTO(
-                    label.identifiedObjectUUID,
-                    label.kind,
-                    null,
-                ),
-            );
-        }
-        persistLabelPositions(resetLabels);
-    }
-
-    function persistLabelPositions(labelPositionDTOList) {
-        const diagramUUID = editorState.selectedDiagram.getProperty("id");
-        if (!diagramUUID || labelPositionDTOList.length === 0) {
-            return;
-        }
-
-        if (editorState.selectedGraph.getValue()) {
-            updateLabelPositions({
-                path: {
-                    datasetName: editorState.selectedWorkspace.getValue(),
-                    graphURI: editorState.selectedGraph.getValue(),
-                    diagramUUID: diagramUUID,
-                },
-                body: labelPositionDTOList,
+            if (!node.measured?.width) {
+                return;
+            }
+            classRects.set(node.id, {
+                x: node.position.x,
+                y: node.position.y,
+                width: node.measured.width,
+                height: node.measured.height,
             });
-        } else {
-            updateDatasetLabelPositions({
-                path: {
-                    datasetName: editorState.selectedWorkspace.getValue(),
-                    diagramUUID: diagramUUID,
-                },
-                body: labelPositionDTOList,
+        }
+        dockingPointsCheckPending = false;
+        const previousEdges = edges;
+        edges = updateDockingPoints(edges, (point, classId) => {
+            const rect = classRects.get(classId);
+            if (!rect) {
+                return point;
+            }
+            const docked = projectPointOntoRectBorder(rect, point);
+            const distance = Math.hypot(docked.x - point.x, docked.y - point.y);
+            if (
+                distance <=
+                EDGE_INTERACTION_CONFIG.dockingPointBorderTolerancePx
+            ) {
+                return point;
+            }
+            return { ...point, ...docked };
+        });
+        edgeLayouts.acceptWithoutSaving(previousEdges, edges);
+    }
+
+    function handleNodeDragStart({ nodes: draggedNodes }) {
+        edgeLayouts.beginNodeDrag();
+        lastDragPositions.clear();
+        for (const node of draggedNodes) {
+            lastDragPositions.set(node.id, {
+                x: node.position.x,
+                y: node.position.y,
+            });
+        }
+    }
+
+    function handleNodeDrag({ nodes: draggedNodes }) {
+        edges = moveEdgePointsWithDraggedClasses(
+            edges,
+            draggedNodes,
+            lastDragPositions,
+        );
+        for (const node of draggedNodes) {
+            lastDragPositions.set(node.id, {
+                x: node.position.x,
+                y: node.position.y,
             });
         }
     }
@@ -513,99 +664,94 @@
                 node => node.type === LABEL_NODE_TYPE,
             );
             if (movedLabels.length > 0) {
-                handleLabelMove(movedLabels);
+                labelLayout.handleMove(movedLabels);
             }
             return;
         }
         const movedClasses = movedNodes.filter(
             node => node.type !== LABEL_NODE_TYPE,
         );
-        if (movedClasses.length === 0) {
+        edgeLayouts.saveDiagramLayout({
+            classes: toClassPositionDTOs(movedClasses),
+            labels: labelLayout.manuallyPlacedLabelsOf(movedClasses),
+        });
+    }
+
+    function toClassPositionDTOs(classNodesToSave) {
+        return classNodesToSave.map(node => ({
+            classUUID: node.id,
+            xPosition: node.position.x,
+            yPosition: node.position.y,
+            zPosition: nodeOrderCtrl.rankOf(node.id),
+        }));
+    }
+    function selectOnlyEdge(edgeId) {
+        edges = edges.map(edge => ({
+            ...edge,
+            selected: edge.id === edgeId,
+        }));
+    }
+    /**
+     * Selects only the clicked edge on a plain left click. Independent of the class-based auto
+     * selection: clicking an edge always selects just that edge.
+     */
+    function handleEdgeClick({ edge, event }) {
+        if (!edge?.id) return;
+        selectOnlyEdge(edge.id);
+        if (event?.detail === 2) {
+            openEdgeEditor(edge);
+        }
+    }
+
+    /**
+     * Opens what an edge stands for: the association editor with the association end focused, or
+     * the class editor of the sub class with its super class focused.
+     */
+    function openEdgeEditor(edge) {
+        if (edge?.type === "inheritance") {
+            superClassFocusRequest.open(edge.source);
+            openClassFromMenu(edge.source);
             return;
         }
-        updateNodePositions(movedClasses);
-        persistManuallyPlacedLabelsOf(movedClasses);
-    }
-
-    function persistManuallyPlacedLabelsOf(movedClassNodes) {
-        const movedClassIds = new Set(movedClassNodes.map(node => node.id));
-        const rebuilt = buildLabelNodes(
-            nodes,
-            edges,
-            labelPositions,
-            labelPlacementCache,
-        );
-        const rebuiltById = new Map(rebuilt.map(node => [node.id, node]));
-
-        const affectedLabels = [];
-        for (const { label, sourceId, targetId } of collectLabels(edges)) {
-            const edgeAffected =
-                movedClassIds.has(sourceId) || movedClassIds.has(targetId);
-            if (!edgeAffected || !hasManualPlacement(label, labelPositions)) {
-                continue;
-            }
-            const labelNode = rebuiltById.get(labelNodeId(label));
-            if (!labelNode) {
-                continue;
-            }
-            affectedLabels.push(
-                toLabelPositionDTO(
-                    label.identifiedObjectUUID,
-                    label.kind,
-                    labelNode.position,
-                ),
-            );
-        }
-        if (affectedLabels.length > 0) {
-            persistLabelPositions(affectedLabels);
+        const target = associationEditTarget(edge);
+        if (target) {
+            propertyEditorRequest.open(target);
         }
     }
 
-    function updateNodePositions(movedNodes) {
-        let classPositionDTOList = [];
-        for (const node of movedNodes) {
-            const classPositionDTO = {
-                classUUID: node.id,
-                xPosition: node.position.x,
-                yPosition: node.position.y,
-                zPosition: nodeOrderCtrl.rankOf(node.id),
-            };
-            classPositionDTOList.push(classPositionDTO);
-        }
-
-        const diagramUUID = editorState.selectedDiagram.getProperty("id");
-        if (!diagramUUID || classPositionDTOList.length === 0) return;
-
-        if (editorState.selectedGraph.getValue()) {
-            updateClassPositions({
-                path: {
-                    datasetName: editorState.selectedWorkspace.getValue(),
-                    graphURI: editorState.selectedGraph.getValue(),
-                    diagramUUID: diagramUUID,
-                },
-                body: classPositionDTOList,
-            });
-        } else {
-            updateDatasetClassPositions({
-                path: {
-                    datasetName: editorState.selectedWorkspace.getValue(),
-                    diagramUUID: diagramUUID,
-                },
-                body: classPositionDTOList,
-            });
-        }
+    function handleEditEdge({ edgeId }) {
+        openEdgeEditor(edges.find(edge => edge.id === edgeId));
     }
 
+    /**
+     * Lays out the classes and saves the result. A layout that finishes after another diagram was
+     * loaded is dropped, otherwise it would be saved into that diagram.
+     */
     export async function applyELKLayout() {
         if (!isLoading) isLoading = true;
         layouted = true;
+        const laidOutInput = inputNodes;
         try {
-            const layoutedNodes = await getLayoutedNodes(classNodes, edges);
+            const [{ nodes: layoutedNodes, layoutedEdges }] = await Promise.all(
+                [layoutDiagram(classNodes, edges), refreshReadOnlyState()],
+            );
+            if (inputNodes !== laidOutInput) {
+                return;
+            }
             nodes = [...layoutedNodes];
-            updateNodePositions(nodes);
-            resetLabelPositions();
-            syncLabelNodes(nodes, edges);
-            await svelteFlowAPI.svelteFlow.fitView();
+            edges = applyLayoutedEdges(
+                edges,
+                layoutedEdges,
+                EDGE_INTERACTION_CONFIG.collinearBendPointTolerancePx,
+            );
+            edgeLayouts.saveDiagramLayout({
+                classes: toClassPositionDTOs(classNodes),
+                labels: labelLayout.resetPositions(),
+                allEdges: true,
+            });
+            labelLayout.sync(nodes, edges);
+            await tick();
+            await fitViewIncludingEdgePoints();
         } catch (error) {
             // The diagram keeps the positions it has; leaving the spinner up would only look
             // like a layout that never finishes.
@@ -615,8 +761,30 @@
                 "The diagram could not be laid out automatically.",
             );
         } finally {
-            isLoading = false;
+            if (inputNodes === laidOutInput) {
+                isLoading = false;
+            }
         }
+    }
+
+    /**
+     * Fits the view to the diagram including the edge points of its edges, which may lie outside of
+     * the classes.
+     */
+    export async function fitViewIncludingEdgePoints({ duration = 400 } = {}) {
+        const bounds = getDiagramBounds(nodes, edges, id =>
+            svelteFlowAPI.svelteFlow.getInternalNode(id),
+        );
+
+        if (!bounds) {
+            await svelteFlowAPI.svelteFlow.fitView({ duration });
+            return;
+        }
+
+        return svelteFlowAPI.svelteFlow.fitBounds(bounds, {
+            padding: 0.1,
+            duration,
+        });
     }
 
     setContext(DIAGRAM_SELECTION_CONTEXT, selection);
@@ -643,7 +811,6 @@
             !heldModifiers.shiftKey &&
             !heldModifiers.ctrlKey &&
             !heldModifiers.metaKey}
-        fitView
         elementsSelectable={true}
         nodesFocusable={false}
         zIndexMode={"manual"}
@@ -664,10 +831,12 @@
         }}
         onpanecontextmenu={e => contextMenus.handlePaneContextMenu(e)}
         onedgecontextmenu={e => contextMenus.handleEdgeContextMenu(e)}
-        onselectionchange={e => selection.handleSelectionChange(e)}
+        onselectionchange={e =>
+            selection.handleSelectionChange(e, boxSelecting)}
         onselectionstart={() => {
             boxSelecting = true;
         }}
+        onedgeclick={e => handleEdgeClick(e)}
         onselectionend={() => {
             boxSelecting = false;
             selection.handleSelectionEnd();
@@ -678,23 +847,26 @@
             // selectable. Announcing the drag keeps the class selection from following along.
             selection.notifyNodeDragStart();
             if (e.targetNode?.type === LABEL_NODE_TYPE) {
-                labelDragActive = true;
+                labelLayout.dragActive = true;
                 return;
             }
-            nodeOrderCtrl.bringToFrontTemporarily(e.targetNode?.id);
+            nodeOrderCtrl.bringToFrontTemporarily(e.node?.id);
+            handleNodeDragStart(e);
         }}
         onnodedrag={e => {
-            if (labelDragActive) {
-                clampDraggedLabels(e.nodes ?? []);
+            if (labelLayout.dragActive) {
+                labelLayout.clampDragged(e.nodes ?? []);
+            } else {
+                handleNodeDrag(e);
             }
         }}
         onnodedragstop={e => {
-            const wasLabelDrag = labelDragActive;
-            labelDragActive = false;
+            const wasLabelDrag = labelLayout.dragActive;
+            labelLayout.dragActive = false;
             selection.notifyNodeDragStop();
             handleNodeMove(e, wasLabelDrag);
             if (wasLabelDrag) {
-                syncLabelNodes(nodes, edges);
+                labelLayout.sync(nodes, edges);
             }
         }}
         selectionMode={"partial"}
@@ -703,7 +875,7 @@
         selectionKey={"Shift"}
         connectionMode={"loose"}
         multiSelectionKey={"Shift"}
-        deleteKeyCode={null}
+        deleteKey={null}
         zoomOnDoubleClick={false}
         minZoom={0.1}
         maxZoom={5}
@@ -735,7 +907,6 @@
         nodeCount={classNodes.length}
         onClose={() => contextMenus.close()}
         onOpenClass={openClassFromMenu}
-        onMoveClass={e => nodeOrderCtrl.moveClass(e)}
         onSetLayer={e => nodeOrderCtrl.setLayer(e)}
         onPersistLayer={e => nodeOrderCtrl.persistLayer(e)}
     />
@@ -743,6 +914,20 @@
         request={propertyContextMenu.request}
         readOnly={isWorkspaceReadOnly}
         onClose={() => propertyContextMenu.close()}
+    />
+    <SvelteFlowEdgeContextMenu
+        request={contextMenus.edgeRequest}
+        disabled={!contextMenus.edgeRequest}
+        readOnly={isWorkspaceReadOnly}
+        edgeKind={contextMenuEdge?.type ?? null}
+        canEdit={isEditableEdge(contextMenuEdge)}
+        onClose={() => contextMenus.close()}
+        onEditEdge={handleEditEdge}
+        onAddBendPoint={edgePoints.handleEdgeAddBendPoint}
+        onDeleteEdgePoint={edgePoints.handleEdgeDeleteEdgePoint}
+        onRemoveBendPoints={edgePoints.handleEdgeRemoveBendPoints}
+        onRemoveDockingPoints={edgePoints.handleEdgeRemoveDockingPoints}
+        onRemoveAllEdgePoints={edgePoints.handleEdgeRemoveAllEdgePoints}
     />
 </div>
 

@@ -15,20 +15,16 @@
  *
  */
 
-package org.rdfarchitect.services.dl.update;
+package org.rdfarchitect.dl.data.dto;
 
-import org.rdfarchitect.database.GraphIdentifier;
+import lombok.Builder;
+import lombok.Data;
 
-import java.util.UUID;
+import org.rdfarchitect.dl.data.dto.relations.MRID;
 
-public interface ReplaceDiagramUseCase {
+@Data
+@Builder(toBuilder = true)
+public class DiagramObjectGluePoint {
 
-    /**
-     * Replaces the diagram with a new diagram created using the values in the parameters
-     *
-     * @param graphIdentifier the identifier of the graph
-     * @param packageUUID the UUID of the package identifying the diagram
-     * @param packageName the name of the new diagram
-     */
-    void replaceDiagram(GraphIdentifier graphIdentifier, UUID packageUUID, String packageName);
+    private MRID mRID;
 }

@@ -21,26 +21,19 @@ import ELK from "elkjs/lib/elk.bundled.js"; //keep this import! the 'elkjs' impo
 const LAYOUT_OPTIONS = {
     //BASE
     "elk.algorithm": "layered",
-    "elk.aspectRatio": "1.78f", //1.6f = 16:10, 1.78f = 16:9, which is more common for monitors
-    "elk.edge.thickness": "2.0", //matches the 2px width of SvelteFlow edges
-    "elk.direction": "RIGHT", //horizontal as it suits monitor layouts, right because the ClassEditor is more likely to be closed than the PackageNav
+    "elk.aspectRatio": "1.78f",
+    "elk.direction": "RIGHT",
     "elk.layered.thoroughness": "150",
     "elk.edgeRouting": "POLYLINE",
-    "elk.layered.slopedEdgeZoneWidth": "0.0",
-    "elk.separateConnectedComponents": "false",
-    "elk.layered.mergeHierarchyEdges": "false",
+    "elk.layered.edgeRouting.polyline.slopedEdgeZoneWidth": "20.0",
+    "elk.separateConnectedComponents": "true",
+    "elk.layered.considerModelOrder.components": "MODEL_ORDER",
 
     //NODE PLACEMENT
     "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
-    "elk.layered.nodePlacement.favorStraightEdges": "false",
-
-    //CROSSING MINIMIZATION
-    "elk.layered.crossingMinimization.greedySwitchType": "TWO_SIDED",
-    "elk.layered.greedySwitch.activationThreshold": "40",
 
     //NODE PROMOTION
     "elk.layered.layering.nodePromotion.strategy": "NIKOLOV_IMPROVED",
-    "elk.layered.layering.nodePromotion.maxIterations": "20",
 
     //NODE LAYERING
     "elk.layered.layering.strategy": "STRETCH_WIDTH",
@@ -48,15 +41,21 @@ const LAYOUT_OPTIONS = {
     //HIGH DEGREE NODES
     "elk.layered.highDegreeNodes.treatment": "true",
     "elk.layered.highDegreeNodes.threshold": "10",
-    "elk.layered.highDegreeNodes.treeHeight": "5",
 
     //SPACING
     "elk.layered.spacing.edgeEdgeBetweenLayers": "20",
-    "elk.layered.spacing.edgeNodeBetweenLayers": "40",
-    "elk.spacing.edgeNode": "30",
-    "elk.spacing.edgeEdge": "15",
+    "elk.spacing.edgeNode": "40",
+    "elk.spacing.edgeEdge": "20",
     "elk.layered.spacing.nodeNodeBetweenLayers": "80",
     "elk.spacing.nodeNode": "60",
+};
+
+/**
+ * Inheritance edges keep pointing in the layout direction, from the subclass to the superclass, when
+ * edges form cycles: ELK then reverses associations instead.
+ */
+const INHERITANCE_EDGE_OPTIONS = {
+    "elk.layered.priority.direction": "10",
 };
 
 let elk = null;
@@ -74,17 +73,98 @@ function initializeELK() {
     return elk;
 }
 
-export async function getLayoutedNodes(nodes, edges) {
+/**
+ * Runs the ELK layout for the given SvelteFlow nodes and edges and returns the
+ * layouted result. The nodes come back in SvelteFlow format with updated
+ * positions. The layouted edges are returned separately as raw geometric points
+ * (tagged source/bend/target) per edge id, so that the rendering layer can turn
+ * them into the actual docking and bend point objects. This file stays purely
+ * geometric and does not deal with the frontend's point representation.
+ *
+ * @param {Array} nodes SvelteFlow nodes
+ * @param {Array} edges SvelteFlow edges
+ * @returns {Promise<{nodes: Array, layoutedEdges: Map<string, {x: number, y: number, role: "source"|"bend"|"target"}[]>}>}
+ */
+export async function layoutDiagram(nodes, edges) {
     const elkInstance = initializeELK();
 
     if (!elkInstance) {
         console.warn("ELK layout not available in this environment");
-        return nodes;
+        return { nodes, layoutedEdges: new Map() };
     }
 
-    const graph = {
+    const elkGraph = await elkInstance.layout(buildElkGraph(nodes, edges));
+
+    return {
+        nodes: nodes.map(node => toSvelteFlowNode(node, elkGraph)),
+        layoutedEdges: extractLayoutedEdges(elkGraph),
+    };
+}
+
+/**
+ * Extracts the routing ELK computed for every edge. For each edge the first
+ * section is used, since every edge connects exactly two classes and its full
+ * path is described by a single section. The result maps an edge id to an
+ * ordered list of raw points, each tagged with a role: "source" for the point at
+ * the source class border, "bend" for the bend points in between, and "target"
+ * for the point at the target class border.
+ *
+ * @param {object} elkGraph the graph returned by ELK after layout
+ * @returns {Map<string, {x: number, y: number, role: "source"|"bend"|"target"}[]>}
+ */
+function extractLayoutedEdges(elkGraph) {
+    const layoutedEdges = new Map();
+    for (const elkEdge of elkGraph.edges ?? []) {
+        const section = elkEdge.sections?.[0];
+        if (!section) {
+            continue;
+        }
+
+        const orderedPoints = [
+            {
+                x: section.startPoint.x,
+                y: section.startPoint.y,
+                role: "source",
+            },
+        ];
+        for (const bendPoint of section.bendPoints ?? []) {
+            orderedPoints.push({
+                x: bendPoint.x,
+                y: bendPoint.y,
+                role: "bend",
+            });
+        }
+        orderedPoints.push({
+            x: section.endPoint.x,
+            y: section.endPoint.y,
+            role: "target",
+        });
+
+        layoutedEdges.set(elkEdge.id, orderedPoints);
+    }
+    return layoutedEdges;
+}
+
+/**
+ * Builds the ELK graph input structure from the SvelteFlow nodes and edges.
+ * A pure SvelteFlow-to-ELK transformation. Classes with edges come first, so
+ * that ELK places the classes without any edge after them, beside the diagram.
+ *
+ * @param {Array} nodes SvelteFlow nodes
+ * @param {Array} edges SvelteFlow edges
+ * @returns {object} the ELK graph input
+ */
+function buildElkGraph(nodes, edges) {
+    const connected = new Set(
+        edges.flatMap(edge => [edge.source, edge.target]),
+    );
+    const ordered = [
+        ...nodes.filter(node => connected.has(node.id)),
+        ...nodes.filter(node => !connected.has(node.id)),
+    ];
+    return {
         id: "root",
-        children: nodes.map(node => ({
+        children: ordered.map(node => ({
             id: node.id,
             width: node.measured.width,
             height: node.measured.height,
@@ -93,24 +173,29 @@ export async function getLayoutedNodes(nodes, edges) {
             id: edge.id,
             source: edge.source,
             target: edge.target,
+            ...(edge.type === "inheritance" && {
+                layoutOptions: INHERITANCE_EDGE_OPTIONS,
+            }),
         })),
         layoutOptions: LAYOUT_OPTIONS,
     };
+}
 
-    const elkGraph = await elkInstance.layout(graph);
-
-    return nodes.map(node => {
-        const elkNode = elkGraph.children.find(n => n.id === node.id);
-
-        if (elkNode) {
-            return {
-                ...node,
-                position: {
-                    x: elkNode.x,
-                    y: elkNode.y,
-                },
-            };
-        }
+/**
+ * Returns the given SvelteFlow node with the position ELK computed for it. If ELK
+ * did not lay out the node, it is returned unchanged.
+ *
+ * @param {object} node the original SvelteFlow node
+ * @param {object} elkGraph the graph returned by ELK after layout
+ * @returns {object} the positioned SvelteFlow node
+ */
+function toSvelteFlowNode(node, elkGraph) {
+    const elkNode = elkGraph.children?.find(child => child.id === node.id);
+    if (!elkNode) {
         return node;
-    });
+    }
+    return {
+        ...node,
+        position: { x: elkNode.x, y: elkNode.y },
+    };
 }
