@@ -17,15 +17,21 @@
 
 package org.rdfarchitect.services.versioncontrol;
 
+import org.rdfarchitect.api.dto.HistoryStepDTO;
+import org.rdfarchitect.models.changelog.RevertScope;
+
 import java.util.UUID;
 
 public interface RestoreVersionUseCase {
 
     /**
-     * Rolls the workspace back to a specific version, undoing every change made after it.
+     * Puts the workspace back the way a specific version left it, recording that as a new change.
      *
      * @param workspaceName the workspace to operate on
      * @param versionId the change to restore to
+     * @param scope how much of the workspace to put back
+     * @return what was restored and what is left to undo or redo; the change is {@code null} if
+     *     nothing within the scope had changed since
      */
-    void restoreVersion(String workspaceName, UUID versionId);
+    HistoryStepDTO restoreVersion(String workspaceName, UUID versionId, RevertScope scope);
 }

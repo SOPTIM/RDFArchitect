@@ -249,22 +249,31 @@ class WorkspaceChangeLogTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void restoreTo_undoesEverythingRecordedAfterTheGivenChange() {
+    void historySince_namesTheChangeAndEverythingRecordedAfterIt_newestFirst() {
         var target = commit("first", rdfOf(graphA, "urn:a"));
         log.push(target);
-        log.push(commit("second", rdfOf(graphA, "urn:a")));
-        log.push(commit("third", rdfOf(graphB, "urn:b")));
-        calls.clear();
+        var second = commit("second", rdfOf(graphA, "urn:a"));
+        log.push(second);
+        var third = commit("third", rdfOf(graphB, "urn:b"));
+        log.push(third);
 
-        log.restoreTo(target.changeId());
+        var history = log.historySince(target.changeId());
 
-        assertThat(calls).containsExactly("graphB.undo", "graphA.undo");
-        assertThat(log.undoHistory().getFirst()).isEqualTo(target);
+        assertThat(history.change()).isEqualTo(target);
+        assertThat(history.after()).containsExactly(third, second);
     }
 
     @Test
-    void restoreTo_unknownChange_throwsException() {
-        assertThatThrownBy(() -> log.restoreTo(UUID.randomUUID()))
+    void historySince_theNewestChange_namesNothingAfterIt() {
+        var target = commit("first", rdfOf(graphA, "urn:a"));
+        log.push(target);
+
+        assertThat(log.historySince(target.changeId()).after()).isEmpty();
+    }
+
+    @Test
+    void historySince_unknownChange_throwsException() {
+        assertThatThrownBy(() -> log.historySince(UUID.randomUUID()))
                 .isInstanceOf(GraphVersionControlException.class)
                 .hasMessageContaining("not found");
     }
@@ -333,6 +342,12 @@ class WorkspaceChangeLogTest {
         @Override
         public UUID currentVersionId() {
             return pastVersions.peek();
+        }
+
+        @Override
+        public CapturedState capture(int versionsBack) {
+            calls.add("%s.capture(%d)".formatted(name, versionsBack));
+            return () -> calls.add(name + ".reinstate");
         }
 
         @Override

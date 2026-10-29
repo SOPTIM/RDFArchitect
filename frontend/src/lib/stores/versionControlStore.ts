@@ -34,6 +34,7 @@ import {
     canUndo as sdkCanUndo,
     canRedo as sdkCanRedo,
     getUndoPreview as sdkUndoPreview,
+    restoreVersion as sdkRestore,
 } from "../api/generated";
 import {
     type ChangeLogEntryDto,
@@ -44,19 +45,32 @@ import { undoConfirmStore } from "../eventhandling/undoConfirmStore.svelte.js";
 
 type Direction = "undo" | "redo";
 
+/** A move through the history, including the one that is not a single step. */
+type Move = Direction | "restore";
+
 /** Whether a workspace can be stepped, one cached answer per workspace and direction. */
 type State = { steppable: Map<string, AsyncSlot<boolean>> };
+
+/**
+ * What a move leaves the caller with: whether it failed, and whether it moved
+ * anything at all — a move that did not is not something to reload for.
+ */
+type MoveResult = {
+    error: unknown;
+    skipped?: boolean;
+};
 
 const LOG = "[versionControlStore]";
 
 export const versionControlStore = createVersionControlStore();
 
 /**
- * Everything a step back and a step forward do differently: which endpoints
- * they use and what they are called on screen. Keeping it in one table is what
- * lets the two share the rest.
+ * Everything the moves through the history do differently: which endpoints a
+ * step uses and what each move is called on screen. Keeping it in one table is
+ * what lets them share the rest. A restore has no endpoint of its own here
+ * because it carries a body rather than only a workspace.
  */
-const STEPS = {
+const MOVES = {
     undo: {
         check: sdkCanUndo,
         apply: sdkUndo,
@@ -72,6 +86,12 @@ const STEPS = {
         failureTitle: "Redo failed",
         failureText: "Could not redo the change.",
         unnamedChange: "The last change was restored.",
+    },
+    restore: {
+        successTitle: "Version restored",
+        failureTitle: "Restore failed",
+        failureText: "Could not restore the selected version.",
+        unnamedChange: "The selected version was restored.",
     },
 } as const;
 
@@ -106,7 +126,7 @@ function createVersionControlStore() {
             steppable: new Map(s.steppable).set(key, { ...read(s), ...patch }),
         });
         const ask = () =>
-            STEPS[direction].check({ path: { datasetName: target } });
+            MOVES[direction].check({ path: { datasetName: target } });
 
         const cached = await loadSlot(
             store,
@@ -135,66 +155,127 @@ function createVersionControlStore() {
     }
 
     /**
-     * The steps asked for, run one after another.
+     * The moves asked for, run one after another.
      *
-     * Every press counts, so one that arrives while a step is running waits for
+     * Every press counts, so one that arrives while a move is running waits for
      * it instead of being dropped. Running them one at a time keeps a burst of
-     * presses from working the workspace twice over: each step takes the
+     * presses from working the workspace twice over: each move takes the
      * workspace's write lock and is followed by a reload of the editor, and two
      * of those at once only make each other slower. The caller is handed the
-     * promise of its own step, so it reloads when its step has run rather than
-     * when somebody else's has.
+     * promise of its own move, so it reloads when its move has run rather than
+     * when somebody else's has. A restore queues with the steps, so it and the
+     * undo after it are held apart the same way two undos are.
      */
     let queue: Promise<unknown> = Promise.resolve();
 
-    function enqueue(workspace: string | undefined, direction: Direction) {
-        const result = queue.then(() => takeStep(workspace, direction));
-        // A step that throws must not take the presses behind it down with it.
+    function enqueue(perform: () => Promise<MoveResult>) {
+        const result = queue.then(perform);
+        // A move that throws must not take the ones behind it down with it.
         queue = result.catch(() => {});
         return result;
+    }
+
+    /** Reports a move that could not be attempted at all. */
+    function cannotStart(move: Move, message: string): MoveResult {
+        console.error(`${LOG} ${move} failed`, message);
+        toastStore.error(MOVES[move].failureTitle, message);
+        return { error: message };
+    }
+
+    /** Reports a move the backend refused. */
+    function refused(move: Move, error: unknown): MoveResult {
+        console.error(`${LOG} ${move} failed`, error);
+        toastStore.error(MOVES[move].failureTitle, MOVES[move].failureText);
+        return { error };
+    }
+
+    /**
+     * Says what a move did, reloads what it may have changed and records where
+     * it left the history.
+     *
+     * A move reaches the whole workspace, so what it changed may sit in a graph
+     * the user is not looking at, which is why the whole workspace is
+     * invalidated rather than the graph in view.
+     */
+    function landed(
+        move: Move,
+        target: string,
+        step: HistoryStepDto | undefined,
+    ): MoveResult {
+        toastStore.info(MOVES[move].successTitle, describe(move, step?.change));
+        invalidateWorkspace(target);
+        rememberHistoryEnd(target, step);
+        return { error: null };
     }
 
     /**
      * A step through the workspace history. A held Ctrl+Z is filtered out as
      * auto-repeat where the key is read, so every step here stands for a press
-     * somebody made.
-     *
-     * An undone change can sit in any graph of the workspace, which is why the
-     * whole workspace is invalidated rather than the graph the user happens to
-     * be looking at.
+     * somebody made. Undo and redo differ only in which endpoint they call,
+     * what they are called in a message, and whether anything is asked first.
      */
     async function takeStep(
         workspace: string | undefined,
         direction: Direction,
-    ) {
-        const step = STEPS[direction];
+    ): Promise<MoveResult> {
         const target = resolveWorkspace(workspace);
         if (!target) {
-            const message = `No ${direction} target selected.`;
-            console.error(`${LOG} ${direction} failed`, message);
-            toastStore.error(step.failureTitle, message);
-            return { error: message };
+            return cannotStart(direction, `No ${direction} target selected.`);
         }
         if (direction === "undo" && !(await confirmedIfDestructive(target))) {
             // Skipped: nothing moved, so there is nothing to reload for.
             return { error: null, skipped: true };
         }
-        const { data, error } = await step.apply({
+        const { data, error } = await MOVES[direction].apply({
             path: { datasetName: target },
         });
-        if (error) {
-            console.error(`${LOG} ${direction} failed`, error);
-            toastStore.error(step.failureTitle, step.failureText);
-            return { error };
-        }
-        toastStore.info(step.successTitle, describe(direction, data?.change));
-        invalidateWorkspace(target);
-        rememberHistoryEnd(target, data);
-        return { error: null };
+        return error
+            ? refused(direction, error)
+            : landed(direction, target, data);
     }
 
     /**
-     * Takes the ends of the history from the step's own answer. Asking for them
+     * Puts the workspace back the way a recorded version left it.
+     *
+     * Not a step through the history but a change of its own, so it ends up
+     * here all the same: it can move anything in the workspace, which is what
+     * decides what has to be reloaded and what the user has to be told.
+     *
+     * @param changeId the version to restore to
+     * @param graphUris the graphs to put back, or empty for the whole workspace
+     * @param workspace the workspace to act on, or the selected one
+     */
+    async function restore(
+        changeId: string,
+        graphUris: string[] = [],
+        workspace?: string,
+    ) {
+        return enqueue(async () => {
+            const target = resolveWorkspace(workspace);
+            if (!target) {
+                return cannotStart("restore", "No workspace selected.");
+            }
+            const { data, error } = await sdkRestore({
+                path: { datasetName: target },
+                body: { versionId: changeId, graphUris },
+            });
+            if (error) return refused("restore", error);
+            // A restore that covers nothing which has changed since writes no
+            // change at all. Saying it restored something would be a lie, and
+            // reloading for it would be work for nothing.
+            if (!data?.change) {
+                toastStore.info(
+                    "Nothing to restore",
+                    "The workspace is already at that version.",
+                );
+                return { error: null, skipped: true };
+            }
+            return landed("restore", target, data);
+        });
+    }
+
+    /**
+     * Takes the ends of the history from the move's own answer. Asking for them
      * would be two more requests, and would leave a window in which another
      * request could move the workspace on in between.
      */
@@ -250,8 +331,11 @@ function createVersionControlStore() {
         refresh,
         canUndo,
         canRedo,
-        undo: (workspace?: string) => enqueue(workspace, "undo"),
-        redo: (workspace?: string) => enqueue(workspace, "redo"),
+        undo: (workspace?: string) =>
+            enqueue(() => takeStep(workspace, "undo")),
+        redo: (workspace?: string) =>
+            enqueue(() => takeStep(workspace, "redo")),
+        restore,
     };
 }
 
@@ -267,15 +351,12 @@ function settled<T>(data: T): AsyncSlot<T> {
 /**
  * What the change did, and where it landed if that is somewhere the user is not looking.
  *
- * A step reaches the whole workspace, so what it took back may sit in a graph the user is not
+ * A move reaches the whole workspace, so what it changed may sit in a graph the user is not
  * looking at, or in its SHACL shapes rather than its schema. Without saying so, the editor would
  * appear unchanged and the change would look lost.
  */
-function describe(
-    direction: Direction,
-    change: ChangeLogEntryDto | undefined,
-): string {
-    const what = change?.message ?? STEPS[direction].unnamedChange;
+function describe(move: Move, change: ChangeLogEntryDto | undefined): string {
+    const what = change?.message ?? MOVES[move].unnamedChange;
     const elsewhere = (change?.affectedGraphUris ?? []).filter(
         graph => graph !== editorState.selectedGraph.getValue(),
     );

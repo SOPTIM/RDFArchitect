@@ -26,6 +26,7 @@ import org.apache.jena.vocabulary.RDF;
 import org.rdfarchitect.database.DiagramLayout;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.rdf.resources.CIM;
+import org.rdfarchitect.models.changelog.CapturedState;
 import org.rdfarchitect.models.changelog.ChangeLogParticipant;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
@@ -85,6 +86,11 @@ public class DiagramLayoutDelta
     // -------------------------------------------------------------------------
 
     @Override
+    public CapturedState capture(int versionsBack) {
+        return inner.capture(versionsBack);
+    }
+
+    @Override
     public void undo() {
         inner.undo();
     }
@@ -100,8 +106,8 @@ public class DiagramLayoutDelta
     }
 
     @Override
-    public UUID currentVersionId() {
-        return inner.currentVersionId();
+    public UUID versionIdAt(int versionsBack) {
+        return inner.versionIdAt(versionsBack);
     }
 
     @Override
