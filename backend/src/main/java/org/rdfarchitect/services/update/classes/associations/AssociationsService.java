@@ -31,6 +31,7 @@ import org.rdfarchitect.database.inmemory.SessionDataStore;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -63,9 +64,11 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                         graphIdentifier.graphUri(),
                         cimAssociationPair);
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             executeOnGraph(ctx, graphIdentifier, update);
-            ctx.commit(
+            transaction.commit(
                     buildAssociationMessage("Created", ctx, associationPair, cimAssociationPair));
         }
         return new AssociationUUIDs(from.getUuid(), to.getUuid());
@@ -81,9 +84,11 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                         graphIdentifier.graphUri(),
                         cimAssociationPair);
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             executeOnGraph(ctx, graphIdentifier, update);
-            ctx.commit(
+            transaction.commit(
                     buildAssociationMessage("Replaced", ctx, associationPair, cimAssociationPair));
         }
         return new AssociationUUIDs(
@@ -103,15 +108,19 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                         classUUID,
                         cimAssociationPairs);
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var classResource = CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), classUUID);
             var classLabel = CIMResourceUtils.findLabelForResource(classResource);
 
             executeOnGraph(ctx, graphIdentifier, update);
 
-            ctx.commit(
-                    "Replaced all associations for class \"%s\" (%s)"
-                            .formatted(classLabel, classUUID));
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Replaced all associations of",
+                            "class",
+                            ChangeDescriptions.name(classLabel)));
         }
     }
 

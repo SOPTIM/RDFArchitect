@@ -33,7 +33,6 @@
     let selectedWorkspaceName = $derived(
         editorState.selectedWorkspace.getValue(),
     );
-    let selectedGraphUri = $derived(editorState.selectedGraph.getValue());
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
@@ -46,20 +45,17 @@
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
-        if (selectedWorkspaceName && selectedGraphUri) {
+        if (selectedWorkspaceName) {
             await getChangelog();
         }
     });
 
     async function getChangelog() {
-        if (!selectedWorkspaceName || !selectedGraphUri) {
+        if (!selectedWorkspaceName) {
             return;
         }
         const { data, error } = await getChangeLogAPI({
-            path: {
-                datasetName: selectedWorkspaceName,
-                graphURI: selectedGraphUri,
-            },
+            path: { datasetName: selectedWorkspaceName },
         });
         if (!error) {
             changelog = data;
@@ -98,7 +94,7 @@
             </table>
         </div>
     </div>
-{:else if selectedGraphUri}
+{:else if selectedWorkspaceName}
     <div class="flex h-full items-center justify-center">
         <p class="text-default-text text-lg">No changes in current session</p>
     </div>

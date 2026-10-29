@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
-import org.apache.jena.query.ReadWrite;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -36,6 +35,8 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import utils.TestWorkspaces;
 
 import java.io.StringReader;
 import java.util.UUID;
@@ -153,10 +154,7 @@ class ClassSchemaOccurrenceServiceTest {
     private void createProfileGraph(GraphIdentifier graphIdentifier) {
         var graph = GraphFactory.createDefaultGraph();
         RDFParser.create().source(new StringReader(NAMED_PROFILE)).lang(Lang.TURTLE).parse(graph);
-        databasePort.createGraph(graphIdentifier, graph);
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            ctx.commit("import");
-        }
+        TestWorkspaces.createGraph(databasePort, graphIdentifier, graph);
     }
 
     private void createGraph(GraphIdentifier graphIdentifier, String fileName) {
@@ -166,6 +164,6 @@ class ClassSchemaOccurrenceServiceTest {
                         .setFile(file)
                         .setGraphName(graphIdentifier.graphUri())
                         .build();
-        databasePort.createGraph(graphIdentifier, graphSource.graph());
+        TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }
 }

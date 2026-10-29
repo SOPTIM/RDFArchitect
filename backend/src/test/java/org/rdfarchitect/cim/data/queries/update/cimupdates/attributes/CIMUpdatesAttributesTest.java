@@ -129,7 +129,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isFalse
                 assertThat(
                                 ctx.getRdfGraph()
@@ -205,7 +206,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isFalse
                 assertThat(
                                 ctx.getRdfGraph()
@@ -326,7 +328,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isFalse
                 assertThat(
                                 ctx.getRdfGraph()
@@ -402,7 +405,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isFalse
                 assertThat(
                                 ctx.getRdfGraph()
@@ -505,7 +509,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 var isFixedTriples =
                         ctx.getRdfGraph()
                                 .find(
@@ -537,7 +542,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     attributeMultipleStereotypes,
                                     false));
 
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 assertThat(
                                 ctx.getRdfGraph()
                                         .contains(
@@ -584,7 +590,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     attributeRequired,
                                     false));
 
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 assertThat(
                                 ctx.getRdfGraph()
                                         .contains(
@@ -618,7 +625,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                             databasePort.getPrefixMapping(DATASET_NAME), GRAPH_URI, MY_UUID));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 assertThat(
                                 ctx.getRdfGraph()
                                         .contains(
@@ -644,7 +652,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                             nonExistingUUID));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isTrue
                 assertThat(
                                 ctx.getRdfGraph()
@@ -708,7 +717,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                             nonExistingUUID));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isTrue
                 assertThat(ctx.getRdfGraph().isEmpty()).isTrue();
             }
@@ -741,7 +751,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isFalse
                 assertThat(
                                 ctx.getRdfGraph()
@@ -832,7 +843,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isFalse
                 assertThat(
                                 ctx.getRdfGraph()
@@ -960,7 +972,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isFalse
                 assertThat(
                                 ctx.getRdfGraph()
@@ -998,7 +1011,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isTrue
                 assertThat(
                                 ctx.getRdfGraph()
@@ -1112,7 +1126,8 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                             .build());
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isFalse
                 assertThat(
                                 ctx.getRdfGraph()

@@ -29,4 +29,10 @@ public class ChangeLogEntryDTO {
     private String timestamp;
     private String message;
     private List<ContextDeltaDTO> contextDeltas;
+
+    /** Graphs and diagrams that undoing this change would remove; empty when nothing disappears. */
+    private List<String> removedOnUndo;
+
+    /** The graphs this change touched, so the editor can offer to go where it landed. */
+    private List<String> affectedGraphUris;
 }

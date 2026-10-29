@@ -24,6 +24,7 @@ import static org.mockito.Mockito.verify;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
+import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.SchemaConfig;
@@ -37,6 +38,8 @@ import org.rdfarchitect.services.ExpandURIService;
 import org.rdfarchitect.services.update.classes.CopyClassSource;
 import org.rdfarchitect.services.update.classes.CopyClassSourceReader;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import utils.TestWorkspaces;
 
 import java.util.List;
 import java.util.UUID;
@@ -66,7 +69,7 @@ class CopyClassSourceReaderTest {
                         .setFile(file)
                         .setGraphName(graphIdentifier.graphUri())
                         .build();
-        databasePort.createGraph(graphIdentifier, graphSource.graph());
+        TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }
 
     private List<CopyClassSource> sources(String classUUID) {
@@ -80,7 +83,8 @@ class CopyClassSourceReaderTest {
         sourceReader.readSources(sources(CLASS_UUID), snapshots);
         sourceReader.readSources(sources(CLASS_UUID), snapshots);
 
-        verify(databasePort, times(1)).getGraphWithContext(graphIdentifier);
+        verify(databasePort, times(1))
+                .beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ);
     }
 
     @Test
@@ -88,7 +92,8 @@ class CopyClassSourceReaderTest {
         sourceReader.readSources(sources(CLASS_UUID));
         sourceReader.readSources(sources(CLASS_UUID));
 
-        verify(databasePort, times(2)).getGraphWithContext(graphIdentifier);
+        verify(databasePort, times(2))
+                .beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ);
     }
 
     @Test

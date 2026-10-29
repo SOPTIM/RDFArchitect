@@ -18,7 +18,7 @@
 package org.rdfarchitect.services.dl.select;
 
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
+import org.rdfarchitect.database.DiagramLayout;
 
 import java.util.UUID;
 
@@ -32,8 +32,7 @@ public interface FetchRenderingLayoutDataUseCase {
      * @return {@link RenderingLayoutData DTO object containing necessary layout information for
      *     rendering}
      */
-    RenderingLayoutData fetchRenderingLayoutData(
-            DiagramLayoutDelta diagramLayout, UUID packageUUID);
+    RenderingLayoutData fetchRenderingLayoutData(DiagramLayout diagramLayout, UUID packageUUID);
 
     /**
      * Fetches all layout data necessary for constructing the DTO object for rendering

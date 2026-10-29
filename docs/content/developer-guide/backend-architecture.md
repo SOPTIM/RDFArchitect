@@ -47,6 +47,18 @@ Services live under `services/<feature>/` and typically implement multiple use c
 
 The **in-memory** path (`database/inmemory`) is used heavily in tests and as the per-session working buffer for uploaded datasets and edits.
 
+Its contents (graphs, custom diagrams, layout, namespaces) are reachable only through a workspace transaction, so that a change touching several of them commits or rolls back as a whole and becomes one entry in the workspace changelog:
+
+```java
+try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+    var ctx = transaction.graph(graphUri);
+    // … edit ctx.getRdfGraph(), transaction.diagrams(), transaction.layout() …
+    transaction.commit("Deleted class \"Breaker\"");
+}
+```
+
+A commit message is the text the changelog and the undo toast show, so it is written for the person who made the change: past tense, and naming what was changed rather than identifying it. `services/ChangeDescriptions` builds those names. `commitWithoutHistory()` stores a change the user did not ask for, such as the layout a diagram gets the first time it is opened, without offering it as an undo step.
+
 ## REST controllers
 
 Controllers are thin and follow a strict skeleton:

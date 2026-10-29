@@ -48,6 +48,8 @@ import org.rdfarchitect.services.update.classes.CopyClassSourceReader;
 import org.rdfarchitect.services.update.classes.PastePreviewService;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import utils.TestWorkspaces;
+
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -86,8 +88,9 @@ class PastePreviewServiceTest {
                         .setFile(file)
                         .setGraphName(sourceGraphIdentifier.graphUri())
                         .build();
-        databasePort.createGraph(sourceGraphIdentifier, graphSource.graph());
-        databasePort.createGraph(targetGraphIdentifier, GraphFactory.createDefaultGraph());
+        TestWorkspaces.createGraph(databasePort, sourceGraphIdentifier, graphSource.graph());
+        TestWorkspaces.createGraph(
+                databasePort, targetGraphIdentifier, GraphFactory.createDefaultGraph());
     }
 
     private PasteSourceClassDTO source(String classUUID) {
@@ -263,14 +266,16 @@ class PastePreviewServiceTest {
 
     @Test
     void previewPaste_associationWithoutRange_namesNoAssociationTarget() {
-        try (var ctx =
-                databasePort.getGraphWithContext(sourceGraphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(
+                        sourceGraphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(sourceGraphIdentifier.graphUri());
             ctx.getRdfGraph()
                     .remove(
                             NodeFactory.createURI("http://example.org#class.associatedClass"),
                             RDFS.range.asNode(),
                             NodeFactory.createURI("http://example.org#associatedClass"));
-            ctx.commit("Removed a triple for the test.");
+            transaction.commit("Removed a triple for the test.");
         }
 
         var preview =

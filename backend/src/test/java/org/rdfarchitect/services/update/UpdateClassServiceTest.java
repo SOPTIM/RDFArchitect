@@ -56,6 +56,8 @@ import org.rdfarchitect.services.update.classes.UpdateClassService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import utils.TestWorkspaces;
+
 import java.util.UUID;
 
 @SpringBootTest
@@ -97,7 +99,7 @@ class UpdateClassServiceTest {
                         .setFile(file)
                         .setGraphName(graphIdentifier.graphUri())
                         .build();
-        databasePort.createGraph(graphIdentifier, graphSource.graph());
+        TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }
 
     @Test
@@ -111,7 +113,9 @@ class UpdateClassServiceTest {
 
         updateClassService.addClass(graphIdentifier, packageDTO, PREFIX, "newClass", null);
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             assertThat(
                             ctx.getRdfGraph()
                                     .contains(
@@ -146,7 +150,9 @@ class UpdateClassServiceTest {
                 updateClassService.addClass(graphIdentifier, packageDTO, PREFIX, "ghost", null);
 
         assertThat(newUuid).isEqualTo(referencedUuid);
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             assertThat(
                             model.listStatements(
@@ -161,14 +167,15 @@ class UpdateClassServiceTest {
     @Test
     void addClass_packageWithSameIriExists_throwsConflict() {
         var packageUri = PREFIX + "packageCollision";
-        var graphCtx = databasePort.getGraphWithContext(graphIdentifier);
-        try (var ctx = graphCtx.begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             ctx.getRdfGraph()
                     .add(
                             NodeFactory.createURI(packageUri),
                             RDF.type.asNode(),
                             CIMS.classCategory.asNode());
-            ctx.commit();
+            transaction.commit("test change");
         }
 
         var packageDTO =
@@ -189,7 +196,9 @@ class UpdateClassServiceTest {
                 .isInstanceOf(ResourceConflictException.class)
                 .hasMessageContaining("package with the same IRI");
 
-        try (var ctx = graphCtx.begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             assertThat(
                             ctx.getRdfGraph()
                                     .contains(
@@ -212,7 +221,9 @@ class UpdateClassServiceTest {
 
         updateClassService.replaceClass(graphIdentifier, newClass);
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             assertThat(
                             ctx.getRdfGraph()
                                     .contains(
@@ -288,15 +299,19 @@ class UpdateClassServiceTest {
 
     /** Referencing a uri that nothing defines makes it a referenced only resource with a uuid. */
     private UUID addReferencedOnlyResource(String label) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             ctx.getRdfGraph()
                     .add(
                             NodeFactory.createURI(PREFIX + "class.associatedClass"),
                             RDFS.range.asNode(),
                             NodeFactory.createURI(PREFIX + label));
-            ctx.commit("referenced only resource");
+            transaction.commit("referenced only resource");
         }
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             return UUID.fromString(
                     model.getResource(PREFIX + label).getProperty(RDFA.uuid).getString());
@@ -306,7 +321,9 @@ class UpdateClassServiceTest {
     @Test
     void deleteClass_removesClassResourceFromGraph() {
         updateClassService.deleteClass(graphIdentifier, UUID.fromString(CLASS_UUID));
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             var classResource = model.createResource(PREFIX + "class");
             var statements = model.listStatements(classResource, null, (RDFNode) null).toList();

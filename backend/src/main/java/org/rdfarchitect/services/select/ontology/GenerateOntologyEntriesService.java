@@ -25,6 +25,7 @@ import org.rdfarchitect.api.dto.ChangeLogEntryMapper;
 import org.rdfarchitect.api.dto.ontology.OntologyEntry;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.cim.ontology.OntologyGeneratableEntriesBuilder;
 import org.springframework.stereotype.Service;
 
@@ -40,14 +41,23 @@ public class GenerateOntologyEntriesService implements GenerateOntologyEntriesUs
 
     @Override
     public List<OntologyEntry> generateOntologyEntries(GraphIdentifier graphIdentifier) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             return new OntologyGeneratableEntriesBuilder(model)
                     .generateDCTModified(
-                            changeLogEntryMapper.toDTOList(ctx.getChangeLog().getUndoHistory()))
+                            changeLogEntryMapper.toDTOList(changesAffecting(graphIdentifier)))
                     .generateDCTIssued()
                     .build();
         }
+    }
+
+    /** The changes that reached this graph, newest first. */
+    private List<WorkspaceChangeLogEntry> changesAffecting(GraphIdentifier graphIdentifier) {
+        return databasePort.listChanges(graphIdentifier.datasetName()).stream()
+                .filter(entry -> entry.affectsGraph(graphIdentifier.graphUri()))
+                .toList();
     }
 }

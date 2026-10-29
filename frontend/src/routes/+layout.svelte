@@ -34,6 +34,7 @@
     import ToastContainer from "$lib/components/ToastContainer.svelte";
     import { PUBLIC_EMBED_SESSION_HANDSHAKE } from "$lib/config/runtime";
     import { isDialogOpen } from "$lib/dialog/openDialogs.js";
+    import UndoConfirmDialog from "$lib/dialog/UndoConfirmDialog.svelte";
     import { installSessionHandshake } from "$lib/embedding/session-handshake.js";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
@@ -49,7 +50,6 @@
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import {
-        DiagramType,
         editorState,
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
@@ -158,10 +158,9 @@
 
     async function fetchUndoRedo() {
         const workspaceName = editorState.selectedWorkspace.getValue();
-        const graph = editorState.selectedGraph.getValue();
-        await versionControlStore.refresh(workspaceName, graph);
-        canUndo = await versionControlStore.canUndo(workspaceName, graph);
-        canRedo = await versionControlStore.canRedo(workspaceName, graph);
+        await versionControlStore.refresh(workspaceName);
+        canUndo = await versionControlStore.canUndo(workspaceName);
+        canRedo = await versionControlStore.canRedo(workspaceName);
     }
 
     async function reload() {
@@ -191,11 +190,11 @@
         if (!isRedo && !canUndo) return;
 
         await eventStack.guardAction(async () => {
-            const { error } = isRedo
+            const { error, skipped } = isRedo
                 ? await versionControlStore.redo()
                 : await versionControlStore.undo();
 
-            if (!error) {
+            if (!error && !skipped) {
                 await reload();
             }
         });
@@ -221,14 +220,11 @@
                 if (isDialogOpen()) {
                     return;
                 }
-                if (
-                    editorState.selectedDiagram.getProperty("type") ===
-                    DiagramType.CROSS_PROFILE
-                ) {
-                    toastStore.info(
-                        "Undo/Redo not possible",
-                        "Undo/Redo is not available in the Merged View.",
-                    );
+                // Auto-repeat fires every thirty or so milliseconds and would
+                // walk the whole history in a second. Only real presses count;
+                // every one of those takes a step.
+                if (event.repeat) {
+                    event.preventDefault();
                     return;
                 }
                 event.preventDefault();
@@ -372,5 +368,6 @@
         </div>
     </div>
     <ToastContainer />
+    <UndoConfirmDialog />
     <PasteClassesDialog />
 </Tooltip.Provider>

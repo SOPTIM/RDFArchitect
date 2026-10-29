@@ -45,6 +45,8 @@ import org.rdfarchitect.services.update.classes.associations.AssociationsService
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import utils.TestWorkspaces;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -84,7 +86,7 @@ class AssociationsServiceTest {
                         .setFile(readMultipartFileFromFile(PATH, "class.ttl"))
                         .setGraphName(GRAPH_URI)
                         .build();
-        databasePort.createGraph(graphIdentifier, graphSource.graph());
+        TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }
 
     @Test
@@ -112,7 +114,9 @@ class AssociationsServiceTest {
     }
 
     private void assertBothDirectionsArePresent() {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
             assertThat(graph.contains(ASSOCIATION, RDF.type.asNode(), RDF.Property.asNode()))
                     .isTrue();
