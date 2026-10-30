@@ -191,7 +191,7 @@ class GraphToCIMCollectionConverterServiceFilterTest {
         var childClass = classIterator.next();
         var superClass = classIterator.next();
 
-        assertThat(childClass.getSuperClass()).isNull();
-        assertThat(superClass.getSuperClass()).isNull();
+        assertThat(childClass.getSuperClasses()).isEmpty();
+        assertThat(superClass.getSuperClasses()).isEmpty();
     }
 }

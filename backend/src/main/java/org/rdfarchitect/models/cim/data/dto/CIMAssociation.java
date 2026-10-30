@@ -23,12 +23,15 @@ import lombok.Data;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSInverseRoleName;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSDomain;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.RDFSRange;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -52,4 +55,16 @@ public class CIMAssociation {
     private CIMSAssociationUsed associationUsed;
 
     private CIMSInverseRoleName inverseRoleName;
+
+    /**
+     * The stereotypes of the half. An association is stereotyped once and both halves carry the
+     * set; {@code ofAggregate} is the one a release emits, derived from the aggregation of the
+     * opposite end.
+     *
+     * <p>Written but not yet read back: the select query does not bind them and the API carries no
+     * field for them, so {@code replaceAssociations} — which deletes every triple of both halves
+     * and rewrites them from this DTO — drops them on the first save. Closing that is the same work
+     * as moving the editing services onto the write facade.
+     */
+    @Builder.Default private List<CIMSStereotype> stereotypes = new ArrayList<>();
 }

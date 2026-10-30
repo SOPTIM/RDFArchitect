@@ -284,7 +284,7 @@ public class CopyClassService implements CopyClassUseCase {
                         sourceClass.getUri(),
                         sourceClass.getLabel(),
                         sourceClass.getStereotypes(),
-                        resolvableSuperClass(sourceClass, targetGraph, copiedUris),
+                        resolvableSuperClasses(sourceClass, targetGraph, copiedUris),
                         cimPackage);
         if (options.copiesMembersOf(reference)) {
             copyMembers(sourceClass, newCimClass);
@@ -295,26 +295,23 @@ public class CopyClassService implements CopyClassUseCase {
         return true;
     }
 
-    private RDFSSubClassOf resolvableSuperClass(
+    /** Only those superclasses the target graph can actually resolve; each is judged on its own. */
+    private List<RDFSSubClassOf> resolvableSuperClasses(
             ICIMClass sourceClass, Graph targetGraph, Set<URI> copiedUris) {
-        var superClass = superClassOf(sourceClass);
-        if (superClass == null) {
-            return null;
+        var resolvable = new ArrayList<RDFSSubClassOf>();
+        for (var superClass : superClassesOf(sourceClass)) {
+            if (copiedUris.contains(superClass.getUri())
+                    || CIMResourceUtils.containsClass(targetGraph, superClass.getUri())) {
+                resolvable.add(superClass);
+            }
         }
-        if (copiedUris.contains(superClass.getUri())
-                || CIMResourceUtils.containsClass(targetGraph, superClass.getUri())) {
-            return superClass;
-        }
-        return null;
+        return resolvable;
     }
 
-    private RDFSSubClassOf superClassOf(ICIMClass sourceClass) {
-        var superClasses = sourceClass.getSuperClasses();
-        if (superClasses.isEmpty()) {
-            return null;
-        }
-        var superClass = superClasses.getFirst();
-        return new RDFSSubClassOf(superClass.getUri(), superClass.getLabel());
+    private List<RDFSSubClassOf> superClassesOf(ICIMClass sourceClass) {
+        return sourceClass.getSuperClasses().stream()
+                .map(superClass -> new RDFSSubClassOf(superClass.getUri(), superClass.getLabel()))
+                .toList();
     }
 
     private String buildReferenceMessage(CopyClassReference reference, CopyClassOptions options) {
@@ -382,7 +379,7 @@ public class CopyClassService implements CopyClassUseCase {
                         options.copyAsAbstract()
                                 ? CIMStereotypes.withoutConcrete(cimClass.getStereotypes())
                                 : cimClass.getStereotypes(),
-                        options.copyInheritance() ? superClassIn(cimClass, batch) : null,
+                        options.copyInheritance() ? superClassesIn(cimClass, batch) : List.of(),
                         cimPackage);
         if (options.copyAttributes()) {
             copyMembers(cimClass, newCimClass);
@@ -393,14 +390,14 @@ public class CopyClassService implements CopyClassUseCase {
         return newCimClass;
     }
 
-    private RDFSSubClassOf superClassIn(ICIMClass sourceClass, PasteBatch batch) {
-        var superClass = superClassOf(sourceClass);
-        if (superClass == null) {
-            return null;
-        }
-        return new RDFSSubClassOf(
-                batch.uriOf(superClass.getUri()),
-                batch.labelOf(superClass.getUri(), superClass.getLabel()));
+    private List<RDFSSubClassOf> superClassesIn(ICIMClass sourceClass, PasteBatch batch) {
+        return superClassesOf(sourceClass).stream()
+                .map(
+                        superClass ->
+                                new RDFSSubClassOf(
+                                        batch.uriOf(superClass.getUri()),
+                                        batch.labelOf(superClass.getUri(), superClass.getLabel())))
+                .toList();
     }
 
     private CIMClassUMLAdapted copyClassBase(
@@ -408,7 +405,7 @@ public class CopyClassService implements CopyClassUseCase {
             URI uri,
             RDFSLabel label,
             List<CIMSStereotype> stereotypes,
-            RDFSSubClassOf superClass,
+            List<RDFSSubClassOf> superClasses,
             ICIMClassCategory cimPackage) {
         var newCimClass =
                 CIMClassUMLAdapted.builder()
@@ -416,7 +413,7 @@ public class CopyClassService implements CopyClassUseCase {
                         .uri(uri)
                         .label(label)
                         .stereotypes(stereotypes)
-                        .superClass(superClass)
+                        .superClasses(superClasses)
                         .attributes(List.of())
                         .enumEntries(List.of())
                         .associationPairs(List.of())

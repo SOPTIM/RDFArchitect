@@ -31,10 +31,12 @@ import {
     renameGraph as sdkRenameGraph,
     cancelImport as sdkCancelImport,
     getImportStatus as sdkGetImportStatus,
+    importSelectedPackages as sdkImportSelectedPackages,
     resolvePrefixConflicts as sdkResolvePrefixConflicts,
     type GraphDto,
     type ImportJobStatus,
     type PrefixResolutionDto,
+    type SelectedPackageDto,
 } from "../api/generated";
 import { PUBLIC_BACKEND_URL } from "../config/runtime";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
@@ -208,6 +210,8 @@ function createGraphStore() {
         addEmptyGraph,
         renameGraph,
         startImport,
+        startXmiScan,
+        importSelectedPackages,
         getImportStatus,
         resolvePrefixConflicts,
         cancelImport,
@@ -269,6 +273,79 @@ async function startImport(
         console.error(`${LOG_PREFIX} Failed to start the import`, error);
         return { error };
     }
+}
+
+/**
+ * Starts reading an Enterprise Architect XMI export and returns the id of the job that runs it.
+ * The job reports the profiles the export holds and stores nothing; follow it with
+ * {@link getImportStatus} exactly like an import.
+ */
+async function startXmiScan(
+    workspaceName: string,
+    file: File,
+    options: {
+        onUploadProgress?: (percent: number) => void;
+        signal?: AbortSignal;
+    } = {},
+): Promise<Result<{ jobId: string }>> {
+    console.log(`${LOG_PREFIX} Reading the export "${file?.name}"`);
+
+    if (!file) {
+        const error = new Error("A file is required.");
+        console.error(`${LOG_PREFIX} ${error.message}`);
+        return { error };
+    }
+
+    try {
+        const jobId = await uploadImport(
+            workspaceName,
+            [file],
+            [],
+            options,
+            "/xmi",
+        );
+        console.log(`${LOG_PREFIX} Export job "${jobId}" started`);
+        return { error: null, data: { jobId } };
+    } catch (error) {
+        console.error(`${LOG_PREFIX} Failed to read the export`, error);
+        return { error };
+    }
+}
+
+/**
+ * Imports the packages chosen out of the exports a read job holds, each becoming one schema.
+ * Nothing is uploaded again, and a read can be chosen from once.
+ *
+ * @returns the id of the import job, which is a different one from the read
+ */
+async function importSelectedPackages(
+    workspaceName: string,
+    readJobId: string,
+    packages: SelectedPackageDto[],
+    diagramIds: string[],
+): Promise<Result<{ jobId: string }>> {
+    console.log(
+        `${LOG_PREFIX} Importing ${packages.length} package(s) of read job "${readJobId}"`,
+    );
+
+    const { data, error } = await sdkImportSelectedPackages({
+        path: { datasetName: workspaceName, jobId: readJobId },
+        body: { packages, diagramIds },
+    });
+
+    if (error || !data?.jobId) {
+        console.error(
+            `${LOG_PREFIX} Failed to import the chosen packages of read job "${readJobId}"`,
+            await describeError(error),
+        );
+        toastStore.error(
+            "Import failed",
+            "The chosen packages could not be imported.",
+        );
+        return { error: error ?? new Error("The import did not start.") };
+    }
+
+    return { error: null, data: { jobId: data.jobId } };
 }
 
 async function getImportStatus(
@@ -362,13 +439,14 @@ function uploadImport(
         onUploadProgress?: (percent: number) => void;
         signal?: AbortSignal;
     },
+    path: string = "",
 ): Promise<string> {
     const query = graphUris
         .map(graphUri => `graphUris=${encodeURIComponent(graphUri ?? "")}`)
         .join("&");
     const url =
         `${PUBLIC_BACKEND_URL}/api/datasets/${encodeURIComponent(workspaceName)}` +
-        `/graphs/content/imports${query ? `?${query}` : ""}`;
+        `/imports${path}${query ? `?${query}` : ""}`;
 
     const formData = new FormData();
     for (const file of files) {

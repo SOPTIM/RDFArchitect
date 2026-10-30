@@ -18,7 +18,12 @@
     import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
-    let { children, type = "info" } = $props();
+    let {
+        children,
+        type = "info",
+        /** Whether it takes up as little room as it can, for a note said in passing. */
+        dense = false,
+    } = $props();
 
     const COLORS = {
         info: "text-blue",
@@ -28,9 +33,16 @@
     const colorClass = COLORS[type] ?? COLORS.info;
 </script>
 
-<div class="text-dark flex items-start space-x-2 rounded-lg border p-4">
-    <Fa icon={faCircleInfo} class="{colorClass} mt-0.5" />
-    <div class="text-sm leading-relaxed">
+<div
+    class="border-border flex items-start space-x-2 rounded-lg border {dense
+        ? 'px-3 py-2'
+        : 'p-4'}"
+>
+    <Fa
+        icon={faCircleInfo}
+        class="{colorClass} mt-0.5 {dense ? 'text-xs' : ''}"
+    />
+    <div class="leading-relaxed {dense ? 'text-xs' : 'text-sm'}">
         {@render children?.()}
     </div>
 </div>

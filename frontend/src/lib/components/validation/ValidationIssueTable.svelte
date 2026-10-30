@@ -46,11 +46,24 @@
         onSelectGrouping,
         allCollapsed = false,
         onToggleAllGroups,
+        /**
+         * What the column of {@code ruleLabel} is called. A validation finding names the check
+         * that produced it; another kind of finding names something else there.
+         */
+        typeLabel = "Check",
+        /**
+         * Whether a cell too narrow for its text wraps rather than cutting it off. Cutting it off
+         * is for a table whose rows open to show the whole of it; one whose rows do not has to
+         * let it wrap, or the text cannot be read at all.
+         */
+        wrapText = false,
     } = $props();
 
     const SEVERITY_KEYS = ["ERROR", "WARNING", "INFO"];
 
     const expandedRows = new SvelteSet();
+
+    const clipped = $derived(wrapText ? "break-words" : "truncate");
 
     const allIssues = $derived(groups.flatMap(group => group.issues));
 
@@ -142,7 +155,7 @@
             </th>
             {#if showType}
                 <th scope="col" class="w-44 py-1 font-medium">
-                    {@render groupingHeader(GroupBy.RULE, "Check")}
+                    {@render groupingHeader(GroupBy.RULE, typeLabel)}
                 </th>
             {/if}
             <th scope="col" class="w-56 py-1 font-medium">
@@ -274,12 +287,12 @@
                             </span>
                         </td>
                         {#if showType}
-                            <td class="text-text-subtle truncate py-1.5 pr-3">
+                            <td class="text-text-subtle py-1.5 pr-3 {clipped}">
                                 {issue.ruleLabel ?? ""}
                             </td>
                         {/if}
                         <td
-                            class="text-default-text truncate py-1.5 pr-3 font-mono text-xs"
+                            class="text-default-text py-1.5 pr-3 font-mono text-xs {clipped}"
                             title={issue.resourceUri}
                         >
                             {issue.resourceUri
@@ -289,7 +302,7 @@
                         <td
                             class="text-default-text py-1.5 pr-3 {expanded
                                 ? ''
-                                : 'truncate'}"
+                                : clipped}"
                             title={issue.message}
                         >
                             {issue.message}

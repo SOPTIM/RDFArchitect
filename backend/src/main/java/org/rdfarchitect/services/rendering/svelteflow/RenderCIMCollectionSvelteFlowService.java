@@ -35,6 +35,7 @@ import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSSubClassOf;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rendering.RenderingUtils;
@@ -261,8 +262,10 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
     private List<EdgeDTO> assembleInheritanceEdgeDTOList(RenderContext renderContext) {
         List<EdgeDTO> inheritanceEdgeDTOList = new ArrayList<>();
         for (var cimClass : renderContext.cimCollection.getClasses()) {
-            if (cimClass.getSuperClass() != null) {
-                inheritanceEdgeDTOList.add(assembleInheritanceEdgeDTO(renderContext, cimClass));
+            // One edge per superclass, because a class may declare several.
+            for (var superClass : cimClass.getSuperClasses()) {
+                inheritanceEdgeDTOList.add(
+                        assembleInheritanceEdgeDTO(renderContext, cimClass, superClass));
             }
         }
         return inheritanceEdgeDTOList;
@@ -272,12 +275,13 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
      * Assembles an inheritance edge from a class to its superclass.
      *
      * @param cimClass The child class
+     * @param superClass The one of its superclasses this edge is drawn for
      * @return EdgeDTO representing the inheritance relationship
      */
-    private EdgeDTO assembleInheritanceEdgeDTO(RenderContext renderContext, CIMClass cimClass) {
+    private EdgeDTO assembleInheritanceEdgeDTO(
+            RenderContext renderContext, CIMClass cimClass, RDFSSubClassOf superClass) {
         var classUUID = renderContext.uriToUUIDMap.get(cimClass.getUri().toString());
-        var superClassUUID =
-                renderContext.uriToUUIDMap.get(cimClass.getSuperClass().getUri().toString());
+        var superClassUUID = renderContext.uriToUUIDMap.get(superClass.getUri().toString());
 
         return EdgeDTO.builder()
                 .id(UUID.randomUUID().toString())

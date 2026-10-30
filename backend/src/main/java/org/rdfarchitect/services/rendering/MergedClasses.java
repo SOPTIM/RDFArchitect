@@ -18,7 +18,7 @@
 package org.rdfarchitect.services.rendering;
 
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
-import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelReader;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -52,7 +52,7 @@ public final class MergedClasses {
      * their graph. Only the classes of the diagram are read, not those of the whole graph.
      */
     public static Map<UUID, String> classUriByUuid(
-            List<ClassInDiagram> classesInDiagram, Map<String, ICIMModelFacade> modelsByGraphUri) {
+            List<ClassInDiagram> classesInDiagram, Map<String, ICIMModelReader> modelsByGraphUri) {
         var classUriByUuid = new LinkedHashMap<UUID, String>();
         for (var classInDiagram : classesInDiagram) {
             if (classInDiagram.getGraphUri() == null || classInDiagram.getUuid() == null) {
@@ -70,8 +70,8 @@ public final class MergedClasses {
         return classUriByUuid;
     }
 
-    private static Map<String, ICIMModelFacade> modelsByGraphUri(List<CIMProfileModel> profiles) {
-        var modelsByGraphUri = new HashMap<String, ICIMModelFacade>();
+    private static Map<String, ICIMModelReader> modelsByGraphUri(List<CIMProfileModel> profiles) {
+        var modelsByGraphUri = new HashMap<String, ICIMModelReader>();
         for (var profile : profiles) {
             modelsByGraphUri.putIfAbsent(profile.graphUri(), profile.model());
         }

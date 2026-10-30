@@ -22,7 +22,18 @@ import org.rdfarchitect.models.cim.data.dto.facade.header.ICIMProfileHeader;
 import java.util.List;
 import java.util.UUID;
 
-public interface ICIMModelFacade {
+/**
+ * Reads a graph as a CIM profile: its classes, its categories and its profile header.
+ *
+ * <p>Named for the capability rather than for the implementation, because reading and writing a
+ * profile graph are meant to end up on one object over one {@link org.apache.jena.rdf.model.Model}
+ * — {@link CIMModelFacade} is that object. Keeping the two contracts apart is what lets the
+ * rendering path ask for a graph it can only read, and get a guarantee rather than a convention.
+ *
+ * <p>Everything here is a view over the model and is computed on call, not cached, so a getter is
+ * cheap to ignore and not cheap to call in a loop.
+ */
+public interface ICIMModelReader {
 
     String getGraphUri();
 

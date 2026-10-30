@@ -40,6 +40,7 @@
     import SnapshotDialog from "../../SnapshotDialog.svelte";
     import UserSettingDialog from "../../UserSettingDialog.svelte";
     import WorkspaceDeleteDialog from "../../WorkspaceDeleteDialog.svelte";
+    import XmiImportDialog from "../../XmiImportDialog.svelte";
 
     let { isWorkspaceReadOnly } = $props();
 
@@ -48,6 +49,7 @@
     let showExportDialog = $state(false);
     let showSnapshotDialog = $state(false);
     let showImportDialog = $state(false);
+    let showXmiImportDialog = $state(false);
     let showSHACLExportDialog = $state(false);
     let showSHACLUploadDialog = $state(false);
     let showDeleteDialog = $state(false);
@@ -133,6 +135,12 @@
                     Schema (RDFS)
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
+                    onSelect={() => (showXmiImportDialog = true)}
+                    faIcon={faFileImport}
+                >
+                    Model (Enterprise Architect XMI)
+                </Menubar.Item.Button>
+                <Menubar.Item.Button
                     onSelect={() => (showSHACLUploadDialog = true)}
                     faIcon={faUpload}
                     altText="Ctrl+Shift+I"
@@ -213,6 +221,7 @@
 </Menubar.Menu>
 
 <ImportDialog bind:showDialog={showImportDialog} />
+<XmiImportDialog bind:showDialog={showXmiImportDialog} />
 <ExportDialog bind:showDialog={showExportDialog} />
 <SnapshotDialog bind:showDialog={showSnapshotDialog} />
 <SHACLUploadDialog bind:showDialog={showSHACLUploadDialog} />

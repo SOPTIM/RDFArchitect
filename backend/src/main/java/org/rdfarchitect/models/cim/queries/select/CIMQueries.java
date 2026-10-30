@@ -58,7 +58,6 @@ public class CIMQueries {
 
         return builder.appendUUIDQuery(REQUIRED)
                 .appendLabelQuery(REQUIRED)
-                .appendSuperClassQuery(OPTIONAL)
                 .appendCommentQuery(OPTIONAL)
                 .appendPackageQuery(OPTIONAL)
                 .buildSelectBuilder();
@@ -85,7 +84,6 @@ public class CIMQueries {
 
         return builder.appendUUIDQuery(REQUIRED)
                 .appendLabelQuery(REQUIRED)
-                .appendSuperClassQuery(OPTIONAL)
                 .appendCommentQuery(OPTIONAL)
                 .appendPackageQuery(OPTIONAL)
                 .buildSelectBuilder();
@@ -114,7 +112,6 @@ public class CIMQueries {
 
         return builder.appendUUIDQuery(REQUIRED)
                 .appendLabelQuery(REQUIRED)
-                .appendSuperClassQuery(OPTIONAL)
                 .appendCommentQuery(OPTIONAL)
                 .appendPackageQuery(OPTIONAL)
                 .buildSelectBuilder();
@@ -277,6 +274,37 @@ public class CIMQueries {
     }
 
     /**
+     * Get a {@link SelectBuilder} for a query that retrieves the superclasses of all classes
+     * carrying one of the given UUIDs in a single query. The UUID of the class a superclass belongs
+     * to is bound to {@link org.rdfarchitect.models.cim.queries.CIMQueryVars#UUID}, so the results
+     * can be grouped per class.
+     *
+     * <p>Superclasses are read with a query of their own and not with the class, the way
+     * stereotypes are: a class may declare several, and bound in the class query they would
+     * multiply its rows so that the same class arrived once per superclass.
+     *
+     * @param prefixMapping The {@link PrefixMapping} to use for the query.
+     * @param classUUIDs The UUIDs of the classes to retrieve the superclasses of. Must not be
+     *     empty, as an empty list would match every class of the graph.
+     * @param graphURI The URI of the graph to query.
+     * @return A {@link SelectBuilder} for the query.
+     */
+    public static SelectBuilder getSuperClassesForUUIDsQuery(
+            PrefixMapping prefixMapping, List<String> classUUIDs, String graphURI) {
+        var baseQuery =
+                new CIMBaseQueryBuilder()
+                        .addPrefixes(prefixMapping)
+                        .setGraph(graphURI)
+                        .buildWithoutUriVar();
+
+        var builder = new CIMQueryBuilder(baseQuery, classUUIDs);
+
+        return builder.appendUUIDQuery(REQUIRED)
+                .appendSuperClassQuery(REQUIRED)
+                .buildSelectBuilder();
+    }
+
+    /**
      * Get a {@link SelectBuilder} for a query that retrieves the enum classes of a graph.
      *
      * @param prefixMapping The {@link PrefixMapping} to use for the query.
@@ -293,7 +321,6 @@ public class CIMQueries {
                 .appendLabelQuery(REQUIRED)
                 .appendCommentQuery(OPTIONAL)
                 .appendPackageQuery(OPTIONAL)
-                .appendSuperClassQuery(OPTIONAL)
                 .buildSelectBuilder();
     }
 
@@ -314,7 +341,6 @@ public class CIMQueries {
                 .appendLabelQuery(REQUIRED)
                 .appendCommentQuery(OPTIONAL)
                 .appendPackageQuery(OPTIONAL)
-                .appendSuperClassQuery(OPTIONAL)
                 .buildSelectBuilder();
     }
 

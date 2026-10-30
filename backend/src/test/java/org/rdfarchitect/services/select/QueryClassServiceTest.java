@@ -28,6 +28,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.api.dto.ClassDTO;
 import org.rdfarchitect.api.dto.ClassMapper;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
 import org.rdfarchitect.config.SchemaConfig;
@@ -109,6 +110,33 @@ class QueryClassServiceTest {
                         graphIdentifier, UUID.randomUUID().toString(), true);
 
         assertThat(classDTO).isNull();
+    }
+
+    @Test
+    @DisplayName("lists the ancestors of a class and nothing else")
+    void listSuperClasses_returnsTheChainAboveTheClass() {
+        // A class is looked up by uuid, and the chain walks on by resolving each superclass uri
+        // back to one. Taking the uri for a uuid finds nothing and leaves a null in the list.
+        var superClasses = queryClassService.listSuperClasses(graphIdentifier, uuidOf("subClass"));
+
+        assertThat(superClasses).doesNotContainNull();
+        assertThat(superClasses).extracting(ClassDTO::getLabel).containsExactly("oldLabel");
+    }
+
+    @Test
+    @DisplayName("lists nothing for a class that has no superclass")
+    void listSuperClasses_classWithoutASuperClass_isEmpty() {
+        assertThat(queryClassService.listSuperClasses(graphIdentifier, UUID.fromString(CLASS_UUID)))
+                .isEmpty();
+    }
+
+    /** The uuid the graph minted for the resource named {@code label} under {@link #PREFIX}. */
+    private UUID uuidOf(String label) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
+            return UUID.fromString(
+                    model.getResource(PREFIX + label).getProperty(RDFA.uuid).getString());
+        }
     }
 
     /** Referencing a uri that nothing defines makes it a referenced only resource with a uuid. */

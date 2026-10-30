@@ -16,29 +16,21 @@
   -->
 
 <script>
-    import { faMinus } from "@fortawesome/free-solid-svg-icons";
-    import { Fa } from "svelte-fa";
     import { v4 as uuidv4 } from "uuid";
 
-    import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import FileDropZone from "$lib/components/FileDropZone.svelte";
+    import GraphFilePicker from "$lib/components/GraphFilePicker.svelte";
     import ImportProgressPanel from "$lib/components/ImportProgressPanel.svelte";
     import NamespacePrefixComparison from "$lib/components/NamespacePrefixComparison.svelte";
+    import SkippedFilesNotice from "$lib/components/SkippedFilesNotice.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
-    import {
-        isSupportedGraphFile,
-        isZipFile,
-        supportedRDFMediaTypes,
-    } from "$lib/utils/fileUtils";
+    import { asGraphUri } from "$lib/utils/graphUri.js";
     import { ImportProgress } from "$lib/utils/importProgress.svelte.js";
+    import { applyImportResult } from "$lib/utils/importResult.js";
+    import { ImportStatusPoller } from "$lib/utils/importStatusPoller.js";
 
-    import {
-        editorState,
-        forceReloadTrigger,
-    } from "../lib/sharedState.svelte.js";
+    import { editorState } from "../lib/sharedState.svelte.js";
 
     let {
         showDialog = $bindable(),
@@ -48,30 +40,18 @@
     } = $props();
 
     const DEFAULT_WORKSPACE_NAME = "default";
-    const POLL_INTERVAL_MS = 300;
-    const MAX_FAILED_POLLS = 3;
-    const GRAPH_NAMESPACE_URI = "http://graph#"; // Keep in sync with RDFA.GRAPH_URI (backend)
-    const DEFAULT_GRAPH_NAME = "graph";
-    const supportedFileExtensions = supportedRDFMediaTypes.map(
-        type => type.fileExtension,
-    );
-    const allowedFileExtensions = supportedFileExtensions.join(", ");
+    const poller = new ImportStatusPoller();
     const uniqueId = uuidv4();
     const workspaceInputId = `workspaceNameImport-${uniqueId}`;
     const workspaceListId = `workspaceNamesImport-${uniqueId}`;
-    const fileInputId = `actual-file-input-${uniqueId}`;
     let workspaceNameUserInput = $state("");
     let files = $state([]);
-    let fileInputValue = $state("");
-    let rejectedFiles = $state([]);
 
     let readOnlyWorkspaces = $state([]);
     let modifiableWorkspaces = $state([]);
 
     /** Set while an import runs and until its result is dismissed; drives the progress panel. */
     let progress = $state(null);
-    let pollTimeout = null;
-    let failedPolls = 0;
     /** The workspace the running import writes into, applied to the editor once it is done. */
     let importWorkspaceName = null;
     let importJobId = null;
@@ -132,9 +112,6 @@
         workspaceNameUserInput = forNewWorkspace
             ? ""
             : (lockedWorkspaceName ?? editorState.selectedWorkspace.getValue());
-        if (droppedItems) {
-            addFiles(droppedItems.files, droppedItems.directoryNames);
-        }
 
         const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
         for (const workspace of workspaces) {
@@ -154,8 +131,6 @@
     function clearInputs() {
         workspaceNameUserInput = "";
         files = [];
-        fileInputValue = "";
-        rejectedFiles = [];
         modifiableWorkspaces = [];
         readOnlyWorkspaces = [];
         prefixResolutions = [];
@@ -166,73 +141,6 @@
     function isWorkspaceReadOnly(workspaceName) {
         const targetWorkspace = workspaceName || DEFAULT_WORKSPACE_NAME;
         return readOnlyWorkspaces.includes(targetWorkspace);
-    }
-
-    function getSanitizedGraphName(fileName) {
-        if (!fileName) {
-            return DEFAULT_GRAPH_NAME;
-        }
-        const normalized = fileName.split(/[\\/]/).pop() ?? fileName;
-        const lastDotIndex = normalized.lastIndexOf(".");
-        const baseName =
-            lastDotIndex === -1
-                ? normalized
-                : normalized.substring(0, lastDotIndex);
-        const sanitized = baseName.replace(/\W/g, "_");
-        return sanitized.trim() ? sanitized : DEFAULT_GRAPH_NAME;
-    }
-
-    function buildGraphUri(fileName) {
-        const sanitized = getSanitizedGraphName(fileName);
-        return `${GRAPH_NAMESPACE_URI}${sanitized}`;
-    }
-
-    function ensureGraphNamespaceUri(graphUri, fallbackName) {
-        const trimmed = graphUri?.trim();
-        if (!trimmed) {
-            return buildGraphUri(fallbackName);
-        }
-        if (trimmed.includes("://")) {
-            return trimmed;
-        }
-        return `${GRAPH_NAMESPACE_URI}${trimmed}`;
-    }
-
-    function addFiles(newFiles, directoryNames = []) {
-        rejectedFiles = directoryNames.map(name => `${name} (folder)`);
-        const mappedFiles = Array.from(newFiles)
-            .map(file => {
-                if (!isZipFile(file.name) && !isSupportedGraphFile(file.name)) {
-                    rejectedFiles.push(file.name);
-                    return null;
-                }
-                return {
-                    file,
-                    graphUri: isZipFile(file.name)
-                        ? ""
-                        : buildGraphUri(file.name),
-                    isZip: isZipFile(file.name),
-                };
-            })
-            .filter(Boolean);
-
-        if (mappedFiles.length > 0) {
-            files = [...files, ...mappedFiles];
-        }
-        fileInputValue = "";
-    }
-
-    function removeFile(index) {
-        files = files.filter((_, idx) => idx !== index);
-    }
-
-    function updateGraphUri(index, graphUri) {
-        if (files[index]?.isZip) {
-            return;
-        }
-        files = files.map((entry, idx) =>
-            idx === index ? { ...entry, graphUri } : entry,
-        );
     }
 
     function getUserInputWorkspaceName() {
@@ -246,14 +154,11 @@
         const workspaceName = getUserInputWorkspaceName();
         const filesToImport = files.map(entry => entry.file);
         const graphUris = files.map(entry =>
-            entry.isZip
-                ? ""
-                : ensureGraphNamespaceUri(entry.graphUri, entry.file.name),
+            entry.isZip ? "" : asGraphUri(entry.graphUri, entry.file.name),
         );
 
         const currentProgress = new ImportProgress();
         progress = currentProgress;
-        failedPolls = 0;
         importWorkspaceName = workspaceName;
 
         const { data, error } = await graphStore.startImport(
@@ -284,60 +189,23 @@
             // Cancelled while the files were still going up, so the job needs to hear about it.
             await cancelImportJob(workspaceName, data.jobId);
         }
-        pollImportStatus();
+        followJob(currentProgress, data.jobId);
     }
 
     /**
-     * Polls the backend until the job is done, the prefix question included: polling is what tells
-     * the backend somebody is still there to answer it. A single timeout is kept in flight, so
-     * closing the dialog or finishing the import ends the polling.
+     * Follows the job until it is done, the prefix question included: polling is what tells the
+     * backend somebody is still there to answer it.
      */
-    function pollImportStatus() {
-        stopPolling();
-        pollTimeout = setTimeout(async () => {
-            const currentProgress = progress;
-            const jobId = importJobId;
-            if (!currentProgress || !jobId) {
-                return;
-            }
-
-            const { data, error } = await graphStore.getImportStatus(
-                importWorkspaceName,
-                jobId,
-            );
-
-            if (progress !== currentProgress) {
-                return;
-            }
-            if (error || !data) {
-                // A single missed poll is not worth giving up on, the import keeps running.
-                failedPolls += 1;
-                if (failedPolls > MAX_FAILED_POLLS) {
-                    currentProgress.fail(
-                        "The progress of the import could not be read.",
-                    );
-                    return;
+    function followJob(currentProgress, startedJobId) {
+        poller.follow(
+            () => graphStore.getImportStatus(importWorkspaceName, startedJobId),
+            currentProgress,
+            () => {
+                if (!currentProgress.awaitingPrefixResolution) {
+                    submittingResolutions = false;
                 }
-                pollImportStatus();
-                return;
-            }
-
-            failedPolls = 0;
-            currentProgress.apply(data);
-            if (!currentProgress.awaitingPrefixResolution) {
-                submittingResolutions = false;
-            }
-            if (!currentProgress.finished) {
-                pollImportStatus();
-            }
-        }, POLL_INTERVAL_MS);
-    }
-
-    function stopPolling() {
-        if (pollTimeout !== null) {
-            clearTimeout(pollTimeout);
-            pollTimeout = null;
-        }
+            },
+        );
     }
 
     /** Hands the decisions to the import; a rejected answer leaves it waiting for a new one. */
@@ -367,7 +235,7 @@
      * graphs it already wrote still have to reach the editor.
      */
     async function dismissImport() {
-        stopPolling();
+        poller.stop();
         const currentProgress = progress;
         const jobId = importJobId;
         const workspaceName = importWorkspaceName;
@@ -411,20 +279,6 @@
         }
         await graphStore.cancelImport(workspaceName, jobId);
     }
-
-    function applyImportResult(importedGraphUris, workspaceName) {
-        editorState.selectedWorkspace.updateValue(workspaceName);
-        editorState.selectedGraph.updateValue(importedGraphUris[0] || null);
-        editorState.selectedDiagram.updateValue({ type: null, id: null });
-        editorState.selectedClassWorkspace.updateValue(null);
-        editorState.selectedClassGraph.updateValue(null);
-        editorState.selectedClass.updateValue({ type: null, id: null });
-
-        graphStore.invalidateWorkspace(workspaceName);
-        workspaceStore.invalidate();
-        crossProfileStore.invalidateWorkspace(workspaceName);
-        forceReloadTrigger.trigger();
-    }
 </script>
 
 <ActionDialog
@@ -442,20 +296,11 @@
     size={resolvingPrefixes ? "w-1/2" : "w-1/3"}
 >
     {#if resolvingPrefixes}
-        {#if unreadableFiles.length > 0}
-            <div
-                class="bg-red-background text-red-text border-red-border mx-2 mt-2 rounded border px-3 py-2 text-xs"
-            >
-                <p class="font-semibold">
-                    These files could not be read and will not be imported:
-                </p>
-                <ul class="list-disc pl-5">
-                    {#each unreadableFiles as file (file.index)}
-                        <li>{file.fileName}</li>
-                    {/each}
-                </ul>
-            </div>
-        {/if}
+        <SkippedFilesNotice
+            heading="These files could not be read and will not be imported:"
+            names={unreadableFiles.map(file => file.fileName)}
+            placement="mx-2 mt-2"
+        />
         <NamespacePrefixComparison
             comparison={progress.prefixComparison}
             bind:resolutions={prefixResolutions}
@@ -502,115 +347,7 @@
                     Cannot import into read-only workspace
                 </div>
             {/if}
-            <div class="mt-4">
-                <input
-                    class="hidden"
-                    type="file"
-                    id={fileInputId}
-                    multiple
-                    accept={`${supportedFileExtensions.join(",")},.zip`}
-                    onchange={event => {
-                        addFiles(event.target.files);
-                        event.target.value = "";
-                    }}
-                    bind:value={fileInputValue}
-                />
-                <FileDropZone
-                    class="hover:border-blue flex w-full flex-col px-4 py-6"
-                    onFiles={items =>
-                        addFiles(items.files, items.directoryNames)}
-                >
-                    <div
-                        class="flex flex-col items-start space-y-2 md:flex-row md:items-center md:space-y-0 md:space-x-3"
-                    >
-                        <div class="h-9 w-24">
-                            <ButtonControl
-                                height={9}
-                                callOnClick={() => {
-                                    document
-                                        .getElementById(fileInputId)
-                                        .click();
-                                }}
-                            >
-                                Select File
-                            </ButtonControl>
-                        </div>
-                        <p class="text-font-secondary text-sm">
-                            or drag and drop files or a .zip archive
-                        </p>
-                    </div>
-                    <p class="text-font-secondary mt-2 text-xs">
-                        Each file becomes a schema named after the file. ZIP
-                        files are unpacked and imported automatically.
-                        <br />
-                        Supported file extensions:
-                        <b>{allowedFileExtensions}</b>
-                        . In ZIP files, schemas must be located at the root level;
-                        folders are ignored.
-                        <br />
-                        Dropped folders are skipped; pack them into a ZIP.
-                    </p>
-                    {#if rejectedFiles.length > 0}
-                        <div
-                            class="bg-red-background text-red-text border-red-border mt-3 rounded border px-3 py-2 text-xs"
-                        >
-                            <p class="font-semibold">
-                                Skipped, these will not be imported:
-                            </p>
-                            <ul class="list-disc pl-5">
-                                {#each rejectedFiles as fileName}
-                                    <li>{fileName}</li>
-                                {/each}
-                            </ul>
-                        </div>
-                    {/if}
-                </FileDropZone>
-
-                {#if files.length > 0}
-                    <div class="mt-3 max-h-[55vh] space-y-2 overflow-y-auto">
-                        {#each files as fileEntry, index}
-                            <div
-                                class="border-border flex items-center space-x-3 rounded border px-3 py-2"
-                            >
-                                <div class="flex-1">
-                                    <input
-                                        id={`graph-uri-${index}`}
-                                        class="border-border bg-window-background focus:border-blue ring-none w-full rounded border-2 p-2 text-sm outline-none"
-                                        type="text"
-                                        value={fileEntry.isZip
-                                            ? fileEntry.file.name
-                                            : fileEntry.graphUri}
-                                        disabled={fileEntry.isZip}
-                                        oninput={event =>
-                                            updateGraphUri(
-                                                index,
-                                                event.target.value,
-                                            )}
-                                    />
-                                </div>
-                                <div
-                                    class="flex size-10 items-center justify-center p-0"
-                                >
-                                    <ButtonControl
-                                        height={10}
-                                        callOnClick={() => removeFile(index)}
-                                        title="Remove file"
-                                    >
-                                        <Fa
-                                            icon={faMinus}
-                                            ariaLabel="Remove file"
-                                        />
-                                    </ButtonControl>
-                                </div>
-                            </div>
-                        {/each}
-                    </div>
-                {:else}
-                    <p class="text-font-secondary mt-2 text-sm">
-                        No files selected yet.
-                    </p>
-                {/if}
-            </div>
+            <GraphFilePicker bind:files {droppedItems} />
         </div>
     {/if}
 </ActionDialog>

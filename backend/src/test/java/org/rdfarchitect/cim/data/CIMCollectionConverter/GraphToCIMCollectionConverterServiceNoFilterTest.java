@@ -148,7 +148,7 @@ class GraphToCIMCollectionConverterServiceNoFilterTest {
         var cimClass = cimCollection.getClasses().getFirst();
         assertThat(cimClass.getUri()).isEqualTo(new URI(prefixMapping.get("cim") + "ChildClass"));
         assertThat(cimClass.getLabel()).isEqualTo(new RDFSLabel("ChildClass", "en"));
-        assertThat(cimClass.getSuperClass()).isNull();
+        assertThat(cimClass.getSuperClasses()).isEmpty();
         assertThat(cimClass.getStereotypes())
                 .containsExactly(new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#concrete"));
     }
@@ -201,8 +201,8 @@ class GraphToCIMCollectionConverterServiceNoFilterTest {
         var childClass = classesIterator.next();
         var superClass = classesIterator.next();
 
-        assertThat(childClass.getSuperClass().getUri()).isEqualTo(superClass.getUri());
-        assertThat(superClass.getSuperClass()).isNull();
+        assertThat(childClass.firstSuperClass().getUri()).isEqualTo(superClass.getUri());
+        assertThat(superClass.getSuperClasses()).isEmpty();
     }
 
     @Test
@@ -308,7 +308,7 @@ class GraphToCIMCollectionConverterServiceNoFilterTest {
         var enumClass = cimCollection.getEnums().getFirst();
         assertThat(enumClass.getUri()).isEqualTo(new URI(prefixMapping.get("cim") + "EnumClass"));
         assertThat(enumClass.getLabel()).isEqualTo(new RDFSLabel("EnumClass", "en"));
-        assertThat(enumClass.getSuperClass()).isNull();
+        assertThat(enumClass.getSuperClasses()).isEmpty();
         assertThat(enumClass.getStereotypes())
                 .containsExactly(
                         new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#enumeration"));

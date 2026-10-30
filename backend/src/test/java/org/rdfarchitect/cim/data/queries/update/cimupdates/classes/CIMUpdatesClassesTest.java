@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.cim.data.queries.update.cimupdates.CIMUpdatesTestBase;
 import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.models.cim.data.CIMObjectFetcher;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
@@ -75,10 +76,11 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
         classOptional =
                 baseClass.toBuilder()
                         .uuid(MY_UUID)
-                        .superClass(
-                                new RDFSSubClassOf(
-                                        new URI(SUPER_CLASS_URI),
-                                        new RDFSLabel(SUPER_CLASS_LABEL, "en")))
+                        .superClasses(
+                                List.of(
+                                        new RDFSSubClassOf(
+                                                new URI(SUPER_CLASS_URI),
+                                                new RDFSLabel(SUPER_CLASS_LABEL, "en"))))
                         .comment(new RDFSComment(COMMENT, new URI(COMMENT_FORMAT)))
                         .belongsToCategory(
                                 new CIMSBelongsToCategory(
@@ -317,6 +319,55 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                                                 RDFS.label.asNode(),
                                                 NodeFactory.createLiteralLang(CLASS_LABEL, "en")))
                         .isTrue();
+            }
+        }
+
+        @Test
+        @DisplayName("Writes every superclass a class declares, and reads the class back once")
+        void insertClass_severalSuperClasses_writesAllAndReadsTheClassOnce() {
+            // Arrange
+            var secondSuperClassUri = "http://example.com/second#SecondSuper";
+            var withTwo =
+                    classRequired.toBuilder()
+                            .uuid(UUID.randomUUID())
+                            .superClasses(
+                                    List.of(
+                                            new RDFSSubClassOf(
+                                                    new URI(SUPER_CLASS_URI),
+                                                    new RDFSLabel(SUPER_CLASS_LABEL, "en")),
+                                            new RDFSSubClassOf(
+                                                    new URI(secondSuperClassUri),
+                                                    new RDFSLabel("SecondSuper", "en"))))
+                            .build();
+
+            // Act
+            executeWriteTransaction(
+                    graph ->
+                            CIMUpdates.insertClass(
+                                    graph, databasePort.getPrefixMapping(DATASET_NAME), withTwo));
+
+            // Assert
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+                var graph = ctx.getRdfGraph();
+                assertThat(
+                                graph.stream(
+                                                NodeFactory.createURI(CLASS_URI),
+                                                RDFS.subClassOf.asNode(),
+                                                Node.ANY)
+                                        .map(triple -> triple.getObject().getURI()))
+                        .containsExactlyInAnyOrder(SUPER_CLASS_URI, secondSuperClassUri);
+
+                // The class query must not bind the superclass: it would yield one row per
+                // superclass and hand the same class back twice.
+                var fetched =
+                        new CIMObjectFetcher(
+                                        graph,
+                                        GRAPH_URI,
+                                        databasePort.getPrefixMapping(DATASET_NAME))
+                                .fetchCIMClass(withTwo.getUuid().toString());
+                assertThat(fetched.getSuperClasses())
+                        .extracting(superClass -> superClass.getUri().toString())
+                        .containsExactlyInAnyOrder(SUPER_CLASS_URI, secondSuperClassUri);
             }
         }
 

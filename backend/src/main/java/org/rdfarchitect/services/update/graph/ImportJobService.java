@@ -26,6 +26,8 @@ import org.rdfarchitect.context.UserSettings;
 import org.rdfarchitect.context.UserSettingsContext;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.services.update.graph.ImportOutcome.GraphsImported;
+import org.rdfarchitect.services.update.graph.ImportOutcome.PackagesScanned;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -42,6 +44,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.BiFunction;
 import java.util.function.Predicate;
 
 @Service
@@ -50,7 +53,7 @@ public class ImportJobService implements ImportJobUseCase {
 
     private static final Logger logger = LoggerFactory.getLogger(ImportJobService.class);
 
-    /** How long a finished job stays readable before it is dropped. */
+    /** How long a finished job stays readable after the last time anyone looked at it. */
     private static final Duration RETENTION = Duration.ofMinutes(10);
 
     /**
@@ -60,11 +63,74 @@ public class ImportJobService implements ImportJobUseCase {
     private static final Duration ABANDONED_AFTER = Duration.ofSeconds(60);
 
     private final ImportGraphsUseCase importGraphsUseCase;
+    private final ImportXmiUseCase importXmiUseCase;
     private final Map<UUID, ImportJob> jobs = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     @Override
     public UUID startImport(String datasetName, List<MultipartFile> files, List<String> graphUris) {
+        return start(
+                datasetName,
+                files,
+                true,
+                ImportKind.GRAPH_IMPORT,
+                (job, owned) -> importGraphs(job, owned, graphUris));
+    }
+
+    @Override
+    public UUID startXmiScan(String datasetName, List<MultipartFile> files) {
+        return start(datasetName, files, true, ImportKind.EXPORT_SCAN, this::readExports);
+    }
+
+    @Override
+    public Optional<UUID> startPackageImport(
+            String datasetName,
+            UUID readJobId,
+            List<SelectedPackageDTO> selection,
+            List<String> diagramIds) {
+        dropExpiredJobs();
+        var readJob = findJob(datasetName, readJobId).orElse(null);
+        if (readJob == null) {
+            return Optional.empty();
+        }
+        var exports = readJob.takeRetainedFiles();
+        if (exports.isEmpty()) {
+            throw new ResourceConflictException(
+                    "The exports this read was made from are gone. Upload them again.");
+        }
+        var handedOver = false;
+        try {
+            var importJobId =
+                    start(
+                            datasetName,
+                            exports,
+                            false,
+                            ImportKind.PACKAGE_IMPORT,
+                            (job, owned) -> importPackages(job, owned, selection, diagramIds));
+            handedOver = true;
+            return Optional.of(importJobId);
+        } finally {
+            if (!handedOver) {
+                // Starting refuses while the session has another import running. The read has
+                // given its exports up by then, so hand them back: otherwise they stay spooled
+                // with nobody left to delete them and the read cannot be built from again.
+                readJob.retain(exports);
+            }
+        }
+    }
+
+    /**
+     * @param takeOverUpload whether the files are an upload the job has to copy before the request
+     *     that carried them is answered. They are already the job's own when they come from a job
+     *     that kept them
+     * @param work what the job does once it is running
+     */
+    private UUID start(
+            String datasetName,
+            List<MultipartFile> files,
+            boolean takeOverUpload,
+            ImportKind kind,
+            BiFunction<ImportJob, List<MultipartFile>, ImportOutcome> work) {
         dropExpiredJobs();
 
         var sessionId = SessionContext.getSessionId();
@@ -72,7 +138,7 @@ public class ImportJobService implements ImportJobUseCase {
                 job -> job.getSessionId().equals(sessionId) && job.isAwaitingPrefixResolution(),
                 "superseded by a new import of the same session");
 
-        var job = new ImportJob(UUID.randomUUID(), sessionId, datasetName, Instant.now());
+        var job = new ImportJob(UUID.randomUUID(), sessionId, datasetName, kind, Instant.now());
         // Claiming the session and registering the job has to be one step, otherwise two parallel
         // starts both pass the guard and import into the same store with their own reservations.
         synchronized (jobs) {
@@ -84,18 +150,19 @@ public class ImportJobService implements ImportJobUseCase {
         }
 
         var userSettings = UserSettingsContext.get();
+        // The servlet container deletes the temporary files of the request once its response is
+        // sent, so the job has to take over the uploaded content before that happens.
+        var ownedFiles = takeOverUpload ? takeOver(job, files) : files;
         var started = false;
         try {
-            // The servlet container deletes the temporary files of the request once its response
-            // is sent, so the job has to take over the uploaded content before that happens.
-            var ownedFiles = copyOf(files);
-            executor.execute(() -> runImport(job, ownedFiles, graphUris, userSettings));
+            executor.execute(() -> runJob(job, ownedFiles, userSettings, work));
             started = true;
         } finally {
             if (!started) {
-                // Taking the files over or handing them to the executor went wrong, so the job
-                // never ran and must not keep blocking the session.
+                // Handing the files to the executor went wrong, so the job never ran and must
+                // neither keep blocking the session nor leave its spooled files behind.
                 jobs.remove(job.getId());
+                SpooledMultipartFile.discard(ownedFiles);
             }
         }
 
@@ -138,6 +205,10 @@ public class ImportJobService implements ImportJobUseCase {
         job.ifPresent(
                 cancelledJob -> {
                     cancelledJob.requestCancel();
+                    // A job that has already finished never notices the request, so the exports a
+                    // read keeps for the import that follows it would stay spooled until the job
+                    // expires — and an export is a hundred megabytes.
+                    SpooledMultipartFile.discard(cancelledJob.takeRetainedFiles());
                     logger.info("Cancellation requested for import job {}.", cancelledJob.getId());
                 });
         return job.isPresent();
@@ -147,24 +218,26 @@ public class ImportJobService implements ImportJobUseCase {
      * Runs the import on its own thread. Every throwable ends the job: one left unfinished is never
      * reaped and holds the session's only import slot for as long as the session lives.
      */
-    private void runImport(
+    private void runJob(
             ImportJob job,
             List<MultipartFile> files,
-            List<String> graphUris,
-            UserSettings userSettings) {
+            UserSettings userSettings,
+            BiFunction<ImportJob, List<MultipartFile>, ImportOutcome> work) {
         // Both contexts live in thread locals that the request thread filled in, and the database
         // is looked up per session, so they have to be re-established on this thread.
         SessionContext.setSessionId(job.getSessionId());
         UserSettingsContext.set(userSettings);
+        var keepFiles = false;
         try {
-            var result =
-                    importGraphsUseCase.importGraphs(job.getDatasetName(), files, graphUris, job);
-            job.complete(result);
-            logger.info(
-                    "Import job {} finished: {} graph(s) imported, {} file(s) failed.",
-                    job.getId(),
-                    result.importedGraphUris().size(),
-                    result.failedFileNames().size());
+            var outcome = work.apply(job, files);
+            // A read is only half of an import: the exports have to survive it, or choosing a
+            // profile from them would mean uploading them a second time.
+            keepFiles = outcome instanceof PackagesScanned && !job.isCancelled();
+            if (keepFiles) {
+                job.retain(files);
+            }
+            job.complete(outcome);
+            logger.info("Import job {} finished: {}.", job.getId(), describe(outcome));
         } catch (Throwable throwable) {
             logger.error("Import job {} failed.", job.getId(), throwable);
             job.fail(throwable.getMessage());
@@ -172,9 +245,54 @@ public class ImportJobService implements ImportJobUseCase {
                 throw error;
             }
         } finally {
+            if (!keepFiles) {
+                SpooledMultipartFile.discard(files);
+            }
             SessionContext.clear();
             UserSettingsContext.clear();
         }
+    }
+
+    /**
+     * Reads the uploaded exports and reports what they hold. Nothing is stored, because which of
+     * the packages become schemas is a decision that has not been made at this point.
+     */
+    private PackagesScanned readExports(ImportJob job, List<MultipartFile> files) {
+        return importXmiUseCase.scanPackages(files, job);
+    }
+
+    private GraphsImported importGraphs(
+            ImportJob job, List<MultipartFile> files, List<String> graphUris) {
+        var result = importGraphsUseCase.importGraphs(job.getDatasetName(), files, graphUris, job);
+        return new GraphsImported(
+                result.importedGraphUris(), result.failedFileNames(), result.warnings());
+    }
+
+    /** Builds the chosen packages out of the exports the read that found them kept. */
+    private GraphsImported importPackages(
+            ImportJob job,
+            List<MultipartFile> files,
+            List<SelectedPackageDTO> selection,
+            List<String> diagramIds) {
+        var result =
+                importXmiUseCase.importPackages(
+                        job.getDatasetName(), files, selection, diagramIds, job);
+        return new GraphsImported(
+                result.importedGraphUris(), result.failedFileNames(), result.warnings());
+    }
+
+    /**
+     * How a finished job reads in the log. The switch is exhaustive without a default, so a new
+     * kind of outcome cannot be added without being accounted for here.
+     */
+    private static String describe(ImportOutcome outcome) {
+        return switch (outcome) {
+            case PackagesScanned read -> read.packages().size() + " package(s) found";
+            case GraphsImported imported ->
+                    "%d graph(s) imported, %d file(s) failed"
+                            .formatted(
+                                    imported.graphUris().size(), imported.failedFileNames().size());
+        };
     }
 
     private boolean hasRunningJob(String sessionId) {
@@ -196,12 +314,28 @@ public class ImportJobService implements ImportJobUseCase {
         return Optional.of(job);
     }
 
+    /** Takes the upload over, and frees the job's session slot again when that fails. */
+    private List<MultipartFile> takeOver(ImportJob job, List<MultipartFile> files) {
+        var taken = false;
+        try {
+            var ownedFiles = copyOf(files);
+            taken = true;
+            return ownedFiles;
+        } finally {
+            if (!taken) {
+                jobs.remove(job.getId());
+            }
+        }
+    }
+
     private List<MultipartFile> copyOf(List<MultipartFile> files) {
         var ownedFiles = new ArrayList<MultipartFile>(files.size());
         for (var file : files) {
             try {
-                ownedFiles.add(InMemoryMultipartFile.copyOf(file));
-            } catch (IOException exception) {
+                ownedFiles.add(SpooledMultipartFile.copyOf(file));
+            } catch (IOException | RuntimeException exception) {
+                // Whatever was spooled before the failure has nobody left to delete it.
+                SpooledMultipartFile.discard(ownedFiles);
                 throw new DataAccessException(
                         "Unable to read the uploaded file " + file.getOriginalFilename() + ".",
                         exception);
@@ -216,13 +350,15 @@ public class ImportJobService implements ImportJobUseCase {
                 job -> job.isAbandoned(now.minus(ABANDONED_AFTER)),
                 "nobody is following the namespace prefix question any more");
 
-        var expiredBefore = now.minus(RETENTION);
-        jobs.values()
-                .removeIf(
-                        job -> {
-                            var finishedAt = job.finishedAt();
-                            return finishedAt != null && finishedAt.isBefore(expiredBefore);
-                        });
+        var forgottenBefore = now.minus(RETENTION);
+        var expired = jobs.values().iterator();
+        while (expired.hasNext()) {
+            var job = expired.next();
+            if (job.isForgotten(forgottenBefore)) {
+                SpooledMultipartFile.discard(job.takeRetainedFiles());
+                expired.remove();
+            }
+        }
     }
 
     private void cancelJobs(Predicate<ImportJob> shouldCancel, String reason) {
@@ -237,5 +373,6 @@ public class ImportJobService implements ImportJobUseCase {
     @PreDestroy
     void shutdown() {
         executor.shutdownNow();
+        jobs.values().forEach(job -> SpooledMultipartFile.discard(job.takeRetainedFiles()));
     }
 }
