@@ -45,9 +45,11 @@ A paste is all or nothing. If one of the copied classes is gone by the time it i
 
 A class usually refers to other classes: the data types of its attributes, the target classes of its associations, and its super class. When the target schema does not contain some of them, a dialog lists what is missing before the paste runs, grouped by kind and with the attribute or class that uses it. Everything is preselected — clear whatever should stay out.
 
+Inheritance is followed all the way up: the list names the whole chain of super classes, not just the direct one, each with the sub class it belongs to — for `GeneratingUnit` that is `Equipment`, then `PowerSystemResource`, then `IdentifiedObject`. The chain stops where the target schema already defines a class of it.
+
 Association targets and super classes are copied as stubs: label and URI only, without attributes or associations. Data types are copied with their attributes, including the data types those attributes need in turn; such a follow-up data type is checked and locked in the list, labelled with the entry that requires it.
 
-The dialog only covers what the chosen variant actually copies — after **Paste without Associations** it never asks about association targets, and **Paste Bare** never opens it at all. A super class that is left behind stays on the pasted class as a reference: the class editor shows it under **Derived from** even though the schema does not define it.
+The dialog only covers what the chosen variant actually copies — after **Paste without Associations** it never asks about association targets, and **Paste Bare** never opens it at all. A super class that is left behind stays on the class below it as a reference: the class editor shows it under **Derived from** even though the schema does not define it.
 
 ## Deleting
 
