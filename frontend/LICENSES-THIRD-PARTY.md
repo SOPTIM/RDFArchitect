@@ -109,7 +109,7 @@
 
 ### bits-ui
 - **Package:** bits-ui
-- **Version:** 2.20.0
+- **Version:** 2.20.2
 - **License:** MIT
 
 ### codemirror
@@ -227,7 +227,7 @@
 
 ### svelte-eslint-parser
 - **Package:** svelte-eslint-parser
-- **Version:** 1.9.0
+- **Version:** 1.10.0
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/svelte-eslint-parser#readme](https://github.com/sveltejs/svelte-eslint-parser#readme)
 
