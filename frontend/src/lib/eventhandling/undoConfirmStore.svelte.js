@@ -18,10 +18,10 @@
 /**
  * Asks the user to confirm an undo that would make something disappear.
  *
- * Undo is triggered from three places — the keyboard handler, the edit menu and the graph context
- * menu — but the question is the same everywhere, so it is asked in one place: the store holds the
- * request, UndoConfirmDialog.svelte (mounted once in `+layout.svelte`) shows it, and the caller
- * simply awaits an answer.
+ * Undo is triggered from three places — the keyboard handler, the edit menu and the workspace
+ * context menu — but the question is the same everywhere, so it is asked in one place: the store
+ * holds the request, UndoConfirmDialog.svelte (mounted once in `+layout.svelte`) shows it, and
+ * the caller simply awaits an answer.
  *
  * @typedef {{ message: string, removed: string[] }} UndoConfirmRequest
  */

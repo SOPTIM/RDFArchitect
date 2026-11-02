@@ -24,6 +24,8 @@
         faPen,
         faPenToSquare,
         faPlus,
+        faRotateLeft,
+        faRotateRight,
         faShare,
         faTags,
         faTrash,
@@ -32,6 +34,7 @@
     import { validateWorkspaceAndShowResult } from "$lib/actions/validationActions.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { versionControlStore } from "$lib/stores/versionControlStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import ImportDialog from "../../ImportDialog.svelte";
@@ -54,6 +57,27 @@
     let showNewDiagramDialog = $state(false);
     let showNamespacesDialog = $state(false);
     let showSnapshotDialog = $state(false);
+    let canUndo = $state(false);
+    let canRedo = $state(false);
+
+    // Undo and redo step through the history of the whole workspace, which is why they live in
+    // its menu rather than in that of a schema. Asked whenever the menu opens, as any edit since
+    // the last time may have changed the answer.
+    async function loadHistoryEnds() {
+        await versionControlStore.refresh(workspaceName);
+        canUndo = await versionControlStore.canUndo(workspaceName);
+        canRedo = await versionControlStore.canRedo(workspaceName);
+    }
+
+    async function step(direction) {
+        const { error, skipped } =
+            direction === "undo"
+                ? await versionControlStore.undo(workspaceName)
+                : await versionControlStore.redo(workspaceName);
+        if (!error && !skipped) {
+            forceReloadTrigger.trigger();
+        }
+    }
 
     async function toggleEditing(editingEnabled) {
         const succeeded = editingEnabled
@@ -66,7 +90,7 @@
     }
 </script>
 
-<ContextMenu.Content>
+<ContextMenu.Content onOpenAutoFocus={loadHistoryEnds}>
     <ContextMenu.Item.Button
         onSelect={() => (showNewGraphDialog = true)}
         disabled={readonly}
@@ -87,6 +111,23 @@
         faIcon={faPlus}
     >
         New Workspace Diagram
+    </ContextMenu.Item.Button>
+    <ContextMenu.Separator />
+    <ContextMenu.Item.Button
+        onSelect={() => step("undo")}
+        disabled={readonly || !canUndo}
+        faIcon={faRotateLeft}
+        altText="Ctrl+Z"
+    >
+        Undo
+    </ContextMenu.Item.Button>
+    <ContextMenu.Item.Button
+        onSelect={() => step("redo")}
+        disabled={readonly || !canRedo}
+        faIcon={faRotateRight}
+        altText="Ctrl+Y"
+    >
+        Redo
     </ContextMenu.Item.Button>
     <ContextMenu.Separator />
     <ContextMenu.Item.Button

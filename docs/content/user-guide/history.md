@@ -11,7 +11,7 @@ Every edit you make in a workspace is tracked. Three features make this tracking
 
 ## Undo / Redo
 
-Cross-cutting, session-level undo and redo is available from **Edit → Undo** / **Redo** or with **Ctrl+Z** / **Ctrl+Y**. The history belongs to the whole workspace, not to a single schema: one linear stream of changes across every schema in it, including the ones that span two schemas at once, such as copying a class from one into another.
+Cross-cutting, session-level undo and redo is available from **Edit → Undo** / **Redo**, from the context menu of a workspace, or with **Ctrl+Z** / **Ctrl+Y**. The history belongs to the whole workspace, not to a single schema: one linear stream of changes across every schema in it, including the ones that span two schemas at once, such as copying a class from one into another.
 
 What is tracked goes beyond class, attribute, association, enum entry, package, and ontology edits. Importing, deleting, and renaming a schema, the namespace table of the workspace, custom SHACL shapes, diagrams, and diagram layout are part of the same history. The layout a diagram is given the first time you open it is not: opening a diagram is not something to undo, and it usually leaves what you can redo untouched.
 
