@@ -32,6 +32,7 @@ import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagramCollection;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
+import org.rdfarchitect.exception.graph.UndoTargetChangedException;
 import org.rdfarchitect.models.changelog.ParticipantId;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLog;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
@@ -290,6 +291,28 @@ public class Workspace {
      */
     public WorkspaceHistoryStep undo() {
         try (var _ = begin(ReadWrite.WRITE)) {
+            return stepOf(changeLog.undo());
+        }
+    }
+
+    /**
+     * Rolls back the most recent change, provided it is still the one the caller means.
+     *
+     * <p>The editor reads the change from {@link #undoPreview()} before every undo, to say what it
+     * undoes and to ask first if it removes something. That read and this undo are two
+     * transactions, so another request may commit in between; checking under the write lock keeps
+     * the undo from taking back a change the user was never shown or asked about.
+     *
+     * @param changeId the change the undo preview showed
+     * @return what was undone and what is left to undo or redo
+     * @throws UndoTargetChangedException if the newest change is a different one
+     */
+    public WorkspaceHistoryStep undoIfLatest(UUID changeId) {
+        try (var _ = begin(ReadWrite.WRITE)) {
+            var newest = changeLog.undoPreview();
+            if (newest == null || !changeId.equals(newest.changeId())) {
+                throw new UndoTargetChangedException();
+            }
             return stepOf(changeLog.undo());
         }
     }

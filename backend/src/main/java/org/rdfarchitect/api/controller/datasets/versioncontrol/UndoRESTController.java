@@ -34,7 +34,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("api/datasets/{datasetName}/undo")
@@ -47,7 +50,9 @@ public class UndoRESTController {
 
     @Operation(
             summary = "undo ",
-            description = "Undo the last change",
+            description =
+                    "Undo the last change. With expectedChangeId, only if that is still the last"
+                            + " change; otherwise nothing is undone and 409 is returned.",
             tags = {"workspace"},
             responses = {
                 @ApiResponse(
@@ -55,7 +60,11 @@ public class UndoRESTController {
                         content =
                                 @Content(
                                         mediaType = "application/json",
-                                        schema = @Schema(implementation = HistoryStepDTO.class)))
+                                        schema = @Schema(implementation = HistoryStepDTO.class))),
+                @ApiResponse(
+                        responseCode = "409",
+                        description = "The last change is no longer the expected one.",
+                        content = @Content())
             })
     @PostMapping
     public HistoryStepDTO undo(
@@ -66,13 +75,22 @@ public class UndoRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The change the caller means to undo, as read from the undo"
+                                            + " preview.")
+                    @RequestParam(required = false)
+                    UUID expectedChangeId) {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/undo\" from \"{}\".",
                 datasetName,
                 originURL);
 
-        var entry = undoUseCase.undo(datasetName);
+        var entry =
+                expectedChangeId == null
+                        ? undoUseCase.undo(datasetName)
+                        : undoUseCase.undoIfLatest(datasetName, expectedChangeId);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/undo\" to \"{}\".",

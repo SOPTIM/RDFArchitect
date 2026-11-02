@@ -126,6 +126,18 @@ public interface SessionDataStore {
     WorkspaceHistoryStep undo(String workspaceName);
 
     /**
+     * Rolls back the most recent change, provided it is still the given one. The caller read it
+     * from the undo preview, and another change may have landed since.
+     *
+     * @param workspaceName literal workspace name
+     * @param changeId the change the undo preview showed
+     * @return the change that was undone
+     * @throws org.rdfarchitect.exception.graph.UndoTargetChangedException if the most recent change
+     *     is a different one; nothing is undone then
+     */
+    WorkspaceHistoryStep undoIfLatest(String workspaceName, UUID changeId);
+
+    /**
      * Reapplies the most recently undone change of the workspace.
      *
      * @param workspaceName literal workspace name

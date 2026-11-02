@@ -136,6 +136,11 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     @Override
+    public WorkspaceHistoryStep undoIfLatest(String workspaceName, UUID changeId) {
+        return workspace(workspaceName).undoIfLatest(changeId);
+    }
+
+    @Override
     public WorkspaceHistoryStep redo(String workspaceName) {
         return workspace(workspaceName).redo();
     }

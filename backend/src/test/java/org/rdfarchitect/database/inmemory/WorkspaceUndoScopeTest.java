@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.GraphCompressionConfig;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.exception.graph.UndoTargetChangedException;
 import org.rdfarchitect.models.changelog.ParticipantId;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.TestRDFUtils;
@@ -407,6 +408,36 @@ class WorkspaceUndoScopeTest {
             assertThat(workspace.undoPreview().removedOnUndo()).containsExactly("Overview");
             assertThat(workspace.undoPreview().removedOnUndo().getFirst())
                     .doesNotContain(diagramId.toString());
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // An undo the user confirmed
+    // -------------------------------------------------------------------------
+
+    @Nested
+    class ConfirmedUndo {
+
+        @Test
+        void undo_ofTheChangeThePreviewShowed_undoesIt() {
+            createGraph(GRAPH_A);
+            var previewed = workspace.undoPreview().changeId();
+
+            workspace.undoIfLatest(previewed);
+
+            assertThat(workspace.listGraphUris()).isEmpty();
+        }
+
+        @Test
+        void undo_afterAnotherChangeLandedInBetween_isRefusedAndUndoesNothing() {
+            createGraph(GRAPH_A);
+            var previewed = workspace.undoPreview().changeId();
+            createGraph(GRAPH_B);
+
+            assertThatThrownBy(() -> workspace.undoIfLatest(previewed))
+                    .isInstanceOf(UndoTargetChangedException.class);
+            assertThat(workspace.listGraphUris()).containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
+            assertThat(workspace.canRedo()).isFalse();
         }
     }
 

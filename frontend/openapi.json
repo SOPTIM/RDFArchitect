@@ -8595,7 +8595,7 @@
     },
     "/api/datasets/{datasetName}/undo" : {
       "post" : {
-        "description" : "Undo the last change",
+        "description" : "Undo the last change. With expectedChangeId, only if that is still the last change; otherwise nothing is undone and 409 is returned.",
         "operationId" : "undo",
         "parameters" : [
           {
@@ -8616,6 +8616,16 @@
             "schema" : {
               "type" : "string"
             }
+          },
+          {
+            "description" : "The change the caller means to undo, as read from the undo preview.",
+            "in" : "query",
+            "name" : "expectedChangeId",
+            "required" : false,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
           }
         ],
         "responses" : {
@@ -8628,6 +8638,9 @@
               }
             },
             "description" : "OK"
+          },
+          "409" : {
+            "description" : "The last change is no longer the expected one."
           }
         },
         "summary" : "undo ",

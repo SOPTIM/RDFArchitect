@@ -62,6 +62,11 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
+    public WorkspaceHistoryStep undoIfLatest(String workspaceName, UUID changeId) {
+        return database.undoIfLatest(workspaceName, changeId);
+    }
+
+    @Override
     public WorkspaceHistoryStep redo(String workspaceName) {
         return database.redo(workspaceName);
     }

@@ -109,6 +109,11 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
+    public WorkspaceHistoryStep undoIfLatest(String workspaceName, UUID changeId) {
+        return getOrCreateSessionDataStore().undoIfLatest(workspaceName, changeId);
+    }
+
+    @Override
     public WorkspaceHistoryStep redo(String workspaceName) {
         return getOrCreateSessionDataStore().redo(workspaceName);
     }

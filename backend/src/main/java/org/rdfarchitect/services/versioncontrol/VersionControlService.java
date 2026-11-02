@@ -63,6 +63,11 @@ public class VersionControlService
     }
 
     @Override
+    public HistoryStepDTO undoIfLatest(String workspaceName, UUID changeId) {
+        return changeLogEntryMapper.toDTO(databasePort.undoIfLatest(workspaceName, changeId));
+    }
+
+    @Override
     public void persist(GraphIdentifier graphIdentifier) {
         databasePort.persist(databaseConnection, graphIdentifier);
     }

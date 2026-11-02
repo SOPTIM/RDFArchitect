@@ -17,7 +17,7 @@
 
 import { writable } from "svelte/store";
 
-import { editorState } from "../sharedState.svelte.js";
+import { editorState, forceReloadTrigger } from "../sharedState.svelte.js";
 import { classStore } from "./classStore";
 import { crossProfileStore } from "./crossProfileStore";
 import { datatypesStore } from "./datatypesStore";
@@ -175,16 +175,36 @@ function createVersionControlStore() {
             toastStore.error(step.failureTitle, message);
             return { error: message };
         }
-        if (direction === "undo" && !(await confirmedIfDestructive(target))) {
-            // Skipped: nothing moved, so there is nothing to reload for.
-            return { error: null, skipped: true };
+        let expectedChangeId: string | undefined;
+        if (direction === "undo") {
+            const confirmation = await confirmIfDestructive(target);
+            if (!confirmation.confirmed) {
+                // Skipped: nothing moved, so there is nothing to reload for.
+                return { error: null, skipped: true };
+            }
+            expectedChangeId = confirmation.changeId;
         }
-        const { data, error } = await step.apply({
+        const { data, error, response } = await step.apply({
             path: { datasetName: target },
+            query: expectedChangeId ? { expectedChangeId } : undefined,
         });
         if (error) {
             console.error(`${LOG} ${direction} failed`, error);
-            toastStore.error(step.failureTitle, step.failureText);
+            if (response?.status === 409) {
+                // Somebody changed the workspace since the preview, so the undo would take back
+                // something other than what was shown or asked about.
+                toastStore.error(
+                    step.failureTitle,
+                    "The workspace changed in the meantime. Nothing was undone.",
+                );
+                invalidateWorkspace(target);
+                await refresh(target);
+                // The caller only reloads after a step that ran, but the editor still shows the
+                // workspace from before that other change.
+                forceReloadTrigger.trigger();
+            } else {
+                toastStore.error(step.failureTitle, step.failureText);
+            }
             return { error };
         }
         toastStore.info(step.successTitle, describe(direction, data?.change));
@@ -213,20 +233,35 @@ function createVersionControlStore() {
      * Asks before an undo that makes something disappear — an imported or newly created graph, a
      * new diagram. A change that only alters what already exists goes through unasked, which is
      * the common case and must not become a click-through habit.
+     *
+     * The answer carries the id of the change the preview showed, whether or not the user was
+     * asked. The undo sends it along, and the backend refuses if another change has landed in
+     * between: otherwise an undo nobody was asked about could take back a newly created schema.
      */
-    async function confirmedIfDestructive(workspace: string): Promise<boolean> {
+    async function confirmIfDestructive(
+        workspace: string,
+    ): Promise<{ confirmed: boolean; changeId?: string }> {
         const { data, error } = await sdkUndoPreview({
             path: { datasetName: workspace },
         });
         if (error) {
             console.error(`${LOG} could not read the undo preview`, error);
-            return true;
+            return { confirmed: true };
         }
+        const changeId = data?.changeId;
         const removed = data?.removedOnUndo ?? [];
-        if (removed.length === 0) return true;
-        return undoConfirmStore.confirm(data?.message ?? "", removed);
+        if (removed.length === 0) return { confirmed: true, changeId };
+        const confirmed = await undoConfirmStore.confirm(
+            data?.message ?? "",
+            removed,
+        );
+        return { confirmed, changeId };
     }
 
+    /**
+     * Drops every cached view of the workspace. Anything that moves the history — a step, a
+     * restore — can change any graph in it, not just the one on screen.
+     */
     function invalidateWorkspace(workspace: string) {
         classStore.invalidateWorkspace(workspace);
         ontologyStore.invalidateWorkspace(workspace);
@@ -250,6 +285,7 @@ function createVersionControlStore() {
         refresh,
         canUndo,
         canRedo,
+        invalidateWorkspace,
         undo: (workspace?: string) => enqueue(workspace, "undo"),
         redo: (workspace?: string) => enqueue(workspace, "redo"),
     };
