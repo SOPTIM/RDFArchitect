@@ -19,8 +19,10 @@ import { describe, expect, test } from "vitest";
 
 import {
     applyLayoutedEdges,
+    canRemoveEdgePoint,
     createBendPoint,
     createDockingPoint,
+    createSelfLoopPoints,
     dissolveCollinearBendPoints,
     findEdgePointAtPosition,
     getBendPoints,
@@ -29,6 +31,7 @@ import {
     getTargetDockingPoint,
     insertBendPointAt,
     isDockingPoint,
+    isSelfLoop,
     moveEdgePointsWithDraggedClasses,
     removeBendPoints,
     removeDockingPoints,
@@ -305,5 +308,77 @@ describe("edges following their classes", () => {
 
         expect(result[0].data.edgePoints).toHaveLength(3);
         expect(result[1]).toBe(edges[1]);
+    });
+});
+
+describe("self-associations", () => {
+    test("are the edges from a class to itself", () => {
+        expect(isSelfLoop(edge("e", "a", "a", []))).toBe(true);
+        expect(isSelfLoop(edge("e", "a", "b", []))).toBe(false);
+    });
+
+    test("get a rectangular loop above their class as default shape", () => {
+        const points = createSelfLoopPoints({ x: 100, y: 200, width: 80 }, 50);
+
+        expect(points.map(({ x, y }) => ({ x, y }))).toEqual([
+            { x: 120, y: 200 },
+            { x: 120, y: 150 },
+            { x: 160, y: 150 },
+            { x: 160, y: 200 },
+        ]);
+        expect(getSourceDockingPoint(points)).toBe(points[0]);
+        expect(getTargetDockingPoint(points)).toBe(points[3]);
+        expect(getBendPoints(points)).toHaveLength(2);
+    });
+
+    test("keep their last bend point and their last docking point", () => {
+        const loop = edge("e", "a", "a", [
+            docking("s", 0, 0, "source"),
+            bend("b", 0, -50),
+            docking("t", 50, 0, "target"),
+        ]);
+        const loopWithOneDockingPoint = edge("e", "a", "a", [
+            bend("b", 0, -50),
+            docking("t", 50, 0, "target"),
+        ]);
+
+        expect(canRemoveEdgePoint(loop, "b")).toBe(false);
+        expect(canRemoveEdgePoint(loop, "s")).toBe(true);
+        expect(canRemoveEdgePoint(loopWithOneDockingPoint, "t")).toBe(false);
+        expect(
+            canRemoveEdgePoint(edge("e", "a", "b", [bend("b", 0, -50)]), "b"),
+        ).toBe(true);
+    });
+
+    test("keep a bend point when their bend points would be dissolved", () => {
+        const points = [
+            docking("s", 0, 0, "source"),
+            bend("b", 50, 1),
+            docking("t", 100, 0, "target"),
+        ];
+
+        expect(dissolveCollinearBendPoints(points, 5, true)).toBe(points);
+        expect(
+            dissolveCollinearBendPoints(points, 5).map(point => point.id),
+        ).toEqual(["s", "t"]);
+    });
+
+    test("keep a bend point of the routing a layout computed", () => {
+        const [loop] = applyLayoutedEdges(
+            [edge("e", "a", "a", [])],
+            new Map([
+                [
+                    "e",
+                    [
+                        { x: 0, y: 0, role: "source" },
+                        { x: 50, y: 1, role: "bend" },
+                        { x: 100, y: 0, role: "target" },
+                    ],
+                ],
+            ]),
+            5,
+        );
+
+        expect(getBendPoints(loop.data.edgePoints)).toHaveLength(1);
     });
 });

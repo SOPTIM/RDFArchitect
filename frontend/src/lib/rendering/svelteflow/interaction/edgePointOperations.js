@@ -120,6 +120,53 @@ export function createDockingPoint(x, y, side) {
     return { id: crypto.randomUUID(), x, y, isDockingPoint: true, side };
 }
 
+/** Whether an edge connects a class to itself, which only an association can. */
+export function isSelfLoop(edge) {
+    return !!edge && edge.source === edge.target;
+}
+
+/**
+ * The edge points of the default shape of a self-association: a rectangular loop above its class,
+ * leaving the top border at a quarter of the width of the class and returning at three quarters.
+ *
+ * @param {{x: number, y: number, width: number}} classRect the position and width of the class
+ * @param {number} height how far the loop reaches above the class
+ * @returns {Array} the docking point, the two bend points and the docking point of the loop
+ */
+export function createSelfLoopPoints(classRect, height) {
+    const left = classRect.x + classRect.width * 0.25;
+    const right = classRect.x + classRect.width * 0.75;
+    const top = classRect.y;
+    return [
+        createDockingPoint(left, top, "source"),
+        createBendPoint(left, top - height),
+        createBendPoint(right, top - height),
+        createDockingPoint(right, top, "target"),
+    ];
+}
+
+/**
+ * Whether a self-association has a course of its own: at least one docking point and one bend
+ * point. Without a bend point it would collapse onto the border of its class, without a docking
+ * point both of its ends would dock on their own and could meet in the same place.
+ */
+export function hasSelfLoopShape(points) {
+    return (
+        points.some(isDockingPoint) &&
+        points.some(point => !isDockingPoint(point))
+    );
+}
+
+/**
+ * Whether an edge point of an edge may be deleted. A self-association keeps its last bend point
+ * and its last docking point, see {@link hasSelfLoopShape}.
+ */
+export function canRemoveEdgePoint(edge, pointId) {
+    if (!isSelfLoop(edge)) return true;
+    const points = getEdgePoints(edge);
+    return hasSelfLoopShape(removeEdgePoint(points, pointId));
+}
+
 /**
  * Finds the first edge point within the given hit radius of a position. Returns the point (bend
  * or docking point) or null. Used to decide whether a click on an edge targets an existing point,
@@ -168,9 +215,16 @@ export function toEdgePoints(routingPoints) {
  *
  * @param {Array<{x:number,y:number,id:string}>} points ordered edge points
  * @param {number} tolerance max perpendicular distance to count as collinear
+ * @param {boolean} [keepBendPoint] whether at least one bend point has to stay, as for a
+ *     self-association, see {@link canRemoveEdgePoint}; nothing is dissolved then if no bend point
+ *     would stay
  * @returns {Array} a new points array with redundant bend points removed
  */
-export function dissolveCollinearBendPoints(points, tolerance) {
+export function dissolveCollinearBendPoints(
+    points,
+    tolerance,
+    keepBendPoint = false,
+) {
     if (points.length < 3) {
         return points;
     }
@@ -191,7 +245,13 @@ export function dissolveCollinearBendPoints(points, tolerance) {
     }
     kept.push(points[points.length - 1]);
 
-    return kept.length === points.length ? points : kept;
+    if (
+        kept.length === points.length ||
+        (keepBendPoint && getBendPoints(kept).length === 0)
+    ) {
+        return points;
+    }
+    return kept;
 }
 
 /**
@@ -309,6 +369,7 @@ export function applyLayoutedEdges(edges, layoutedEdges, tolerance) {
                 edgePoints: dissolveCollinearBendPoints(
                     toEdgePoints(routingPoints),
                     tolerance,
+                    isSelfLoop(edge),
                 ),
             },
         };

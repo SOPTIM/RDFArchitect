@@ -33,8 +33,6 @@ const LABEL_Z_INDEX = 2_000_000;
 /** Radius of the invisible circle a label may be dragged within, around its anchor point. */
 const LABEL_MAX_DISTANCE = 120;
 
-const SELF_LOOP_LABEL_OFFSET = { x: 12, y: -30 };
-
 /**
  * The vertical distance between the two labels of an edge end. Kept vertical whatever way the
  * edge runs, because a label is at most a line high but can be arbitrarily wide.
@@ -165,6 +163,12 @@ export function buildLabelNodes(
         const source = classNodes.get(edge.source);
         const target = classNodes.get(edge.target);
         if (!source?.measured || !target?.measured) {
+            continue;
+        }
+        if (
+            source === target &&
+            getBendPoints(edge.data?.edgePoints ?? []).length === 0
+        ) {
             continue;
         }
 
@@ -351,28 +355,6 @@ function samePlacementInputs(cached, source, target) {
  * edge end carried more than one label.
  */
 function edgePlacements(source, target, bendPoints = [], dockingPoints = {}) {
-    if (source.id === target.id) {
-        const position = source.position;
-        const width = source.measured.width ?? 100;
-        // Stacked upwards, into the loop the edge draws above the class, rather than downwards
-        // onto the class itself.
-        const stacked = { x: 0, y: -LABEL_STACK_SPACING };
-        return {
-            source: placement(
-                position.x + width * 0.25,
-                position.y,
-                { x: -SELF_LOOP_LABEL_OFFSET.x, y: SELF_LOOP_LABEL_OFFSET.y },
-                stacked,
-            ),
-            target: placement(
-                position.x + width * 0.75,
-                position.y,
-                { x: SELF_LOOP_LABEL_OFFSET.x, y: SELF_LOOP_LABEL_OFFSET.y },
-                stacked,
-            ),
-        };
-    }
-
     const edgeParams = getEdgeParams(source, target, bendPoints, dockingPoints);
     const stacked = { x: 0, y: LABEL_STACK_SPACING };
     return {

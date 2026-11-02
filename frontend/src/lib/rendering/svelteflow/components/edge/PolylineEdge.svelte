@@ -24,6 +24,7 @@
         getSourceDockingPoint,
         getTargetDockingPoint,
         dissolveCollinearBendPoints,
+        isSelfLoop,
     } from "$lib/rendering/svelteflow/interaction/edgePointOperations.js";
     import { labelHighlight } from "$lib/rendering/svelteflow/interaction/labelHighlight.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
@@ -36,15 +37,7 @@
     } from "./edgeUtils.ts";
     import { labelsOf } from "../../diagram/labelNodes.js";
 
-    let {
-        id,
-        source,
-        target,
-        data,
-        selected,
-        allowSelfConnecting = false,
-        children,
-    } = $props();
+    let { id, source, target, data, selected, children } = $props();
 
     const edges = useEdges();
 
@@ -102,9 +95,6 @@
 
     function getPath() {
         if (!edgeParams) return "";
-        if (allowSelfConnecting && target === source && sourceNode.current) {
-            return getSelfConnectingPath();
-        }
         if (bendPoints.length > 0) {
             return getBendPointPath();
         }
@@ -131,20 +121,6 @@
         })[0];
     }
 
-    function getSelfConnectingPath() {
-        const pos = sourceNode.current.internals.positionAbsolute ?? {
-            x: 0,
-            y: 0,
-        };
-        const w = sourceNode.current.measured.width ?? 100;
-        const x1 = pos.x + w * 0.25;
-        const y1 = pos.y;
-        const x2 = pos.x + w * 0.75;
-        const y2 = pos.y;
-        const loopHeight = 70;
-        return `M ${x1} ${y1} C ${x1} ${y1 - loopHeight}, ${x2} ${y2 - loopHeight}, ${x2} ${y2}`;
-    }
-
     function patchEdgeData(dataPatch) {
         edges.update(current =>
             current.map(edge =>
@@ -164,6 +140,7 @@
         const dissolved = dissolveCollinearBendPoints(
             current,
             EDGE_INTERACTION_CONFIG.collinearBendPointTolerancePx,
+            isSelfLoop({ source, target }),
         );
         if (dissolved !== current) {
             patchEdgeData({ edgePoints: dissolved });
@@ -173,7 +150,7 @@
 
 {@render children(path, highlighted, edgeParams)}
 
-{#if edited && edgeParams && target !== source}
+{#if edited && edgeParams}
     <EdgePointHandles
         edgeId={id}
         sourcePoint={{ x: edgeParams.sx, y: edgeParams.sy }}

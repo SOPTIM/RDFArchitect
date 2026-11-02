@@ -22,6 +22,7 @@ import {
     EDGE_Z_INDEX,
     ELEVATED_EDGE_Z_INDEX,
     elevateEdges,
+    isRaisedBySelection,
     onlySelectedEdgeId,
 } from "$lib/rendering/svelteflow/diagram/diagramElements.js";
 import { toEdgeLayoutDTO } from "$lib/rendering/svelteflow/interaction/edgeLayoutPersistence.js";
@@ -110,6 +111,35 @@ describe("elevateEdges", () => {
         const edges = [{ id: "a", selected: false, zIndex: EDGE_Z_INDEX }];
 
         expect(elevateEdges(edges, edge => edge.selected)).toBe(edges);
+    });
+});
+
+describe("isRaisedBySelection", () => {
+    test("raises the edited edge and every selected self-association", () => {
+        expect(
+            isRaisedBySelection({ id: "ab", source: "a", target: "b" }, "ab"),
+        ).toBe(true);
+        expect(
+            isRaisedBySelection(
+                { id: "aa", source: "a", target: "a", selected: true },
+                null,
+            ),
+        ).toBe(true);
+    });
+
+    test("does not raise other selected edges or unselected self-associations", () => {
+        expect(
+            isRaisedBySelection(
+                { id: "ab", source: "a", target: "b", selected: true },
+                null,
+            ),
+        ).toBe(false);
+        expect(
+            isRaisedBySelection(
+                { id: "aa", source: "a", target: "a", selected: false },
+                "ab",
+            ),
+        ).toBe(false);
     });
 });
 
