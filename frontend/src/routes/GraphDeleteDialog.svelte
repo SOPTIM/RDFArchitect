@@ -52,7 +52,9 @@
         const { error } = await graphStore.remove(workspaceName, graphURI);
         if (error) return;
 
-        editorState.selectedWorkspace.updateValue(null);
+        // The workspace stays selected: Ctrl+Z undoes in the selected workspace, and the dialog
+        // promises that it brings the schema back.
+        editorState.selectWorkspace(workspaceName);
         editorState.selectedGraph.updateValue(null);
         editorState.selectedDiagram.updateValue({
             type: null,

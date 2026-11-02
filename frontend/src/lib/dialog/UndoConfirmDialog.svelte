@@ -24,8 +24,10 @@
     let request = $derived(undoConfirmStore.getRequest());
     let showDialog = $derived(!!request);
 
+    // Enter on a focused button activates that button, so Cancel keeps meaning cancel; only
+    // Enter on the dialog itself confirms.
     function handleKeyDown(event) {
-        if (event.key === "Enter") {
+        if (event.key === "Enter" && event.target === event.currentTarget) {
             event.preventDefault();
             undoConfirmStore.respond(true);
         }
