@@ -19,12 +19,10 @@ import { describe, expect, test } from "vitest";
 
 import { isInvalidRangeValue } from "$lib/models/reactive/validity-rules/validityFunctions.js";
 import {
-    innerTickFractions,
     parseRangeInput,
     roundToDecimals,
-    scaleLabels,
+    sliderScale,
     snapToStep,
-    valueAfterKey,
 } from "$lib/utils/rangeValue.js";
 
 describe("snapToStep", () => {
@@ -40,8 +38,9 @@ describe("snapToStep", () => {
         expect(snapToStep(2.4, 0.5, 5, 1)).toBe(2.5);
     });
 
-    test("never snaps beyond the upper bound", () => {
+    test("never snaps beyond the last step within the upper bound", () => {
         expect(snapToStep(9.9, 0, 10, 4)).toBe(8);
+        expect(snapToStep(95, 0, 95, 10)).toBe(90);
     });
 
     test("leaves values outside of the bounds for the validation", () => {
@@ -58,74 +57,33 @@ describe("roundToDecimals", () => {
     });
 });
 
-describe("valueAfterKey", () => {
-    test("moves one step with the arrow keys", () => {
-        expect(valueAfterKey("ArrowRight", 60, 0, 100, 10, 2)).toBe(70);
-        expect(valueAfterKey("ArrowDown", 60, 0, 100, 10, 2)).toBe(50);
-        expect(valueAfterKey("ArrowUp", 0.3, 0, 1, 0.1, 2)).toBe(0.4);
-    });
-
-    test("moves from a value between two steps to the next step in the key direction", () => {
-        expect(valueAfterKey("ArrowRight", 25, 0, 100, 10, 2)).toBe(30);
-        expect(valueAfterKey("ArrowLeft", 25, 0, 100, 10, 2)).toBe(20);
-    });
-
-    test("moves a tenth of the range with the page keys and to the bounds with Home and End", () => {
-        expect(valueAfterKey("PageUp", 40, 0, 100, 1, 2)).toBe(50);
-        expect(valueAfterKey("PageDown", 40, 0, 100, 10, 2)).toBe(30);
-        expect(valueAfterKey("Home", 40, 0, 100, 10, 2)).toBe(0);
-        expect(valueAfterKey("End", 40, 0, 100, 10, 2)).toBe(100);
-    });
-
-    test("moves a hundredth of the range without a step and stays within the bounds", () => {
-        expect(valueAfterKey("ArrowRight", 12.5, 0, 100, undefined, 2)).toBe(
-            13.5,
-        );
-        expect(valueAfterKey("ArrowRight", 99.5, 0, 100, 10, 2)).toBe(100);
-        expect(valueAfterKey("ArrowLeft", 150, 0, 100, 10, 2)).toBe(90);
-    });
-
-    test("ignores other keys", () => {
-        expect(valueAfterKey("a", 40, 0, 100, 10, 2)).toBeNull();
-    });
-});
-
-describe("innerTickFractions", () => {
-    test("has a tick for every step between the two ends", () => {
-        expect(innerTickFractions(0, 100, 25)).toEqual([0.25, 0.5, 0.75]);
-        expect(innerTickFractions(0, 10, 4)).toEqual([0.4, 0.8]);
-    });
-
-    test("has no ticks without a step or with more than 30 ticks", () => {
-        expect(innerTickFractions(0, 100)).toEqual([]);
-        expect(innerTickFractions(0, 29, 1)).toHaveLength(28);
-        expect(innerTickFractions(0, 30, 1)).toEqual([]);
-    });
-});
-
-describe("scaleLabels", () => {
-    const valuesOf = labels => labels.map(label => label.value);
-
-    test("labels the two ends and evenly spaced ticks in between", () => {
-        expect(valuesOf(scaleLabels(0, 100, 20))).toEqual([
-            0, 20, 40, 60, 80, 100,
-        ]);
-        expect(valuesOf(scaleLabels(0, 100, 10))).toEqual([
-            0, 20, 40, 60, 80, 100,
-        ]);
-        expect(valuesOf(scaleLabels(0, 100, 4))).toEqual([
-            0, 20, 40, 60, 80, 100,
-        ]);
-        expect(scaleLabels(0, 100, 25)[1]).toEqual({
-            value: 25,
-            fraction: 0.25,
+describe("sliderScale", () => {
+    test("draws every tick of a stepped slider and labels evenly spaced ones", () => {
+        expect(sliderScale(11, true)).toEqual({
+            innerTicks: true,
+            labelIndices: [0, 2, 4, 6, 8, 10],
+        });
+        expect(sliderScale(6, true)).toEqual({
+            innerTicks: true,
+            labelIndices: [0, 1, 2, 3, 4, 5],
         });
     });
 
-    test("labels only the two ends without ticks", () => {
-        expect(valuesOf(scaleLabels(0, 100))).toEqual([0, 100]);
-        expect(valuesOf(scaleLabels(0, 100, 1))).toEqual([0, 100]);
-        expect(valuesOf(scaleLabels(0, 29, 1))).toEqual([0, 29]);
+    test("draws and labels only the two ends without steps or with more than 30 ticks", () => {
+        expect(sliderScale(30, true).innerTicks).toBe(true);
+        expect(sliderScale(31, true)).toEqual({
+            innerTicks: false,
+            labelIndices: [0, 30],
+        });
+        expect(sliderScale(10001, false)).toEqual({
+            innerTicks: false,
+            labelIndices: [0, 10000],
+        });
+    });
+
+    test("handles a slider with a single step or none", () => {
+        expect(sliderScale(1, true).labelIndices).toEqual([0]);
+        expect(sliderScale(0, true).labelIndices).toEqual([]);
     });
 });
 

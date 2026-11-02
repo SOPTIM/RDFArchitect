@@ -17,7 +17,7 @@
 
 import { flushSync, mount, unmount } from "svelte";
 import { SvelteMap } from "svelte/reactivity";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import SliderEditControl from "$lib/components/SliderEditControl.svelte";
 
@@ -44,7 +44,7 @@ function render(props) {
     return {
         value: () => bound.get("value"),
         field: target.querySelector('input[type="text"]'),
-        range: target.querySelector('input[type="range"]'),
+        thumb: target.querySelector("[data-slider-thumb]"),
     };
 }
 
@@ -58,6 +58,22 @@ function leave(field) {
     field.dispatchEvent(new Event("change", { bubbles: true }));
     flushSync();
 }
+
+function press(thumb, key) {
+    thumb.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+    flushSync();
+}
+
+beforeAll(() => {
+    vi.stubGlobal(
+        "ResizeObserver",
+        class {
+            observe() {}
+            unobserve() {}
+            disconnect() {}
+        },
+    );
+});
 
 afterEach(() => {
     if (mounted) unmount(mounted);
@@ -85,8 +101,8 @@ describe("SliderEditControl", () => {
         expect(value()).toBe("");
     });
 
-    test("rounds a typed value when leaving the field and shows it between the steps", () => {
-        const { value, field, range } = render({
+    test("rounds a typed value when leaving the field and keeps it between the steps", () => {
+        const { value, field, thumb } = render({
             value: 60,
             min: 0,
             max: 100,
@@ -99,7 +115,7 @@ describe("SliderEditControl", () => {
 
         expect(value()).toBe(25.46);
         expect(field.value).toBe("25.46");
-        expect(range.value).toBe("25.46");
+        expect(thumb.getAttribute("aria-valuenow")).toBe("30");
     });
 
     test("keeps invalid input in the field", () => {
@@ -121,25 +137,23 @@ describe("SliderEditControl", () => {
         expect(value()).toBe("abc");
     });
 
-    test("snaps to the steps when sliding and moves with the arrow keys", () => {
-        const { value, field, range } = render({
+    test("moves one step with the arrow keys and to the bounds with Home and End", () => {
+        const { value, field, thumb } = render({
             value: 60,
             min: 0,
             max: 100,
             step: 10,
         });
 
-        range.value = "33";
-        range.dispatchEvent(new Event("input", { bubbles: true }));
-        flushSync();
-        expect(value()).toBe(30);
-        expect(field.value).toBe("30");
+        press(thumb, "ArrowRight");
+        expect(value()).toBe(70);
+        expect(field.value).toBe("70");
 
-        range.dispatchEvent(
-            new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
-        );
-        flushSync();
-        expect(value()).toBe(40);
+        press(thumb, "Home");
+        expect(value()).toBe(0);
+
+        press(thumb, "End");
+        expect(value()).toBe(100);
     });
 
     test("shows the label of the selected option instead of a text field", () => {
@@ -147,15 +161,12 @@ describe("SliderEditControl", () => {
             { value: "low", label: "Low" },
             { value: "high", label: "High" },
         ];
-        const { value, field, range } = render({ value: "low", options });
+        const { value, field, thumb } = render({ value: "low", options });
 
         expect(field).toBeNull();
         expect(target.textContent).toContain("Low");
 
-        range.dispatchEvent(
-            new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
-        );
-        flushSync();
+        press(thumb, "ArrowRight");
         expect(value()).toBe("high");
         expect(target.textContent).toContain("High");
     });
