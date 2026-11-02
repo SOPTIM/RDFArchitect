@@ -31,12 +31,12 @@ import {
     getEdgePoints,
     getSourceDockingPoint,
     getTargetDockingPoint,
-    hasSelfLoopShape,
     insertBendPointAt,
     isSelfLoop,
     removeBendPoints,
     removeDockingPoints,
     removeEdgePoint,
+    withDefaultSelfLoops,
 } from "./edgePointOperations.js";
 
 /**
@@ -187,32 +187,18 @@ export class EdgePointController {
 
     /**
      * Gives every self-association without a course of its own its default shape, see
-     * {@link hasSelfLoopShape}: one that was just created, one of a diagram laid out before
-     * self-associations were drawn from their points, or one that lost its docking points before
-     * they had to stay. The points are saved like any other change of an edge.
+     * {@link withDefaultSelfLoops}. The points are saved like any other change of an edge.
      *
-     * @param nodes the nodes of the diagram; a class that is not measured yet is left for later
+     * @param nodes the nodes of the diagram
      */
     addDefaultSelfLoops(nodes) {
         const edges = this.#getEdges();
-        if (!edges.some(edge => this.#needsDefaultShape(edge))) {
-            return;
-        }
-        const nodesById = new Map(nodes.map(node => [node.id, node]));
-        let changed = false;
-        const nextEdges = edges.map(edge => {
-            const classNode = nodesById.get(edge.source);
-            if (!this.#needsDefaultShape(edge) || !classNode?.measured?.width) {
-                return edge;
-            }
-            changed = true;
-            const edgePoints = createSelfLoopPoints(
-                { ...classNode.position, width: classNode.measured.width },
-                EDGE_INTERACTION_CONFIG.selfLoopHeightPx,
-            );
-            return { ...edge, data: { ...edge.data, edgePoints } };
-        });
-        if (changed) {
+        const nextEdges = withDefaultSelfLoops(
+            edges,
+            nodes,
+            EDGE_INTERACTION_CONFIG.selfLoopHeightPx,
+        );
+        if (nextEdges !== edges) {
             this.#setEdges(nextEdges);
         }
     }
@@ -355,10 +341,6 @@ export class EdgePointController {
             source: { x: params.sx, y: params.sy },
             target: { x: params.tx, y: params.ty },
         };
-    }
-
-    #needsDefaultShape(edge) {
-        return isSelfLoop(edge) && !hasSelfLoopShape(getEdgePoints(edge));
     }
 
     #findEdge(edgeId) {

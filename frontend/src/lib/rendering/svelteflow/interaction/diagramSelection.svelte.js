@@ -160,6 +160,9 @@ export class DiagramSelectionController {
             if (!edge.selected) {
                 this.#edgesSelectedByClasses.delete(edge.id);
             }
+            if (shouldSelect && autoSelectedIds.has(edge.id)) {
+                this.#edgesSelectedByClasses.add(edge.id);
+            }
             if (!!edge.selected === shouldSelect) {
                 return edge;
             }
