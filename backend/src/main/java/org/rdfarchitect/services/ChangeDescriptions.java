@@ -86,6 +86,27 @@ public final class ChangeDescriptions {
     }
 
     /**
+     * Returns the name of a class as the editor labels it.
+     *
+     * @param schema the graph to look the class up in
+     * @param classUri the class
+     * @return the label, or {@code ""} for a class the graph does not declare — the far end of an
+     *     association may live in another schema
+     */
+    public static String className(Graph schema, String classUri) {
+        if (schema == null || classUri == null) {
+            return "";
+        }
+        try {
+            return name(
+                    CIMResourceUtils.findLabelForResource(
+                            CIMResourceUtils.findResourceForUri(schema, classUri)));
+        } catch (IllegalStateException _) {
+            return "";
+        }
+    }
+
+    /**
      * Returns the name of a custom diagram, which carries its own: the DL model only stores an
      * empty one for them.
      *

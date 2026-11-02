@@ -20,6 +20,7 @@ package org.rdfarchitect.services.update.classes.associations;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.arq.querybuilder.UpdateBuilder;
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.update.UpdateExecutionFactory;
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
@@ -29,6 +30,7 @@ import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.SessionDataStore;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.services.ChangeDescriptions;
@@ -137,29 +139,29 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         UpdateExecutionFactory.create(update.buildRequest(), dataset).execute();
     }
 
+    /**
+     * Names an association by its two ends as the editor shows them, {@code Class.role}. The uuids
+     * of the ends are left out: they identify nothing a reader of the changelog can place.
+     */
     private String buildAssociationMessage(
             String action,
             GraphContext session,
             AssociationPairDTO dto,
             CIMAssociationPair cimPair) {
-        var from = cimPair.getFrom();
-        var to = cimPair.getTo();
-        var fromClassLabel =
-                CIMResourceUtils.findLabelForResource(
-                        CIMResourceUtils.findResourceForUri(
-                                session.getRdfGraph(), dto.getFrom().getDomain()));
-        var toClassLabel =
-                CIMResourceUtils.findLabelForResource(
-                        CIMResourceUtils.findResourceForUri(
-                                session.getRdfGraph(), dto.getTo().getDomain()));
-        return "%s association \"%s.%s\" (%s) → \"%s.%s\" (%s)"
+        var graph = session.getRdfGraph();
+        return "%s association \"%s\" → \"%s\""
                 .formatted(
                         action,
-                        fromClassLabel,
-                        from.getLabel().getValue(),
-                        from.getUuid(),
-                        toClassLabel,
-                        to.getLabel().getValue(),
-                        to.getUuid());
+                        endName(graph, dto.getFrom().getDomain(), cimPair.getFrom().getLabel()),
+                        endName(graph, dto.getTo().getDomain(), cimPair.getTo().getLabel()));
+    }
+
+    private static String endName(Graph graph, String classUri, RDFSLabel role) {
+        var className = ChangeDescriptions.className(graph, classUri);
+        var roleName = ChangeDescriptions.name(role);
+        if (className.isEmpty()) {
+            return roleName;
+        }
+        return roleName.isEmpty() ? className : className + "." + roleName;
     }
 }

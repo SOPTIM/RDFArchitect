@@ -101,6 +101,29 @@ class AssociationsServiceTest {
     }
 
     @Test
+    @DisplayName("Creating an association is recorded under the names of its ends, not their ids")
+    void createAssociation_isRecordedUnderTheNamesOfItsEnds() {
+        var uuids =
+                associationsService.createAssociation(graphIdentifier, associationPair(null, null));
+
+        assertThat(databasePort.listChanges(graphIdentifier.datasetName()).getFirst().message())
+                .doesNotContain(uuids.fromUUID().toString(), uuids.toUUID().toString())
+                .isEqualTo("Created association \"oldLabel.subClass\" → \"subClass.class\"");
+    }
+
+    @Test
+    @DisplayName("An end whose class the schema does not declare is recorded by its role alone")
+    void createAssociation_toAClassTheSchemaDoesNotDeclare_isRecordedByTheRole() {
+        var pair = associationPair(null, null);
+        pair.getTo().setDomain(PREFIX + "elsewhere");
+
+        associationsService.createAssociation(graphIdentifier, pair);
+
+        assertThat(databasePort.listChanges(graphIdentifier.datasetName()).getFirst().message())
+                .isEqualTo("Created association \"oldLabel.subClass\" → \"class\"");
+    }
+
+    @Test
     @DisplayName("Replacing all associations of a class writes them into the named graph")
     void replaceAllAssociations_namedGraph_persistsBothDirections() {
         var classUUID = UUID.fromString("43836908-c7f7-4749-bb8b-3ac9250de655");
