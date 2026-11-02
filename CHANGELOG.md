@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-29
+
+### Added
+
+- RDFA-760: Drag and drop schema files into the editor ([863de33a](https://github.com/SOPTIM/RDFArchitect/commit/863de33a), [#284](https://github.com/SOPTIM/RDFArchitect/pull/284))
+- RDFA-720: Name a schema by its profile, not by its graph URI ([884a3c6a](https://github.com/SOPTIM/RDFArchitect/commit/884a3c6a), [#265](https://github.com/SOPTIM/RDFArchitect/pull/265))
+- RDFA-690: Deep link to classes, attributes, associations and enum entries; embeddable-session handshake ([aeaff0ea](https://github.com/SOPTIM/RDFArchitect/commit/aeaff0ea), [#252](https://github.com/SOPTIM/RDFArchitect/pull/252))
+- RDFA-591: Resolve namespace-prefix conflicts on import ([ac2d4111](https://github.com/SOPTIM/RDFArchitect/commit/ac2d4111), [#277](https://github.com/SOPTIM/RDFArchitect/pull/277))
+- RDFA-700: Workspace validation ([76febb63](https://github.com/SOPTIM/RDFArchitect/commit/76febb63), [#275](https://github.com/SOPTIM/RDFArchitect/pull/275))
+- RDFA-471: Import in the background with progress in the dialog ([f49fa388](https://github.com/SOPTIM/RDFArchitect/commit/f49fa388), [#243](https://github.com/SOPTIM/RDFArchitect/pull/243))
+- RDFA-636: Open editors from diagram elements ([bf6d0985](https://github.com/SOPTIM/RDFArchitect/commit/bf6d0985), [#272](https://github.com/SOPTIM/RDFArchitect/pull/272))
+
+### Fixed
+
+- Fixed association updates being shown incorrectly ([45a149c6](https://github.com/SOPTIM/RDFArchitect/commit/45a149c6), [#279](https://github.com/SOPTIM/RDFArchitect/pull/279))
+- RDFA-752: Fixed profile header deletion not working correctly ([ae7119b8](https://github.com/SOPTIM/RDFArchitect/commit/ae7119b8), [#278](https://github.com/SOPTIM/RDFArchitect/pull/278))
+- Refactored backend and frontend logic concerning label layout data ([00023bbf](https://github.com/SOPTIM/RDFArchitect/commit/00023bbf), [#266](https://github.com/SOPTIM/RDFArchitect/pull/266))
+- RDFA-738: Apply a changed fixed value only to the attribute it belongs to ([d8097805](https://github.com/SOPTIM/RDFArchitect/commit/d8097805), [#270](https://github.com/SOPTIM/RDFArchitect/pull/270))
+
 ## [1.6.0] - 2026-09-10
 
 ### Added
