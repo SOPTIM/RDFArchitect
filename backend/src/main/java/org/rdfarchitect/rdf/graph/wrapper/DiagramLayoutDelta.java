@@ -115,7 +115,7 @@ public class DiagramLayoutDelta
     }
 
     @Override
-    public void foldLastVersionIntoPrevious() {
-        inner.foldLastVersionIntoPrevious();
+    public boolean foldLastVersionIntoPrevious() {
+        return inner.foldLastVersionIntoPrevious();
     }
 }

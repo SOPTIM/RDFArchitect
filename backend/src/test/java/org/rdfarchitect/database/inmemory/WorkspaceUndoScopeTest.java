@@ -442,6 +442,98 @@ class WorkspaceUndoScopeTest {
     }
 
     // -------------------------------------------------------------------------
+    // The layout a diagram gets when it is first opened
+    // -------------------------------------------------------------------------
+
+    @Nested
+    class FirstLayout {
+
+        private final Triple moved = TestRDFUtils.triple("diagramObject x 120");
+        private final Triple laidOut = TestRDFUtils.triple("otherDiagramObject x 40");
+        private final Triple laidOutLater = TestRDFUtils.triple("thirdDiagramObject x 7");
+
+        @Test
+        void afterAnUndoOfASchemaChange_keepsTheRedo() {
+            createGraph(GRAPH_A);
+            commitTriple(GRAPH_A, triple);
+            workspace.undo();
+
+            commitFirstLayout(GRAPH_A, laidOut);
+
+            assertThat(workspace.canRedo()).isTrue();
+            workspace.redo();
+            assertThat(triplesIn(GRAPH_A)).containsExactly(triple);
+            assertThat(layoutOf(GRAPH_A)).containsExactly(laidOut);
+        }
+
+        @Test
+        void afterAnUndoInTheSameLayout_keepsTheRedoAndTheNewLayout() {
+            createGraph(GRAPH_A);
+            commitLayout(GRAPH_A, moved);
+            workspace.undo();
+
+            commitFirstLayout(GRAPH_A, laidOut);
+
+            assertThat(workspace.canRedo()).isTrue();
+            workspace.redo();
+            assertThat(layoutOf(GRAPH_A)).containsExactlyInAnyOrder(moved, laidOut);
+            workspace.undo();
+            assertThat(layoutOf(GRAPH_A)).containsExactly(laidOut);
+        }
+
+        @Test
+        void afterAnUndoOfAVersionThatWasFoldedInto_dropsTheRedoRatherThanEmptyingIt() {
+            createGraph(GRAPH_A);
+            commitLayout(GRAPH_A, moved);
+            commitFirstLayout(GRAPH_A, laidOut);
+            workspace.undo();
+
+            commitFirstLayout(GRAPH_A, laidOutLater);
+
+            // Redoing would have to bring back the move and the first layout, and the version
+            // that holds them no longer knows what it changed.
+            assertThat(workspace.canRedo()).isFalse();
+            assertThat(layoutOf(GRAPH_A)).containsExactly(laidOutLater);
+        }
+
+        private void commitLayout(String graphUri, Triple value) {
+            try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+                transaction
+                        .graph(graphUri)
+                        .getDiagramLayout()
+                        .getDiagramLayoutModel()
+                        .getGraph()
+                        .add(value);
+                transaction.commit("moved a class");
+            }
+        }
+
+        private void commitFirstLayout(String graphUri, Triple value) {
+            try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+                transaction
+                        .graph(graphUri)
+                        .getDiagramLayout()
+                        .getDiagramLayoutModel()
+                        .getGraph()
+                        .add(value);
+                transaction.commitWithoutHistory();
+            }
+        }
+
+        private List<Triple> layoutOf(String graphUri) {
+            try (var transaction = workspace.begin(ReadWrite.READ)) {
+                return transaction
+                        .graph(graphUri)
+                        .getDiagramLayout()
+                        .getDiagramLayoutModel()
+                        .getGraph()
+                        .find()
+                        .toList();
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // The history horizon
     // -------------------------------------------------------------------------
 

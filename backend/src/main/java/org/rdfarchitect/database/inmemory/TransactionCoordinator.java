@@ -141,6 +141,7 @@ class TransactionCoordinator {
         }
         var enrolled = List.copyOf(txnContext.enrolledParticipants());
         var versioned = new ArrayList<TransactionParticipant>();
+        var redoStillApplies = true;
         var complete = false;
         try {
             for (var participant : enrolled) {
@@ -151,7 +152,7 @@ class TransactionCoordinator {
                 participant.commit();
                 versioned.add(participant);
                 if (participant instanceof ChangeLogParticipant rewindable) {
-                    rewindable.foldLastVersionIntoPrevious();
+                    redoStillApplies &= rewindable.foldLastVersionIntoPrevious();
                 }
             }
             complete = true;
@@ -161,8 +162,8 @@ class TransactionCoordinator {
             }
         }
         txnContext.clearEnrolled();
-        if (!versioned.isEmpty()) {
-            // Folding still writes over what undo moved aside, so the redo branch is gone.
+        if (!redoStillApplies) {
+            // A participant wrote over what undo moved aside, so the redo branch is gone.
             changeLog.abandonRedo();
         }
         logger.debug("Workspace committed without recording history.");

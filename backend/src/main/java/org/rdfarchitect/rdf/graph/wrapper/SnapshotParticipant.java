@@ -183,13 +183,16 @@ public abstract class SnapshotParticipant<S>
     }
 
     @Override
-    public void foldLastVersionIntoPrevious() {
+    public boolean foldLastVersionIntoPrevious() {
         if (pastStates.size() < 2) {
-            return;
+            return futureStates.isEmpty();
         }
         var newest = pastStates.pop();
         pastStates.pop();
         pastStates.push(newest);
         lastAdditions = List.of();
+        // A future state is a whole snapshot taken without the folded change; redoing it would
+        // take that change back.
+        return futureStates.isEmpty();
     }
 }

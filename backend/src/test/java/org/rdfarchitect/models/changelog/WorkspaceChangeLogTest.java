@@ -362,8 +362,9 @@ class WorkspaceChangeLogTest {
         }
 
         @Override
-        public void foldLastVersionIntoPrevious() {
+        public boolean foldLastVersionIntoPrevious() {
             // not exercised here
+            return true;
         }
     }
 }

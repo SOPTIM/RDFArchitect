@@ -67,6 +67,12 @@ public interface ChangeLogParticipant {
      * <p>Used for a change the user did not make and cannot mean to undo — the layout a diagram is
      * given the first time it is opened. Recording it as a version while the log ignored it would
      * put the two out of step, which is the one thing the log must never allow.
+     *
+     * <p>A participant that carries versions an undo moved out of the way keeps them if it can
+     * rebase them onto the folded version, so that opening a diagram does not cost the user their
+     * redo. One that cannot answers {@code false}, and the log abandons the redo branch.
+     *
+     * @return whether the versions waiting to be redone still apply on top of the folded one
      */
-    void foldLastVersionIntoPrevious();
+    boolean foldLastVersionIntoPrevious();
 }

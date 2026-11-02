@@ -59,6 +59,13 @@ public class DeltaCompressible extends CompositionBase {
     @Getter private UUID versionId = UUID.randomUUID();
 
     /**
+     * -- GETTER -- Answer whether this delta has been compressed: its content is a base of its own
+     * then, and what it added and removed is no longer known, so it cannot be {@link #rebaseOnto
+     * rebased}.
+     */
+    @Getter private boolean compressed;
+
+    /**
      * Takes over the identity of the version this delta replaces.
      *
      * <p>Only for folding two versions into one: the result is still the version the changelog
@@ -87,6 +94,41 @@ public class DeltaCompressible extends CompositionBase {
         additions = GraphMemFactory.createDefaultGraph();
         deletions = GraphMemFactory.createDefaultGraph();
         prefixMapping = new DeltaPrefixMapping(base.getPrefixMapping());
+        compressed = true;
+    }
+
+    /**
+     * Puts this delta on top of a different base while keeping what it changes: the same triples
+     * and prefixes are added and removed, measured against the new base.
+     *
+     * <p>The additions and deletions graphs stay the same objects, so whoever holds on to them —
+     * the changelog keeps references for showing what a change did — still sees this delta.
+     *
+     * <p>The triples are replayed, not reconciled: an addition the new base already holds and a
+     * deletion it no longer holds drop out, and nothing else is compared. That is only sound when
+     * the new base differs from the old one in triples this delta does not touch. Where both write
+     * about the same subject, say two positions for one diagram object, the result holds both.
+     *
+     * <p>A {@link #isCompressed() compressed} delta records no additions or deletions, so it would
+     * come out of this equal to the new base; it must not be rebased.
+     *
+     * @param newBase the graph this delta now applies to
+     */
+    public void rebaseOnto(@NotNull Graph newBase) {
+        var added = additions.find().toList();
+        var deleted = deletions.find().toList();
+        var addedPrefixes = prefixMapping.getAddedPrefixes();
+        var deletedPrefixes = prefixMapping.getDeletedPrefixes();
+
+        base = newBase;
+        additions.clear();
+        deletions.clear();
+        prefixMapping = new DeltaPrefixMapping(newBase.getPrefixMapping());
+
+        deleted.forEach(this::performDelete);
+        added.forEach(this::performAdd);
+        deletedPrefixes.keySet().forEach(prefixMapping::removeNsPrefix);
+        prefixMapping.setNsPrefixes(addedPrefixes);
     }
 
     /** Add the triple to the graph, ie add it to the additions, remove it from the removals. */

@@ -303,8 +303,9 @@ class TransactionCoordinatorTest {
         }
 
         @Override
-        public void foldLastVersionIntoPrevious() {
+        public boolean foldLastVersionIntoPrevious() {
             folds++;
+            return true;
         }
     }
 }

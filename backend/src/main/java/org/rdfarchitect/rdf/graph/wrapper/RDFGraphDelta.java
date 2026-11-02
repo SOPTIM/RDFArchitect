@@ -299,9 +299,9 @@ public class RDFGraphDelta
     }
 
     @Override
-    public void foldLastVersionIntoPrevious() {
+    public boolean foldLastVersionIntoPrevious() {
         if (pastDeltas.size() < 2) {
-            return;
+            return true;
         }
         // Compressing first detaches the newest delta from the version it is about to replace, so
         // dropping that version leaves the chain below it intact.
@@ -309,5 +309,23 @@ public class RDFGraphDelta
         newest.compress();
         newest.adoptVersionId(pastDeltas.pop().getVersionId());
         pastDeltas.push(newest);
+        // A version that was itself folded into, undone and is now waiting to be redone has been
+        // compressed: it holds a whole graph rather than what it changed, and would lose its
+        // change when rebased. The same goes for one above it, which no longer stands on the
+        // version below it. The redo branch cannot be kept then.
+        if (futureDeltas.stream().anyMatch(DeltaCompressible::isCompressed)) {
+            return false;
+        }
+        // The next version to redo was cut on top of the version just replaced. Each delta only
+        // records what it adds and removes, so it can sit on the folded version instead; the
+        // ones above it are built on it and follow along. This relies on the folded change and
+        // the ones waiting to be redone touching different triples. The layout a diagram gets
+        // when it is first opened is written for a diagram that had none, so this holds unless a
+        // change laid that diagram out, was undone, and is redone after the opening; the diagram
+        // would then end up with two objects for one class.
+        if (!futureDeltas.isEmpty()) {
+            futureDeltas.peek().rebaseOnto(newest);
+        }
+        return true;
     }
 }
