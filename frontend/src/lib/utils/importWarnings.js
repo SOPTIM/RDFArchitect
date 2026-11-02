@@ -41,8 +41,9 @@
  * @returns {{issues: object[]}} a result the validation report can be given
  */
 export function asValidationResult(warnings) {
-    const issues = (warnings ?? []).flatMap(warning =>
-        (warning.items ?? []).map(item => ({
+    const issues = (warnings ?? []).flatMap((warning, warningIndex) =>
+        (warning.items ?? []).map((item, itemIndex) => ({
+            id: `${warningIndex}:${itemIndex}`,
             severity: "WARNING",
             ruleLabel: warning.fileName,
             ruleId: warning.graphUri,

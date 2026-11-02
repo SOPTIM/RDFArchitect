@@ -22,6 +22,12 @@ const POLL_INTERVAL_MS = 300;
 const MAX_FAILED_POLLS = 3;
 
 /**
+ * How often a finished job that is kept alive is looked at. The backend forgets a finished job ten
+ * minutes after it was last polled, so this only has to stay well below that.
+ */
+const KEEP_ALIVE_INTERVAL_MS = 60_000;
+
+/**
  * Follows a background import job until it is done and applies every status it reads to an
  * {@link ImportProgress}.
  *
@@ -29,6 +35,9 @@ const MAX_FAILED_POLLS = 3;
  * so a job waiting for a decision keeps being polled rather than being left alone. One timeout is
  * kept in flight at a time, so {@link stop} ends the polling for good and following a second job
  * abandons the first.
+ *
+ * <p>A finished job can be kept alive, which is what a read that is still to be chosen from needs:
+ * the backend holds the export only as long as somebody keeps asking about the job.
  */
 export class ImportStatusPoller {
     #timeout = null;
@@ -41,10 +50,17 @@ export class ImportStatusPoller {
      * @param {() => Promise<{data?: object, error?: unknown}>} readStatus reads the job's status
      * @param {object} progress the {@link ImportProgress} every status is applied to
      * @param {(status: object) => void} [onStatus] called after each status was applied
+     * @param {{keepAlive?: boolean}} [options] whether to keep polling once the job has finished,
+     *     until {@link stop} is called
      */
-    follow(readStatus, progress, onStatus = () => {}) {
+    follow(
+        readStatus,
+        progress,
+        onStatus = () => {},
+        { keepAlive = false } = {},
+    ) {
         this.stop();
-        const run = { readStatus, progress, onStatus };
+        const run = { readStatus, progress, onStatus, keepAlive };
         this.#run = run;
         this.#failedPolls = 0;
         this.#schedule(run);
@@ -64,6 +80,19 @@ export class ImportStatusPoller {
             () => void this.#poll(run),
             POLL_INTERVAL_MS,
         );
+    }
+
+    #scheduleKeepAlive(run) {
+        this.#timeout = setTimeout(async () => {
+            if (this.#run !== run) {
+                return;
+            }
+            // Only the poll itself matters here; the status was applied when the job finished.
+            await run.readStatus();
+            if (this.#run === run) {
+                this.#scheduleKeepAlive(run);
+            }
+        }, KEEP_ALIVE_INTERVAL_MS);
     }
 
     async #poll(run) {
@@ -91,7 +120,11 @@ export class ImportStatusPoller {
         run.progress.apply(data);
         run.onStatus(data);
         if (run.progress.finished) {
-            this.stop();
+            if (run.keepAlive) {
+                this.#scheduleKeepAlive(run);
+            } else {
+                this.stop();
+            }
             return;
         }
         this.#schedule(run);

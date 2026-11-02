@@ -38,7 +38,8 @@
     >
         <p class="font-semibold">{heading}</p>
         <ul class="list-disc pl-5">
-            {#each names as name (name)}
+            <!-- Unkeyed: two files of the same name from different folders are two entries. -->
+            {#each names as name}
                 <li>{name}</li>
             {/each}
         </ul>

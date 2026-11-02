@@ -205,9 +205,13 @@
         current.uploaded();
         jobId = data.jobId;
         readJobId = data.jobId;
+        // Kept alive while the packages are chosen: the backend lets go of the export once
+        // nobody has asked about the read for a while, and choosing can take longer than that.
         poller.follow(
             () => graphStore.getImportStatus(scanWorkspaceName, jobId),
             current,
+            undefined,
+            { keepAlive: true },
         );
     }
 

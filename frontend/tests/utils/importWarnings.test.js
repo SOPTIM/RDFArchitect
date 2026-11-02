@@ -20,6 +20,7 @@ import { describe, expect, it } from "vitest";
 import {
     GroupBy,
     groupIssues,
+    issueKey,
 } from "../../src/lib/components/validation/validationIssues.js";
 import {
     asValidationResult,
@@ -75,6 +76,21 @@ describe("asValidationResult", () => {
         expect(
             asValidationResult(WARNINGS).issues[0].occurrences,
         ).toBeUndefined();
+    });
+
+    it("tells apart findings that agree in everything else", () => {
+        // A class declared three times in one file is reported twice, for the same reason.
+        const duplicate = {
+            fileName: "TopologyProfile",
+            graphUri: "http://graph#TopologyProfile",
+            items: [
+                { resource: "Terminal", reason: "declared more than once" },
+                { resource: "Terminal", reason: "declared more than once" },
+            ],
+        };
+        const keys = asValidationResult([duplicate]).issues.map(issueKey);
+
+        expect(new Set(keys).size).toBe(2);
     });
 
     it("is valid where the import carried everything over", () => {
