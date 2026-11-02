@@ -35,6 +35,8 @@
         hasDefaultNodeLayout,
     } from "./diagram/diagramElements.js";
     import { buildLabelNodes, LABEL_NODE_TYPE } from "./diagram/labelNodes.js";
+    import { EDGE_INTERACTION_CONFIG } from "./interaction/edgeInteractionConfig.js";
+    import { withDefaultSelfLoops } from "./interaction/edgePointOperations.js";
     import { layoutDiagram } from "./layout/elkLayout.js";
 
     let {
@@ -69,6 +71,11 @@
             nodes = [...layoutedNodes];
         }
 
+        edges = withDefaultSelfLoops(
+            edges,
+            nodes,
+            EDGE_INTERACTION_CONFIG.selfLoopHeightPx,
+        );
         nodes = [...nodes, ...buildLabelNodes(nodes, edges)];
 
         const padding = 60;

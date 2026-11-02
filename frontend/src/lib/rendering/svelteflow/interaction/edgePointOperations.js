@@ -158,6 +158,40 @@ export function hasSelfLoopShape(points) {
 }
 
 /**
+ * Gives every self-association without a course of its own its default shape, see
+ * {@link hasSelfLoopShape} and {@link createSelfLoopPoints}: one that was just created, one of a
+ * diagram laid out before self-associations were drawn from their points, or one that lost its
+ * docking points before they had to stay.
+ *
+ * @param {Array} edges the diagram edges
+ * @param {Array} nodes the diagram nodes; a class that is not measured yet is left for later
+ * @param {number} height how far the loops reach above their classes
+ * @returns {Array} the given edges if none of them changed, otherwise new edges
+ */
+export function withDefaultSelfLoops(edges, nodes, height) {
+    const needsDefaultShape = edge =>
+        isSelfLoop(edge) && !hasSelfLoopShape(getEdgePoints(edge));
+    if (!edges.some(needsDefaultShape)) {
+        return edges;
+    }
+    const nodesById = new Map(nodes.map(node => [node.id, node]));
+    let changed = false;
+    const nextEdges = edges.map(edge => {
+        const classNode = nodesById.get(edge.source);
+        if (!needsDefaultShape(edge) || !classNode?.measured?.width) {
+            return edge;
+        }
+        changed = true;
+        const edgePoints = createSelfLoopPoints(
+            { ...classNode.position, width: classNode.measured.width },
+            height,
+        );
+        return { ...edge, data: { ...edge.data, edgePoints } };
+    });
+    return changed ? nextEdges : edges;
+}
+
+/**
  * Whether an edge point of an edge may be deleted. A self-association keeps its last bend point
  * and its last docking point, see {@link hasSelfLoopShape}.
  */

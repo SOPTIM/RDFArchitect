@@ -32,6 +32,7 @@ import {
     insertBendPointAt,
     isDockingPoint,
     isSelfLoop,
+    withDefaultSelfLoops,
     moveEdgePointsWithDraggedClasses,
     removeBendPoints,
     removeDockingPoints,
@@ -361,6 +362,26 @@ describe("self-associations", () => {
         expect(
             dissolveCollinearBendPoints(points, 5).map(point => point.id),
         ).toEqual(["s", "t"]);
+    });
+
+    test("get their default shape when they have no course of their own", () => {
+        const edges = [
+            edge("loop", "a", "a", [bend("b", 0, -50)]),
+            edge("ab", "a", "b", []),
+        ];
+        const nodes = [
+            {
+                id: "a",
+                position: { x: 0, y: 0 },
+                measured: { width: 100, height: 60 },
+            },
+        ];
+
+        const next = withDefaultSelfLoops(edges, nodes, 50);
+
+        expect(getEdgePoints(next[0])).toHaveLength(4);
+        expect(next[1]).toBe(edges[1]);
+        expect(withDefaultSelfLoops(next, nodes, 50)).toBe(next);
     });
 
     test("keep a bend point of the routing a layout computed", () => {

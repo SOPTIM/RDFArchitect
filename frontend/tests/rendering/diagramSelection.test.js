@@ -97,6 +97,22 @@ describe("DiagramSelectionController", () => {
         expect(selectedEdgeIds(state)).toEqual([]);
     });
 
+    test("deselects an edge the box selection selected along with its classes once they are deselected", () => {
+        const { state, selection } = controllerFor(
+            [classNode("a"), classNode("b")],
+            [edge("ab", "a", "b", true)],
+        );
+        selection.handleSelectionChange(
+            { nodes: [classNode("a"), classNode("b")], edges: state.edges },
+            true,
+        );
+
+        multiSelectState.clear();
+        selection.reflectSelectionToNodes();
+
+        expect(selectedEdgeIds(state)).toEqual([]);
+    });
+
     test("keeps a clicked edge selected when the class selection changes", () => {
         const { state, selection } = controllerFor(
             [classNode("a"), classNode("b"), classNode("c")],
