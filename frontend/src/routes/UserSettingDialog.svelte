@@ -87,7 +87,8 @@
     saveChanges={save}
     discardChanges={() =>
         (localSettings = { ...DEFAULT_SETTINGS, ...userSettings.all })}
-    hasChanges={isModified && !hasInvalidInput}
+    hasChanges={isModified}
+    isValid={!hasInvalidInput}
     size="w-1/3"
     title="Settings"
 >
