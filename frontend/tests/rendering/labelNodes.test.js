@@ -18,6 +18,7 @@
 import { describe, expect, test } from "vitest";
 
 import { buildLabelNodes } from "$lib/rendering/svelteflow/diagram/labelNodes.js";
+import { createSelfLoopPoints } from "$lib/rendering/svelteflow/interaction/edgePointOperations.js";
 
 const CLASS_SIZE = { width: 100, height: 50 };
 
@@ -86,21 +87,41 @@ describe("buildLabelNodes", () => {
         }
     });
 
-    test("stacks the labels of a self loop into its arc", () => {
+    test("leaves out the labels of a self loop that has no points yet", () => {
         const nodes = [classNode("class", 0, 0)];
         const edges = [
             associationEdge("class", "class", {
                 sourceMultiplicityLabel: label("from", "1..1"),
-                sourceAssociationLabel: label("from", "Parent"),
+            }),
+        ];
+
+        expect(buildLabelNodes(nodes, edges)).toEqual([]);
+    });
+
+    test("anchors the labels of a self loop at its docking points", () => {
+        const nodes = [classNode("class", 0, 0)];
+        const edges = [
+            associationEdge("class", "class", {
+                sourceMultiplicityLabel: label("from", "1..1"),
+                targetMultiplicityLabel: label("to", "0..n"),
+                edgePoints: createSelfLoopPoints(
+                    { x: 0, y: 0, width: CLASS_SIZE.width },
+                    50,
+                ),
             }),
         ];
 
         const labelNodes = buildLabelNodes(nodes, edges);
 
-        const multiplicity = nodeById(labelNodes, "from:multiplicity");
-        const associationLabel = nodeById(labelNodes, "from:associationLabel");
-        expect(associationLabel.position.x).toBe(multiplicity.position.x);
-        expect(multiplicity.position.y - associationLabel.position.y).toBe(24);
+        expect(
+            nodeById(labelNodes, "from:multiplicity").data.anchorPoint,
+        ).toEqual({ x: 25, y: 0 });
+        expect(
+            nodeById(labelNodes, "to:multiplicity").data.anchorPoint,
+        ).toEqual({
+            x: 75,
+            y: 0,
+        });
     });
 
     test("keeps a manually placed association label at its stored position", () => {

@@ -23,13 +23,17 @@ import {
 
 import { EDGE_INTERACTION_CONFIG } from "./edgeInteractionConfig.js";
 import {
+    canRemoveEdgePoint,
     createBendPoint,
+    createSelfLoopPoints,
     findEdgePointAtPosition,
     getBendPoints,
     getEdgePoints,
     getSourceDockingPoint,
     getTargetDockingPoint,
+    hasSelfLoopShape,
     insertBendPointAt,
+    isSelfLoop,
     removeBendPoints,
     removeDockingPoints,
     removeEdgePoint,
@@ -123,27 +127,95 @@ export class EdgePointController {
         );
     };
 
-    /** Deletes a single bend or docking point of an edge. */
+    /**
+     * Deletes a single bend or docking point of an edge, except the last bend point of a
+     * self-association, see {@link canRemoveEdgePoint}.
+     */
     handleEdgeDeleteEdgePoint = ({ edgeId, pointId }) => {
-        this.#updateEdgePoints(edgeId, points =>
-            removeEdgePoint(points, pointId),
+        const edge = this.#findEdge(edgeId);
+        if (!edge || !canRemoveEdgePoint(edge, pointId)) return;
+        this.#patchEdgePoints(
+            edgeId,
+            removeEdgePoint(getEdgePoints(edge), pointId),
         );
     };
 
-    /** Deletes the bend points of an edge, its docking points stay where they are pinned. */
+    /**
+     * Deletes the bend points of an edge, its docking points stay where they are pinned. A
+     * self-association keeps its bend points.
+     */
     handleEdgeRemoveBendPoints = ({ edgeId }) => {
+        if (isSelfLoop(this.#findEdge(edgeId))) return;
         this.#updateEdgePoints(edgeId, removeBendPoints);
     };
 
-    /** Deletes the docking points of an edge, so it docks on its own at both ends. */
+    /**
+     * Deletes the docking points of an edge, so it docks on its own at both ends. A
+     * self-association keeps its docking points.
+     */
     handleEdgeRemoveDockingPoints = ({ edgeId }) => {
+        if (isSelfLoop(this.#findEdge(edgeId))) return;
         this.#updateEdgePoints(edgeId, removeDockingPoints);
     };
 
-    /** Deletes all edge points of an edge, so it is drawn straight between its classes. */
+    /**
+     * Deletes all edge points of an edge, so it is drawn straight between its classes. A
+     * self-association keeps its edge points.
+     */
     handleEdgeRemoveAllEdgePoints = ({ edgeId }) => {
+        if (isSelfLoop(this.#findEdge(edgeId))) return;
         this.#patchEdgePoints(edgeId, []);
     };
+
+    /** Gives a self-association its default shape again, see {@link createSelfLoopPoints}. */
+    handleEdgeResetSelfLoop = ({ edgeId }) => {
+        const edge = this.#findEdge(edgeId);
+        if (!isSelfLoop(edge)) return;
+        const classNode = this.#getSvelteFlow()?.getInternalNode?.(edge.source);
+        if (!classNode?.measured?.width) return;
+        this.#patchEdgePoints(
+            edgeId,
+            createSelfLoopPoints(
+                {
+                    ...classNode.internals.positionAbsolute,
+                    width: classNode.measured.width,
+                },
+                EDGE_INTERACTION_CONFIG.selfLoopHeightPx,
+            ),
+        );
+    };
+
+    /**
+     * Gives every self-association without a course of its own its default shape, see
+     * {@link hasSelfLoopShape}: one that was just created, one of a diagram laid out before
+     * self-associations were drawn from their points, or one that lost its docking points before
+     * they had to stay. The points are saved like any other change of an edge.
+     *
+     * @param nodes the nodes of the diagram; a class that is not measured yet is left for later
+     */
+    addDefaultSelfLoops(nodes) {
+        const edges = this.#getEdges();
+        if (!edges.some(edge => this.#needsDefaultShape(edge))) {
+            return;
+        }
+        const nodesById = new Map(nodes.map(node => [node.id, node]));
+        let changed = false;
+        const nextEdges = edges.map(edge => {
+            const classNode = nodesById.get(edge.source);
+            if (!this.#needsDefaultShape(edge) || !classNode?.measured?.width) {
+                return edge;
+            }
+            changed = true;
+            const edgePoints = createSelfLoopPoints(
+                { ...classNode.position, width: classNode.measured.width },
+                EDGE_INTERACTION_CONFIG.selfLoopHeightPx,
+            );
+            return { ...edge, data: { ...edge.data, edgePoints } };
+        });
+        if (changed) {
+            this.#setEdges(nextEdges);
+        }
+    }
 
     /**
      * Ctrl+Q: creates a bend point on the edge closest to the cursor. Selects that edge if it was
@@ -208,6 +280,7 @@ export class EdgePointController {
                 context.hitRadius,
             );
             if (!hitPoint) continue;
+            if (!canRemoveEdgePoint(edge, hitPoint.id)) return;
 
             if (!edge.selected) this.#selectEdge(edge.id);
             this.handleEdgeDeleteEdgePoint({
@@ -220,7 +293,7 @@ export class EdgePointController {
 
     /**
      * Finds the edge whose drawn polyline is closest to the given flow position, within the given
-     * hit radius. Self loops are skipped.
+     * hit radius.
      *
      * @returns the edge, or null if none is close enough
      */
@@ -228,7 +301,6 @@ export class EdgePointController {
         let closestEdge = null;
         let closestDistance = Infinity;
         for (const edge of this.#getEdges()) {
-            if (edge.source === edge.target) continue;
             const bendPoints = getBendPoints(getEdgePoints(edge));
             const ends = this.#drawnEnds(edge, bendPoints);
             if (!ends) continue;
@@ -285,8 +357,16 @@ export class EdgePointController {
         };
     }
 
+    #needsDefaultShape(edge) {
+        return isSelfLoop(edge) && !hasSelfLoopShape(getEdgePoints(edge));
+    }
+
+    #findEdge(edgeId) {
+        return this.#getEdges().find(e => e.id === edgeId);
+    }
+
     #updateEdgePoints(edgeId, update) {
-        const edge = this.#getEdges().find(e => e.id === edgeId);
+        const edge = this.#findEdge(edgeId);
         if (!edge) return;
         this.#patchEdgePoints(edgeId, update(getEdgePoints(edge)));
     }

@@ -73,6 +73,7 @@ Reference document for manual testing. Verify the areas relevant to your change 
 - Point context menu: Delete edge point; deleted docking point docks on its own again
 - Edge context menu: Add bend point here; Remove all bend points (docking points stay); Remove docking points; Remove all edge points; Edit/View Association or Inheritance; remove entries disabled when nothing to remove
 - Double-click on edge: association editor, or class editor of the sub class with Derived from focused
+- Self-association: drawn as a loop above the class (two docking points, two bend points), new or unlaid-out loops get it right away and keep it after reload; points editable; last bend point and last docking point not deletable (context menu, Ctrl+Shift+Q, brush); loops without a docking point or bend point get the default shape; context menu offers Reset to default shape instead of the remove entries; Reset Layout uses the routing of the layout
 - Docking points follow moved and resized classes; bend points move along when both classes are dragged
 - Collinear bend points removed on save
 - Dragging a point near the border pans the view

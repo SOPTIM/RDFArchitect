@@ -42,7 +42,7 @@
     );
 </script>
 
-<PolylineEdge {id} {source} {target} {data} {selected} allowSelfConnecting>
+<PolylineEdge {id} {source} {target} {data} {selected}>
     {#snippet children(path, highlighted, edgeParams)}
         <BaseEdge
             {id}

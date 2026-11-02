@@ -29,6 +29,7 @@ import {
     dissolveCollinearBendPoints,
     getSourceDockingPoint,
     getTargetDockingPoint,
+    isSelfLoop,
 } from "./edgePointOperations.js";
 
 /**
@@ -158,8 +159,8 @@ function withoutDuplicateLabels(labels) {
  * with the points it was saved with is not sent at all.
  *
  * Changes are detected by the identity of the points array of an edge, which every edit replaces.
- * The requests of an edge are sent one after another, so the mRIDs the backend returns for new
- * points are known before the edge is sent again.
+ * The requests of an edge are sent one after another, so an older request never overwrites a newer
+ * one. A new point is stored under the UUID the frontend created it with.
  *
  * Manually placed labels sit relative to the point where their edge meets the class, so they move
  * along when the edge points of their edge change. They are saved together with their edge in one
@@ -455,6 +456,7 @@ export class EdgeLayoutPersistence {
         const dissolved = dissolveCollinearBendPoints(
             points,
             EDGE_INTERACTION_CONFIG.collinearBendPointTolerancePx,
+            isSelfLoop(edge),
         );
         if (dissolved === points) {
             return edge;

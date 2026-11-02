@@ -40,6 +40,9 @@ export const EDGE_INTERACTION_CONFIG = {
      */
     edgeHitRadiusPx: 20,
 
+    /** How far (in flow units) the default loop of a self-association reaches above its class. */
+    selfLoopHeightPx: 50,
+
     /**
      * Maximum perpendicular distance (in flow units) of a bend point to the
      * straight line between its neighbours for it to count as redundant and be

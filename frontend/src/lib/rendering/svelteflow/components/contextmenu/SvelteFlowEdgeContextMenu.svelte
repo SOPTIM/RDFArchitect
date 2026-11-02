@@ -21,6 +21,7 @@
         faEye,
         faGear,
         faPlus,
+        faRotateLeft,
         faTrash,
     } from "@fortawesome/free-solid-svg-icons";
 
@@ -45,6 +46,7 @@
         onRemoveBendPoints = () => {},
         onRemoveDockingPoints = () => {},
         onRemoveAllEdgePoints = () => {},
+        onResetSelfLoop = () => {},
     } = $props();
 
     let triggerRef = $state(null);
@@ -57,6 +59,7 @@
     );
 
     let onEdgePoint = $derived(!!request?.hitEdgePointId);
+    let selfLoop = $derived(!!request?.selfLoop);
     let hasBendPoints = $derived((request?.bendPointCount ?? 0) > 0);
     let hasDockingPoints = $derived((request?.dockingPointCount ?? 0) > 0);
 
@@ -114,6 +117,12 @@
         onRemoveAllEdgePoints({ edgeId: request.edgeId });
         onClose();
     }
+
+    function resetSelfLoop() {
+        if (!request) return;
+        onResetSelfLoop({ edgeId: request.edgeId });
+        onClose();
+    }
 </script>
 
 <ContextMenu.Root bind:open onOpenChange={handleOpenChange}>
@@ -130,7 +139,7 @@
                 faIcon={faTrash}
                 altText={"Ctrl+Shift+Q"}
                 variant="danger"
-                disabled={readOnly}
+                disabled={readOnly || !request?.hitEdgePointRemovable}
             >
                 Delete edge point
             </ContextMenu.Item.Button>
@@ -145,30 +154,42 @@
             </ContextMenu.Item.Button>
         {/if}
         <ContextMenu.Separator />
-        <ContextMenu.Item.Button
-            onSelect={removeBendPoints}
-            faIcon={faEraser}
-            variant="danger"
-            disabled={readOnly || !hasBendPoints}
-        >
-            Remove all bend points
-        </ContextMenu.Item.Button>
-        <ContextMenu.Item.Button
-            onSelect={removeDockingPoints}
-            faIcon={faEraser}
-            variant="danger"
-            disabled={readOnly || !hasDockingPoints}
-        >
-            Remove docking points
-        </ContextMenu.Item.Button>
-        <ContextMenu.Item.Button
-            onSelect={removeAllEdgePoints}
-            faIcon={faEraser}
-            variant="danger"
-            disabled={readOnly || !(hasBendPoints || hasDockingPoints)}
-        >
-            Remove all edge points
-        </ContextMenu.Item.Button>
+        {#if selfLoop}
+            <ContextMenu.Item.Button
+                onSelect={resetSelfLoop}
+                faIcon={faRotateLeft}
+                disabled={readOnly}
+            >
+                Reset to default shape
+            </ContextMenu.Item.Button>
+        {:else}
+            <ContextMenu.Item.Button
+                onSelect={removeBendPoints}
+                faIcon={faEraser}
+                variant="danger"
+                disabled={readOnly || !hasBendPoints}
+            >
+                Remove all bend points
+            </ContextMenu.Item.Button>
+        {/if}
+        {#if !selfLoop}
+            <ContextMenu.Item.Button
+                onSelect={removeDockingPoints}
+                faIcon={faEraser}
+                variant="danger"
+                disabled={readOnly || !hasDockingPoints}
+            >
+                Remove docking points
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={removeAllEdgePoints}
+                faIcon={faEraser}
+                variant="danger"
+                disabled={readOnly || !(hasBendPoints || hasDockingPoints)}
+            >
+                Remove all edge points
+            </ContextMenu.Item.Button>
+        {/if}
         {#if canEdit}
             <ContextMenu.Separator />
             <ContextMenu.Item.Button

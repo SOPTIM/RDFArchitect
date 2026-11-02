@@ -58,6 +58,7 @@
     import {
         decorateEdges,
         elevateEdges,
+        isRaisedBySelection,
         getDiagramBounds,
         hasDefaultNodeLayout,
         onlySelectedEdgeId,
@@ -227,6 +228,7 @@
         const currentNodes = nodes;
         untrack(() => {
             moveDockingPointsOfResizedClasses(currentNodes);
+            edgePoints.addDefaultSelfLoops(currentNodes);
             redockDetachedDockingPoints(currentNodes);
         });
     });
@@ -289,7 +291,7 @@
         const next = elevateEdges(
             currentEdges,
             edge =>
-                edge.id === editedEdgeId ||
+                isRaisedBySelection(edge, editedEdgeId) ||
                 labelHighlight.isHeld(labelsOf(edge.data)),
         );
         if (next !== currentEdges) {
@@ -928,6 +930,7 @@
         onRemoveBendPoints={edgePoints.handleEdgeRemoveBendPoints}
         onRemoveDockingPoints={edgePoints.handleEdgeRemoveDockingPoints}
         onRemoveAllEdgePoints={edgePoints.handleEdgeRemoveAllEdgePoints}
+        onResetSelfLoop={edgePoints.handleEdgeResetSelfLoop}
     />
 </div>
 

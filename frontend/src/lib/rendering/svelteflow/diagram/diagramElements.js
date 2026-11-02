@@ -16,6 +16,7 @@
  */
 
 import { LABEL_NODE_TYPE } from "./labelNodes.js";
+import { isSelfLoop } from "../interaction/edgePointOperations.js";
 
 /** Edges are drawn below every class. */
 export const EDGE_Z_INDEX = -1;
@@ -63,6 +64,20 @@ export function elevateEdges(edges, isElevated) {
         return { ...edge, zIndex };
     });
     return changed ? next : edges;
+}
+
+/**
+ * Whether the selection raises an edge above the classes: the edited edge, i.e. the only selected
+ * one, and every selected self-association. A self-association can lie entirely on its class and
+ * could not be grabbed there otherwise, e.g. when the class is selected together with several of
+ * its loops. Other edges are not raised when several are selected, which would slow down a box
+ * selection over a large diagram.
+ *
+ * @param edge an edge of the diagram
+ * @param editedEdgeId the id of the only selected edge, see {@link onlySelectedEdgeId}
+ */
+export function isRaisedBySelection(edge, editedEdgeId) {
+    return edge.id === editedEdgeId || (!!edge.selected && isSelfLoop(edge));
 }
 
 /**

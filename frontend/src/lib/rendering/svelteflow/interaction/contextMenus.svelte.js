@@ -19,9 +19,11 @@ import { editorState, multiSelectState } from "$lib/sharedState.svelte.js";
 
 import { EDGE_INTERACTION_CONFIG } from "./edgeInteractionConfig.js";
 import {
+    canRemoveEdgePoint,
     findEdgePointAtPosition,
     getBendPoints,
     getEdgePoints,
+    isSelfLoop,
 } from "./edgePointOperations.js";
 import { propertyContextMenu } from "./propertyInteraction.svelte.js";
 
@@ -146,6 +148,9 @@ export class ContextMenuController {
             edgeId,
             flowPosition,
             hitEdgePointId: hitPoint?.id ?? null,
+            hitEdgePointRemovable:
+                !!hitPoint && canRemoveEdgePoint(currentEdge, hitPoint.id),
+            selfLoop: isSelfLoop(currentEdge),
             bendPointCount,
             dockingPointCount: edgePoints.length - bendPointCount,
         };

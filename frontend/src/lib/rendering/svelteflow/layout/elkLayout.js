@@ -48,6 +48,7 @@ const LAYOUT_OPTIONS = {
     "elk.spacing.edgeEdge": "20",
     "elk.layered.spacing.nodeNodeBetweenLayers": "80",
     "elk.spacing.nodeNode": "60",
+    "elk.spacing.nodeSelfLoop": "50",
 };
 
 /**
