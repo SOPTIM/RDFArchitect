@@ -16,14 +16,14 @@
   -->
 
 <script>
+    import { Slider as BitsUiSlider } from "bits-ui";
+
     import InputWithButtonsControl from "$lib/components/InputWithButtonsControl.svelte";
     import {
-        innerTickFractions,
         parseRangeInput,
         roundToDecimals,
-        scaleLabels,
+        sliderScale,
         snapToStep,
-        valueAfterKey,
     } from "$lib/utils/rangeValue.js";
 
     let {
@@ -49,26 +49,26 @@
 
     let lower = $derived(options ? 0 : min);
     let upper = $derived(options ? options.length - 1 : max);
-    let gridStep = $derived(options ? 1 : step);
-    let ticks = $derived(innerTickFractions(lower, upper, gridStep));
-    let labels = $derived(options ? [] : scaleLabels(lower, upper, gridStep));
+    let sliderStep = $derived(options ? 1 : (step ?? 10 ** -decimals));
+    let stepped = $derived(Boolean(options || step));
     let selectedOption = $derived(
         options?.find(option => option.value === value),
     );
 
+    /**
+     * The step the thumb stands on. The slider only takes values on its steps and would overwrite
+     * any other value with the nearest step, so it is handed the step nearest to the value, while
+     * the text field keeps a typed value between two steps.
+     */
     let position = $derived.by(() => {
         if (options) {
             return Math.max(0, options.indexOf(selectedOption));
         }
         const parsed = parseRangeInput(value);
-        return parsed === null
-            ? lower
-            : Math.min(upper, Math.max(lower, parsed));
+        const bounded =
+            parsed === null ? lower : Math.min(upper, Math.max(lower, parsed));
+        return snapToStep(bounded, lower, upper, sliderStep);
     });
-
-    let filled = $derived(
-        upper > lower ? (position - lower) / (upper - lower) : 0,
-    );
 
     $effect(() => {
         if (value !== shownValue) {
@@ -77,47 +77,13 @@
         }
     });
 
-    /**
-     * Places an element at a fraction of the slider length, measured between the two thumb
-     * centers at the ends.
-     */
-    function along(fraction) {
-        return `calc(0.5rem + (100% - 1rem) * ${fraction})`;
-    }
-
     function show(nextValue) {
         shownValue = value = nextValue;
         text = String(nextValue);
     }
 
-    function showPosition(nextPosition) {
+    function slide(nextPosition) {
         show(options ? options[nextPosition].value : nextPosition);
-    }
-
-    function slide(event) {
-        const raw = Number(event.currentTarget.value);
-        const nextPosition = roundToDecimals(
-            snapToStep(raw, lower, upper, gridStep),
-            decimals,
-        );
-        event.currentTarget.value = String(nextPosition);
-        showPosition(nextPosition);
-    }
-
-    function slideByKey(event) {
-        const nextPosition = valueAfterKey(
-            event.key,
-            position,
-            lower,
-            upper,
-            gridStep,
-            decimals,
-        );
-        if (nextPosition === null) {
-            return;
-        }
-        event.preventDefault();
-        showPosition(nextPosition);
     }
 
     function type(nextText) {
@@ -135,7 +101,7 @@
 </script>
 
 <div class="text-default-text flex h-full w-full flex-col">
-    <label for={id} {title}>
+    <label for={options ? undefined : id} {title}>
         {#if label}
             {label}
         {/if}
@@ -163,157 +129,57 @@
                 />
             {/if}
         </div>
-        <div class="flex-1" class:inactive={disabled || readonly}>
-            <div class="relative h-8">
-                {#each ticks as fraction}
-                    <span class="tick" style:left={along(fraction)}></span>
-                {/each}
-                <span class="tick tick-end" style:left={along(0)}></span>
-                <span class="tick tick-end" style:left={along(1)}></span>
-                <div class="track"></div>
-                <div
-                    class="fill"
-                    style:width="calc((100% - 1rem) * {filled})"
-                ></div>
-                <input
-                    type="range"
-                    class="slider"
-                    id={options ? id : undefined}
-                    min={lower}
-                    max={upper}
-                    step="any"
-                    value={position}
-                    oninput={slide}
-                    onkeydown={slideByKey}
-                    disabled={disabled || readonly}
-                    aria-label={label}
-                    aria-valuetext={selectedOption?.label}
-                    {title}
-                />
-            </div>
-            {#if labels.length > 0}
-                <div class="relative -mt-1.5 h-3.5">
-                    {#each labels as scaleLabel}
-                        <span
-                            class="scale-label"
-                            style:left={along(scaleLabel.fraction)}
-                        >
-                            {scaleLabel.value}
-                        </span>
+        <div class="flex-1 px-2" class:opacity-60={disabled || readonly}>
+            <BitsUiSlider.Root
+                type="single"
+                value={position}
+                onValueChange={slide}
+                min={lower}
+                max={upper}
+                step={sliderStep}
+                thumbPositioning="exact"
+                disabled={disabled || readonly}
+                class="group relative mb-2 block h-8 cursor-pointer data-[disabled]:cursor-default"
+                {title}
+            >
+                {#snippet children({ tickItems })}
+                    {@const scale = sliderScale(tickItems.length, stepped)}
+                    <span
+                        class="bg-border-strong absolute inset-x-0 top-1/2 -mt-0.75 h-1.5"
+                    ></span>
+                    <BitsUiSlider.Range
+                        class="bg-blue group-data-[disabled]:bg-button-disabled-background top-1/2 -mt-0.75 h-1.5"
+                    />
+                    {#each tickItems as tick (tick.index)}
+                        {#if tick.index === 0 || tick.index === tickItems.length - 1}
+                            <BitsUiSlider.Tick
+                                index={tick.index}
+                                class="bg-text-subtle top-1/2 -mt-2.25 h-4.5 w-0.5 rounded-[1px]"
+                            />
+                        {:else if scale.innerTicks}
+                            <BitsUiSlider.Tick
+                                index={tick.index}
+                                class="bg-button-darkgray-background top-1/2 -mt-1.75 h-3.5 w-px"
+                            />
+                        {/if}
                     {/each}
-                </div>
-            {/if}
+                    {#each scale.labelIndices as index (index)}
+                        <BitsUiSlider.TickLabel
+                            {index}
+                            position="bottom"
+                            class="text-default-text -mt-1.5 text-xs/3.5 whitespace-nowrap"
+                        >
+                            {tickItems[index].value}
+                        </BitsUiSlider.TickLabel>
+                    {/each}
+                    <BitsUiSlider.Thumb
+                        index={0}
+                        class="bg-blue group-data-[disabled]:bg-button-disabled-background top-1/2 -mt-2 size-4 rounded-full border-2 border-white shadow-[0_1px_2px_rgb(0_0_0/0.35)] outline-none focus-visible:shadow-[0_0_0_0.2rem_var(--color-button-hover-background)]"
+                        aria-label={label}
+                        aria-valuetext={selectedOption?.label}
+                    />
+                {/snippet}
+            </BitsUiSlider.Root>
         </div>
     </div>
 </div>
-
-<style>
-    .inactive {
-        opacity: 0.6;
-    }
-
-    .track,
-    .fill {
-        position: absolute;
-        top: 50%;
-        left: 0.5rem;
-        height: 0.375rem;
-        transform: translateY(-50%);
-    }
-
-    .track {
-        right: 0.5rem;
-        background: var(--color-border-strong);
-    }
-
-    .fill {
-        background: var(--color-blue);
-    }
-
-    .inactive .fill {
-        background: var(--color-button-disabled-background);
-    }
-
-    .tick {
-        position: absolute;
-        top: 50%;
-        width: 1px;
-        height: 0.875rem;
-        transform: translate(-50%, -50%);
-        background: var(--color-button-darkgray-background);
-    }
-
-    .tick-end {
-        width: 2px;
-        height: 1.125rem;
-        border-radius: 1px;
-        background: var(--color-text-subtle);
-    }
-
-    .scale-label {
-        position: absolute;
-        top: 0;
-        transform: translateX(-50%);
-        font-size: 0.75rem;
-        line-height: 0.875rem;
-        white-space: nowrap;
-        color: var(--color-default-text);
-    }
-
-    .slider {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        appearance: none;
-        background: transparent;
-        cursor: pointer;
-        outline: none;
-    }
-
-    .slider:disabled {
-        cursor: default;
-    }
-
-    .slider::-moz-range-track {
-        background: transparent;
-    }
-
-    .slider::-webkit-slider-thumb {
-        box-sizing: border-box;
-        width: 1rem;
-        height: 1rem;
-        border: 2px solid var(--color-white);
-        border-radius: 9999px;
-        appearance: none;
-        background: var(--color-blue);
-        box-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
-    }
-
-    .slider::-moz-range-thumb {
-        box-sizing: border-box;
-        width: 1rem;
-        height: 1rem;
-        border: 2px solid var(--color-white);
-        border-radius: 9999px;
-        background: var(--color-blue);
-        box-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
-    }
-
-    .slider:focus-visible::-webkit-slider-thumb {
-        box-shadow: 0 0 0 0.2rem var(--color-button-hover-background);
-    }
-
-    .slider:focus-visible::-moz-range-thumb {
-        box-shadow: 0 0 0 0.2rem var(--color-button-hover-background);
-    }
-
-    .slider:disabled::-webkit-slider-thumb {
-        background: var(--color-button-disabled-background);
-    }
-
-    .slider:disabled::-moz-range-thumb {
-        background: var(--color-button-disabled-background);
-    }
-</style>

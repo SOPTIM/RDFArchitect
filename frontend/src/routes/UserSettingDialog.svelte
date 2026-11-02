@@ -178,7 +178,7 @@
                     bind:value={localSettings["cornerRoundingFactor"]}
                     min={0}
                     max={100}
-                    step={10}
+                    step={1}
                     disabled={!localSettings["useRoundedEdges"]}
                     warn={hasInvalidInput}
                     title={"Controls how strongly the edge corners are \n" +
