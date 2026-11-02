@@ -86,7 +86,7 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.71.2
+- **Version:** 8.72.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
@@ -109,7 +109,7 @@
 
 ### bits-ui
 - **Package:** bits-ui
-- **Version:** 2.19.5
+- **Version:** 2.20.0
 - **License:** MIT
 
 ### codemirror
@@ -257,7 +257,7 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.71.2
+- **Version:** 8.72.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
@@ -275,7 +275,7 @@
 
 ### vite
 - **Package:** vite
-- **Version:** 8.3.3
+- **Version:** 8.3.5
 - **License:** MIT
 - **URL:** [https://vite.dev](https://vite.dev)
 
