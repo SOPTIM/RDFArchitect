@@ -47,6 +47,13 @@ export class DiagramSelectionController {
     #nodeDragActive = false;
     #suppressClickOpen = false;
 
+    /**
+     * The edges this controller selected because both of their classes were selected. Only these
+     * are deselected again when one of their classes leaves the selection, an edge the user
+     * clicked stays selected.
+     */
+    #edgesSelectedByClasses = new Set();
+
     constructor({
         getNodes,
         setNodes,
@@ -134,6 +141,13 @@ export class DiagramSelectionController {
         );
     }
 
+    /**
+     * Selects the edges between selected classes and deselects the edges that were selected that
+     * way, or by the box selection, once one of their classes is no longer selected.
+     *
+     * @param selectedClassIds the ids of the selected classes
+     * @param autoSelectedEdges the edges the box selection selected, or null
+     */
     #reconcileEdgeSelection(selectedClassIds, autoSelectedEdges) {
         const autoSelectedIds = new Set(
             (autoSelectedEdges ?? []).map(edge => edge.id),
@@ -143,10 +157,18 @@ export class DiagramSelectionController {
             const shouldSelect =
                 selectedClassIds.has(edge.source) &&
                 selectedClassIds.has(edge.target);
+            if (!edge.selected) {
+                this.#edgesSelectedByClasses.delete(edge.id);
+            }
             if (!!edge.selected === shouldSelect) {
                 return edge;
             }
-            if (!shouldSelect && !autoSelectedIds.has(edge.id)) {
+            if (shouldSelect) {
+                this.#edgesSelectedByClasses.add(edge.id);
+            } else if (
+                !this.#edgesSelectedByClasses.delete(edge.id) &&
+                !autoSelectedIds.has(edge.id)
+            ) {
                 return edge;
             }
             changed = true;
