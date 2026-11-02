@@ -51,6 +51,7 @@ class XmiImportWarnings {
         add(warnings, profileName, graphUri, unresolvedTypes(profileName, written));
         add(warnings, profileName, graphUri, duplicateClasses(profileName, written));
         add(warnings, profileName, graphUri, droppedMembers(profileName, written));
+        add(warnings, profileName, graphUri, unnameableMembers(profileName, written));
         add(warnings, profileName, graphUri, unmappedOntologyFields(written));
     }
 
@@ -136,6 +137,30 @@ class XmiImportWarnings {
                 written.droppedMembers().size());
         return written.droppedMembers().stream()
                 .map(dropped -> new UncarriedItem(dropped.memberName(), describe(dropped)))
+                .toList();
+    }
+
+    /**
+     * The attributes and enum literals of written classes whose name holds whitespace in the
+     * middle, which a URI cannot. The class is in the schema and the member is not, so, as with a
+     * dropped member, the loss is invisible without this.
+     */
+    private List<UncarriedItem> unnameableMembers(String profileName, WrittenProfile written) {
+        if (written.unnameableMembers().isEmpty()) {
+            return List.of();
+        }
+        logger.warn(
+                "Profile '{}': {} attribute(s) or enum literal(s) are named in a way no URI can"
+                        + " hold. They are not imported.",
+                profileName,
+                written.unnameableMembers().size());
+        return written.unnameableMembers().stream()
+                .map(
+                        unnameable ->
+                                new UncarriedItem(
+                                        unnameable.memberName(),
+                                        "The name contains whitespace, which a URI cannot hold;"
+                                                + " not imported"))
                 .toList();
     }
 

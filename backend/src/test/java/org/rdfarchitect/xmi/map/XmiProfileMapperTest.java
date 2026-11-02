@@ -456,6 +456,14 @@ class XmiProfileMapperTest {
     }
 
     @Test
+    void write_reportsAMemberWhoseNameNoUriCanHold() {
+        // UnitSymbol is written; its literal "TB 170" cannot be, and nothing else would say so.
+        assertThat(writtenProfile("Topology").unnameableMembers())
+                .extracting(XmiProfileMapper.UnnameableMember::memberName)
+                .contains("UnitSymbol.TB 170");
+    }
+
+    @Test
     void write_namesSuchAnAttributeOnceAnExtensionNamespaceIsSupplied() {
         assertThat(writtenProfile("Meßwerte", EXTENSION_NS).droppedMembers()).isEmpty();
         assertThat(write("Meßwerte", EXTENSION_NS))

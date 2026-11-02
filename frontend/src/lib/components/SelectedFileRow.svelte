@@ -23,6 +23,8 @@
 
     let {
         value,
+        /** What the field holds, as a screen reader announces it. */
+        label = "Selected file",
         disabled = false,
         onValueChange = () => {},
         onRemove,
@@ -45,6 +47,7 @@
             type="text"
             {value}
             {disabled}
+            aria-label={label}
             title={disabled ? "This name cannot be changed" : undefined}
             oninput={event => onValueChange(event.target.value)}
         />

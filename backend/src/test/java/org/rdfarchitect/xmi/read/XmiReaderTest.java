@@ -459,6 +459,12 @@ class XmiReaderTest {
     }
 
     @Test
+    void read_remembersAMemberItDroppedForItsName() {
+        // Dropped, but not forgotten: the import has to be able to say what it left out.
+        assertThat(classNamed("UnitSymbol").getUnnameableMembers()).contains("TB 170");
+    }
+
+    @Test
     void read_keepsTheNameOfAnElementTheExportDoesNotContain() {
         // A partial export writes an EAStub per missing target. It is the only thing that can say
         // what an attribute wanted to be typed with.

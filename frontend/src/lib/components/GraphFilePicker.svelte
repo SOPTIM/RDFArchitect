@@ -138,6 +138,9 @@
                         ? fileEntry.file.name
                         : fileEntry.graphUri}
                     disabled={fileEntry.isZip}
+                    label={fileEntry.isZip
+                        ? "Selected archive"
+                        : `Schema URI for ${fileEntry.file.name}`}
                     onValueChange={value => updateGraphUri(index, value)}
                     onRemove={() => removeFile(index)}
                 />

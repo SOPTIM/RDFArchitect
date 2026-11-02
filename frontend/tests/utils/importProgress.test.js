@@ -21,6 +21,7 @@ import {
     FileState,
     ImportPhase,
     ImportProgress,
+    importedGraphUrisOf,
     JobState,
     OutcomeKind,
 } from "$lib/utils/importProgress.svelte.js";
@@ -436,5 +437,38 @@ describe("ImportProgress", () => {
         expect(progress.finished).toBe(true);
         expect(progress.jobState).toBe(JobState.FAILED);
         expect(progress.errorMessage).toBe("Another import is still running.");
+    });
+});
+
+describe("importedGraphUrisOf", () => {
+    test("takes the schemas the outcome names once the job has ended", () => {
+        expect(
+            importedGraphUrisOf({
+                state: JobState.CANCELLED,
+                outcome: {
+                    kind: OutcomeKind.GRAPHS_IMPORTED,
+                    graphUris: ["http://graph#A"],
+                },
+            }),
+        ).toEqual(["http://graph#A"]);
+    });
+
+    test("takes the files imported so far while a cancelled job has not stopped yet", () => {
+        expect(
+            importedGraphUrisOf({
+                state: JobState.RUNNING,
+                files: [
+                    file({
+                        state: FileState.IMPORTED,
+                        graphUri: "http://graph#A",
+                    }),
+                    file({ index: 1, state: FileState.RUNNING }),
+                ],
+            }),
+        ).toEqual(["http://graph#A"]);
+    });
+
+    test("finds nothing without a status", () => {
+        expect(importedGraphUrisOf(undefined)).toEqual([]);
     });
 });

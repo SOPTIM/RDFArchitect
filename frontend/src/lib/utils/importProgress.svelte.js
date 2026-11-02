@@ -74,6 +74,22 @@ const FINISHED_STATES = [
     FileState.SKIPPED,
 ];
 
+/**
+ * The schemas a job has written so far, read from a status the backend reported. The outcome names
+ * them once the job has ended; until then, the files that made it through do.
+ *
+ * @param {{outcome?: {kind: string, graphUris?: string[]}, files?: {state: string, graphUri?: string}[]}|null|undefined} status
+ * @returns {string[]} the URIs of the imported schemas
+ */
+export function importedGraphUrisOf(status) {
+    if (status?.outcome?.kind === OutcomeKind.GRAPHS_IMPORTED) {
+        return status.outcome.graphUris ?? [];
+    }
+    return (status?.files ?? [])
+        .filter(file => file.state === FileState.IMPORTED && file.graphUri)
+        .map(file => file.graphUri);
+}
+
 function clampPercent(value) {
     if (!Number.isFinite(value)) return 0;
     return Math.min(100, Math.max(0, value));

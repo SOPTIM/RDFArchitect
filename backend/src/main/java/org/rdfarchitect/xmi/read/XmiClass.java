@@ -62,6 +62,12 @@ public class XmiClass {
     private final List<XmiEnumLiteral> literals = new ArrayList<>();
 
     /**
+     * The attributes and literals the export names in a way no URI can hold, by the name as stated.
+     * They are not read, so this is all that is left to report them by.
+     */
+    private final List<String> unnameableMembers = new ArrayList<>();
+
+    /**
      * The complete stereotype set, read from the stereotype applications at the root of the file.
      * The {@code stereotype} attributes of the vendor extension hold one value each and lose the
      * co-occurring ones a release does emit.

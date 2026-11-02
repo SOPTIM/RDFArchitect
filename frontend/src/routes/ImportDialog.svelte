@@ -26,7 +26,10 @@
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { asGraphUri } from "$lib/utils/graphUri.js";
-    import { ImportProgress } from "$lib/utils/importProgress.svelte.js";
+    import {
+        ImportProgress,
+        importedGraphUrisOf,
+    } from "$lib/utils/importProgress.svelte.js";
     import { applyImportResult } from "$lib/utils/importResult.js";
     import { ImportStatusPoller } from "$lib/utils/importStatusPoller.js";
 
@@ -247,7 +250,9 @@
             return;
         }
 
-        let importedGraphUris = currentProgress.importedGraphUris;
+        let importedGraphUris = currentProgress.finished
+            ? currentProgress.importedGraphUris
+            : importedGraphUrisOf({ files: currentProgress.files });
         if (!currentProgress.finished) {
             currentProgress.cancel();
             await cancelImportJob(workspaceName, jobId);
@@ -258,8 +263,9 @@
                     workspaceName,
                     jobId,
                 );
-                importedGraphUris =
-                    data?.importedGraphUris ?? importedGraphUris;
+                if (data) {
+                    importedGraphUris = importedGraphUrisOf(data);
+                }
             }
         }
         if (importedGraphUris.length > 0) {

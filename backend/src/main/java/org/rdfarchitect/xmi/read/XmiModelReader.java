@@ -151,7 +151,7 @@ final class XmiModelReader {
         if (currentClass == null || XmiStreams.attribute(reader, XmiNames.ASSOCIATION) != null) {
             return;
         }
-        var name = XmiNaming.usableOrNull(XmiStreams.attribute(reader, XmiNames.NAME));
+        var name = usableMemberName(reader);
         if (name == null) {
             return;
         }
@@ -165,13 +165,27 @@ final class XmiModelReader {
         if (currentClass == null) {
             return;
         }
-        var name = XmiNaming.usableOrNull(XmiStreams.attribute(reader, XmiNames.NAME));
+        var name = usableMemberName(reader);
         if (name == null) {
             return;
         }
         var literal = new XmiEnumLiteral(XmiStreams.attribute(reader, XmiNames.ID), name);
         currentClass.getLiterals().add(literal);
         context.getLiteralsById().put(literal.getId(), literal);
+    }
+
+    /**
+     * The name of an attribute or literal of the current class, or {@code null} where it has none a
+     * URI can hold. A refused name is remembered on the class, so that leaving the member out is
+     * reported rather than passed over.
+     */
+    private String usableMemberName(XMLStreamReader reader) {
+        var stated = XmiStreams.attribute(reader, XmiNames.NAME);
+        var name = XmiNaming.usableOrNull(stated);
+        if (name == null && stated != null && !stated.isBlank()) {
+            currentClass.getUnnameableMembers().add(stated);
+        }
+        return name;
     }
 
     private void rememberSuperClass(String generalId) {

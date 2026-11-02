@@ -84,6 +84,7 @@ public final class XmiProfileMapper {
     private final List<DuplicateClass> duplicateClasses = new ArrayList<>();
     private final Map<String, WrittenClass> sharedClasses = new LinkedHashMap<>();
     private final List<DroppedMember> droppedMembers = new ArrayList<>();
+    private final List<UnnameableMember> unnameableMembers = new ArrayList<>();
     private final List<UnmappedOntologyField> unmappedOntologyFields = new ArrayList<>();
 
     /**
@@ -125,6 +126,15 @@ public final class XmiProfileMapper {
      */
     public record DroppedMember(String memberName, List<String> stereotypes) {}
 
+    /**
+     * An attribute or enum literal of a written class that the export names in a way no URI can
+     * hold, such as the enum literal {@code "TB 170"}. It is left out rather than renamed into
+     * something the export does not say.
+     *
+     * @param memberName the member as the export names it, qualified by its class
+     */
+    public record UnnameableMember(String memberName) {}
+
     /** An ontology header field the export states under a name no known field matches. */
     public record UnmappedOntologyField(String name) {}
 
@@ -140,6 +150,7 @@ public final class XmiProfileMapper {
      * @param duplicateClasses the classes that were left out for sharing a name with one already
      *     written
      * @param droppedMembers the members of written classes that could not be written themselves
+     * @param unnameableMembers the members of written classes whose name no URI can hold
      * @param unmappedOntologyFields the header fields that were not carried
      */
     public record WrittenProfile(
@@ -148,6 +159,7 @@ public final class XmiProfileMapper {
             List<UnresolvedType> unresolvedTypes,
             List<DuplicateClass> duplicateClasses,
             List<DroppedMember> droppedMembers,
+            List<UnnameableMember> unnameableMembers,
             List<UnmappedOntologyField> unmappedOntologyFields) {}
 
     private XmiProfileMapper(
@@ -220,6 +232,7 @@ public final class XmiProfileMapper {
                 List.copyOf(unresolvedTypes),
                 List.copyOf(duplicateClasses),
                 List.copyOf(droppedMembers),
+                List.copyOf(unnameableMembers),
                 List.copyOf(unmappedOntologyFields));
     }
 
@@ -371,6 +384,12 @@ public final class XmiProfileMapper {
             written.put(classId, new WrittenClass(uuid, uri));
             writeAttributes(writer, cimClass);
             writeEnumEntries(writer, cimClass);
+            cimClass.getUnnameableMembers()
+                    .forEach(
+                            member ->
+                                    unnameableMembers.add(
+                                            new UnnameableMember(
+                                                    cimClass.getName() + "." + member)));
         }
         return written;
     }
