@@ -15,16 +15,28 @@
   -->
 
 <script>
-    import { faDatabase } from "@fortawesome/free-solid-svg-icons";
+    import {
+        faDatabase,
+        faDiagramProject,
+    } from "@fortawesome/free-solid-svg-icons";
 
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import {
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
+    import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
+    import { graphLabeller } from "$lib/utils/graph-label.js";
+    import { compareGraphs } from "$lib/utils/graph-order.js";
+    import { workspaceState } from "$lib/workspaceState.svelte.js";
+
+    import { getUri } from "../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
+
+    const { graphUri = null, onSelectGraph } = $props();
 
     let workspaceList = $state([]);
+
     let selectedWorkspaceName = $derived(
         editorState.selectedWorkspace.getValue(),
     );
@@ -35,27 +47,88 @@
     });
 
     async function fetchNavigationObject() {
-        workspaceList = (await workspaceStore.getWorkspaces()) ?? [];
+        const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
+        workspaceList = await Promise.all(
+            workspaces.map(async workspace => {
+                const workspaceName = workspace.label;
+                const wasExpanded = workspaceList.find(
+                    entry => entry.label === workspaceName,
+                )?.showContents;
+                return {
+                    label: workspaceName,
+                    graphs: await listGraphs(workspaceName),
+                    showContents:
+                        wasExpanded ?? workspaceName === selectedWorkspaceName,
+                };
+            }),
+        );
+    }
+
+    /**
+     * The schemas of a workspace, named and ordered the way the editor's own
+     * navigation names and orders them — two sidebars showing the same schemas
+     * must not disagree about what each is called or where it sits.
+     */
+    async function listGraphs(workspaceName) {
+        const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
+        const nameOf = graphLabeller(graphs);
+        return graphs
+            .map(graph => ({ graph, name: nameOf(graph) }))
+            .sort((a, b) =>
+                compareGraphs(
+                    { label: a.name, uri: getUri(a.graph) },
+                    { label: b.name, uri: getUri(b.graph) },
+                ),
+            );
     }
 </script>
 
-<div class="nav-sidebar h-full w-full">
-    <div class="nav-sidebar__scroll no-scrollbar">
+<div class="flex h-full min-h-0 w-full flex-col">
+    <div class="no-scrollbar min-h-0 flex-1 overflow-y-auto py-[0.4rem]">
         {#if workspaceList && workspaceList.length > 0}
-            <div class="flex flex-col gap-1 pr-2">
-                {#each workspaceList as workspace}
-                    <NavigationEntry
-                        level={1}
-                        label={workspace.label}
-                        icon={faDatabase}
-                        isSelected={workspace.label === selectedWorkspaceName}
-                        title={workspace.label}
-                        onclick={() => {
-                            editorState.selectedWorkspace.updateValue(
-                                workspace.label,
-                            );
-                        }}
-                    />
+            <div class="flex flex-col gap-1 px-2">
+                {#each workspaceList as workspace (workspace.label)}
+                    <div>
+                        <NavigationEntry
+                            level={1}
+                            label={workspace.label}
+                            icon={faDatabase}
+                            hasChildren={workspace.graphs.length > 0}
+                            expanded={workspace.showContents}
+                            isSelected={workspace.label ===
+                                selectedWorkspaceName && !graphUri}
+                            title="{workspace.label} — every change in the workspace"
+                            onclick={() => {
+                                workspaceState.activate(workspace.label);
+                                onSelectGraph(null);
+                            }}
+                            onToggle={() => {
+                                if (!workspace.graphs.length) return;
+                                workspace.showContents =
+                                    !workspace.showContents;
+                            }}
+                        />
+                        {#if workspace.showContents}
+                            {#each workspace.graphs as { graph, name } (getUri(graph))}
+                                <NavigationEntry
+                                    level={2}
+                                    label={name}
+                                    secondaryLabel={graph.uri.prefix ?? ""}
+                                    icon={faDiagramProject}
+                                    isSelected={selectedWorkspaceName ===
+                                        workspace.label &&
+                                        getUri(graph) === graphUri}
+                                    title={getUri(graph)}
+                                    onclick={() => {
+                                        workspaceState.activate(
+                                            workspace.label,
+                                        );
+                                        onSelectGraph(getUri(graph));
+                                    }}
+                                />
+                            {/each}
+                        {/if}
+                    </div>
                 {/each}
             </div>
         {:else}

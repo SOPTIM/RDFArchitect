@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
+import org.rdfarchitect.models.changelog.CapturedState;
 import org.rdfarchitect.models.changelog.ChangeLogParticipant;
 import org.rdfarchitect.models.changelog.ParticipantId;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLog;
@@ -277,6 +278,11 @@ class TransactionCoordinatorTest {
         @Override
         public boolean hasChanges() {
             return true;
+        }
+
+        @Override
+        public CapturedState capture(int versionsBack) {
+            return () -> {};
         }
 
         @Override

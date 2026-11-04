@@ -20,10 +20,12 @@ package org.rdfarchitect.database.inmemory;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
+import org.rdfarchitect.models.changelog.ValueChange;
 import org.rdfarchitect.rdf.graph.wrapper.SnapshotParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /** The namespace prefixes shared by all graphs of a workspace. */
@@ -66,5 +68,11 @@ class WorkspacePrefixes extends SnapshotParticipant<Map<String, String>> {
     protected void restore(Map<String, String> state) {
         prefixes.clearNsPrefixMap();
         prefixes.setNsPrefixes(state);
+    }
+
+    @Override
+    protected List<ValueChange> describeValueChanges(
+            Map<String, String> before, Map<String, String> after) {
+        return ValueChange.between(before, after);
     }
 }

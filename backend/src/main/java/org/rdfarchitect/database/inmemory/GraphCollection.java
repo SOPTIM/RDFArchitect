@@ -20,12 +20,14 @@ package org.rdfarchitect.database.inmemory;
 import org.rdfarchitect.rdf.graph.wrapper.SnapshotParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 /**
  * Which graphs a workspace contains, under which URI.
@@ -58,6 +60,29 @@ class GraphCollection extends SnapshotParticipant<Map<String, GraphWithContext>>
     /** Returns the graphs by URI, for reading only. */
     Map<String, GraphWithContext> view() {
         return Collections.unmodifiableMap(graphs);
+    }
+
+    /**
+     * Returns the graphs the workspace held a number of versions back, without stepping there.
+     *
+     * @param versionsBack how far back to look; {@code 0} is the current set of graphs
+     * @return the graphs held then
+     */
+    Collection<GraphWithContext> graphsAt(int versionsBack) {
+        return graphsByUriAt(versionsBack).values();
+    }
+
+    /**
+     * Returns the graphs the workspace held a number of versions back by the URI they had then,
+     * without stepping there.
+     *
+     * @param versionsBack how far back to look; {@code 0} is the current set of graphs
+     * @return the graphs held then, by the URI they were held under
+     */
+    Map<String, GraphWithContext> graphsByUriAt(int versionsBack) {
+        // A set of graphs nothing has been committed to yet has no recorded state, but the one it
+        // stands in is no less the state it is in.
+        return Collections.unmodifiableMap(versionsBack == 0 ? graphs : stateAt(versionsBack));
     }
 
     void put(String graphUri, GraphWithContext graph) {
@@ -98,6 +123,19 @@ class GraphCollection extends SnapshotParticipant<Map<String, GraphWithContext>>
         return after.entrySet().stream()
                 .filter(entry -> !existing.contains(entry.getValue()))
                 .map(Map.Entry::getKey)
+                .toList();
+    }
+
+    /**
+     * A URI is affected when it no longer stands for the same graph: it was created, deleted, or
+     * renamed — and a rename affects both the URI it left and the one it moved to.
+     */
+    @Override
+    protected List<String> describeAffectedGraphs(
+            Map<String, GraphWithContext> before, Map<String, GraphWithContext> after) {
+        return Stream.concat(before.keySet().stream(), after.keySet().stream())
+                .distinct()
+                .filter(graphUri -> before.get(graphUri) != after.get(graphUri))
                 .toList();
     }
 }

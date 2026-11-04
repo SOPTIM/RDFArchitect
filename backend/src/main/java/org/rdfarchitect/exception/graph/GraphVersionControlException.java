@@ -18,10 +18,15 @@
 package org.rdfarchitect.exception.graph;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 
 public class GraphVersionControlException extends GraphException {
 
     public GraphVersionControlException(String message) {
         super(HttpStatus.INTERNAL_SERVER_ERROR, message);
+    }
+
+    protected GraphVersionControlException(HttpStatusCode status, String message) {
+        super(status, message);
     }
 }

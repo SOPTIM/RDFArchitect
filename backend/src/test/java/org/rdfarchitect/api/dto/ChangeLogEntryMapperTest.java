@@ -26,12 +26,15 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
+import org.rdfarchitect.models.changelog.CapturedState;
+import org.rdfarchitect.models.changelog.ChangeLogParticipant;
 import org.rdfarchitect.models.changelog.ContextDelta;
 import org.rdfarchitect.models.changelog.ParticipantId;
+import org.rdfarchitect.models.changelog.ParticipantVersion;
+import org.rdfarchitect.models.changelog.ValueChange;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
-import java.lang.ref.WeakReference;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -53,6 +56,12 @@ class ChangeLogEntryMapperTest {
 
     private static WorkspaceChangeLogEntry changeLogEntry;
 
+    /**
+     * An entry holds the triples of its delta only weakly, as the live graph is what keeps them;
+     * here this is that graph, or a collection between setup and test would leave nothing to map.
+     */
+    private static DeltaCompressible delta;
+
     @BeforeAll
     static void beforeAll() {
         var baseGraph = GraphFactory.createDefaultGraph();
@@ -66,7 +75,7 @@ class ChangeLogEntryMapperTest {
                         NodeFactory.createURI(SUB),
                         NodeFactory.createURI(PRED),
                         NodeFactory.createURI(DELETED)));
-        var delta = new DeltaCompressible(baseGraph);
+        delta = new DeltaCompressible(baseGraph);
         delta.add(
                 Triple.create(
                         NodeFactory.createURI(SUB),
@@ -80,13 +89,45 @@ class ChangeLogEntryMapperTest {
 
         var contextDeltas =
                 List.of(
-                        new ContextDelta(
+                        ContextDelta.ofTriples(
                                 ParticipantId.ofGraph(ParticipantId.Kind.RDF, GRAPH_URI),
-                                new WeakReference<>(delta.getAdditions()),
-                                new WeakReference<>(delta.getDeletions())));
+                                null,
+                                delta.getAdditions(),
+                                delta.getDeletions()));
+        var participant =
+                ParticipantVersion.of(
+                        ParticipantId.ofGraph(ParticipantId.Kind.RDF, GRAPH_URI),
+                        new UnsteppableParticipant(),
+                        UUID.randomUUID());
         changeLogEntry =
                 new WorkspaceChangeLogEntry(
-                        CHANGE_ID, TIMESTAMP, MESSAGE, List.of(), contextDeltas);
+                        CHANGE_ID, TIMESTAMP, MESSAGE, List.of(participant), contextDeltas, false);
+    }
+
+    /** Stands in for a participant where only what the entry says about it is under test. */
+    private record UnsteppableParticipant() implements ChangeLogParticipant {
+
+        @Override
+        public CapturedState capture(int versionsBack) {
+            return () -> {};
+        }
+
+        @Override
+        public void undo() {}
+
+        @Override
+        public void redo() {}
+
+        @Override
+        public void discardOldestVersion() {}
+
+        @Override
+        public void discardRedoHistory() {}
+
+        @Override
+        public boolean foldLastVersionIntoPrevious() {
+            return true;
+        }
     }
 
     @Test
@@ -110,6 +151,69 @@ class ChangeLogEntryMapperTest {
                 () -> assertThat(contextDelta.getDeletions()).hasSize(1),
                 () -> assertThat(deletion.getSubject()).isEqualTo(SUB),
                 () -> assertThat(deletion.getPredicate()).isEqualTo(PRED),
-                () -> assertThat(deletion.getObject()).isEqualTo(DELETED));
+                () -> assertThat(deletion.getObject()).isEqualTo(DELETED),
+                () -> assertThat(dto.getAffectedKinds()).containsExactly("rdf"),
+                () -> assertThat(dto.getAffectedGraphUris()).containsExactly(GRAPH_URI),
+                () -> assertThat(dto.getRestorableGraphUris()).containsExactly(GRAPH_URI));
+    }
+
+    @Test
+    void toDTO_aDeltaOfValuesCarriesThemInsteadOfTriples() {
+        var entry =
+                new WorkspaceChangeLogEntry(
+                        UUID.randomUUID(),
+                        TIMESTAMP,
+                        "changed the namespace prefixes",
+                        List.of(
+                                ParticipantVersion.of(
+                                        ParticipantId.ofWorkspace(ParticipantId.Kind.PREFIXES),
+                                        new UnsteppableParticipant(),
+                                        UUID.randomUUID())),
+                        List.of(
+                                ContextDelta.ofValues(
+                                        ParticipantId.ofWorkspace(ParticipantId.Kind.PREFIXES),
+                                        null,
+                                        List.of(
+                                                new ValueChange(
+                                                        "ex", null, "http://example.org/")))),
+                        false);
+
+        var dto = changeLogEntryMapper.toDTO(entry);
+
+        var contextDelta = dto.getContextDeltas().getFirst();
+        var value = contextDelta.getValues().getFirst();
+        assertAll(
+                () -> assertThat(contextDelta.getContextName()).isEqualTo("prefixes"),
+                () -> assertThat(contextDelta.getAdditions()).isNull(),
+                () -> assertThat(contextDelta.getDeletions()).isNull(),
+                () -> assertThat(contextDelta.getValues()).hasSize(1),
+                () -> assertThat(value.getKey()).isEqualTo("ex"),
+                () -> assertThat(value.getBefore()).isNull(),
+                () -> assertThat(value.getAfter()).isEqualTo("http://example.org/"));
+    }
+
+    @Test
+    void toDTO_whatBecameOfAGraphIsShownThereButNotRestorableThere() {
+        var createdGraph =
+                new ParticipantVersion(
+                        ParticipantId.ofWorkspace(ParticipantId.Kind.GRAPHS),
+                        new UnsteppableParticipant(),
+                        UUID.randomUUID(),
+                        List.of(GRAPH_URI),
+                        List.of(GRAPH_URI));
+        var entry =
+                new WorkspaceChangeLogEntry(
+                        UUID.randomUUID(),
+                        TIMESTAMP,
+                        "created a graph",
+                        List.of(createdGraph),
+                        List.of(),
+                        false);
+
+        var dto = changeLogEntryMapper.toDTO(entry);
+
+        assertAll(
+                () -> assertThat(dto.getAffectedGraphUris()).containsExactly(GRAPH_URI),
+                () -> assertThat(dto.getRestorableGraphUris()).isEmpty());
     }
 }

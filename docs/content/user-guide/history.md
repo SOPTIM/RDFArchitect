@@ -28,3 +28,13 @@ This is the view to use when reviewing what happened between two editing session
 ## Restore a previous version
 
 From the changelog you can restore the workspace to any earlier point, which takes back every change made after it, in all of its schemas rather than only the one you have open.
+
+A restore of the whole workspace steps back through the history, so the changes it takes back can be redone afterwards.
+
+### Restore a single schema
+
+In the changelog of a single schema, the restore dialog offers **Restore only this schema**. It puts back that schema's content, shapes and diagrams the way the chosen version left them and leaves the other schemas alone. Because it cannot step through the history without taking the other schemas along, it is recorded as a new change of its own: it can be undone like any other, but changes that were undone before it can no longer be redone.
+
+A schema can only be restored on its own to a version from after it was created. For an older version — for example the state the workspace was loaded in, before the schema was imported — the dialog offers only the whole workspace.
+
+If the workspace changes while the dialog is open, for example in another tab, the restore is refused and the changelog reloads, so that you can confirm again with what the restore would now do.
