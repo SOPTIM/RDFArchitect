@@ -145,7 +145,9 @@
                     <br />
                     Supported:
                     <b>{allowedFileExtensions}</b>
-                    . One export is read at a time.
+                    (Enterprise Architect XMI 2.5.1; other versions may work).
+                    <br />
+                    Multiple inheritance may be lost.
                 </p>
                 <SkippedFilesNotice
                     heading="Skipped, these will not be read:"

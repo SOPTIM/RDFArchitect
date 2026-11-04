@@ -39,6 +39,10 @@ The other entry point for CGMES: the Enterprise Architect export the profiles ar
 rather than the RDFS released from it. One export becomes **one workspace of its own**, so a name a
 workspace already has is refused. Upload the entire model including any possible metadata to
 prevent missing references; which packages are actually imported is chosen afterwards.
+Supported are Enterprise Architect **XMI 2.5.1** exports (Publish → Publish As… → XMI 2.5.1); other
+XMI versions may work, but are not guaranteed.
+Multiple inheritance is not fully supported: a class with several superclasses may lose all but one
+of them.
 
 Every package can become a schema, and a schema is the package you pick plus everything its classes
 need, which is what the two numbers per row mean: `26 classes + 7 dependencies`. A package marked
