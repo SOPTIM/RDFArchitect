@@ -135,6 +135,27 @@ function createVersionControlStore() {
     }
 
     /**
+     * Workspaces whose history ends came with the step that just moved them.
+     * Every step that went through is followed by a reload of the editor; the
+     * reload finds them here instead of asking again.
+     */
+    const stepped = new Set<string>();
+
+    /**
+     * Refreshes the history ends after a reload of the editor, unless a step
+     * has just answered them. Any reload clears what the steps left behind, so
+     * an edit that reloads later is asked about again.
+     */
+    async function refreshAfterReload(workspace?: string) {
+        const target = resolveWorkspace(workspace);
+        if (!target) return;
+        const answeredByStep = stepped.has(target);
+        stepped.clear();
+        if (answeredByStep) return;
+        await refresh(target);
+    }
+
+    /**
      * The steps asked for, run one after another.
      *
      * Every press counts, so one that arrives while a step is running waits for
@@ -222,6 +243,7 @@ function createVersionControlStore() {
         workspace: string,
         step: HistoryStepDto | undefined,
     ) {
+        stepped.add(workspace);
         store.update(s => ({
             steppable: new Map(s.steppable)
                 .set(stepKey(workspace, "undo"), settled(!!step?.canUndo))
@@ -283,6 +305,7 @@ function createVersionControlStore() {
     return {
         subscribe,
         refresh,
+        refreshAfterReload,
         canUndo,
         canRedo,
         invalidateWorkspace,

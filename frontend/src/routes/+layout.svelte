@@ -158,7 +158,7 @@
 
     async function fetchUndoRedo() {
         const workspaceName = editorState.selectedWorkspace.getValue();
-        await versionControlStore.refresh(workspaceName);
+        await versionControlStore.refreshAfterReload(workspaceName);
         canUndo = await versionControlStore.canUndo(workspaceName);
         canRedo = await versionControlStore.canRedo(workspaceName);
     }

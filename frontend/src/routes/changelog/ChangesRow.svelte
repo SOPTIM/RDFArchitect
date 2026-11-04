@@ -50,7 +50,7 @@
             // A restore takes back changes in every graph of the workspace, not only the one on
             // screen.
             versionControlStore.invalidateWorkspace(workspaceName);
-            await versionControlStore.refresh(workspaceName);
+            // The reload asks for the history ends again as well.
             forceReloadTrigger.trigger();
             toastStore.success(
                 "Version restored",
