@@ -78,6 +78,16 @@ public class CrossProfileDiagramInfo extends SnapshotParticipant<Map<String, Str
         }
     }
 
+    /**
+     * Drops the colour of a graph that no longer exists.
+     *
+     * @param graphUri the URI of the deleted graph
+     */
+    public void removeGraph(String graphUri) {
+        beginChange();
+        colors.remove(graphUri);
+    }
+
     @Override
     protected Map<String, String> snapshot() {
         return new HashMap<>(colors);

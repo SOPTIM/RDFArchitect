@@ -444,6 +444,32 @@ class WorkspaceTest {
     }
 
     @Test
+    void delete_dropsCrossProfileColorAndUndoBringsItBack() {
+        // Arrange
+        Workspace workspace = new Workspace(WORKSPACE);
+        exampleGraphs = List.of(createExampleGraph());
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.crossProfileColors().setColor("http://example.org/graph1", "#123456");
+            transaction.commit("assigned a colour");
+        }
+
+        // Act
+        deleteGraph(workspace, "http://example.org/graph1");
+
+        // Assert
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            assertThat(transaction.crossProfileColors().getColor("http://example.org/graph1"))
+                    .isNull();
+        }
+        workspace.undo();
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            assertThat(transaction.crossProfileColors().getColor("http://example.org/graph1"))
+                    .isEqualTo("#123456");
+        }
+    }
+
+    @Test
     void rename_nonExistingGraphUri_throwsException() {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);

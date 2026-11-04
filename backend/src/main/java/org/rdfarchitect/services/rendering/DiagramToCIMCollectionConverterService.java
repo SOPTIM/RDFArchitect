@@ -70,12 +70,15 @@ public class DiagramToCIMCollectionConverterService
 
     @Override
     public CIMCollection convert(String datasetName, UUID diagramId) {
+        List<CopiedGraph> copiedGraphs;
+        // The lock only covers taking the copies; converting them would hold up edits and undo
+        // for every query over every graph in the diagram.
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
             var diagram = getDiagram(transaction, datasetName, diagramId);
             var graphEntries = buildSortedGraphEntries(datasetName, diagram);
-            var copiedGraphs = copyGraphs(transaction, graphEntries);
-            return convertAndMerge(copiedGraphs);
+            copiedGraphs = copyGraphs(transaction, graphEntries);
         }
+        return convertAndMerge(copiedGraphs);
     }
 
     private CustomDiagram getDiagram(
