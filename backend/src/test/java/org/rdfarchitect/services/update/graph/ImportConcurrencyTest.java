@@ -20,10 +20,12 @@ package org.rdfarchitect.services.update.graph;
 import static org.assertj.core.api.Assertions.*;
 
 import org.apache.jena.query.ReadWrite;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.GraphCompressionConfig;
 import org.rdfarchitect.config.SchemaConfig;
+import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
@@ -59,9 +61,18 @@ class ImportConcurrencyTest {
 
     @BeforeEach
     void setUp() {
+        // The session is a thread-local, and the readers here run on threads of their own: they
+        // only see the workspace if the test thread uses the default session as well, rather than
+        // one an earlier test left behind on it.
+        SessionContext.clear();
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         importGraphs = new ImportGraphsService(databasePort);
         originalTimeout = GraphCompressionConfig.getLockTimeoutSeconds();
+    }
+
+    @AfterEach
+    void tearDown() {
+        SessionContext.clear();
     }
 
     @Test
