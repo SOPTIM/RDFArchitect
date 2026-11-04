@@ -55,7 +55,7 @@ The default upload limit is 50 MB. For larger files, an administrator can raise 
 
 ### I made a mistake — how do I undo it?
 
-**Ctrl+Z** or **Edit → Undo**. Undo works across tracked graph edits such as classes, attributes, associations, packages, and ontology changes. Up to 256 steps of history per graph.
+**Ctrl+Z** or **Edit → Undo**. The history belongs to the whole workspace: undo walks back through every tracked change in it, be it a class, attribute, association, package, ontology metadata, namespace, custom SHACL shape, diagram, or the import, deletion or renaming of a schema. Up to 256 steps per workspace. A step that would make a schema or diagram disappear is confirmed first.
 
 ### Why can't I edit this class / package?
 
@@ -132,7 +132,7 @@ Not from the UI as of 1.0.0. Snapshots are stored as datasets in Fuseki; an admi
 
 ### The changelog view is slow.
 
-The changelog of a long-lived graph can contain thousands of entries. Older entries are transparently compressed, but rendering the full list still takes time. Using the search bar at the top of the changelog is faster than scrolling.
+The changelog of a long-lived workspace can contain thousands of entries. Older entries are transparently folded into the state they started from, but rendering the full list still takes time. Using the search bar at the top of the changelog is faster than scrolling.
 
 ## Operations (for administrators)
 

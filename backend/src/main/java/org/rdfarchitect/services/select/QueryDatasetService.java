@@ -36,7 +36,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.DatasetDTO;
 import org.rdfarchitect.api.dto.GraphDTO;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
@@ -64,15 +64,16 @@ public class QueryDatasetService
 
     @Override
     public ByteArrayOutputStream getDatasetSchema(String datasetName, RDFFormat format) {
-        var graphUris = databasePort.listGraphUris(datasetName);
         var resultDataset = DatasetFactory.create();
 
         // fetch graphs and insert into resultDataset
-        for (String graphUri : graphUris) {
-            if (graphUri.equals("default")) {
-                resultDataset.setDefaultModel(getGraphAsModel(datasetName, "default"));
-            } else {
-                resultDataset.addNamedModel(graphUri, getGraphAsModel(datasetName, graphUri));
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            for (String graphUri : transaction.graphUris()) {
+                if (graphUri.equals("default")) {
+                    resultDataset.setDefaultModel(getGraphAsModel(datasetName, "default"));
+                } else {
+                    resultDataset.addNamedModel(graphUri, getGraphAsModel(datasetName, graphUri));
+                }
             }
         }
 
@@ -87,10 +88,8 @@ public class QueryDatasetService
     }
 
     private Model getGraphAsModel(String datasetName, String graphURI) {
-        try (var ctx =
-                databasePort
-                        .getGraphWithContext(new GraphIdentifier(datasetName, graphURI))
-                        .begin(ReadWrite.READ)) {
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            var ctx = transaction.graph(graphURI);
             return ModelFactory.createModelForGraph(GraphUtils.deepCopy(ctx.getRdfGraph()));
         }
     }
@@ -102,8 +101,10 @@ public class QueryDatasetService
         // Read once for the whole listing: it cannot change while it is running, and asking the
         // store per graph takes its lock once per profile of the workspace.
         var datasetPrefixes = databasePort.getPrefixMapping(datasetName);
-        for (var graphUri : databasePort.listGraphUris(datasetName)) {
-            result.add(readGraph(datasetName, graphUri, datasetPrefixes));
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            for (var graphUri : transaction.graphUris()) {
+                result.add(readGraph(transaction, graphUri, datasetPrefixes));
+            }
         }
 
         return result;
@@ -121,13 +122,11 @@ public class QueryDatasetService
      * one of them. The graph's own prefixes therefore win, and the dataset's fill in only what the
      * graph does not declare itself.
      */
-    private GraphDTO readGraph(String datasetName, String graphUri, PrefixMapping datasetPrefixes) {
+    private GraphDTO readGraph(
+            WorkspaceTransaction transaction, String graphUri, PrefixMapping datasetPrefixes) {
         var dto = GraphDTO.builder().uri(new URI(graphUri)).build();
-        try (var ctx =
-                databasePort
-                        .getGraphWithContext(new GraphIdentifier(datasetName, graphUri))
-                        .begin(ReadWrite.READ)) {
-            var stored = ctx.getRdfGraph();
+        try {
+            var stored = transaction.graph(graphUri).getRdfGraph();
             var graph = GraphUtils.deepCopy(stored);
             var prefixes = graph.getPrefixMapping().setNsPrefixes(stored.getPrefixMapping());
             fillInMissingPrefixes(prefixes, datasetPrefixes);

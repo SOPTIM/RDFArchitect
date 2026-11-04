@@ -25,8 +25,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
-    import { graphStore } from "$lib/stores/graphStore.ts";
-    import { ontologyStore } from "$lib/stores/ontologyStore.ts";
+    import { versionControlStore } from "$lib/stores/versionControlStore.ts";
 
     import TripleTable from "./TripleTable.svelte";
 
@@ -42,15 +41,16 @@
 
     async function callRestoreVersion(changeId) {
         const workspaceName = editorState.selectedWorkspace.getValue();
-        const graphUri = editorState.selectedGraph.getValue();
         const { error } = await restoreVersion({
-            path: { datasetName: workspaceName, graphURI: graphUri },
+            path: { datasetName: workspaceName },
             body: { versionId: changeId },
         });
         if (!error) {
             console.log("Version restored successfully");
-            ontologyStore.invalidateGraph(workspaceName, graphUri);
-            graphStore.invalidateWorkspace(workspaceName);
+            // A restore takes back changes in every graph of the workspace, not only the one on
+            // screen.
+            versionControlStore.invalidateWorkspace(workspaceName);
+            // The reload asks for the history ends again as well.
             forceReloadTrigger.trigger();
             toastStore.success(
                 "Version restored",
@@ -93,12 +93,24 @@
         );
     }
 
-    function getAdditionsKey(contextName) {
-        return `${change.changeId}::${contextName}::additions`;
+    function describeContext(context) {
+        return context.graphUri
+            ? `${context.contextName} — ${context.graphUri}`
+            : context.contextName;
     }
 
-    function getDeletionsKey(contextName) {
-        return `${change.changeId}::${contextName}::deletions`;
+    function getAdditionsKey(context) {
+        return `${change.changeId}::${contextKey(context)}::additions`;
+    }
+
+    function getDeletionsKey(context) {
+        return `${change.changeId}::${contextKey(context)}::deletions`;
+    }
+
+    // One change can touch the same kind of data in several graphs, so the kind alone would give
+    // two contexts the same key and make them expand and collapse together.
+    function contextKey(context) {
+        return `${context.graphUri ?? "workspace"}::${context.contextName}`;
     }
 </script>
 
@@ -150,7 +162,7 @@
                     {#if context.additions?.length || context.deletions?.length}
                         <div class="border-border rounded-xl border p-2">
                             <h3 class="mb-2 font-semibold">
-                                Context: {context.contextName}
+                                Context: {describeContext(context)}
                             </h3>
 
                             {#if context.additions?.length}
@@ -158,9 +170,7 @@
                                     triples={context.additions}
                                     color="green"
                                     title="Additions"
-                                    expandedKey={getAdditionsKey(
-                                        context.contextName,
-                                    )}
+                                    expandedKey={getAdditionsKey(context)}
                                     {getExpanded}
                                     {setExpanded}
                                 />
@@ -171,9 +181,7 @@
                                     triples={context.deletions}
                                     color="red"
                                     title="Deletions"
-                                    expandedKey={getDeletionsKey(
-                                        context.contextName,
-                                    )}
+                                    expandedKey={getDeletionsKey(context)}
                                     {getExpanded}
                                     {setExpanded}
                                 />

@@ -26,6 +26,7 @@ import java.util.List;
 @NoArgsConstructor
 public class ContextDeltaDTO {
     private String contextName;
+    private String graphUri;
     private List<TripleDTO> additions;
     private List<TripleDTO> deletions;
 }

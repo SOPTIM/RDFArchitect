@@ -23,6 +23,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
 
 import java.util.List;
+import java.util.UUID;
 
 public interface GetCustomDiagramsUseCase {
 
@@ -41,6 +42,14 @@ public interface GetCustomDiagramsUseCase {
      * @return The custom diagrams for the dataset.
      */
     List<CustomDiagramDTO> getCustomDiagramsForDataset(String datasetName);
+
+    /**
+     * Returns the id of the dataset's cross profile diagram.
+     *
+     * @param datasetName The name of the dataset.
+     * @return The id of the cross profile diagram.
+     */
+    UUID getCrossProfileDiagramId(String datasetName);
 
     /**
      * Returns the cross profile diagram for the dataset.

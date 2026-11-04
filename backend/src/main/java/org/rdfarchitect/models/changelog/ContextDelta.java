@@ -20,6 +20,29 @@ package org.rdfarchitect.models.changelog;
 import org.apache.jena.graph.Graph;
 
 import java.lang.ref.WeakReference;
+import java.util.Locale;
 
+/**
+ * What one participant changed in a commit, for display in the changelog.
+ *
+ * <p>Carries the full {@link ParticipantId} rather than only the kind of data, so that a commit
+ * touching the same kind in two graphs can still say which delta belongs to which graph.
+ *
+ * @param participant which part of the workspace changed
+ * @param additions the triples the commit added, held weakly so that an entry never keeps a graph
+ *     alive on its own
+ * @param deletions the triples the commit removed, held weakly for the same reason
+ */
 public record ContextDelta(
-        String contextName, WeakReference<Graph> additions, WeakReference<Graph> deletions) {}
+        ParticipantId participant, WeakReference<Graph> additions, WeakReference<Graph> deletions) {
+
+    /** Returns the kind of data that changed, named the way the changelog shows it. */
+    public String contextName() {
+        return participant.kind().name().toLowerCase(Locale.ROOT);
+    }
+
+    /** Returns the graph this delta belongs to, or {@code null} for workspace-wide data. */
+    public String graphUri() {
+        return participant.scope();
+    }
+}

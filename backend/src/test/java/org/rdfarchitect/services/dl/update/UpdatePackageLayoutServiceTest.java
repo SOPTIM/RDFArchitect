@@ -60,8 +60,7 @@ class UpdatePackageLayoutServiceTest extends DiagramLayoutServicesTestBase {
         addGraphFromFile("association.ttl");
         initialiseDiagramLayout();
         var diagramAobjectsList =
-                diagramLayout
-                        .getDiagramLayoutModelDirect()
+                layoutModelOf(graphIdentifier)
                         .listSubjectsWithProperty(
                                 DL.belongsToDiagram,
                                 ResourceFactory.createResource(

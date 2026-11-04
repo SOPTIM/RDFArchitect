@@ -17,17 +17,28 @@
 
 package org.rdfarchitect.services.versioncontrol;
 
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.api.dto.HistoryStepDTO;
+
+import java.util.UUID;
 
 public interface UndoUseCase {
 
     /**
-     * Undoes the most recent named commit for the given graph, reverting all associated graph
-     * participants to their previous state.
+     * Rolls back the most recent change anywhere in the workspace, across every graph it touched.
      *
-     * @param graphIdentifier the identifier of the graph to operate on
-     * @return the changelog entry that was undone, or {@code null} if no undo was available
+     * @param workspaceName the workspace to operate on
+     * @return the change that was undone
      */
-    ChangeLogEntry undo(GraphIdentifier graphIdentifier);
+    HistoryStepDTO undo(String workspaceName);
+
+    /**
+     * Rolls back the most recent change, provided it is still the one the undo preview showed.
+     *
+     * @param workspaceName the workspace to operate on
+     * @param changeId the change the undo preview showed
+     * @return the change that was undone
+     * @throws org.rdfarchitect.exception.graph.UndoTargetChangedException if the most recent change
+     *     is a different one; nothing is undone then
+     */
+    HistoryStepDTO undoIfLatest(String workspaceName, UUID changeId);
 }

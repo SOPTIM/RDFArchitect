@@ -25,7 +25,6 @@ import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.SnapshotPort;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.SnapshotException;
@@ -64,11 +63,13 @@ public class InMemorySnapshotAdapter implements SnapshotPort {
         var snapshotName = constructSnapshotName(datasetName, base64Token);
 
         var graphsByUri = new LinkedHashMap<String, Graph>();
-        for (var graphUri : databasePort.listGraphUris(datasetName)) {
-            graphsByUri.put(graphUri, copyGraph(new GraphIdentifier(datasetName, graphUri)));
+        PrefixMapping prefixMapping;
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            for (var graphUri : transaction.graphUris()) {
+                graphsByUri.put(graphUri, copyGraph(transaction.graph(graphUri).getRdfGraph()));
+            }
+            prefixMapping = new PrefixMappingImpl().setNsPrefixes(transaction.prefixes());
         }
-        var prefixMapping =
-                new PrefixMappingImpl().setNsPrefixes(databasePort.getPrefixMapping(datasetName));
 
         snapshots.put(base64Token, new StoredSnapshot(snapshotName, graphsByUri, prefixMapping));
         return base64Token;
@@ -80,12 +81,18 @@ public class InMemorySnapshotAdapter implements SnapshotPort {
         if (snapshot == null) {
             throw new SnapshotException("Snapshot with token " + base64Token + " does not exist");
         }
-        for (var entry : snapshot.graphsByUri().entrySet()) {
-            databasePort.createGraph(
-                    new GraphIdentifier(snapshot.snapshotName(), entry.getKey()),
-                    GraphUtils.deepCopy(entry.getValue()));
+        databasePort.createWorkspaceIfAbsent(snapshot.snapshotName());
+        try (var transaction =
+                databasePort.beginTransaction(snapshot.snapshotName(), ReadWrite.WRITE)) {
+            for (var entry : snapshot.graphsByUri().entrySet()) {
+                transaction.createGraph(entry.getKey(), GraphUtils.deepCopy(entry.getValue()));
+            }
+            transaction.setPrefixes(snapshot.prefixMapping());
+            // Loading a snapshot is not a change the user made and cannot mean to undo.
+            transaction.commitWithoutHistory();
         }
-        databasePort.setPrefixMapping(snapshot.snapshotName(), snapshot.prefixMapping());
+        // A fresh workspace starts out editable; a snapshot is a shared copy and must not be.
+        databasePort.disableEditing(snapshot.snapshotName());
     }
 
     @Override
@@ -93,11 +100,9 @@ public class InMemorySnapshotAdapter implements SnapshotPort {
         return snapshots.containsKey(base64Token);
     }
 
-    private Graph copyGraph(GraphIdentifier graphIdentifier) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var copiedGraph = GraphUtils.deepCopy(ctx.getRdfGraph());
-            GraphUtils.removeUUIDs(copiedGraph);
-            return copiedGraph;
-        }
+    private Graph copyGraph(Graph graph) {
+        var copiedGraph = GraphUtils.deepCopy(graph);
+        GraphUtils.removeUUIDs(copiedGraph);
+        return copiedGraph;
     }
 }

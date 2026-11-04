@@ -54,8 +54,11 @@ public class ClassSchemaOccurrenceService implements ListClassSchemaOccurrencesU
         var schemas = schemasByGraphUri(datasetName);
 
         var occurrences = new ArrayList<ClassSchemaOccurrenceDTO>();
-        for (var graphUri : databasePort.listGraphUris(datasetName)) {
-            occurrences.add(occurrenceIn(datasetName, graphUri, schemas.get(graphUri), classUri));
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            for (var graphUri : transaction.graphUris()) {
+                occurrences.add(
+                        occurrenceIn(datasetName, graphUri, schemas.get(graphUri), classUri));
+            }
         }
         return occurrences;
     }
@@ -76,7 +79,9 @@ public class ClassSchemaOccurrenceService implements ListClassSchemaOccurrencesU
         var keyword = schema == null ? null : schema.getKeyword();
         var label = schema == null ? null : schema.getLabel();
         var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
             var model = ModelFactory.createModelForGraph(graph);
             var resource = model.getResource(classUri);
