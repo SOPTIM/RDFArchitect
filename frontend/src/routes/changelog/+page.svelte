@@ -50,20 +50,18 @@
     }
 
     /**
-     * Cleans the expandedStateMap by removing keys that a new changelog does not contain.
+     * Forgets what was expanded in changes a new changelog no longer holds.
+     *
+     * Every key starts with the id of its change — the row, and each table of
+     * each context inside it — so the change decides whether a key survives,
+     * whatever the row builds after it.
      * @param {Array} changelog - The new changelog array.
      */
     function cleanExpandedStateMap(changelog) {
-        const validKeys = new Set();
-
-        for (const change of changelog) {
-            validKeys.add(`${change.changeId}::row`);
-            validKeys.add(`${change.changeId}::additions`);
-            validKeys.add(`${change.changeId}::deletions`);
-        }
+        const changeIds = new Set(changelog.map(change => change.changeId));
 
         for (const key in expandedStateMap) {
-            if (!validKeys.has(key)) {
+            if (!changeIds.has(key.split("::")[0])) {
                 delete expandedStateMap[key];
             }
         }

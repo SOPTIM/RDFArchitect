@@ -30,7 +30,7 @@
         filterableKinds,
         labelOf,
     } from "./changeKinds.js";
-    import { showsChange } from "./changelogFilter.js";
+    import { restoreRequestFor, showsChange } from "./changelogFilter.js";
     import ChangesRow from "./ChangesRow.svelte";
     import RestoreConfirmDialog from "./RestoreConfirmDialog.svelte";
 
@@ -123,37 +123,9 @@
         hiddenKinds = next;
     }
 
-    /**
-     * Asks before restoring, naming the changes between the workspace and the target. The
-     * changelog already holds them, so the question can be asked without another request.
-     *
-     * A target below the workspace is reached by taking changes back, one above it by reapplying
-     * them, and the two read differently enough that the question says which it is. How many
-     * changes lie ahead goes with it, because a restore recorded as a new version leaves none of
-     * them to be redone.
-     */
+    /** Asks before restoring, naming what the restore would do. */
     function askToRestore(change) {
-        const all = changelog ?? [];
-        const current = all.findIndex(entry => !entry.undone);
-        const index = all.findIndex(
-            entry => entry.changeId === change.changeId,
-        );
-        // Where the workspace stood when the question was asked: the change it
-        // stood on, and the newest one, which an undo leaves above it. The
-        // backend refuses the restore if either has moved before the answer,
-        // as the lists the question showed would no longer be what it does.
-        const standingOn = {
-            current: all[current]?.changeId,
-            newest: all[0]?.changeId,
-        };
-        restoreRequest = change.undone
-            ? { change, standingOn, reapplied: all.slice(index, current) }
-            : {
-                  change,
-                  standingOn,
-                  takenBack: all.slice(current, index),
-                  undoneAhead: current,
-              };
+        restoreRequest = restoreRequestFor(changelog, change);
     }
 
     async function restore(graphUris) {

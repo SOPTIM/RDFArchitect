@@ -69,7 +69,7 @@ class GraphCollection extends SnapshotParticipant<Map<String, GraphWithContext>>
      * @return the graphs held then
      */
     Collection<GraphWithContext> graphsAt(int versionsBack) {
-        return stateAt(versionsBack).values();
+        return graphsByUriAt(versionsBack).values();
     }
 
     /**
@@ -80,7 +80,9 @@ class GraphCollection extends SnapshotParticipant<Map<String, GraphWithContext>>
      * @return the graphs held then, by the URI they were held under
      */
     Map<String, GraphWithContext> graphsByUriAt(int versionsBack) {
-        return Collections.unmodifiableMap(stateAt(versionsBack));
+        // A set of graphs nothing has been committed to yet has no recorded state, but the one it
+        // stands in is no less the state it is in.
+        return Collections.unmodifiableMap(versionsBack == 0 ? graphs : stateAt(versionsBack));
     }
 
     void put(String graphUri, GraphWithContext graph) {

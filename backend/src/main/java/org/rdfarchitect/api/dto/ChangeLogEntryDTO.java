@@ -45,6 +45,13 @@ public class ChangeLogEntryDTO {
     private List<String> restorableGraphUris;
 
     /**
+     * The graphs a restore held to one graph can take back to this version: those that already
+     * existed right after it, under the URIs they have now. A graph created since has nothing to go
+     * back to, so a restore held to it can only cover the whole workspace.
+     */
+    private List<String> restoreTargetGraphUris;
+
+    /**
      * Whether an undo has stepped over this change, so that it lies ahead of the workspace rather
      * than behind it. A redo brings it back.
      */

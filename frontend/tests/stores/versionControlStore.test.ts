@@ -797,9 +797,37 @@ describe("versionControlStore", () => {
                 path: { datasetName: WORKSPACE },
                 body: { versionId: CHANGE_ID, graphUris: [] },
             });
+            // The workspace steps back to the version and answers with it:
+            // where it went, not something it did.
             expect(toastStore.info).toHaveBeenCalledWith(
                 "Version restored",
-                expect.stringContaining("added a class"),
+                "The workspace is now at: added a class",
+            );
+        });
+
+        test("names a schema restore by the change it recorded", async () => {
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: {
+                    change: {
+                        changeId: "22222222-2222-2222-2222-222222222222",
+                        message: 'Restored schema "EQ" to the state after: x',
+                        affectedGraphUris: [],
+                    },
+                    canUndo: true,
+                    canRedo: false,
+                },
+                error: undefined,
+            });
+
+            await store.restore(
+                CHANGE_ID,
+                ["http://example.org/EQ"],
+                WORKSPACE,
+            );
+
+            expect(toastStore.info).toHaveBeenCalledWith(
+                "Version restored",
+                'Restored schema "EQ" to the state after: x',
             );
         });
 

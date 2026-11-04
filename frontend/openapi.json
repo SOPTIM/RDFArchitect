@@ -373,6 +373,12 @@
             },
             "type" : "array"
           },
+          "restoreTargetGraphUris" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "timestamp" : {
             "type" : "string"
           },
@@ -8588,7 +8594,7 @@
     },
     "/api/datasets/{datasetName}/restore" : {
       "post" : {
-        "description" : "Puts the workspace back the way the given version left it. Leaving the scope out restores the whole workspace by stepping through the history, which writes nothing and leaves the changes stepped over to be redone. A scope holding the restore to certain graphs is recorded as a new change instead, which discards whatever could still be redone. With expectedCurrentChangeId and expectedNewestChangeId, only if the workspace still stands on the one and the newest recorded change is still the other; otherwise nothing is restored and 409 is returned.",
+        "description" : "Puts the workspace back the way the given version left it. Leaving the scope out restores the whole workspace by stepping through the history, which writes nothing and leaves the changes stepped over to be redone. A scope holding the restore to certain graphs is recorded as a new change instead, which discards whatever could still be redone. With expectedCurrentChangeId, only if the workspace still stands on that change, and with expectedNewestChangeId, only if that is still the newest recorded change, undone or not; otherwise nothing is restored and 409 is returned. A restore that cannot be carried out, such as one held to a schema that did not exist yet at that version, is refused with 422.",
         "operationId" : "restoreVersion",
         "parameters" : [
           {
@@ -8635,6 +8641,9 @@
           },
           "409" : {
             "description" : "The workspace has moved in its history since."
+          },
+          "422" : {
+            "description" : "The restore cannot be carried out as asked."
           }
         },
         "summary" : "restore a version",

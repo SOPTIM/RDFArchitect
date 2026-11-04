@@ -18,6 +18,7 @@
 import { describe, expect, test } from "vitest";
 
 import {
+    restoreRequestFor,
     restoresChange,
     showsChange,
     visibleDeltas,
@@ -195,5 +196,61 @@ describe("visibleDeltas", () => {
 
     test("copes with a change that carries no deltas", () => {
         expect(visibleDeltas({}, { graphUri: GRAPH_A })).toEqual([]);
+    });
+});
+
+describe("restoreRequestFor", () => {
+    // Newest first, like the log: two changes undone above the current one.
+    const LOG = [
+        { changeId: "e", undone: true },
+        { changeId: "d", undone: true },
+        { changeId: "c" },
+        { changeId: "b" },
+        { changeId: "a" },
+    ];
+
+    test("takes back what lies between the workspace and an older change", () => {
+        const request = restoreRequestFor(LOG, LOG[4]);
+
+        expect(request.takenBack.map(change => change.changeId)).toEqual([
+            "c",
+            "b",
+        ]);
+        expect(request.undoneAhead).toBe(2);
+    });
+
+    test("reapplies what lies between an undone change and the workspace", () => {
+        const request = restoreRequestFor(LOG, LOG[0]);
+
+        expect(request.reapplied.map(change => change.changeId)).toEqual([
+            "e",
+            "d",
+        ]);
+        expect(request.takenBack).toBeUndefined();
+    });
+
+    test("says where the workspace stood, for the backend to check", () => {
+        const request = restoreRequestFor(LOG, LOG[4]);
+
+        expect(request.standingOn).toEqual({ current: "c", newest: "e" });
+    });
+
+    test("reapplies every change when all of them are undone", () => {
+        // The workspace stands below the oldest change, so it is reapplied too.
+        const allUndone = [
+            { changeId: "b", undone: true },
+            { changeId: "a", undone: true },
+        ];
+
+        const request = restoreRequestFor(allUndone, allUndone[0]);
+
+        expect(request.reapplied.map(change => change.changeId)).toEqual([
+            "b",
+            "a",
+        ]);
+        expect(request.standingOn).toEqual({
+            current: undefined,
+            newest: "b",
+        });
     });
 });

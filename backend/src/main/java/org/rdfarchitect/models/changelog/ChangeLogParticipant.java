@@ -59,10 +59,11 @@ public interface ChangeLogParticipant {
     /**
      * Takes a state this participant was in, so that it can be written back as a change of its own.
      *
-     * <p>That is what makes a restore a new commit rather than a rewind: nothing is stepped, the
-     * old state is read where it already lies and written forward. History then only ever grows in
-     * one direction, the restore can itself be undone, and a restore covering part of the workspace
-     * never touches the rest.
+     * <p>That is what a restore held to some schemas is built on: it cannot step, since stepping
+     * takes the whole workspace along, so the old state is read where it already lies and written
+     * forward as a new commit. The restore can itself be undone, and it never touches the rest of
+     * the workspace. A restore of the whole workspace has no need for this — it steps through the
+     * history instead.
      *
      * @param versionsBack how far back the state lies; {@code 0} is the current state
      * @return what writes the captured state back, to be run inside a write transaction on the

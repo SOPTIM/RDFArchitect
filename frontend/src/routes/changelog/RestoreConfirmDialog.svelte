@@ -42,10 +42,19 @@
     /** Whether the target lies ahead of the workspace, so that reaching it reapplies changes. */
     let goingForward = $derived(!!request?.reapplied);
 
-    /** Whether the question on the table is a restore held to the schema in view. */
-    let restoringOneSchema = $derived(
-        thisSchemaOnly && !!graphUri && !goingForward,
+    /**
+     * Whether the schema in view can be restored on its own to the target. A schema created after
+     * it — imported, or recreated under a URI another one left — has no state there to go back to,
+     * and only the whole workspace can be taken that far.
+     */
+    let schemaCanGoBack = $derived(
+        !!graphUri &&
+            !goingForward &&
+            (request?.change.restoreTargetGraphUris ?? []).includes(graphUri),
     );
+
+    /** Whether the question on the table is a restore held to the schema in view. */
+    let restoringOneSchema = $derived(thisSchemaOnly && schemaCanGoBack);
 
     /**
      * The changes between the workspace and the target, with what the user has held back already
@@ -124,7 +133,12 @@
                         {/each}
                     </ul>
                 {/if}
-                {#if graphUri && !goingForward}
+                {#if graphUri && !goingForward && !schemaCanGoBack}
+                    <p class="border-border border-t pt-2 text-xs">
+                        This schema did not exist yet at that version, so only
+                        the whole workspace can be restored to it.
+                    </p>
+                {:else if schemaCanGoBack}
                     <div class="border-border border-t pt-2">
                         <CheckBoxEditControl
                             label="Restore only this schema"

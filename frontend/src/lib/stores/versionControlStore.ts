@@ -252,8 +252,9 @@ function createVersionControlStore() {
         move: Move,
         target: string,
         step: HistoryStepDto | undefined,
+        text: string = describe(move, step?.change),
     ): MoveResult {
-        toastStore.info(MOVES[move].successTitle, describe(move, step?.change));
+        toastStore.info(MOVES[move].successTitle, text);
         invalidateWorkspace(target);
         rememberHistoryEnd(target, step);
         return { error: null };
@@ -353,7 +354,19 @@ function createVersionControlStore() {
                 );
                 return { error: null, skipped: true };
             }
-            return landed("restore", target, data);
+            if (graphUris.length > 0) {
+                // A schema restore is a change of its own, and its message says
+                // what it restored.
+                return landed("restore", target, data);
+            }
+            // A workspace restore steps there, and answers with the change it
+            // now stands on: that is where it went, not what it did.
+            return landed(
+                "restore",
+                target,
+                data,
+                `The workspace is now at: ${data.change.message}`,
+            );
         });
     }
 

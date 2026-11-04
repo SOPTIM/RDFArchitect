@@ -75,10 +75,28 @@ public record RevertScope(Set<String> graphUris) {
         return graphUris.isEmpty();
     }
 
-    /** Names what this scope covers, for the message of the commit that records the restore. */
+    /**
+     * Names what this scope covers the way the changelog names schemas elsewhere, for the message
+     * of the commit that records the restore.
+     *
+     * @return {@code schema "EQ"}, {@code schemas "EQ", "SSH"}, or {@code the workspace}
+     */
     public String describe() {
-        return isEverything()
-                ? "the workspace"
-                : graphUris.stream().sorted().collect(Collectors.joining(", "));
+        if (isEverything()) {
+            return "the workspace";
+        }
+        var names =
+                graphUris.stream()
+                        .map(RevertScope::localName)
+                        .sorted()
+                        .map("\"%s\""::formatted)
+                        .collect(Collectors.joining(", "));
+        return (graphUris.size() == 1 ? "schema " : "schemas ") + names;
+    }
+
+    /** The part of a graph URI after its last {@code #} or {@code /}, as the import names it. */
+    private static String localName(String uri) {
+        var cut = Math.max(uri.lastIndexOf('#'), uri.lastIndexOf('/'));
+        return cut < 0 || cut == uri.length() - 1 ? uri : uri.substring(cut + 1);
     }
 }

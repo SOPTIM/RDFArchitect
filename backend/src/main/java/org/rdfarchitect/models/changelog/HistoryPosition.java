@@ -27,7 +27,22 @@ import java.util.UUID;
  * a commit moves both, an undo or redo moves the first, and a change committed and undone again
  * elsewhere moves the second while leaving the first where it was.
  *
+ * <p>As an expectation, a side left {@code null} is not checked: a client that only knows where the
+ * workspace stood can still say so.
+ *
  * @param currentChangeId the change the workspace stands on, or {@code null} if there is none
  * @param newestChangeId the newest change recorded, undone or not, or {@code null} if there is none
  */
-public record HistoryPosition(UUID currentChangeId, UUID newestChangeId) {}
+public record HistoryPosition(UUID currentChangeId, UUID newestChangeId) {
+
+    /**
+     * Returns whether the workspace still stands where this expectation saw it.
+     *
+     * @param actual where the workspace stands now
+     * @return whether every side this expectation names still matches
+     */
+    public boolean admits(HistoryPosition actual) {
+        return (currentChangeId == null || currentChangeId.equals(actual.currentChangeId()))
+                && (newestChangeId == null || newestChangeId.equals(actual.newestChangeId()));
+    }
+}

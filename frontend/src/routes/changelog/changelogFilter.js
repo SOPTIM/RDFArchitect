@@ -99,3 +99,41 @@ function showsSomething(delta) {
         delta.values?.length > 0
     );
 }
+
+/**
+ * Works out what restoring to a change does, for the question asked before it. The changelog
+ * already holds everything between the workspace and the target, so the question can be asked
+ * without another request.
+ *
+ * A target below the workspace is reached by taking changes back, one above it by reapplying them,
+ * and the two read differently enough that the question says which it is. How many changes lie
+ * ahead goes with it, because a restore recorded as a new version leaves none of them to be redone.
+ *
+ * Where the workspace stood goes with it as well: the change it stood on, and the newest one, which
+ * an undo leaves above it. The backend refuses the restore if either has moved before the answer,
+ * as the lists the question showed would no longer be what it does.
+ *
+ * @param {Array<{changeId: string, undone?: boolean}>} changelog the whole log, newest first
+ * @param {{changeId: string, undone?: boolean}} change the change to restore to
+ * @returns {object} the request: the change, where the workspace stood, and either the changes
+ *     reapplied or those taken back with the number undone ahead
+ */
+export function restoreRequestFor(changelog, change) {
+    const all = changelog ?? [];
+    // With every change undone the workspace stands below all of them.
+    const firstDone = all.findIndex(entry => !entry.undone);
+    const current = firstDone < 0 ? all.length : firstDone;
+    const index = all.findIndex(entry => entry.changeId === change.changeId);
+    const standingOn = {
+        current: all[current]?.changeId,
+        newest: all[0]?.changeId,
+    };
+    return change.undone
+        ? { change, standingOn, reapplied: all.slice(index, current) }
+        : {
+              change,
+              standingOn,
+              takenBack: all.slice(current, index),
+              undoneAhead: current,
+          };
+}

@@ -33,6 +33,7 @@ import org.rdfarchitect.database.inmemory.diagrams.CustomDiagramCollection;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
 import org.rdfarchitect.exception.graph.GraphVersionControlException;
+import org.rdfarchitect.exception.graph.RestoreRefusedException;
 import org.rdfarchitect.exception.graph.RestoreTargetChangedException;
 import org.rdfarchitect.exception.graph.UndoTargetChangedException;
 import org.rdfarchitect.models.changelog.CapturedState;
@@ -55,6 +56,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -62,10 +64,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -463,7 +467,7 @@ public class Workspace {
     public WorkspaceHistoryStep restoreToVersion(
             UUID versionId, RevertScope scope, HistoryPosition expectedPosition) {
         try (var transaction = begin(ReadWrite.WRITE)) {
-            if (expectedPosition != null && !expectedPosition.equals(historyPosition())) {
+            if (expectedPosition != null && !expectedPosition.admits(historyPosition())) {
                 throw new RestoreTargetChangedException();
             }
             var ahead = indexAhead(versionId);
@@ -491,7 +495,7 @@ public class Workspace {
      */
     private static void requireWholeWorkspace(RevertScope scope) {
         if (!scope.isEverything()) {
-            throw new GraphVersionControlException(
+            throw new RestoreRefusedException(
                     "Cannot move part of the workspace to a change that has been undone: "
                             + "reaching it again reapplies the whole change.");
         }
@@ -524,7 +528,8 @@ public class Workspace {
         reinstate(captured);
         rebindRenamedGraphs(captured, graphSetVersionsIn(history.after()));
         coordinator.commit(
-                "restored %s to \"%s\"".formatted(scope.describe(), history.change().message()));
+                "Restored %s to the state after: %s"
+                        .formatted(scope.describe(), history.change().message()));
         var head = changeLog.undoHistory().getFirst();
         // Reinstating a state the workspace was already in writes nothing, so there is no entry:
         // a revert that changes nothing must not be reported as one that did.
@@ -581,6 +586,26 @@ public class Workspace {
                                                                 new URI(uriThen),
                                                                 new URI(uriNow))));
         return renamed;
+    }
+
+    /**
+     * Returns the graphs held both now and right before the given commits, under the URIs they have
+     * now — the graphs a restore held to them can take back that far.
+     *
+     * @param since the commits made since, newest first
+     */
+    private Set<String> graphsHeldAfter(List<WorkspaceChangeLogEntry> since) {
+        var heldThen = Collections.newSetFromMap(new IdentityHashMap<GraphWithContext, Boolean>());
+        try {
+            heldThen.addAll(graphs.graphsAt(graphSetVersionsIn(since)));
+        } catch (GraphVersionControlException beyondRetention) {
+            // Folded into the oldest state kept: no graph can be restored that far on its own.
+            return Set.of();
+        }
+        return graphs.view().entrySet().stream()
+                .filter(entry -> heldThen.contains(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
     }
 
     /** Returns how many versions the commits being taken back gave the set of graphs. */
@@ -659,7 +684,8 @@ public class Workspace {
     }
 
     /**
-     * Refuses to restore a graph the workspace no longer holds.
+     * Refuses to restore a graph the workspace does not hold, whether it was deleted since or never
+     * there.
      *
      * <p>Asked of the scope rather than of the changes being taken back: a graph deleted without a
      * change of its own since the version leaves only workspace-wide changes behind, and would
@@ -671,9 +697,9 @@ public class Workspace {
                 .findFirst()
                 .ifPresent(
                         graphUri -> {
-                            throw new GraphVersionControlException(
-                                    ("Cannot restore %s to that version: the schema under that "
-                                                    + "URI has been deleted.")
+                            throw new RestoreRefusedException(
+                                    ("Cannot restore %s to that version: the workspace holds no "
+                                                    + "schema under that URI.")
                                             .formatted(graphUri));
                         });
     }
@@ -685,7 +711,7 @@ public class Workspace {
     private void requireHeldThen(
             ChangeLogParticipant participant, Collection<GraphWithContext> graphsThen) {
         if (graphsThen.stream().noneMatch(graph -> kindWithin(graph, participant) != null)) {
-            throw new GraphVersionControlException(
+            throw new RestoreRefusedException(
                     ("Cannot restore %s to that version: the schema now under that URI was "
                                     + "created after it.")
                             .formatted(identifyOrNull(participant).scope()));
@@ -744,13 +770,22 @@ public class Workspace {
      */
     public List<WorkspaceChangeLogEntry> getChangeHistory() {
         try (var _ = begin(ReadWrite.READ)) {
+            var behind = changeLog.undoHistory();
+            var reached = new ArrayList<WorkspaceChangeLogEntry>(behind.size());
+            for (int i = 0; i < behind.size(); i++) {
+                reached.add(
+                        asCurrentlyIdentified(behind.get(i))
+                                .withRestoreTargetGraphUris(graphsHeldAfter(behind.subList(0, i))));
+            }
             return Stream.concat(
                             // Furthest ahead first: the redo stack hands out the next one to
                             // reapply first, which is the other way round from newest first.
+                            // Nothing is restored to one of them by graph: they can only be
+                            // reached again by stepping, which takes the whole workspace along.
                             changeLog.redoHistory().reversed().stream()
-                                    .map(WorkspaceChangeLogEntry::asUndone),
-                            changeLog.undoHistory().stream())
-                    .map(this::asCurrentlyIdentified)
+                                    .map(WorkspaceChangeLogEntry::asUndone)
+                                    .map(this::asCurrentlyIdentified),
+                            reached.stream())
                     .toList();
         }
     }

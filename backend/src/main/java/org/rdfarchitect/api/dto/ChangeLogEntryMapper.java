@@ -42,6 +42,9 @@ public interface ChangeLogEntryMapper {
             target = "restorableGraphUris",
             expression = "java(java.util.List.copyOf(entry.restorableGraphUris()))")
     @Mapping(target = "affectedKinds", expression = "java(entry.affectedKinds())")
+    @Mapping(
+            target = "restoreTargetGraphUris",
+            expression = "java(java.util.List.copyOf(entry.restoreTargetGraphUris()))")
     ChangeLogEntryDTO toDTO(WorkspaceChangeLogEntry entry);
 
     List<ChangeLogEntryDTO> toDTOList(List<WorkspaceChangeLogEntry> entries);

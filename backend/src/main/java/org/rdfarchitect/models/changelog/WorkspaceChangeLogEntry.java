@@ -42,6 +42,10 @@ import java.util.stream.Stream;
  *     workspace rather than behind it. Answered when the history is read and never while the entry
  *     sits in the log, because it is not a property of the commit but of where the workspace
  *     currently stands relative to it.
+ * @param restoreTargetGraphUris the graphs, under the URIs they have now, that a restore held to
+ *     them can take back to this version: those the workspace already held right after it. A graph
+ *     created since — newly, by an import, or under a URI another graph left — has no state at this
+ *     version to go back to. Like {@code undone}, answered when the history is read.
  */
 public record WorkspaceChangeLogEntry(
         UUID changeId,
@@ -49,11 +53,24 @@ public record WorkspaceChangeLogEntry(
         String message,
         List<ParticipantVersion> participants,
         List<ContextDelta> deltas,
-        boolean undone) {
+        boolean undone,
+        Set<String> restoreTargetGraphUris) {
 
     public WorkspaceChangeLogEntry {
         participants = List.copyOf(participants);
         deltas = List.copyOf(deltas);
+        restoreTargetGraphUris = Set.copyOf(restoreTargetGraphUris);
+    }
+
+    /** Creates an entry no graph can be restored to, which is what an entry is until it is read. */
+    public WorkspaceChangeLogEntry(
+            UUID changeId,
+            LocalDateTime timestamp,
+            String message,
+            List<ParticipantVersion> participants,
+            List<ContextDelta> deltas,
+            boolean undone) {
+        this(changeId, timestamp, message, participants, deltas, undone, Set.of());
     }
 
     /**
@@ -80,6 +97,17 @@ public record WorkspaceChangeLogEntry(
             String message, List<ParticipantVersion> participants, List<ContextDelta> deltas) {
         return new WorkspaceChangeLogEntry(
                 UUID.randomUUID(), LocalDateTime.now(), message, participants, deltas, false);
+    }
+
+    /**
+     * Returns the same entry with the graphs a restore held to them can take back to it.
+     *
+     * @param graphUris the graphs, under the URIs they have now
+     * @return the entry
+     */
+    public WorkspaceChangeLogEntry withRestoreTargetGraphUris(Set<String> graphUris) {
+        return new WorkspaceChangeLogEntry(
+                changeId, timestamp, message, participants, deltas, undone, graphUris);
     }
 
     /**

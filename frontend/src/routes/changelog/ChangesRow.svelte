@@ -139,7 +139,10 @@
     </td>
 </tr>
 
-{#if getExpanded(rowKey)}
+<!-- Hiding every kind the row has takes its caret away; drawing the details
+     then would leave an empty row with nothing to close it by. The row stays
+     open underneath and shows again with its kinds. -->
+{#if getExpanded(rowKey) && hasDetails}
     <tr class={placement}>
         <td colspan="4" class="p-0">
             <div class="space-y-6 p-2">

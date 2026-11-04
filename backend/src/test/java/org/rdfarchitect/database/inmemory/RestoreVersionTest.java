@@ -32,6 +32,7 @@ import org.rdfarchitect.config.GraphCompressionConfig;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.graph.GraphVersionControlException;
+import org.rdfarchitect.exception.graph.RestoreRefusedException;
 import org.rdfarchitect.exception.graph.RestoreTargetChangedException;
 import org.rdfarchitect.models.changelog.HistoryPosition;
 import org.rdfarchitect.models.changelog.RevertScope;
@@ -42,8 +43,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Covers restoring a version as a commit of its own: what it puts back, what a restricted scope
- * leaves alone, and that the history keeps growing in one direction either way.
+ * Covers restoring a version: what it puts back, how the whole workspace steps through the history
+ * while a restore held to some schemas is recorded as a commit of its own, what such a restricted
+ * scope leaves alone, and when a restore is refused.
  */
 class RestoreVersionTest {
 
@@ -224,8 +226,26 @@ class RestoreVersionTest {
             assertThatThrownBy(
                             () -> workspace.restoreToVersion(target, RevertScope.ofGraphs(GRAPH_B)))
                     .isInstanceOf(GraphVersionControlException.class)
-                    .hasMessageContaining("deleted");
+                    .hasMessageContaining("no schema under that URI");
             assertThat(workspace.listGraphUris()).containsExactly(GRAPH_A);
+        }
+
+        @Test
+        void aUriThatNeverHeldASchema_isRefusedAsSomethingTheUserCanActOn() {
+            // A refusal, not a failure: it is answered with 422 rather than 500, and apart from
+            // the 409 that asks for the confirmation to be renewed.
+            var target = newestChangeId();
+            commitSchema(GRAPH_A, triple("s p o"));
+
+            assertThatThrownBy(
+                            () ->
+                                    workspace.restoreToVersion(
+                                            target,
+                                            RevertScope.ofGraphs("http://example.org/never")))
+                    .isInstanceOf(RestoreRefusedException.class)
+                    .hasMessageContaining("no schema under that URI")
+                    .extracting(e -> ((RestoreRefusedException) e).getStatusCode().value())
+                    .isEqualTo(422);
         }
 
         @Test
@@ -239,7 +259,7 @@ class RestoreVersionTest {
             assertThatThrownBy(
                             () -> workspace.restoreToVersion(target, RevertScope.ofGraphs(GRAPH_B)))
                     .isInstanceOf(GraphVersionControlException.class)
-                    .hasMessageContaining("deleted");
+                    .hasMessageContaining("no schema under that URI");
         }
 
         @Test
@@ -372,6 +392,48 @@ class RestoreVersionTest {
         }
 
         @Test
+        void aVersionBeforeASchemaWasCreated_isNoRestoreTargetForIt() {
+            // The changelog offers a restore held to a schema only where the backend can carry it
+            // out; a schema has no state to go back to from before it existed.
+            var before = newestChangeId();
+            createGraph(GRAPH_B);
+            commitSchema(GRAPH_B, triple("s p b"));
+
+            assertThat(changeWithId(before).restoreTargetGraphUris()).containsExactly(GRAPH_A);
+            assertThat(newestChange().restoreTargetGraphUris())
+                    .containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
+        }
+
+        @Test
+        void theVersionsOfADeletedSchema_areNoRestoreTargetForOneRecreatedUnderItsUri() {
+            commitSchema(GRAPH_A, triple("s p old"));
+            var old = newestChangeId();
+            WorkspaceFixtures.deleteGraph(workspace, GRAPH_A);
+            createGraph(GRAPH_A);
+            commitSchema(GRAPH_A, triple("s p new"));
+
+            assertThat(changeWithId(old).restoreTargetGraphUris()).isEmpty();
+            assertThat(newestChange().restoreTargetGraphUris()).containsExactly(GRAPH_A);
+        }
+
+        @Test
+        void aRenamedSchema_isARestoreTargetUnderTheNameItHasNow() {
+            commitSchema(GRAPH_A, triple("s p a"));
+            var target = newestChangeId();
+            WorkspaceFixtures.renameGraph(workspace, GRAPH_A, GRAPH_B);
+
+            assertThat(changeWithId(target).restoreTargetGraphUris()).containsExactly(GRAPH_B);
+        }
+
+        @Test
+        void anUndoneChange_isNoRestoreTargetForASchema() {
+            commitSchema(GRAPH_A, triple("s p a"));
+            workspace.undo();
+
+            assertThat(workspace.getChangeHistory().getFirst().restoreTargetGraphUris()).isEmpty();
+        }
+
+        @Test
         void aScopeThatCoversNothingChangesNothingAndSaysSo() {
             createGraph(GRAPH_B);
             var target = newestChangeId();
@@ -484,6 +546,20 @@ class RestoreVersionTest {
             assertThat(workspace.canRedo()).isTrue();
         }
 
+        @Test
+        void anExpectationNamingOnlyTheCurrentChange_checksOnlyThat() {
+            commitSchema(GRAPH_A, triple("s p old"));
+            var target = newestChangeId();
+            commitSchema(GRAPH_A, triple("s p new"));
+
+            workspace.restoreToVersion(
+                    target,
+                    RevertScope.ofGraphs(GRAPH_A),
+                    new HistoryPosition(newestChangeId(), null));
+
+            assertThat(schemaOf(GRAPH_A)).containsExactly(triple("s p old"));
+        }
+
         /** Where the workspace stands, as a confirmation built from its changelog sees it. */
         private HistoryPosition positionNow() {
             var history = workspace.getChangeHistory();
@@ -576,7 +652,9 @@ class RestoreVersionTest {
 
             var step = workspace.restoreToVersion(target, RevertScope.ofGraphs(GRAPH_A));
 
-            assertThat(step.change().message()).startsWith("restored " + GRAPH_A + " to ");
+            assertThat(step.change().message())
+                    .isEqualTo(
+                            "Restored schema \"a\" to the state after: created graph " + GRAPH_B);
             assertThat(currentChange().changeId()).isEqualTo(step.change().changeId());
             assertThat(workspace.canRedo()).isFalse();
         }
@@ -701,6 +779,13 @@ class RestoreVersionTest {
     private WorkspaceChangeLogEntry currentChange() {
         return workspace.getChangeHistory().stream()
                 .filter(change -> !change.undone())
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private WorkspaceChangeLogEntry changeWithId(UUID changeId) {
+        return workspace.getChangeHistory().stream()
+                .filter(change -> change.changeId().equals(changeId))
                 .findFirst()
                 .orElseThrow();
     }
