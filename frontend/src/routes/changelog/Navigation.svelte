@@ -29,6 +29,7 @@
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { graphLabeller } from "$lib/utils/graph-label.js";
     import { compareGraphs } from "$lib/utils/graph-order.js";
+    import { workspaceState } from "$lib/workspaceState.svelte.js";
 
     import { getUri } from "../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
 
@@ -98,9 +99,7 @@
                                 selectedWorkspaceName && !graphUri}
                             title="{workspace.label} — every change in the workspace"
                             onclick={() => {
-                                editorState.selectedWorkspace.updateValue(
-                                    workspace.label,
-                                );
+                                workspaceState.activate(workspace.label);
                                 onSelectGraph(null);
                             }}
                             onToggle={() => {
@@ -121,7 +120,7 @@
                                         getUri(graph) === graphUri}
                                     title={getUri(graph)}
                                     onclick={() => {
-                                        editorState.selectedWorkspace.updateValue(
+                                        workspaceState.activate(
                                             workspace.label,
                                         );
                                         onSelectGraph(getUri(graph));

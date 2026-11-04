@@ -25,6 +25,7 @@ import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.WorkspaceTransaction;
+import org.rdfarchitect.models.changelog.HistoryPosition;
 import org.rdfarchitect.models.changelog.RevertScope;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
@@ -74,8 +75,11 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
 
     @Override
     public WorkspaceHistoryStep restoreToVersion(
-            String workspaceName, UUID versionId, RevertScope scope, UUID expectedCurrentChangeId) {
-        return database.restoreToVersion(workspaceName, versionId, scope, expectedCurrentChangeId);
+            String workspaceName,
+            UUID versionId,
+            RevertScope scope,
+            HistoryPosition expectedPosition) {
+        return database.restoreToVersion(workspaceName, versionId, scope, expectedPosition);
     }
 
     @Override

@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.HistoryStepDTO;
+import org.rdfarchitect.models.changelog.HistoryPosition;
 import org.rdfarchitect.models.changelog.RevertScope;
 import org.rdfarchitect.services.versioncontrol.RestoreVersionUseCase;
 import org.slf4j.Logger;
@@ -60,15 +61,16 @@ public class RestoreVersionRESTController {
                             + "history, which writes nothing and leaves the changes stepped over "
                             + "to be redone. A scope holding the restore to certain graphs is "
                             + "recorded as a new change instead, which discards whatever could "
-                            + "still be redone. With expectedCurrentChangeId, only if the "
-                            + "workspace still stands on that change; otherwise nothing is "
-                            + "restored and 409 is returned.",
+                            + "still be redone. With expectedCurrentChangeId and "
+                            + "expectedNewestChangeId, only if the workspace still stands on the "
+                            + "one and the newest recorded change is still the other; otherwise "
+                            + "nothing is restored and 409 is returned.",
             tags = {"workspace"},
             responses = {
                 @ApiResponse(responseCode = "200"),
                 @ApiResponse(
                         responseCode = "409",
-                        description = "The workspace no longer stands on the expected change.",
+                        description = "The workspace has moved in its history since.",
                         content = @Content())
             })
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -97,9 +99,7 @@ public class RestoreVersionRESTController {
                         datasetName,
                         UUID.fromString(dto.versionId),
                         dto.scope(),
-                        dto.expectedCurrentChangeId() == null
-                                ? null
-                                : UUID.fromString(dto.expectedCurrentChangeId()));
+                        dto.expectedPosition());
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/restore\" to \"{}\".",
@@ -113,9 +113,27 @@ public class RestoreVersionRESTController {
      * @param graphUris the graphs to put back, or empty for the whole workspace
      * @param expectedCurrentChangeId the change the workspace stood on when the restore was
      *     confirmed, or {@code null} to restore without checking
+     * @param expectedNewestChangeId the newest change recorded when the restore was confirmed,
+     *     undone or not; checked together with {@code expectedCurrentChangeId}
      */
     public record RestoreVersionDTO(
-            String versionId, List<String> graphUris, String expectedCurrentChangeId) {
+            String versionId,
+            List<String> graphUris,
+            String expectedCurrentChangeId,
+            String expectedNewestChangeId) {
+
+        /** Where the confirmation saw the workspace, or {@code null} if it did not say. */
+        HistoryPosition expectedPosition() {
+            if (expectedCurrentChangeId == null && expectedNewestChangeId == null) {
+                return null;
+            }
+            return new HistoryPosition(
+                    uuidOrNull(expectedCurrentChangeId), uuidOrNull(expectedNewestChangeId));
+        }
+
+        private static UUID uuidOrNull(String id) {
+            return id == null ? null : UUID.fromString(id);
+        }
 
         RevertScope scope() {
             return new RevertScope(graphUris == null ? Set.of() : Set.copyOf(graphUris));

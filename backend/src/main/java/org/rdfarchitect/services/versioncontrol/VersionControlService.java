@@ -24,6 +24,7 @@ import org.rdfarchitect.api.dto.HistoryStepDTO;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.changelog.HistoryPosition;
 import org.rdfarchitect.models.changelog.RevertScope;
 import org.springframework.stereotype.Service;
 
@@ -75,9 +76,11 @@ public class VersionControlService
 
     @Override
     public HistoryStepDTO restoreVersion(
-            String workspaceName, UUID versionId, RevertScope scope, UUID expectedCurrentChangeId) {
+            String workspaceName,
+            UUID versionId,
+            RevertScope scope,
+            HistoryPosition expectedPosition) {
         return changeLogEntryMapper.toDTO(
-                databasePort.restoreToVersion(
-                        workspaceName, versionId, scope, expectedCurrentChangeId));
+                databasePort.restoreToVersion(workspaceName, versionId, scope, expectedPosition));
     }
 }

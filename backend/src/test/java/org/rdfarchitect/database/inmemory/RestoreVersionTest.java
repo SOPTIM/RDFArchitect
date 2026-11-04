@@ -29,10 +29,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.GraphCompressionConfig;
+import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.graph.GraphVersionControlException;
 import org.rdfarchitect.exception.graph.RestoreTargetChangedException;
+import org.rdfarchitect.models.changelog.HistoryPosition;
 import org.rdfarchitect.models.changelog.RevertScope;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.List;
 import java.util.UUID;
@@ -225,6 +229,20 @@ class RestoreVersionTest {
         }
 
         @Test
+        void aSchemaDeletedSinceWithoutAnEditOfItsOwn_isRefused() {
+            // Only the set of graphs and the colours changed after the target, so none of the
+            // changes in between is the schema's own; it is still not there to be restored.
+            createGraph(GRAPH_B);
+            var target = newestChangeId();
+            WorkspaceFixtures.deleteGraph(workspace, GRAPH_B);
+
+            assertThatThrownBy(
+                            () -> workspace.restoreToVersion(target, RevertScope.ofGraphs(GRAPH_B)))
+                    .isInstanceOf(GraphVersionControlException.class)
+                    .hasMessageContaining("deleted");
+        }
+
+        @Test
         void aSchemaRecreatedUnderTheSameUri_isRefused() {
             // What the target held belonged to the deleted schema; the one standing there now
             // would be taken back past its creation, a state the URI never had.
@@ -285,6 +303,37 @@ class RestoreVersionTest {
             workspace.restoreToVersion(target, RevertScope.ofGraphs(GRAPH_B));
 
             assertThat(schemaOf(GRAPH_B)).containsExactly(triple("s p a"));
+        }
+
+        @Test
+        void aSchemaRestoredToBeforeItsRename_keepsItsDiagramsPointingAtItsCurrentUri() {
+            // The rename rewrote the schema's diagrams to the new URI. Putting the diagrams back
+            // the way the version left them must not bring back the URI the schema has left.
+            var diagramId = UUID.randomUUID();
+            try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+                var diagram = new CustomDiagram(diagramId);
+                diagram.setClasses(
+                        List.of(new ClassInDiagram(UUID.randomUUID(), new URI(GRAPH_A))));
+                transaction.graph(GRAPH_A).getCustomDiagrams().put(diagramId, diagram);
+                transaction.commit("added a diagram");
+            }
+            var target = newestChangeId();
+            WorkspaceFixtures.renameGraph(workspace, GRAPH_A, GRAPH_B);
+            commitSchema(GRAPH_B, triple("s p o"));
+
+            workspace.restoreToVersion(target, RevertScope.ofGraphs(GRAPH_B));
+
+            assertThat(schemaOf(GRAPH_B)).isEmpty();
+            try (var transaction = workspace.begin(ReadWrite.READ)) {
+                assertThat(
+                                transaction
+                                        .graph(GRAPH_B)
+                                        .getCustomDiagrams()
+                                        .get(diagramId)
+                                        .getClasses())
+                        .extracting(entry -> entry.getGraphUri().toString())
+                        .containsExactly(GRAPH_B);
+            }
         }
 
         @Test
@@ -373,7 +422,7 @@ class RestoreVersionTest {
             var target = newestChangeId();
             commitSchema(GRAPH_A, triple("s p new"));
 
-            workspace.restoreToVersion(target, RevertScope.everything(), newestChangeId());
+            workspace.restoreToVersion(target, RevertScope.everything(), positionNow());
 
             assertThat(schemaOf(GRAPH_A)).containsExactly(triple("s p old"));
         }
@@ -385,7 +434,7 @@ class RestoreVersionTest {
             commitSchema(GRAPH_A, triple("s p old"));
             var target = newestChangeId();
             commitSchema(GRAPH_A, triple("s p new"));
-            var confirmedAt = newestChangeId();
+            var confirmedAt = positionNow();
             commitSchema(GRAPH_A, triple("s p unseen"));
 
             assertThatThrownBy(
@@ -405,7 +454,7 @@ class RestoreVersionTest {
             commitSchema(GRAPH_A, triple("s p old"));
             var target = newestChangeId();
             commitSchema(GRAPH_A, triple("s p new"));
-            var confirmedAt = newestChangeId();
+            var confirmedAt = positionNow();
             workspace.undo();
 
             assertThatThrownBy(
@@ -414,6 +463,37 @@ class RestoreVersionTest {
                                             target, RevertScope.ofGraphs(GRAPH_A), confirmedAt))
                     .isInstanceOf(RestoreTargetChangedException.class);
             assertThat(workspace.canRedo()).isTrue();
+        }
+
+        @Test
+        void aChangeCommittedAndUndoneAfterTheConfirmation_refusesTheRestore() {
+            // The workspace stands where it stood, but the undone change can still be redone,
+            // and a restore held to one schema would discard it without having said so.
+            commitSchema(GRAPH_A, triple("s p old"));
+            var target = newestChangeId();
+            commitSchema(GRAPH_A, triple("s p new"));
+            var confirmedAt = positionNow();
+            commitSchema(GRAPH_A, triple("s p elsewhere"));
+            workspace.undo();
+
+            assertThatThrownBy(
+                            () ->
+                                    workspace.restoreToVersion(
+                                            target, RevertScope.ofGraphs(GRAPH_A), confirmedAt))
+                    .isInstanceOf(RestoreTargetChangedException.class);
+            assertThat(workspace.canRedo()).isTrue();
+        }
+
+        /** Where the workspace stands, as a confirmation built from its changelog sees it. */
+        private HistoryPosition positionNow() {
+            var history = workspace.getChangeHistory();
+            var current =
+                    history.stream()
+                            .filter(change -> !change.undone())
+                            .findFirst()
+                            .map(WorkspaceChangeLogEntry::changeId)
+                            .orElse(null);
+            return new HistoryPosition(current, history.getFirst().changeId());
         }
     }
 

@@ -20,9 +20,9 @@ package org.rdfarchitect.exception.graph;
 import org.springframework.http.HttpStatus;
 
 /**
- * Thrown when a restore was confirmed with the workspace standing on one change but it has moved on
- * to another in the meantime, so that the restore would take back or discard something the user was
- * not shown.
+ * Thrown when a restore was confirmed with the workspace at one point in its history but it has
+ * moved in the meantime, so that the restore would take back or discard something the user was not
+ * shown.
  */
 public class RestoreTargetChangedException extends GraphException {
 

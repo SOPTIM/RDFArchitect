@@ -72,6 +72,17 @@ class GraphCollection extends SnapshotParticipant<Map<String, GraphWithContext>>
         return stateAt(versionsBack).values();
     }
 
+    /**
+     * Returns the graphs the workspace held a number of versions back by the URI they had then,
+     * without stepping there.
+     *
+     * @param versionsBack how far back to look; {@code 0} is the current set of graphs
+     * @return the graphs held then, by the URI they were held under
+     */
+    Map<String, GraphWithContext> graphsByUriAt(int versionsBack) {
+        return Collections.unmodifiableMap(stateAt(versionsBack));
+    }
+
     void put(String graphUri, GraphWithContext graph) {
         beginChange();
         graphs.put(graphUri, graph);

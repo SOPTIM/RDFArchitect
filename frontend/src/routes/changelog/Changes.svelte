@@ -138,10 +138,14 @@
         const index = all.findIndex(
             entry => entry.changeId === change.changeId,
         );
-        // Where the workspace stood when the question was asked. The backend
-        // refuses the restore if it has moved on before the answer, as the
-        // lists the question showed would no longer be what it does.
-        const standingOn = all[current]?.changeId;
+        // Where the workspace stood when the question was asked: the change it
+        // stood on, and the newest one, which an undo leaves above it. The
+        // backend refuses the restore if either has moved before the answer,
+        // as the lists the question showed would no longer be what it does.
+        const standingOn = {
+            current: all[current]?.changeId,
+            newest: all[0]?.changeId,
+        };
         restoreRequest = change.undone
             ? { change, standingOn, reapplied: all.slice(index, current) }
             : {

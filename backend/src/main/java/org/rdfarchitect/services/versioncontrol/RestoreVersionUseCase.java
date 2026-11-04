@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.versioncontrol;
 
 import org.rdfarchitect.api.dto.HistoryStepDTO;
+import org.rdfarchitect.models.changelog.HistoryPosition;
 import org.rdfarchitect.models.changelog.RevertScope;
 
 import java.util.UUID;
@@ -31,7 +32,7 @@ public interface RestoreVersionUseCase {
      * @param workspaceName the workspace to operate on
      * @param versionId the change to restore to
      * @param scope how much of the workspace to put back
-     * @param expectedCurrentChangeId the change the workspace stood on when the restore was
+     * @param expectedPosition where the workspace stood in its history when the restore was
      *     confirmed, or {@code null} to restore without checking
      * @return what was restored and what is left to undo or redo; the change is {@code null} if
      *     nothing within the scope had changed since
@@ -39,5 +40,8 @@ public interface RestoreVersionUseCase {
      *     stands on a different change by now
      */
     HistoryStepDTO restoreVersion(
-            String workspaceName, UUID versionId, RevertScope scope, UUID expectedCurrentChangeId);
+            String workspaceName,
+            UUID versionId,
+            RevertScope scope,
+            HistoryPosition expectedPosition);
 }

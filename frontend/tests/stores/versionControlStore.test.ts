@@ -951,7 +951,10 @@ describe("versionControlStore", () => {
                 error: undefined,
             });
 
-            await store.restore(CHANGE_ID, [], WORKSPACE, "current-change");
+            await store.restore(CHANGE_ID, [], WORKSPACE, {
+                current: "current-change",
+                newest: "newest-change",
+            });
 
             expect(api.restoreVersion).toHaveBeenCalledWith({
                 path: { datasetName: WORKSPACE },
@@ -959,6 +962,7 @@ describe("versionControlStore", () => {
                     versionId: CHANGE_ID,
                     graphUris: [],
                     expectedCurrentChangeId: "current-change",
+                    expectedNewestChangeId: "newest-change",
                 },
             });
         });
@@ -971,12 +975,10 @@ describe("versionControlStore", () => {
                 response: { status: 409 },
             } as never);
 
-            const result = await store.restore(
-                CHANGE_ID,
-                [],
-                WORKSPACE,
-                "current-change",
-            );
+            const result = await store.restore(CHANGE_ID, [], WORKSPACE, {
+                current: "current-change",
+                newest: "current-change",
+            });
 
             expect(result.error).toBe(error);
             expect(toastStore.error).toHaveBeenCalledWith(

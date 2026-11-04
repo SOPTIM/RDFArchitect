@@ -188,17 +188,32 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
 
     private static void rewriteGraphUri(
             Collection<CustomDiagram> diagrams, URI oldUri, URI newUri) {
+        rewriteGraphUris(diagrams, Map.of(oldUri, newUri));
+    }
+
+    /**
+     * Points the classes of the diagrams at the URIs their graphs have now.
+     *
+     * <p>Every reference is looked up once, so that two graphs which swapped their URIs are not
+     * rewritten back and forth.
+     *
+     * @param diagrams the diagrams to rewrite
+     * @param renamed the URI each renamed graph has now, by the URI it had
+     */
+    static void rewriteGraphUris(Collection<CustomDiagram> diagrams, Map<URI, URI> renamed) {
         for (var diagram : diagrams) {
             var classes = diagram.getClasses();
-            if (classes.stream().noneMatch(entry -> oldUri.equals(entry.getGraphUri()))) {
+            if (classes.stream().noneMatch(entry -> renamed.containsKey(entry.getGraphUri()))) {
                 continue;
             }
             diagram.setClasses(
                     classes.stream()
                             .map(
                                     entry ->
-                                            oldUri.equals(entry.getGraphUri())
-                                                    ? new ClassInDiagram(entry.getUuid(), newUri)
+                                            renamed.containsKey(entry.getGraphUri())
+                                                    ? new ClassInDiagram(
+                                                            entry.getUuid(),
+                                                            renamed.get(entry.getGraphUri()))
                                                     : entry)
                             .toList());
         }

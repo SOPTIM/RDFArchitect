@@ -305,14 +305,15 @@ function createVersionControlStore() {
      * @param changeId the version to restore to
      * @param graphUris the graphs to put back, or empty for the whole workspace
      * @param workspace the workspace to act on, or the selected one
-     * @param standingOn the change the workspace stood on when the restore was
-     *     confirmed; the backend refuses if it has moved on since
+     * @param standingOn where the workspace stood in its history when the
+     *     restore was confirmed — the change it stood on and the newest one
+     *     recorded; the backend refuses if either has moved since
      */
     async function restore(
         changeId: string,
         graphUris: string[] = [],
         workspace?: string,
-        standingOn?: string,
+        standingOn?: { current?: string; newest?: string },
     ) {
         // Read before queueing: the user may select another workspace while the
         // restore waits behind a step, and it belongs to the one it was asked in.
@@ -326,7 +327,8 @@ function createVersionControlStore() {
                 body: {
                     versionId: changeId,
                     graphUris,
-                    expectedCurrentChangeId: standingOn,
+                    expectedCurrentChangeId: standingOn?.current,
+                    expectedNewestChangeId: standingOn?.newest,
                 },
             });
             if (error && response?.status === 409) {

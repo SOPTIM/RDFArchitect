@@ -37,6 +37,7 @@ import org.rdfarchitect.exception.graph.RestoreTargetChangedException;
 import org.rdfarchitect.exception.graph.UndoTargetChangedException;
 import org.rdfarchitect.models.changelog.CapturedState;
 import org.rdfarchitect.models.changelog.ChangeLogParticipant;
+import org.rdfarchitect.models.changelog.HistoryPosition;
 import org.rdfarchitect.models.changelog.ParticipantId;
 import org.rdfarchitect.models.changelog.ParticipantVersion;
 import org.rdfarchitect.models.changelog.RevertScope;
@@ -44,6 +45,7 @@ import org.rdfarchitect.models.changelog.WorkspaceChangeLog;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLog.HistorySince;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 import org.rdfarchitect.rdf.graph.wrapper.TransactionParticipant;
@@ -58,6 +60,7 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -443,23 +446,24 @@ public class Workspace {
      * Moves the workspace to the given version, provided it still stands where it stood when the
      * move was confirmed.
      *
-     * <p>The confirmation lists what the move takes back, read from the changelog in an earlier
-     * request. A commit, undo or redo landing in between would make the move take back or discard
-     * something that list did not show, so it is checked under the write lock the move runs in.
+     * <p>The confirmation lists what the move takes back and what it leaves ahead, read from the
+     * changelog in an earlier request. A commit, undo or redo landing in between — or a change
+     * committed and undone again, which leaves a redo a move held to some schemas would discard —
+     * would make the move do something that list did not show, so it is checked under the write
+     * lock the move runs in.
      *
      * @param versionId the change to move to
      * @param scope how much of the workspace to put back
-     * @param expectedCurrentChangeId the change the workspace stood on when the move was confirmed,
+     * @param expectedPosition where the workspace stood in its history when the move was confirmed,
      *     or {@code null} to move without checking
      * @return where the workspace ended up and what is left to undo or redo; {@link
      *     WorkspaceHistoryStep#change()} is {@code null} if there was nothing to do
-     * @throws RestoreTargetChangedException if the workspace stands on a different change by now
+     * @throws RestoreTargetChangedException if the workspace has moved in its history since
      */
     public WorkspaceHistoryStep restoreToVersion(
-            UUID versionId, RevertScope scope, UUID expectedCurrentChangeId) {
+            UUID versionId, RevertScope scope, HistoryPosition expectedPosition) {
         try (var transaction = begin(ReadWrite.WRITE)) {
-            if (expectedCurrentChangeId != null
-                    && !expectedCurrentChangeId.equals(currentChangeId())) {
+            if (expectedPosition != null && !expectedPosition.equals(historyPosition())) {
                 throw new RestoreTargetChangedException();
             }
             var ahead = indexAhead(versionId);
@@ -468,6 +472,7 @@ public class Workspace {
                 return stepForward(ahead + 1);
             }
             var history = changeLog.historySince(versionId);
+            requireStillHeld(scope);
             if (history.after().isEmpty()) {
                 return nothingRestored();
             }
@@ -517,6 +522,7 @@ public class Workspace {
         }
         var before = changeLog.undoHistory().getFirst();
         reinstate(captured);
+        rebindRenamedGraphs(captured, graphSetVersionsIn(history.after()));
         coordinator.commit(
                 "restored %s to \"%s\"".formatted(scope.describe(), history.change().message()));
         var head = changeLog.undoHistory().getFirst();
@@ -530,6 +536,60 @@ public class Workspace {
 
     private static void reinstate(List<CapturedParticipant> captured) {
         captured.forEach(each -> each.state().reinstate());
+    }
+
+    /**
+     * Points the reinstated diagrams at the URIs their graphs have now.
+     *
+     * <p>A rename rewrites every diagram that shows the renamed graph, and the rename itself stays
+     * where it is: a restore held to some schemas leaves the set of graphs alone. Reinstated as the
+     * version left them, the diagrams would point at URIs the graphs have left since — at nothing,
+     * or at another graph that has moved in.
+     *
+     * @param captured what was reinstated
+     * @param graphSetVersionsBack how many versions back the set of graphs stood at the version
+     */
+    private void rebindRenamedGraphs(List<CapturedParticipant> captured, int graphSetVersionsBack) {
+        var renamed = renamedSince(graphSetVersionsBack);
+        if (renamed.isEmpty()) {
+            return;
+        }
+        captured.stream()
+                .map(CapturedParticipant::participant)
+                .filter(CustomDiagramCollection.class::isInstance)
+                .map(CustomDiagramCollection.class::cast)
+                .forEach(
+                        diagrams ->
+                                WorkspaceTransactionImpl.rewriteGraphUris(
+                                        diagrams.get().values(), renamed));
+    }
+
+    /** Returns the URI each graph renamed since a version of the set of graphs has now. */
+    private Map<URI, URI> renamedSince(int graphSetVersionsBack) {
+        var renamed = new HashMap<URI, URI>();
+        graphs.graphsByUriAt(graphSetVersionsBack)
+                .forEach(
+                        (uriThen, graph) ->
+                                graphs.view().entrySet().stream()
+                                        .filter(now -> now.getValue() == graph)
+                                        .map(Map.Entry::getKey)
+                                        .filter(uriNow -> !uriNow.equals(uriThen))
+                                        .findFirst()
+                                        .ifPresent(
+                                                uriNow ->
+                                                        renamed.put(
+                                                                new URI(uriThen),
+                                                                new URI(uriNow))));
+        return renamed;
+    }
+
+    /** Returns how many versions the commits being taken back gave the set of graphs. */
+    private int graphSetVersionsIn(List<WorkspaceChangeLogEntry> entries) {
+        return (int)
+                entries.stream()
+                        .flatMap(entry -> entry.participants().stream())
+                        .filter(version -> version.participant() == graphs)
+                        .count();
     }
 
     /**
@@ -565,32 +625,22 @@ public class Workspace {
             List<WorkspaceChangeLogEntry> toRevert, RevertScope scope) {
         var versionsGained = new LinkedHashMap<ChangeLogParticipant, Integer>();
         var oldestTakenBack = new HashMap<ChangeLogParticipant, UUID>();
-        var graphSetVersionsGained = 0;
         for (var entry : toRevert.reversed()) {
             for (var version : entry.participants()) {
-                if (version.participant() == graphs) {
-                    graphSetVersionsGained++;
-                }
                 // Identified as it stands now, like the changelog identifies it when it is read:
                 // the name a change is shown under has to be the name it can be restored with, or
                 // a restore of a renamed graph would match nothing and quietly do nothing.
+                // A deleted graph's changes are no part of the history of a graph that stands
+                // under its URI now, and one with nothing standing there is refused beforehand.
                 var current = identifyOrNull(version.participant());
-                if (current == null) {
-                    // A deleted graph's changes are no part of the history of a graph that stands
-                    // under its URI now, so they only matter where nothing does.
-                    if (scope.covers(version.id()) && !graphs.contains(version.id().scope())) {
-                        requireStillHeld(version);
-                    }
-                    continue;
-                }
-                if (!scope.covers(current)) {
+                if (current == null || !scope.covers(current)) {
                     continue;
                 }
                 versionsGained.merge(version.participant(), 1, Integer::sum);
                 oldestTakenBack.putIfAbsent(version.participant(), version.versionId());
             }
         }
-        var graphsThen = graphs.graphsAt(graphSetVersionsGained);
+        var graphsThen = graphs.graphsAt(graphSetVersionsIn(toRevert));
         versionsGained.keySet().forEach(participant -> requireHeldThen(participant, graphsThen));
         // A graph created since may have no changes of its own to take back, yet the URI held
         // something else at the version, or nothing at all.
@@ -608,14 +658,24 @@ public class Workspace {
                 .toList();
     }
 
-    /** Refuses to take back a change made to a graph the workspace no longer holds. */
-    private void requireStillHeld(ParticipantVersion version) {
-        if (identifyOrNull(version.participant()) == null) {
-            throw new GraphVersionControlException(
-                    ("Cannot restore %s to that version: changes since were made to a schema "
-                                    + "under that URI which has been deleted.")
-                            .formatted(version.id().scope()));
-        }
+    /**
+     * Refuses to restore a graph the workspace no longer holds.
+     *
+     * <p>Asked of the scope rather than of the changes being taken back: a graph deleted without a
+     * change of its own since the version leaves only workspace-wide changes behind, and would
+     * otherwise be reported as already standing at that version.
+     */
+    private void requireStillHeld(RevertScope scope) {
+        scope.graphUris().stream()
+                .filter(graphUri -> !graphs.contains(graphUri))
+                .findFirst()
+                .ifPresent(
+                        graphUri -> {
+                            throw new GraphVersionControlException(
+                                    ("Cannot restore %s to that version: the schema under that "
+                                                    + "URI has been deleted.")
+                                            .formatted(graphUri));
+                        });
     }
 
     /**
@@ -661,10 +721,14 @@ public class Workspace {
         }
     }
 
-    /** Returns the change the workspace stands on, or {@code null} if there is none. */
-    private UUID currentChangeId() {
+    /** Returns where the workspace stands in its history. */
+    private HistoryPosition historyPosition() {
         var behind = changeLog.undoHistory();
-        return behind.isEmpty() ? null : behind.getFirst().changeId();
+        var ahead = changeLog.redoHistory();
+        var current = behind.isEmpty() ? null : behind.getFirst().changeId();
+        // The redo stack hands out the nearest change first, so the newest one sits at its end.
+        var newest = ahead.isEmpty() ? current : ahead.getLast().changeId();
+        return new HistoryPosition(current, newest);
     }
 
     private WorkspaceHistoryStep nothingRestored() {

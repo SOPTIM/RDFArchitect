@@ -34,12 +34,10 @@
 
     import { validateWorkspaceAndShowResult } from "$lib/actions/validationActions.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
-    import {
-        editorState,
-        forceReloadTrigger,
-    } from "$lib/sharedState.svelte.js";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { versionControlStore } from "$lib/stores/versionControlStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
+    import { workspaceState } from "$lib/workspaceState.svelte.js";
 
     import ImportDialog from "../../ImportDialog.svelte";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
@@ -88,9 +86,12 @@
     /**
      * Opens the changelog on this workspace as a whole, rather than on the graph the editor was
      * last in: the menu was asked of the workspace, so that is what its history should show.
+     * Switching goes through the workspace state, which keeps the editor's selection per
+     * workspace — otherwise the editor would come back asking this workspace for the graph and
+     * diagram of the one before.
      */
     function showChangelog() {
-        editorState.selectedWorkspace.updateValue(workspaceName);
+        workspaceState.activate(workspaceName);
         goto("/changelog?scope=workspace");
     }
 

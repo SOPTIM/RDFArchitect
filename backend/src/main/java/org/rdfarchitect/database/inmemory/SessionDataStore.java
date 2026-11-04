@@ -27,6 +27,7 @@ import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.models.changelog.HistoryPosition;
 import org.rdfarchitect.models.changelog.RevertScope;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
@@ -152,13 +153,16 @@ public interface SessionDataStore {
      * @param workspaceName literal workspace name
      * @param versionId the change to restore to
      * @param scope how much of the workspace to put back
-     * @param expectedCurrentChangeId the change the workspace stood on when the restore was
+     * @param expectedPosition where the workspace stood in its history when the restore was
      *     confirmed, or {@code null} to restore without checking
      * @throws org.rdfarchitect.exception.graph.RestoreTargetChangedException if the workspace
      *     stands on a different change by now
      */
     WorkspaceHistoryStep restoreToVersion(
-            String workspaceName, UUID versionId, RevertScope scope, UUID expectedCurrentChangeId);
+            String workspaceName,
+            UUID versionId,
+            RevertScope scope,
+            HistoryPosition expectedPosition);
 
     /**
      * Returns the recorded changes of the workspace, newest first.
