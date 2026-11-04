@@ -17,6 +17,7 @@
 
 <script>
     import {
+        faClockRotateLeft,
         faDiagramProject,
         faFileImport,
         faListCheck,
@@ -33,7 +34,10 @@
 
     import { validateWorkspaceAndShowResult } from "$lib/actions/validationActions.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import {
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
     import { versionControlStore } from "$lib/stores/versionControlStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
@@ -44,6 +48,8 @@
     import SnapshotDialog from "../../SnapshotDialog.svelte";
     import WorkspaceDeleteDialog from "../../WorkspaceDeleteDialog.svelte";
     import CustomWorkspaceDiagramDialog from "../packageNavigation/custom-diagram-dialogs/CustomWorkspaceDiagramDialog.svelte";
+
+    import { goto } from "$app/navigation";
 
     let {
         workspaceName,
@@ -77,6 +83,15 @@
         if (!error && !skipped) {
             forceReloadTrigger.trigger();
         }
+    }
+
+    /**
+     * Opens the changelog on this workspace as a whole, rather than on the graph the editor was
+     * last in: the menu was asked of the workspace, so that is what its history should show.
+     */
+    function showChangelog() {
+        editorState.selectedWorkspace.updateValue(workspaceName);
+        goto("/changelog?scope=workspace");
     }
 
     async function toggleEditing(editingEnabled) {
@@ -153,6 +168,12 @@
         faIcon={faListCheck}
     >
         Validate Workspace
+    </ContextMenu.Item.Button>
+    <ContextMenu.Item.Button
+        onSelect={showChangelog}
+        faIcon={faClockRotateLeft}
+    >
+        Workspace Changelog
     </ContextMenu.Item.Button>
     {#if readonly}
         <ContextMenu.Item.Button

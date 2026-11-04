@@ -19,11 +19,13 @@ package org.rdfarchitect.api.controller.datasets.versioncontrol;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.controller.Response;
+import org.rdfarchitect.api.dto.HistoryStepDTO;
+import org.rdfarchitect.models.changelog.RevertScope;
 import org.rdfarchitect.services.versioncontrol.RestoreVersionUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +38,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -49,12 +53,26 @@ public class RestoreVersionRESTController {
     private final RestoreVersionUseCase restoreVersionUseCase;
 
     @Operation(
-            summary = "restore ",
-            description = "restores the graph to the state specified by the version id",
+            summary = "restore a version",
+            description =
+                    "Puts the workspace back the way the given version left it. Leaving the "
+                            + "scope out restores the whole workspace by stepping through the "
+                            + "history, which writes nothing and leaves the changes stepped over "
+                            + "to be redone. A scope holding the restore to certain graphs is "
+                            + "recorded as a new change instead, which discards whatever could "
+                            + "still be redone. With expectedCurrentChangeId, only if the "
+                            + "workspace still stands on that change; otherwise nothing is "
+                            + "restored and 409 is returned.",
             tags = {"workspace"},
-            responses = {@ApiResponse(responseCode = "200")})
+            responses = {
+                @ApiResponse(responseCode = "200"),
+                @ApiResponse(
+                        responseCode = "409",
+                        description = "The workspace no longer stands on the expected change.",
+                        content = @Content())
+            })
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public String restoreVersion(
+    public HistoryStepDTO restoreVersion(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -74,14 +92,33 @@ public class RestoreVersionRESTController {
                 datasetName,
                 originURL);
 
-        restoreVersionUseCase.restoreVersion(datasetName, UUID.fromString(dto.versionId));
+        var step =
+                restoreVersionUseCase.restoreVersion(
+                        datasetName,
+                        UUID.fromString(dto.versionId),
+                        dto.scope(),
+                        dto.expectedCurrentChangeId() == null
+                                ? null
+                                : UUID.fromString(dto.expectedCurrentChangeId()));
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/restore\" to \"{}\".",
                 datasetName,
                 originURL);
-        return Response.SUCCESS;
+        return step;
     }
 
-    public record RestoreVersionDTO(String versionId) {}
+    /**
+     * @param versionId the change to restore to
+     * @param graphUris the graphs to put back, or empty for the whole workspace
+     * @param expectedCurrentChangeId the change the workspace stood on when the restore was
+     *     confirmed, or {@code null} to restore without checking
+     */
+    public record RestoreVersionDTO(
+            String versionId, List<String> graphUris, String expectedCurrentChangeId) {
+
+        RevertScope scope() {
+            return new RevertScope(graphUris == null ? Set.of() : Set.copyOf(graphUris));
+        }
+    }
 }

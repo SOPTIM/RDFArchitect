@@ -261,6 +261,22 @@ class WorkspaceUndoScopeTest {
         }
 
         @Test
+        void undo_ofADeletion_restoresTheColour() {
+            createGraph(GRAPH_A);
+            String generated;
+            try (var transaction = workspace.begin(ReadWrite.READ)) {
+                generated = transaction.crossProfileColors().getColor(GRAPH_A);
+            }
+            WorkspaceFixtures.deleteGraph(workspace, GRAPH_A);
+
+            workspace.undo();
+
+            try (var transaction = workspace.begin(ReadWrite.READ)) {
+                assertThat(transaction.crossProfileColors().getColor(GRAPH_A)).isEqualTo(generated);
+            }
+        }
+
+        @Test
         void undo_ofAPrefixChange_restoresThePreviousPrefixes() {
             setPrefixes(prefixMapping("first", "http://example.org/first#"));
             setPrefixes(prefixMapping("second", "http://example.org/second#"));

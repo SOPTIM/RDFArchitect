@@ -19,6 +19,7 @@ package org.rdfarchitect.database;
 
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
+import org.rdfarchitect.models.changelog.RevertScope;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 
@@ -91,12 +92,20 @@ public interface DatabasePort {
     WorkspaceHistoryStep redo(String workspaceName);
 
     /**
-     * Rolls the workspace back to the given version.
+     * Puts the workspace back the way the given version left it. The whole workspace is moved by
+     * stepping through the history; a restore held to certain graphs is recorded as a new change.
      *
      * @param workspaceName literal workspace name
      * @param versionId the change to restore to
+     * @param scope how much of the workspace to put back
+     * @param expectedCurrentChangeId the change the workspace stood on when the restore was
+     *     confirmed, or {@code null} to restore without checking
+     * @return what was restored, or a step without a change if the scope covered nothing
+     * @throws org.rdfarchitect.exception.graph.RestoreTargetChangedException if the workspace
+     *     stands on a different change by now
      */
-    void restoreToVersion(String workspaceName, UUID versionId);
+    WorkspaceHistoryStep restoreToVersion(
+            String workspaceName, UUID versionId, RevertScope scope, UUID expectedCurrentChangeId);
 
     /**
      * Returns the recorded changes of the workspace, newest first.

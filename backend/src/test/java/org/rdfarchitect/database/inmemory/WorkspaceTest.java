@@ -444,7 +444,23 @@ class WorkspaceTest {
     }
 
     @Test
-    void delete_dropsCrossProfileColorAndUndoBringsItBack() {
+    void delete_removesCrossProfileColor() {
+        // Otherwise a graph renamed onto the URI later, if it had no colour of its own, would be
+        // drawn in the deleted one's.
+        Workspace workspace = new Workspace(WORKSPACE);
+        exampleGraphs = List.of(createExampleGraph());
+        createGraph(workspace, "http://example.org/graph1", exampleGraphs.getFirst());
+
+        deleteGraph(workspace, "http://example.org/graph1");
+
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            assertThat(transaction.crossProfileColors().getColor("http://example.org/graph1"))
+                    .isNull();
+        }
+    }
+
+    @Test
+    void delete_undone_bringsTheCrossProfileColorBack() {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph());
@@ -453,16 +469,12 @@ class WorkspaceTest {
             transaction.crossProfileColors().setColor("http://example.org/graph1", "#123456");
             transaction.commit("assigned a colour");
         }
-
-        // Act
         deleteGraph(workspace, "http://example.org/graph1");
 
-        // Assert
-        try (var transaction = workspace.begin(ReadWrite.READ)) {
-            assertThat(transaction.crossProfileColors().getColor("http://example.org/graph1"))
-                    .isNull();
-        }
+        // Act
         workspace.undo();
+
+        // Assert
         try (var transaction = workspace.begin(ReadWrite.READ)) {
             assertThat(transaction.crossProfileColors().getColor("http://example.org/graph1"))
                     .isEqualTo("#123456");

@@ -33,15 +33,42 @@ import java.util.UUID;
  * @param additions what this version brought into existence and undoing it would remove again,
  *     recorded here rather than asked of the participant later, which would answer for its newest
  *     version instead of this one
+ * @param affectedGraphs the graphs a workspace-scoped participant reached, for the one case where
+ *     workspace-wide data is really about individual graphs: the set of graphs. Empty for a
+ *     graph-scoped participant, whose graph {@link #id()} already names.
+ * @param held whether the workspace still holds the participant. A graph deleted since keeps its
+ *     recorded changes, but nothing can be restored into it: a graph created under the same URI
+ *     afterwards is a different graph with a history of its own.
  */
 public record ParticipantVersion(
         ParticipantId id,
         ChangeLogParticipant participant,
         UUID versionId,
-        List<String> additions) {
+        List<String> additions,
+        List<String> affectedGraphs,
+        boolean held) {
 
     public ParticipantVersion {
         additions = List.copyOf(additions);
+        affectedGraphs = List.copyOf(affectedGraphs);
+    }
+
+    /**
+     * Creates a version of a participant the workspace holds.
+     *
+     * @param id describes which part of the workspace the participant represents
+     * @param participant the participant itself
+     * @param versionId the version the participant gained in this commit
+     * @param additions what this version brought into existence
+     * @param affectedGraphs the graphs a workspace-scoped participant reached
+     */
+    public ParticipantVersion(
+            ParticipantId id,
+            ChangeLogParticipant participant,
+            UUID versionId,
+            List<String> additions,
+            List<String> affectedGraphs) {
+        this(id, participant, versionId, additions, affectedGraphs, true);
     }
 
     /**
@@ -54,6 +81,28 @@ public record ParticipantVersion(
      */
     public static ParticipantVersion of(
             ParticipantId id, ChangeLogParticipant participant, UUID versionId) {
-        return new ParticipantVersion(id, participant, versionId, List.of());
+        return new ParticipantVersion(id, participant, versionId, List.of(), List.of());
+    }
+
+    /**
+     * Returns the same version seen under a different identifier, for an entry rendered with the
+     * participants identified as they stand now rather than as they stood when it was recorded.
+     *
+     * @param currentId the identifier the participant has now
+     * @return the version under {@code currentId}
+     */
+    public ParticipantVersion identifiedAs(ParticipantId currentId) {
+        return new ParticipantVersion(
+                currentId, participant, versionId, additions, affectedGraphs, held);
+    }
+
+    /**
+     * Returns the same version marked as belonging to a participant the workspace no longer holds,
+     * for an entry rendered after its graph was deleted.
+     *
+     * @return the version, no longer held
+     */
+    public ParticipantVersion asNoLongerHeld() {
+        return new ParticipantVersion(id, participant, versionId, additions, affectedGraphs, false);
     }
 }

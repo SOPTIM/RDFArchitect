@@ -20,10 +20,12 @@ package org.rdfarchitect.database.inmemory.diagrams;
 import lombok.Getter;
 
 import org.rdfarchitect.database.CrossProfileColors;
+import org.rdfarchitect.models.changelog.ValueChange;
 import org.rdfarchitect.rdf.graph.wrapper.SnapshotParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -65,6 +67,20 @@ public class CrossProfileDiagramInfo extends SnapshotParticipant<Map<String, Str
     }
 
     /**
+     * Drops the colour of a graph that is deleted, so that it does not linger for a graph that
+     * later takes over the URI.
+     *
+     * @param graphUri the URI of the deleted graph
+     */
+    public void removeColor(String graphUri) {
+        if (!colors.containsKey(graphUri)) {
+            return;
+        }
+        beginChange();
+        colors.remove(graphUri);
+    }
+
+    /**
      * Moves the colour of a graph to its new URI.
      *
      * @param oldGraphUri the URI the graph had
@@ -78,16 +94,6 @@ public class CrossProfileDiagramInfo extends SnapshotParticipant<Map<String, Str
         }
     }
 
-    /**
-     * Drops the colour of a graph that no longer exists.
-     *
-     * @param graphUri the URI of the deleted graph
-     */
-    public void removeGraph(String graphUri) {
-        beginChange();
-        colors.remove(graphUri);
-    }
-
     @Override
     protected Map<String, String> snapshot() {
         return new HashMap<>(colors);
@@ -97,5 +103,11 @@ public class CrossProfileDiagramInfo extends SnapshotParticipant<Map<String, Str
     protected void restore(Map<String, String> state) {
         colors.clear();
         colors.putAll(state);
+    }
+
+    @Override
+    protected List<ValueChange> describeValueChanges(
+            Map<String, String> before, Map<String, String> after) {
+        return ValueChange.between(before, after);
     }
 }

@@ -29,6 +29,7 @@ import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.models.changelog.RevertScope;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 
@@ -119,8 +120,10 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
-    public void restoreToVersion(String workspaceName, UUID versionId) {
-        getOrCreateSessionDataStore().restoreToVersion(workspaceName, versionId);
+    public WorkspaceHistoryStep restoreToVersion(
+            String workspaceName, UUID versionId, RevertScope scope, UUID expectedCurrentChangeId) {
+        return getOrCreateSessionDataStore()
+                .restoreToVersion(workspaceName, versionId, scope, expectedCurrentChangeId);
     }
 
     @Override

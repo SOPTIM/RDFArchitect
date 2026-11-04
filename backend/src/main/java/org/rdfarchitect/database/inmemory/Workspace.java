@@ -32,9 +32,16 @@ import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagramCollection;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
+import org.rdfarchitect.exception.graph.GraphVersionControlException;
+import org.rdfarchitect.exception.graph.RestoreTargetChangedException;
 import org.rdfarchitect.exception.graph.UndoTargetChangedException;
+import org.rdfarchitect.models.changelog.CapturedState;
+import org.rdfarchitect.models.changelog.ChangeLogParticipant;
 import org.rdfarchitect.models.changelog.ParticipantId;
+import org.rdfarchitect.models.changelog.ParticipantVersion;
+import org.rdfarchitect.models.changelog.RevertScope;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLog;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLog.HistorySince;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
 import org.rdfarchitect.rdf.RDFUtils;
@@ -44,12 +51,19 @@ import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Stream;
 
 /**
  * A workspace: a set of named graphs with a shared prefix mapping, its own custom diagrams and
@@ -213,6 +227,23 @@ public class Workspace {
      * behind.
      */
     private ParticipantId identify(TransactionParticipant participant) {
+        var id = identifyOrNull(participant);
+        if (id == null) {
+            throw new IllegalStateException(
+                    "A participant enrolled that does not belong to this workspace: "
+                            + participant);
+        }
+        return id;
+    }
+
+    /**
+     * Works out what a participant represents, or {@code null} if the workspace no longer holds it.
+     *
+     * <p>Unknown is a real answer when a recorded change is being read rather than written: the
+     * graph a change belongs to may have been deleted since, and the entry still has to be
+     * readable.
+     */
+    private ParticipantId identifyOrNull(Object participant) {
         for (var entry : graphs.view().entrySet()) {
             var kind = kindWithin(entry.getValue(), participant);
             if (kind != null) {
@@ -234,12 +265,10 @@ public class Workspace {
         if (participant == diagramLayout) {
             return ParticipantId.ofWorkspace(ParticipantId.Kind.DL);
         }
-        throw new IllegalStateException(
-                "A participant enrolled that does not belong to this workspace: " + participant);
+        return null;
     }
 
-    private static ParticipantId.Kind kindWithin(
-            GraphWithContext graph, TransactionParticipant participant) {
+    private static ParticipantId.Kind kindWithin(GraphWithContext graph, Object participant) {
         if (participant == graph.getRdfGraph()) {
             return ParticipantId.Kind.RDF;
         }
@@ -273,7 +302,8 @@ public class Workspace {
      */
     public WorkspaceChangeLogEntry undoPreview() {
         try (var _ = begin(ReadWrite.READ)) {
-            return changeLog.undoPreview();
+            var preview = changeLog.undoPreview();
+            return preview == null ? null : asCurrentlyIdentified(preview);
         }
     }
 
@@ -329,24 +359,335 @@ public class Workspace {
     }
 
     private WorkspaceHistoryStep stepOf(WorkspaceChangeLogEntry change) {
-        return new WorkspaceHistoryStep(change, changeLog.canUndo(), changeLog.canRedo());
+        return new WorkspaceHistoryStep(
+                asCurrentlyIdentified(change), changeLog.canUndo(), changeLog.canRedo());
     }
 
     /**
-     * Rolls the workspace back to the given version, undoing every change made after it.
+     * Renders an entry with its participants identified as they stand now rather than as they stood
+     * when the commit was recorded.
      *
-     * @param versionId the change to restore to
+     * <p>A graph that has been renamed since would otherwise keep every change ever made to it
+     * under the name it used to have, and its changelog would look as though it only began at the
+     * rename. The entry holds the participants themselves, so where they belong now is a question
+     * that can still be answered — except for a graph deleted since, where the recorded identifier
+     * is the best there is. Such a version is marked as no longer held, so that the entry is not
+     * offered for restoring a graph created under the same URI afterwards.
+     *
+     * <p>What a graph lifecycle change names is deliberately left alone: creating, deleting and
+     * renaming a graph are recorded against the URI they acted on, which is what their message says
+     * as well.
      */
-    public void restoreToVersion(UUID versionId) {
-        try (var _ = begin(ReadWrite.WRITE)) {
-            changeLog.restoreTo(versionId);
+    private WorkspaceChangeLogEntry asCurrentlyIdentified(WorkspaceChangeLogEntry entry) {
+        // Keyed by the participant rather than its recorded identifier: within one change a graph
+        // can be renamed away from a URI and another created under it, and both are recorded
+        // under that URI.
+        var renamed = new IdentityHashMap<ChangeLogParticipant, ParticipantId>();
+        var participants = new ArrayList<ParticipantVersion>();
+        var changed = false;
+        for (var version : entry.participants()) {
+            var current = identifyOrNull(version.participant());
+            if (current == null) {
+                participants.add(version.asNoLongerHeld());
+                changed = true;
+            } else if (current.equals(version.id())) {
+                participants.add(version);
+            } else {
+                renamed.put(version.participant(), current);
+                participants.add(version.identifiedAs(current));
+                changed = true;
+            }
+        }
+        if (!changed) {
+            return entry;
+        }
+        var deltas =
+                entry.deltas().stream()
+                        .map(
+                                delta -> {
+                                    var current = renamed.get(delta.owner());
+                                    return current == null ? delta : delta.identifiedAs(current);
+                                })
+                        .toList();
+        return new WorkspaceChangeLogEntry(
+                entry.changeId(),
+                entry.timestamp(),
+                entry.message(),
+                participants,
+                deltas,
+                entry.undone());
+    }
+
+    /**
+     * Moves the workspace to the given version.
+     *
+     * <p>A move covering the whole workspace steps through the recorded history, forwards or back,
+     * and writes nothing: the changes it steps over stay where they are and can be stepped over
+     * again, which is what lets a user walk the changelog in both directions.
+     *
+     * <p>A move covering only part of the workspace cannot step, because stepping takes the whole
+     * workspace with it. It is written forward as a new commit instead, which puts the schemas it
+     * covers back and leaves the rest alone — at the cost of discarding whatever lay ahead, as any
+     * new commit does.
+     *
+     * @param versionId the change to move to
+     * @param scope how much of the workspace to put back
+     * @return where the workspace ended up and what is left to undo or redo; {@link
+     *     WorkspaceHistoryStep#change()} is {@code null} if there was nothing to do
+     */
+    public WorkspaceHistoryStep restoreToVersion(UUID versionId, RevertScope scope) {
+        return restoreToVersion(versionId, scope, null);
+    }
+
+    /**
+     * Moves the workspace to the given version, provided it still stands where it stood when the
+     * move was confirmed.
+     *
+     * <p>The confirmation lists what the move takes back, read from the changelog in an earlier
+     * request. A commit, undo or redo landing in between would make the move take back or discard
+     * something that list did not show, so it is checked under the write lock the move runs in.
+     *
+     * @param versionId the change to move to
+     * @param scope how much of the workspace to put back
+     * @param expectedCurrentChangeId the change the workspace stood on when the move was confirmed,
+     *     or {@code null} to move without checking
+     * @return where the workspace ended up and what is left to undo or redo; {@link
+     *     WorkspaceHistoryStep#change()} is {@code null} if there was nothing to do
+     * @throws RestoreTargetChangedException if the workspace stands on a different change by now
+     */
+    public WorkspaceHistoryStep restoreToVersion(
+            UUID versionId, RevertScope scope, UUID expectedCurrentChangeId) {
+        try (var transaction = begin(ReadWrite.WRITE)) {
+            if (expectedCurrentChangeId != null
+                    && !expectedCurrentChangeId.equals(currentChangeId())) {
+                throw new RestoreTargetChangedException();
+            }
+            var ahead = indexAhead(versionId);
+            if (ahead >= 0) {
+                requireWholeWorkspace(scope);
+                return stepForward(ahead + 1);
+            }
+            var history = changeLog.historySince(versionId);
+            if (history.after().isEmpty()) {
+                return nothingRestored();
+            }
+            if (scope.isEverything()) {
+                return stepBack(history.after().size());
+            }
+            return revertAsCommit(history, scope);
         }
     }
 
-    /** Returns the recorded changes of the workspace, newest first. */
+    /**
+     * Refuses a move that covers part of the workspace where only a whole one is possible.
+     *
+     * <p>Stepping through the history takes the whole workspace with it, and a change that lies
+     * ahead can only be reached by stepping: there is no older state of it to put back.
+     */
+    private static void requireWholeWorkspace(RevertScope scope) {
+        if (!scope.isEverything()) {
+            throw new GraphVersionControlException(
+                    "Cannot move part of the workspace to a change that has been undone: "
+                            + "reaching it again reapplies the whole change.");
+        }
+    }
+
+    private WorkspaceHistoryStep stepForward(int steps) {
+        for (int i = 0; i < steps; i++) {
+            changeLog.redo();
+        }
+        return stepOf(changeLog.undoHistory().getFirst());
+    }
+
+    private WorkspaceHistoryStep stepBack(int steps) {
+        for (int i = 0; i < steps; i++) {
+            changeLog.undo();
+        }
+        return stepOf(changeLog.undoHistory().getFirst());
+    }
+
+    /**
+     * Puts the schemas a scope covers back as a new commit, leaving the rest of the workspace where
+     * it is.
+     */
+    private WorkspaceHistoryStep revertAsCommit(HistorySince history, RevertScope scope) {
+        var captured = captureBefore(history.after(), scope);
+        if (captured.isEmpty()) {
+            return nothingRestored();
+        }
+        var before = changeLog.undoHistory().getFirst();
+        reinstate(captured);
+        coordinator.commit(
+                "restored %s to \"%s\"".formatted(scope.describe(), history.change().message()));
+        var head = changeLog.undoHistory().getFirst();
+        // Reinstating a state the workspace was already in writes nothing, so there is no entry:
+        // a revert that changes nothing must not be reported as one that did.
+        return head.changeId().equals(before.changeId()) ? nothingRestored() : stepOf(head);
+    }
+
+    /** A state taken from a participant, with the participant it was taken from. */
+    private record CapturedParticipant(ChangeLogParticipant participant, CapturedState state) {}
+
+    private static void reinstate(List<CapturedParticipant> captured) {
+        captured.forEach(each -> each.state().reinstate());
+    }
+
+    /**
+     * Returns how far ahead of the workspace a change lies, or {@code -1} if it is not ahead.
+     *
+     * <p>A change an undo has stepped over is not behind the workspace to be put back but in front
+     * of it to be reached again, which is a different move with a different answer.
+     */
+    private int indexAhead(UUID versionId) {
+        var ahead = changeLog.redoHistory();
+        for (int i = 0; i < ahead.size(); i++) {
+            if (ahead.get(i).changeId().equals(versionId)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Takes the state everything in scope was in at a version, without going there.
+     *
+     * <p>Each participant keeps its own versions, so how far back its state lies is simply how many
+     * of them the commits being taken back gave it. Asking it directly leaves the workspace where
+     * it stands: nothing is stepped, nothing has to be stepped back afterwards, and a restore
+     * covering part of the workspace never touches the rest.
+     *
+     * <p>Only a graph that was there at the version, and still is, can be put back. A URI can name
+     * more than one graph over time — one deleted and another created under the same URI, or
+     * replaced by an import — and putting back what the version held would then take the graph now
+     * standing there back past its creation, a state the URI never had.
+     */
+    private List<CapturedParticipant> captureBefore(
+            List<WorkspaceChangeLogEntry> toRevert, RevertScope scope) {
+        var versionsGained = new LinkedHashMap<ChangeLogParticipant, Integer>();
+        var oldestTakenBack = new HashMap<ChangeLogParticipant, UUID>();
+        var graphSetVersionsGained = 0;
+        for (var entry : toRevert.reversed()) {
+            for (var version : entry.participants()) {
+                if (version.participant() == graphs) {
+                    graphSetVersionsGained++;
+                }
+                // Identified as it stands now, like the changelog identifies it when it is read:
+                // the name a change is shown under has to be the name it can be restored with, or
+                // a restore of a renamed graph would match nothing and quietly do nothing.
+                var current = identifyOrNull(version.participant());
+                if (current == null) {
+                    // A deleted graph's changes are no part of the history of a graph that stands
+                    // under its URI now, so they only matter where nothing does.
+                    if (scope.covers(version.id()) && !graphs.contains(version.id().scope())) {
+                        requireStillHeld(version);
+                    }
+                    continue;
+                }
+                if (!scope.covers(current)) {
+                    continue;
+                }
+                versionsGained.merge(version.participant(), 1, Integer::sum);
+                oldestTakenBack.putIfAbsent(version.participant(), version.versionId());
+            }
+        }
+        var graphsThen = graphs.graphsAt(graphSetVersionsGained);
+        versionsGained.keySet().forEach(participant -> requireHeldThen(participant, graphsThen));
+        // A graph created since may have no changes of its own to take back, yet the URI held
+        // something else at the version, or nothing at all.
+        scope.graphUris().stream()
+                .map(graphs.view()::get)
+                .filter(Objects::nonNull)
+                .forEach(graph -> requireHeldThen(graph.getRdfGraph(), graphsThen));
+        return versionsGained.entrySet().stream()
+                .map(
+                        gained ->
+                                captureBefore(
+                                        gained.getKey(),
+                                        gained.getValue(),
+                                        oldestTakenBack.get(gained.getKey())))
+                .toList();
+    }
+
+    /** Refuses to take back a change made to a graph the workspace no longer holds. */
+    private void requireStillHeld(ParticipantVersion version) {
+        if (identifyOrNull(version.participant()) == null) {
+            throw new GraphVersionControlException(
+                    ("Cannot restore %s to that version: changes since were made to a schema "
+                                    + "under that URI which has been deleted.")
+                            .formatted(version.id().scope()));
+        }
+    }
+
+    /**
+     * Refuses to take a graph back to a version from before it was created, which includes one that
+     * replaced another under the same URI.
+     */
+    private void requireHeldThen(
+            ChangeLogParticipant participant, Collection<GraphWithContext> graphsThen) {
+        if (graphsThen.stream().noneMatch(graph -> kindWithin(graph, participant) != null)) {
+            throw new GraphVersionControlException(
+                    ("Cannot restore %s to that version: the schema now under that URI was "
+                                    + "created after it.")
+                            .formatted(identifyOrNull(participant).scope()));
+        }
+    }
+
+    private static CapturedParticipant captureBefore(
+            ChangeLogParticipant participant, int versionsGained, UUID oldestTakenBack) {
+        requireAgreementOnHistory(participant, versionsGained, oldestTakenBack);
+        return new CapturedParticipant(participant, participant.capture(versionsGained));
+    }
+
+    /**
+     * Refuses to take a state the log and the participant do not agree on.
+     *
+     * <p>How far back a state lies is counted from the entries being taken back, while the state
+     * itself is read from the participant's own chain. The two are separate accounts of the same
+     * history, and if they ever disagreed the restore would put back a state nobody asked for and
+     * say nothing about it. The oldest version being taken back has to be the one the participant
+     * is about to step over; participants that track no version id cannot be checked this way.
+     */
+    private static void requireAgreementOnHistory(
+            ChangeLogParticipant participant, int versionsGained, UUID oldestTakenBack) {
+        if (oldestTakenBack == null) {
+            return;
+        }
+        var standingThere = participant.versionIdAt(versionsGained - 1);
+        if (!oldestTakenBack.equals(standingThere)) {
+            throw new GraphVersionControlException(
+                    ("Cannot restore: the oldest change being taken back names version %s, "
+                                    + "but %d versions back the participant holds %s.")
+                            .formatted(oldestTakenBack, versionsGained - 1, standingThere));
+        }
+    }
+
+    /** Returns the change the workspace stands on, or {@code null} if there is none. */
+    private UUID currentChangeId() {
+        var behind = changeLog.undoHistory();
+        return behind.isEmpty() ? null : behind.getFirst().changeId();
+    }
+
+    private WorkspaceHistoryStep nothingRestored() {
+        return new WorkspaceHistoryStep(null, changeLog.canUndo(), changeLog.canRedo());
+    }
+
+    /**
+     * Returns the recorded changes of the workspace, newest first.
+     *
+     * <p>Includes what an undo has stepped over. Those commits still happened and a redo brings
+     * them back, so dropping them from the history would leave a user who pressed Ctrl+Z watching
+     * their work disappear from the record of it.
+     */
     public List<WorkspaceChangeLogEntry> getChangeHistory() {
         try (var _ = begin(ReadWrite.READ)) {
-            return changeLog.undoHistory();
+            return Stream.concat(
+                            // Furthest ahead first: the redo stack hands out the next one to
+                            // reapply first, which is the other way round from newest first.
+                            changeLog.redoHistory().reversed().stream()
+                                    .map(WorkspaceChangeLogEntry::asUndone),
+                            changeLog.undoHistory().stream())
+                    .map(this::asCurrentlyIdentified)
+                    .toList();
         }
     }
 

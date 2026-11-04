@@ -120,7 +120,7 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     public void deleteGraph(String graphUri) {
         var expanded = prefixes.expandPrefix(graphUri);
         graphs.remove(expanded);
-        crossProfileDiagramInfo.removeGraph(expanded);
+        crossProfileDiagramInfo.removeColor(expanded);
     }
 
     @Override
