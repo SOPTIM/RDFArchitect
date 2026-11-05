@@ -18,6 +18,7 @@
 package org.rdfarchitect.api.controller.datasets.graphs.shacl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -30,9 +31,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.apache.jena.graph.Node;
+import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.riot.Lang;
+import org.apache.jena.riot.RDFParser;
 import org.apache.jena.sparql.graph.GraphFactory;
+import org.apache.jena.vocabulary.RDF;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,6 +65,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * The shapes-document endpoints answered end to end: real service, real controller advice.
@@ -422,6 +429,88 @@ class ShapesDocumentsApiTest {
                                                 result.getResponse()
                                                         .getContentAsString(StandardCharsets.UTF_8))
                                         .isEqualTo(SHAPES));
+    }
+
+    @Test
+    void aDocumentOfOnlyCommentsExportedAloneIsItsOwnText() throws Exception {
+        var document = givenDocument("notes.ttl", "# notes that matter\n");
+
+        mockMvc.perform(
+                        get(BASE + "/export/file")
+                                .param("documentId", document.getId().toString())
+                                .header(HttpHeaders.ACCEPT, "text/turtle"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        result ->
+                                assertThat(
+                                                result.getResponse()
+                                                        .getContentAsString(StandardCharsets.UTF_8))
+                                        .isEqualTo("# notes that matter\n"));
+    }
+
+    @Test
+    void theContentTypeIsTheFormatTheBytesAreIn() throws Exception {
+        var document = givenDocument("eq.ttl", SHAPES);
+
+        mockMvc.perform(
+                        get(BASE + "/export/file")
+                                .param("documentId", document.getId().toString())
+                                .header(HttpHeaders.ACCEPT, "application/rdf+xml, text/turtle"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("text/turtle"));
+        mockMvc.perform(
+                        get(BASE + "/export/file")
+                                .param("documentId", document.getId().toString())
+                                .header(HttpHeaders.ACCEPT, "application/rdf+xml"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("application/rdf+xml"));
+        mockMvc.perform(get(BASE + "/export/file").param("documentId", document.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("text/turtle"));
+    }
+
+    @Test
+    void aSyntaxErrorIsReportedOnTheLineTheTextHasItOn() throws Exception {
+        mockMvc.perform(
+                        post(DOCUMENTS)
+                                .param("name", "bad.ttl")
+                                .contentType(MediaType.TEXT_PLAIN)
+                                .content("\n\n\n@prefix ex: <http://e/> .\nex:a ex:b .oops\n"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("[line: 5,")));
+    }
+
+    /** Merging must not fold two documents' lists together where they happen to look alike. */
+    @Test
+    void longListsFromTwoDocumentsStayTwoListsInAMergedExport() throws Exception {
+        var shared =
+                IntStream.range(0, 40).mapToObj(i -> "ex:v" + i).collect(Collectors.joining(" "));
+        var prefixes =
+                "@prefix sh: <http://www.w3.org/ns/shacl#> .\n@prefix ex: <http://example.org/> .\n";
+        var first =
+                givenDocument(
+                        "a.ttl",
+                        prefixes + "ex:A sh:path ex:p ; sh:in ( " + shared + " ex:a ) .\n");
+        var second =
+                givenDocument(
+                        "b.ttl",
+                        prefixes + "ex:B sh:path ex:q ; sh:in ( " + shared + " ex:b ) .\n");
+
+        var exported =
+                mockMvc.perform(
+                                get(BASE + "/export/file")
+                                        .param("documentId", first.getId().toString())
+                                        .param("documentId", second.getId().toString())
+                                        .header(HttpHeaders.ACCEPT, "text/turtle"))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString(StandardCharsets.UTF_8);
+
+        var merged = RDFParser.fromString(exported, Lang.TURTLE).toGraph();
+        assertThat(merged.stream(Node.ANY, RDF.rest.asNode(), Node.ANY).toList())
+                .extracting(Triple::getSubject)
+                .doesNotHaveDuplicates();
     }
 
     @Test
