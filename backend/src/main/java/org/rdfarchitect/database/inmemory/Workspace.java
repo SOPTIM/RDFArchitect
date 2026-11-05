@@ -21,15 +21,19 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.config.GraphCompressionConfig;
+import org.rdfarchitect.database.ShapesDocumentSeed;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagramCollection;
+import org.rdfarchitect.database.snapshots.ShapesDocumentSeeds;
+import org.rdfarchitect.database.snapshots.ShapesGraphNaming;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
 import org.rdfarchitect.exception.graph.GraphVersionControlException;
@@ -143,22 +147,29 @@ public class Workspace {
         this(workspaceName);
         try (var transaction = begin(ReadWrite.WRITE)) {
             this.prefixes.addAll(dataset.getPrefixMapping());
+            var documents = ShapesDocumentSeeds.of(dataset);
             if (!dataset.getDefaultModel().isEmpty()) {
-                graphs.put(
-                        DEFAULT_GRAPH_NAME,
-                        new GraphWithContext(dataset.getDefaultModel().getGraph(), txnContext));
+                loadGraph(DEFAULT_GRAPH_NAME, dataset.getDefaultModel().getGraph(), documents);
             }
             for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
                 var graphURI = it.next().getURI();
-                graphs.put(
-                        graphURI,
-                        new GraphWithContext(
-                                dataset.getNamedModel(graphURI).getGraph(), txnContext));
+                // A dataset stores shapes documents in graphs of their own, which belong to the
+                // graph owning them rather than being graphs of the workspace.
+                if (!ShapesGraphNaming.isReserved(graphURI)) {
+                    loadGraph(graphURI, dataset.getNamedModel(graphURI).getGraph(), documents);
+                }
             }
             transaction.commit(INITIAL_CHANGE_MESSAGE);
         }
         // The load itself is not something the user can undo; it is the state they started from.
         changeLog.forgetHistory(INITIAL_CHANGE_MESSAGE);
+    }
+
+    private void loadGraph(
+            String graphUri, Graph content, Map<String, List<ShapesDocumentSeed>> documents) {
+        var graph = new GraphWithContext(content, txnContext);
+        graphs.put(graphUri, graph);
+        documents.getOrDefault(graphUri, List.of()).forEach(graph::restoreShapesDocument);
     }
 
     // -------------------------------------------------------------------------

@@ -116,6 +116,10 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
             GraphUtils.removeUUIDs(copiedGraph);
 
             conn.put(graphIdentifier.graphUri(), ModelFactory.createModelForGraph(copiedGraph));
+            ShapesDocumentGraphs.of(graphIdentifier.graphUri(), ctx.getShapesDocuments().values())
+                    .forEach(
+                            (name, graph) ->
+                                    conn.put(name, ModelFactory.createModelForGraph(graph)));
         } catch (Exception e) {
             throw new FusekiServerException(e.getMessage());
         }
