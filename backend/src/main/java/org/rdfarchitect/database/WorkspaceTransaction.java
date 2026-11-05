@@ -100,6 +100,18 @@ public interface WorkspaceTransaction extends AutoCloseable {
     void createGraph(String graphUri, Graph graph);
 
     /**
+     * Gives the graph registered under {@code graphUri} new contents, keeping its shapes documents.
+     * Otherwise like {@link #createGraph}, which it amounts to when no such graph exists.
+     *
+     * <p>Replacing a schema is how a new release of a profile is loaded, and the constraints
+     * written for the old one are what the user wants to check the new one against.
+     *
+     * @param graphUri the graph URI
+     * @param graph the graph's new contents
+     */
+    void replaceGraph(String graphUri, Graph graph);
+
+    /**
      * Removes the graph identified by {@code graphUri}. Does nothing if it does not exist.
      *
      * @param graphUri the graph URI

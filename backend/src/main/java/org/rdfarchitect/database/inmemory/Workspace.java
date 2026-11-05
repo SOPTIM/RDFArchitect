@@ -279,7 +279,7 @@ public class Workspace {
         if (participant == graph.getRdfGraph()) {
             return ParticipantId.Kind.RDF;
         }
-        if (participant == graph.getCustomSHACL()) {
+        if (participant == graph.getCustomSHACL() || graph.shapesDocuments().holds(participant)) {
             return ParticipantId.Kind.SHACL;
         }
         if (participant == graph.getDiagramLayout()) {

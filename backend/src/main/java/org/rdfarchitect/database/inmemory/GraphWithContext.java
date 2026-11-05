@@ -21,6 +21,8 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.rdfarchitect.database.GraphContext;
+import org.rdfarchitect.database.ShapesDocument;
+import org.rdfarchitect.database.ShapesDocumentSeed;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagramCollection;
 import org.rdfarchitect.models.cim.CIMModifyingUtils;
@@ -46,6 +48,7 @@ public class GraphWithContext implements GraphContext {
     private final DiagramLayoutDelta diagramLayout;
     private final RDFGraphDelta customSHACL;
     private final CustomDiagramCollection customDiagrams;
+    private final ShapesDocumentCollection shapesDocuments;
 
     /**
      * Builds the graph from {@code base}. Must be called inside a write transaction of the owning
@@ -55,6 +58,20 @@ public class GraphWithContext implements GraphContext {
      * @param txnContext the transaction context of the owning workspace
      */
     public GraphWithContext(Graph base, WorkspaceTransactionContext txnContext) {
+        this(base, txnContext, new ShapesDocumentCollection(txnContext));
+    }
+
+    /**
+     * Builds the graph from {@code base}, taking over the shapes documents of a graph it replaces.
+     *
+     * @param base the initial contents
+     * @param txnContext the transaction context of the owning workspace
+     * @param shapesDocuments the documents to hold
+     */
+    GraphWithContext(
+            Graph base,
+            WorkspaceTransactionContext txnContext,
+            ShapesDocumentCollection shapesDocuments) {
         GraphUtils.enhanceWithUUIDs(base);
         CIMModifyingUtils.replaceCommentDatatype(base);
         this.rdfGraph = new RDFGraphDelta(GraphFactory.createDefaultGraph(), txnContext);
@@ -64,6 +81,7 @@ public class GraphWithContext implements GraphContext {
         this.diagramLayout = new DiagramLayoutDelta(txnContext);
         this.customSHACL = new RDFGraphDelta(GraphFactory.createDefaultGraph(), txnContext);
         this.customDiagrams = new CustomDiagramCollection(txnContext);
+        this.shapesDocuments = shapesDocuments;
     }
 
     @Override
@@ -86,10 +104,45 @@ public class GraphWithContext implements GraphContext {
         return customDiagrams.get();
     }
 
+    @Override
+    public UUID getRdfGraphVersion() {
+        return rdfGraph.versionIdAt(0);
+    }
+
+    @Override
+    public UUID getShapesDocumentsVersion() {
+        return shapesDocuments.contentVersion();
+    }
+
+    @Override
+    public Map<UUID, ShapesDocument> getShapesDocuments() {
+        return shapesDocuments.view();
+    }
+
+    @Override
+    public ShapesDocument createShapesDocument(String name, ShapesDocument.Origin origin) {
+        return shapesDocuments.create(name, origin);
+    }
+
+    @Override
+    public void restoreShapesDocument(ShapesDocumentSeed seed) {
+        shapesDocuments.restore(seed);
+    }
+
+    @Override
+    public void removeShapesDocument(UUID documentId) {
+        shapesDocuments.remove(documentId);
+    }
+
     /**
      * The collection behind {@link #getCustomDiagrams()}, for the workspace to enrol and commit.
      */
     CustomDiagramCollection customDiagrams() {
         return customDiagrams;
+    }
+
+    /** The collection behind {@link #getShapesDocuments()}, which a replacing graph takes over. */
+    ShapesDocumentCollection shapesDocuments() {
+        return shapesDocuments;
     }
 }
