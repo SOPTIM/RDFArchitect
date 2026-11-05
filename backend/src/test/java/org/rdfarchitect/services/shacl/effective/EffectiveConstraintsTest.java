@@ -51,6 +51,44 @@ class EffectiveConstraintsTest {
     }
 
     @Test
+    void aRuleNamedFromAnotherDocumentCounts() {
+        var referring = shapes("ex:Shape sh:targetClass ex:Thing ; sh:property ex:Rule .");
+        var defining = shapes("ex:Rule sh:path ex:value ; sh:minCount 1 .");
+        var documents = new LinkedHashMap<String, Graph>();
+        documents.put("referring.ttl", referring);
+        documents.put("defining.ttl", defining);
+
+        var asserted = EffectiveConstraints.of(documents);
+
+        assertThat(asserted.constraints().get(THING_VALUE).minCount()).isEqualTo(1);
+        assertThat(asserted.statedIn().get(THING_VALUE)).containsExactly("referring.ttl");
+    }
+
+    @Test
+    void aDocumentsOwnDefinitionOfARuleIsTheOneItMeans() {
+        var referring =
+                shapes(
+                        """
+                        ex:Shape sh:targetClass ex:Thing ; sh:property ex:Rule .
+                        ex:Rule sh:path ex:value ; sh:minCount 1 .
+                        """);
+        var other = shapes("ex:Rule sh:path ex:value ; sh:minCount 7 .");
+        var documents = new LinkedHashMap<String, Graph>();
+        documents.put("referring.ttl", referring);
+        documents.put("other.ttl", other);
+
+        assertThat(EffectiveConstraints.of(documents).constraints().get(THING_VALUE).minCount())
+                .isEqualTo(1);
+    }
+
+    @Test
+    void aPropertyShapeCanBeItsOwnTarget() {
+        var graph = shapes("ex:Shape sh:targetClass ex:Thing ; sh:path ex:value ; sh:minCount 1 .");
+
+        assertThat(EffectiveConstraints.of(graph).get(THING_VALUE).minCount()).isEqualTo(1);
+    }
+
+    @Test
     void aPropertysRulesSpreadOverSeveralShapesCollapseIntoOne() {
         var graph =
                 shapes(

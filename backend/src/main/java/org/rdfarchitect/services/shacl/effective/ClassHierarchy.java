@@ -131,10 +131,14 @@ public final class ClassHierarchy {
 
     /**
      * Only a class the schema declares can be known to be abstract, and a schema that marks no
-     * class concrete tells nothing either way — so when filtering leaves nothing, the unfiltered
-     * set is the honest answer.
+     * class concrete tells nothing either way. When filtering leaves nothing, the unfiltered set is
+     * the honest answer as well: official lists name a class the schema doesn't mark concrete on
+     * purpose, like {@code cim:Statements} in the CGMES Header.
      */
     private Set<String> instantiable(Set<String> candidates) {
+        if (concrete.isEmpty()) {
+            return candidates;
+        }
         var instantiable = new LinkedHashSet<String>();
         candidates.stream()
                 .filter(name -> concrete.contains(name) || !classes.contains(name))
