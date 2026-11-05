@@ -38,9 +38,11 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,6 +53,12 @@ import java.util.stream.Stream;
 /** Utility class for graph operations */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class GraphUtils {
+
+    /**
+     * How many fingerprints may go into telling look-alike blank nodes apart, which bounds the time
+     * a text built to make that hard can take. The largest official files stay well below it.
+     */
+    private static final long REFINEMENT_BUDGET = 2_000_000L;
 
     private static final Set<String> RELEVANT_TYPES =
             Set.of(RDF.Property.toString(), RDFS.Class.toString());
@@ -187,7 +195,74 @@ public class GraphUtils {
                 break;
             }
         }
+        separateLookalikes(edges, hashes);
         return hashes;
+    }
+
+    /**
+     * Keeps apart blank nodes that only look alike from close up.
+     *
+     * <p>Two nodes with the same label become one node in the result, which is right for true
+     * duplicates. But the passes above see ten hops, and two long lists differing only further
+     * along than that shared their middle cells. A shared cell has two ways on, so a reader took
+     * the wrong one: official constraints files lost classes from their {@code sh:in} lists.
+     *
+     * <p>So nodes still sharing a label are refined until no group splits, and what is left is the
+     * same all the way out and safe to merge. Every other node keeps the label it already has,
+     * which leaves it unaffected by an edit far away.
+     */
+    private static void separateLookalikes(Map<Node, List<Edge>> edges, Map<Node, String> hashes) {
+        var groups = groupsSharingALabel(hashes.keySet(), hashes);
+        var budget = REFINEMENT_BUDGET;
+        while (!groups.isEmpty()) {
+            var next = new HashMap<Node, String>();
+            for (var group : groups) {
+                for (var node : group) {
+                    var fingerprint =
+                            blankNodeFingerprint(edges.getOrDefault(node, List.of()), hashes);
+                    // The old label goes in as well, so that a group can only ever split further.
+                    next.put(node, sha256prefix(hashes.get(node) + "|" + fingerprint));
+                }
+            }
+            var refined = groupsSharingALabel(next.keySet(), next);
+            if (refined.size() == groups.size() && next.size() == nodesIn(refined)) {
+                return;
+            }
+            hashes.putAll(next);
+            groups = refined;
+            budget -= next.size();
+            if (budget <= 0) {
+                keepApart(groups, hashes);
+                return;
+            }
+        }
+    }
+
+    /** The groups of more than one node carrying the same label. */
+    private static List<List<Node>> groupsSharingALabel(
+            Collection<Node> nodes, Map<Node, String> labels) {
+        return nodes.stream().collect(Collectors.groupingBy(labels::get)).values().stream()
+                .filter(group -> group.size() > 1)
+                .toList();
+    }
+
+    private static int nodesIn(List<List<Node>> groups) {
+        return groups.stream().mapToInt(List::size).sum();
+    }
+
+    /**
+     * Gives up on telling {@code groups} apart by content, and does not merge them.
+     *
+     * <p>Only something built to be pathological gets here, and a label that differs between two
+     * parses of it costs a noisier diff, where a wrong merge would change what it says.
+     */
+    private static void keepApart(List<List<Node>> groups, Map<Node, String> hashes) {
+        for (var group : groups) {
+            for (int index = 1; index < group.size(); index++) {
+                var node = group.get(index);
+                hashes.put(node, sha256prefix(hashes.get(node) + "|" + index));
+            }
+        }
     }
 
     /** One triple seen from a blank node: which end the node is on, and what is at the other. */
@@ -210,11 +285,7 @@ public class GraphUtils {
         try {
             var digest = MessageDigest.getInstance("SHA-256");
             var bytes = digest.digest(input.getBytes(StandardCharsets.UTF_8));
-            var sb = new StringBuilder(32);
-            for (int i = 0; i < 16; i++) {
-                sb.append(String.format("%02x", bytes[i]));
-            }
-            return sb.toString();
+            return HexFormat.of().formatHex(bytes, 0, 16);
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
         }
