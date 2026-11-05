@@ -88,9 +88,12 @@ export function ruleLabel(issue) {
 
 /**
  * A stable identity for a finding, used to remember which rows are expanded
- * across regroupings.
+ * across regroupings. A finding that brings an id of its own is known by it.
  */
 export function issueKey(issue) {
+    if (issue.id != null) {
+        return String(issue.id);
+    }
     return [
         issue.ruleId ?? issue.ruleLabel ?? "",
         issue.resourceUri ?? "",

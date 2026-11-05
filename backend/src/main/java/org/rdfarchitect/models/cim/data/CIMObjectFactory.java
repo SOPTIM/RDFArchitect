@@ -31,6 +31,7 @@ import org.rdfarchitect.models.cim.data.dto.CIMEnumEntry;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSSubClassOf;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.queries.CIMQueryVars;
 
@@ -78,9 +79,7 @@ public class CIMObjectFactory {
                 .uuid(parser.getUUID(CIMQueryVars.UUID))
                 .uri(uri)
                 .label(label)
-                .superClass(
-                        parser.getSubClassOf(
-                                CIMQueryVars.SUPER_CLASS_URI, CIMQueryVars.SUPER_CLASS_LABEL))
+                // The superclasses are resolved with a query of their own, see CIMObjectFetcher.
                 .comment(parser.getComment(CIMQueryVars.COMMENT))
                 .belongsToCategory(
                         parser.getBelongsToCategory(
@@ -310,6 +309,31 @@ public class CIMObjectFactory {
                     .add(createCIMSStereotype(querySolution));
         }
         return stereotypesByUUID;
+    }
+
+    /**
+     * Groups the superclasses of a result set by the UUID of the class they belong to. A class may
+     * declare several, which is why they are read apart from the class itself.
+     *
+     * @param superClassResultSet A result set binding the class UUID and one superclass per row.
+     * @return Map from class UUID to its superclasses. Classes without one are absent from the map.
+     */
+    public static Map<UUID, List<RDFSSubClassOf>> createSuperClassListsByUUID(
+            ResultSet superClassResultSet) {
+        Map<UUID, List<RDFSSubClassOf>> superClassesByUUID = new HashMap<>();
+        while (superClassResultSet.hasNext()) {
+            var parser = new CIMQuerySolutionParser(superClassResultSet.next());
+            var superClass =
+                    parser.getSubClassOf(
+                            CIMQueryVars.SUPER_CLASS_URI, CIMQueryVars.SUPER_CLASS_LABEL);
+            if (superClass == null) {
+                continue;
+            }
+            superClassesByUUID
+                    .computeIfAbsent(parser.getUUID(CIMQueryVars.UUID), key -> new ArrayList<>())
+                    .add(superClass);
+        }
+        return superClassesByUUID;
     }
 
     /**

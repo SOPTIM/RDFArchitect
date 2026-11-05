@@ -49,7 +49,14 @@ public class CIMClass {
 
     private RDFSLabel label;
 
-    private RDFSSubClassOf superClass;
+    /**
+     * Every superclass the graph declares, because a class may declare several. They are read with
+     * a query of their own rather than with the class, the way stereotypes are: bound in the class
+     * query they would multiply its rows and the same class would arrive once per superclass.
+     */
+    @Builder.Default
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private List<RDFSSubClassOf> superClasses = new ArrayList<>();
 
     private RDFSComment comment;
 
@@ -64,5 +71,15 @@ public class CIMClass {
         if (stereotypes.isEmpty()) {
             stereotypes = null;
         }
+    }
+
+    /**
+     * The first superclass the graph declares, for the callers that can hold only one. Which one
+     * that is, is the declaration order of the graph; nothing orders them beyond that.
+     *
+     * @return the superclass, or null when the class declares none
+     */
+    public RDFSSubClassOf firstSuperClass() {
+        return superClasses == null || superClasses.isEmpty() ? null : superClasses.getFirst();
     }
 }

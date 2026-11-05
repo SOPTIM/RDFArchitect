@@ -42,14 +42,26 @@ public interface ImportGraphsUseCase {
     }
 
     /**
-     * Warning about a successfully imported file whose content is not fully representable in the
-     * editor. The triples are stored, but the listed properties will not be displayed as attributes
-     * or associations because they lack the CIM metadata RDFArchitect relies on.
+     * One thing an import could not carry over as its file states it.
      *
-     * @param fileName the original filename the warning relates to
-     * @param undisplayableProperties names of the properties that will not be displayed
+     * <p>Reported as two fields rather than one sentence because an import has several reasons to
+     * report something and a caller groups by them: a property stored but not displayable, a type
+     * the export refers to without containing, a class declared twice, a header field under a name
+     * no ontology field matches.
+     *
+     * @param resource what it was, named as the file names it
+     * @param reason why it could not be carried over as stated
      */
-    record ImportWarning(String fileName, List<String> undisplayableProperties) {}
+    record UncarriedItem(String resource, String reason) {}
+
+    /**
+     * What one file or profile of an import could not carry over, the rest of it having been
+     * imported as the file has it.
+     *
+     * @param fileName the file, or the profile of an export, the items were found in
+     * @param graphUri the schema that was written from it, which is what the items belong to
+     */
+    record ImportWarning(String fileName, String graphUri, List<UncarriedItem> items) {}
 
     /**
      * Imports multiple graphs into the specified dataset.
@@ -58,8 +70,8 @@ public interface ImportGraphsUseCase {
      * @param files The list of files containing the graph data to be imported. A zip archive is
      *     unpacked and each graph file in it imported on its own.
      * @param graphUris The list of graph URIs corresponding to each file.
-     * @param listener Receives the progress of the import and can cancel it; pass {@link
-     *     ImportProgressListener#NOOP} when neither is needed.
+     * @param listener Receives the progress of the import, answers the namespace prefix question
+     *     and can cancel it; pass {@link GraphImportListener#NOOP} when none of that is needed.
      * @return A record storing both the successfully imported graph URIs and the filenames of files
      *     that failed to import.
      */
@@ -67,5 +79,5 @@ public interface ImportGraphsUseCase {
             String datasetName,
             List<MultipartFile> files,
             List<String> graphUris,
-            ImportProgressListener listener);
+            GraphImportListener listener);
 }

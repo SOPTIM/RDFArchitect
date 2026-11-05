@@ -137,9 +137,8 @@ public class CIMUpdates {
         if (newClass.getUuid() != null) {
             classBaseUpdate.addInsert(newClassURI, RDFA.uuid, newClass.getUuid().toString());
         }
-        if (newClass.getSuperClass() != null) {
-            classBaseUpdate.addInsert(
-                    newClassURI, RDFS.subClassOf, newClass.getSuperClass().getUri().toNode());
+        for (var superClass : newClass.getSuperClasses()) {
+            classBaseUpdate.addInsert(newClassURI, RDFS.subClassOf, superClass.getUri().toNode());
         }
         if (newClass.getComment() != null) {
             classBaseUpdate.addInsert(
@@ -558,6 +557,12 @@ public class CIMUpdates {
                     association.getUri().toNode(),
                     RDFS.comment,
                     asLiteralWithOptionalNormalization(association.getComment()));
+        }
+        for (CIMSStereotype stereotype : association.getStereotypes()) {
+            baseUpdate.addInsert(
+                    association.getUri().toNode(),
+                    CIMS.stereotype,
+                    RDFUtils.wrapURLorLiteral(stereotype.getStereotype()));
         }
     }
 

@@ -92,7 +92,7 @@ class RenderCIMCollectionTestBase {
                         .uuid(UUID.randomUUID())
                         .uri(uri)
                         .label(label)
-                        .superClass(null)
+                        .superClasses(List.of())
                         .belongsToCategory(null);
         if (packageLabel != null) {
             cimClass.belongsToCategory(

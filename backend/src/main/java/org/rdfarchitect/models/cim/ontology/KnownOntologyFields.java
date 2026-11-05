@@ -57,6 +57,14 @@ public class KnownOntologyFields {
     public static final OntologyField DCT_LANGUAGE =
             OntologyField.builder().iri(DCTerms.language.getURI()).isIriEntry(false).build();
 
+    /**
+     * Stated by 38 of the 240 ontology headers of the CGMES 3.0 model, which the released RDFS does
+     * not carry. Written as a literal like the other URL-valued fields, {@code dcat:landingPage}
+     * among them, rather than as a resource.
+     */
+    public static final OntologyField DCT_LICENSE =
+            OntologyField.builder().iri(DCTerms.license.getURI()).isIriEntry(false).build();
+
     public static final OntologyField DCT_MODIFIED =
             OntologyField.builder()
                     .iri(DCTerms.modified.getURI())
@@ -116,6 +124,7 @@ public class KnownOntologyFields {
                 DCT_IDENTIFIER,
                 DCT_ISSUED,
                 DCT_LANGUAGE,
+                DCT_LICENSE,
                 DCT_MODIFIED,
                 DCT_PUBLISHER,
                 DCT_RIGHTS,
