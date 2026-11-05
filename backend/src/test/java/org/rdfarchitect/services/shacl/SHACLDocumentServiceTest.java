@@ -281,6 +281,21 @@ class SHACLDocumentServiceTest {
         assertThat(service.getShapesDocumentText(GRAPH, draft.getId())).contains("cim:NoSuchClass");
     }
 
+    /** RDF/XML may have nothing before its declaration, so this one trim has to stay. */
+    @Test
+    void anRdfXmlFileStartingWithABlankLineStillImports() {
+        var rdfXml =
+                """
+
+                <?xml version="1.0"?>
+                <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
+                """;
+
+        var created = service.createShapesDocument(GRAPH, "x.rdf", "x.rdf", rdfXml, Lang.RDFXML);
+
+        assertThat(created.getName()).isEqualTo("x.rdf");
+    }
+
     @Test
     void exportingASelectionIncludesOnlyTheDocumentsAskedFor() {
         var eq = service.createShapesDocument(GRAPH, "eq.ttl", null, TURTLE, Lang.TURTLE);

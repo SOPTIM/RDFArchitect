@@ -29,8 +29,8 @@ import java.util.Set;
 /**
  * What a constraints document holds, counted the way SHACL defines its parts.
  *
- * <p>A triple count says how big a document is but not what is in it: 9,931 triples is 145 node
- * shapes and 572 rules in one official file and something else entirely in another.
+ * <p>A triple count says how big a document is but not what is in it: some ten thousand triples is
+ * 145 node shapes and 572 rules in one official file and something else entirely in another.
  *
  * @param nodeShapes subjects typed {@code sh:NodeShape}, or with a target, that are not property
  *     shapes
