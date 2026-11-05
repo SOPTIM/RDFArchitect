@@ -311,9 +311,11 @@ class CIMModelWriterMatchesCIMUpdatesTest extends CIMUpdatesTestBase {
 
     /** What the test graph holds now, detached so that it survives the transaction. */
     private org.apache.jena.rdf.model.Model currentTestGraph() {
-        try (var ctx = testGraph.begin(ReadWrite.READ)) {
+        try (var transaction = beginTestTransaction(ReadWrite.READ)) {
             return ModelFactory.createDefaultModel()
-                    .add(ModelFactory.createModelForGraph(ctx.getRdfGraph()));
+                    .add(
+                            ModelFactory.createModelForGraph(
+                                    transaction.graph(GRAPH_URI).getRdfGraph()));
         }
     }
 

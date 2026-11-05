@@ -46,7 +46,7 @@ public class OntologyGeneratableEntriesBuilder {
      * ontology entries. If the changelog is empty, return the existing dcterms:modified entry from
      * the ontology if it exists, otherwise do nothing.
      *
-     * @param changelogList List of ChangeLogEntry representing the changelog
+     * @param changelogList the changes that modified the graph, newest first
      * @return The current instance of OntologyGeneratableEntriesBuilder
      */
     public OntologyGeneratableEntriesBuilder generateDCTModified(
@@ -63,7 +63,7 @@ public class OntologyGeneratableEntriesBuilder {
             }
             return this;
         }
-        final var latestChangeLogEntry = changelogList.getLast();
+        final var latestChangeLogEntry = changelogList.getFirst();
         final var timeStampString = latestChangeLogEntry.getTimestamp();
         final var formattedTimestamp =
                 LocalDateTime.parse(timeStampString)

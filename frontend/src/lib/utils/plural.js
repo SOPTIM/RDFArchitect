@@ -16,12 +16,28 @@
  */
 
 /**
- * A count with the word it counts, in the number the count calls for.
+ * Returns the plural of a word.
+ *
+ * Covers the regular English nouns the editor names things with — a change,
+ * a class, a schema. A word with an irregular plural has to be written out
+ * where it is used.
+ *
+ * @param {string} word the singular
+ * @returns {string} the plural
+ */
+export function plural(word) {
+    return word.endsWith("s") ? `${word}es` : `${word}s`;
+}
+
+/**
+ * Returns a count together with what is being counted, in the right number.
  *
  * @param {number} count how many there are
- * @param {string} one the word for one of them
- * @param {string} [many] the word for several, the English default being the word plus an s
+ * @param {string} noun what they are, in the singular
+ * @param {string} [many] what they are, in the plural, for a noun whose plural
+ *     is irregular
+ * @returns {string} e.g. {@code "1 change"} or {@code "3 changes"}
  */
-export function plural(count, one, many = `${one}s`) {
-    return `${count} ${count === 1 ? one : many}`;
+export function counted(count, noun, many = plural(noun)) {
+    return `${count} ${count === 1 ? noun : many}`;
 }

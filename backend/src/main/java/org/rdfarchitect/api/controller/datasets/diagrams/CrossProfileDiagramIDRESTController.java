@@ -21,7 +21,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -39,7 +39,7 @@ public class CrossProfileDiagramIDRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(CrossProfileDiagramIDRESTController.class);
 
-    private final DatabasePort databasePort;
+    private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
 
     @GetMapping
     public String getCrossProfileDiagramId(
@@ -56,11 +56,7 @@ public class CrossProfileDiagramIDRESTController {
                 datasetName,
                 originURL);
 
-        var result =
-                databasePort
-                        .getCrossProfileDiagramInfo(datasetName)
-                        .getCrossProfileDiagramUUID()
-                        .toString();
+        var result = getCustomDiagramsUseCase.getCrossProfileDiagramId(datasetName).toString();
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/crossprofilediagram\" from \"{}\"",

@@ -19,7 +19,7 @@
     import InfoTooltip from "$lib/components/InfoTooltip.svelte";
     import TreeChevron from "$lib/components/TreeChevron.svelte";
     import XmiNamespaceEditor from "$lib/components/XmiNamespaceEditor.svelte";
-    import { plural } from "$lib/utils/plural.js";
+    import { counted } from "$lib/utils/plural.js";
 
     let {
         /** The progress of the read, which is what the export states. */
@@ -66,9 +66,9 @@
 <div class="mx-2 flex h-full min-h-0 flex-col gap-4">
     <p class="text-sm">
         <span class="font-semibold">Importing:</span>
-        {plural(choice.schemas.length, "profile")},
-        {plural(choice.classes, "class definition")},
-        {plural(choice.diagramIds.length, "diagram")}
+        {counted(choice.schemas.length, "profile")},
+        {counted(choice.classes, "class definition")},
+        {counted(choice.diagramIds.length, "diagram")}
     </p>
 
     <XmiNamespaceEditor
@@ -91,7 +91,7 @@
                 >
                     <TreeChevron expanded={showCarriedOver} />
                     <span>
-                        {plural(
+                        {counted(
                             carriedOver.length,
                             "further prefix is",
                             "further prefixes are",

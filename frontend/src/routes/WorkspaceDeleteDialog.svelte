@@ -16,7 +16,11 @@
   -->
 
 <script>
-    import { faExclamation } from "@fortawesome/free-solid-svg-icons";
+    import {
+        faCircleExclamation,
+        faExclamation,
+    } from "@fortawesome/free-solid-svg-icons";
+    import { Fa } from "svelte-fa";
 
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import {
@@ -95,8 +99,10 @@
                 const label = graphCount === 1 ? "schema" : "schemas";
                 return `${baseDeletionDescription} ${graphCount} ${label} will be deleted.`;
             })()}
-            <br />
-            This action is not reversible.
         </p>
+        <div class="text-default-text flex items-start gap-2 text-sm">
+            <Fa icon={faCircleExclamation} class="text-red mt-0.5" />
+            <span>This action is not reversible.</span>
+        </div>
     </div>
 </ActionDialog>

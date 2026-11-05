@@ -17,12 +17,8 @@
 
 package org.rdfarchitect.services.update.graph;
 
-import lombok.RequiredArgsConstructor;
-
-import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
-import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
@@ -35,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
@@ -51,14 +48,14 @@ import java.util.function.Function;
  * <p>Both kinds carry positions, and the two address a class differently: a schema diagram by the
  * uuid of the class, a workspace diagram by the merged uuid its uri hashes to, which is how the
  * workspace-wide layout identifies the same class across schemas.
+ *
+ * <p>Writes into the transaction of the import rather than opening one per diagram: the diagrams
+ * are part of the one change an import is, and are taken back with it when it is cancelled.
  */
 @Service
-@RequiredArgsConstructor
 class XmiDiagramStore {
 
     private static final Logger logger = LoggerFactory.getLogger(XmiDiagramStore.class);
-
-    private final DatabasePort databasePort;
 
     /**
      * Stores every diagram, each where it belongs.
@@ -67,7 +64,10 @@ class XmiDiagramStore {
      *     and a cancellation that is only noticed after it would not look like one
      * @return how many were stored
      */
-    int store(String datasetName, List<ImportedDiagram> diagrams, BooleanSupplier cancelled) {
+    int store(
+            WorkspaceTransaction transaction,
+            List<ImportedDiagram> diagrams,
+            BooleanSupplier cancelled) {
         var stored = 0;
         for (var diagram : diagrams) {
             if (cancelled.getAsBoolean()) {
@@ -75,7 +75,7 @@ class XmiDiagramStore {
                 return stored;
             }
             try {
-                storeOne(datasetName, diagram);
+                storeOne(transaction, diagram);
                 stored++;
             } catch (RuntimeException exception) {
                 // A diagram that cannot be stored costs its positions, not the schemas it draws.
@@ -88,39 +88,37 @@ class XmiDiagramStore {
         return stored;
     }
 
-    private void storeOne(String datasetName, ImportedDiagram diagram) {
+    private void storeOne(WorkspaceTransaction transaction, ImportedDiagram diagram) {
         var schemaUri = diagram.schemaUri();
         if (schemaUri != null) {
-            storeInGraph(new GraphIdentifier(datasetName, schemaUri), diagram);
-        } else {
-            storeInDataset(datasetName, diagram);
-        }
-    }
-
-    private void storeInGraph(GraphIdentifier graphIdentifier, ImportedDiagram diagram) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            ctx.getCustomDiagrams()
-                    .put(
-                            diagram.id(),
-                            new CustomDiagram(diagram.id(), diagram.name(), classesIn(diagram)));
-            writeLayout(
-                    ctx.getDiagramLayout().getDiagramLayoutModel(),
+            var graph = transaction.graph(schemaUri);
+            store(
+                    graph.getCustomDiagrams(),
+                    graph.getDiagramLayout().getDiagramLayoutModel(),
                     diagram,
                     placed -> placed.location().uuid());
-            ctx.commit("imported diagram %s".formatted(diagram.name()));
+        } else {
+            store(
+                    transaction.diagrams(),
+                    transaction.layout().getDiagramLayoutModel(),
+                    diagram,
+                    placed -> CrossProfileUtils.mergedUuid(placed.location().classUri()));
         }
     }
 
-    private void storeInDataset(String datasetName, ImportedDiagram diagram) {
-        databasePort
-                .getDatasetDiagrams(datasetName)
-                .put(
-                        diagram.id(),
-                        new CustomDiagram(diagram.id(), diagram.name(), classesIn(diagram)));
-        writeLayout(
-                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel(),
-                diagram,
-                placed -> CrossProfileUtils.mergedUuid(placed.location().classUri()));
+    /**
+     * Lays the diagram out before listing it. A failure cannot be rolled back on its own — an abort
+     * takes the whole import with it — so the diagram is only listed once it is complete, and a
+     * failure leaves at most positions no diagram refers to.
+     */
+    private void store(
+            Map<UUID, CustomDiagram> customDiagrams,
+            Model diagramLayoutModel,
+            ImportedDiagram diagram,
+            Function<PlacedClass, UUID> identityOf) {
+        writeLayout(diagramLayoutModel, diagram, identityOf);
+        customDiagrams.put(
+                diagram.id(), new CustomDiagram(diagram.id(), diagram.name(), classesIn(diagram)));
     }
 
     /**

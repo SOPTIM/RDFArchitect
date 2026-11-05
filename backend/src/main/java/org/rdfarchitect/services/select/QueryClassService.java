@@ -59,7 +59,9 @@ public class QueryClassService
     @Override
     public ClassUMLAdaptedDTO getClassInformation(
             GraphIdentifier graphIdentifier, String classUUID, boolean includeSuperClasses) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
             var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.datasetName());
             var cimClass =
@@ -108,7 +110,9 @@ public class QueryClassService
 
     @Override
     public List<ClassDTO> listSuperClasses(GraphIdentifier graphIdentifier, UUID classUUID) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
             var model = ModelFactory.createModelForGraph(graph);
             var cimObjectFetcher =
@@ -153,7 +157,9 @@ public class QueryClassService
     @Override
     public ClassRelationsDTO getClassesReferencingThisClass(
             GraphIdentifier graphIdentifier, UUID classUUID) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             return CIMClassRelationFinder.getAllClassRelations(ctx.getRdfGraph(), classUUID);
         }
     }

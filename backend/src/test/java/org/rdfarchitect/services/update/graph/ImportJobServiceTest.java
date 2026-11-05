@@ -183,7 +183,7 @@ class ImportJobServiceTest {
     private static ImportJobService jobService(ImportGraphsUseCase importGraphs) {
         var database = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         return new ImportJobService(
-                importGraphs, new ImportXmiService(database, new XmiDiagramStore(database)));
+                importGraphs, new ImportXmiService(database, new XmiDiagramStore()));
     }
 
     /** Reads an uploaded file while the import still owns it. */

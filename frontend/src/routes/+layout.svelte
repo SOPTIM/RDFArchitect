@@ -34,6 +34,7 @@
     import ToastContainer from "$lib/components/ToastContainer.svelte";
     import { PUBLIC_EMBED_SESSION_HANDSHAKE } from "$lib/config/runtime";
     import { isDialogOpen } from "$lib/dialog/openDialogs.js";
+    import UndoConfirmDialog from "$lib/dialog/UndoConfirmDialog.svelte";
     import { installSessionHandshake } from "$lib/embedding/session-handshake.js";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
@@ -49,7 +50,6 @@
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import {
-        DiagramType,
         editorState,
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
@@ -66,6 +66,12 @@
     /** @type {{children?: import("svelte").Snippet}} */
     let { children } = $props();
 
+    /**
+     * What to call a page in the toolbar. Only for pages that are laid out like the editor and
+     * would otherwise be mistaken for it; the editor itself puts its search there instead.
+     */
+    const PAGE_TITLES = { "/changelog": "Changelog" };
+
     let canUndo = $state(false);
     let canRedo = $state(false);
     let menubarValue = $state("");
@@ -75,6 +81,8 @@
     let isLeftAltPressed = false;
 
     let selectedWorkspace = $derived(editorState.selectedWorkspace.getValue());
+
+    let pageTitle = $derived(PAGE_TITLES[page.url.pathname] ?? "");
 
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
@@ -158,10 +166,9 @@
 
     async function fetchUndoRedo() {
         const workspaceName = editorState.selectedWorkspace.getValue();
-        const graph = editorState.selectedGraph.getValue();
-        await versionControlStore.refresh(workspaceName, graph);
-        canUndo = await versionControlStore.canUndo(workspaceName, graph);
-        canRedo = await versionControlStore.canRedo(workspaceName, graph);
+        await versionControlStore.refreshAfterReload(workspaceName);
+        canUndo = await versionControlStore.canUndo(workspaceName);
+        canRedo = await versionControlStore.canRedo(workspaceName);
     }
 
     async function reload() {
@@ -191,11 +198,11 @@
         if (!isRedo && !canUndo) return;
 
         await eventStack.guardAction(async () => {
-            const { error } = isRedo
+            const { error, skipped } = isRedo
                 ? await versionControlStore.redo()
                 : await versionControlStore.undo();
 
-            if (!error) {
+            if (!error && !skipped) {
                 await reload();
             }
         });
@@ -221,14 +228,11 @@
                 if (isDialogOpen()) {
                     return;
                 }
-                if (
-                    editorState.selectedDiagram.getProperty("type") ===
-                    DiagramType.CROSS_PROFILE
-                ) {
-                    toastStore.info(
-                        "Undo/Redo not possible",
-                        "Undo/Redo is not available in the Merged View.",
-                    );
+                // Auto-repeat fires every thirty or so milliseconds and would
+                // walk the whole history in a second. Only real presses count;
+                // every one of those takes a step.
+                if (event.repeat) {
+                    event.preventDefault();
                     return;
                 }
                 event.preventDefault();
@@ -311,7 +315,9 @@
     >
         {#if page.url.pathname !== "/"}
             <nav
-                class="toolbar-surface text-default-text flex h-12 min-h-12 w-full items-center"
+                class="toolbar-surface text-default-text flex h-12 min-h-12 w-full items-center {pageTitle
+                    ? 'toolbar-surface--named'
+                    : ''}"
             >
                 <!-- Left -->
                 <div class="w-1/3">
@@ -346,6 +352,10 @@
                         <div class="w-full">
                             <Searchbar />
                         </div>
+                    {:else if pageTitle}
+                        <div class="w-full text-center text-sm font-semibold">
+                            {pageTitle}
+                        </div>
                     {/if}
                 </div>
 
@@ -372,5 +382,6 @@
         </div>
     </div>
     <ToastContainer />
+    <UndoConfirmDialog />
     <PasteClassesDialog />
 </Tooltip.Provider>

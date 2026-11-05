@@ -20,11 +20,11 @@ package org.rdfarchitect.services.update.graph;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
@@ -36,6 +36,7 @@ import org.rdfarchitect.xmi.map.XmiDiagrams.PlacedClass;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.function.BooleanSupplier;
 
 /**
  * Where a diagram of an export ends up, which is decided by what it draws and not by where it was
@@ -48,7 +49,7 @@ class XmiDiagramStoreTest {
     private static final String SECOND = "http://example.com/graphs/second";
 
     /** A caller that never cancels, which is every case but the one that tests cancelling. */
-    private static final java.util.function.BooleanSupplier NEVER = () -> false;
+    private static final BooleanSupplier NEVER = () -> false;
 
     private DatabasePort databasePort;
     private XmiDiagramStore store;
@@ -57,37 +58,38 @@ class XmiDiagramStoreTest {
     void setUp() {
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         databasePort.createWorkspaceIfAbsent(DATASET);
-        databasePort.createEmptyGraph(new GraphIdentifier(DATASET, FIRST));
-        databasePort.createEmptyGraph(new GraphIdentifier(DATASET, SECOND));
-        store = new XmiDiagramStore(databasePort);
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.WRITE)) {
+            transaction.createGraph(FIRST, GraphFactory.createDefaultGraph());
+            transaction.createGraph(SECOND, GraphFactory.createDefaultGraph());
+            transaction.commit("schemas to draw on");
+        }
+        store = new XmiDiagramStore();
     }
 
     @Test
     void store_putsADiagramDrawingOneSchemaWithThatSchema() {
-        store.store(DATASET, List.of(diagram(placed("A", FIRST), placed("B", FIRST))), NEVER);
+        store(List.of(diagram(placed("A", FIRST), placed("B", FIRST))), NEVER);
 
         assertThat(diagramsOfGraph(FIRST)).extracting(CustomDiagram::getName).containsExactly("D");
-        assertThat(databasePort.getDatasetDiagrams(DATASET)).isEmpty();
+        assertThat(workspaceDiagrams()).isEmpty();
     }
 
     @Test
     void store_putsADiagramDrawingSeveralSchemasWithTheWorkspace() {
         // No single schema can hold it, and the same Enterprise Architect diagram is one or the
         // other depending only on which profiles were chosen alongside it.
-        store.store(DATASET, List.of(diagram(placed("A", FIRST), placed("B", SECOND))), NEVER);
+        store(List.of(diagram(placed("A", FIRST), placed("B", SECOND))), NEVER);
 
-        assertThat(databasePort.getDatasetDiagrams(DATASET).values())
-                .extracting(CustomDiagram::getName)
-                .containsExactly("D");
+        assertThat(workspaceDiagrams()).extracting(CustomDiagram::getName).containsExactly("D");
         assertThat(diagramsOfGraph(FIRST)).isEmpty();
         assertThat(diagramsOfGraph(SECOND)).isEmpty();
     }
 
     @Test
     void store_keepsTheClassesOfAWorkspaceDiagram() {
-        store.store(DATASET, List.of(diagram(placed("A", FIRST), placed("B", SECOND))), NEVER);
+        store(List.of(diagram(placed("A", FIRST), placed("B", SECOND))), NEVER);
 
-        var diagram = databasePort.getDatasetDiagrams(DATASET).values().iterator().next();
+        var diagram = workspaceDiagrams().getFirst();
         assertThat(diagram.getClasses()).hasSize(2);
     }
 
@@ -98,18 +100,19 @@ class XmiDiagramStoreTest {
         var drawn = placed("A", FIRST);
         var imported = diagram(drawn, placed("B", SECOND));
 
-        store.store(DATASET, List.of(imported), NEVER);
+        store(List.of(imported), NEVER);
 
-        var layout = databasePort.getDatasetDiagramLayout(DATASET).getDiagramLayoutModel();
-        assertThat(DLObjectFetcher.fetchDiagramDOPPerClass(layout, imported.id()))
-                .containsKey(CrossProfileUtils.mergedUuid(drawn.location().classUri()));
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
+            var layout = transaction.layout().getDiagramLayoutModel();
+            assertThat(DLObjectFetcher.fetchDiagramDOPPerClass(layout, imported.id()))
+                    .containsKey(CrossProfileUtils.mergedUuid(drawn.location().classUri()));
+        }
     }
 
     @Test
     void store_reportsHowManyItStored() {
         var stored =
-                store.store(
-                        DATASET,
+                store(
                         List.of(
                                 diagram(placed("A", FIRST)),
                                 diagram(placed("B", FIRST), placed("C", SECOND))),
@@ -122,8 +125,7 @@ class XmiDiagramStoreTest {
     void store_keepsGoingWhenOneDiagramNamesASchemaThatIsNotThere() {
         // The positions of that one are lost; the schemas it draws are not.
         var stored =
-                store.store(
-                        DATASET,
+                store(
                         List.of(
                                 diagram(placed("A", "http://example.com/graphs/gone")),
                                 diagram(placed("B", FIRST))),
@@ -138,8 +140,7 @@ class XmiDiagramStoreTest {
         // The longest part of an import by far, so a cancellation noticed only after it would not
         // look like one at all.
         var stored =
-                store.store(
-                        DATASET,
+                store(
                         List.of(diagram(placed("A", FIRST)), diagram(placed("B", FIRST))),
                         () -> true);
 
@@ -161,10 +162,24 @@ class XmiDiagramStoreTest {
                 2);
     }
 
+    /** Stores the diagrams the way an import does, in a transaction of its own. */
+    private int store(List<ImportedDiagram> diagrams, BooleanSupplier cancelled) {
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.WRITE)) {
+            var stored = store.store(transaction, diagrams, cancelled);
+            transaction.commit("diagrams");
+            return stored;
+        }
+    }
+
     private List<CustomDiagram> diagramsOfGraph(String graphUri) {
-        var graphIdentifier = new GraphIdentifier(DATASET, graphUri);
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            return List.copyOf(ctx.getCustomDiagrams().values());
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
+            return List.copyOf(transaction.graph(graphUri).getCustomDiagrams().values());
+        }
+    }
+
+    private List<CustomDiagram> workspaceDiagrams() {
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
+            return List.copyOf(transaction.diagrams().values());
         }
     }
 }

@@ -20,6 +20,7 @@ package org.rdfarchitect.services;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.QueryFactory;
+import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
@@ -235,13 +236,15 @@ public class SearchService implements SearchUseCase {
             return;
         }
 
-        for (String graphUri : databasePort.listGraphUris(datasetName)) {
-            searchGraph(
-                    new GraphIdentifier(datasetName, graphUri),
-                    query,
-                    filter,
-                    searchResults,
-                    externalSearchResults);
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            for (String graphUri : transaction.graphUris()) {
+                searchGraph(
+                        new GraphIdentifier(datasetName, graphUri),
+                        query,
+                        filter,
+                        searchResults,
+                        externalSearchResults);
+            }
         }
     }
 
@@ -272,13 +275,18 @@ public class SearchService implements SearchUseCase {
                 appendPackageConstraint(filter, specificExternalQuery);
         var internalQueryObject = QueryFactory.create(internalQueryWithPackageConstraint);
         var externalQueryObject = QueryFactory.create(externalQueryWithPackageConstraint);
-        var ctx = databasePort.getGraphWithContext(graphIdentifier);
         var internalResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        ctx, internalQueryObject, graphIdentifier.graphUri());
+                        databasePort,
+                        graphIdentifier,
+                        internalQueryObject,
+                        graphIdentifier.graphUri());
         var externalResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        ctx, externalQueryObject, graphIdentifier.graphUri());
+                        databasePort,
+                        graphIdentifier,
+                        externalQueryObject,
+                        graphIdentifier.graphUri());
 
         searchResults.addAll(
                 SearchResultObjectFactory.createSearchResultObjectList(

@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.exception.database.DataAccessException;
@@ -94,11 +93,8 @@ class InMemorySnapshotAdapterTest {
         var snapshotName = SnapshotUtils.constructSnapshotName(DATASET, token);
         assertTrue(databasePort.listDatasets().contains(snapshotName));
         assertTrue(databasePort.listGraphUris(snapshotName).contains(GRAPH_URI));
-        try (var ctx =
-                databasePort
-                        .getGraphWithContext(new GraphIdentifier(snapshotName, GRAPH_URI))
-                        .begin(ReadWrite.READ)) {
-            assertTrue(ctx.getRdfGraph().contains(CLASS_TRIPLE));
+        try (var transaction = databasePort.beginTransaction(snapshotName, ReadWrite.READ)) {
+            assertTrue(transaction.graph(GRAPH_URI).getRdfGraph().contains(CLASS_TRIPLE));
         }
     }
 
@@ -126,11 +122,8 @@ class InMemorySnapshotAdapterTest {
         adapter.fetchSnapshot(token);
 
         var snapshotName = SnapshotUtils.constructSnapshotName(DATASET, token);
-        try (var ctx =
-                databasePort
-                        .getGraphWithContext(new GraphIdentifier(snapshotName, GRAPH_URI))
-                        .begin(ReadWrite.READ)) {
-            assertTrue(ctx.getRdfGraph().contains(CLASS_TRIPLE));
+        try (var transaction = databasePort.beginTransaction(snapshotName, ReadWrite.READ)) {
+            assertTrue(transaction.graph(GRAPH_URI).getRdfGraph().contains(CLASS_TRIPLE));
         }
     }
 
@@ -140,7 +133,10 @@ class InMemorySnapshotAdapterTest {
         createSampleDataset();
         var prefixes = org.apache.jena.shared.PrefixMapping.Factory.create();
         prefixes.setNsPrefix("ex", "http://example.com/");
-        databasePort.setPrefixMapping(DATASET, prefixes);
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.WRITE)) {
+            transaction.setPrefixes(prefixes);
+            transaction.commit("changed the namespace prefixes");
+        }
         var token = adapter.createSnapshot(DATASET);
 
         SessionContext.setSessionId("session-b");
@@ -155,6 +151,10 @@ class InMemorySnapshotAdapterTest {
     private void createSampleDataset() {
         var graph = GraphFactory.createDefaultGraph();
         graph.add(CLASS_TRIPLE);
-        databasePort.createGraph(new GraphIdentifier(DATASET, GRAPH_URI), graph);
+        databasePort.createWorkspaceIfAbsent(DATASET);
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.WRITE)) {
+            transaction.createGraph(GRAPH_URI, graph);
+            transaction.commit("imported graph %s".formatted(GRAPH_URI));
+        }
     }
 }

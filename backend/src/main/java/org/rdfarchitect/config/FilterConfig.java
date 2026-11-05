@@ -20,12 +20,24 @@ package org.rdfarchitect.config;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.filters.DatasetFilter;
 import org.rdfarchitect.filters.SessionContextFilter;
+import org.rdfarchitect.filters.StaleTransactionFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class FilterConfig {
+
+    /** Outermost, so that its cleanup runs after every other filter has finished. */
+    @Bean
+    public FilterRegistrationBean<StaleTransactionFilter> staleTransactionFilterRegistration() {
+        FilterRegistrationBean<StaleTransactionFilter> registrationBean =
+                new FilterRegistrationBean<>();
+        registrationBean.setFilter(new StaleTransactionFilter());
+        registrationBean.setOrder(0);
+        registrationBean.addUrlPatterns("/*");
+        return registrationBean;
+    }
 
     @Bean
     public FilterRegistrationBean<SessionContextFilter> sessionContextFilterRegistration() {

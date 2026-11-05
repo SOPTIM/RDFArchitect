@@ -26,7 +26,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
@@ -43,6 +42,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * What importing the profiles chosen from an export leaves behind.
@@ -79,7 +79,7 @@ class ImportXmiServiceTest {
     @BeforeEach
     void setUp() {
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
-        service = new ImportXmiService(databasePort, new XmiDiagramStore(databasePort));
+        service = new ImportXmiService(databasePort, new XmiDiagramStore());
     }
 
     @Test
@@ -192,6 +192,50 @@ class ImportXmiServiceTest {
     }
 
     @Test
+    void importPackages_cancelledWhileStoringTheDiagrams_writesNothing() throws IOException {
+        // The schemas are already in the transaction by then; aborting it takes them along.
+        databasePort.createWorkspaceIfAbsent(DATASET);
+        var cancelled = new AtomicBoolean();
+        var cancelOnceTheDiagramsStart =
+                new ImportProgressListener() {
+                    @Override
+                    public void started(int index) {
+                        if (index == 1) {
+                            cancelled.set(true);
+                        }
+                    }
+
+                    @Override
+                    public boolean isCancelled() {
+                        return cancelled.get();
+                    }
+                };
+
+        var result = importTopology(null, ALL_DIAGRAMS, cancelOnceTheDiagramsStart);
+
+        assertThat(result.importedGraphUris()).isEmpty();
+        assertThat(databasePort.listGraphUris(DATASET)).isEmpty();
+        assertThat(databasePort.listChanges(DATASET))
+                .noneMatch(entry -> entry.message().startsWith("Imported"));
+    }
+
+    @Test
+    void importPackages_isOneChangeInTheHistory() throws IOException {
+        databasePort.createWorkspaceIfAbsent(DATASET);
+
+        importTopology(null);
+
+        assertThat(databasePort.listChanges(DATASET))
+                .first()
+                .satisfies(
+                        entry -> {
+                            assertThat(entry.message()).contains("Imported");
+                            assertThat(entry.affectedGraphUris())
+                                    .containsExactly(RDFA.GRAPH_URI + "Topology");
+                        });
+    }
+
+    @Test
     void importPackages_storesOnlyTheDiagramsThatWereChosen() throws IOException {
         importTopology(null, List.of(), ImportProgressListener.NOOP);
 
@@ -222,8 +266,8 @@ class ImportXmiServiceTest {
     void importPackages_storesWhereADiagramDrawsItsClasses() throws IOException {
         importTopology(null);
 
-        var graphIdentifier = new GraphIdentifier(DATASET, RDFA.GRAPH_URI + "Topology");
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
+            var ctx = transaction.graph(RDFA.GRAPH_URI + "Topology");
             var diagramId = ctx.getCustomDiagrams().keySet().iterator().next();
             var layout = ctx.getDiagramLayout().getDiagramLayoutModel();
             var positions = DLObjectFetcher.fetchDiagramDOPPerClass(layout, diagramId);
@@ -333,16 +377,16 @@ class ImportXmiServiceTest {
     }
 
     private List<org.apache.jena.rdf.model.Statement> graphOf(String graphUri) {
-        var graphIdentifier = new GraphIdentifier(DATASET, graphUri);
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            return ModelFactory.createModelForGraph(ctx.getRdfGraph()).listStatements().toList();
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
+            return ModelFactory.createModelForGraph(transaction.graph(graphUri).getRdfGraph())
+                    .listStatements()
+                    .toList();
         }
     }
 
     private Map<UUID, CustomDiagram> diagramsOf(String graphUri) {
-        var graphIdentifier = new GraphIdentifier(DATASET, graphUri);
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            return Map.copyOf(ctx.getCustomDiagrams());
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
+            return Map.copyOf(transaction.graph(graphUri).getCustomDiagrams());
         }
     }
 

@@ -17,78 +17,179 @@
 
 package org.rdfarchitect.filters;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.exception.security.DatasetAccessDeniedException;
+import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Covers which requests reach a controller before the dataset they address exists. The import is
- * the case that matters: it brings its dataset into being, and reading an export does not create
- * one at all, so a filter that insisted on the dataset would turn both into an access denial.
+ * Guards the one place where a workspace name is read from the URL by hand.
+ *
+ * <p>The filter matches path literals and cuts the name out at a fixed offset, so nothing here is
+ * checked by the compiler: a wrong prefix or a wrong offset does not fail to build, it silently
+ * stops rejecting foreign workspaces or starts rejecting every one.
  */
 class DatasetFilterTest {
 
+    private static final String OWN = "myWorkspace";
+    private static final String FOREIGN = "someoneElsesWorkspace";
+
+    private DatabasePort databasePort;
     private DatasetFilter filter;
+    private MockFilterChain chain;
+    private MockHttpServletResponse response;
 
     @BeforeEach
     void setUp() {
-        var databasePort = mock(DatabasePort.class);
-        when(databasePort.listDatasets()).thenReturn(List.of("existing"));
+        databasePort = mock(DatabasePort.class);
+        when(databasePort.listDatasets()).thenReturn(List.of(OWN));
         filter = new DatasetFilter(databasePort);
+        chain = new MockFilterChain();
+        response = new MockHttpServletResponse();
+    }
+
+    // -------------------------------------------------------------------------
+    // The access check itself
+    // -------------------------------------------------------------------------
+
+    @Test
+    void doFilter_workspaceOfThisSession_passesThrough() throws Exception {
+        filter.doFilter(request("GET", "/api/datasets/" + OWN + "/graphs"), response, chain);
+
+        assertThat(chain.getRequest()).isNotNull();
     }
 
     @Test
-    void startingAnImportIntoADatasetThatDoesNotExistIsLetThrough() throws Exception {
-        assertThat(reaches("POST", "/api/datasets/brandnew/imports")).isTrue();
+    void doFilter_workspaceOfAnotherSession_isRejected() {
+        var request = request("GET", "/api/datasets/" + FOREIGN + "/graphs");
+
+        assertThatThrownBy(() -> filter.doFilter(request, response, chain))
+                .isInstanceOf(DatasetAccessDeniedException.class)
+                .hasMessageContaining(FOREIGN);
     }
 
     @Test
-    void readingAnExportForADatasetThatDoesNotExistIsLetThrough() throws Exception {
-        assertThat(reaches("POST", "/api/datasets/brandnew/imports/xmi")).isTrue();
+    void doFilter_urlEncodedWorkspaceName_isDecodedBeforeTheCheck() throws Exception {
+        when(databasePort.listDatasets()).thenReturn(List.of("my workspace"));
+
+        filter.doFilter(request("GET", "/api/datasets/my%20workspace/graphs"), response, chain);
+
+        assertThat(chain.getRequest()).isNotNull();
     }
 
     @Test
-    void followingAnImportOfADatasetThatNeverCameIntoExistenceIsLetThrough() throws Exception {
-        var jobId = "/api/datasets/brandnew/imports/3f1b6a5e-0000-0000-0000-000000000000";
+    void doFilter_workspaceNameWithoutTrailingPath_isStillExtracted() {
+        var request = request("GET", "/api/datasets/" + FOREIGN);
 
-        assertThat(reaches("GET", jobId)).isTrue();
-        assertThat(reaches("DELETE", jobId)).isTrue();
-        assertThat(reaches("PUT", jobId + "/prefix-resolutions")).isTrue();
+        assertThatThrownBy(() -> filter.doFilter(request, response, chain))
+                .isInstanceOf(DatasetAccessDeniedException.class)
+                .hasMessageContaining(FOREIGN);
     }
 
     @Test
-    void anotherRequestForADatasetThatDoesNotExistIsRefused() {
-        assertThatThrownBy(() -> reaches("GET", "/api/datasets/brandnew/graphs"))
+    void doFilter_pathOutsideTheWorkspaceApi_isNotChecked() throws Exception {
+        filter.doFilter(request("GET", "/api/session"), response, chain);
+
+        assertThat(chain.getRequest()).isNotNull();
+        verify(databasePort, never()).listDatasets();
+    }
+
+    @Test
+    void doFilter_preflight_isNotChecked() throws Exception {
+        // Preflight arrives under a different session id, so checking it would reject every
+        // cross-origin request.
+        filter.doFilter(request("OPTIONS", "/api/datasets/" + FOREIGN), response, chain);
+
+        assertThat(chain.getRequest()).isNotNull();
+        verify(databasePort, never()).listDatasets();
+    }
+
+    // -------------------------------------------------------------------------
+    // Requests allowed to name a workspace that does not exist yet
+    // -------------------------------------------------------------------------
+
+    @Test
+    void doFilter_putCreatingAWorkspace_isAllowedForAnUnknownName() throws Exception {
+        filter.doFilter(request("PUT", "/api/datasets/brandNew"), response, chain);
+
+        assertThat(chain.getRequest()).isNotNull();
+    }
+
+    @Test
+    void doFilter_uploadBringingItsWorkspace_isAllowedForAnUnknownName() throws Exception {
+        filter.doFilter(
+                request("PUT", "/api/datasets/brandNew/graphs/http%3A%2F%2Fex.org%2Fg/content"),
+                response,
+                chain);
+
+        assertThat(chain.getRequest()).isNotNull();
+    }
+
+    @Test
+    void doFilter_startingAnImport_isAllowedForAnUnknownName() throws Exception {
+        filter.doFilter(request("POST", "/api/datasets/brandNew/imports"), response, chain);
+
+        assertThat(chain.getRequest()).isNotNull();
+    }
+
+    @Test
+    void doFilter_readingAnXmiExport_isAllowedForAnUnknownName() throws Exception {
+        filter.doFilter(request("POST", "/api/datasets/brandNew/imports/xmi"), response, chain);
+
+        assertThat(chain.getRequest()).isNotNull();
+    }
+
+    @Test
+    void doFilter_importProgress_isAllowedForAnUnknownName() throws Exception {
+        filter.doFilter(request("GET", "/api/datasets/brandNew/imports/42"), response, chain);
+
+        assertThat(chain.getRequest()).isNotNull();
+    }
+
+    @Test
+    void doFilter_followingUpAnImport_isAllowedForAnUnknownName() throws Exception {
+        var resolutionChain = new MockFilterChain();
+
+        filter.doFilter(request("DELETE", "/api/datasets/brandNew/imports/42"), response, chain);
+        filter.doFilter(
+                request("PUT", "/api/datasets/brandNew/imports/42/prefix-resolutions"),
+                response,
+                resolutionChain);
+
+        assertThat(chain.getRequest()).isNotNull();
+        assertThat(resolutionChain.getRequest()).isNotNull();
+    }
+
+    @Test
+    void doFilter_getOnAWorkspaceThatDoesNotExist_isRejected() {
+        // Only PUT is whitelisted; a GET must not be able to address an unknown workspace.
+        var request = request("GET", "/api/datasets/brandNew");
+
+        assertThatThrownBy(() -> filter.doFilter(request, response, chain))
                 .isInstanceOf(DatasetAccessDeniedException.class);
     }
 
     @Test
-    void aRequestForADatasetThatExistsIsLetThrough() throws Exception {
-        assertThat(reaches("GET", "/api/datasets/existing/graphs")).isTrue();
+    void doFilter_putOnAGraphOfAForeignWorkspace_isRejected() {
+        // The whitelist covers the content upload, not every PUT below a workspace.
+        var request = request("PUT", "/api/datasets/" + FOREIGN + "/graphs/g/keyword");
+
+        assertThatThrownBy(() -> filter.doFilter(request, response, chain))
+                .isInstanceOf(DatasetAccessDeniedException.class)
+                .hasMessageContaining(FOREIGN);
     }
 
-    /** Whether the request got past the filter to the chain behind it. */
-    private boolean reaches(String method, String uri) throws IOException, ServletException {
+    private static MockHttpServletRequest request(String method, String uri) {
         var request = new MockHttpServletRequest(method, uri);
         request.setRequestURI(uri);
-        var reached = new AtomicBoolean(false);
-        FilterChain recording = (_, _) -> reached.set(true);
-        filter.doFilter(request, new MockHttpServletResponse(), recording);
-        return reached.get();
+        return request;
     }
 }

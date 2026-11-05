@@ -19,10 +19,13 @@ package org.rdfarchitect.services.update.graph;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.graph.Graph;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelWriter;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportResult;
 import org.rdfarchitect.services.update.graph.ImportOutcome.PackagesScanned;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
@@ -30,6 +33,7 @@ import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImpo
 import org.rdfarchitect.xmi.map.XmiDiagramAvailability;
 import org.rdfarchitect.xmi.map.XmiDiagrams;
 import org.rdfarchitect.xmi.map.XmiDiagrams.ClassLocation;
+import org.rdfarchitect.xmi.map.XmiDiagrams.ImportedDiagram;
 import org.rdfarchitect.xmi.map.XmiNamespaces;
 import org.rdfarchitect.xmi.map.XmiProfileMapper;
 import org.rdfarchitect.xmi.read.XmiIndex;
@@ -210,6 +214,10 @@ public class ImportXmiService implements ImportXmiUseCase {
      * rather than per file, because a package is what becomes a schema and what can fail on its
      * own; which export it came out of is of no further interest once it has been read.
      *
+     * <p>Every export is read and turned into schemas before anything is written, and what was
+     * built is then stored in a single transaction: the workspace is not held up while a large
+     * export is being read, and the import is one change in its history.
+     *
      * <p>Cancelling takes the schemas back out again. An import of rdf files keeps what it wrote,
      * because each file is a thing the caller asked for on its own; this one is a single act
      * carried out in steps, and stopping it halfway would leave a workspace that was never asked
@@ -227,44 +235,97 @@ public class ImportXmiService implements ImportXmiUseCase {
         listener.planned(work.stream().flatMap(export -> export.plannedSteps().stream()).toList());
 
         var result = new ImportResult();
-        var workspaceExisted = workspaceExists(datasetName);
         var reservedGraphUris = loadExistingGraphUris(datasetName);
+        var built = new BuiltImport(new ArrayList<>(), new ArrayList<>());
         for (var export : work) {
-            importFrom(datasetName, export, reservedGraphUris, chosenDiagrams, listener, result);
+            importFrom(export, reservedGraphUris, chosenDiagrams, listener, result, built);
         }
         if (listener.isCancelled()) {
-            rollBack(datasetName, result, workspaceExisted);
+            built.diagrams()
+                    .forEach(
+                            diagrams -> listener.finished(diagrams.index(), Outcome.SKIPPED, null));
+            takeBack(result);
+            return result;
         }
+        store(datasetName, built, listener, result);
         return result;
     }
 
     /**
-     * Undoes what the import wrote. Only its own graphs, and the workspace only where the import
-     * brought it into being: one that was already there holds schemas this import has no say over.
+     * Writes what was built in one transaction, the diagrams after the schemas they are drawn on.
+     *
+     * <p>A cancellation noticed while the diagrams are stored aborts the transaction, which leaves
+     * the schemas unwritten as well. The workspace is removed again only where the import brought
+     * it into being: one that was already there holds schemas this import has no say over.
      */
-    private void rollBack(String datasetName, ImportResult result, boolean workspaceExisted) {
-        for (var graphUri : result.importedGraphUris()) {
-            try {
-                databasePort.deleteGraph(new GraphIdentifier(datasetName, graphUri));
-            } catch (RuntimeException exception) {
-                logger.warn(
-                        "Unable to take back the schema \"{}\": {}",
-                        graphUri,
-                        exception.getMessage());
+    private void store(
+            String datasetName,
+            BuiltImport built,
+            ImportProgressListener listener,
+            ImportResult result) {
+        if (built.schemas().isEmpty()) {
+            return;
+        }
+        var workspaceExisted = workspaceExists(datasetName);
+        // Created at the first write rather than up front, the way importing rdf files does it: an
+        // import that writes nothing leaves no workspace behind.
+        databasePort.createWorkspaceIfAbsent(datasetName);
+        var committed = false;
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            for (var schema : built.schemas()) {
+                transaction.deleteGraph(schema.graphUri());
+                transaction.createGraph(schema.graphUri(), schema.graph());
+            }
+            for (var diagrams : built.diagrams()) {
+                storeDiagrams(transaction, diagrams, listener);
+            }
+            if (listener.isCancelled()) {
+                transaction.abort();
+            } else {
+                transaction.commit(importMessage(built.schemas()));
+                committed = true;
+            }
+        } catch (RuntimeException exception) {
+            logger.warn("Unable to store the imported schemas: {}", exception.getMessage());
+            for (var schema : built.schemas()) {
+                result.failedFileNames().add(schema.profileName());
+                listener.finished(schema.index(), Outcome.FAILED, null);
+            }
+            built.diagrams()
+                    .forEach(diagrams -> listener.finished(diagrams.index(), Outcome.FAILED, null));
+        }
+        if (!committed) {
+            takeBack(result);
+            if (!workspaceExisted) {
+                deleteWorkspace(datasetName);
             }
         }
-        logger.info("Import cancelled: took back {} schema(s).", result.importedGraphUris().size());
+    }
+
+    private void takeBack(ImportResult result) {
+        logger.info(
+                "Import not stored: took back {} schema(s).", result.importedGraphUris().size());
         result.importedGraphUris().clear();
-        if (!workspaceExisted) {
-            try {
-                databasePort.deleteDataset(datasetName);
-            } catch (RuntimeException exception) {
-                logger.warn(
-                        "Unable to take back the workspace \"{}\": {}",
-                        datasetName,
-                        exception.getMessage());
-            }
+    }
+
+    private void deleteWorkspace(String datasetName) {
+        try {
+            databasePort.deleteDataset(datasetName);
+        } catch (RuntimeException exception) {
+            logger.warn(
+                    "Unable to take back the workspace \"{}\": {}",
+                    datasetName,
+                    exception.getMessage());
         }
+    }
+
+    private static String importMessage(List<BuiltSchema> schemas) {
+        return schemas.size() == 1
+                ? ChangeDescriptions.actionOn(
+                        "Imported",
+                        "schema",
+                        ChangeDescriptions.localName(schemas.getFirst().graphUri()))
+                : "Imported %d schemas".formatted(schemas.size());
     }
 
     private boolean workspaceExists(String datasetName) {
@@ -281,12 +342,12 @@ public class ImportXmiService implements ImportXmiUseCase {
      * is opened: a full model is 100 MB of file and rather more as an index.
      */
     private void importFrom(
-            String datasetName,
             ExportWork export,
             Set<String> reservedGraphUris,
             Set<String> chosenDiagrams,
             ImportProgressListener listener,
-            ImportResult result) {
+            ImportResult result,
+            BuiltImport built) {
         XmiIndex index;
         // Reported against the first package of the export: reading it is what that step waits
         // for, and it is the one part of an import whose length is known in advance.
@@ -310,25 +371,19 @@ public class ImportXmiService implements ImportXmiUseCase {
         var locations = new HashMap<String, ClassLocation>();
         for (var plannedProfile : export.packages()) {
             writePackage(
-                    datasetName,
-                    index,
-                    plannedProfile,
-                    reservedGraphUris,
-                    listener,
-                    result,
-                    locations);
+                    index, plannedProfile, reservedGraphUris, listener, result, locations, built);
         }
-        storeDiagrams(datasetName, export, index, locations, chosenDiagrams, listener);
+        collectDiagrams(export, index, locations, chosenDiagrams, listener, built);
     }
 
     private void writePackage(
-            String datasetName,
             XmiIndex index,
             PlannedProfile plannedProfile,
             Set<String> reservedGraphUris,
             ImportProgressListener listener,
             ImportResult result,
-            Map<String, ClassLocation> locations) {
+            Map<String, ClassLocation> locations,
+            BuiltImport built) {
         if (listener.isCancelled()) {
             listener.finished(plannedProfile.index(), Outcome.SKIPPED, null);
             return;
@@ -379,7 +434,13 @@ public class ImportXmiService implements ImportXmiUseCase {
             XmiImportWarnings.reportOn(
                     plannedProfile.profileName(), graphUri, written, result.warnings());
 
-            replaceGraph(datasetName, graphUri, writer);
+            built.schemas()
+                    .add(
+                            new BuiltSchema(
+                                    plannedProfile.index(),
+                                    plannedProfile.profileName(),
+                                    graphUri,
+                                    writer.graph()));
             result.importedGraphUris().add(graphUri);
             listener.finished(plannedProfile.index(), Outcome.IMPORTED, graphUri);
             logger.info(
@@ -398,49 +459,58 @@ public class ImportXmiService implements ImportXmiUseCase {
     }
 
     /**
-     * Stores the diagrams, reported as a step of its own.
+     * Picks the chosen diagrams of an export while it is still at hand. They are stored later, with
+     * the schemas, but only the export knows where their classes are drawn.
+     */
+    private void collectDiagrams(
+            ExportWork export,
+            XmiIndex index,
+            Map<String, ClassLocation> locations,
+            Set<String> chosenDiagrams,
+            ImportProgressListener listener,
+            BuiltImport built) {
+        if (locations.isEmpty() || listener.isCancelled()) {
+            listener.finished(export.diagramIndex(), Outcome.SKIPPED, null);
+            return;
+        }
+        var offered = XmiDiagrams.of(index, locations);
+        built.diagrams()
+                .add(
+                        new BuiltDiagrams(
+                                export.diagramIndex(),
+                                offered.stream()
+                                        .filter(
+                                                diagram ->
+                                                        chosenDiagrams.contains(diagram.exportId()))
+                                        .toList(),
+                                offered.size(),
+                                index.getDiagrams().size()));
+    }
+
+    /**
+     * Stores the diagrams of an export, reported as a step of its own.
      *
      * <p>It is part of the plan rather than something that happens after it, because it takes
      * longer than writing the schemas on a large one and a progress that was already complete would
      * leave the caller watching a finished bar.
      */
     private void storeDiagrams(
-            String datasetName,
-            ExportWork export,
-            XmiIndex index,
-            Map<String, ClassLocation> locations,
-            Set<String> chosenDiagrams,
+            WorkspaceTransaction transaction,
+            BuiltDiagrams diagrams,
             ImportProgressListener listener) {
-        if (locations.isEmpty() || listener.isCancelled()) {
-            listener.finished(export.diagramIndex(), Outcome.SKIPPED, null);
+        if (listener.isCancelled()) {
+            listener.finished(diagrams.index(), Outcome.SKIPPED, null);
             return;
         }
-        listener.started(export.diagramIndex());
-        var offered = XmiDiagrams.of(index, locations);
-        var stored =
-                diagramStore.store(
-                        datasetName,
-                        offered.stream()
-                                .filter(diagram -> chosenDiagrams.contains(diagram.exportId()))
-                                .toList(),
-                        listener::isCancelled);
-        listener.finished(export.diagramIndex(), Outcome.IMPORTED, null);
+        listener.started(diagrams.index());
+        var stored = diagramStore.store(transaction, diagrams.chosen(), listener::isCancelled);
+        listener.finished(diagrams.index(), Outcome.IMPORTED, null);
         logger.info(
                 "Stored {} of the {} diagram(s) offered, out of the export's {}; the rest draw"
                         + " classes that were not imported.",
                 stored,
-                offered.size(),
-                index.getDiagrams().size());
-    }
-
-    private void replaceGraph(String datasetName, String graphUri, CIMModelWriter writer) {
-        // Created at the first write rather than up front, the way importing rdf files does it: an
-        // import that writes nothing leaves no workspace behind.
-        databasePort.createWorkspaceIfAbsent(datasetName);
-
-        var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
-        databasePort.deleteGraph(graphIdentifier);
-        databasePort.createGraph(graphIdentifier, writer.graph());
+                diagrams.offered(),
+                diagrams.inExport());
     }
 
     /** Reports the packages of an export nothing else will, or the import waits on them forever. */
@@ -506,6 +576,22 @@ public class ImportXmiService implements ImportXmiUseCase {
         }
         return work;
     }
+
+    /** What the exports were turned into, held until it is stored in one go. */
+    private record BuiltImport(List<BuiltSchema> schemas, List<BuiltDiagrams> diagrams) {}
+
+    /** A schema that has been built but not yet written into the workspace. */
+    private record BuiltSchema(int index, String profileName, String graphUri, Graph graph) {}
+
+    /**
+     * The diagrams chosen from one export.
+     *
+     * @param index position of the export's diagram step in the progress
+     * @param offered how many of the export's diagrams draw only imported classes
+     * @param inExport how many diagrams the export holds
+     */
+    private record BuiltDiagrams(
+            int index, List<ImportedDiagram> chosen, int offered, int inExport) {}
 
     /**
      * One export of the import: the packages chosen from it and the step its diagrams are.

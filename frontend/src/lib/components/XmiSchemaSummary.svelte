@@ -25,7 +25,7 @@
         dependencyNamesOf,
         PackageScope,
     } from "$lib/utils/packageTree.js";
-    import { plural } from "$lib/utils/plural.js";
+    import { counted } from "$lib/utils/plural.js";
 
     let {
         /** The selection worked out, as {@link importChoiceOf} reports it. */
@@ -110,12 +110,12 @@
                             <ul class={NESTED}>
                                 {@render listing(
                                     `${row.id}::diagrams`,
-                                    plural(diagrams.length, "diagram"),
+                                    counted(diagrams.length, "diagram"),
                                     diagrams.map(diagram => diagram.name),
                                 )}
                                 {@render listing(
                                     `${row.id}::classes`,
-                                    plural(
+                                    counted(
                                         declaredOf(row.node, row.scope),
                                         "class",
                                         "classes",
@@ -128,7 +128,7 @@
                                 )}
                                 {@render listing(
                                     `${row.id}::dependencies`,
-                                    plural(
+                                    counted(
                                         dependenciesOf(row.node, row.scope),
                                         "dependency",
                                         "dependencies",
@@ -149,7 +149,7 @@
                 {#if choice.homes.workspace.length > 0}
                     {@render listing(
                         WORKSPACE,
-                        plural(
+                        counted(
                             choice.homes.workspace.length,
                             "workspace diagram",
                         ),
@@ -162,8 +162,8 @@
     </div>
 
     <p class="border-border text-text-subtle border-t px-3 py-2 text-xs">
-        {plural(choice.schemas.length, "schema")},
-        {plural(choice.classes, "class definition")},
-        {plural(choice.diagramIds.length, "diagram")}
+        {counted(choice.schemas.length, "schema")},
+        {counted(choice.classes, "class definition")},
+        {counted(choice.diagramIds.length, "diagram")}
     </p>
 </div>

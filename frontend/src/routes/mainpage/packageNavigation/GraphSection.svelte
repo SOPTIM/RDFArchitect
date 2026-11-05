@@ -30,8 +30,6 @@
         faUpload,
         faDownload,
         faEye,
-        faRotateLeft,
-        faRotateRight,
         faGear,
         faCircleCheck,
         faListCheck,
@@ -46,13 +44,8 @@
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { graphColors } from "$lib/graphColors.svelte.js";
-    import {
-        editorState,
-        forceReloadTrigger,
-        SelectionLevel,
-    } from "$lib/sharedState.svelte.js";
+    import { editorState, SelectionLevel } from "$lib/sharedState.svelte.js";
     import { ontologyStore } from "$lib/stores/ontologyStore.ts";
-    import { versionControlStore } from "$lib/stores/versionControlStore.ts";
 
     import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
@@ -97,8 +90,6 @@
     let showSHACLFullViewDialog = $state(false);
     let showDeleteDependenciesDialog = $state(false);
     let showValidationDialog = $state(false);
-    let canUndo = $state(false);
-    let canRedo = $state(false);
     let showEditOntologyDialog = $state(false);
     let showSchemaColorsDialog = $state(false);
     let showPickColorDialog = $state(false);
@@ -133,41 +124,6 @@
             workspaceNavEntry.id,
             graphNavEntry.id,
         );
-
-        await versionControlStore.refresh(
-            workspaceNavEntry.id,
-            graphNavEntry.id,
-        );
-        canUndo = await versionControlStore.canUndo(
-            workspaceNavEntry.id,
-            graphNavEntry.id,
-        );
-        canRedo = await versionControlStore.canRedo(
-            workspaceNavEntry.id,
-            graphNavEntry.id,
-        );
-    }
-
-    async function undo() {
-        const { error } = await versionControlStore.undo(
-            workspaceNavEntry.id,
-            graphNavEntry.id,
-        );
-
-        if (!error) {
-            forceReloadTrigger.trigger();
-        }
-    }
-
-    async function redo() {
-        const { error } = await versionControlStore.redo(
-            workspaceNavEntry.id,
-            graphNavEntry.id,
-        );
-
-        if (!error) {
-            forceReloadTrigger.trigger();
-        }
     }
 
     function handleToggleGraph() {
@@ -276,29 +232,6 @@
                     </ContextMenu.Item.Button>
                 </ContextMenu.SubMenu.Content>
             </ContextMenu.SubMenu.Root>
-            <ContextMenu.Separator />
-            <ContextMenu.Item.Button
-                onSelect={() => {
-                    focusGraphContext();
-                    undo();
-                }}
-                disabled={readonly || !canUndo}
-                faIcon={faRotateLeft}
-                altText="Ctrl+Z"
-            >
-                Undo
-            </ContextMenu.Item.Button>
-            <ContextMenu.Item.Button
-                onSelect={() => {
-                    focusGraphContext();
-                    redo();
-                }}
-                disabled={readonly || !canRedo}
-                faIcon={faRotateRight}
-                altText="Ctrl+Y"
-            >
-                Redo
-            </ContextMenu.Item.Button>
             {#if !readonly}
                 <ContextMenu.Separator />
                 {#if ontology?.uuid}

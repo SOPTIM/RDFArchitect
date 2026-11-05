@@ -19,13 +19,20 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import * as api from "../../src/lib/api/generated";
 import { toastStore } from "../../src/lib/eventhandling/toastStore.svelte.js";
-import { editorState } from "../../src/lib/sharedState.svelte.js";
+import { undoConfirmStore } from "../../src/lib/eventhandling/undoConfirmStore.svelte.js";
+import {
+    editorState,
+    forceReloadTrigger,
+} from "../../src/lib/sharedState.svelte.js";
 import { classStore } from "../../src/lib/stores/classStore";
+import { crossProfileStore } from "../../src/lib/stores/crossProfileStore";
+import { datatypesStore } from "../../src/lib/stores/datatypesStore";
 import { customDiagramStore } from "../../src/lib/stores/diagramStore";
 import { graphStore } from "../../src/lib/stores/graphStore";
 import { ontologyStore } from "../../src/lib/stores/ontologyStore";
 import { packageStore } from "../../src/lib/stores/packageStore";
 import { createVersionControlStore } from "../../src/lib/stores/versionControlStore";
+import { workspaceStore } from "../../src/lib/stores/workspaceStore";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -36,17 +43,23 @@ vi.mock("$lib/api/generated", () => ({
     redo: vi.fn(),
     canUndo: vi.fn(),
     canRedo: vi.fn(),
+    getUndoPreview: vi.fn(),
+    restoreVersion: vi.fn(),
 }));
 
 vi.mock("$lib/sharedState.svelte.js", () => ({
     editorState: {
-        selectedWorkspace: { getValue: vi.fn() },
-        selectedGraph: { getValue: vi.fn() },
+        selectedWorkspace: { getValue: vi.fn(), updateValue: vi.fn() },
+        selectedGraph: { getValue: vi.fn(), updateValue: vi.fn() },
     },
+    forceReloadTrigger: { trigger: vi.fn() },
 }));
 
 vi.mock("$lib/stores/classStore", () => ({
-    classStore: { invalidateGraph: vi.fn() },
+    classStore: { invalidateWorkspace: vi.fn() },
+}));
+vi.mock("$lib/stores/datatypesStore", () => ({
+    datatypesStore: { invalidateWorkspace: vi.fn() },
 }));
 vi.mock("$lib/stores/diagramStore", () => ({
     customDiagramStore: { invalidateWorkspace: vi.fn() },
@@ -55,26 +68,28 @@ vi.mock("$lib/stores/graphStore", () => ({
     graphStore: { invalidateWorkspace: vi.fn() },
 }));
 vi.mock("$lib/stores/ontologyStore", () => ({
-    ontologyStore: { invalidateGraph: vi.fn() },
+    ontologyStore: { invalidateWorkspace: vi.fn() },
 }));
 vi.mock("$lib/stores/packageStore", () => ({
-    packageStore: { invalidateGraph: vi.fn() },
+    packageStore: { invalidateWorkspace: vi.fn() },
+}));
+vi.mock("$lib/stores/workspaceStore", () => ({
+    workspaceStore: { invalidate: vi.fn() },
+}));
+vi.mock("$lib/stores/graphStore", () => ({
+    graphStore: { invalidateWorkspace: vi.fn() },
+}));
+vi.mock("$lib/stores/crossProfileStore", () => ({
+    crossProfileStore: { invalidateWorkspace: vi.fn() },
 }));
 
 vi.mock("$lib/eventhandling/toastStore.svelte.js", () => ({
     toastStore: { info: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock("$lib/stores/storeHelpers", async importOriginal => {
-    const actual =
-        await importOriginal<
-            typeof import("../../src/lib/stores/storeHelpers")
-        >();
-    return {
-        ...actual,
-        makeGraphKey: vi.fn((workspace, graph) => `${workspace}::${graph}`),
-    };
-});
+vi.mock("$lib/eventhandling/undoConfirmStore.svelte.js", () => ({
+    undoConfirmStore: { confirm: vi.fn() },
+}));
 
 // Suppress console outputs during error tests
 vi.spyOn(console, "error").mockImplementation(() => {});
@@ -86,7 +101,6 @@ vi.spyOn(console, "error").mockImplementation(() => {});
 describe("versionControlStore", () => {
     let store: ReturnType<typeof createVersionControlStore>;
     const WORKSPACE = "workspaceA";
-    const GRAPH = "http://example.org/graph";
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -99,11 +113,61 @@ describe("versionControlStore", () => {
         vi.mocked(editorState.selectedGraph.getValue).mockReturnValue(
             undefined,
         );
+
+        // Nothing disappears unless a test says so, so undo goes through unasked.
+        vi.mocked(api.getUndoPreview).mockResolvedValue({
+            data: { message: "a change", removedOnUndo: [] },
+            error: undefined,
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("refreshAfterReload", () => {
+        beforeEach(() => {
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: false,
+                error: undefined,
+            });
+            vi.mocked(api.undo).mockResolvedValue({
+                data: { change: { message: "a change" }, canUndo: false },
+                error: undefined,
+            });
+        });
+
+        test("asks for the history ends after an edit", async () => {
+            await store.refreshAfterReload(WORKSPACE);
+
+            expect(api.canUndo).toHaveBeenCalledTimes(1);
+            expect(api.canRedo).toHaveBeenCalledTimes(1);
+        });
+
+        test("takes them from the step the reload follows", async () => {
+            await store.undo(WORKSPACE);
+
+            await store.refreshAfterReload(WORKSPACE);
+
+            expect(api.canUndo).not.toHaveBeenCalled();
+            expect(api.canRedo).not.toHaveBeenCalled();
+            expect(await store.canUndo(WORKSPACE)).toBe(false);
+        });
+
+        test("asks again on the reload after that", async () => {
+            await store.undo(WORKSPACE);
+            await store.refreshAfterReload(WORKSPACE);
+
+            await store.refreshAfterReload(WORKSPACE);
+
+            expect(api.canUndo).toHaveBeenCalledTimes(1);
+        });
     });
 
     // -------------------------------------------------------------------------
     describe("refresh", () => {
-        test("updates state based on explicit arguments", async () => {
+        test("updates state based on the explicit workspace", async () => {
             vi.mocked(api.canUndo).mockResolvedValue({
                 data: true,
                 error: undefined,
@@ -113,21 +177,18 @@ describe("versionControlStore", () => {
                 error: undefined,
             });
 
-            await store.refresh(WORKSPACE, GRAPH);
+            await store.refresh(WORKSPACE);
 
-            expect(await store.canUndo(WORKSPACE, GRAPH)).toBe(true);
-            expect(await store.canRedo(WORKSPACE, GRAPH)).toBe(false);
+            expect(await store.canUndo(WORKSPACE)).toBe(true);
+            expect(await store.canRedo(WORKSPACE)).toBe(false);
             expect(api.canUndo).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE, graphURI: GRAPH },
+                path: { datasetName: WORKSPACE },
             });
         });
 
-        test("falls back to editorState if arguments are omitted", async () => {
+        test("falls back to editorState if the argument is omitted", async () => {
             vi.mocked(editorState.selectedWorkspace.getValue).mockReturnValue(
                 WORKSPACE,
-            );
-            vi.mocked(editorState.selectedGraph.getValue).mockReturnValue(
-                GRAPH,
             );
 
             vi.mocked(api.canUndo).mockResolvedValue({
@@ -141,8 +202,8 @@ describe("versionControlStore", () => {
 
             await store.refresh();
 
-            expect(await store.canUndo(WORKSPACE, GRAPH)).toBe(true);
-            expect(await store.canRedo(WORKSPACE, GRAPH)).toBe(true);
+            expect(await store.canUndo(WORKSPACE)).toBe(true);
+            expect(await store.canRedo(WORKSPACE)).toBe(true);
         });
 
         test("sets flags to false if API returns an error", async () => {
@@ -155,22 +216,71 @@ describe("versionControlStore", () => {
                 error: new Error("Server down"),
             });
 
-            await store.refresh(WORKSPACE, GRAPH);
+            await store.refresh(WORKSPACE);
 
-            expect(await store.canUndo(WORKSPACE, GRAPH)).toBe(false);
-            expect(await store.canRedo(WORKSPACE, GRAPH)).toBe(false);
+            expect(await store.canUndo(WORKSPACE)).toBe(false);
+            expect(await store.canRedo(WORKSPACE)).toBe(false);
         });
 
-        test("does nothing if no targets resolve", async () => {
+        test("does nothing if no workspace resolves", async () => {
             await store.refresh(); // no args, no editorState
             expect(api.canUndo).not.toHaveBeenCalled();
         });
     });
 
     // -------------------------------------------------------------------------
+    describe("workspace scope", () => {
+        test("asks the backend once per workspace, not once per graph", async () => {
+            vi.mocked(editorState.selectedWorkspace.getValue).mockReturnValue(
+                WORKSPACE,
+            );
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+
+            await store.canUndo();
+            vi.mocked(editorState.selectedGraph.getValue).mockReturnValue(
+                "http://example.org/other",
+            );
+            await store.canUndo();
+
+            expect(api.canUndo).toHaveBeenCalledTimes(1);
+        });
+
+        test("works without a selected graph", async () => {
+            vi.mocked(editorState.selectedWorkspace.getValue).mockReturnValue(
+                WORKSPACE,
+            );
+            vi.mocked(api.undo).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: false,
+                error: undefined,
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+
+            const result = await store.undo();
+
+            expect(result.error).toBeNull();
+            expect(api.undo).toHaveBeenCalledWith({
+                path: { datasetName: WORKSPACE },
+            });
+        });
+    });
+
+    // -------------------------------------------------------------------------
     describe("canUndo / canRedo (Getters)", () => {
-        test("returns correct flags from state based on explicit args", async () => {
-            // Seed state via refresh
+        test("returns correct flags from state", async () => {
             vi.mocked(api.canUndo).mockResolvedValue({
                 data: true,
                 error: undefined,
@@ -179,62 +289,53 @@ describe("versionControlStore", () => {
                 data: false,
                 error: undefined,
             });
-            await store.refresh(WORKSPACE, GRAPH);
+            await store.refresh(WORKSPACE);
 
-            expect(await store.canUndo(WORKSPACE, GRAPH)).toBe(true);
-            expect(await store.canRedo(WORKSPACE, GRAPH)).toBe(false);
+            expect(await store.canUndo(WORKSPACE)).toBe(true);
+            expect(await store.canRedo(WORKSPACE)).toBe(false);
         });
 
-        test("returns false for unknown graph", async () => {
+        test("returns false for an unknown workspace", async () => {
             vi.mocked(api.canUndo).mockResolvedValue({
                 data: false,
                 error: undefined,
             });
-            vi.mocked(api.canRedo).mockResolvedValue({
-                data: false,
-                error: undefined,
-            });
-            expect(await store.canUndo("unknown", "unknown")).toBe(false);
+            expect(await store.canUndo("unknown")).toBe(false);
         });
     });
 
     // -------------------------------------------------------------------------
     describe("undo", () => {
-        test("calls SDK, invalidates stores, toasts, and refreshes on success", async () => {
+        test("calls SDK, invalidates the whole workspace, and toasts", async () => {
             vi.mocked(api.undo).mockResolvedValue({
-                data: undefined,
+                data: {
+                    change: { message: "a change" },
+                    canUndo: false,
+                    canRedo: true,
+                },
                 error: undefined,
             });
 
-            // Mock refresh endpoints so it doesn't fail when called at the end
-            vi.mocked(api.canUndo).mockResolvedValue({
-                data: false,
-                error: undefined,
-            });
-            vi.mocked(api.canRedo).mockResolvedValue({
-                data: true,
-                error: undefined,
-            });
-
-            const result = await store.undo(WORKSPACE, GRAPH);
+            const result = await store.undo(WORKSPACE);
 
             expect(result.error).toBeNull();
             expect(api.undo).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE, graphURI: GRAPH },
+                path: { datasetName: WORKSPACE },
             });
 
-            // Ensure invalidations were broadcast
-            expect(classStore.invalidateGraph).toHaveBeenCalledWith(
+            // An undone change can sit in any graph, so every graph-keyed cache
+            // of the workspace has to go, not just the selected one.
+            expect(classStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
-                GRAPH,
             );
-            expect(ontologyStore.invalidateGraph).toHaveBeenCalledWith(
+            expect(ontologyStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
-                GRAPH,
             );
-            expect(packageStore.invalidateGraph).toHaveBeenCalledWith(
+            expect(packageStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
-                GRAPH,
+            );
+            expect(datatypesStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
             );
             expect(customDiagramStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
@@ -243,16 +344,27 @@ describe("versionControlStore", () => {
             expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
             );
+            expect(crossProfileStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+            // The namespaces live in the cached workspace list.
+            expect(workspaceStore.invalidate).toHaveBeenCalled();
 
-            expect(toastStore.info).toHaveBeenCalledWith("Undone");
-            expect(api.canUndo).toHaveBeenCalled(); // Proves refresh was called
+            expect(toastStore.info).toHaveBeenCalledWith(
+                "Undone",
+                expect.any(String),
+            );
+            // The step reports where it left the history, so nothing is asked
+            // again afterwards.
+            expect(api.canUndo).not.toHaveBeenCalled();
+            expect(await store.canRedo(WORKSPACE)).toBe(true);
         });
 
         test("returns error and prevents invalidation if SDK fails", async () => {
             const error = new Error("Conflict");
             vi.mocked(api.undo).mockResolvedValue({ data: undefined, error });
 
-            const result = await store.undo(WORKSPACE, GRAPH);
+            const result = await store.undo(WORKSPACE);
 
             expect(result.error).toBe(error);
             expect(toastStore.error).toHaveBeenCalledWith(
@@ -261,10 +373,10 @@ describe("versionControlStore", () => {
             );
 
             // Stores should NOT be invalidated if undo failed
-            expect(classStore.invalidateGraph).not.toHaveBeenCalled();
+            expect(classStore.invalidateWorkspace).not.toHaveBeenCalled();
         });
 
-        test("fails early if targets cannot be resolved", async () => {
+        test("fails early if no workspace resolves", async () => {
             const result = await store.undo(); // no args, no global state
 
             expect(result.error).toBe("No undo target selected.");
@@ -273,8 +385,321 @@ describe("versionControlStore", () => {
     });
 
     // -------------------------------------------------------------------------
+    describe("what the toast says", () => {
+        const GRAPH = "http://example.org/schemas/Core";
+        const OTHER = "http://example.org/schemas/Operation";
+
+        beforeEach(() => {
+            vi.mocked(editorState.selectedWorkspace.getValue).mockReturnValue(
+                WORKSPACE,
+            );
+            vi.mocked(editorState.selectedGraph.getValue).mockReturnValue(
+                GRAPH,
+            );
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: false,
+                error: undefined,
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+        });
+
+        test("names the change and where it landed", async () => {
+            vi.mocked(api.undo).mockResolvedValue({
+                data: {
+                    change: {
+                        message: 'Renamed class "Terminal" to "Node"',
+                        affectedGraphUris: [OTHER],
+                    },
+                    canUndo: false,
+                    canRedo: true,
+                },
+                error: undefined,
+            });
+
+            await store.undo(WORKSPACE);
+
+            const [title, message] = vi.mocked(toastStore.info).mock.calls[0];
+            expect(title).toBe("Undone");
+            expect(message).toContain('Renamed class "Terminal" to "Node"');
+            expect(message).toContain("Operation");
+        });
+
+        test("says nothing about a place when the change is in the open graph", async () => {
+            vi.mocked(api.undo).mockResolvedValue({
+                data: {
+                    change: {
+                        message: "a change",
+                        affectedGraphUris: [GRAPH],
+                    },
+                    canUndo: false,
+                    canRedo: true,
+                },
+                error: undefined,
+            });
+
+            await store.undo(WORKSPACE);
+
+            expect(vi.mocked(toastStore.info).mock.calls[0][1]).toBe(
+                "a change",
+            );
+        });
+
+        test("an unnamed redo does not say the change was reverted", async () => {
+            vi.mocked(api.redo).mockResolvedValue({
+                data: { change: {}, canUndo: true, canRedo: false },
+                error: undefined,
+            });
+
+            await store.redo(WORKSPACE);
+
+            expect(vi.mocked(toastStore.info).mock.calls[0][1]).not.toContain(
+                "reverted",
+            );
+        });
+
+        test("counts the graphs when a change spanned several", async () => {
+            vi.mocked(api.undo).mockResolvedValue({
+                data: {
+                    change: {
+                        message: "copied a class",
+                        affectedGraphUris: [
+                            OTHER,
+                            "http://example.org/schemas/Third",
+                        ],
+                    },
+                    canUndo: false,
+                    canRedo: true,
+                },
+                error: undefined,
+            });
+
+            await store.undo(WORKSPACE);
+
+            expect(vi.mocked(toastStore.info).mock.calls[0][1]).toContain(
+                "in 2 graphs",
+            );
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("presses that follow one another", () => {
+        beforeEach(() => {
+            vi.mocked(editorState.selectedWorkspace.getValue).mockReturnValue(
+                WORKSPACE,
+            );
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+        });
+
+        test("every press takes a step of its own", async () => {
+            vi.mocked(api.undo).mockResolvedValue({
+                data: { change: { message: "a change" } },
+                error: undefined,
+            });
+
+            await store.undo(WORKSPACE);
+            const second = await store.undo(WORKSPACE);
+
+            expect(second.skipped).toBeUndefined();
+            expect(api.undo).toHaveBeenCalledTimes(2);
+        });
+
+        test("a press during a running step waits for it instead of being dropped", async () => {
+            // Both steps run, but never at the same time: one takes the
+            // workspace lock and sets off a reload of the editor, and two of
+            // those at once only make each other slower.
+            let running = 0;
+            let highWaterMark = 0;
+            vi.mocked(api.undo).mockImplementation(async () => {
+                running++;
+                highWaterMark = Math.max(highWaterMark, running);
+                await new Promise(resolve => setTimeout(resolve, 0));
+                running--;
+                return {
+                    data: { change: { message: "a change" } },
+                    error: undefined,
+                };
+            });
+
+            await Promise.all(
+                Array.from({ length: 5 }, () => store.undo(WORKSPACE)),
+            );
+
+            expect(api.undo).toHaveBeenCalledTimes(5);
+            expect(highWaterMark).toBe(1);
+        });
+
+        test("a press that waited reports its own result, so it reloads too", async () => {
+            vi.mocked(api.undo).mockImplementation(async () => {
+                await new Promise(resolve => setTimeout(resolve, 0));
+                return {
+                    data: { change: { message: "a change" } },
+                    error: undefined,
+                };
+            });
+
+            const [first, second] = await Promise.all([
+                store.undo(WORKSPACE),
+                store.undo(WORKSPACE),
+            ]);
+
+            expect(first.error).toBeNull();
+            expect(first.skipped).toBeUndefined();
+            expect(second.error).toBeNull();
+            expect(second.skipped).toBeUndefined();
+        });
+
+        test("a redo pressed during an undo runs after it", async () => {
+            const order: string[] = [];
+            vi.mocked(api.undo).mockImplementation(async () => {
+                await new Promise(resolve => setTimeout(resolve, 0));
+                order.push("undo");
+                return { data: {}, error: undefined };
+            });
+            vi.mocked(api.redo).mockImplementation(async () => {
+                order.push("redo");
+                return { data: {}, error: undefined };
+            });
+
+            await Promise.all([store.undo(WORKSPACE), store.redo(WORKSPACE)]);
+
+            expect(order).toEqual(["undo", "redo"]);
+        });
+
+        test("a failed step does not spoil the next one", async () => {
+            vi.mocked(api.undo).mockRejectedValueOnce(new Error("boom"));
+
+            await store.undo(WORKSPACE).catch(() => {});
+            vi.mocked(api.undo).mockResolvedValue({
+                data: { change: { message: "a change" } },
+                error: undefined,
+            });
+            const result = await store.undo(WORKSPACE);
+
+            expect(result.error).toBeNull();
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    describe("undo that removes something", () => {
+        beforeEach(() => {
+            vi.mocked(editorState.selectedWorkspace.getValue).mockReturnValue(
+                WORKSPACE,
+            );
+            vi.mocked(api.undo).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: false,
+                error: undefined,
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+            vi.mocked(api.getUndoPreview).mockResolvedValue({
+                data: {
+                    message: "imported graph http://example.org/a",
+                    removedOnUndo: ["http://example.org/a"],
+                },
+                error: undefined,
+            });
+        });
+
+        test("asks before undoing and goes ahead when confirmed", async () => {
+            vi.mocked(undoConfirmStore.confirm).mockResolvedValue(true);
+
+            const result = await store.undo(WORKSPACE);
+
+            expect(undoConfirmStore.confirm).toHaveBeenCalledWith(
+                "imported graph http://example.org/a",
+                ["http://example.org/a"],
+            );
+            expect(api.undo).toHaveBeenCalled();
+            expect(result.error).toBeNull();
+        });
+
+        test("leaves everything alone when the user declines", async () => {
+            vi.mocked(undoConfirmStore.confirm).mockResolvedValue(false);
+
+            const result = await store.undo(WORKSPACE);
+
+            expect(api.undo).not.toHaveBeenCalled();
+            expect(classStore.invalidateWorkspace).not.toHaveBeenCalled();
+            expect(toastStore.info).not.toHaveBeenCalled();
+            expect(result.error).toBeNull();
+        });
+
+        test("a declined undo reports itself skipped, so nothing reloads", async () => {
+            vi.mocked(undoConfirmStore.confirm).mockResolvedValue(false);
+
+            const result = await store.undo(WORKSPACE);
+
+            expect(result.skipped).toBe(true);
+        });
+
+        test("declining does not block the next press", async () => {
+            vi.mocked(undoConfirmStore.confirm).mockResolvedValueOnce(false);
+            await store.undo(WORKSPACE);
+
+            vi.mocked(undoConfirmStore.confirm).mockResolvedValue(true);
+            const second = await store.undo(WORKSPACE);
+
+            expect(second.skipped).toBeUndefined();
+            expect(api.undo).toHaveBeenCalledTimes(1);
+        });
+
+        test("does not ask when nothing would disappear", async () => {
+            vi.mocked(api.getUndoPreview).mockResolvedValue({
+                data: { message: "renamed a class", removedOnUndo: [] },
+                error: undefined,
+            });
+
+            await store.undo(WORKSPACE);
+
+            expect(undoConfirmStore.confirm).not.toHaveBeenCalled();
+            expect(api.undo).toHaveBeenCalled();
+        });
+
+        test("undoes rather than blocks when the peek fails", async () => {
+            // A failed peek must not stand between the user and their undo.
+            vi.mocked(api.getUndoPreview).mockResolvedValue({
+                data: undefined,
+                error: new Error("Server down"),
+            });
+
+            await store.undo(WORKSPACE);
+
+            expect(undoConfirmStore.confirm).not.toHaveBeenCalled();
+            expect(api.undo).toHaveBeenCalled();
+        });
+
+        test("redo never asks", async () => {
+            vi.mocked(api.redo).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+
+            await store.redo(WORKSPACE);
+
+            expect(api.getUndoPreview).not.toHaveBeenCalled();
+            expect(undoConfirmStore.confirm).not.toHaveBeenCalled();
+        });
+    });
+
+    // -------------------------------------------------------------------------
     describe("redo", () => {
-        test("calls SDK, invalidates stores, toasts, and refreshes on success", async () => {
+        test("calls SDK, invalidates the whole workspace, toasts, and refreshes", async () => {
             vi.mocked(api.redo).mockResolvedValue({
                 data: undefined,
                 error: undefined,
@@ -289,24 +714,24 @@ describe("versionControlStore", () => {
                 error: undefined,
             });
 
-            const result = await store.redo(WORKSPACE, GRAPH);
+            const result = await store.redo(WORKSPACE);
 
             expect(result.error).toBeNull();
             expect(api.redo).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE, graphURI: GRAPH },
+                path: { datasetName: WORKSPACE },
             });
 
-            expect(classStore.invalidateGraph).toHaveBeenCalledWith(
+            expect(classStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
-                GRAPH,
             );
-            expect(ontologyStore.invalidateGraph).toHaveBeenCalledWith(
+            expect(ontologyStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
-                GRAPH,
             );
-            expect(packageStore.invalidateGraph).toHaveBeenCalledWith(
+            expect(packageStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
-                GRAPH,
+            );
+            expect(datatypesStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
             );
             expect(customDiagramStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
@@ -315,22 +740,328 @@ describe("versionControlStore", () => {
             expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
                 WORKSPACE,
             );
+            expect(crossProfileStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+            expect(workspaceStore.invalidate).toHaveBeenCalled();
 
-            expect(toastStore.info).toHaveBeenCalledWith("Redone");
+            expect(toastStore.info).toHaveBeenCalledWith(
+                "Redone",
+                expect.any(String),
+            );
         });
 
         test("returns error and prevents invalidation if SDK fails", async () => {
             const error = new Error("Cannot redo");
             vi.mocked(api.redo).mockResolvedValue({ data: undefined, error });
 
-            const result = await store.redo(WORKSPACE, GRAPH);
+            const result = await store.redo(WORKSPACE);
 
             expect(result.error).toBe(error);
             expect(toastStore.error).toHaveBeenCalledWith(
                 "Redo failed",
                 "Could not redo the change.",
             );
-            expect(classStore.invalidateGraph).not.toHaveBeenCalled();
+            expect(classStore.invalidateWorkspace).not.toHaveBeenCalled();
+        });
+
+        test("fails early if no workspace resolves", async () => {
+            const result = await store.redo();
+
+            expect(result.error).toBe("No redo target selected.");
+            expect(api.redo).not.toHaveBeenCalled();
+        });
+    });
+    // -------------------------------------------------------------------------
+    describe("restore", () => {
+        const CHANGE_ID = "11111111-1111-1111-1111-111111111111";
+
+        test("restores the whole workspace and says what came back", async () => {
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: {
+                    change: {
+                        changeId: CHANGE_ID,
+                        message: "added a class",
+                        affectedGraphUris: [],
+                    },
+                    canUndo: true,
+                    canRedo: false,
+                },
+                error: undefined,
+            });
+
+            const result = await store.restore(CHANGE_ID, [], WORKSPACE);
+
+            expect(result.error).toBeNull();
+            expect(api.restoreVersion).toHaveBeenCalledWith({
+                path: { datasetName: WORKSPACE },
+                body: { versionId: CHANGE_ID, graphUris: [] },
+            });
+            // The workspace steps back to the version and answers with it:
+            // where it went, not something it did.
+            expect(toastStore.info).toHaveBeenCalledWith(
+                "Version restored",
+                "The workspace is now at: added a class",
+            );
+        });
+
+        test("names a schema restore by the change it recorded", async () => {
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: {
+                    change: {
+                        changeId: "22222222-2222-2222-2222-222222222222",
+                        message: 'Restored schema "EQ" to the state after: x',
+                        affectedGraphUris: [],
+                    },
+                    canUndo: true,
+                    canRedo: false,
+                },
+                error: undefined,
+            });
+
+            await store.restore(
+                CHANGE_ID,
+                ["http://example.org/EQ"],
+                WORKSPACE,
+            );
+
+            expect(toastStore.info).toHaveBeenCalledWith(
+                "Version restored",
+                'Restored schema "EQ" to the state after: x',
+            );
+        });
+
+        test("passes the graphs a restricted restore is held to", async () => {
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: { change: { changeId: CHANGE_ID }, canUndo: true },
+                error: undefined,
+            });
+
+            await store.restore(CHANGE_ID, ["http://example.org/a"], WORKSPACE);
+
+            expect(api.restoreVersion).toHaveBeenCalledWith({
+                path: { datasetName: WORKSPACE },
+                body: {
+                    versionId: CHANGE_ID,
+                    graphUris: ["http://example.org/a"],
+                },
+            });
+        });
+
+        test("reloads the whole workspace, because a restore can reach all of it", async () => {
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: { change: { changeId: CHANGE_ID }, canUndo: true },
+                error: undefined,
+            });
+
+            await store.restore(CHANGE_ID, [], WORKSPACE);
+
+            expect(classStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+            expect(graphStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+            expect(crossProfileStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+            expect(workspaceStore.invalidate).toHaveBeenCalled();
+        });
+
+        test("takes over the flags the restore reports", async () => {
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: {
+                    change: { changeId: CHANGE_ID },
+                    canUndo: true,
+                    canRedo: false,
+                },
+                error: undefined,
+            });
+
+            await store.restore(CHANGE_ID, [], WORKSPACE);
+
+            expect(await store.canUndo(WORKSPACE)).toBe(true);
+            expect(await store.canRedo(WORKSPACE)).toBe(false);
+            expect(api.canUndo).not.toHaveBeenCalled();
+        });
+
+        test("says nothing was restored when the scope covered nothing", async () => {
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: { change: null, canUndo: true, canRedo: false },
+                error: undefined,
+            });
+
+            const result = await store.restore(
+                CHANGE_ID,
+                ["http://example.org/b"],
+                WORKSPACE,
+            );
+
+            expect(result.skipped).toBe(true);
+            expect(toastStore.info).toHaveBeenCalledWith(
+                "Nothing to restore",
+                expect.any(String),
+            );
+            expect(classStore.invalidateWorkspace).not.toHaveBeenCalled();
+        });
+
+        test("says only the schema is at the version when held to one", async () => {
+            // Other schemas may have moved on since, so the workspace as a whole is not.
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: { change: null, canUndo: true, canRedo: false },
+                error: undefined,
+            });
+
+            await store.restore(CHANGE_ID, ["http://example.org/b"], WORKSPACE);
+
+            expect(toastStore.info).toHaveBeenCalledWith(
+                "Nothing to restore",
+                "This schema is already at that version.",
+            );
+        });
+
+        test("says the workspace is at the version when restoring all of it", async () => {
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: { change: null, canUndo: true, canRedo: false },
+                error: undefined,
+            });
+
+            await store.restore(CHANGE_ID, [], WORKSPACE);
+
+            expect(toastStore.info).toHaveBeenCalledWith(
+                "Nothing to restore",
+                "The workspace is already at that version.",
+            );
+        });
+
+        test("passes on the reason the backend refused with", async () => {
+            const error = {
+                detail: "Cannot restore http://example.org/a to that version.",
+            };
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: undefined,
+                error,
+            });
+
+            const result = await store.restore(
+                CHANGE_ID,
+                ["http://example.org/a"],
+                WORKSPACE,
+            );
+
+            expect(result.error).toBe(error);
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Restore failed",
+                "Cannot restore http://example.org/a to that version.",
+            );
+        });
+
+        test("returns error and prevents invalidation if SDK fails", async () => {
+            const error = new Error("Cannot restore");
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: undefined,
+                error,
+            });
+
+            const result = await store.restore(CHANGE_ID, [], WORKSPACE);
+
+            expect(result.error).toBe(error);
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Restore failed",
+                "Could not restore the selected version.",
+            );
+            expect(classStore.invalidateWorkspace).not.toHaveBeenCalled();
+        });
+
+        test("tells the backend where the workspace stood when it was confirmed", async () => {
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: { change: { changeId: CHANGE_ID }, canUndo: true },
+                error: undefined,
+            });
+
+            await store.restore(CHANGE_ID, [], WORKSPACE, {
+                current: "current-change",
+                newest: "newest-change",
+            });
+
+            expect(api.restoreVersion).toHaveBeenCalledWith({
+                path: { datasetName: WORKSPACE },
+                body: {
+                    versionId: CHANGE_ID,
+                    graphUris: [],
+                    expectedCurrentChangeId: "current-change",
+                    expectedNewestChangeId: "newest-change",
+                },
+            });
+        });
+
+        test("says nothing was restored when the workspace moved on since the confirmation", async () => {
+            const error = { detail: "conflict" };
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: undefined,
+                error,
+                response: { status: 409 },
+            } as never);
+
+            const result = await store.restore(CHANGE_ID, [], WORKSPACE, {
+                current: "current-change",
+                newest: "current-change",
+            });
+
+            expect(result.error).toBe(error);
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Restore failed",
+                "The workspace changed in the meantime. Nothing was restored.",
+            );
+            // The changelog the confirmation came from is stale; reloading it
+            // is what lets the user ask again.
+            expect(classStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
+            );
+            expect(forceReloadTrigger.trigger).toHaveBeenCalled();
+        });
+
+        test("stays with the workspace it was asked in while it waits behind a step", async () => {
+            vi.mocked(editorState.selectedWorkspace.getValue).mockReturnValue(
+                WORKSPACE,
+            );
+            let finishUndo: () => void = () => {};
+            vi.mocked(api.undo).mockImplementation(
+                () =>
+                    new Promise(resolve => {
+                        finishUndo = () =>
+                            resolve({
+                                data: { change: { message: "a change" } },
+                                error: undefined,
+                            } as never);
+                    }),
+            );
+            vi.mocked(api.restoreVersion).mockResolvedValue({
+                data: { change: { changeId: CHANGE_ID }, canUndo: true },
+                error: undefined,
+            });
+
+            const undone = store.undo();
+            const restored = store.restore(CHANGE_ID);
+            vi.mocked(editorState.selectedWorkspace.getValue).mockReturnValue(
+                "workspaceB",
+            );
+            await vi.waitFor(() => expect(api.undo).toHaveBeenCalled());
+            finishUndo();
+            await Promise.all([undone, restored]);
+
+            expect(api.restoreVersion).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    path: { datasetName: WORKSPACE },
+                }),
+            );
+        });
+
+        test("fails early if no workspace resolves", async () => {
+            const result = await store.restore(CHANGE_ID);
+
+            expect(result.error).toBe("No workspace selected.");
+            expect(api.restoreVersion).not.toHaveBeenCalled();
         });
     });
 });
