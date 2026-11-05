@@ -20,6 +20,9 @@ package org.rdfarchitect.services.shacl;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
+import org.apache.jena.graph.Node;
+import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -677,8 +680,9 @@ public class SHACLStoringService
      *
      * <p>A single document asked for as Turtle, on its own, is handed back as the text it holds —
      * an imported file comes back byte for byte, comments and ordering included, instead of as a
-     * re-serialisation of its triples. Documents with no triples add nothing to a merge, so they do
-     * not stop the one that does from coming back as written.
+     * re-serialisation of its triples. That holds for one holding only comments as well. Beside
+     * others, a document with no triples adds nothing to a merge, so it does not stop the one that
+     * does from coming back as written.
      */
     @Override
     public ByteArrayOutputStream exportSelectedSHACLGraph(
@@ -690,11 +694,13 @@ public class SHACLStoringService
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphUri());
             var ids = Set.copyOf(documentIds == null ? List.<UUID>of() : documentIds);
+            var requested = ids.stream().map(id -> requireDocument(ctx, id)).toList();
             var contributing =
-                    ids.stream()
-                            .map(id -> requireDocument(ctx, id))
-                            .filter(document -> !document.getGraph().isEmpty())
-                            .toList();
+                    requested.size() == 1
+                            ? requested
+                            : requested.stream()
+                                    .filter(document -> !document.getGraph().isEmpty())
+                                    .toList();
             if (contributing.size() == 1
                     && !includeGenerated
                     && Lang.TURTLE.equals(format.getLang())) {
@@ -739,6 +745,9 @@ public class SHACLStoringService
     /**
      * Adds a document's triples. The first document to declare a prefix keeps it, so a later
      * document rebinding it cannot change what earlier shapes mean.
+     *
+     * <p>Blank nodes stay apart per document: a label only identifies a node within the document it
+     * was normalised in, and merging on it would fold together two lists that merely look alike.
      */
     private static void addWithPrefixes(Model union, ShapesDocument document) {
         var model = ModelFactory.createModelForGraph(document.getGraph());
@@ -749,7 +758,23 @@ public class SHACLStoringService
                                 union.setNsPrefix(prefix, uri);
                             }
                         });
-        union.add(model);
+        var scope = document.getId() + ":";
+        document.getGraph()
+                .find()
+                .forEach(
+                        triple ->
+                                union.getGraph()
+                                        .add(
+                                                Triple.create(
+                                                        scoped(triple.getSubject(), scope),
+                                                        triple.getPredicate(),
+                                                        scoped(triple.getObject(), scope))));
+    }
+
+    private static Node scoped(Node node, String scope) {
+        return node.isBlank()
+                ? NodeFactory.createBlankNode(scope + node.getBlankNodeLabel())
+                : node;
     }
 
     /**
@@ -884,7 +909,10 @@ public class SHACLStoringService
      */
     private static Model parse(String content, Lang lang) {
         var model = ModelFactory.createDefaultModel();
-        try (var reader = new StringReader(content == null ? "" : content.trim())) {
+        // Only RDF/XML needs this, which allows nothing before its declaration. Trimming anything
+        // else would move the line and column a syntax error reports.
+        var text = content == null ? "" : content;
+        try (var reader = new StringReader(Lang.RDFXML.equals(lang) ? text.trim() : text)) {
             model.read(reader, null, lang.getName());
         } catch (RiotException e) {
             throw new InvalidContentException(
