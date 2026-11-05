@@ -324,16 +324,22 @@ public final class ShapeBlockLocator {
         return index;
     }
 
+    /** The token at {@code from}: an IRI to its {@code >}, anything else to where a name ends. */
     private static String tokenAt(String text, int from) {
-        int end = from;
-        while (end < text.length() && !Character.isWhitespace(text.charAt(end))) {
-            if (text.charAt(end) == '<') {
-                int close = text.indexOf('>', end);
-                return close < 0 ? text.substring(from) : text.substring(from, close + 1);
-            }
-            end++;
+        if (from < text.length() && text.charAt(from) == '<') {
+            int close = text.indexOf('>', from);
+            return close < 0 ? text.substring(from) : text.substring(from, close + 1);
         }
-        return text.substring(from, end);
+        int end = from;
+        while (end < text.length()) {
+            char c = text.charAt(end);
+            if (Character.isWhitespace(c) || c == '<' || c == '#') {
+                break;
+            }
+            // Only an escape can put either of those into a name.
+            end += c == '\\' ? 2 : 1;
+        }
+        return text.substring(from, Math.min(end, text.length()));
     }
 
     private static boolean isDirective(String token) {
@@ -395,15 +401,28 @@ public final class ShapeBlockLocator {
     /**
      * Whether a {@code .} ends the statement rather than sitting inside a name.
      *
-     * <p>{@code cim:ACLineSegment.length} is one prefixed name, so a full stop only terminates when
-     * whitespace, a comment or the end of the document follows it.
+     * <p>{@code cim:ACLineSegment.length} is one prefixed name, and so is {@code ex:a.ex:b}, since
+     * a local name may hold a colon. A full stop terminates when what follows can't continue a name
+     * or when what comes before isn't one: an IRI, a literal or a closed group.
      */
     private static boolean terminates(String text, int index) {
         if (index + 1 >= text.length()) {
             return true;
         }
         char next = text.charAt(index + 1);
-        return Character.isWhitespace(next) || next == '#';
+        if (Character.isWhitespace(next)
+                || next == '#'
+                || next == '<'
+                || next == '['
+                || next == '(') {
+            return true;
+        }
+        char previous = index > 0 ? text.charAt(index - 1) : ' ';
+        return previous == '>'
+                || previous == '"'
+                || previous == '\''
+                || previous == ']'
+                || previous == ')';
     }
 
     /** Just past the literal starting at {@code start}. Shared with {@link ClauseLocator}. */

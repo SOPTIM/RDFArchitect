@@ -46,6 +46,23 @@ class ClauseLocatorTest {
     }
 
     @Test
+    void aDatatypeAfterWhitespaceBelongsToItsLiteral() {
+        var turtle = "ex:S sh:order \"1\"^^ xsd:integer ; sh:minCount 1 .";
+
+        assertThat(clausesOf(turtle))
+                .containsExactly("sh:order -> \"1\"^^ xsd:integer", "sh:minCount -> 1");
+    }
+
+    @Test
+    void aCommentBeforeADatatypeBelongsToItsLiteral() {
+        var turtle = "ex:S sh:order \"1\"^^ # the type\n xsd:integer ; sh:minCount 1 .";
+
+        assertThat(clausesOf(turtle))
+                .containsExactly(
+                        "sh:order -> \"1\"^^ # the type\n xsd:integer", "sh:minCount -> 1");
+    }
+
+    @Test
     void splitsAStatementAtItsSemicolons() {
         var turtle = "ex:S a sh:NodeShape ; sh:targetClass cim:Terminal ; sh:minCount 1 .";
 
