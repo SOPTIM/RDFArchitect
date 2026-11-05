@@ -63,6 +63,15 @@ class ClauseLocatorTest {
     }
 
     @Test
+    void bracketsNestedBeyondReasonStayOneObject() {
+        int depth = 20_000;
+        var object = "[ sh:not ".repeat(depth) + "ex:Leaf" + " ]".repeat(depth);
+        var turtle = "ex:S sh:not " + object + " .";
+
+        assertThat(clausesOf(turtle)).containsExactly("sh:not -> " + object);
+    }
+
+    @Test
     void splitsAStatementAtItsSemicolons() {
         var turtle = "ex:S a sh:NodeShape ; sh:targetClass cim:Terminal ; sh:minCount 1 .";
 
