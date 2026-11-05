@@ -62,6 +62,25 @@ class ClassHierarchyTest {
     }
 
     @Test
+    void aSchemaMarkingNothingConcreteFiltersNothing() {
+        var hierarchy = ClassHierarchy.of(schema("ex:Declared a rdfs:Class ."));
+        var listed = Set.of(EX + "Declared", "http://other.example/Foreign");
+
+        assertThat(hierarchy.typedAs(listed)).isEqualTo(listed);
+    }
+
+    /**
+     * Not an oversight. Official lists name classes the schema doesn't mark concrete on purpose:
+     * CGMES's Header writes {@code sh:in (cim:Statements)} and the geographical location profile
+     * {@code sh:in (cim:StreetAddress)}, and reading those as "admits nothing" would report the
+     * official files as contradicting their own schema.
+     */
+    @Test
+    void aListOfOnlyUnmarkedClassesStillMeansThem() {
+        assertThat(hierarchy().typedAs(Set.of(BASE))).containsExactly(BASE);
+    }
+
+    @Test
     void aClassDerivesFromItselfAndFromEveryAncestor() {
         var hierarchy = hierarchy();
 

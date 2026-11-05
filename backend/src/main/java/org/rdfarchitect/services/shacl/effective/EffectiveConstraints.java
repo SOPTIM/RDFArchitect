@@ -19,6 +19,7 @@ package org.rdfarchitect.services.shacl.effective;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
+import org.apache.jena.graph.Triple;
 import org.apache.jena.shacl.vocabulary.SHACL;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.vocabulary.RDF;
@@ -33,6 +34,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * What a shapes graph actually requires of each property of each class.
@@ -122,14 +124,19 @@ public final class EffectiveConstraints {
 
     private EffectiveConstraints() {}
 
-    /** Reads several documents as one set of constraints, remembering where each came from. */
+    /**
+     * Reads several documents as one set of constraints, remembering where each came from.
+     *
+     * <p>Every enabled document applies, so a shape can name a rule another document defines. It
+     * counts as stated by the document naming it, which is the one saying it applies to the class.
+     */
     public static Asserted of(Map<String, Graph> documents) {
         var enforced = new LinkedHashMap<Key, Constraint>();
         var advisory = new LinkedHashMap<Key, Constraint>();
         var statedIn = new LinkedHashMap<Key, List<String>>();
         documents.forEach(
                 (name, graph) -> {
-                    var read = read(graph);
+                    var read = read(graph, documents.values());
                     read.enforced()
                             .forEach(
                                     (key, constraint) ->
@@ -156,10 +163,10 @@ public final class EffectiveConstraints {
 
     /** Reads a shapes graph into one enforced constraint per class and property. */
     public static Map<Key, Constraint> of(Graph shapes) {
-        return read(shapes).enforced();
+        return read(shapes, List.of()).enforced();
     }
 
-    private static Read read(Graph shapes) {
+    private static Read read(Graph shapes, Collection<Graph> documents) {
         var enforced = new LinkedHashMap<Key, Constraint>();
         var advisory = new LinkedHashMap<Key, Constraint>();
         shapes.stream(Node.ANY, SHACL.targetClass, Node.ANY)
@@ -169,6 +176,7 @@ public final class EffectiveConstraints {
                         triple ->
                                 collect(
                                         shapes,
+                                        documents,
                                         triple.getSubject(),
                                         triple.getObject().getURI(),
                                         enforced,
@@ -180,23 +188,31 @@ public final class EffectiveConstraints {
 
     private static void collect(
             Graph shapes,
-            Node nodeShape,
+            Collection<Graph> documents,
+            Node shape,
             String targetClass,
             Map<Key, Constraint> enforced,
             Map<Key, Constraint> advisory) {
-        shapes.stream(nodeShape, SHACL.property, Node.ANY)
-                .map(triple -> triple.getObject())
-                .filter(property -> !isDeactivated(shapes, property))
+        // A property shape can carry the target itself, with no node shape around it.
+        var own =
+                shapes.contains(shape, SHACL.path, Node.ANY)
+                        ? Stream.of(shape)
+                        : Stream.<Node>empty();
+        Stream.concat(own, shapes.stream(shape, SHACL.property, Node.ANY).map(Triple::getObject))
                 .forEach(
                         property -> {
+                            var definedIn = definedIn(property, shapes, documents);
+                            if (isDeactivated(definedIn, property)) {
+                                return;
+                            }
                             // Usually one path. A path expression rather than a property yields
                             // none: there is nothing to compare it with on the other side.
-                            var paths = propertiesOf(shapes, property);
+                            var paths = propertiesOf(definedIn, property);
                             if (paths.isEmpty()) {
                                 return;
                             }
-                            var into = isAdvisory(shapes, property) ? advisory : enforced;
-                            var constraint = read(shapes, property);
+                            var into = isAdvisory(definedIn, property) ? advisory : enforced;
+                            var constraint = read(definedIn, property);
                             paths.forEach(
                                     path ->
                                             into.merge(
@@ -204,6 +220,17 @@ public final class EffectiveConstraints {
                                                     constraint,
                                                     EffectiveConstraints::conjunction));
                         });
+    }
+
+    /** Where a rule is written: the naming document if it says itself, else whichever does. */
+    private static Graph definedIn(Node rule, Graph shapes, Collection<Graph> documents) {
+        if (!rule.isURI() || shapes.contains(rule, SHACL.path, Node.ANY)) {
+            return shapes;
+        }
+        return documents.stream()
+                .filter(document -> document.contains(rule, SHACL.path, Node.ANY))
+                .findFirst()
+                .orElse(shapes);
     }
 
     /**
