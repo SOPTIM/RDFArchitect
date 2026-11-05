@@ -890,6 +890,10 @@ public class SHACLStoringService
             throw new InvalidContentException(
                     "The constraints could not be read as %s: %s"
                             .formatted(lang.getLabel(), e.getMessage()));
+        } catch (StackOverflowError e) {
+            // Jena parses brackets recursively, so this says something about the text and not about
+            // the server.
+            throw new InvalidContentException(ShapesTurtleParser.TOO_DEEP);
         }
         return ModelFactory.createModelForGraph(GraphUtils.normalizeBlankNodes(model.getGraph()));
     }
