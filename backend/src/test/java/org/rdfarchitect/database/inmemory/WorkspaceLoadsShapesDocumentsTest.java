@@ -140,6 +140,40 @@ class WorkspaceLoadsShapesDocumentsTest {
         assertThat(ShapesDocumentGraphs.of(GRAPH_URI, List.of())).isEmpty();
     }
 
+    /**
+     * A schema with no triples isn't stored at all, since a store keeps no empty graphs. Its
+     * documents are, and without bringing the schema back they would load into nothing.
+     */
+    @Test
+    void documentsBringBackASchemaWithNoTriples() {
+        var id = UUID.randomUUID();
+        var dataset = DatasetFactory.createGeneral();
+        addShapes(dataset, id, "Shape");
+        addMetadata(dataset, metadata(id, "eq.ttl", null, 0, true, null));
+
+        var workspace = new Workspace("loaded", dataset);
+
+        assertThat(workspace.listGraphUris()).containsExactly(GRAPH_URI);
+        assertThat(documentsOf(workspace)).containsOnlyKeys(id);
+    }
+
+    @Test
+    void documentsBringBackAnEmptyDefaultGraph() {
+        var id = UUID.randomUUID();
+        var dataset = DatasetFactory.createGeneral();
+        dataset.addNamedModel(ShapesGraphNaming.encode("default", id.toString()), shapeModel("S"));
+        var all = ShapesDocumentMetadata.emptyModel();
+        all.add(metadata(id, "eq.ttl", null, 0, true, null));
+        dataset.addNamedModel(ShapesGraphNaming.encodeMetadata("default"), all);
+
+        var workspace = new Workspace("loaded", dataset);
+
+        assertThat(workspace.listGraphUris()).containsExactly("default");
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            assertThat(transaction.graph("default").getShapesDocuments()).containsOnlyKeys(id);
+        }
+    }
+
     @Test
     void aDocumentsGraphsAreNotGraphsOfTheWorkspace() {
         var id = UUID.randomUUID();
