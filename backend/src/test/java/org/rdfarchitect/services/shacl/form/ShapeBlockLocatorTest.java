@@ -48,6 +48,37 @@ class ShapeBlockLocatorTest {
     }
 
     @Test
+    void aFullStopRightBeforeTheNextStatementEndsThisOne() {
+        var turtle =
+                "@prefix ex: <http://example.org/> .\n"
+                        + "ex:First ex:p <urn:o>.ex:Second ex:p \"x\".<urn:Third> ex:p [ ex:q 1 ].ex:Fourth ex:p 1 .\n";
+
+        assertThat(ShapeBlockLocator.statements(turtle).stream().map(s -> textOf(turtle, s)))
+                .contains(
+                        "ex:First ex:p <urn:o>.",
+                        "ex:Second ex:p \"x\".",
+                        "<urn:Third> ex:p [ ex:q 1 ].",
+                        "ex:Fourth ex:p 1 .");
+    }
+
+    @Test
+    void aDotInsideAPrefixedNameBeforeANameStaysInIt() {
+        var turtle = "@prefix ex: <http://example.org/> .\nex:S ex:p ex:a.b .\n";
+
+        assertThat(ShapeBlockLocator.statements(turtle).stream().map(s -> textOf(turtle, s)))
+                .contains("ex:S ex:p ex:a.b .");
+    }
+
+    @Test
+    void aSubjectEndsWhereACommentOrAnIriStarts() {
+        var commented = "@prefix ex: <http://example.org/> .\nex:S# comment\n ex:p ex:o .\n";
+        var glued = "@prefix ex: <http://example.org/> .\nex:S<urn:p> <urn:o> .\n";
+
+        assertThat(ShapeBlockLocator.locate(commented, EX + "S", prefixes())).isPresent();
+        assertThat(ShapeBlockLocator.locate(glued, EX + "S", prefixes())).isPresent();
+    }
+
+    @Test
     void findsAStatementAndSpansItThroughItsFullStop() {
         var turtle =
                 """

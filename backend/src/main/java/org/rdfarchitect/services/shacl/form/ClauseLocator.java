@@ -174,7 +174,9 @@ public final class ClauseLocator {
     /** A literal's {@code ^^datatype} or {@code @language}, which belong to the same object. */
     private static int endOfSuffix(String text, int from, int limit) {
         if (from + 1 < limit && text.charAt(from) == '^' && text.charAt(from + 1) == '^') {
-            return endOfTerm(text, Math.min(from + 2, limit), limit);
+            // Tokens may have whitespace and comments between them, here as anywhere.
+            int datatype = skipIgnorable(text, from + 2, limit);
+            return datatype >= limit ? limit : endOfTerm(text, datatype, limit);
         }
         if (from < limit && text.charAt(from) == '@') {
             int index = from + 1;
