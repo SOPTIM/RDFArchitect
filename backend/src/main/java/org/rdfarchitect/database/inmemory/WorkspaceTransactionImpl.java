@@ -119,6 +119,18 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     }
 
     @Override
+    public void replaceGraph(String schemaName, Graph newGraph) {
+        var replaced = graphs.get(schemaName);
+        graphs.put(
+                schemaName,
+                replaced == null
+                        ? new GraphWithContext(newGraph, txnContext)
+                        : new GraphWithContext(newGraph, txnContext, replaced.shapesDocuments()));
+        prefixes.addAll(newGraph.getPrefixMapping());
+        crossProfileDiagramInfo.setColor(schemaName, CrossProfileUtils.generateRandomDarkColor());
+    }
+
+    @Override
     public void deleteGraph(String schemaName) {
         graphs.remove(schemaName);
         crossProfileDiagramInfo.removeColor(schemaName);
