@@ -159,6 +159,21 @@ public class Workspace {
                     loadGraph(graphURI, dataset.getNamedModel(graphURI).getGraph(), documents);
                 }
             }
+            // A store keeps no empty graphs, so a schema with no triples isn't in the dataset, but
+            // its documents are. The metadata says it was written that way, which a stray graph
+            // left behind by something else doesn't.
+            documents.keySet().stream()
+                    .filter(graphURI -> !graphs.contains(graphURI))
+                    .filter(
+                            graphURI ->
+                                    dataset.containsNamedModel(
+                                            ShapesGraphNaming.encodeMetadata(graphURI)))
+                    .forEach(
+                            graphURI ->
+                                    loadGraph(
+                                            graphURI,
+                                            GraphFactory.createDefaultGraph(),
+                                            documents));
             transaction.commit(INITIAL_CHANGE_MESSAGE);
         }
         // The load itself is not something the user can undo; it is the state they started from.

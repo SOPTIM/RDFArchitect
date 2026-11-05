@@ -21,6 +21,7 @@ import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -94,6 +95,11 @@ public final class SHACLFileResponse {
         headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));
         return ResponseEntity.ok()
                 .headers(headers)
+                // Stated, since Spring would otherwise pick from the Accept header on its own and
+                // could label the bytes as a format other than the one they were written in.
+                .contentType(
+                        MediaType.parseMediaType(
+                                format.getLang().getContentType().getContentTypeStr()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
                 .body(outStream.toByteArray());
     }
