@@ -40,6 +40,13 @@ import java.util.List;
 public final class ClauseLocator {
 
     /**
+     * How deep into {@code [ … ]} the scan reads. Each level costs stack and a rescan of what is
+     * left of its group, so a text built to go deep must not decide how far this goes. Far past
+     * anything written by hand: deeper content is still one object, just one nobody edits into.
+     */
+    private static final int MAX_NESTING = 64;
+
+    /**
      * One object of a clause, and the clauses inside it when it is a {@code [ … ]} blank node.
      *
      * <p>A clause may state several objects — {@code sh:targetClass cim:A , cim:B} is one clause
@@ -80,6 +87,10 @@ public final class ClauseLocator {
 
     /** The clauses written between {@code from} (inclusive) and {@code to} (exclusive). */
     static List<Clause> clauses(String text, int from, int to) {
+        return clauses(text, from, to, 0);
+    }
+
+    private static List<Clause> clauses(String text, int from, int to, int depth) {
         var clauses = new ArrayList<Clause>();
         int index = Math.max(0, from);
         int limit = Math.min(text.length(), to);
@@ -104,7 +115,7 @@ public final class ClauseLocator {
                 continue;
             }
             var predicate = text.substring(index, predicateEnd);
-            var objects = objectsOf(text, predicateEnd, limit);
+            var objects = objectsOf(text, predicateEnd, limit, depth);
             int cursor = objects.isEmpty() ? predicateEnd : objects.get(objects.size() - 1).end();
             if (!objects.isEmpty()) {
                 clauses.add(new Clause(predicate, index, cursor, List.copyOf(objects)));
@@ -118,7 +129,7 @@ public final class ClauseLocator {
     }
 
     /** The comma-separated objects following a predicate. */
-    private static List<ObjectSpan> objectsOf(String text, int from, int limit) {
+    private static List<ObjectSpan> objectsOf(String text, int from, int limit, int depth) {
         var objects = new ArrayList<ObjectSpan>();
         int cursor = from;
         while (true) {
@@ -130,7 +141,7 @@ public final class ClauseLocator {
             if (end == cursor) {
                 return objects;
             }
-            objects.add(new ObjectSpan(cursor, end, nestedIn(text, cursor, end)));
+            objects.add(new ObjectSpan(cursor, end, nestedIn(text, cursor, end, depth)));
             cursor = skipIgnorable(text, end, limit);
             if (cursor >= limit || text.charAt(cursor) != ',') {
                 return objects;
@@ -140,8 +151,10 @@ public final class ClauseLocator {
     }
 
     /** The clauses inside a {@code [ … ]} object, or nothing for any other kind of object. */
-    private static List<Clause> nestedIn(String text, int start, int end) {
-        return text.charAt(start) == '[' ? clauses(text, start + 1, end - 1) : List.of();
+    private static List<Clause> nestedIn(String text, int start, int end, int depth) {
+        return text.charAt(start) == '[' && depth < MAX_NESTING
+                ? clauses(text, start + 1, end - 1, depth + 1)
+                : List.of();
     }
 
     /**
