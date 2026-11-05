@@ -132,9 +132,19 @@ export async function loadGrammar(registry) {
     return registry.loadGrammar(TURTLE_SCOPE);
 }
 
-/** The compiled Turtle grammar, loaded once per page. */
+/**
+ * The compiled Turtle grammar, loaded once per page.
+ *
+ * A failure is not kept: `loadMonaco` lets the next editor try again, which only helps if this
+ * does too, or the editor stays broken until a reload even after the connection is back.
+ */
 function loadTurtleGrammar() {
-    grammarPromise ??= loadGrammar(createRegistry(createOnigLib()));
+    grammarPromise ??= loadGrammar(createRegistry(createOnigLib())).catch(
+        error => {
+            grammarPromise = undefined;
+            throw error;
+        },
+    );
     return grammarPromise;
 }
 
