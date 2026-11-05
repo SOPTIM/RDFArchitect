@@ -70,6 +70,7 @@ const MENU_AND_WIDGETS_LIGHT = {
     "editorSuggestWidget.border": "#e0e0e0",
     "editorSuggestWidget.selectedBackground": "#90c1f1",
     "editorSuggestWidget.selectedForeground": "#303030",
+    "editorSuggestWidget.focusHighlightForeground": "#0a3a7a",
     "editorSuggestWidget.highlightForeground": "#1f75cb",
     "editorHoverWidget.background": "#f9f9f9",
     "editorHoverWidget.foreground": "#303030",
