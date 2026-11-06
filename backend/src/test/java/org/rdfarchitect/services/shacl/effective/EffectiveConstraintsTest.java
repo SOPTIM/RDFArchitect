@@ -183,6 +183,19 @@ class EffectiveConstraintsTest {
     }
 
     @Test
+    void aPropertyShapeTargetedInOneDocumentAndDefinedInAnotherCounts() {
+        var targeting = shapes("ex:Rule sh:targetClass ex:Thing .");
+        var defining = shapes("ex:Rule sh:path ex:value ; sh:minCount 1 .");
+        var documents = new LinkedHashMap<String, Graph>();
+        documents.put("targeting.ttl", targeting);
+        documents.put("defining.ttl", defining);
+
+        var asserted = EffectiveConstraints.of(documents);
+
+        assertThat(asserted.constraints().get(THING_VALUE).minCount()).isEqualTo(1);
+    }
+
+    @Test
     void anIllTypedDeactivationDoesNotFailTheRead() {
         // It parses, and "maybe" is simply not true.
         var shapes =
