@@ -153,15 +153,14 @@ public final class ClassHierarchy {
     public Set<String> roots(Set<String> named) {
         var roots = new LinkedHashSet<String>();
         named.stream()
-                .filter(
-                        name ->
-                                named.stream()
-                                        .noneMatch(
-                                                other ->
-                                                        !other.equals(name)
-                                                                && isSubClassOf(name, other)))
+                .filter(name -> named.stream().noneMatch(other -> strictlyDerives(name, other)))
                 .forEach(roots::add);
         return roots;
+    }
+
+    /** Strictly, so that classes in a cycle don't each remove the other. */
+    private boolean strictlyDerives(String sub, String sup) {
+        return !sub.equals(sup) && isSubClassOf(sub, sup) && !isSubClassOf(sup, sub);
     }
 
     private Set<String> descendants(String name) {
