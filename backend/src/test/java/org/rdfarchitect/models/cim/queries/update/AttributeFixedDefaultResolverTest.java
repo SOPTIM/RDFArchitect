@@ -83,7 +83,8 @@ class AttributeFixedDefaultResolverTest {
                 baseAttribute()
                         .dataType(
                                 new CIMSDataType(
-                                        new URI(RDF.getURI() + "LangString"),
+                                        new URI(
+                                                "http://www.w3.org/1999/02/22-rdf-syntax-ns#LangString"),
                                         new RDFSLabel("LangString"),
                                         CIMSDataType.Type.PRIMITIVE))
                         .fixedValue(new CIMSIsFixed("fixed"))

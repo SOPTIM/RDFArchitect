@@ -20,13 +20,25 @@ package org.rdfarchitect.shacl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.jena.datatypes.TypeMapper;
+import org.apache.jena.sys.JenaSystem;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 class XSDDatatypeMapperTest {
+
+    /**
+     * This can be the first test in the JVM to touch Jena. Until Jena has initialised, {@code
+     * TypeMapper.getInstance()} is null, and touching its {@code RDF} vocabulary breaks Jena for
+     * the whole run.
+     */
+    @BeforeAll
+    static void initialiseJena() {
+        JenaSystem.init();
+    }
 
     @ParameterizedTest
     @CsvSource({
