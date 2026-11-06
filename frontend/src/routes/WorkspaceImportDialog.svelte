@@ -22,7 +22,6 @@
     import FileDropZone from "$lib/components/FileDropZone.svelte";
     import ImportProgressPanel from "$lib/components/ImportProgressPanel.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import {
@@ -31,45 +30,29 @@
         workspaceNameOfArchiveFile,
     } from "$lib/utils/fileUtils";
     import {
-        ImportProgress,
-        JobState,
-    } from "$lib/utils/importProgress.svelte.js";
-
-    import {
-        editorState,
-        forceReloadTrigger,
-    } from "../lib/sharedState.svelte.js";
+        ImportJobRunner,
+        newWorkspaceNameError,
+        openImportedWorkspace,
+    } from "$lib/utils/importJob.svelte.js";
+    import { JobState } from "$lib/utils/importProgress.svelte.js";
 
     let { showDialog = $bindable() } = $props();
 
-    const POLL_INTERVAL_MS = 300;
-    const MAX_FAILED_POLLS = 3;
     const uniqueId = uuidv4();
     const nameInputId = `workspaceArchiveName-${uniqueId}`;
     const fileInputId = `workspaceArchiveFile-${uniqueId}`;
+    const job = new ImportJobRunner();
 
     let archive = $state(null);
     let rejectedFileName = $state(null);
     let workspaceName = $state("");
     let existingWorkspaces = $state([]);
 
-    let progress = $state(null);
-    let importJobId = null;
-    let importWorkspaceName = null;
-    let pollTimeout = null;
-    let failedPolls = 0;
-
+    let progress = $derived(job.progress);
     let importing = $derived(progress !== null && !progress.finished);
-    let nameError = $derived.by(() => {
-        const name = workspaceName.trim();
-        if (name === "") {
-            return "Enter a name for the new workspace";
-        }
-        if (existingWorkspaces.includes(name)) {
-            return `A workspace named "${name}" already exists`;
-        }
-        return "";
-    });
+    let nameError = $derived(
+        newWorkspaceNameError(workspaceName, existingWorkspaces),
+    );
 
     async function onOpen() {
         clearInputs();
@@ -122,127 +105,24 @@
         }
     }
 
-    async function startImport() {
-        if (progress !== null || !archive || nameError) {
+    function startImport() {
+        if (!archive || nameError) {
             return;
         }
         const name = workspaceName.trim();
-        const currentProgress = new ImportProgress();
-        progress = currentProgress;
-        failedPolls = 0;
-        importWorkspaceName = name;
-
-        const { data, error } = await graphStore.startWorkspaceImport(
-            name,
-            archive,
-            {
-                onUploadProgress: percent =>
-                    currentProgress.uploadProgress(percent),
-                signal: currentProgress.signal,
-            },
+        void job.start(name, options =>
+            graphStore.startWorkspaceImport(name, archive, options),
         );
-        if (progress !== currentProgress) {
-            if (data) {
-                await graphStore.cancelImport(name, data.jobId);
-            }
-            return;
-        }
-        if (error || !data) {
-            if (currentProgress.cancelling) {
-                currentProgress.cancelled();
-            } else {
-                currentProgress.fail(
-                    error?.message ?? "The import could not be started.",
-                );
-            }
-            return;
-        }
-
-        currentProgress.uploaded();
-        importJobId = data.jobId;
-        if (currentProgress.cancelling) {
-            await graphStore.cancelImport(name, data.jobId);
-        }
-        pollImportStatus();
-    }
-
-    function pollImportStatus() {
-        stopPolling();
-        pollTimeout = setTimeout(async () => {
-            const currentProgress = progress;
-            const jobId = importJobId;
-            if (!currentProgress || !jobId) {
-                return;
-            }
-            const { data, error } = await graphStore.getImportStatus(
-                importWorkspaceName,
-                jobId,
-            );
-            if (progress !== currentProgress) {
-                return;
-            }
-            if (error || !data) {
-                failedPolls += 1;
-                if (failedPolls > MAX_FAILED_POLLS) {
-                    currentProgress.fail(
-                        "The progress of the import could not be read.",
-                    );
-                    return;
-                }
-                pollImportStatus();
-                return;
-            }
-            failedPolls = 0;
-            currentProgress.apply(data);
-            if (!currentProgress.finished) {
-                pollImportStatus();
-            }
-        }, POLL_INTERVAL_MS);
-    }
-
-    function stopPolling() {
-        if (pollTimeout !== null) {
-            clearTimeout(pollTimeout);
-            pollTimeout = null;
-        }
-    }
-
-    function requestCancel() {
-        progress?.cancel();
-        if (importWorkspaceName && importJobId) {
-            void graphStore.cancelImport(importWorkspaceName, importJobId);
-        }
     }
 
     async function dismissImport() {
-        stopPolling();
-        const currentProgress = progress;
-        const jobId = importJobId;
-        const name = importWorkspaceName;
-        progress = null;
-        importJobId = null;
-        importWorkspaceName = null;
-
-        if (!currentProgress) {
-            return;
-        }
-        let finalStatus = currentProgress.finished
-            ? {
-                  state: currentProgress.jobState,
-                  importedGraphUris: currentProgress.importedGraphUris,
-              }
-            : null;
-        if (!finalStatus) {
-            currentProgress.cancel();
-            if (!name || !jobId) {
-                return;
-            }
-            await graphStore.cancelImport(name, jobId);
-            // It may have completed before the cancellation arrived.
-            finalStatus = (await graphStore.getImportStatus(name, jobId)).data;
-        }
-        if (finalStatus?.state === JobState.COMPLETED) {
-            openImportedWorkspace(name, finalStatus.importedGraphUris ?? []);
+        const result = await job.dismiss();
+        // The workspace is restored as a whole or not at all.
+        if (result?.state === JobState.COMPLETED) {
+            openImportedWorkspace(
+                result.workspaceName,
+                result.importedGraphUris,
+            );
         }
     }
 
@@ -250,20 +130,6 @@
         void dismissImport();
         clearInputs();
         showDialog = false;
-    }
-
-    function openImportedWorkspace(name, importedGraphUris) {
-        editorState.selectedWorkspace.updateValue(name);
-        editorState.selectedGraph.updateValue(importedGraphUris[0] ?? null);
-        editorState.selectedDiagram.updateValue({ type: null, id: null });
-        editorState.selectedClassWorkspace.updateValue(null);
-        editorState.selectedClassGraph.updateValue(null);
-        editorState.selectedClass.updateValue({ type: null, id: null });
-
-        graphStore.invalidateWorkspace(name);
-        workspaceStore.invalidate();
-        crossProfileStore.invalidateWorkspace(name);
-        forceReloadTrigger.trigger();
     }
 </script>
 
@@ -276,7 +142,7 @@
     disablePrimary={!progress?.finished &&
         (progress !== null || !archive || !!nameError)}
     secondaryLabel={importing ? "Cancel" : undefined}
-    onSecondary={requestCancel}
+    onSecondary={() => job.cancel()}
     disableSecondary={progress?.cancelling}
     closeOnPrimary={false}
     title="Import Workspace (archive)"
