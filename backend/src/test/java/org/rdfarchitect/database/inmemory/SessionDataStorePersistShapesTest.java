@@ -18,15 +18,17 @@
 package org.rdfarchitect.database.inmemory;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.Dataset;
@@ -44,11 +46,14 @@ import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.ShapesDocument;
+import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.rdf.formatter.ResultSetFormatterImpl;
 import org.rdfarchitect.rdf.graph.source.GraphSource;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -106,12 +111,22 @@ class SessionDataStorePersistShapesTest {
                 .insertGraph(any(GraphSource.class), eq(DATASET));
         doAnswer(
                         invocation -> {
-                            remote.removeNamedModel(invocation.<String>getArgument(1));
+                            invocation
+                                    .<Collection<String>>getArgument(0)
+                                    .forEach(remote::removeNamedModel);
+                            invocation
+                                    .<Map<String, Graph>>getArgument(1)
+                                    .forEach(
+                                            (name, graph) ->
+                                                    graph.find()
+                                                            .forEach(
+                                                                    remote.getNamedModel(name)
+                                                                                    .getGraph()
+                                                                            ::add));
                             return null;
                         })
                 .when(connection)
-                .deleteGraph(eq(DATASET), anyString());
-
+                .replaceGraphs(any(), any(), eq(DATASET));
         store = new SessionDataStoreImpl();
         store.createDataset(DATASET);
         var schema = GraphFactory.createDefaultGraph();
@@ -194,6 +209,40 @@ class SessionDataStorePersistShapesTest {
     }
 
     @Test
+    void aRefusedWriteLeavesWhatWasStoredBefore() {
+        var kept = create("kept.ttl", null);
+        var deleted = create("gone.ttl", null);
+        store.writeToDatabase(connection, GRAPH);
+        write(
+                graph -> {
+                    var document = graph.getShapesDocuments().get(kept);
+                    document.setName("renamed.ttl");
+                    document.setRawText(SHAPES + "# edited\n");
+                    graph.removeShapesDocument(deleted);
+                    return null;
+                });
+        var refused = new DataAccessException("The store refused the request");
+        doThrow(refused).when(connection).replaceGraphs(any(), any(), eq(DATASET));
+
+        assertThatThrownBy(() -> store.writeToDatabase(connection, GRAPH)).isSameAs(refused);
+
+        try (var transaction = fetched().beginTransaction(DATASET, ReadWrite.READ)) {
+            var documents = transaction.graph(GRAPH.graphUri()).getShapesDocuments();
+            assertThat(documents).containsOnlyKeys(kept, deleted);
+            assertThat(documents.get(kept).getName()).isEqualTo("kept.ttl");
+            assertThat(documents.get(kept).getRawText()).isEqualTo(SHAPES);
+            assertThat(documents.get(deleted).getRawText()).isEqualTo(SHAPES);
+        }
+    }
+
+    @Test
+    void nothingIsSentForAGraphThatHasAndHadNoDocuments() {
+        store.writeToDatabase(connection, GRAPH);
+
+        verify(connection, never()).replaceGraphs(any(), any(), eq(DATASET));
+    }
+
+    @Test
     void theShapesDoNotBecomeGraphsOfTheirOwn() {
         create("eq.ttl", null);
 
@@ -206,7 +255,6 @@ class SessionDataStorePersistShapesTest {
     void persistingAGraphWithoutDocumentsWritesOnlyTheSchema() {
         store.writeToDatabase(connection, GRAPH);
 
-        verify(connection, never()).deleteGraph(eq(DATASET), anyString());
         var written = new ArrayList<String>();
         remote.listModelNames().forEachRemaining(resource -> written.add(resource.getURI()));
         assertThat(written).containsExactly(GRAPH.graphUri());

@@ -415,6 +415,23 @@ class ShapesDocumentsApiTest {
     // -------------------------------------------------------------------------
 
     @Test
+    void anEmptyDocumentIdAmongOthersNamesNothingAndIsNoServerFault() throws Exception {
+        var document = givenDocument("eq.ttl", SHAPES);
+
+        mockMvc.perform(
+                        get(BASE + "/export/file")
+                                .param("documentId", document.getId().toString(), "")
+                                .header(HttpHeaders.ACCEPT, "text/turtle"))
+                .andExpect(status().isOk())
+                .andExpect(
+                        result ->
+                                assertThat(
+                                                result.getResponse()
+                                                        .getContentAsString(StandardCharsets.UTF_8))
+                                        .isEqualTo(SHAPES));
+    }
+
+    @Test
     void oneDocumentExportedAsTurtleIsItsOwnText() throws Exception {
         var document = givenDocument("eq.ttl", SHAPES);
 
