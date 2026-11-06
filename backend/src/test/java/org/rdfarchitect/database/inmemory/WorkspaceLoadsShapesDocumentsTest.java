@@ -249,7 +249,7 @@ class WorkspaceLoadsShapesDocumentsTest {
     }
 
     @Test
-    void graphsFromTheFormerPerSchemaLayoutAreIgnoredAndNeverBecomeSchemas() {
+    void graphsNamedAfterASchemaAreIgnoredAndNeverBecomeSchemas() {
         var dataset = datasetWithSchema();
         var owner = "http%3A%2F%2Fexample.org%2FEQ";
         dataset.addNamedModel(

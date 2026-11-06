@@ -74,7 +74,6 @@ class ShapeCountsTest {
 
         var counts = ShapeCounts.of(graph);
 
-        // The form reads this file as 145 node shapes and 572 shared rules.
         assertThat(counts.nodeShapes()).isEqualTo(145);
         assertThat(counts.propertyShapes()).isEqualTo(572);
     }
