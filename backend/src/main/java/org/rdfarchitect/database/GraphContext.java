@@ -24,8 +24,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * The contents of a single named graph: its RDF schema, its diagram layout, its custom SHACL, its
- * shapes documents and its custom diagrams.
+ * The contents of a single named graph: its RDF schema, its diagram layout, its custom SHACL and
+ * its custom diagrams.
  *
  * <p>Carries no transaction of its own. Graphs take part in the transaction of the workspace that
  * holds them and are reachable only through {@link WorkspaceTransaction#graph(String)}, so a graph
@@ -54,46 +54,4 @@ public interface GraphContext {
      * without the commit path having to notify anyone.
      */
     UUID getRdfGraphVersion();
-
-    /**
-     * Identifies the state of the graph's shapes documents — which exist, their triples, their text
-     * and their metadata — the way {@link #getRdfGraphVersion()} does for the schema.
-     */
-    UUID getShapesDocumentsVersion();
-
-    /**
-     * Returns the graph's shapes documents, by id, in the order they were added.
-     *
-     * <p>The map is a copy; use {@link #createShapesDocument} and {@link #removeShapesDocument} to
-     * change which documents exist. Nothing reads these together with {@link #getCustomSHACL()}:
-     * the two are separate stores.
-     */
-    Map<UUID, ShapesDocument> getShapesDocuments();
-
-    /**
-     * Adds an empty shapes document, placed last. Must be called in a write transaction: an abort
-     * discards the document, and undoing the commit that created it removes it again.
-     *
-     * @param name the document's display name
-     * @param origin where it came from
-     * @return the new document
-     */
-    ShapesDocument createShapesDocument(String name, ShapesDocument.Origin origin);
-
-    /**
-     * Puts a shapes document back as storage described it, under the id it was recorded with. Must
-     * be called in a write transaction.
-     *
-     * @param seed what storage recorded
-     */
-    void restoreShapesDocument(ShapesDocumentSeed seed);
-
-    /**
-     * Removes a shapes document. Must be called in a write transaction. Which documents exist is
-     * versioned like their content, so undoing the commit brings the document back with its shapes,
-     * text and metadata.
-     *
-     * @param documentId the document to remove; an unknown one is ignored
-     */
-    void removeShapesDocument(UUID documentId);
 }

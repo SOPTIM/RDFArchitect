@@ -97,12 +97,13 @@ class SHACLDocumentServiceTest {
     }
 
     private ShapesDocumentInfo createTurtleDocument(String name) {
-        return service.createShapesDocument(GRAPH, name, name, TURTLE, Lang.TURTLE);
+        return service.createShapesDocument(
+                GRAPH.datasetName(), List.of(GRAPH.graphUri()), name, name, TURTLE, Lang.TURTLE);
     }
 
     @Test
     void newGraphHasNoDocuments() {
-        assertThat(service.listShapesDocuments(GRAPH)).isEmpty();
+        assertThat(service.listShapesDocuments(GRAPH.datasetName())).isEmpty();
     }
 
     @Test
@@ -111,7 +112,7 @@ class SHACLDocumentServiceTest {
 
         assertThat(created.getOrigin()).isEqualTo(ShapesDocument.Origin.IMPORTED);
         assertThat(created.getTripleCount()).isPositive();
-        assertThat(service.listShapesDocuments(GRAPH))
+        assertThat(service.listShapesDocuments(GRAPH.datasetName()))
                 .extracting(ShapesDocumentInfo::getName)
                 .containsExactly("eq.ttl");
     }
@@ -120,57 +121,79 @@ class SHACLDocumentServiceTest {
     void turtleIsKeptExactlyAsGiven() {
         var created = createTurtleDocument("eq.ttl");
 
-        assertThat(service.getShapesDocumentText(GRAPH, created.getId())).isEqualTo(TURTLE);
+        assertThat(service.getShapesDocumentText(GRAPH.datasetName(), created.getId()))
+                .isEqualTo(TURTLE);
     }
 
     @Test
     void otherSyntaxesAreConvertedToTurtleOnImport() {
         // The editor only works in Turtle, so keeping the original RDF/XML would hand it something
         // it cannot show.
-        var created = service.createShapesDocument(GRAPH, "tp.rdf", "tp.rdf", RDF_XML, Lang.RDFXML);
+        var created =
+                service.createShapesDocument(
+                        GRAPH.datasetName(),
+                        List.of(GRAPH.graphUri()),
+                        "tp.rdf",
+                        "tp.rdf",
+                        RDF_XML,
+                        Lang.RDFXML);
 
-        var text = service.getShapesDocumentText(GRAPH, created.getId());
+        var text = service.getShapesDocumentText(GRAPH.datasetName(), created.getId());
 
         assertThat(text).doesNotContain("rdf:RDF").contains("TerminalShape");
     }
 
     @Test
     void contentWrittenWithoutAnAuthoredTextIsStillReadable() {
-        var created = service.createShapesDocument(GRAPH, "eq.ttl", null, TURTLE, Lang.TURTLE);
+        var created =
+                service.createShapesDocument(
+                        GRAPH.datasetName(),
+                        List.of(GRAPH.graphUri()),
+                        "eq.ttl",
+                        null,
+                        TURTLE,
+                        Lang.TURTLE);
 
-        service.replaceShapesDocumentText(GRAPH, created.getId(), TURTLE);
+        service.replaceShapesDocumentText(GRAPH.datasetName(), created.getId(), TURTLE);
 
-        assertThat(service.getShapesDocumentText(GRAPH, created.getId())).isEqualTo(TURTLE);
+        assertThat(service.getShapesDocumentText(GRAPH.datasetName(), created.getId()))
+                .isEqualTo(TURTLE);
     }
 
     @Test
     void aSaveMadeToTheStoredTextIsWritten() {
         var created = createTurtleDocument("eq.ttl");
-        var read = service.getShapesDocumentText(GRAPH, created.getId());
+        var read = service.getShapesDocumentText(GRAPH.datasetName(), created.getId());
 
         service.replaceShapesDocumentText(
-                GRAPH, created.getId(), read + "# mine\n", SHACLDocumentUseCase.revisionOf(read));
+                GRAPH.datasetName(),
+                created.getId(),
+                read + "# mine\n",
+                SHACLDocumentUseCase.revisionOf(read));
 
-        assertThat(service.getShapesDocumentText(GRAPH, created.getId())).endsWith("# mine\n");
+        assertThat(service.getShapesDocumentText(GRAPH.datasetName(), created.getId()))
+                .endsWith("# mine\n");
     }
 
     @Test
     void aSaveMadeToTextThatHasSinceChangedIsRefused() {
         var created = createTurtleDocument("eq.ttl");
-        var read = service.getShapesDocumentText(GRAPH, created.getId());
+        var read = service.getShapesDocumentText(GRAPH.datasetName(), created.getId());
         // Someone else saves in the meantime — another tab, or an undo.
-        service.replaceShapesDocumentText(GRAPH, created.getId(), read + "# theirs\n");
+        service.replaceShapesDocumentText(
+                GRAPH.datasetName(), created.getId(), read + "# theirs\n");
 
         assertThatThrownBy(
                         () ->
                                 service.replaceShapesDocumentText(
-                                        GRAPH,
+                                        GRAPH.datasetName(),
                                         created.getId(),
                                         read + "# mine\n",
                                         SHACLDocumentUseCase.revisionOf(read)))
                 .isInstanceOf(StaleWriteException.class)
                 .hasMessageContaining("eq.ttl");
-        assertThat(service.getShapesDocumentText(GRAPH, created.getId())).endsWith("# theirs\n");
+        assertThat(service.getShapesDocumentText(GRAPH.datasetName(), created.getId()))
+                .endsWith("# theirs\n");
     }
 
     @Test
@@ -187,9 +210,9 @@ class SHACLDocumentServiceTest {
         // A document emptied in the editor has to be sent as something — Spring rejects an absent
         // plain-string body — so the editor sends a space. Storing that verbatim made the text read
         // back differ from the text sent, and a freshly saved document looked unsaved.
-        service.replaceShapesDocumentText(GRAPH, created.getId(), " ");
+        service.replaceShapesDocumentText(GRAPH.datasetName(), created.getId(), " ");
 
-        assertThat(service.getShapesDocumentText(GRAPH, created.getId())).isEmpty();
+        assertThat(service.getShapesDocumentText(GRAPH.datasetName(), created.getId())).isEmpty();
     }
 
     @Test
@@ -197,7 +220,8 @@ class SHACLDocumentServiceTest {
         var created = createTurtleDocument("eq.ttl");
 
         var updated =
-                service.updateShapesDocument(GRAPH, created.getId(), "renamed.ttl", false, null);
+                service.updateShapesDocument(
+                        GRAPH.datasetName(), created.getId(), "renamed.ttl", false, null, null);
 
         assertThat(updated.getName()).isEqualTo("renamed.ttl");
         assertThat(updated.isEnabled()).isFalse();
@@ -206,10 +230,11 @@ class SHACLDocumentServiceTest {
     @Test
     void omittedFieldsAreLeftAlone() {
         var created = createTurtleDocument("eq.ttl");
-        service.updateShapesDocument(GRAPH, created.getId(), null, false, null);
+        service.updateShapesDocument(GRAPH.datasetName(), created.getId(), null, false, null, null);
 
         var updated =
-                service.updateShapesDocument(GRAPH, created.getId(), "renamed.ttl", null, null);
+                service.updateShapesDocument(
+                        GRAPH.datasetName(), created.getId(), "renamed.ttl", null, null, null);
 
         assertThat(updated.getName()).isEqualTo("renamed.ttl");
         assertThat(updated.isEnabled())
@@ -222,12 +247,12 @@ class SHACLDocumentServiceTest {
         var first = createTurtleDocument("first.ttl");
         createTurtleDocument("second.ttl");
 
-        service.updateShapesDocument(GRAPH, first.getId(), null, null, 1);
+        service.updateShapesDocument(GRAPH.datasetName(), first.getId(), null, null, 1, null);
 
-        assertThat(service.listShapesDocuments(GRAPH))
+        assertThat(service.listShapesDocuments(GRAPH.datasetName()))
                 .extracting(ShapesDocumentInfo::getOrder)
                 .containsExactly(0, 1);
-        assertThat(service.listShapesDocuments(GRAPH))
+        assertThat(service.listShapesDocuments(GRAPH.datasetName()))
                 .extracting(ShapesDocumentInfo::getName)
                 .containsExactly("second.ttl", "first.ttl");
     }
@@ -236,9 +261,9 @@ class SHACLDocumentServiceTest {
     void deletedDocumentDisappears() {
         var created = createTurtleDocument("eq.ttl");
 
-        service.deleteShapesDocument(GRAPH, created.getId());
+        service.deleteShapesDocument(GRAPH.datasetName(), created.getId());
 
-        assertThat(service.listShapesDocuments(GRAPH)).isEmpty();
+        assertThat(service.listShapesDocuments(GRAPH.datasetName())).isEmpty();
     }
 
     @Test
@@ -249,7 +274,7 @@ class SHACLDocumentServiceTest {
                 .isThrownBy(
                         () ->
                                 service.replaceShapesDocumentText(
-                                        GRAPH,
+                                        GRAPH.datasetName(),
                                         createTurtleDocument("broken.ttl").getId(),
                                         "@prefix sh: <http://www.w3.org/ns/shacl#> .\n\n"
                                                 + "ex:Broken a sh:NodeShape .\n"))
@@ -267,7 +292,7 @@ class SHACLDocumentServiceTest {
         // storable or the editor cannot be used to finish it.
         var draft = createTurtleDocument("draft.ttl");
         service.replaceShapesDocumentText(
-                GRAPH,
+                GRAPH.datasetName(),
                 draft.getId(),
                 """
                 @prefix sh:  <http://www.w3.org/ns/shacl#> .
@@ -278,7 +303,8 @@ class SHACLDocumentServiceTest {
                     sh:targetClass cim:NoSuchClass .
                 """);
 
-        assertThat(service.getShapesDocumentText(GRAPH, draft.getId())).contains("cim:NoSuchClass");
+        assertThat(service.getShapesDocumentText(GRAPH.datasetName(), draft.getId()))
+                .contains("cim:NoSuchClass");
     }
 
     /** RDF/XML may have nothing before its declaration, so this one trim has to stay. */
@@ -291,17 +317,32 @@ class SHACLDocumentServiceTest {
                 <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"/>
                 """;
 
-        var created = service.createShapesDocument(GRAPH, "x.rdf", "x.rdf", rdfXml, Lang.RDFXML);
+        var created =
+                service.createShapesDocument(
+                        GRAPH.datasetName(),
+                        List.of(GRAPH.graphUri()),
+                        "x.rdf",
+                        "x.rdf",
+                        rdfXml,
+                        Lang.RDFXML);
 
         assertThat(created.getName()).isEqualTo("x.rdf");
     }
 
     @Test
     void exportingASelectionIncludesOnlyTheDocumentsAskedFor() {
-        var eq = service.createShapesDocument(GRAPH, "eq.ttl", null, TURTLE, Lang.TURTLE);
+        var eq =
+                service.createShapesDocument(
+                        GRAPH.datasetName(),
+                        List.of(GRAPH.graphUri()),
+                        "eq.ttl",
+                        null,
+                        TURTLE,
+                        Lang.TURTLE);
         var other =
                 service.createShapesDocument(
-                        GRAPH,
+                        GRAPH.datasetName(),
+                        List.of(GRAPH.graphUri()),
                         "other.ttl",
                         null,
                         TURTLE.replace("ACLineSegmentShape", "OtherShape"),
@@ -309,7 +350,10 @@ class SHACLDocumentServiceTest {
 
         var exported =
                 service.exportSelectedSHACLGraph(
-                                GRAPH, RDFFormat.TURTLE, List.of(eq.getId()), false)
+                                GRAPH.datasetName(),
+                                RDFFormat.TURTLE,
+                                List.of(eq.getId()),
+                                List.of())
                         .toString(StandardCharsets.UTF_8);
 
         assertThat(exported).contains("ACLineSegmentShape").doesNotContain("OtherShape");
@@ -319,12 +363,22 @@ class SHACLDocumentServiceTest {
     @Test
     void aDisabledDocumentIsStillExportedWhenItIsAskedForByName() {
         // Disabling says "take no part in validation", not "never let me export you".
-        var draft = service.createShapesDocument(GRAPH, "draft.ttl", null, TURTLE, Lang.TURTLE);
-        service.updateShapesDocument(GRAPH, draft.getId(), null, false, null);
+        var draft =
+                service.createShapesDocument(
+                        GRAPH.datasetName(),
+                        List.of(GRAPH.graphUri()),
+                        "draft.ttl",
+                        null,
+                        TURTLE,
+                        Lang.TURTLE);
+        service.updateShapesDocument(GRAPH.datasetName(), draft.getId(), null, false, null, null);
 
         var exported =
                 service.exportSelectedSHACLGraph(
-                                GRAPH, RDFFormat.TURTLE, List.of(draft.getId()), false)
+                                GRAPH.datasetName(),
+                                RDFFormat.TURTLE,
+                                List.of(draft.getId()),
+                                List.of())
                         .toString(StandardCharsets.UTF_8);
 
         assertThat(exported).contains("ACLineSegmentShape");
@@ -332,12 +386,22 @@ class SHACLDocumentServiceTest {
 
     @Test
     void anEmptyDocumentTickedAlongsideDoesNotStopAFileComingBackAsWritten() {
-        var empty = service.createShapesDocument(GRAPH, "empty.ttl", null, "", Lang.TURTLE);
+        var empty =
+                service.createShapesDocument(
+                        GRAPH.datasetName(),
+                        List.of(GRAPH.graphUri()),
+                        "empty.ttl",
+                        null,
+                        "",
+                        Lang.TURTLE);
         var eq = createTurtleDocument("eq.ttl");
 
         var exported =
                 service.exportSelectedSHACLGraph(
-                                GRAPH, RDFFormat.TURTLE, List.of(empty.getId(), eq.getId()), false)
+                                GRAPH.datasetName(),
+                                RDFFormat.TURTLE,
+                                List.of(empty.getId(), eq.getId()),
+                                List.of())
                         .toString(StandardCharsets.UTF_8);
 
         assertThat(exported).isEqualTo(TURTLE);
@@ -346,7 +410,8 @@ class SHACLDocumentServiceTest {
     @Test
     void exportingNothingProducesAnEmptyDocumentRatherThanFailing() {
         var exported =
-                service.exportSelectedSHACLGraph(GRAPH, RDFFormat.TURTLE, List.of(), false)
+                service.exportSelectedSHACLGraph(
+                                GRAPH.datasetName(), RDFFormat.TURTLE, List.of(), List.of())
                         .toString(StandardCharsets.UTF_8);
 
         assertThat(exported).doesNotContain("targetClass");
@@ -355,16 +420,23 @@ class SHACLDocumentServiceTest {
     @Test
     void anIdThatNamesNoDocumentIsNotFoundRatherThanSilentlyLeftOut() {
         // An export missing a file the user ticked looks complete; saying so is the only warning.
-        var eq = service.createShapesDocument(GRAPH, "eq.ttl", null, TURTLE, Lang.TURTLE);
+        var eq =
+                service.createShapesDocument(
+                        GRAPH.datasetName(),
+                        List.of(GRAPH.graphUri()),
+                        "eq.ttl",
+                        null,
+                        TURTLE,
+                        Lang.TURTLE);
 
         assertThatExceptionOfType(ResourceNotFoundException.class)
                 .isThrownBy(
                         () ->
                                 service.exportSelectedSHACLGraph(
-                                        GRAPH,
+                                        GRAPH.datasetName(),
                                         RDFFormat.TURTLE,
                                         List.of(eq.getId(), UUID.randomUUID()),
-                                        false));
+                                        List.of()));
     }
 
     @Test
@@ -384,9 +456,16 @@ class SHACLDocumentServiceTest {
                 .isThrownBy(
                         () ->
                                 service.updateShapesDocument(
-                                        GRAPH, tp.getId(), "eq.ttl", null, null));
+                                        GRAPH.datasetName(),
+                                        tp.getId(),
+                                        "eq.ttl",
+                                        null,
+                                        null,
+                                        null));
 
-        var unchanged = service.updateShapesDocument(GRAPH, tp.getId(), "tp.ttl", null, null);
+        var unchanged =
+                service.updateShapesDocument(
+                        GRAPH.datasetName(), tp.getId(), "tp.ttl", null, null, null);
         assertThat(unchanged.getName()).isEqualTo("tp.ttl");
     }
 
@@ -397,17 +476,27 @@ class SHACLDocumentServiceTest {
         databasePort.disableEditing(GRAPH.datasetName());
 
         assertThatThrownBy(
-                        () -> service.createShapesDocument(GRAPH, "new.ttl", null, "", Lang.TURTLE))
+                        () ->
+                                service.createShapesDocument(
+                                        GRAPH.datasetName(),
+                                        List.of(GRAPH.graphUri()),
+                                        "new.ttl",
+                                        null,
+                                        "",
+                                        Lang.TURTLE))
                 .isInstanceOf(ResourceConflictException.class)
                 .hasMessageContaining("read-only");
-        assertThatThrownBy(() -> service.replaceShapesDocumentText(GRAPH, id, ""))
+        assertThatThrownBy(() -> service.replaceShapesDocumentText(GRAPH.datasetName(), id, ""))
                 .isInstanceOf(ResourceConflictException.class);
-        assertThatThrownBy(() -> service.updateShapesDocument(GRAPH, id, "x", false, 0))
+        assertThatThrownBy(
+                        () ->
+                                service.updateShapesDocument(
+                                        GRAPH.datasetName(), id, "x", false, 0, null))
                 .isInstanceOf(ResourceConflictException.class);
-        assertThatThrownBy(() -> service.deleteShapesDocument(GRAPH, id))
+        assertThatThrownBy(() -> service.deleteShapesDocument(GRAPH.datasetName(), id))
                 .isInstanceOf(ResourceConflictException.class);
 
-        assertThat(service.listShapesDocuments(GRAPH))
+        assertThat(service.listShapesDocuments(GRAPH.datasetName()))
                 .singleElement()
                 .satisfies(
                         info -> {
@@ -443,7 +532,7 @@ class SHACLDocumentServiceTest {
 
         service.replaceCustomSHACLGraph(GRAPH, shacl);
 
-        assertThat(service.listShapesDocuments(GRAPH)).isEmpty();
+        assertThat(service.listShapesDocuments(GRAPH.datasetName())).isEmpty();
     }
 
     @Test
@@ -451,10 +540,161 @@ class SHACLDocumentServiceTest {
         var missing = UUID.randomUUID();
 
         assertThatExceptionOfType(ResourceNotFoundException.class)
-                .isThrownBy(() -> service.getShapesDocumentText(GRAPH, missing));
+                .isThrownBy(() -> service.getShapesDocumentText(GRAPH.datasetName(), missing));
         assertThatExceptionOfType(ResourceNotFoundException.class)
-                .isThrownBy(() -> service.deleteShapesDocument(GRAPH, missing));
+                .isThrownBy(() -> service.deleteShapesDocument(GRAPH.datasetName(), missing));
         assertThatExceptionOfType(ResourceNotFoundException.class)
-                .isThrownBy(() -> service.replaceShapesDocumentText(GRAPH, missing, TURTLE));
+                .isThrownBy(
+                        () ->
+                                service.replaceShapesDocumentText(
+                                        GRAPH.datasetName(), missing, TURTLE));
+    }
+
+    // -------------------------------------------------------------------------
+    // Which schemas a document applies to
+    // -------------------------------------------------------------------------
+
+    private static final String OTHER_SCHEMA = "http://example.org/other";
+
+    private void givenOtherSchema() {
+        try (var transaction =
+                databasePort.beginTransaction(GRAPH.datasetName(), ReadWrite.WRITE)) {
+            transaction.createGraph(OTHER_SCHEMA, GraphFactory.createDefaultGraph());
+            transaction.commit("Created another schema");
+        }
+    }
+
+    @Test
+    void aDocumentCanApplyToSeveralSchemasAtOnce() {
+        givenOtherSchema();
+
+        var created =
+                service.createShapesDocument(
+                        GRAPH.datasetName(),
+                        List.of(GRAPH.graphUri(), OTHER_SCHEMA),
+                        "both.ttl",
+                        null,
+                        TURTLE,
+                        Lang.TURTLE);
+
+        assertThat(created.getSchemas()).containsExactlyInAnyOrder(GRAPH.graphUri(), OTHER_SCHEMA);
+    }
+
+    @Test
+    void aDocumentCanApplyToNoSchema() {
+        var created =
+                service.createShapesDocument(
+                        GRAPH.datasetName(), List.of(), "none.ttl", null, TURTLE, Lang.TURTLE);
+
+        assertThat(created.getSchemas()).isEmpty();
+    }
+
+    @Test
+    void aSchemaThatDoesNotExistIsRefusedAndNothingIsCreated() {
+        assertThatThrownBy(
+                        () ->
+                                service.createShapesDocument(
+                                        GRAPH.datasetName(),
+                                        List.of("http://example.org/nowhere"),
+                                        "nowhere.ttl",
+                                        null,
+                                        TURTLE,
+                                        Lang.TURTLE))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        assertThat(service.listShapesDocuments(GRAPH.datasetName())).isEmpty();
+    }
+
+    @Test
+    void anUpdateReplacesTheSchemasAndLeavesThemWhenNotAsked() {
+        givenOtherSchema();
+        var created = createTurtleDocument("document.ttl");
+
+        var unchanged =
+                service.updateShapesDocument(
+                        GRAPH.datasetName(), created.getId(), null, false, null, null);
+        assertThat(unchanged.getSchemas()).containsExactly(GRAPH.graphUri());
+
+        var moved =
+                service.updateShapesDocument(
+                        GRAPH.datasetName(),
+                        created.getId(),
+                        null,
+                        null,
+                        null,
+                        List.of(OTHER_SCHEMA));
+        assertThat(moved.getSchemas()).containsExactly(OTHER_SCHEMA);
+
+        var cleared =
+                service.updateShapesDocument(
+                        GRAPH.datasetName(), created.getId(), null, null, null, List.of());
+        assertThat(cleared.getSchemas()).isEmpty();
+    }
+
+    @Test
+    void anUpdateToASchemaThatDoesNotExistIsRefused() {
+        var created = createTurtleDocument("document.ttl");
+
+        assertThatThrownBy(
+                        () ->
+                                service.updateShapesDocument(
+                                        GRAPH.datasetName(),
+                                        created.getId(),
+                                        null,
+                                        null,
+                                        null,
+                                        List.of("http://example.org/nowhere")))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void aDocumentNameIsUniqueAcrossTheWorkspaceWhicheverSchemasItAppliesTo() {
+        givenOtherSchema();
+        createTurtleDocument("document.ttl");
+
+        assertThatThrownBy(
+                        () ->
+                                service.createShapesDocument(
+                                        GRAPH.datasetName(),
+                                        List.of(OTHER_SCHEMA),
+                                        "document.ttl",
+                                        null,
+                                        TURTLE,
+                                        Lang.TURTLE))
+                .isInstanceOf(ResourceConflictException.class);
+    }
+
+    @Test
+    void generatedShapesAreMergedInForEachSchemaAsked() {
+        var created = createTurtleDocument("document.ttl");
+
+        var alone =
+                service.exportSelectedSHACLGraph(
+                                GRAPH.datasetName(),
+                                RDFFormat.NTRIPLES,
+                                List.of(created.getId()),
+                                List.of())
+                        .toString(StandardCharsets.UTF_8);
+        var merged =
+                service.exportSelectedSHACLGraph(
+                                GRAPH.datasetName(),
+                                RDFFormat.NTRIPLES,
+                                List.of(created.getId()),
+                                List.of(GRAPH.graphUri()))
+                        .toString(StandardCharsets.UTF_8);
+
+        assertThat(merged).contains(alone.lines().toList());
+    }
+
+    @Test
+    void generatedShapesForASchemaThatDoesNotExistAreRefused() {
+        assertThatThrownBy(
+                        () ->
+                                service.exportSelectedSHACLGraph(
+                                        GRAPH.datasetName(),
+                                        RDFFormat.TURTLE,
+                                        List.of(),
+                                        List.of("http://example.org/nowhere")))
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 }

@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs.shacl.documents;
+package org.rdfarchitect.api.controller.datasets.shacl.documents;
 
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;

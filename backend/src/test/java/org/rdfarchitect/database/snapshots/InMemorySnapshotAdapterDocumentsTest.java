@@ -31,11 +31,12 @@ import org.junit.jupiter.api.Test;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.ShapesDocument;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -75,16 +76,16 @@ class InMemorySnapshotAdapterDocumentsTest {
         SessionContext.clear();
     }
 
-    private void write(String dataset, Consumer<GraphContext> change) {
+    private void write(String dataset, Consumer<WorkspaceTransaction> change) {
         try (var transaction = databasePort.beginTransaction(dataset, ReadWrite.WRITE)) {
-            change.accept(transaction.graph(GRAPH_URI));
+            change.accept(transaction);
             transaction.commit("Changed");
         }
     }
 
-    private void read(String dataset, Consumer<GraphContext> reader) {
+    private void read(String dataset, Consumer<WorkspaceTransaction> reader) {
         try (var transaction = databasePort.beginTransaction(dataset, ReadWrite.READ)) {
-            reader.accept(transaction.graph(GRAPH_URI));
+            reader.accept(transaction);
         }
     }
 
@@ -92,10 +93,12 @@ class InMemorySnapshotAdapterDocumentsTest {
         var id = new UUID[1];
         write(
                 DATASET,
-                graph -> {
+                transaction -> {
                     var document =
-                            graph.createShapesDocument(
-                                    "official.ttl", ShapesDocument.Origin.IMPORTED);
+                            transaction.createShapesDocument(
+                                    "official.ttl",
+                                    ShapesDocument.Origin.IMPORTED,
+                                    List.of(GRAPH_URI));
                     document.getGraph().add(SHAPE);
                     document.setRawText(SHAPE_TEXT);
                     document.setSourceFileName("official.ttl");
@@ -111,10 +114,13 @@ class InMemorySnapshotAdapterDocumentsTest {
         var empty = new UUID[1];
         write(
                 DATASET,
-                graph ->
+                transaction ->
                         empty[0] =
-                                graph.createShapesDocument(
-                                                "draft.ttl", ShapesDocument.Origin.AUTHORED)
+                                transaction
+                                        .createShapesDocument(
+                                                "draft.ttl",
+                                                ShapesDocument.Origin.AUTHORED,
+                                                List.of())
                                         .getId());
         var token = adapter.createSnapshot(DATASET);
 
@@ -123,13 +129,14 @@ class InMemorySnapshotAdapterDocumentsTest {
 
         read(
                 SnapshotUtils.constructSnapshotName(DATASET, token),
-                graph -> {
-                    var documents = graph.getShapesDocuments();
+                transaction -> {
+                    var documents = transaction.shapesDocuments();
                     var document = documents.get(imported);
                     assertThat(document.getName()).isEqualTo("official.ttl");
                     assertThat(document.getOrigin()).isEqualTo(ShapesDocument.Origin.IMPORTED);
                     assertThat(document.getRawText()).isEqualTo(SHAPE_TEXT);
                     assertThat(document.isEnabled()).isFalse();
+                    assertThat(document.getSchemas()).containsExactly(GRAPH_URI);
                     assertThat(document.getGraph().contains(SHAPE)).isTrue();
                     assertThat(documents.get(empty[0]).getName()).isEqualTo("draft.ttl");
                 });
@@ -143,15 +150,17 @@ class InMemorySnapshotAdapterDocumentsTest {
 
         SessionContext.setSessionId("session-b");
         adapter.fetchSnapshot(token);
-        write(snapshotName, graph -> graph.getShapesDocuments().get(id).getGraph().clear());
+        write(
+                snapshotName,
+                transaction -> transaction.shapesDocuments().get(id).getGraph().clear());
 
         SessionContext.setSessionId("session-c");
         adapter.fetchSnapshot(token);
 
         read(
                 snapshotName,
-                graph ->
-                        assertThat(graph.getShapesDocuments().get(id).getGraph().contains(SHAPE))
+                transaction ->
+                        assertThat(transaction.shapesDocuments().get(id).getGraph().contains(SHAPE))
                                 .isTrue());
     }
 
@@ -159,15 +168,15 @@ class InMemorySnapshotAdapterDocumentsTest {
     void aSnapshotIsNotChangedByLaterEditsToTheWorkspace() {
         var id = createImported();
         var token = adapter.createSnapshot(DATASET);
-        write(DATASET, graph -> graph.getShapesDocuments().get(id).setRawText("edited"));
+        write(DATASET, transaction -> transaction.shapesDocuments().get(id).setRawText("edited"));
 
         SessionContext.setSessionId("session-b");
         adapter.fetchSnapshot(token);
 
         read(
                 SnapshotUtils.constructSnapshotName(DATASET, token),
-                graph ->
-                        assertThat(graph.getShapesDocuments().get(id).getRawText())
+                transaction ->
+                        assertThat(transaction.shapesDocuments().get(id).getRawText())
                                 .isEqualTo(SHAPE_TEXT));
     }
 
@@ -192,12 +201,12 @@ class InMemorySnapshotAdapterDocumentsTest {
 
         read(
                 SnapshotUtils.constructSnapshotName(DATASET, token),
-                graph -> assertThat(graph.getShapesDocuments()).isEmpty());
+                transaction -> assertThat(transaction.shapesDocuments()).isEmpty());
     }
 
     @Test
     void customShaclStaysOutOfASnapshotAsBefore() {
-        write(DATASET, (GraphContext graph) -> addTo(graph.getCustomSHACL()));
+        write(DATASET, transaction -> addTo(transaction.graph(GRAPH_URI).getCustomSHACL()));
         var token = adapter.createSnapshot(DATASET);
 
         SessionContext.setSessionId("session-b");
@@ -205,7 +214,9 @@ class InMemorySnapshotAdapterDocumentsTest {
 
         read(
                 SnapshotUtils.constructSnapshotName(DATASET, token),
-                graph -> assertThat(graph.getCustomSHACL().isEmpty()).isTrue());
+                transaction ->
+                        assertThat(transaction.graph(GRAPH_URI).getCustomSHACL().isEmpty())
+                                .isTrue());
     }
 
     private static void addTo(Graph graph) {

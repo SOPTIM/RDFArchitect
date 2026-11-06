@@ -28,24 +28,28 @@ import org.rdfarchitect.rdf.graph.wrapper.SnapshotParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
- * Which shapes documents a graph holds.
+ * Which shapes documents a workspace holds.
  *
  * <p>Making the set of documents a participant is what puts creating and deleting a document in the
  * same undo stack as its contents, the way {@link GraphCollection} does for graphs. A deleted
  * document is not torn down, only unlinked: the snapshot undo would return to still holds it, with
  * its own history intact, and it becomes unreachable once the deletion falls out of the changelog.
  *
- * <p>Takes part in a transaction only once it is written to, so a graph nobody has given a document
- * records nothing here.
+ * <p>Takes part in a transaction only once it is written to, so a workspace nobody has given a
+ * document records nothing here.
  */
 final class ShapesDocumentCollection extends SnapshotParticipant<Map<UUID, ShapesDocument>> {
 
@@ -64,13 +68,14 @@ final class ShapesDocumentCollection extends SnapshotParticipant<Map<UUID, Shape
         return Collections.unmodifiableMap(new LinkedHashMap<>(documents));
     }
 
-    ShapesDocument create(String name, ShapesDocument.Origin origin) {
+    ShapesDocument create(String name, ShapesDocument.Origin origin, Collection<String> schemas) {
         beginWrite();
         var document =
                 new ShapesDocument(
                         UUID.randomUUID(),
                         origin,
-                        new ShapesDocument.State(name, null, true, nextOrder(), null),
+                        new ShapesDocument.State(
+                                name, null, true, nextOrder(), Set.copyOf(schemas), null),
                         txnContext,
                         this);
         documents.put(document.getId(), document);
@@ -93,6 +98,7 @@ final class ShapesDocumentCollection extends SnapshotParticipant<Map<UUID, Shape
                                 seed.sourceFileName(),
                                 seed.enabled(),
                                 seed.order(),
+                                seed.schemas(),
                                 StoredText.of(seed.rawText())),
                         txnContext,
                         this);
@@ -118,6 +124,24 @@ final class ShapesDocumentCollection extends SnapshotParticipant<Map<UUID, Shape
         beginWrite();
         document.getGraph().clear();
         documents.remove(documentId);
+    }
+
+    /**
+     * Points the documents that apply to a schema at the URI it has now.
+     *
+     * @param oldUri the URI it had
+     * @param newUri the URI it has
+     */
+    void renameSchema(String oldUri, String newUri) {
+        documents.values().stream()
+                .filter(document -> document.getSchemas().contains(oldUri))
+                .forEach(
+                        document -> {
+                            var schemas = new HashSet<>(document.getSchemas());
+                            schemas.remove(oldUri);
+                            schemas.add(newUri);
+                            document.setSchemas(schemas);
+                        });
     }
 
     /**
@@ -181,6 +205,20 @@ final class ShapesDocumentCollection extends SnapshotParticipant<Map<UUID, Shape
         return after.values().stream()
                 .filter(document -> !before.containsKey(document.getId()))
                 .map(ShapesDocument::getName)
+                .toList();
+    }
+
+    /** Shows a document coming or going in the changelog of every schema it applies to. */
+    @Override
+    protected List<String> describeAffectedGraphs(
+            Map<UUID, ShapesDocument> before, Map<UUID, ShapesDocument> after) {
+        return Stream.concat(before.keySet().stream(), after.keySet().stream())
+                .distinct()
+                .filter(id -> before.get(id) != after.get(id))
+                .map(id -> after.containsKey(id) ? after.get(id) : before.get(id))
+                .flatMap(document -> document.getSchemas().stream())
+                .distinct()
+                .sorted()
                 .toList();
     }
 

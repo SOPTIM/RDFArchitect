@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs.shacl;
+package org.rdfarchitect.api.controller.datasets.shacl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -29,6 +29,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.apache.jena.graph.Node;
@@ -41,13 +43,12 @@ import org.apache.jena.vocabulary.RDF;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.api.controller.datasets.graphs.shacl.documents.ShapesDocumentRESTController;
-import org.rdfarchitect.api.controller.datasets.graphs.shacl.documents.ShapesDocumentsRESTController;
-import org.rdfarchitect.api.controller.datasets.graphs.shacl.export.SHACLSelectionExportRESTController;
+import org.rdfarchitect.api.controller.datasets.shacl.documents.ShapesDocumentRESTController;
+import org.rdfarchitect.api.controller.datasets.shacl.documents.ShapesDocumentsRESTController;
+import org.rdfarchitect.api.controller.datasets.shacl.export.SHACLSelectionExportRESTController;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.exception.handlers.GenericExceptionHandler;
@@ -64,6 +65,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -79,8 +81,7 @@ class ShapesDocumentsApiTest {
 
     private static final String GRAPH_URI = "http://example.org/EQ";
 
-    private static final String BASE =
-            "/api/datasets/cgmes/graphs/http%3A%2F%2Fexample.org%2FEQ/shacl";
+    private static final String BASE = "/api/datasets/cgmes/shacl";
 
     private static final String DOCUMENTS = BASE + "/documents";
 
@@ -134,15 +135,15 @@ class ShapesDocumentsApiTest {
 
     private ShapesDocumentInfo givenDocument(String name, String turtle) {
         return service.createShapesDocument(
-                new GraphIdentifier("cgmes", GRAPH_URI), name, name, turtle, Lang.TURTLE);
+                "cgmes", List.of(GRAPH_URI), name, name, turtle, Lang.TURTLE);
     }
 
     private String textOf(UUID documentId) {
-        return service.getShapesDocumentText(new GraphIdentifier("cgmes", GRAPH_URI), documentId);
+        return service.getShapesDocumentText("cgmes", documentId);
     }
 
     private UUID onlyUploadedDocument() {
-        return service.listShapesDocuments(new GraphIdentifier("cgmes", GRAPH_URI)).stream()
+        return service.listShapesDocuments("cgmes").stream()
                 .map(ShapesDocumentInfo::getId)
                 .findFirst()
                 .orElseThrow();
@@ -170,7 +171,7 @@ class ShapesDocumentsApiTest {
                                 assertThat(result.getResponse().getContentAsString())
                                         .contains("Turtle"));
 
-        assertThat(service.listShapesDocuments(new GraphIdentifier("cgmes", GRAPH_URI))).isEmpty();
+        assertThat(service.listShapesDocuments("cgmes")).isEmpty();
     }
 
     @Test
@@ -353,7 +354,7 @@ class ShapesDocumentsApiTest {
                                 assertThat(result.getResponse().getContentAsString())
                                         .contains(ShapesTurtleParser.TOO_DEEP));
 
-        assertThat(service.listShapesDocuments(new GraphIdentifier("cgmes", GRAPH_URI))).isEmpty();
+        assertThat(service.listShapesDocuments("cgmes")).isEmpty();
     }
 
     @Test
@@ -392,8 +393,7 @@ class ShapesDocumentsApiTest {
     void writingOverTextThatChangedSinceItWasReadIsAPreconditionFailure() throws Exception {
         var document = givenDocument("eq.ttl", SHAPES);
         var revisionRead = SHACLDocumentUseCase.revisionOf(SHAPES);
-        service.replaceShapesDocumentText(
-                new GraphIdentifier("cgmes", GRAPH_URI), document.getId(), SHAPES + "# later\n");
+        service.replaceShapesDocumentText("cgmes", document.getId(), SHAPES + "# later\n");
 
         mockMvc.perform(
                         put(DOCUMENTS + "/" + document.getId())
@@ -406,7 +406,7 @@ class ShapesDocumentsApiTest {
     }
 
     @Test
-    void aGraphStartsWithoutAnyDocument() throws Exception {
+    void aWorkspaceStartsWithoutAnyDocument() throws Exception {
         mockMvc.perform(get(DOCUMENTS)).andExpect(status().isOk()).andExpect(content().json("[]"));
     }
 
@@ -585,5 +585,69 @@ class ShapesDocumentsApiTest {
                                 .param("documentId", UUID.randomUUID().toString())
                                 .header(HttpHeaders.ACCEPT, "text/turtle"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void creatingFromTextNamesTheSchemasItAppliesTo() throws Exception {
+        mockMvc.perform(
+                        post(DOCUMENTS)
+                                .param("name", "eq.ttl")
+                                .param("schema", GRAPH_URI)
+                                .contentType(MediaType.TEXT_PLAIN)
+                                .content(SHAPES))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.schemas[0]").value(GRAPH_URI));
+    }
+
+    @Test
+    void creatingWithoutASchemaAppliesToNone() throws Exception {
+        mockMvc.perform(
+                        post(DOCUMENTS)
+                                .param("name", "eq.ttl")
+                                .contentType(MediaType.TEXT_PLAIN)
+                                .content(SHAPES))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.schemas").isEmpty());
+    }
+
+    @Test
+    void aSchemaThatDoesNotExistIsNotFound() throws Exception {
+        mockMvc.perform(
+                        post(DOCUMENTS)
+                                .param("name", "eq.ttl")
+                                .param("schema", "http://example.org/nowhere")
+                                .contentType(MediaType.TEXT_PLAIN)
+                                .content(SHAPES))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void anEmptySchemaParameterClearsWhatADocumentAppliesTo() throws Exception {
+        var document = givenDocument("eq.ttl", SHAPES);
+
+        mockMvc.perform(patch(DOCUMENTS + "/" + document.getId()).param("schema", ""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.schemas").isEmpty());
+    }
+
+    @Test
+    void anUpdateWithNoSchemaParameterLeavesThemAlone() throws Exception {
+        var document = givenDocument("eq.ttl", SHAPES);
+
+        mockMvc.perform(patch(DOCUMENTS + "/" + document.getId()).param("enabled", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.schemas[0]").value(GRAPH_URI));
+    }
+
+    @Test
+    void anExportIsNamedAfterTheWorkspace() throws Exception {
+        var document = givenDocument("eq.ttl", SHAPES);
+
+        mockMvc.perform(
+                        get(BASE + "/export/file")
+                                .param("documentId", document.getId().toString())
+                                .header(HttpHeaders.ACCEPT, "text/turtle"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "cgmes-shacl.ttl"));
     }
 }

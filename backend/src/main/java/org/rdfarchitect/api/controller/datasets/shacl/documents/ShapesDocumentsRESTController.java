@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs.shacl.documents;
+package org.rdfarchitect.api.controller.datasets.shacl.documents;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,7 +24,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.Lang;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLDocumentUseCase;
@@ -47,14 +46,14 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * The sets of SHACL shapes a graph holds.
+ * The sets of SHACL shapes a workspace holds.
  *
- * <p>A graph can hold any number of them — typically the official constraints files of a profile
- * plus whatever was authored here. They are not ranked: SHACL is conjunctive, so every enabled
- * document applies and none overrides another.
+ * <p>A workspace can hold any number of them — typically the official constraints files of its
+ * profiles plus whatever was authored here. They are not ranked: SHACL is conjunctive, so every
+ * enabled document applies and none overrides another.
  */
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/documents")
+@RequestMapping("api/datasets/{datasetName}/shacl/documents")
 @RequiredArgsConstructor
 public class ShapesDocumentsRESTController {
 
@@ -68,7 +67,7 @@ public class ShapesDocumentsRESTController {
     @Operation(
             summary = "list constraints documents",
             description =
-                    "Lists the sets of SHACL shapes stored for a graph, in order, without their content.",
+                    "Lists the sets of SHACL shapes in the workspace, in order, without their content.",
             tags = {"shacl"},
             responses = {@ApiResponse(responseCode = "200")})
     @GetMapping
@@ -80,19 +79,13 @@ public class ShapesDocumentsRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI) {
+                    String datasetName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/documents\" from \"{}\".",
+                "Received GET request: \"/api/datasets/{{}}/shacl/documents\" from \"{}\".",
                 datasetName,
-                graphURI,
                 originURL);
 
-        return shaclDocumentUseCase.listShapesDocuments(graphIdentifier(datasetName, graphURI));
+        return shaclDocumentUseCase.listShapesDocuments(datasetName);
     }
 
     @Operation(
@@ -106,10 +99,11 @@ public class ShapesDocumentsRESTController {
                 @ApiResponse(
                         responseCode = "400",
                         description = "The content is not valid Turtle."),
+                @ApiResponse(responseCode = "404", description = "A named schema does not exist."),
                 @ApiResponse(
                         responseCode = "409",
                         description =
-                                "Another document in this graph already has that name, or the"
+                                "Another document in this workspace already has that name, or the"
                                         + " workspace is read-only."),
                 @ApiResponse(
                         responseCode = "415",
@@ -125,26 +119,24 @@ public class ShapesDocumentsRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
             @Parameter(description = "The file containing the SHACL shapes.") @RequestParam("file")
                     MultipartFile file,
+            @Parameter(description = "URIs of the schemas it applies to.")
+                    @RequestParam(name = "schema", required = false)
+                    List<String> schemas,
             @Parameter(description = "Display name; defaults to the file name.")
                     @RequestParam(value = "name", required = false)
                     String name) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/shacl/documents/file\" from \"{}\".",
+                "Received POST request: \"/api/datasets/{{}}/shacl/documents/file\" from \"{}\".",
                 datasetName,
-                graphURI,
                 originURL);
 
         var fileName = file.getOriginalFilename();
         var lang = ShapesUpload.languageOf(fileName, file.getContentType());
         return shaclDocumentUseCase.createShapesDocument(
-                graphIdentifier(datasetName, graphURI),
+                datasetName,
+                SchemaParameter.expanded(schemas, datasetName, expandURIUseCase),
                 name != null && !name.isBlank() ? name : fileName,
                 fileName,
                 ShapesUpload.toTurtle(readFile(file), lang),
@@ -160,10 +152,11 @@ public class ShapesDocumentsRESTController {
                 @ApiResponse(
                         responseCode = "400",
                         description = "The content is not valid Turtle."),
+                @ApiResponse(responseCode = "404", description = "A named schema does not exist."),
                 @ApiResponse(
                         responseCode = "409",
                         description =
-                                "Another document in this graph already has that name, or the"
+                                "Another document in this workspace already has that name, or the"
                                         + " workspace is read-only.")
             })
     // Raw text, not JSON: Spring reads a String @RequestBody verbatim, so a JSON-quoted
@@ -178,27 +171,25 @@ public class ShapesDocumentsRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
             @Parameter(description = "Display name of the new document.") @RequestParam("name")
                     String name,
+            @Parameter(description = "URIs of the schemas it applies to.")
+                    @RequestParam(name = "schema", required = false)
+                    List<String> schemas,
             @Parameter(description = "The SHACL shapes in Turtle syntax.") @RequestBody
                     String turtle) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/shacl/documents\" from \"{}\".",
+                "Received POST request: \"/api/datasets/{{}}/shacl/documents\" from \"{}\".",
                 datasetName,
-                graphURI,
                 originURL);
 
         return shaclDocumentUseCase.createShapesDocument(
-                graphIdentifier(datasetName, graphURI), name, null, turtle, Lang.TURTLE);
-    }
-
-    private GraphIdentifier graphIdentifier(String datasetName, String graphURI) {
-        return new GraphIdentifier(datasetName, expandURIUseCase.expandUri(datasetName, graphURI));
+                datasetName,
+                SchemaParameter.expanded(schemas, datasetName, expandURIUseCase),
+                name,
+                null,
+                turtle,
+                Lang.TURTLE);
     }
 
     private static byte[] readFile(MultipartFile file) {

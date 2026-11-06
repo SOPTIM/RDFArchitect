@@ -75,6 +75,7 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
                         for (var graphURI : databasePort.listGraphUris(datasetName)) {
                             transferGraph(conn, new GraphIdentifier(datasetName, graphURI));
                         }
+                        transferShapesDocuments(conn, datasetName);
                     });
         } catch (Exception e) {
             fusekiHttpAdminProtocol.deleteDataset(snapshotName);
@@ -104,6 +105,17 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
         return fusekiHttpAdminProtocol.ping();
     }
 
+    private void transferShapesDocuments(RDFConnection conn, String datasetName) {
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            ShapesDocumentGraphs.of(transaction.shapesDocuments().values())
+                    .forEach(
+                            (name, graph) ->
+                                    conn.put(name, ModelFactory.createModelForGraph(graph)));
+        } catch (Exception e) {
+            throw new FusekiServerException(e.getMessage());
+        }
+    }
+
     private void transferGraph(RDFConnection conn, GraphIdentifier graphIdentifier) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
@@ -116,10 +128,6 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
             GraphUtils.removeUUIDs(copiedGraph);
 
             conn.put(graphIdentifier.graphUri(), ModelFactory.createModelForGraph(copiedGraph));
-            ShapesDocumentGraphs.of(graphIdentifier.graphUri(), ctx.getShapesDocuments().values())
-                    .forEach(
-                            (name, graph) ->
-                                    conn.put(name, ModelFactory.createModelForGraph(graph)));
         } catch (Exception e) {
             throw new FusekiServerException(e.getMessage());
         }

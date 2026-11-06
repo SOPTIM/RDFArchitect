@@ -61,21 +61,22 @@ public interface SHACLExportUseCase {
     ByteArrayOutputStream exportGeneratedSHACLGraph(Graph graph, RDFFormat format);
 
     /**
-     * Exports the chosen shapes documents as one file, optionally merged with the generated shapes.
+     * Exports the chosen shapes documents as one file, optionally merged with shapes generated from
+     * schemas.
      *
      * <p>A document is included because the caller named it, whether or not it is enabled.
      *
-     * @param graphIdentifier The identifier of the graph holding the documents.
+     * @param datasetName The workspace holding the documents.
      * @param format The format to export in.
      * @param documentIds The documents to include.
-     * @param includeGenerated Whether to merge in the shapes generated from the schema.
+     * @param generatedFor URIs of the schemas whose generated shapes to merge in.
      * @return A ByteArrayOutputStream containing the export.
      */
     ByteArrayOutputStream exportSelectedSHACLGraph(
-            GraphIdentifier graphIdentifier,
+            String datasetName,
             RDFFormat format,
             Collection<UUID> documentIds,
-            boolean includeGenerated);
+            Collection<String> generatedFor);
 
     /**
      * Export the custom SHACL namespaces for a given graph identifier.
