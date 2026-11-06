@@ -33,6 +33,7 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { guardUnsavedChanges } from "$lib/eventhandling/unsavedChanges.js";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
+    import { ShapesFormView } from "$lib/shacl/formState.svelte.js";
     import { newDocumentText } from "$lib/shacl/newDocument.js";
     import {
         leavingNeedsConfirmation,
@@ -51,19 +52,23 @@
 
     import DocumentInspector from "./workbench/DocumentInspector.svelte";
     import DocumentList from "./workbench/DocumentList.svelte";
+    import FormEditor from "./workbench/FormEditor.svelte";
     import SchemaPicker from "./workbench/SchemaPicker.svelte";
 
     import { beforeNavigate, goto } from "$app/navigation";
     import { page } from "$app/state";
 
-    const VIEWS = [{ id: "ttl", label: "Turtle" }];
+    const VIEWS = [
+        { id: "ttl", label: "Turtle" },
+        { id: "form", label: "Form" },
+    ];
 
     let editor = $state(null);
 
     /** The open schema's name, as the navigation writes it: its dcat:keyword, not its URI. */
     let schemaName = $state("");
 
-    /** Which view of the open document is showing. */
+    /** Which view of the open document is showing. Both edit the same unsaved buffer. */
     let view = $state("ttl");
 
     /** The link already followed, so selecting its document does not re-trigger the follow. */
@@ -108,6 +113,16 @@
     const workbench = $derived(
         selectedWorkspace && selectedGraph
             ? new ShapesWorkbench({
+                  datasetName: selectedWorkspace,
+                  graphUri: selectedGraph,
+              })
+            : null,
+    );
+
+    /** Reads and writes the buffer as shapes, for the form view. */
+    const formView = $derived(
+        selectedWorkspace && selectedGraph
+            ? new ShapesFormView({
                   datasetName: selectedWorkspace,
                   graphUri: selectedGraph,
               })
@@ -227,6 +242,10 @@
 
     /** Saves the open document. Returns whether it was written, which the switch dialog needs. */
     async function save({ overwrite = false } = {}) {
+        // A field typed in and saved straight away — with Ctrl+S, or by clicking Save — still has
+        // its edit on the way to the buffer. Saving first would write the document without it and
+        // then show it coming back as an unsaved change.
+        await formView?.settle();
         const { saved, reason, unchanged, stale } = await workbench.save({
             overwrite,
         });
@@ -266,6 +285,9 @@
      * @param {{ allowSave?: boolean }} [options] whether Save is offered as an answer
      */
     async function confirmSwitch({ allowSave = true } = {}) {
+        // Land anything typed in the form before asking, or an edit still on its way would decide
+        // the question by arriving after the answer.
+        await formView?.settle();
         if (!workbench?.dirty) {
             return true;
         }
@@ -303,6 +325,24 @@
         });
     }
 
+    /**
+     * Takes the form's rewrite of the buffer — unless the buffer moved on while the form was
+     * working. The rewrite is of the text it was given, and applied over a newer one it would
+     * silently undo whatever was typed since. Returns false then, which has the form read the
+     * buffer again.
+     */
+    function applyFormText(next, base) {
+        if (base !== undefined && base !== workbench.text) {
+            toastStore.info(
+                "Form edit discarded",
+                "The text changed while the form was applying the edit. Make it again if it is still wanted.",
+            );
+            return false;
+        }
+        workbench.text = next;
+        return true;
+    }
+
     function answerSwitch(answer) {
         const resolve = pendingSwitch;
         pendingSwitch = null;
@@ -329,10 +369,43 @@
         editor?.reveal(line, column);
     }
 
-    /** Shows a line in the Turtle, whichever view the click came from. */
+    /**
+     * Shows a line in whichever view can show it: the form when that is where the reader is, and
+     * otherwise the Turtle — a click in the outline or the problems panel from the schema check
+     * would move a cursor nobody can see.
+     */
     function showLine(line, column = 1) {
         reveal(line, column);
+        if (view === "form" && formView) {
+            formView.focusLine = line;
+        } else {
+            view = "ttl";
+        }
+    }
+
+    /**
+     * Shows a line of the document in the Turtle view, from a card in the form.
+     *
+     * The editor stays mounted behind the form, so it is already scrolled by the time the view
+     * changes over.
+     */
+    function showInTurtle(line) {
         view = "ttl";
+        reveal(line);
+    }
+
+    /**
+     * The way back: the form card for the line the cursor is on.
+     *
+     * The line is left with the form view rather than resolved here, because which card holds a
+     * line is a question about shapes the form has not necessarily read yet.
+     */
+    function showInForm(line) {
+        if (!formView || !views.some(option => option.id === "form")) {
+            return;
+        }
+        formView.focusLine = line;
+        view = "form";
     }
 
     /**
@@ -499,6 +572,11 @@
                                         </button>
                                     {/each}
                                 </div>
+                                {#if view === "form" && formView?.applying}
+                                    <span class="text-text-subtle text-xs">
+                                        applying…
+                                    </span>
+                                {/if}
                                 {#if workbench.showingGenerated}
                                     <span class="text-text-subtle text-xs">
                                         derived from the schema — read-only
@@ -523,10 +601,21 @@
                                         readOnly={workbench.editorReadOnly}
                                         placeholder={workbench.editorReadOnly
                                             ? undefined
-                                            : "Empty document — write shapes in Turtle here."}
+                                            : "Empty document — write shapes in Turtle here, or add one in the Form view."}
                                         onSave={() => save()}
+                                        onshowinform={showInForm}
                                     />
                                 </div>
+                                {#if view === "form" && formView}
+                                    <FormEditor
+                                        form={formView}
+                                        documentId={workbench.selectedId}
+                                        turtle={workbench.text}
+                                        readOnly={workbench.readOnly}
+                                        onturtle={applyFormText}
+                                        onreveal={showInTurtle}
+                                    />
+                                {/if}
                             </div>
                         </div>
                     {/if}

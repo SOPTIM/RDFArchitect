@@ -34,6 +34,8 @@
         maxHeight = 480,
         onSave = undefined,
         onchange = undefined,
+        /** Called with the cursor's line when the reader asks to see it in the form view. */
+        onshowinform = undefined,
         /**
          * Which document `value` belongs to. A change opens the new text with a history of its
          * own; without one, every new value is an undoable edit to the text before it.
@@ -112,6 +114,17 @@
                     fixedOverflowWidgets: true,
                 });
                 editor = created;
+
+                // The way back from the text to the form. Monaco owns this context menu, so the
+                // entry has to be an editor action rather than one of the app's own menus.
+                created.addAction({
+                    id: "rdfa.shacl.showInForm",
+                    label: "Show in the Form view",
+                    contextMenuGroupId: "navigation",
+                    contextMenuOrder: 1.6,
+                    run: instance =>
+                        onshowinform?.(instance.getPosition()?.lineNumber ?? 1),
+                });
 
                 created.onDidChangeModelContent(() => {
                     value = created.getValue();
