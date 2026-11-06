@@ -29,6 +29,7 @@
         faFileImport,
         faFolderOpen,
         faPen,
+        faScaleBalanced,
         faTrash,
         faWandMagicSparkles,
     } from "@fortawesome/free-solid-svg-icons";
@@ -235,7 +236,8 @@
   Every enabled document applies and none overrides another, so the checkbox is about participation
   and the arrows are about reading order — neither changes which constraints win.
 
-  The first entry under a schema is not a document at all but what RDFArchitect derives from it, because this is where someone looks for "what constrains
+  Opening a schema compares it with its documents. The first entry under it is not a document at all
+  but what RDFArchitect derives from it, because this is where someone looks for "what constrains
   this schema".
 
   Each row carries its actions twice, on purpose: on the row itself, where hovering shows them
@@ -520,9 +522,11 @@
                         : 'hover:bg-nav-hover-background focus-within:bg-nav-hover-background border-transparent'}"
                 >
                     {@render groupToggle(schema.uri, schema.label)}
-                    <span
-                        class="flex min-w-0 flex-1 items-baseline gap-2"
-                        title={schema.uri}
+                    <button
+                        class="flex min-w-0 flex-1 cursor-pointer items-baseline gap-2 text-left"
+                        aria-current={comparing ? "true" : undefined}
+                        title={`${schema.uri}\nOpen to compare this schema with its documents`}
+                        onclick={() => workbench.compare(schema.uri)}
                     >
                         <span class="truncate text-sm font-semibold">
                             {schema.label}
@@ -531,10 +535,18 @@
                             {documents.length}
                             {documents.length === 1 ? "document" : "documents"}
                         </span>
-                    </span>
+                    </button>
                     <div
                         class="absolute inset-y-0 right-1 flex items-center gap-0.5 rounded bg-inherit pl-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100"
                     >
+                        <button
+                            class={ROW_ACTION}
+                            title="Compare with the schema"
+                            aria-label={`Compare ${schema.label} with its documents`}
+                            onclick={() => workbench.compare(schema.uri)}
+                        >
+                            <Fa icon={faScaleBalanced} />
+                        </button>
                         {#if !readOnly}
                             <button
                                 class={ROW_ACTION}
