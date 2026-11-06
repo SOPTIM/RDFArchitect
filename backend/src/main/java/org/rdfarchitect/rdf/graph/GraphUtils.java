@@ -212,28 +212,37 @@ public class GraphUtils {
      * which leaves it unaffected by an edit far away.
      */
     private static void separateLookalikes(Map<Node, List<Edge>> edges, Map<Node, String> hashes) {
-        var groups = groupsSharingALabel(hashes.keySet(), hashes);
+        var lookalikes = groupsSharingALabel(hashes.keySet(), hashes);
+        var refined = new HashMap<>(hashes);
+        var groups = lookalikes;
         var budget = REFINEMENT_BUDGET;
         while (!groups.isEmpty()) {
             var next = new HashMap<Node, String>();
             for (var group : groups) {
                 for (var node : group) {
                     var fingerprint =
-                            blankNodeFingerprint(edges.getOrDefault(node, List.of()), hashes);
+                            blankNodeFingerprint(edges.getOrDefault(node, List.of()), refined);
                     // The old label goes in as well, so that a group can only ever split further.
-                    next.put(node, sha256prefix(hashes.get(node) + "|" + fingerprint));
+                    next.put(node, sha256prefix(refined.get(node) + "|" + fingerprint));
                 }
             }
-            var refined = groupsSharingALabel(next.keySet(), next);
-            if (refined.size() == groups.size() && next.size() == nodesIn(refined)) {
-                return;
+            var split = groupsSharingALabel(next.keySet(), next);
+            if (split.size() == groups.size() && next.size() == nodesIn(split)) {
+                break;
             }
-            hashes.putAll(next);
-            groups = refined;
+            refined.putAll(next);
+            groups = split;
             budget -= next.size();
             if (budget <= 0) {
-                keepApart(groups, hashes);
-                return;
+                keepApart(groups, refined);
+                break;
+            }
+        }
+        // Only a group that really split takes new labels: true duplicates keep theirs, however
+        // many passes something else elsewhere in the graph needed.
+        for (var group : lookalikes) {
+            if (group.stream().map(refined::get).distinct().count() > 1) {
+                group.forEach(node -> hashes.put(node, refined.get(node)));
             }
         }
     }

@@ -34,6 +34,7 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeTyp
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMAttributeUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
+import org.rdfarchitect.shacl.XSDDatatypeMapper;
 
 import java.util.List;
 import java.util.Objects;
@@ -128,7 +129,9 @@ public class DefaultValueAssigner {
                 || CIMAttributeUtils.hasCIMDatatype(attributeResource)
                 || CIMAttributeUtils.hasXSDDatatype(attributeResource)) {
             attributeChange.setPrimitiveDataType(
-                    CIMAttributeUtils.getPrimitiveDatatype(attributeResource).getURI());
+                    XSDDatatypeMapper.forPlainValue(
+                                    CIMAttributeUtils.getPrimitiveDatatype(attributeResource))
+                            .getURI());
             attributeChange.setDataType(
                     attributeResource.getProperty(CIMS.datatype).getResource().getURI());
         } else if (CIMAttributeUtils.hasEnumAttribute(attributeResource)) {

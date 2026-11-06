@@ -22,6 +22,7 @@ import lombok.experimental.UtilityClass;
 import org.apache.jena.datatypes.BaseDatatype;
 import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.datatypes.TypeMapper;
+import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.datatypes.xsd.impl.RDFLangString;
 import org.apache.jena.vocabulary.XSD;
 
@@ -65,6 +66,14 @@ public class XSDDatatypeMapper {
             }
         }
         return new BaseDatatype(xsdUri);
+    }
+
+    /**
+     * The datatype to write a value of {@code datatype} with when that value is only text, as a
+     * migration's default is: {@code rdf:langString} needs a language tag, so it is a plain string.
+     */
+    public RDFDatatype forPlainValue(RDFDatatype datatype) {
+        return datatype == RDFLangString.rdfLangString ? XSDDatatype.XSDstring : datatype;
     }
 
     /**
