@@ -22,7 +22,6 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.datatypes.TypeMapper;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.update.UpdateRequest;
 import org.rdfarchitect.context.MigrationSessionStore;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
@@ -65,10 +64,10 @@ public class SparqlUpdateGenerator {
         }
 
         var subClasses = getClassHierarchy(classIri);
-        var result = new UpdateRequest();
+        var result = new StringBuilder();
 
         for (var subClass : subClasses) {
-            result.add(generateAddAttributeToSingleClassUpdate(attributeChange, subClass));
+            append(result, generateAddAttributeToSingleClassUpdate(attributeChange, subClass));
         }
 
         return result.toString();
@@ -114,26 +113,26 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateRenameAttributeUpdate(SemanticAttributeChange attributeChange) {
-        var result = new UpdateRequest();
+        var result = new StringBuilder();
         for (var oldIri : attributeChange.getAllOldIRIs()) {
             var pss = SparqlTemplateLoader.loadTemplate("migration/attribute-renamed");
             pss.setIri("oldAttribute", oldIri);
             pss.setIri("newAttribute", attributeChange.getIri());
-            result.add(pss.toString());
+            append(result, pss.toString());
         }
         return result.toString();
     }
 
     public <T extends SemanticPropertyChange> String generateSplitPropertyUpdate(List<T> siblings) {
         var oldAttribute = siblings.getFirst().getOldIRI();
-        var result = new UpdateRequest();
+        var result = new StringBuilder();
         for (var sibling : siblings) {
             for (var classIri : getClassHierarchy(sibling.getDomain())) {
                 var pss = SparqlTemplateLoader.loadTemplate("migration/property-split");
                 pss.setIri("oldProperty", oldAttribute);
                 pss.setIri("newProperty", sibling.getIri());
                 pss.setIri("domain", classIri);
-                result.add(pss.toString());
+                append(result, pss.toString());
             }
         }
         return result.toString();
@@ -178,12 +177,12 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateRenameEnumEntryUpdate(SemanticEnumEntryChange enumEntryChange) {
-        var result = new UpdateRequest();
+        var result = new StringBuilder();
         for (var oldIri : enumEntryChange.getAllOldIRIs()) {
             var pss = SparqlTemplateLoader.loadTemplate("migration/enum-entry-renamed");
             pss.setIri("oldEnumEntry", oldIri);
             pss.setIri("newEnumEntry", enumEntryChange.getIri());
-            result.add(pss.toString());
+            append(result, pss.toString());
         }
         return result.toString();
     }
@@ -203,14 +202,13 @@ public class SparqlUpdateGenerator {
         }
 
         var subClasses = getClassHierarchy(associationChange.getMapping());
-        var result = new UpdateRequest();
+        var result = new StringBuilder();
 
         for (var subClass : subClasses) {
-            result.add(generateAddAssociationToSingleClassUpdate(associationChange, subClass));
+            append(result, generateAddAssociationToSingleClassUpdate(associationChange, subClass));
         }
 
-        var updateString = result.toString();
-        return updateString.replace("<mapping>", associationChange.getMapping());
+        return result.toString();
     }
 
     public String generateAddAssociationToSingleClassUpdate(
@@ -229,12 +227,12 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateRenameAssociationUpdate(SemanticAssociationChange associationChange) {
-        var result = new UpdateRequest();
+        var result = new StringBuilder();
         for (var oldIri : associationChange.getAllOldIRIs()) {
             var pss = SparqlTemplateLoader.loadTemplate("migration/association-renamed");
             pss.setIri("oldAssociation", oldIri);
             pss.setIri("newAssociation", associationChange.getIri());
-            result.add(pss.toString());
+            append(result, pss.toString());
         }
         return result.toString();
     }
@@ -243,6 +241,16 @@ public class SparqlUpdateGenerator {
             SemanticAssociationChange associationChange) {
         return generateDeletePropertyUpdate(associationChange)
                 + generateAddAssociationUpdate(associationChange);
+    }
+
+    /**
+     * Appends a single update to a multi-update script. The templates already carry the trailing
+     * {@code ;} that separates them, so the blocks only need to be concatenated.
+     */
+    private void append(StringBuilder script, String update) {
+        if (!update.isBlank()) {
+            script.append(update);
+        }
     }
 
     private boolean lacksDefaultValue(SemanticAttributeChange attributeChange) {
