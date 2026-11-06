@@ -61,6 +61,6 @@ public class ShapesDocumentInfo {
     /** Property shapes, named and inline — the rules on individual properties. */
     private int propertyShapeCount;
 
-    /** SPARQL constraints, which the form has no fields for. */
+    /** SPARQL constraints, which neither of the shape counts says anything about. */
     private int sparqlConstraintCount;
 }
