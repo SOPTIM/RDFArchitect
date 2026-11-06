@@ -39,6 +39,7 @@ import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.diagrams.RemoveFromCustomDiagramUseCase;
+import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CrossProfileDiagramLayoutUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseCase;
@@ -62,6 +63,7 @@ public class UpdateClassService
     private final DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase;
     private final RemoveFromCustomDiagramUseCase removeFromCustomDiagramUseCase;
     private final CrossProfileDiagramLayoutUseCase crossProfileDiagramLayoutUseCase;
+    private final SyncDiagramLayoutUseCase syncDiagramLayoutUseCase;
 
     public UpdateClassService(
             DatabasePort databasePort,
@@ -72,7 +74,8 @@ public class UpdateClassService
             DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase,
             @Value("${attributes.newValuesBlankNode:false}") boolean newValuesAsBlankNode,
             CrossProfileDiagramLayoutUseCase crossProfileDiagramLayoutUseCase,
-            RemoveFromCustomDiagramUseCase removeFromCustomDiagramUseCase) {
+            RemoveFromCustomDiagramUseCase removeFromCustomDiagramUseCase,
+            SyncDiagramLayoutUseCase syncDiagramLayoutUseCase) {
         this.databasePort = databasePort;
         this.classMapper = classMapper;
         this.packageMapper = packageMapper;
@@ -82,6 +85,7 @@ public class UpdateClassService
         this.newValuesAsBlankNode = newValuesAsBlankNode;
         this.crossProfileDiagramLayoutUseCase = crossProfileDiagramLayoutUseCase;
         this.removeFromCustomDiagramUseCase = removeFromCustomDiagramUseCase;
+        this.syncDiagramLayoutUseCase = syncDiagramLayoutUseCase;
     }
 
     /**
@@ -124,6 +128,7 @@ public class UpdateClassService
                         newClassUri);
             }
 
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(describeClassUpdate(oldClassUri, newClass.getLabel()));
         }
     }
@@ -158,6 +163,7 @@ public class UpdateClassService
                             newClass);
             createClassLayoutDataUseCase.createClassLayoutData(
                     graphIdentifier, packageDTO, className, newClassUUID, classLayoutPosition);
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Added", "class", ChangeDescriptions.name(newClass.getLabel())));
@@ -210,6 +216,7 @@ public class UpdateClassService
 
             deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, classUUID);
             removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, classUUID);
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
 
             transaction.commit("Deleted class \"%s\"".formatted(classLabel));
         }

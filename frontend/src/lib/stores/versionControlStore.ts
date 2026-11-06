@@ -60,6 +60,17 @@ type MoveResult = {
     skipped?: boolean;
 };
 
+/**
+ * Something in the editor that holds changes it saves later, such as the
+ * points of the edge being edited, which are saved once it is deselected.
+ */
+type UnsavedChanges = {
+    /** Whether the user is moving something right now, e.g. a class. */
+    isBusy: () => boolean;
+    /** Saves the changes right away, resolved once the backend has them. */
+    save: () => Promise<unknown>;
+};
+
 const LOG = "[versionControlStore]";
 
 export const versionControlStore = createVersionControlStore();
@@ -195,6 +206,37 @@ function createVersionControlStore() {
      */
     let queue: Promise<unknown> = Promise.resolve();
 
+    const unsavedChanges = new Set<UnsavedChanges>();
+
+    /**
+     * Lets a move save what the editor has not saved yet before it moves, so
+     * that the change the user just made is the one an undo takes back.
+     *
+     * @returns a function that stops the move from asking
+     */
+    function registerUnsavedChanges(changes: UnsavedChanges) {
+        unsavedChanges.add(changes);
+        return () => {
+            unsavedChanges.delete(changes);
+        };
+    }
+
+    /**
+     * Saves what the editor has not saved yet. A move while the user is still
+     * moving something is not made at all: the drop would save the new place
+     * afterwards anyway and take the redo away.
+     *
+     * @returns whether the move can go ahead
+     */
+    async function saveUnsavedChanges() {
+        const sources = [...unsavedChanges];
+        if (sources.some(changes => changes.isBusy())) {
+            return false;
+        }
+        await Promise.all(sources.map(changes => changes.save()));
+        return true;
+    }
+
     function enqueue(perform: () => Promise<MoveResult>) {
         const result = queue.then(perform);
         // A move that throws must not take the ones behind it down with it.
@@ -274,6 +316,9 @@ function createVersionControlStore() {
         if (!target) {
             return cannotStart(direction, `No ${direction} target selected.`);
         }
+        if (!(await saveUnsavedChanges())) {
+            return { error: null, skipped: true };
+        }
         let expectedChangeId: string | undefined;
         if (direction === "undo") {
             const confirmation = await confirmIfDestructive(target);
@@ -322,6 +367,9 @@ function createVersionControlStore() {
         return enqueue(async () => {
             if (!target) {
                 return cannotStart("restore", "No workspace selected.");
+            }
+            if (!(await saveUnsavedChanges())) {
+                return { error: null, skipped: true };
             }
             const { data, error, response } = await sdkRestore({
                 path: { datasetName: target },
@@ -445,6 +493,7 @@ function createVersionControlStore() {
         canUndo,
         canRedo,
         invalidateWorkspace,
+        registerUnsavedChanges,
         undo: (workspace?: string) =>
             enqueue(() => takeStep(workspace, "undo")),
         redo: (workspace?: string) =>

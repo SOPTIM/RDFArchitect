@@ -41,6 +41,10 @@ export const GRAPH_FILTER_KEYS = [
 
 export const renderOptions = createRenderOptions();
 
+/**
+ * The overrides are changed per key rather than replaced, so a reader only reacts to the keys it
+ * reads: toggling a filter that only changes how classes are drawn does not fetch the diagram anew.
+ */
 function createRenderOptions() {
     let overrides = $state({});
 
@@ -57,15 +61,15 @@ function createRenderOptions() {
                 RENDER_OPTION_DEFAULTS[key],
             );
             if (value === defaultValue) {
-                overrides = Object.fromEntries(
-                    Object.entries(overrides).filter(([k]) => k !== key),
-                );
+                delete overrides[key];
             } else {
-                overrides = { ...overrides, [key]: value };
+                overrides[key] = value;
             }
         },
         reset() {
-            overrides = {};
+            for (const key of Object.keys(overrides)) {
+                delete overrides[key];
+            }
         },
         get hasOverrides() {
             return Object.keys(overrides).length > 0;

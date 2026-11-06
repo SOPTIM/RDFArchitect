@@ -382,6 +382,53 @@ describe("versionControlStore", () => {
             expect(result.error).toBe("No undo target selected.");
             expect(api.undo).not.toHaveBeenCalled();
         });
+
+        test("saves what the editor has not saved yet before it undoes", async () => {
+            const order: string[] = [];
+            vi.mocked(api.undo).mockImplementation(async () => {
+                order.push("undo");
+                return { data: { change: { message: "a change" } } } as never;
+            });
+            store.registerUnsavedChanges({
+                isBusy: () => false,
+                save: async () => {
+                    await Promise.resolve();
+                    order.push("saved");
+                },
+            });
+
+            await store.undo(WORKSPACE);
+
+            expect(order).toEqual(["saved", "undo"]);
+        });
+
+        test("does not undo while the user is moving something", async () => {
+            const save = vi.fn();
+            store.registerUnsavedChanges({ isBusy: () => true, save });
+
+            const result = await store.undo(WORKSPACE);
+
+            expect(result).toEqual({ error: null, skipped: true });
+            expect(save).not.toHaveBeenCalled();
+            expect(api.undo).not.toHaveBeenCalled();
+        });
+
+        test("no longer asks an editor that is gone", async () => {
+            const save = vi.fn();
+            const unregister = store.registerUnsavedChanges({
+                isBusy: () => false,
+                save,
+            });
+            vi.mocked(api.undo).mockResolvedValue({
+                data: { change: { message: "a change" } },
+                error: undefined,
+            } as never);
+
+            unregister();
+            await store.undo(WORKSPACE);
+
+            expect(save).not.toHaveBeenCalled();
+        });
     });
 
     // -------------------------------------------------------------------------

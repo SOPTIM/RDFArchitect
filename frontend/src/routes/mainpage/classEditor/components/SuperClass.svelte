@@ -16,21 +16,35 @@
   -->
 
 <script>
-    import { getContext, onMount } from "svelte";
+    import { getContext, onMount, untrack } from "svelte";
     import { v4 as uuid } from "uuid";
 
+    import { claimFocus } from "$lib/actions/claimFocus.js";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
+    import { superClassFocusRequest } from "$lib/propertyEditorRequest.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     let { superClass } = $props();
 
     const classEditorContext = getContext("classEditor");
     const id = uuid();
+    let focusToken = $state(null);
 
     let classes = $derived(classEditorContext.classes);
     let readonly = $derived(classEditorContext.readOnly);
+
+    $effect(() => {
+        const request = superClassFocusRequest.current;
+        if (
+            request &&
+            request.classUuid === classEditorContext.reactiveClass?.uuid?.value
+        ) {
+            focusToken = request.token;
+            untrack(() => superClassFocusRequest.close());
+        }
+    });
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
@@ -57,7 +71,7 @@
     <td class="text-blue pt-1 align-top whitespace-nowrap">
         <label for={id}>Derived from</label>
     </td>
-    <td class="flex w-full flex-col space-x-1">
+    <td class="flex w-full flex-col space-x-1" use:claimFocus={focusToken}>
         <SearchableSelect
             {id}
             value={getSuperClassLabel(superClass.value)}

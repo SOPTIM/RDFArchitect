@@ -15,17 +15,20 @@
  *
  */
 
-package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
+package org.rdfarchitect.services.dl.update.packagelayout;
 
-import lombok.Builder;
-import lombok.Data;
+import org.rdfarchitect.database.GraphIdentifier;
 
-/** DTO representing a 3D position within a diagram layout. */
-@Data
-@Builder
-public class PositionDTO {
+import java.util.UUID;
 
-    private double x;
-    private double y;
-    private int z;
+public interface ReplaceDiagramUseCase {
+
+    /**
+     * Replaces the diagram with a new diagram created using the values in the parameters
+     *
+     * @param graphIdentifier the identifier of the graph
+     * @param packageUUID the UUID of the package identifying the diagram
+     * @param packageName the name of the new diagram
+     */
+    void replaceDiagram(GraphIdentifier graphIdentifier, UUID packageUUID, String packageName);
 }
