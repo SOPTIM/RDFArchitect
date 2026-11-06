@@ -210,7 +210,7 @@ describe("the standard vocabulary", () => {
         );
     });
 
-    test("the form's term list stays the schema's, without sh: in it", async () => {
+    test("terms stays the schema's own, without sh: in it", async () => {
         await source.load();
 
         // "Which property of my schema is this rule about?" is never answered by sh:minCount.
