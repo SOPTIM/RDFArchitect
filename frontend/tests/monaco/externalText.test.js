@@ -23,7 +23,7 @@ import {
 } from "../../src/lib/monaco/externalText.js";
 
 /**
- * Text written into the editor from outside it — a form edit, above all.
+ * Text written into the editor from outside it.
  *
  * The behaviour under test is what `setValue` took away: an undoable edit that leaves the view
  * where it was.

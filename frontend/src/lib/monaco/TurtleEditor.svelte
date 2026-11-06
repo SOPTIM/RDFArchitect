@@ -162,7 +162,7 @@
     /**
      * Pushes an external change into the editor.
      *
-     * Within one document it is an edit on the model rather than a `setValue`, so a form edit stays
+     * Within one document it is an edit on the model rather than a `setValue`, so an outside change stays
      * undoable and the view does not jump — see `pushExternalText`. Another document replaces the
      * model's text and history outright — see `openText`.
      */
