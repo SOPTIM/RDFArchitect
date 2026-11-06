@@ -22,9 +22,9 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.shared.Lock;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
@@ -55,44 +55,57 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SyncDiagramLayoutService implements SyncDiagramLayoutUseCase {
 
+    /**
+     * What a sync is recorded as if it runs on its own. Called inside the transaction of the change
+     * that made it necessary, as it is meant to be, it joins that transaction and its message is
+     * dropped, so the change and the sync of the layout are one entry and one undo step.
+     */
+    private static final String SYNC_MESSAGE = "Updated the diagram layout";
+
     private final DatabasePort databasePort;
 
     @Override
     public void syncDiagramLayout(GraphIdentifier graphIdentifier) {
-        syncGraphDiagramLayout(graphIdentifier);
-        syncDatasetDiagramLayout(graphIdentifier.datasetName());
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            syncGraphDiagramLayout(transaction, graphIdentifier.graphUri());
+            syncDatasetDiagramLayout(transaction, graphIdentifier.datasetName());
+            transaction.commit(SYNC_MESSAGE);
+        }
     }
 
     @Override
     public void syncDatasetDiagramLayout(String datasetName) {
-        var diagramLayoutModel =
-                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        diagramLayoutModel.enterCriticalSection(Lock.WRITE);
-        try {
-            var diagramMRIDs = DLObjectFetcher.fetchDiagramMRIDs(diagramLayoutModel);
-            if (diagramMRIDs.isEmpty()) {
-                return;
-            }
-            var profiles = CIMProfileModels.loadAll(databasePort, Map.of(), datasetName, null);
-            var edgeResolver = EdgeResolver.forMergedProfiles(profiles);
-            var crossProfileDiagramUUID =
-                    databasePort
-                            .getCrossProfileDiagramInfo(datasetName)
-                            .getCrossProfileDiagramUUID();
-            var customDiagrams = databasePort.getDatasetDiagrams(datasetName);
-            for (var diagramMRID : diagramMRIDs) {
-                syncDiagram(
-                        diagramLayoutModel,
-                        diagramMRID,
-                        shownClassesOfDatasetDiagram(
-                                profiles,
-                                diagramMRID.getUuid(),
-                                crossProfileDiagramUUID,
-                                customDiagrams),
-                        edgeResolver);
-            }
-        } finally {
-            diagramLayoutModel.leaveCriticalSection();
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            syncDatasetDiagramLayout(transaction, datasetName);
+            transaction.commit(SYNC_MESSAGE);
+        }
+    }
+
+    /**
+     * Syncs the cross-profile diagram and the custom diagrams of the workspace itself, see {@link
+     * #syncDiagram(Model, MRID, Optional, EdgeResolver)}.
+     */
+    private void syncDatasetDiagramLayout(WorkspaceTransaction transaction, String datasetName) {
+        var diagramLayoutModel = transaction.layout().getDiagramLayoutModel();
+        var diagramMRIDs = DLObjectFetcher.fetchDiagramMRIDs(diagramLayoutModel);
+        if (diagramMRIDs.isEmpty()) {
+            return;
+        }
+        var profiles = CIMProfileModels.loadAll(databasePort, Map.of(), datasetName, null);
+        var edgeResolver = EdgeResolver.forMergedProfiles(profiles);
+        var crossProfileDiagramUUID = transaction.crossProfileDiagramId();
+        var customDiagrams = transaction.diagrams();
+        for (var diagramMRID : diagramMRIDs) {
+            syncDiagram(
+                    diagramLayoutModel,
+                    diagramMRID,
+                    shownClassesOfDatasetDiagram(
+                            profiles,
+                            diagramMRID.getUuid(),
+                            crossProfileDiagramUUID,
+                            customDiagrams),
+                    edgeResolver);
         }
     }
 
@@ -100,28 +113,24 @@ public class SyncDiagramLayoutService implements SyncDiagramLayoutUseCase {
      * Syncs the package diagrams and the custom diagrams of a graph, see {@link #syncDiagram(Model,
      * MRID, Optional, EdgeResolver)}.
      */
-    private void syncGraphDiagramLayout(GraphIdentifier graphIdentifier) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            var diagramLayout = ctx.getDiagramLayout();
-            var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
-            var cimModel =
-                    new CIMModelFacade(
-                            graphIdentifier.graphUri(),
-                            ModelFactory.createModelForGraph(ctx.getRdfGraph()));
-            var edgeResolver = EdgeResolver.forGraph(cimModel);
-            var defaultPackageUUID = diagramLayout.getDefaultPackageMRID().getUuid();
-            for (var diagramMRID : DLObjectFetcher.fetchDiagramMRIDs(diagramLayoutModel)) {
-                syncDiagram(
-                        diagramLayoutModel,
-                        diagramMRID,
-                        shownClassesOfGraphDiagram(
-                                cimModel,
-                                diagramMRID.getUuid(),
-                                defaultPackageUUID,
-                                ctx.getCustomDiagrams()),
-                        edgeResolver);
-            }
-            ctx.commit();
+    private static void syncGraphDiagramLayout(WorkspaceTransaction transaction, String graphUri) {
+        var ctx = transaction.graph(graphUri);
+        var diagramLayout = ctx.getDiagramLayout();
+        var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
+        var cimModel =
+                new CIMModelFacade(graphUri, ModelFactory.createModelForGraph(ctx.getRdfGraph()));
+        var edgeResolver = EdgeResolver.forGraph(cimModel);
+        var defaultPackageUUID = diagramLayout.getDefaultPackageMRID().getUuid();
+        for (var diagramMRID : DLObjectFetcher.fetchDiagramMRIDs(diagramLayoutModel)) {
+            syncDiagram(
+                    diagramLayoutModel,
+                    diagramMRID,
+                    shownClassesOfGraphDiagram(
+                            cimModel,
+                            diagramMRID.getUuid(),
+                            defaultPackageUUID,
+                            ctx.getCustomDiagrams()),
+                    edgeResolver);
         }
     }
 

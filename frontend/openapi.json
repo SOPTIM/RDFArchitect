@@ -820,6 +820,9 @@
           "allEdges" : {
             "type" : "boolean"
           },
+          "automatic" : {
+            "type" : "boolean"
+          },
           "classes" : {
             "items" : {
               "$ref" : "#/components/schemas/ClassPositionDTO"

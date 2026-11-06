@@ -57,6 +57,8 @@ import org.rdfarchitect.services.update.classes.UpdateClassService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import utils.TestWorkspaces;
+
 import java.util.UUID;
 
 @SpringBootTest

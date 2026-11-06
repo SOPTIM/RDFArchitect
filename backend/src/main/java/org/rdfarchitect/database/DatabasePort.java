@@ -49,9 +49,7 @@ public interface DatabasePort {
     boolean canUndo(String workspaceName);
 
     /**
-     * Get the {@link DiagramLayout} for all custom diagrams defined on a dataset. Unlike the
-     * diagram layout of a graph it is not guarded by a transaction, so its model must only be read
-     * and written inside a critical section of the model, see {@link DiagramLayout}.
+     * Returns the change the next undo would take back, or {@code null} if there is none.
      *
      * @param workspaceName the workspace to inspect
      * @return the change an undo would take back

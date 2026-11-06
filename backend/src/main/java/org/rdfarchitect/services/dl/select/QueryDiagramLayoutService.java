@@ -21,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
-import org.apache.jena.shared.Lock;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.DiagramLayout;
@@ -46,14 +45,12 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
 
     @Override
     public RenderingLayoutData fetchGlobalRenderingLayoutData(String datasetName, UUID diagramId) {
-        var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
-        var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
-        diagramLayoutModel.enterCriticalSection(Lock.READ);
-        try {
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            var diagramLayout = transaction.layout();
             return fetchRenderingLayoutData(
-                    diagramLayout.getDefaultPackageMRID().getUuid(), diagramLayoutModel, diagramId);
-        } finally {
-            diagramLayoutModel.leaveCriticalSection();
+                    diagramLayout.getDefaultPackageMRID().getUuid(),
+                    diagramLayout.getDiagramLayoutModel(),
+                    diagramId);
         }
     }
 

@@ -24,6 +24,7 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -37,8 +38,16 @@ public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCa
 
     @Override
     public void deleteGraph(GraphIdentifier graphIdentifier) {
-        databasePort.deleteGraph(graphIdentifier);
-        syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.datasetName());
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            transaction.deleteGraph(graphIdentifier.graphUri());
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.datasetName());
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Deleted",
+                            "schema",
+                            ChangeDescriptions.localName(graphIdentifier.graphUri())));
+        }
     }
 
     @Override
@@ -56,12 +65,12 @@ public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCa
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
             transaction.deleteGraph(graphIdentifier.graphUri());
             transaction.createGraph(graphIdentifier.graphUri(), graph);
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.datasetName());
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Replaced",
                             "schema",
                             ChangeDescriptions.localName(graphIdentifier.graphUri())));
         }
-        syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.datasetName());
     }
 }

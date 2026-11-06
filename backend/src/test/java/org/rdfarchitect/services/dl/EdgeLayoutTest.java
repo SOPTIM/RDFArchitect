@@ -53,6 +53,7 @@ import org.rdfarchitect.dl.data.dto.relations.EdgeKey;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.rdf.resources.DL;
+import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.models.dto.rendering.svelteflow.RenderMergedDiagramSvelteFlowService;
@@ -719,7 +720,9 @@ class EdgeLayoutTest {
     @Test
     void deletingAnAssociation_dropsItsEdgeTogetherWithItsLabels() {
         layoutClasses(SUB, SUPER, OTHER_SUPER, TARGET);
-        try (var ctx = databasePort.getGraphWithContext(graphOne).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphOne.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphOne.graphUri());
             DiagramLayoutServiceUtils.insertLabel(
                     ctx.getDiagramLayout().getDiagramLayoutModel(),
                     PACKAGE,
@@ -727,7 +730,7 @@ class EdgeLayoutTest {
                     DiagramObjectStyle.MULTIPLICITY,
                     5,
                     5);
-            ctx.commit();
+            transaction.commit("test change");
         }
         assertThat(DLObjectFetcher.fetchDiagramLabelDOs(graphLayout(), PACKAGE)).hasSize(1);
 
@@ -1043,14 +1046,20 @@ class EdgeLayoutTest {
                         .build()
                         .graph();
         var identifier = new GraphIdentifier(DATASET, graphUri);
-        databasePort.createGraph(identifier, graph);
+        databasePort.createWorkspaceIfAbsent(DATASET);
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.WRITE)) {
+            transaction.createGraph(graphUri, graph);
+            transaction.commit("created graph %s".formatted(graphUri));
+        }
         return identifier;
     }
 
     private void editSchema(Consumer<Model> edit) {
-        try (var ctx = databasePort.getGraphWithContext(graphOne).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphOne.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphOne.graphUri());
             edit.accept(ModelFactory.createModelForGraph(ctx.getRdfGraph()));
-            ctx.commit("edit schema");
+            transaction.commit("edit schema");
         }
     }
 
@@ -1135,6 +1144,50 @@ class EdgeLayoutTest {
                 .orElseThrow();
     }
 
+    @Test
+    void savingEdgePoints_isOneStepInTheHistory() {
+        layoutClasses(SUB, SUPER);
+        var stepsBefore = history().size();
+
+        edgeLayoutService.updateEdgeLayouts(
+                graphOne, PACKAGE, List.of(inheritanceLayout(point(newIds(1).getFirst(), 50, 50))));
+
+        assertThat(history()).hasSize(stepsBefore + 1);
+        assertThat(history().getFirst().message()).startsWith("Moved edge points");
+    }
+
+    @Test
+    void anAutomaticDiagramLayout_isNotRecordedInTheHistory() {
+        layoutClasses(SUB, SUPER);
+        var stepsBefore = history().size();
+        var diagramLayout = new DiagramLayoutDTO();
+        diagramLayout.setEdges(List.of(inheritanceLayout(point(newIds(1).getFirst(), 50, 50))));
+        diagramLayout.setAutomatic(true);
+
+        new UpdateDiagramLayoutService(databasePort)
+                .updateDiagramLayout(graphOne, PACKAGE, diagramLayout);
+
+        assertThat(history()).hasSize(stepsBefore);
+        assertThat(pointsOf(EdgeKey.inheritance(SUB, SUPER))).hasSize(1);
+    }
+
+    @Test
+    void theFirstLayoutOfADiagram_isNotRecordedInTheHistory() {
+        var stepsBefore = history().size();
+        var diagramLayout = new DiagramLayoutDTO();
+        diagramLayout.setClasses(positions(SUB, SUPER));
+
+        new UpdateDiagramLayoutService(databasePort)
+                .updateDiagramLayout(graphOne, PACKAGE, diagramLayout);
+
+        assertThat(history()).hasSize(stepsBefore);
+        assertThat(classesOf(PACKAGE)).containsExactlyInAnyOrder(SUB, SUPER);
+    }
+
+    private List<WorkspaceChangeLogEntry> history() {
+        return databasePort.listChanges(DATASET);
+    }
+
     private static List<String> newIds(int count) {
         return Stream.generate(() -> UUID.randomUUID().toString()).limit(count).toList();
     }
@@ -1172,15 +1225,24 @@ class EdgeLayoutTest {
         return CrossProfileUtils.mergedUuid("http://example.com#" + localName);
     }
 
+    /** A copy of the layout of the first graph, read in a transaction of its own. */
     private Model graphLayout() {
-        return databasePort
-                .getGraphWithContext(graphOne)
-                .getDiagramLayout()
-                .getDiagramLayoutModelDirect();
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
+            return ModelFactory.createDefaultModel()
+                    .add(
+                            transaction
+                                    .graph(graphOne.graphUri())
+                                    .getDiagramLayout()
+                                    .getDiagramLayoutModel());
+        }
     }
 
+    /** A copy of the layout of the diagrams of the workspace, read in a transaction of its own. */
     private Model datasetLayout() {
-        return databasePort.getDatasetDiagramLayout(DATASET).getDiagramLayoutModel();
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
+            return ModelFactory.createDefaultModel()
+                    .add(transaction.layout().getDiagramLayoutModel());
+        }
     }
 
     private Set<EdgeKey> edgesOf(UUID diagramUUID) {

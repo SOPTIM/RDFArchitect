@@ -30,6 +30,8 @@ import org.rdfarchitect.api.dto.DataTypeDTO;
 import org.rdfarchitect.api.dto.association.AssociationDTO;
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.api.dto.association.AssociationPairMapper;
+import org.rdfarchitect.api.dto.delete.DeleteAction;
+import org.rdfarchitect.api.dto.delete.ResourceDeleteRequest;
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
@@ -49,6 +51,7 @@ import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.models.dto.rendering.svelteflow.RenderMergedDiagramSvelteFlowService;
 import org.rdfarchitect.services.GetRenderingDataService;
+import org.rdfarchitect.services.delete.DeleteResourcesService;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.diagrams.CustomDiagramService;
 import org.rdfarchitect.services.dl.select.QueryDiagramLayoutService;
@@ -211,15 +214,32 @@ class EdgeLayoutConsistencyTest {
     }
 
     @Test
+    void deletingAResource_isOneStepTogetherWithTheSyncOfTheLayout() {
+        layoutAllPackages();
+        var conductingEquipment = uuidOf("ConductingEquipment");
+        var stepsBefore = databasePort.listChanges(DATASET).size();
+        var request = new ResourceDeleteRequest();
+        request.setUuid(conductingEquipment);
+        request.setAction(DeleteAction.DELETE);
+
+        new DeleteResourcesService(databasePort, syncDiagramLayoutService)
+                .executeDeleteRequests(equipment, List.of(request));
+
+        var history = databasePort.listChanges(DATASET);
+        assertThat(history).hasSize(stepsBefore + 1);
+        assertThat(history.getFirst().affectedKinds()).contains("rdf", "dl");
+        assertAllPackagesConsistent();
+    }
+
+    @Test
     void crossProfileDiagram_hasADiagramObjectForEveryRenderedEdge() {
         importProfile(STEADY_STATE_HYPOTHESIS);
-        var diagramUUID =
-                databasePort.getCrossProfileDiagramInfo(DATASET).getCrossProfileDiagramUUID();
+        var diagramUUID = crossProfileDiagramId();
 
         var rendering = (SvelteFlowDTO) mergedRenderingService.renderCrossProfileDiagram(DATASET);
         classLayoutService.updateClassPositions(DATASET, diagramUUID, positionsOf(rendering));
 
-        var model = databasePort.getDatasetDiagramLayout(DATASET).getDiagramLayoutModel();
+        var model = datasetLayout();
         assertConsistent(
                 model,
                 diagramUUID,
@@ -231,18 +251,18 @@ class EdgeLayoutConsistencyTest {
     @Test
     void deletingAProfile_dropsItsClassesFromTheCrossProfileDiagram() {
         var steadyStateHypothesis = importProfile(STEADY_STATE_HYPOTHESIS);
-        var diagramUUID =
-                databasePort.getCrossProfileDiagramInfo(DATASET).getCrossProfileDiagramUUID();
+        var diagramUUID = crossProfileDiagramId();
         var rendering = (SvelteFlowDTO) mergedRenderingService.renderCrossProfileDiagram(DATASET);
         classLayoutService.updateClassPositions(DATASET, diagramUUID, positionsOf(rendering));
-        var model = databasePort.getDatasetDiagramLayout(DATASET).getDiagramLayoutModel();
-        var classesBefore = DLObjectFetcher.fetchDiagramClassDOs(model, new MRID(diagramUUID));
+        var classesBefore =
+                DLObjectFetcher.fetchDiagramClassDOs(datasetLayout(), new MRID(diagramUUID));
 
         new DeleteGraphService(databasePort, syncDiagramLayoutService)
                 .deleteGraph(steadyStateHypothesis);
 
         var renderingAfter =
                 (SvelteFlowDTO) mergedRenderingService.renderCrossProfileDiagram(DATASET);
+        var model = datasetLayout();
         assertConsistent(model, diagramUUID, renderingAfter, mergedAssociationEndpoints());
         assertThat(DLObjectFetcher.fetchDiagramClassDOs(model, new MRID(diagramUUID)))
                 .hasSameSizeAs(renderingAfter.getNodes())
@@ -359,7 +379,9 @@ class EdgeLayoutConsistencyTest {
     }
 
     private Map<UUID, Set<UUID>> associationEndpointsOfEquipment() {
-        try (var ctx = databasePort.getGraphWithContext(equipment).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(equipment.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(equipment.graphUri());
             var model =
                     new CIMModelFacade(
                             equipment.graphUri(),
@@ -443,17 +465,38 @@ class EdgeLayoutConsistencyTest {
                 .collect(Collectors.toSet());
     }
 
+    /** A copy of the layout of the equipment graph, read in a transaction of its own. */
     private Model graphLayout() {
-        return databasePort
-                .getGraphWithContext(equipment)
-                .getDiagramLayout()
-                .getDiagramLayoutModelDirect();
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
+            return ModelFactory.createDefaultModel()
+                    .add(
+                            transaction
+                                    .graph(equipment.graphUri())
+                                    .getDiagramLayout()
+                                    .getDiagramLayoutModel());
+        }
+    }
+
+    /** A copy of the layout of the diagrams of the workspace, read in a transaction of its own. */
+    private Model datasetLayout() {
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
+            return ModelFactory.createDefaultModel()
+                    .add(transaction.layout().getDiagramLayoutModel());
+        }
+    }
+
+    private UUID crossProfileDiagramId() {
+        try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.READ)) {
+            return transaction.crossProfileDiagramId();
+        }
     }
 
     private record SchemaClass(UUID uuid, String uri, String namespace, UUID packageUUID) {}
 
     private SchemaClass classOf(String label) {
-        try (var ctx = databasePort.getGraphWithContext(equipment).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(equipment.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(equipment.graphUri());
             var model =
                     new CIMModelFacade(
                             equipment.graphUri(),
@@ -480,9 +523,11 @@ class EdgeLayoutConsistencyTest {
     }
 
     private void editSchema(Consumer<Model> edit) {
-        try (var ctx = databasePort.getGraphWithContext(equipment).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(equipment.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(equipment.graphUri());
             edit.accept(ModelFactory.createModelForGraph(ctx.getRdfGraph()));
-            ctx.commit("edit schema");
+            transaction.commit("edit schema");
         }
     }
 

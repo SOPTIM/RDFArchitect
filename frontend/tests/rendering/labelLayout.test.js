@@ -79,8 +79,8 @@ function dropped(labelNode, dx, dy) {
 }
 
 vi.mock("$lib/api/generated/index.ts", () => ({
-    updateDatasetLabelPositions: vi.fn(),
-    updateLabelPositions: vi.fn(),
+    updateDatasetLabelPositions: vi.fn(() => Promise.resolve({})),
+    updateLabelPositions: vi.fn(() => Promise.resolve({})),
 }));
 
 beforeEach(() => {
