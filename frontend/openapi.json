@@ -2614,6 +2614,45 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/archive" : {
+      "get" : {
+        "description" : "Exports the whole workspace as a workspace archive: every graph with its custom SHACL, layout and custom diagrams, and the workspace's prefixes, diagrams, layout and cross-profile colours.",
+        "operationId" : "exportWorkspace",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/zip" : { }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "export workspace",
+        "tags" : [
+          "dataset"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/canRedo" : {
       "post" : {
         "description" : "Check whether the last undone change can be redone",
