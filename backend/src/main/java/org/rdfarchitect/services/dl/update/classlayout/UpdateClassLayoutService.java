@@ -26,7 +26,6 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
-import org.apache.jena.shared.Lock;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
@@ -34,7 +33,6 @@ import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
@@ -135,7 +133,9 @@ public class UpdateClassLayoutService
                     diagramLayoutModel,
                     packageUUID,
                     EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
-            ctx.commit();
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Laid out", "class", ChangeDescriptions.name(className)));
         }
     }
 
@@ -164,7 +164,7 @@ public class UpdateClassLayoutService
                         EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
             }
 
-            commitLayout(
+            DiagramLayoutServiceUtils.commitLayout(
                     transaction,
                     firstLayout,
                     ChangeDescriptions.actionIn(
@@ -178,18 +178,22 @@ public class UpdateClassLayoutService
     @Override
     public void updateClassPositions(
             String datasetName, UUID diagramUUID, List<ClassPositionDTO> classPositionDTOList) {
-        var diagramLayoutModel =
-                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        diagramLayoutModel.enterCriticalSection(Lock.WRITE);
-        try {
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            var diagramLayoutModel = transaction.layout().getDiagramLayoutModel();
+            var firstLayout = DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null;
             if (applyClassPositions(diagramLayoutModel, diagramUUID, classPositionDTOList)) {
                 EdgeLayoutSync.syncEdges(
                         diagramLayoutModel,
                         diagramUUID,
                         EdgeResolver.forDataset(databasePort, datasetName));
             }
-        } finally {
-            diagramLayoutModel.leaveCriticalSection();
+            DiagramLayoutServiceUtils.commitLayout(
+                    transaction,
+                    firstLayout,
+                    ChangeDescriptions.actionIn(
+                            "Moved classes",
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagramLayoutModel, diagramUUID)));
         }
     }
 
@@ -428,7 +432,8 @@ public class UpdateClassLayoutService
             for (var diagramUUID : diagramUUIDs) {
                 EdgeLayoutSync.syncEdges(diagramLayoutModel, diagramUUID, edgeResolver);
             }
-            ctx.commit();
+            transaction.commit(
+                    ChangeDescriptions.actionOn("Removed the layout of", "class", className));
         }
     }
 
@@ -506,7 +511,11 @@ public class UpdateClassLayoutService
                     diagramLayoutModel,
                     diagramUUID,
                     EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
-            ctx.commit();
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Added classes to",
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagram)));
         }
     }
 
@@ -560,7 +569,11 @@ public class UpdateClassLayoutService
                     diagramLayoutModel,
                     diagramUUID,
                     EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
-            ctx.commit();
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Removed classes from",
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagram)));
         }
     }
 
@@ -608,20 +621,7 @@ public class UpdateClassLayoutService
                 updated.addAll(classes);
                 diagram.setClasses(updated);
             }
-            insertLayoutForClasses(
-                    transaction.layout().getDiagramLayoutModel(),
-                    diagramUUID,
-                    mergedUuidsOf(classes, classUriByUuid(datasetName, classes)));
-            transaction.commit(
-                    ChangeDescriptions.actionOn(
-                            "Added classes to",
-                            "diagram",
-                            ChangeDescriptions.diagramName(diagram)));
-        }
-        var diagramLayoutModel =
-                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        diagramLayoutModel.enterCriticalSection(Lock.WRITE);
-        try {
+            var diagramLayoutModel = transaction.layout().getDiagramLayoutModel();
             insertLayoutForClasses(
                     diagramLayoutModel,
                     diagramUUID,
@@ -630,8 +630,11 @@ public class UpdateClassLayoutService
                     diagramLayoutModel,
                     diagramUUID,
                     EdgeResolver.forDataset(databasePort, datasetName));
-        } finally {
-            diagramLayoutModel.leaveCriticalSection();
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Added classes to",
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagram)));
         }
     }
 
@@ -668,10 +671,9 @@ public class UpdateClassLayoutService
             return;
         }
 
-        var model = databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        model.enterCriticalSection(Lock.WRITE);
-        try {
-            var diagram = databasePort.getDatasetDiagrams(datasetName).get(diagramUUID);
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            var model = transaction.layout().getDiagramLayoutModel();
+            var diagram = transaction.diagrams().get(diagramUUID);
             if (diagram == null) {
                 deleteLayoutForClasses(model, diagramUUID, classUUIDs);
             } else {
@@ -688,8 +690,11 @@ public class UpdateClassLayoutService
             }
             EdgeLayoutSync.syncEdges(
                     model, diagramUUID, EdgeResolver.forDataset(databasePort, datasetName));
-        } finally {
-            model.leaveCriticalSection();
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Removed classes from",
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagram)));
         }
     }
 
@@ -703,14 +708,15 @@ public class UpdateClassLayoutService
             diagramUUIDs.add(transaction.crossProfileDiagramId());
             diagramUUIDs.addAll(transaction.diagrams().keySet());
 
-        model.enterCriticalSection(Lock.WRITE);
-        try {
             for (var diagramUUID : diagramUUIDs) {
                 migrateLayoutToNewClassUri(
                         model, diagramUUID, oldMergedUuid, newMergedUuid, newClassUri);
             }
-        } finally {
-            model.leaveCriticalSection();
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Moved the layout of",
+                            "class",
+                            ChangeDescriptions.localName(newClassUri)));
         }
     }
 

@@ -36,6 +36,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.diagrams.RemoveFromCustomDiagramUseCase;
 import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
@@ -94,15 +95,9 @@ public class UpdateClassService
      */
     @Override
     public void replaceClass(GraphIdentifier graphIdentifier, ClassUMLAdaptedDTO newClass) {
-        String oldClassUri;
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var resource =
-                    CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), newClass.getUuid());
-            oldClassUri = resource.getURI();
-        }
-
-        UUID releasedUuid;
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
             var oldClassUri =
                     CIMResourceUtils.findResourceForUuid(graph, newClass.getUuid()).getURI();
@@ -133,10 +128,9 @@ public class UpdateClassService
                         newClassUri);
             }
 
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(describeClassUpdate(oldClassUri, newClass.getLabel()));
         }
-
-        syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
     }
 
     /** Names a rename by both names, since that is the change the reader will be looking for. */
@@ -169,14 +163,11 @@ public class UpdateClassService
                             newClass);
             createClassLayoutDataUseCase.createClassLayoutData(
                     graphIdentifier, packageDTO, className, newClassUUID, classLayoutPosition);
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Added", "class", ChangeDescriptions.name(newClass.getLabel())));
         }
-
-        createClassLayoutDataUseCase.createClassLayoutData(
-                graphIdentifier, packageDTO, className, newClassUUID, classLayoutPosition);
-        syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
 
         return newClassUUID;
     }
@@ -223,8 +214,11 @@ public class UpdateClassService
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     classUUID);
 
-        deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, classUUID);
-        removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, classUUID);
-        syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
+            deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, classUUID);
+            removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, classUUID);
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
+
+            transaction.commit("Deleted class \"%s\"".formatted(classLabel));
+        }
     }
 }

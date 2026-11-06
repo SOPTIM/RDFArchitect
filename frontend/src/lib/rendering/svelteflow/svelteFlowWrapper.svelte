@@ -42,6 +42,7 @@
         forceReloadTrigger,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
+    import { versionControlStore } from "$lib/stores/versionControlStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import ClassNode from "./components/ClassNode.svelte";
@@ -228,7 +229,9 @@
         const currentNodes = nodes;
         untrack(() => {
             moveDockingPointsOfResizedClasses(currentNodes);
+            const edgesWithoutDefaultLoops = edges;
             edgePoints.addDefaultSelfLoops(currentNodes);
+            edgeLayouts.saveAutomatically(edgesWithoutDefaultLoops, edges);
             redockDetachedDockingPoints(currentNodes);
         });
     });
@@ -326,6 +329,12 @@
             ["ctrl", "shift", "q"],
             edgePoints.deleteEdgePointAtCursor,
         );
+        const unregisterUnsavedChanges =
+            versionControlStore.registerUnsavedChanges({
+                isBusy: () => edgeLayouts.isDragging || labelLayout.dragActive,
+                save: () =>
+                    Promise.all([edgeLayouts.saveNow(), labelLayout.settled()]),
+            });
 
         return () => {
             el.removeEventListener("pointerdown", onContainerPointerDown, true);
@@ -337,6 +346,7 @@
             window.removeEventListener("blur", edgePoints.stopDeleteBrush);
             unregisterAddBendPoint();
             unregisterDeleteEdgePoint();
+            unregisterUnsavedChanges();
         };
     });
 

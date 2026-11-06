@@ -89,9 +89,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         assertThat(workspaceDiagrams().get(diagramUUID).getClasses()).isEmpty();
         assertThat(
                         DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
-                                databasePort
-                                        .getDatasetDiagramLayout(datasetName)
-                                        .getDiagramLayoutModel(),
+                                workspaceLayoutModel(),
                                 diagramUUID,
                                 CrossProfileUtils.mergedUuid(CLASS_A_URI)))
                 .isNull();
@@ -111,11 +109,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
         service.addClassesToCustomDiagram(graphIdentifier, diagramUUID, List.of(classAInDiagram()));
 
-        var model =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModelDirect();
+        var model = layoutModelOf(graphIdentifier);
         assertThat(
                         DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
                                 model, diagramUUID, CLASS_A_UUID))
@@ -211,9 +205,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         assertDiagram(PACKAGE_A_UUID, "");
         assertThat(
                         DLObjectFetcher.fetchDiagramDOForIdentifiedObject(
-                                diagramLayout.getDiagramLayoutModelDirect(),
-                                PACKAGE_A_UUID,
-                                CLASS_A_UUID))
+                                layoutModelOf(graphIdentifier), PACKAGE_A_UUID, CLASS_A_UUID))
                 .isNotNull();
         assertDiagramObjectCoordinates(CLASS_A_UUID, 123.0F, 456.0F);
     }
@@ -258,10 +250,12 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         addGraphFromFile("package_and_class.ttl");
         initialiseDiagramLayout();
         var doMRID = assertDiagramObject(CLASS_A_UUID, PACKAGE_A_UUID, CLASS_A_LABEL);
-        var diagramLayoutModel = diagramLayout.getDiagramLayoutModelDirect();
-        DLUpdates.deleteDiagramObjectPoint(
-                diagramLayoutModel,
-                DiagramLayoutServiceUtils.classPointOf(diagramLayoutModel, doMRID).getMRID());
+        withLayoutModel(
+                graphIdentifier,
+                model ->
+                        DLUpdates.deleteDiagramObjectPoint(
+                                model,
+                                DiagramLayoutServiceUtils.classPointOf(model, doMRID).getMRID()));
         assertDiagramObjectPointDoesNotExist(doMRID);
 
         var packageDTO =

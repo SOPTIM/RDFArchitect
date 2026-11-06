@@ -62,6 +62,8 @@ export class LabelLayoutController {
      */
     #placementCache = new Map();
 
+    #requestsInFlight = new Set();
+
     #getNodes;
     #setNodes;
     #getEdges;
@@ -136,6 +138,11 @@ export class LabelLayoutController {
                     : node,
             ),
         );
+    }
+
+    /** Resolved once every label placement sent so far is saved. */
+    async settled() {
+        await Promise.all(this.#requestsInFlight);
     }
 
     /** Keeps and saves the placement of labels the user dropped somewhere. */
@@ -246,16 +253,17 @@ export class LabelLayoutController {
             return;
         }
 
-        if (graphURI) {
-            updateLabelPositions({
-                path: { datasetName, graphURI, diagramUUID },
-                body: labelPositionDTOList,
-            });
-        } else {
-            updateDatasetLabelPositions({
-                path: { datasetName, diagramUUID },
-                body: labelPositionDTOList,
-            });
-        }
+        const request = (
+            graphURI
+                ? updateLabelPositions({
+                      path: { datasetName, graphURI, diagramUUID },
+                      body: labelPositionDTOList,
+                  })
+                : updateDatasetLabelPositions({
+                      path: { datasetName, diagramUUID },
+                      body: labelPositionDTOList,
+                  })
+        ).finally(() => this.#requestsInFlight.delete(request));
+        this.#requestsInFlight.add(request);
     }
 }

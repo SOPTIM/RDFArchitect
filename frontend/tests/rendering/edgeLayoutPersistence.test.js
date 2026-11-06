@@ -178,6 +178,27 @@ describe("EdgeLayoutPersistence", () => {
         ]);
     });
 
+    test("saves the selected edge right away when asked to and waits for the answer", async () => {
+        const shown = edge("e", [], true);
+        const { show, persistence } = persistenceFor([shown]);
+        show([withPoints(shown, [createBendPoint(10, 20)])]);
+        let respond;
+        updateEdgeLayouts.mockImplementation(
+            () => new Promise(resolve => (respond = resolve)),
+        );
+
+        let saved = false;
+        const saving = persistence.saveNow().then(() => (saved = true));
+        await settle();
+
+        expect(updateEdgeLayouts).toHaveBeenCalledTimes(1);
+        expect(saved).toBe(false);
+
+        respond({ data: [] });
+        await saving;
+        expect(saved).toBe(true);
+    });
+
     test("saves the manually placed labels of an edge together with it", async () => {
         const shown = edge("e", [], true);
         const label = {
@@ -278,6 +299,43 @@ describe("EdgeLayoutPersistence", () => {
         expect(updateEdgeLayouts.mock.calls[0][0].path.diagramUUID).toBe(
             "diagram",
         );
+    });
+
+    test("saves points the editor gave an edge on its own as an automatic layout, once", async () => {
+        const shown = edge("loop");
+        const { state, persistence, show } = persistenceFor([shown]);
+        const loop = withPoints(shown, [
+            createDockingPoint(25, 0, "source"),
+            createBendPoint(25, -50),
+            createDockingPoint(75, 0, "target"),
+        ]);
+
+        persistence.saveAutomatically(state.edges, [loop]);
+        show([loop]);
+        await settle();
+
+        expect(updateDiagramLayout).toHaveBeenCalledTimes(1);
+        expect(updateDiagramLayout.mock.calls[0][0].body.automatic).toBe(true);
+        expect(
+            updateDiagramLayout.mock.calls[0][0].body.edges[0].points,
+        ).toHaveLength(3);
+        expect(updateEdgeLayouts).not.toHaveBeenCalled();
+    });
+
+    test("leaves an edge the user changed before to be saved as usual", async () => {
+        const shown = edge("loop");
+        const { state, persistence } = persistenceFor([shown]);
+        const edited = withPoints(shown, [createBendPoint(1, 1)]);
+        persistence.track([selected(edited, true)]);
+        state.edges = [edited];
+
+        persistence.saveAutomatically(
+            [edited],
+            [withPoints(shown, [createBendPoint(2, 2)])],
+        );
+        await settle();
+
+        expect(updateDiagramLayout).not.toHaveBeenCalled();
     });
 
     test("sends with keepalive when the page is left", () => {

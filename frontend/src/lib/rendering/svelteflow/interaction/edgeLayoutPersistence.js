@@ -149,7 +149,8 @@ function withoutDuplicateLabels(labels) {
 
 /**
  * Saves the points of the edges of the shown diagram. An edge is saved as soon as it can no longer
- * be edited, i.e. when it is deselected, when another diagram is loaded and when the page is left.
+ * be edited, i.e. when it is deselected, when another diagram is loaded and when the page is left,
+ * and before a move through the history, see {@link EdgeLayoutPersistence#saveNow}.
  * While classes are dragged, the docking points of their edges move along; those edges are saved
  * together with the classes once the drag ends. Neither a class drag nor a point drag is saved
  * before the drop.
@@ -178,6 +179,7 @@ export class EdgeLayoutPersistence {
     #persistedPoints = new Map();
     #unsavedEdges = new Map();
     #pendingRequests = new Map();
+    #requestsInFlight = new Set();
     #nodeDragActive = false;
     #disposed = false;
 
@@ -263,6 +265,49 @@ export class EdgeLayoutPersistence {
         }
     }
 
+    /**
+     * Saves points the editor gave edges on its own right away, e.g. the default loop of a new
+     * self-association. They are sent as an automatic layout, which the backend stores without a step
+     * in the history of the workspace, so they can neither be undone nor take the redo step of an
+     * undo away. An edge whose points were changed before, by the user, keeps that change to be
+     * saved as usual.
+     *
+     * @param {Array} previousEdges the edges before the editor gave them points
+     * @param {Array} edges the edges with the new points
+     */
+    saveAutomatically(previousEdges, edges) {
+        const previousPoints = new Map(
+            previousEdges.map(edge => [edge.id, edge.data?.edgePoints]),
+        );
+        const changedEdges = edges.filter(
+            edge =>
+                this.#savedPoints.has(edge.id) &&
+                !this.#unsavedEdges.has(edge.id) &&
+                this.#savedPoints.get(edge.id) ===
+                    previousPoints.get(edge.id) &&
+                edge.data?.edgePoints !== previousPoints.get(edge.id),
+        );
+        if (changedEdges.length === 0) {
+            return;
+        }
+        for (const edge of changedEdges) {
+            this.#savedPoints.set(edge.id, edge.data?.edgePoints);
+            this.#persistedPoints.set(edge.id, toEdgeLayoutDTO(edge).points);
+        }
+        if (this.#isReadOnly() || !this.#target?.diagramUUID) {
+            return;
+        }
+        const target = this.#target;
+        this.#enqueue(
+            changedEdges.map(edge => edge.id),
+            () =>
+                requestDiagramLayout(target, {
+                    edges: changedEdges.map(toEdgeLayoutDTO),
+                    automatic: true,
+                }),
+        );
+    }
+
     /** Holds the edges back until the dragged classes are saved with {@link saveDiagramLayout}. */
     beginNodeDrag() {
         this.#nodeDragActive = true;
@@ -338,6 +383,22 @@ export class EdgeLayoutPersistence {
     saveAll({ keepalive = false } = {}) {
         this.#recordChanges(this.#getEdges());
         this.#saveUnsavedEdges([...this.#unsavedEdges.keys()], keepalive);
+    }
+
+    /** Whether classes or edge points are being dragged right now, so their place is not final. */
+    get isDragging() {
+        return this.#nodeDragActive || edgePointDrag.active;
+    }
+
+    /**
+     * Saves all unsaved edges right away, the selected ones included, e.g. before an undo, which has
+     * to find the change the user just made in the history.
+     *
+     * @returns {Promise<void>} resolved once every request sent so far is answered
+     */
+    async saveNow() {
+        this.saveAll();
+        await Promise.all(this.#requestsInFlight);
     }
 
     /** Saves all unsaved edges and stops touching the shown edges. */
@@ -506,12 +567,14 @@ export class EdgeLayoutPersistence {
                 console.error("Saving the edge layout failed:", error);
             })
             .finally(() => {
+                this.#requestsInFlight.delete(request);
                 for (const edgeId of edgeIds) {
                     if (this.#pendingRequests.get(edgeId) === request) {
                         this.#pendingRequests.delete(edgeId);
                     }
                 }
             });
+        this.#requestsInFlight.add(request);
         for (const edgeId of edgeIds) {
             this.#pendingRequests.set(edgeId, request);
         }

@@ -75,10 +75,10 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
                             .count();
 
             deleteResources(ModelFactory.createModelForGraph(ctx.getRdfGraph()), deleteRequests);
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(
                     "Deleted " + deleteCount + " " + (deleteCount == 1 ? "resource" : "resources"));
         }
-        syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
     }
 
     private void deleteResources(Model model, List<ResourceDeleteRequest> deleteRequests) {

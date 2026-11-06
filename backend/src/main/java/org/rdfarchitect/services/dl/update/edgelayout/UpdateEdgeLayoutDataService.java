@@ -22,7 +22,6 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ResourceFactory;
-import org.apache.jena.shared.Lock;
 import org.rdfarchitect.api.dto.dl.EdgeLayoutDTO;
 import org.rdfarchitect.api.dto.dl.EdgePointDTO;
 import org.rdfarchitect.database.DatabasePort;
@@ -35,6 +34,7 @@ import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.dl.rdf.resources.DL;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.springframework.stereotype.Service;
 
@@ -53,42 +53,61 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
 
+    /** What saving the edge points of edges is recorded as in the changelog. */
+    public static final String EDGE_POINTS_MOVED = "Moved edge points";
+
     private final DatabasePort databasePort;
 
     @Override
     public void updateEdgeLayouts(
             GraphIdentifier graphIdentifier, UUID diagramUUID, List<EdgeLayoutDTO> edges) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagramLayout = ctx.getDiagramLayout();
+            var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
             var resolvedDiagramUUID =
                     diagramUUID != null
                             ? diagramUUID
                             : diagramLayout.getDefaultPackageMRID().getUuid();
+            var firstLayout =
+                    DLObjectFetcher.fetchDiagram(diagramLayoutModel, resolvedDiagramUUID) == null;
             applyEdgeLayouts(
-                    diagramLayout.getDiagramLayoutModel(),
+                    diagramLayoutModel,
                     resolvedDiagramUUID,
                     edges,
                     EdgeResolver.lazily(
                             () ->
                                     EdgeResolver.forGraph(
                                             graphIdentifier.graphUri(), ctx.getRdfGraph())));
-            ctx.commit();
+            DiagramLayoutServiceUtils.commitLayout(
+                    transaction,
+                    firstLayout,
+                    ChangeDescriptions.actionIn(
+                            EDGE_POINTS_MOVED,
+                            "package",
+                            ChangeDescriptions.packageName(
+                                    ctx.getRdfGraph(), diagramLayoutModel, resolvedDiagramUUID)));
         }
     }
 
     @Override
     public void updateEdgeLayouts(String datasetName, UUID diagramUUID, List<EdgeLayoutDTO> edges) {
-        var diagramLayoutModel =
-                databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        diagramLayoutModel.enterCriticalSection(Lock.WRITE);
-        try {
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            var diagramLayoutModel = transaction.layout().getDiagramLayoutModel();
+            var firstLayout = DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null;
             applyEdgeLayouts(
                     diagramLayoutModel,
                     diagramUUID,
                     edges,
                     EdgeResolver.lazily(() -> EdgeResolver.forDataset(databasePort, datasetName)));
-        } finally {
-            diagramLayoutModel.leaveCriticalSection();
+            DiagramLayoutServiceUtils.commitLayout(
+                    transaction,
+                    firstLayout,
+                    ChangeDescriptions.actionIn(
+                            EDGE_POINTS_MOVED,
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagramLayoutModel, diagramUUID)));
         }
     }
 

@@ -43,4 +43,11 @@ public class DiagramLayoutDTO {
     private boolean allEdges;
 
     private List<LabelPositionDTO> labels;
+
+    /**
+     * Whether the editor sends this layout on its own, without the user changing anything, e.g. the
+     * default loop of a new self-association. It is stored without a step in the history, so it can
+     * neither be undone nor take the redo step of an undo away.
+     */
+    private boolean automatic;
 }

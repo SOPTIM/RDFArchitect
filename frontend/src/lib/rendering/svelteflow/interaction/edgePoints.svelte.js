@@ -187,7 +187,8 @@ export class EdgePointController {
 
     /**
      * Gives every self-association without a course of its own its default shape, see
-     * {@link withDefaultSelfLoops}. The points are saved like any other change of an edge.
+     * {@link withDefaultSelfLoops}. The caller saves the points as an automatic layout, see
+     * {@link EdgeLayoutPersistence#saveAutomatically}.
      *
      * @param nodes the nodes of the diagram
      */

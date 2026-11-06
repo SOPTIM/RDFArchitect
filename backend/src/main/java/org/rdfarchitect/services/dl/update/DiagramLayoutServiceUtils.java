@@ -20,6 +20,7 @@ package org.rdfarchitect.services.dl.update;
 import lombok.experimental.UtilityClass;
 
 import org.apache.jena.rdf.model.Model;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.dl.data.dto.Diagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectGluePoint;
@@ -38,6 +39,26 @@ import java.util.UUID;
 /** Utility class with helper methods for the DiagramLayout update services */
 @UtilityClass
 public class DiagramLayoutServiceUtils {
+
+    /**
+     * Records a layout change, unless it is the one a diagram gets the first time it is opened.
+     *
+     * <p>That first layout is computed by the editor and sent back without the user doing anything,
+     * so offering to undo it would mean offering to undo opening a diagram. It still has to be
+     * stored, or every visit would lay the diagram out anew.
+     *
+     * @param transaction the transaction to commit
+     * @param firstLayout whether the diagram had no layout data before
+     * @param message what the change did
+     */
+    public static void commitLayout(
+            WorkspaceTransaction transaction, boolean firstLayout, String message) {
+        if (firstLayout) {
+            transaction.commitWithoutHistory();
+        } else {
+            transaction.commit(message);
+        }
+    }
 
     /**
      * Helper method for creating and inserting a {@link Diagram} into a given model.
