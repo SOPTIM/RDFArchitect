@@ -34,6 +34,7 @@ public record CopyClassReference(
         URI uri,
         String label,
         Set<URI> dataTypeUris,
+        Set<URI> superClassUris,
         Set<Kind> kinds,
         Map<Kind, Set<Usage>> usedBy) {
 
@@ -43,8 +44,17 @@ public record CopyClassReference(
             URI uri,
             String label,
             Set<URI> dataTypeUris,
+            Set<URI> superClassUris,
             Set<Kind> kinds) {
-        this(sourceGraph, uuid, uri, label, dataTypeUris, kinds, new EnumMap<>(Kind.class));
+        this(
+                sourceGraph,
+                uuid,
+                uri,
+                label,
+                dataTypeUris,
+                superClassUris,
+                kinds,
+                new EnumMap<>(Kind.class));
     }
 
     public CopyClassSource toSource() {
