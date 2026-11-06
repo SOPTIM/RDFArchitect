@@ -18,6 +18,8 @@
 package org.rdfarchitect.config;
 
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.services.shacl.terms.SchemaTermsService;
+import org.rdfarchitect.services.shacl.terms.SchemaTermsUseCase;
 import org.rdfarchitect.services.shacl.validation.SchemaIndexCache;
 import org.rdfarchitect.services.shacl.validation.ShapesValidationService;
 import org.rdfarchitect.services.shacl.validation.ShapesValidationUseCase;
@@ -28,8 +30,8 @@ import org.springframework.context.annotation.Configuration;
 public class ShapesValidationConfig {
 
     /**
-     * Shared deliberately: indexing a workspace's schema costs a few hundred milliseconds, and the
-     * editor's terms read the same index in a later commit.
+     * Shared deliberately: indexing a workspace's schema costs a few hundred milliseconds, and
+     * validation and the editor's terms read the same index.
      */
     @Bean
     public SchemaIndexCache schemaIndexCache(DatabasePort databasePort) {
@@ -40,5 +42,11 @@ public class ShapesValidationConfig {
     public ShapesValidationUseCase shapesValidationUseCase(
             DatabasePort databasePort, SchemaIndexCache schemaIndexCache) {
         return new ShapesValidationService(databasePort, schemaIndexCache);
+    }
+
+    @Bean
+    public SchemaTermsUseCase schemaTermsUseCase(
+            DatabasePort databasePort, SchemaIndexCache schemaIndexCache) {
+        return new SchemaTermsService(databasePort, schemaIndexCache);
     }
 }
