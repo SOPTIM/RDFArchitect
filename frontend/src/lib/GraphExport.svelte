@@ -39,6 +39,8 @@
         lockedGraphUri,
         generateOntologyEntries = false,
         supportedMediaTypes = supportedRDFMediaTypes,
+        /** Told whenever the chosen workspace or schema changes, for dialogs that add options. */
+        onselection = () => {},
     } = $props();
 
     let selectedWorkspaceName = $state(null);
@@ -49,6 +51,7 @@
     let generatedOntologyEntries = $state([]);
 
     let namespaces = $state([]);
+
     let hasOntology = $derived(!!ontology);
 
     // Derived state for checkbox
@@ -110,6 +113,10 @@
             return;
         }
         generatedOntologyEntries = [];
+    });
+
+    $effect(() => {
+        onselection(selectedWorkspaceName, graphURI);
     });
 
     onMount(async () => {
