@@ -108,6 +108,13 @@ async function createOnigLib() {
     const { default: wasmUrl } =
         await import("vscode-oniguruma/release/onig.wasm?url");
     const response = await fetch(wasmUrl);
+    // loadWASM remembers a failed start for good, so an error page must not reach it: no later
+    // editor could recover, even once the file is back.
+    if (!response.ok) {
+        throw new Error(
+            `Could not load the syntax highlighter: HTTP ${response.status}`,
+        );
+    }
     await oniguruma.loadWASM(await response.arrayBuffer());
     return {
         createOnigScanner: patterns => oniguruma.createOnigScanner(patterns),

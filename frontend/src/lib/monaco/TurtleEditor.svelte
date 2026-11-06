@@ -122,12 +122,15 @@
                     }
                 });
                 if (autoGrow) {
-                    created.onDidContentSizeChange(() => {
+                    const grow = () => {
                         grownHeight = Math.min(
                             Math.max(created.getContentHeight(), minHeight),
                             maxHeight,
                         );
-                    });
+                    };
+                    created.onDidContentSizeChange(grow);
+                    // The text it opened with was measured during create, before this listener.
+                    grow();
                 }
                 // An action rather than addCommand: a command's keybinding is global and outlives
                 // the editor, so every remount added another one still calling into the old page.
