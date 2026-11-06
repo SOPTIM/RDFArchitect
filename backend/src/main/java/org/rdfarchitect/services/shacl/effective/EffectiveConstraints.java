@@ -193,33 +193,33 @@ public final class EffectiveConstraints {
             String targetClass,
             Map<Key, Constraint> enforced,
             Map<Key, Constraint> advisory) {
-        // A property shape can carry the target itself, with no node shape around it.
-        var own =
+        // A property shape can carry the target itself, with no node shape around it. What it nests
+        // is then about the values of its path, and not about the target class.
+        var properties =
                 shapes.contains(shape, SHACL.path, Node.ANY)
                         ? Stream.of(shape)
-                        : Stream.<Node>empty();
-        Stream.concat(own, shapes.stream(shape, SHACL.property, Node.ANY).map(Triple::getObject))
-                .forEach(
-                        property -> {
-                            var definedIn = definedIn(property, shapes, documents);
-                            if (isDeactivated(definedIn, property)) {
-                                return;
-                            }
-                            // Usually one path. A path expression rather than a property yields
-                            // none: there is nothing to compare it with on the other side.
-                            var paths = propertiesOf(definedIn, property);
-                            if (paths.isEmpty()) {
-                                return;
-                            }
-                            var into = isAdvisory(definedIn, property) ? advisory : enforced;
-                            var constraint = read(definedIn, property);
-                            paths.forEach(
-                                    path ->
-                                            into.merge(
-                                                    new Key(targetClass, path),
-                                                    constraint,
-                                                    EffectiveConstraints::conjunction));
-                        });
+                        : shapes.stream(shape, SHACL.property, Node.ANY).map(Triple::getObject);
+        properties.forEach(
+                property -> {
+                    var definedIn = definedIn(property, shapes, documents);
+                    if (isDeactivated(definedIn, property)) {
+                        return;
+                    }
+                    // Usually one path. A path expression rather than a property yields
+                    // none: there is nothing to compare it with on the other side.
+                    var paths = propertiesOf(definedIn, property);
+                    if (paths.isEmpty()) {
+                        return;
+                    }
+                    var into = isAdvisory(definedIn, property) ? advisory : enforced;
+                    var constraint = read(definedIn, property);
+                    paths.forEach(
+                            path ->
+                                    into.merge(
+                                            new Key(targetClass, path),
+                                            constraint,
+                                            EffectiveConstraints::conjunction));
+                });
     }
 
     /** Where a rule is written: the naming document if it says itself, else whichever does. */
@@ -241,7 +241,11 @@ public final class EffectiveConstraints {
         return shapes.stream(shape, SHACL.deactivated, Node.ANY)
                 .map(triple -> triple.getObject())
                 .anyMatch(
-                        value -> value.isLiteral() && Boolean.TRUE.equals(value.getLiteralValue()));
+                        value ->
+                                value.isLiteral()
+                                        // Reading the value of an ill-typed literal throws.
+                                        && value.getLiteral().isWellFormed()
+                                        && Boolean.TRUE.equals(value.getLiteralValue()));
     }
 
     /** Whether a shape reports at a severity other than {@code sh:Violation}, the default. */
@@ -293,12 +297,16 @@ public final class EffectiveConstraints {
         if (!constraint.dataTypes().isEmpty()) {
             parts.add(terms(constraint.dataTypes(), prefixes));
         }
+        // Every sh:class applies, so all of them are named. A list only offers alternatives, which
+        // is what lets it read as its most general classes.
         var classes = new LinkedHashSet<>(constraint.valueClasses());
         if (constraint.valueTypes() != null) {
-            classes.addAll(constraint.valueTypes());
+            classes.addAll(hierarchy.roots(constraint.valueTypes()));
         }
         if (!classes.isEmpty()) {
-            parts.add("of class " + terms(hierarchy.roots(classes), prefixes));
+            parts.add("of class " + terms(classes, prefixes));
+        } else if (constraint.valueTypes() != null) {
+            parts.add("of class nothing");
         }
         if (!constraint.nodeKinds().isEmpty()) {
             parts.add(terms(constraint.nodeKinds(), prefixes));

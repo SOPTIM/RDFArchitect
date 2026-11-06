@@ -184,15 +184,18 @@ public final class ClauseLocator {
         return Math.min(index, limit);
     }
 
-    /** A literal's {@code ^^datatype} or {@code @language}, which belong to the same object. */
+    /**
+     * A literal's {@code ^^datatype} or {@code @language}, which belong to the same object. Tokens
+     * may have whitespace and comments between them, here as anywhere.
+     */
     private static int endOfSuffix(String text, int from, int limit) {
-        if (from + 1 < limit && text.charAt(from) == '^' && text.charAt(from + 1) == '^') {
-            // Tokens may have whitespace and comments between them, here as anywhere.
-            int datatype = skipIgnorable(text, from + 2, limit);
+        int suffix = skipIgnorable(text, from, limit);
+        if (suffix + 1 < limit && text.charAt(suffix) == '^' && text.charAt(suffix + 1) == '^') {
+            int datatype = skipIgnorable(text, suffix + 2, limit);
             return datatype >= limit ? limit : endOfTerm(text, datatype, limit);
         }
-        if (from < limit && text.charAt(from) == '@') {
-            int index = from + 1;
+        if (suffix < limit && text.charAt(suffix) == '@') {
+            int index = suffix + 1;
             while (index < limit
                     && (Character.isLetterOrDigit(text.charAt(index))
                             || text.charAt(index) == '-')) {

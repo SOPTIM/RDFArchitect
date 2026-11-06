@@ -46,6 +46,33 @@ class ClauseLocatorTest {
     }
 
     @Test
+    void whitespaceBeforeADatatypeOrLanguageKeepsItWithItsLiteral() {
+        var turtle = "ex:S sh:order \"1\" ^^xsd:integer ; sh:message \"Hi\" @en ; sh:minCount 1 .";
+
+        assertThat(clausesOf(turtle))
+                .containsExactly(
+                        "sh:order -> \"1\" ^^xsd:integer",
+                        "sh:message -> \"Hi\" @en",
+                        "sh:minCount -> 1");
+    }
+
+    @Test
+    void aCommentBeforeTheDatatypeMarkerKeepsItWithItsLiteral() {
+        var turtle = "ex:S sh:order \"1\" # the order\n ^^xsd:integer ; sh:minCount 1 .";
+
+        assertThat(clausesOf(turtle))
+                .containsExactly(
+                        "sh:order -> \"1\" # the order\n ^^xsd:integer", "sh:minCount -> 1");
+    }
+
+    @Test
+    void aLiteralWithNoSuffixEndsAtItsQuoteAndNotAtTheSpaceAfter() {
+        var turtle = "ex:S sh:message \"Hi\"   ; sh:minCount 1 .";
+
+        assertThat(clausesOf(turtle)).containsExactly("sh:message -> \"Hi\"", "sh:minCount -> 1");
+    }
+
+    @Test
     void aDatatypeAfterWhitespaceBelongsToItsLiteral() {
         var turtle = "ex:S sh:order \"1\"^^ xsd:integer ; sh:minCount 1 .";
 

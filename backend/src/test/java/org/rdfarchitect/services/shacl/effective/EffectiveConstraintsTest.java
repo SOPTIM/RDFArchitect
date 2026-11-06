@@ -183,6 +183,34 @@ class EffectiveConstraintsTest {
     }
 
     @Test
+    void anIllTypedDeactivationDoesNotFailTheRead() {
+        // It parses, and "maybe" is simply not true.
+        var shapes =
+                shapes(
+                        """
+                        ex:Shape sh:targetClass ex:Thing ;
+                            sh:deactivated "maybe"^^xsd:boolean ;
+                            sh:property [ sh:path ex:value ; sh:minCount 1 ] .
+                        """);
+
+        assertThat(EffectiveConstraints.of(shapes).get(THING_VALUE).minCount()).isEqualTo(1);
+    }
+
+    @Test
+    void whatATargetedPropertyShapeNestsIsAboutItsValuesAndNotTheTarget() {
+        var shapes =
+                shapes(
+                        """
+                        ex:Rule sh:targetClass ex:Thing ;
+                            sh:path ex:value ;
+                            sh:minCount 1 ;
+                            sh:property [ sh:path ex:name ; sh:minCount 1 ] .
+                        """);
+
+        assertThat(EffectiveConstraints.of(shapes)).containsOnlyKeys(THING_VALUE);
+    }
+
+    @Test
     void aDeactivatedShapeAsksNothing() {
         var graph =
                 shapes(
