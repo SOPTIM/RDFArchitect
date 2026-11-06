@@ -106,18 +106,6 @@
 - **Version:** 2.21.0
 - **License:** MIT
 
-### codemirror
-- **Package:** codemirror
-- **Version:** 6.0.2
-- **License:** MIT
-- **URL:** [https://github.com/codemirror/basic-setup](https://github.com/codemirror/basic-setup)
-
-### codemirror-lang-turtle
-- **Package:** codemirror-lang-turtle
-- **Version:** 0.0.2
-- **License:** MIT
-- **URL:** [https://github.com/aatauil/codemirror-lang-turtle](https://github.com/aatauil/codemirror-lang-turtle)
-
 ### elkjs
 - **Package:** elkjs
 - **Version:** 0.12.1
