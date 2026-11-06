@@ -79,6 +79,22 @@ function fakeWorkbench(overrides = {}) {
             return from >= 0 && peers[from + offset] !== undefined;
         },
         selectedId: "eq",
+        results: [
+            {
+                documentId: "eq",
+                documentName: "eq.ttl",
+                errorCount: 2,
+                warningCount: 0,
+                infoCount: 0,
+            },
+            {
+                documentId: "custom",
+                documentName: "custom.ttl",
+                errorCount: 0,
+                warningCount: 0,
+                infoCount: 0,
+            },
+        ],
         select: vi.fn(),
         create: vi.fn().mockResolvedValue({ id: "new" }),
         importFile: vi.fn().mockResolvedValue({ id: "new" }),
@@ -141,13 +157,13 @@ afterEach(() => {
 });
 
 describe("DocumentList", () => {
-    test("shows each document with its triple count", () => {
+    test("shows each document with its triple count and problem summary", () => {
         const list = render({ workbench: fakeWorkbench() });
         const rows = documentRows(list);
 
         expect(rows).toHaveLength(2);
         expect(rows[0].textContent.replace(/\s+/g, " ")).toContain(
-            "51 triples",
+            "51 triples · 2 errors",
         );
         expect(rows[1].textContent).toContain("custom.ttl");
         expect(rows[1].textContent.replace(/\s+/g, " ")).toContain("0 triples");

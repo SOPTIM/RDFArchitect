@@ -51,12 +51,14 @@
 
     import DocumentInspector from "./workbench/DocumentInspector.svelte";
     import DocumentList from "./workbench/DocumentList.svelte";
+    import ProblemsPanel from "./workbench/ProblemsPanel.svelte";
     import WorkspacePicker from "./workbench/WorkspacePicker.svelte";
 
     import { beforeNavigate, goto } from "$app/navigation";
     import { page } from "$app/state";
 
     let editor = $state(null);
+    let problemsExpanded = $state(true);
 
     /** The link already followed, so selecting its document does not re-trigger the follow. */
     let followedLink = null;
@@ -93,9 +95,9 @@
     /**
      * One workbench per workspace, thrown away when the selection changes.
      *
-     * Rebuilding rather than reusing keeps the loaded documents and the editor buffer from ever
-     * describing different workspaces. The selected schema only says what opens first, so it is
-     * read once.
+     * Rebuilding rather than reusing keeps the loaded documents, the editor buffer and the
+     * validation report from ever describing different workspaces. The selected schema only says
+     * what opens first, so it is read once.
      */
     const workbench = $derived(
         selectedWorkspace
@@ -318,8 +320,24 @@
         goto(WORKBENCH_PATH, { replaceState: true, noScroll: true });
     }
 
+    function onTextChanged() {
+        workbench?.scheduleValidation();
+    }
+
     function reveal(line, column = 1) {
         editor?.reveal(line, column);
+    }
+
+    async function jumpTo(problem) {
+        if (problem.documentId && problem.documentId !== workbench.selectedId) {
+            if (!(await confirmSwitch())) {
+                return;
+            }
+            await workbench.select(problem.documentId);
+        }
+        if (problem.line) {
+            reveal(problem.line, problem.column ?? 1);
+        }
     }
 
     /**
@@ -409,6 +427,11 @@
             {:else if workbench.dirty}
                 <span class="text-orange shrink-0 text-xs">
                     unsaved changes
+                </span>
+            {/if}
+            {#if workbench.validating}
+                <span class="text-text-subtle shrink-0 text-xs">
+                    validating…
                 </span>
             {/if}
             {#if workbench.generating}
@@ -512,11 +535,13 @@
                                     bind:this={editor}
                                     bind:value={workbench.text}
                                     documentKey={workbench.bufferKey}
+                                    findings={workbench.findings}
                                     readOnly={workbench.editorReadOnly}
                                     placeholder={workbench.editorReadOnly
                                         ? undefined
                                         : "Empty document — write shapes in Turtle here."}
                                     onSave={saveByKeyboard}
+                                    onchange={onTextChanged}
                                 />
                             </div>
                         </div>
@@ -526,6 +551,12 @@
                     <DocumentInspector {workbench} onreveal={reveal} />
                 </Pane>
             </Splitpanes>
+
+            <ProblemsPanel
+                {workbench}
+                bind:expanded={problemsExpanded}
+                onselect={jumpTo}
+            />
         </div>
     {/if}
 </div>
