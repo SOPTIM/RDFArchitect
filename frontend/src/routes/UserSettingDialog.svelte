@@ -22,6 +22,7 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { isInvalidCornerRoundingFactor } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+    import { THEME_OPTIONS, THEME_SETTING } from "$lib/monaco/theme.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
@@ -45,6 +46,7 @@
         cornerRoundingFactor: 50,
         showAssociationLabels: true,
         showAssociationsInClass: false,
+        [THEME_SETTING]: "light",
     };
 
     let localSettings = $state({});
@@ -191,6 +193,16 @@
                     violations={cornerRoundingFactorViolations}
                 />
             </div>
+        </USC.Section>
+        <USC.Section title="Constraints Editor">
+            <USC.Item.SingleSelect
+                label="Colour Scheme"
+                options={THEME_OPTIONS}
+                getOptionLabel={option => option.name}
+                getOptionValue={option => option.value}
+                value={localSettings[THEME_SETTING]}
+                onChange={value => (localSettings[THEME_SETTING] = value)}
+            />
         </USC.Section>
         <USC.Section title="Normalization">
             <CheckBoxEditControl

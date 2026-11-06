@@ -103,6 +103,18 @@ describe("RestoreConfirmDialog", () => {
         expect(props.onConfirm).toHaveBeenCalledWith([GRAPH_A]);
     });
 
+    test("held to the schema, says constraints documents stay as they are", async () => {
+        await render({ request: requestTo([GRAPH_A]), graphUri: GRAPH_A });
+
+        expect(text()).toContain("leaves them as they are");
+    });
+
+    test("in the workspace log, has nothing to say about documents", async () => {
+        await render({ request: requestTo([]) });
+
+        expect(text()).not.toContain("leaves them as they are");
+    });
+
     test("cleared, restores the whole workspace and lists every change", async () => {
         const props = await render({
             request: requestTo([GRAPH_A]),
