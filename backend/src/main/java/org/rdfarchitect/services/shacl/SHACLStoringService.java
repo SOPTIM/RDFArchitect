@@ -40,9 +40,9 @@ import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.ShapesDocument;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.InvalidContentException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
@@ -78,9 +78,9 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Stores and reads the SHACL shapes belonging to a graph, of which there are two separate stores:
- * the single custom SHACL graph, and any number of {@link ShapesDocument shapes documents}. Nothing
- * here reads one on behalf of the other.
+ * Stores and reads SHACL shapes, of which there are two separate stores: each graph's single custom
+ * SHACL graph, and the workspace's {@link ShapesDocument shapes documents}. Nothing here reads one
+ * on behalf of the other.
  */
 @RequiredArgsConstructor
 public class SHACLStoringService
@@ -544,14 +544,9 @@ public class SHACLStoringService
     // -------------------------------------------------------------------------
 
     @Override
-    public List<ShapesDocumentInfo> listShapesDocuments(GraphIdentifier graphIdentifier) {
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
-            return transaction
-                    .graph(graphIdentifier.graphUri())
-                    .getShapesDocuments()
-                    .values()
-                    .stream()
+    public List<ShapesDocumentInfo> listShapesDocuments(String datasetName) {
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            return transaction.shapesDocuments().values().stream()
                     .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
                     .map(SHACLStoringService::toInfo)
                     .toList();
@@ -560,22 +555,24 @@ public class SHACLStoringService
 
     @Override
     public ShapesDocumentInfo createShapesDocument(
-            GraphIdentifier graphIdentifier,
+            String datasetName,
+            Collection<String> schemas,
             String name,
             String sourceFileName,
             String content,
             Lang lang) {
-        assertEditable(graphIdentifier);
+        assertEditable(datasetName);
         var requestedName = name == null ? null : validName(name);
         var parsed = parse(content, lang);
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
-            var documentName = requestedName != null ? requestedName : freeDefaultName(ctx);
-            assertNameIsFree(ctx, documentName, null);
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            assertSchemasExist(transaction, schemas);
+            var documentName = requestedName != null ? requestedName : freeDefaultName(transaction);
+            assertNameIsFree(transaction, documentName, null);
             // A failure before the commit needs no cleanup: the new document is part of the
             // transaction, and leaving the block without committing discards it.
-            var document = ctx.createShapesDocument(documentName, resolveOrigin(sourceFileName));
+            var document =
+                    transaction.createShapesDocument(
+                            documentName, resolveOrigin(sourceFileName), schemas);
             document.setSourceFileName(sourceFileName);
             writeContent(document, parsed, content, lang);
             transaction.commit(
@@ -585,11 +582,9 @@ public class SHACLStoringService
     }
 
     @Override
-    public String getShapesDocumentText(GraphIdentifier graphIdentifier, UUID documentId) {
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
-            return textOf(
-                    requireDocument(transaction.graph(graphIdentifier.graphUri()), documentId));
+    public String getShapesDocumentText(String datasetName, UUID documentId) {
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            return textOf(requireDocument(transaction, documentId));
         }
     }
 
@@ -602,15 +597,10 @@ public class SHACLStoringService
 
     @Override
     public void replaceShapesDocumentText(
-            GraphIdentifier graphIdentifier,
-            UUID documentId,
-            String turtle,
-            String expectedRevision) {
-        assertEditable(graphIdentifier);
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var document =
-                    requireDocument(transaction.graph(graphIdentifier.graphUri()), documentId);
+            String datasetName, UUID documentId, String turtle, String expectedRevision) {
+        assertEditable(datasetName);
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            var document = requireDocument(transaction, documentId);
             if (expectedRevision != null
                     && !expectedRevision.equalsIgnoreCase(
                             SHACLDocumentUseCase.revisionOf(textOf(document)))) {
@@ -631,26 +621,29 @@ public class SHACLStoringService
 
     @Override
     public ShapesDocumentInfo updateShapesDocument(
-            GraphIdentifier graphIdentifier,
+            String datasetName,
             UUID documentId,
             String name,
             Boolean enabled,
-            Integer order) {
-        assertEditable(graphIdentifier);
+            Integer order,
+            Collection<String> schemas) {
+        assertEditable(datasetName);
         var newName = name == null ? null : validName(name);
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
-            var document = requireDocument(ctx, documentId);
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            var document = requireDocument(transaction, documentId);
             if (newName != null) {
-                assertNameIsFree(ctx, newName, documentId);
+                assertNameIsFree(transaction, newName, documentId);
                 document.setName(newName);
             }
             if (enabled != null) {
                 document.setEnabled(enabled);
             }
             if (order != null) {
-                reorder(ctx, document, order);
+                reorder(transaction, document, order);
+            }
+            if (schemas != null) {
+                assertSchemasExist(transaction, schemas);
+                document.setSchemas(schemas);
             }
             // An update that changes nothing records nothing: only what changed gains a version.
             transaction.commit(
@@ -661,13 +654,11 @@ public class SHACLStoringService
     }
 
     @Override
-    public void deleteShapesDocument(GraphIdentifier graphIdentifier, UUID documentId) {
-        assertEditable(graphIdentifier);
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
-            var document = requireDocument(ctx, documentId);
-            ctx.removeShapesDocument(documentId);
+    public void deleteShapesDocument(String datasetName, UUID documentId) {
+        assertEditable(datasetName);
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            var document = requireDocument(transaction, documentId);
+            transaction.removeShapesDocument(documentId);
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Deleted", "constraints document", document.getName()));
@@ -675,7 +666,7 @@ public class SHACLStoringService
     }
 
     /**
-     * Exports the named documents as one file, optionally merged with the generated shapes.
+     * Exports the named documents as one file, optionally merged with schemas' generated shapes.
      *
      * <p>Enabled state is ignored: a document is included because the user ticked it. Switching one
      * off takes it out of validation, not out of the user's reach.
@@ -688,15 +679,13 @@ public class SHACLStoringService
      */
     @Override
     public ByteArrayOutputStream exportSelectedSHACLGraph(
-            GraphIdentifier graphIdentifier,
+            String datasetName,
             RDFFormat format,
             Collection<UUID> documentIds,
-            boolean includeGenerated) {
-        try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            Collection<String> generatedFor) {
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
             var ids = Set.copyOf(documentIds == null ? List.<UUID>of() : documentIds);
-            var requested = ids.stream().map(id -> requireDocument(ctx, id)).toList();
+            var requested = ids.stream().map(id -> requireDocument(transaction, id)).toList();
             var contributing =
                     requested.size() == 1
                             ? requested
@@ -704,7 +693,7 @@ public class SHACLStoringService
                                     .filter(document -> !document.getGraph().isEmpty())
                                     .toList();
             if (contributing.size() == 1
-                    && !includeGenerated
+                    && generatedFor.isEmpty()
                     && Lang.TURTLE.equals(format.getLang())) {
                 var rawText = contributing.getFirst().getRawText();
                 if (rawText != null) {
@@ -713,11 +702,11 @@ public class SHACLStoringService
                     return out;
                 }
             }
-            var model = readShapesOf(ctx, ids);
-            if (includeGenerated) {
-                var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
-                ontologyModel.setNsPrefixes(
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+            var model = readShapesOf(transaction, ids);
+            for (var schema : generatedFor) {
+                var ontologyModel =
+                        ModelFactory.createModelForGraph(transaction.graph(schema).getRdfGraph());
+                ontologyModel.setNsPrefixes(databasePort.getPrefixMapping(datasetName));
                 var generated =
                         new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true).generate();
                 // Documents win over generated shapes for the same resource: the generated ones
@@ -734,10 +723,10 @@ public class SHACLStoringService
         }
     }
 
-    /** The named documents merged in the graph's own order, whether enabled or not. */
-    private static Model readShapesOf(GraphContext ctx, Set<UUID> documentIds) {
+    /** The named documents merged in the workspace's own order, whether enabled or not. */
+    private static Model readShapesOf(WorkspaceTransaction transaction, Set<UUID> documentIds) {
         var union = ModelFactory.createDefaultModel();
-        ctx.getShapesDocuments().values().stream()
+        transaction.shapesDocuments().values().stream()
                 .filter(document -> documentIds.contains(document.getId()))
                 .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
                 .forEach(document -> addWithPrefixes(union, document));
@@ -786,19 +775,31 @@ public class SHACLStoringService
      * that has not noticed the switch, a script — would otherwise change a workspace the user has
      * frozen.
      */
-    private void assertEditable(GraphIdentifier graphIdentifier) {
-        if (databasePort.isReadOnly(graphIdentifier.datasetName())) {
+    private void assertEditable(String datasetName) {
+        if (databasePort.isReadOnly(datasetName)) {
             throw new ResourceConflictException(
                     "The workspace \"%s\" is read-only. Enable editing to change its constraints."
-                            .formatted(graphIdentifier.datasetName()));
+                            .formatted(datasetName));
         }
     }
 
-    private static ShapesDocument requireDocument(GraphContext ctx, UUID documentId) {
-        var document = ctx.getShapesDocuments().get(documentId);
+    /** A document can only be pointed at schemas that exist now. Later they may go, and return. */
+    private static void assertSchemasExist(
+            WorkspaceTransaction transaction, Collection<String> schemas) {
+        var held = transaction.graphUris();
+        for (var schema : schemas) {
+            if (!held.contains(schema)) {
+                throw new ResourceNotFoundException("No schema with URI " + schema + ".");
+            }
+        }
+    }
+
+    private static ShapesDocument requireDocument(
+            WorkspaceTransaction transaction, UUID documentId) {
+        var document = transaction.shapesDocuments().get(documentId);
         if (document == null) {
             throw new ResourceNotFoundException(
-                    "No constraints document with id " + documentId + " in this graph.");
+                    "No constraints document with id " + documentId + " in this workspace.");
         }
         return document;
     }
@@ -807,16 +808,19 @@ public class SHACLStoringService
      * Names identify documents to the user, so two documents must not share one — nor differ only
      * in case, which reads as the same name and collides as a file name on export.
      */
-    private static void assertNameIsFree(GraphContext ctx, String name, UUID allowedId) {
+    private static void assertNameIsFree(
+            WorkspaceTransaction transaction, String name, UUID allowedId) {
         var clash =
-                ctx.getShapesDocuments().values().stream()
+                transaction.shapesDocuments().values().stream()
                         .anyMatch(
                                 d ->
                                         d.getName().equalsIgnoreCase(name)
                                                 && !d.getId().equals(allowedId));
         if (clash) {
             throw new ResourceConflictException(
-                    "A constraints document named \"" + name + "\" already exists in this graph.");
+                    "A constraints document named \""
+                            + name
+                            + "\" already exists in this workspace.");
         }
     }
 
@@ -834,9 +838,9 @@ public class SHACLStoringService
     }
 
     /** For a document created without a name, such as an upload whose file name is unknown. */
-    private static String freeDefaultName(GraphContext ctx) {
+    private static String freeDefaultName(WorkspaceTransaction transaction) {
         var taken =
-                ctx.getShapesDocuments().values().stream()
+                transaction.shapesDocuments().values().stream()
                         .map(document -> document.getName().toLowerCase(Locale.ROOT))
                         .collect(Collectors.toSet());
         var candidate = DEFAULT_DOCUMENT_NAME + ".ttl";
@@ -850,10 +854,11 @@ public class SHACLStoringService
      * Moves {@code document} to {@code targetOrder} and renumbers the rest so the positions stay
      * dense — a gap would make the next insert land in an unexpected place.
      */
-    private static void reorder(GraphContext ctx, ShapesDocument document, int targetOrder) {
+    private static void reorder(
+            WorkspaceTransaction transaction, ShapesDocument document, int targetOrder) {
         var ordered =
                 new ArrayList<>(
-                        ctx.getShapesDocuments().values().stream()
+                        transaction.shapesDocuments().values().stream()
                                 .sorted(Comparator.comparingInt(ShapesDocument::getOrder))
                                 .toList());
         ordered.remove(document);
@@ -950,6 +955,7 @@ public class SHACLStoringService
                 .origin(document.getOrigin())
                 .enabled(document.isEnabled())
                 .order(document.getOrder())
+                .schemas(document.getSchemas())
                 .tripleCount(document.getGraph().size())
                 .nodeShapeCount(counts.nodeShapes())
                 .propertyShapeCount(counts.propertyShapes())

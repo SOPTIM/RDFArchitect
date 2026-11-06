@@ -17,10 +17,8 @@
 
 package org.rdfarchitect.database.snapshots;
 
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Naming convention for the named graphs that carry shapes documents inside a stored dataset.
@@ -28,82 +26,53 @@ import java.util.Optional;
  * <p>A snapshot is a plain RDF dataset, and the load path discovers its content by asking for every
  * named graph it contains ({@code SELECT DISTINCT ?graph}). Shapes therefore need a graph name that
  * cannot be mistaken for a CIM profile: profile graphs are {@code http(s)} IRIs, so a {@code urn:}
- * name is unambiguous, and putting the owning graph URI inside it keeps the association explicit
- * rather than positional.
+ * name is unambiguous.
  *
  * <pre>
- *   urn:rdfa:shacl:http%3A%2F%2Fiec.ch%2FTC57%2F...%2FEquipment:1fac0fd3-d607-...
- *   └─ prefix ────┘└─ url-encoded owner graph URI ──────────────────┘└ document id
+ *   urn:rdfa:shacl:1fac0fd3-d607-4b1e-8e3c-0a6f3c2d9b11   one document's triples
+ *   urn:rdfa:shacl-meta                                   what the workspace's documents record
  * </pre>
+ *
+ * <p>Earlier test images wrote graphs named after an owning schema under the same two prefixes. No
+ * release holds any. They are still reserved, so they never become schemas, but nothing reads them,
+ * and persisting removes them.
  */
 public final class ShapesGraphNaming {
 
     private static final String PREFIX = "urn:rdfa:shacl:";
 
+    private static final String METADATA = "urn:rdfa:shacl-meta";
+
     private ShapesGraphNaming() {}
 
-    /** Identifies the shapes graph {@code documentId} belonging to {@code ownerGraphUri}. */
-    public record ShapesGraphName(String ownerGraphUri, String documentId) {}
-
-    /** Builds the snapshot graph name for a shapes document of {@code ownerGraphUri}. */
-    public static String encode(String ownerGraphUri, String documentId) {
-        return PREFIX + URLEncoder.encode(ownerGraphUri, StandardCharsets.UTF_8) + ":" + documentId;
+    /** Names the graph holding a document's triples. */
+    public static String encode(UUID documentId) {
+        return PREFIX + documentId;
     }
 
-    private static final String METADATA_PREFIX = "urn:rdfa:shacl-meta:";
-
-    /**
-     * Names the graph holding a graph's shapes-document metadata (names, order, enabled flags,
-     * source text). Separate from the shapes themselves so that reading the shapes never has to
-     * filter bookkeeping triples out of them.
-     */
-    public static String encodeMetadata(String ownerGraphUri) {
-        return METADATA_PREFIX + URLEncoder.encode(ownerGraphUri, StandardCharsets.UTF_8);
-    }
-
-    /** Returns whether {@code graphUri} names a shapes-metadata graph. */
-    public static boolean isMetadataGraph(String graphUri) {
-        return graphUri != null && graphUri.startsWith(METADATA_PREFIX);
-    }
-
-    /** Returns whether {@code graphUri} names a shapes graph rather than a CIM profile graph. */
-    public static boolean isShapesGraph(String graphUri) {
-        return graphUri != null && graphUri.startsWith(PREFIX) && !isMetadataGraph(graphUri);
+    /** Names the graph holding what the workspace's documents record beyond their triples. */
+    public static String metadataGraph() {
+        return METADATA;
     }
 
     /** Returns whether {@code graphUri} is one of the reserved graphs, of either kind. */
     public static boolean isReserved(String graphUri) {
-        return isShapesGraph(graphUri) || isMetadataGraph(graphUri);
-    }
-
-    /** Splits a shapes-metadata graph name back into the graph it belongs to. */
-    public static Optional<String> decodeMetadata(String graphUri) {
-        if (!isMetadataGraph(graphUri)) {
-            return Optional.empty();
-        }
-        var body = graphUri.substring(METADATA_PREFIX.length());
-        if (body.isEmpty()) {
-            return Optional.empty();
-        }
-        return Optional.of(URLDecoder.decode(body, StandardCharsets.UTF_8));
+        return graphUri != null && (graphUri.startsWith(PREFIX) || graphUri.startsWith(METADATA));
     }
 
     /**
-     * Splits a shapes graph name back into its owner and document id.
+     * The document a graph holds the triples of.
      *
-     * @return empty when {@code graphUri} is not a shapes graph name, or is malformed
+     * @return empty when {@code graphUri} does not name a document's graph
      */
-    public static Optional<ShapesGraphName> decode(String graphUri) {
-        if (!isShapesGraph(graphUri)) {
+    public static Optional<UUID> decode(String graphUri) {
+        if (graphUri == null || !graphUri.startsWith(PREFIX)) {
             return Optional.empty();
         }
-        var body = graphUri.substring(PREFIX.length());
-        // The owner URI is url-encoded, so the last ':' is always the id separator.
-        var separator = body.lastIndexOf(':');
-        if (separator <= 0 || separator == body.length() - 1) {
+        try {
+            return Optional.of(UUID.fromString(graphUri.substring(PREFIX.length())));
+        } catch (IllegalArgumentException _) {
             return Optional.empty();
         }
-        var owner = URLDecoder.decode(body.substring(0, separator), StandardCharsets.UTF_8);
-        return Optional.of(new ShapesGraphName(owner, body.substring(separator + 1)));
     }
 }
