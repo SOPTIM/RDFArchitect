@@ -24,7 +24,7 @@ import org.apache.jena.vocabulary.OWL2;
 import org.apache.jena.vocabulary.RDF;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationSeverity;
 import org.rdfarchitect.models.cim.ontology.KnownOntologyFields;
 
 public class ProfileHeaderTest extends SchemaValidationTestBase {
@@ -37,12 +37,7 @@ public class ProfileHeaderTest extends SchemaValidationTestBase {
         var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
         assertThat(report.isValid()).isTrue();
-        assertThat(
-                        hasIssue(
-                                report,
-                                SchemaValidationIssueDTO.Severity.WARNING,
-                                null,
-                                "Profile header is missing"))
+        assertThat(hasIssue(report, ValidationSeverity.WARNING, null, "Profile header is missing"))
                 .isTrue();
     }
 
@@ -61,7 +56,7 @@ public class ProfileHeaderTest extends SchemaValidationTestBase {
         assertThat(
                         hasIssue(
                                 report,
-                                SchemaValidationIssueDTO.Severity.WARNING,
+                                ValidationSeverity.WARNING,
                                 NS + "Ontology",
                                 KnownOntologyFields.OWL_VERSION_IRI.getIri()))
                 .isTrue();
@@ -80,7 +75,7 @@ public class ProfileHeaderTest extends SchemaValidationTestBase {
         assertThat(
                         hasIssue(
                                 report,
-                                SchemaValidationIssueDTO.Severity.WARNING,
+                                ValidationSeverity.WARNING,
                                 NS + "Ontology",
                                 KnownOntologyFields.DCAT_KEYWORD.getIri()))
                 .isTrue();
@@ -96,17 +91,14 @@ public class ProfileHeaderTest extends SchemaValidationTestBase {
         // No required-field errors from the header itself.
         assertThat(
                         report.getIssues().stream()
-                                .filter(
-                                        i ->
-                                                i.getSeverity()
-                                                        == SchemaValidationIssueDTO.Severity.ERROR)
+                                .filter(i -> i.getSeverity() == ValidationSeverity.ERROR)
                                 .anyMatch(i -> i.getMessage().contains("profile header field")))
                 .isFalse();
         // But INFO issues for all other known but unset optional fields.
         assertThat(report.getIssues())
                 .anyMatch(
                         i ->
-                                i.getSeverity() == SchemaValidationIssueDTO.Severity.INFO
+                                i.getSeverity() == ValidationSeverity.INFO
                                         && i.getMessage()
                                                 .contains(
                                                         "Optional profile header field is not set"));

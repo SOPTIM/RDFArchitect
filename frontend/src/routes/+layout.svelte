@@ -24,19 +24,32 @@
         installBackendFetchInterceptor,
         probeBackendConnection,
     } from "$lib/api/backendConnectionMonitor.svelte.js";
-    import { loadSnapshot as loadSnapshotAPI } from "$lib/api/generated/index.ts";
+    import {
+        getSession,
+        loadSnapshot as loadSnapshotAPI,
+    } from "$lib/api/generated/index.ts";
     import { Menubar } from "$lib/components/bitsui/menubar";
     import BrandLogo from "$lib/components/BrandLogo.svelte";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ToastContainer from "$lib/components/ToastContainer.svelte";
+    import { PUBLIC_EMBED_SESSION_HANDSHAKE } from "$lib/config/runtime";
+    import { isDialogOpen } from "$lib/dialog/openDialogs.js";
+    import UndoConfirmDialog from "$lib/dialog/UndoConfirmDialog.svelte";
+    import { installSessionHandshake } from "$lib/embedding/session-handshake.js";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import {
+        dragHasFiles,
+        endFileDrag,
+        enterFileDrag,
+        fileDragState,
+        leaveFileDrag,
+    } from "$lib/fileDragState.svelte.js";
     import { versionControlStore } from "$lib/stores/versionControlStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import {
-        DiagramType,
         editorState,
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
@@ -53,15 +66,23 @@
     /** @type {{children?: import("svelte").Snippet}} */
     let { children } = $props();
 
+    /**
+     * What to call a page in the toolbar. Only for pages that are laid out like the editor and
+     * would otherwise be mistaken for it; the editor itself puts its search there instead.
+     */
+    const PAGE_TITLES = { "/changelog": "Changelog" };
+
     let canUndo = $state(false);
     let canRedo = $state(false);
-    let menubarValue = $state(undefined);
+    let menubarValue = $state("");
 
     let isWorkspaceReadOnly = $state(false);
 
     let isLeftAltPressed = false;
 
     let selectedWorkspace = $derived(editorState.selectedWorkspace.getValue());
+
+    let pageTitle = $derived(PAGE_TITLES[page.url.pathname] ?? "");
 
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
@@ -83,7 +104,18 @@
         installBackendFetchInterceptor();
         probeBackendConnection();
         loadSnapshot();
+        // Lets an embedding IDE read the workspaces of this very session; opt-in per deployment.
+        return installSessionHandshake({
+            enabled: PUBLIC_EMBED_SESSION_HANDSHAKE,
+            fetchSessionId: sessionId,
+        });
     });
+
+    /** The backend session this browser is using, or null when it cannot be read. */
+    async function sessionId() {
+        const { data, error } = await getSession();
+        return error ? null : (data?.id ?? null);
+    }
 
     async function requestEnableEditing() {
         if (!selectedWorkspace || !isWorkspaceReadOnly) {
@@ -108,7 +140,17 @@
                 path: { base64Token: base64Param },
             });
             if (!error) {
-                await goto("/mainpage");
+                // Keep any model-selection params so a snapshot link can deep-link into a
+                // dataset/graph/package or class (e.g. /?snapshot=...&class=<iri>).
+                const forwarded = new URLSearchParams();
+                for (const key of ["dataset", "graph", "package", "class"]) {
+                    const value = page.url.searchParams.get(key);
+                    if (value) {
+                        forwarded.set(key, value);
+                    }
+                }
+                const query = forwarded.toString();
+                await goto(query ? `/mainpage?${query}` : "/mainpage");
                 toastStore.success(
                     "Snapshot loaded",
                     "The shared snapshot has been loaded.",
@@ -124,10 +166,9 @@
 
     async function fetchUndoRedo() {
         const workspaceName = editorState.selectedWorkspace.getValue();
-        const graph = editorState.selectedGraph.getValue();
-        await versionControlStore.refresh(workspaceName, graph);
-        canUndo = await versionControlStore.canUndo(workspaceName, graph);
-        canRedo = await versionControlStore.canRedo(workspaceName, graph);
+        await versionControlStore.refreshAfterReload(workspaceName);
+        canUndo = await versionControlStore.canUndo(workspaceName);
+        canRedo = await versionControlStore.canRedo(workspaceName);
     }
 
     async function reload() {
@@ -152,22 +193,16 @@
         );
     }
 
-    function isDialogOpen() {
-        return !!document.querySelector(
-            '[role="dialog"], [role="alertdialog"]',
-        );
-    }
-
     async function handleUndoRedo(isRedo) {
         if (isRedo && !canRedo) return;
         if (!isRedo && !canUndo) return;
 
         await eventStack.guardAction(async () => {
-            const { error } = isRedo
+            const { error, skipped } = isRedo
                 ? await versionControlStore.redo()
                 : await versionControlStore.undo();
 
-            if (!error) {
+            if (!error && !skipped) {
                 await reload();
             }
         });
@@ -193,14 +228,11 @@
                 if (isDialogOpen()) {
                     return;
                 }
-                if (
-                    editorState.selectedDiagram.getProperty("type") ===
-                    DiagramType.CROSS_PROFILE
-                ) {
-                    toastStore.info(
-                        "Undo/Redo not possible",
-                        "Undo/Redo is not available in the Merged View.",
-                    );
+                // Auto-repeat fires every thirty or so milliseconds and would
+                // walk the whole history in a second. Only real presses count;
+                // every one of those takes a step.
+                if (event.repeat) {
+                    event.preventDefault();
                     return;
                 }
                 event.preventDefault();
@@ -214,6 +246,52 @@
         if (inputFocused) return;
         shortcutStore.handleEvent(event);
     }
+
+    /**
+     * Accepts dragged files on behalf of the whole window: without this, a drop next to a drop
+     * zone opens the file in the tab and takes the editor with it. Behind a dialog it refuses the
+     * drop instead, which the cursor says and which keeps the drop event from firing at all.
+     */
+    function handleWindowDragOver(event) {
+        // A zone that takes the files has answered already; it decides the cursor, not the window.
+        if (!dragHasFiles(event) || event.defaultPrevented) {
+            return;
+        }
+        event.preventDefault();
+        if (isDialogOpen() && event.dataTransfer) {
+            event.dataTransfer.dropEffect = "none";
+        }
+    }
+
+    /**
+     * Clears a drag the browser never ended — cancelling with Esc does not reliably report a last
+     * `dragleave`. A file drag suppresses mouse events, so one arriving now means it is over.
+     */
+    function endStrandedFileDrag() {
+        if (fileDragState.active) {
+            endFileDrag();
+        }
+    }
+
+    function handleWindowDrop(event) {
+        if (!dragHasFiles(event)) {
+            return;
+        }
+        // Whoever took the drop has prevented it already; what still reaches the window landed
+        // beside every zone and would otherwise be gone without a word.
+        if (
+            !event.defaultPrevented &&
+            !isDialogOpen() &&
+            page.url.pathname === "/mainpage"
+        ) {
+            toastStore.info(
+                "Nothing imported",
+                "Drop schemas on the schema navigation to import them.",
+            );
+        }
+        event.preventDefault();
+        endFileDrag();
+    }
 </script>
 
 <svelte:window
@@ -224,6 +302,12 @@
     onblur={() => {
         isLeftAltPressed = false;
     }}
+    ondragenter={enterFileDrag}
+    ondragover={handleWindowDragOver}
+    ondragleave={leaveFileDrag}
+    ondrop={handleWindowDrop}
+    ondragend={endFileDrag}
+    onmousemove={endStrandedFileDrag}
 />
 <Tooltip.Provider delayDuration={150}>
     <div
@@ -231,7 +315,9 @@
     >
         {#if page.url.pathname !== "/"}
             <nav
-                class="toolbar-surface text-default-text flex h-12 min-h-12 w-full items-center"
+                class="toolbar-surface text-default-text flex h-12 min-h-12 w-full items-center {pageTitle
+                    ? 'toolbar-surface--named'
+                    : ''}"
             >
                 <!-- Left -->
                 <div class="w-1/3">
@@ -266,6 +352,10 @@
                         <div class="w-full">
                             <Searchbar />
                         </div>
+                    {:else if pageTitle}
+                        <div class="w-full text-center text-sm font-semibold">
+                            {pageTitle}
+                        </div>
                     {/if}
                 </div>
 
@@ -292,5 +382,6 @@
         </div>
     </div>
     <ToastContainer />
+    <UndoConfirmDialog />
     <PasteClassesDialog />
 </Tooltip.Provider>

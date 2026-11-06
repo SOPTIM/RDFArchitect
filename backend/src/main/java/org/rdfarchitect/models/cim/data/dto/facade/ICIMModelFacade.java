@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.models.cim.data.dto.facade;
 
+import org.rdfarchitect.models.cim.data.dto.facade.header.ICIMProfileHeader;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -37,4 +39,11 @@ public interface ICIMModelFacade {
     List<ICIMClassCategory> getCIMClassCategories();
 
     ICIMClassCategory getCIMClassCategory(UUID uuid);
+
+    /**
+     * The profile header of this graph, saying which profile and which version it is.
+     *
+     * @return the header, never null, see {@link ICIMProfileHeader#isPresent()}
+     */
+    ICIMProfileHeader getHeader();
 }

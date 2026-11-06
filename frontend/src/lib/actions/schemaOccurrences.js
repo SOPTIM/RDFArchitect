@@ -20,21 +20,45 @@
  * whether they agree on the class enough to extend it without asking.
  */
 
+import { graphLabel, graphLabeller } from "$lib/utils/graph-label.js";
 import { compareGraphs } from "$lib/utils/graph-order.js";
-import { uriSuffix } from "$lib/utils/iri.js";
 
-export function schemaLabel(occurrence) {
-    return occurrence?.keyword || uriSuffix(occurrence?.graphUri);
+/** An occurrence read as the schema it is about, so that one rule names them all. */
+function asGraph(occurrence) {
+    return {
+        label: occurrence?.label,
+        keyword: occurrence?.keyword,
+        uri: occurrence?.graphUri,
+    };
 }
 
-/** Lists the schemas the way the navigation lists them. */
+/**
+ * The name of the schema an occurrence is about.
+ *
+ * `displayLabel` is what {@link sortSchemaOccurrences} worked out against the other schemas of
+ * the workspace; on its own an occurrence can only be named by itself.
+ */
+export function schemaLabel(occurrence) {
+    return occurrence?.displayLabel || graphLabel(asGraph(occurrence));
+}
+
+/**
+ * Lists the schemas the way the navigation lists them: named by their profile, lookalikes told
+ * apart, and in the same order.
+ */
 export function sortSchemaOccurrences(occurrences) {
-    return [...(occurrences ?? [])].sort((a, b) =>
-        compareGraphs(
-            { label: schemaLabel(a), uri: a.graphUri },
-            { label: schemaLabel(b), uri: b.graphUri },
-        ),
-    );
+    const nameOf = graphLabeller((occurrences ?? []).map(asGraph));
+    return (occurrences ?? [])
+        .map(occurrence => ({
+            ...occurrence,
+            displayLabel: nameOf(asGraph(occurrence)),
+        }))
+        .sort((a, b) =>
+            compareGraphs(
+                { label: schemaLabel(a), uri: a.graphUri },
+                { label: schemaLabel(b), uri: b.graphUri },
+            ),
+        );
 }
 
 /** Marks the schemas that do not know the class yet. */

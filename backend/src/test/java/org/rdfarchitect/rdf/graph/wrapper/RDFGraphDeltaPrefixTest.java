@@ -30,18 +30,18 @@ class RDFGraphDeltaPrefixTest {
     private static final String FOO_URI = "http://example.org/foo#";
     private static final String BAR_URI = "http://example.org/bar#";
 
-    private TransactionContext txnContext;
+    private WorkspaceTransactionContext txnContext;
     private RDFGraphDelta graph;
 
     @BeforeEach
     void setUp() {
-        txnContext = new TransactionContext();
-        graph = new RDFGraphDelta(GraphFactory.createDefaultGraph(), 15, 5, txnContext);
+        txnContext = new WorkspaceTransactionContext("workspace");
+        graph = new RDFGraphDelta(GraphFactory.createDefaultGraph(), txnContext);
     }
 
     @AfterEach
     void tearDown() {
-        if (txnContext.isInTransaction()) {
+        while (txnContext.isInTransaction()) {
             txnContext.end();
         }
     }

@@ -24,7 +24,7 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationSeverity;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 
 public class ClassTest extends SchemaValidationTestBase {
@@ -43,7 +43,7 @@ public class ClassTest extends SchemaValidationTestBase {
         assertThat(
                         hasIssue(
                                 report,
-                                SchemaValidationIssueDTO.Severity.ERROR,
+                                ValidationSeverity.ERROR,
                                 NS + "ClassA",
                                 "Class is missing rdfs:label"))
                 .isTrue();
@@ -62,7 +62,7 @@ public class ClassTest extends SchemaValidationTestBase {
         assertThat(
                         hasIssue(
                                 report,
-                                SchemaValidationIssueDTO.Severity.WARNING,
+                                ValidationSeverity.WARNING,
                                 NS + "ClassA",
                                 "cims:belongsToCategory is missing"))
                 .isTrue();

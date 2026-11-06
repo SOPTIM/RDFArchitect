@@ -124,7 +124,7 @@ public class DeleteRESTController {
                     @RequestBody
                     List<ResourceDeleteRequest> deleteRequests) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/delete\" from \"{}\".",
+                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/delete-requests\" from \"{}\".",
                 datasetName,
                 graphURI,
                 originURL);
@@ -135,7 +135,7 @@ public class DeleteRESTController {
                 new GraphIdentifier(datasetName, extendedGraphURI), deleteRequests);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/delete\" from \"{}\".",
+                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/delete-requests\" from \"{}\".",
                 datasetName,
                 graphURI,
                 originURL);

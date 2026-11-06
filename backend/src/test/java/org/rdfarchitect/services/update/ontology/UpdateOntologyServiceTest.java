@@ -18,7 +18,9 @@
 package org.rdfarchitect.services.update.ontology;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -38,6 +40,7 @@ import org.rdfarchitect.api.dto.ontology.OntologyEntry;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.models.cim.ontology.OntologyFactory;
 import org.rdfarchitect.services.ExpandURIService;
 
@@ -51,17 +54,18 @@ class UpdateOntologyServiceTest {
     private static final String ONTOLOGY_IRI = NAMESPACE + "Ontology";
 
     private DatabasePort databasePort;
+    private WorkspaceTransaction transaction;
     private Model model;
     private UpdateOntologyService updateOntologyService;
 
     @BeforeEach
     void setUp() {
         databasePort = mock(DatabasePort.class);
+        transaction = mock(WorkspaceTransaction.class);
         var graphContext = mock(GraphContext.class);
         model = ModelFactory.createDefaultModel();
 
-        when(databasePort.getGraphWithContext(any())).thenReturn(graphContext);
-        when(graphContext.begin(ReadWrite.WRITE)).thenReturn(graphContext);
+        stubTransaction(graphContext);
         when(graphContext.getRdfGraph()).thenReturn(model.getGraph());
         when(databasePort.getPrefixMapping(DATASET)).thenReturn(prefixMapping());
 
@@ -159,5 +163,39 @@ class UpdateOntologyServiceTest {
 
         assertThat(datatypeOf(DCTerms.title.getURI())).isEqualTo(XSD.xstring.getURI());
         assertThat(datatypeOf(DCAT.keyword.getURI())).isEqualTo(XSD.xstring.getURI());
+    }
+
+    /**
+     * The ontology IRI is composed from the namespace, so an absent one used to reach Jena as a
+     * null and come back as an unreadable NullPointerException - or, expanded, would have been
+     * written into the graph as the text "null".
+     */
+    @Test
+    void replaceOntology_withoutANamespace_saysWhatIsMissing() {
+        var graphIdentifier = new GraphIdentifier(DATASET, GRAPH_URI);
+        var ontology =
+                new OntologyDTO()
+                        .setEntries(
+                                List.of(literalEntry(DCTerms.title.getURI(), "A profile", null)));
+
+        assertThatThrownBy(() -> updateOntologyService.replaceOntology(graphIdentifier, ontology))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Ontology namespace is missing");
+    }
+
+    @Test
+    void replaceOntology_withAnEntryThatHasNoIri_saysWhatIsMissing() {
+        var graphIdentifier = new GraphIdentifier(DATASET, GRAPH_URI);
+        var ontology = ontologyWith(literalEntry(null, "A profile", null));
+
+        assertThatThrownBy(() -> updateOntologyService.replaceOntology(graphIdentifier, ontology))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Ontology entry IRI is missing");
+    }
+
+    private void stubTransaction(GraphContext graph) {
+        when(transaction.graph(anyString())).thenReturn(graph);
+        when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))
+                .thenReturn(transaction);
     }
 }

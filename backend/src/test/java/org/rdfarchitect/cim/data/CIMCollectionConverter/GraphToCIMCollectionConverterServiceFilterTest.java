@@ -19,6 +19,7 @@ package org.rdfarchitect.cim.data.CIMCollectionConverter;
 
 import static org.assertj.core.api.Assertions.*;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
@@ -68,16 +69,18 @@ class GraphToCIMCollectionConverterServiceFilterTest {
 
     private void addFileGraphToDatabase(String fileName) throws IOException {
         if (!database.containsGraph(graphIdentifier)) {
-            database.createGraph(graphIdentifier, GraphFactory.createDefaultGraph());
+            createGraph(database, graphIdentifier, GraphFactory.createDefaultGraph());
         }
         var graph = GraphFactory.createDefaultGraph();
         InputStream in = Files.newInputStream(Path.of(fileName));
         RDFDataMgr.read(graph, in, Lang.TTL);
-        try (var ctx = database.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                database.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             for (var triple : graph.find().toList()) {
                 ctx.getRdfGraph().add(triple);
             }
-            ctx.commit();
+            transaction.commit("test change");
         }
     }
 
@@ -193,5 +196,14 @@ class GraphToCIMCollectionConverterServiceFilterTest {
 
         assertThat(childClass.getSuperClass()).isNull();
         assertThat(superClass.getSuperClass()).isNull();
+    }
+
+    /** Creates a workspace and a graph in it, the way an upload does. */
+    private static void createGraph(InMemoryDatabase port, GraphIdentifier id, Graph graph) {
+        port.createWorkspaceIfAbsent(id.datasetName());
+        try (var transaction = port.beginTransaction(id.datasetName(), ReadWrite.WRITE)) {
+            transaction.createGraph(id.graphUri(), graph);
+            transaction.commit("created graph %s".formatted(id.graphUri()));
+        }
     }
 }

@@ -19,8 +19,10 @@ package org.rdfarchitect.services.delete;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -35,8 +37,10 @@ import org.rdfarchitect.api.dto.delete.relations.AffectedAssociation;
 import org.rdfarchitect.api.dto.delete.relations.AffectedResource;
 import org.rdfarchitect.api.dto.delete.relations.AffectedResource.AffectedResourceReason;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.GraphWithContextTransactional;
+import org.rdfarchitect.database.WorkspaceTransaction;
+import org.rdfarchitect.database.inmemory.Workspace;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils.CimResourceType;
 
 import java.io.IOException;
@@ -71,8 +75,11 @@ class FindDeleteDependenciesServiceTest {
             UUID.fromString("dba8f8e3-bfb3-4e62-9ca5-b0136ed186b2");
 
     @Mock private DatabasePort databasePort;
+    @Mock private WorkspaceTransaction transaction;
 
     @InjectMocks private FindDeleteDependenciesService service;
+
+    private Workspace workspace;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -81,10 +88,13 @@ class FindDeleteDependenciesServiceTest {
         RDFDataMgr.read(graph, in, Lang.TTL);
         in.close();
 
-        var wrappedContext = new GraphWithContextTransactional(graph);
-
-        when(databasePort.getGraphWithContext(any(GraphIdentifier.class)))
-                .thenReturn(wrappedContext);
+        workspace = new Workspace(GRAPH_IDENTIFIER.datasetName());
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.createGraph(GRAPH_IDENTIFIER.graphUri(), graph);
+            transaction.commit("created the test graph");
+        }
+        when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))
+                .thenAnswer(invocation -> workspace.begin(invocation.getArgument(1)));
     }
 
     private AffectedResource getDeleteDependencies(UUID uuid) {
@@ -365,5 +375,11 @@ class FindDeleteDependenciesServiceTest {
             }
         }
         return result;
+    }
+
+    private void stubTransaction(GraphContext graph) {
+        when(transaction.graph(anyString())).thenReturn(graph);
+        when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))
+                .thenReturn(transaction);
     }
 }

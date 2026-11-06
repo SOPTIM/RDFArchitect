@@ -25,7 +25,7 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationSeverity;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 
 public class AssociationTest extends SchemaValidationTestBase {
@@ -71,7 +71,7 @@ public class AssociationTest extends SchemaValidationTestBase {
         assertThat(
                         hasIssue(
                                 report,
-                                SchemaValidationIssueDTO.Severity.ERROR,
+                                ValidationSeverity.ERROR,
                                 NS + "ClassA.classC",
                                 "Association target class does not exist"))
                 .isTrue();
@@ -95,7 +95,7 @@ public class AssociationTest extends SchemaValidationTestBase {
         assertThat(
                         hasIssue(
                                 report,
-                                SchemaValidationIssueDTO.Severity.ERROR,
+                                ValidationSeverity.ERROR,
                                 NS + "ClassA.broken",
                                 "target (rdfs:range) is not a resource"))
                 .isTrue();
@@ -119,7 +119,7 @@ public class AssociationTest extends SchemaValidationTestBase {
         assertThat(
                         hasIssue(
                                 report,
-                                SchemaValidationIssueDTO.Severity.ERROR,
+                                ValidationSeverity.ERROR,
                                 NS + "ClassA.noRange",
                                 "missing rdfs:range (target class)"))
                 .isTrue();

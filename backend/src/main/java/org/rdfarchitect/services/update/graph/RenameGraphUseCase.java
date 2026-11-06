@@ -25,13 +25,13 @@ public interface RenameGraphUseCase {
      * Renames the graph addressed by {@code graphIdentifier} to {@code newGraphUri}. The content
      * and the history of the graph are kept, references to it are rewritten.
      *
-     * <p>If {@code newKeyword} is given and the graph has a profile header, its {@code
-     * dcat:keyword} is set to that value. Should this fail, the rename is rolled back.
+     * <p>The profile header is deliberately left untouched. What a schema is called on screen is
+     * read from that header — {@code dcterms:title}, {@code dcat:keyword} — and is edited in the
+     * ontology editor. A graph URI names only the graph itself, and is what names a schema that has
+     * no header to be read from.
      *
      * @param graphIdentifier identifies dataset and current graph URI
      * @param newGraphUri the graph URI to rename to
-     * @param newKeyword the display name to store in the profile header, or {@code null} to leave
-     *     the header untouched
      */
-    void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri, String newKeyword);
+    void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri);
 }

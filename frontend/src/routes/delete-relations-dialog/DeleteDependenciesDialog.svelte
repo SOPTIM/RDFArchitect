@@ -31,7 +31,10 @@
     } from "$lib/sharedState.svelte.js";
     import { classStore } from "$lib/stores/classStore.ts";
     import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
+    import { graphStore } from "$lib/stores/graphStore.ts";
+    import { ontologyStore } from "$lib/stores/ontologyStore.ts";
     import { packageStore } from "$lib/stores/packageStore.ts";
+    import { plural } from "$lib/utils/plural.js";
 
     import { getDefaultAction } from "./deleteDependencyDefaults.js";
     import DeleteDependencyNode from "./DeleteDependencyNode.svelte";
@@ -202,6 +205,9 @@
             packageStore.invalidateGraph(workspaceName, graphUri);
             classStore.invalidateGraph(workspaceName, graphUri);
             crossProfileStore.invalidateWorkspace(workspaceName);
+            // The profile header, or the class or package a profile names itself on, may be gone.
+            ontologyStore.invalidateGraph(workspaceName, graphUri);
+            graphStore.invalidateWorkspace(workspaceName);
 
             console.log("Successfully submitted delete request");
             forceReloadTrigger.trigger();
@@ -211,7 +217,7 @@
             multiSelectState.clear();
             const noun = isSingle
                 ? (type ?? "resource")
-                : pluralize(type ?? "resource");
+                : plural(type ?? "resource");
             toastStore.success(
                 `${capitalize(noun)} deleted`,
                 label
@@ -243,10 +249,6 @@
         selectedActions = new Map(selectedActions);
     }
 
-    function pluralize(word) {
-        return word.endsWith("s") ? `${word}es` : `${word}s`;
-    }
-
     function capitalize(word) {
         return word.charAt(0).toUpperCase() + word.slice(1);
     }
@@ -257,7 +259,7 @@
             return `Delete ${noun} "${roots[0].resourceIdentifier.label}"?`;
         }
         if (roots.length > 1) {
-            return `Delete ${roots.length} ${capitalize(pluralize(type ?? "resource"))}?`;
+            return `Delete ${roots.length} ${capitalize(plural(type ?? "resource"))}?`;
         }
         return "Delete Resource?";
     }

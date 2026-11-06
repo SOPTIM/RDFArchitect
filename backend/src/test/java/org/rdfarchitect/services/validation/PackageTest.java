@@ -23,7 +23,7 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.vocabulary.RDF;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationSeverity;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 
 public class PackageTest extends SchemaValidationTestBase {
@@ -37,12 +37,7 @@ public class PackageTest extends SchemaValidationTestBase {
 
         var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
-        assertThat(
-                        hasIssue(
-                                report,
-                                SchemaValidationIssueDTO.Severity.ERROR,
-                                NS + "package",
-                                "missing rdfs:label"))
+        assertThat(hasIssue(report, ValidationSeverity.ERROR, NS + "package", "missing rdfs:label"))
                 .isTrue();
     }
 }

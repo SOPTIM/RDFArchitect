@@ -33,5 +33,12 @@ public interface ICIMResource {
 
     RDFSLabel getLabel();
 
+    /**
+     * The label of this resource, unlike {@link #getLabel()} without failing when there is none.
+     *
+     * @return the label, or null when the model holds none
+     */
+    RDFSLabel getLabelOrNull();
+
     RDFSComment getComment();
 }

@@ -26,7 +26,7 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationSeverity;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 
@@ -73,7 +73,7 @@ public class AttributeTest extends SchemaValidationTestBase {
         assertThat(
                         hasIssue(
                                 report,
-                                SchemaValidationIssueDTO.Severity.ERROR,
+                                ValidationSeverity.ERROR,
                                 NS + "ClassA.attr",
                                 "missing cims:dataType or rdfs:range"))
                 .isTrue();
@@ -90,7 +90,7 @@ public class AttributeTest extends SchemaValidationTestBase {
         assertThat(
                         hasIssue(
                                 report,
-                                SchemaValidationIssueDTO.Severity.ERROR,
+                                ValidationSeverity.ERROR,
                                 NS + "ClassA.attr",
                                 "does not exist or is not a"))
                 .isTrue();
@@ -167,7 +167,7 @@ public class AttributeTest extends SchemaValidationTestBase {
         assertThat(
                         hasIssue(
                                 report,
-                                SchemaValidationIssueDTO.Severity.ERROR,
+                                ValidationSeverity.ERROR,
                                 NS + "ClassA.attr",
                                 "does not exist or is not a"))
                 .isTrue();

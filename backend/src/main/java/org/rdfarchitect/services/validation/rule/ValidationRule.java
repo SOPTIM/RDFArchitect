@@ -22,24 +22,24 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.ValidationSeverity;
 
 import java.util.List;
 
 public interface ValidationRule {
 
-    void validate(Model model, List<SchemaValidationIssueDTO> issues, CGMESVersion cgmesVersion);
+    void validate(Model model, List<ValidationIssueDTO> issues, CGMESVersion cgmesVersion);
 
     default boolean hasNoNamespacePrefix(Model model, String namespace) {
         return !model.getNsPrefixMap().containsValue(namespace);
     }
 
-    default void validateRDFSLabel(
-            Resource property, List<SchemaValidationIssueDTO> issues, String uri) {
+    default void validateRDFSLabel(Resource property, List<ValidationIssueDTO> issues, String uri) {
         if (!property.hasProperty(RDFS.label)) {
             issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(SchemaValidationIssueDTO.Severity.ERROR)
+                    ValidationIssueDTO.builder()
+                            .severity(ValidationSeverity.ERROR)
                             .resourceUri(uri)
                             .message(
                                     property.getProperty(RDF.type)
@@ -52,11 +52,11 @@ public interface ValidationRule {
     }
 
     default void validateNamespace(
-            Model model, Resource property, List<SchemaValidationIssueDTO> issues, String uri) {
+            Model model, Resource property, List<ValidationIssueDTO> issues, String uri) {
         if (hasNoNamespacePrefix(model, property.getNameSpace())) {
             issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(SchemaValidationIssueDTO.Severity.INFO)
+                    ValidationIssueDTO.builder()
+                            .severity(ValidationSeverity.INFO)
                             .resourceUri(uri)
                             .message(
                                     property.getProperty(RDF.type)

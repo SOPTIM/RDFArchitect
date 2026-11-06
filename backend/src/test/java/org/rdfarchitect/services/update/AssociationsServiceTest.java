@@ -45,6 +45,8 @@ import org.rdfarchitect.services.update.classes.associations.AssociationsService
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import utils.TestWorkspaces;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -84,7 +86,7 @@ class AssociationsServiceTest {
                         .setFile(readMultipartFileFromFile(PATH, "class.ttl"))
                         .setGraphName(GRAPH_URI)
                         .build();
-        databasePort.createGraph(graphIdentifier, graphSource.graph());
+        TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }
 
     @Test
@@ -96,6 +98,29 @@ class AssociationsServiceTest {
         assertThat(uuids.fromUUID()).isNotNull();
         assertThat(uuids.toUUID()).isNotNull();
         assertBothDirectionsArePresent();
+    }
+
+    @Test
+    @DisplayName("Creating an association is recorded under the names of its ends, not their ids")
+    void createAssociation_isRecordedUnderTheNamesOfItsEnds() {
+        var uuids =
+                associationsService.createAssociation(graphIdentifier, associationPair(null, null));
+
+        assertThat(databasePort.listChanges(graphIdentifier.datasetName()).getFirst().message())
+                .doesNotContain(uuids.fromUUID().toString(), uuids.toUUID().toString())
+                .isEqualTo("Created association \"oldLabel.subClass\" → \"subClass.class\"");
+    }
+
+    @Test
+    @DisplayName("An end whose class the schema does not declare is recorded by its role alone")
+    void createAssociation_toAClassTheSchemaDoesNotDeclare_isRecordedByTheRole() {
+        var pair = associationPair(null, null);
+        pair.getTo().setDomain(PREFIX + "elsewhere");
+
+        associationsService.createAssociation(graphIdentifier, pair);
+
+        assertThat(databasePort.listChanges(graphIdentifier.datasetName()).getFirst().message())
+                .isEqualTo("Created association \"oldLabel.subClass\" → \"class\"");
     }
 
     @Test
@@ -112,7 +137,9 @@ class AssociationsServiceTest {
     }
 
     private void assertBothDirectionsArePresent() {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var graph = ctx.getRdfGraph();
             assertThat(graph.contains(ASSOCIATION, RDF.type.asNode(), RDF.Property.asNode()))
                     .isTrue();

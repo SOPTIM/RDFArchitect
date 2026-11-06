@@ -108,6 +108,7 @@ abstract class CIMResource implements ICIMResource {
      *
      * @return the label of this resource, or null
      */
+    @Override
     public RDFSLabel getLabelOrNull() {
         var node = getUniqueJenaPropertyNode(RDFS.label);
         return node != null && node.isLiteral() ? asLabel(node) : null;

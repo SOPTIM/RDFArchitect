@@ -26,7 +26,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationReportDTO;
+import org.rdfarchitect.api.dto.validation.ValidationReportDTO;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.validation.SchemaValidationUseCase;
 import org.slf4j.Logger;
@@ -65,10 +65,10 @@ public class SchemaValidationFromFileRESTController {
                                         schema =
                                                 @Schema(
                                                         implementation =
-                                                                SchemaValidationReportDTO.class)))
+                                                                ValidationReportDTO.class)))
             })
     @PostMapping(consumes = {"multipart/form-data"})
-    public SchemaValidationReportDTO validateFile(
+    public ValidationReportDTO validateFile(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

@@ -64,14 +64,16 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
     @Override
     public void executeDeleteRequests(
             GraphIdentifier graphIdentifier, List<ResourceDeleteRequest> deleteRequests) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var deleteCount =
                     deleteRequests.stream()
                             .filter(r -> r.getAction() == DeleteAction.DELETE)
                             .count();
 
             deleteResources(ModelFactory.createModelForGraph(ctx.getRdfGraph()), deleteRequests);
-            ctx.commit(
+            transaction.commit(
                     "Deleted " + deleteCount + " " + (deleteCount == 1 ? "resource" : "resources"));
         }
     }

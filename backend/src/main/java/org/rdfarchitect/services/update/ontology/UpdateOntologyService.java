@@ -46,7 +46,9 @@ public class UpdateOntologyService
     @Override
     public void createOntology(GraphIdentifier graphIdentifier, OntologyDTO ontologyDTO) {
         expandOntologyIris(graphIdentifier.datasetName(), ontologyDTO);
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
@@ -70,9 +72,9 @@ public class UpdateOntologyService
             if (pm.getNsURIPrefix(OWL2.getURI()) == null) {
                 pm.setNsPrefix("owl", OWL2.getURI());
             }
-            databasePort.setPrefixMapping(graphIdentifier.datasetName(), pm);
+            transaction.setPrefixes(pm);
 
-            ctx.commit("Created Ontology");
+            transaction.commit("Created the ontology");
         }
     }
 
@@ -80,7 +82,9 @@ public class UpdateOntologyService
     @Override
     public void replaceOntology(GraphIdentifier graphIdentifier, OntologyDTO ontologyDTO) {
         expandOntologyIris(graphIdentifier.datasetName(), ontologyDTO);
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
@@ -93,28 +97,32 @@ public class UpdateOntologyService
                 }
             }
             new OntologyFacade(model).replaceOntology(ontologyDTO);
-            ctx.commit("Replaced Ontology");
+            transaction.commit("Replaced the ontology");
         }
     }
 
     // DELETE
     @Override
     public void deleteOntology(GraphIdentifier graphIdentifier) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             new OntologyFacade(model).deleteOntology();
-            ctx.commit("Deleted Ontology");
+            transaction.commit("Deleted the ontology");
         }
     }
 
     private void expandOntologyIris(String dataset, OntologyDTO ontologyDTO) {
-        var ontologyNamespace = ontologyDTO.getNamespace();
+        var ontologyNamespace = requireIri(ontologyDTO.getNamespace(), "Ontology namespace");
         ontologyDTO.setNamespace(expandURIUseCase.expandUri(dataset, ontologyNamespace));
 
         var entries = ontologyDTO.getEntries();
         for (var entry : entries) {
-            entry.setIri(expandURIUseCase.expandUri(dataset, entry.getIri()));
+            entry.setIri(
+                    expandURIUseCase.expandUri(
+                            dataset, requireIri(entry.getIri(), "Ontology entry IRI")));
             if (entry.getDatatypeIri() != null) {
                 entry.setDatatypeIri(expandURIUseCase.expandUri(dataset, entry.getDatatypeIri()));
             }
@@ -123,6 +131,18 @@ public class UpdateOntologyService
                 entry.setValue(expandURIUseCase.expandUri(dataset, entry.getValue()));
             }
         }
+    }
+
+    /**
+     * The ontology IRI is composed from the namespace, and every entry is a statement about it, so
+     * an absent one would be written into the graph as the text "null" rather than rejected. The
+     * caller sends nothing for a field it has no value for, which is the case this catches.
+     */
+    private static String requireIri(String iri, String what) {
+        if (iri == null || iri.isBlank()) {
+            throw new IllegalArgumentException(what + " is missing.");
+        }
+        return iri;
     }
 
     private boolean isInvalidUUID(String uuidString) {

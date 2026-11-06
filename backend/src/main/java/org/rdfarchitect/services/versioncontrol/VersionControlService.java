@@ -19,11 +19,13 @@ package org.rdfarchitect.services.versioncontrol;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.query.ReadWrite;
+import org.rdfarchitect.api.dto.ChangeLogEntryMapper;
+import org.rdfarchitect.api.dto.HistoryStepDTO;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.changelog.HistoryPosition;
+import org.rdfarchitect.models.changelog.RevertScope;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -39,30 +41,32 @@ public class VersionControlService
                 RestoreVersionUseCase {
 
     private final DatabasePort databasePort;
+    private final ChangeLogEntryMapper changeLogEntryMapper;
     private final DatabaseConnection databaseConnection;
 
     @Override
-    public Boolean canRedo(GraphIdentifier graphIdentifier) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            return ctx.canRedo();
-        }
+    public Boolean canRedo(String workspaceName) {
+        return databasePort.canRedo(workspaceName);
     }
 
     @Override
-    public Boolean canUndo(GraphIdentifier graphIdentifier) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            return ctx.canUndo();
-        }
+    public Boolean canUndo(String workspaceName) {
+        return databasePort.canUndo(workspaceName);
     }
 
     @Override
-    public ChangeLogEntry redo(GraphIdentifier graphIdentifier) {
-        return databasePort.getGraphWithContext(graphIdentifier).redo();
+    public HistoryStepDTO redo(String workspaceName) {
+        return changeLogEntryMapper.toDTO(databasePort.redo(workspaceName));
     }
 
     @Override
-    public ChangeLogEntry undo(GraphIdentifier graphIdentifier) {
-        return databasePort.getGraphWithContext(graphIdentifier).undo();
+    public HistoryStepDTO undo(String workspaceName) {
+        return changeLogEntryMapper.toDTO(databasePort.undo(workspaceName));
+    }
+
+    @Override
+    public HistoryStepDTO undoIfLatest(String workspaceName, UUID changeId) {
+        return changeLogEntryMapper.toDTO(databasePort.undoIfLatest(workspaceName, changeId));
     }
 
     @Override
@@ -71,7 +75,12 @@ public class VersionControlService
     }
 
     @Override
-    public void restoreVersion(GraphIdentifier graphIdentifier, UUID versionId) {
-        databasePort.getGraphWithContext(graphIdentifier).restoreToVersion(versionId);
+    public HistoryStepDTO restoreVersion(
+            String workspaceName,
+            UUID versionId,
+            RevertScope scope,
+            HistoryPosition expectedPosition) {
+        return changeLogEntryMapper.toDTO(
+                databasePort.restoreToVersion(workspaceName, versionId, scope, expectedPosition));
     }
 }

@@ -111,7 +111,7 @@
             selectedPackageDetails.label !== "default" &&
             !isWorkspaceReadOnly,
     );
-    let graphHasOntology = $derived(!!ontology);
+    let graphHasOntology = $derived(!!ontology?.uuid);
 
     let mergedDiagramShown = $derived(
         isMergedDiagramType(editorState.selectedDiagram.getProperty("type")),
@@ -280,6 +280,19 @@
         );
     }
 
+    /** See `GraphSection.editProfileHeader`: the rename dialog says which editor owns the name. */
+    function editProfileHeader(target) {
+        if (target?.kind === "ontology") {
+            showEditOntologyDialog = true;
+        } else if (target?.kind === "class") {
+            editorState.editClass(
+                selectedWorkspace,
+                selectedGraph,
+                target.uuid,
+            );
+        }
+    }
+
     async function requestEnableEditing() {
         if (!selectedWorkspace || !isWorkspaceReadOnly) {
             return;
@@ -392,21 +405,15 @@
     }
 
     async function undo() {
-        const { error } = await versionControlStore.undo(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
-        );
-        if (!error) {
+        const { error, skipped } = await versionControlStore.undo();
+        if (!error && !skipped) {
             reload();
         }
     }
 
     async function redo() {
-        const { error } = await versionControlStore.redo(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
-        );
-        if (!error) {
+        const { error, skipped } = await versionControlStore.redo();
+        if (!error && !skipped) {
             reload();
         }
     }
@@ -707,6 +714,7 @@
     bind:showDialog={showGraphRenameDialog}
     workspaceName={selectedWorkspace}
     graphUri={selectedGraph}
+    onEditHeader={editProfileHeader}
 />
 <NamespacesDialog bind:showDialog={showNamespaceDialog} />
 {#if ontology}

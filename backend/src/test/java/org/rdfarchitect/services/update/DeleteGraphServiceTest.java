@@ -17,14 +17,16 @@
 
 package org.rdfarchitect.services.update;
 
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import org.apache.jena.graph.Graph;
+import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.services.update.graph.DeleteGraphService;
 import org.springframework.mock.web.MockMultipartFile;
 
@@ -34,20 +36,23 @@ class DeleteGraphServiceTest {
 
     private DeleteGraphService deleteGraphService;
     private DatabasePort mockDatabasePort;
+    private WorkspaceTransaction transaction;
 
     @BeforeEach
     void setUp() {
         mockDatabasePort = mock(DatabasePort.class);
-        var mockCreateDiagramLayoutUseCase = mock(CreateDiagramLayoutUseCase.class);
-        deleteGraphService =
-                new DeleteGraphService(mockDatabasePort, mockCreateDiagramLayoutUseCase);
+        transaction = mock(WorkspaceTransaction.class);
+        when(mockDatabasePort.beginTransaction(anyString(), any(ReadWrite.class)))
+                .thenReturn(transaction);
+        deleteGraphService = new DeleteGraphService(mockDatabasePort);
     }
 
     @Test
     void deleteGraph_callsDeleteGraph() {
         var graphIdentifier = new GraphIdentifier("default", "http://example.com/graph");
         deleteGraphService.deleteGraph(graphIdentifier);
-        verify(mockDatabasePort).deleteGraph(graphIdentifier);
+        verify(transaction).deleteGraph(graphIdentifier.graphUri());
+        verify(transaction).commit(anyString());
     }
 
     @Test
@@ -63,8 +68,8 @@ class DeleteGraphServiceTest {
 
         deleteGraphService.replaceGraph(graphIdentifier, mockFile);
 
-        verify(mockDatabasePort).deleteGraph(graphIdentifier);
-        verify(mockDatabasePort).createGraph(eq(graphIdentifier), any(Graph.class));
+        verify(transaction).deleteGraph(graphIdentifier.graphUri());
+        verify(transaction).createGraph(eq(graphIdentifier.graphUri()), any(Graph.class));
     }
 
     @Test
@@ -73,8 +78,8 @@ class DeleteGraphServiceTest {
 
         deleteGraphService.replaceGraph(graphIdentifier, null);
 
-        verify(mockDatabasePort).deleteGraph(graphIdentifier);
-        verify(mockDatabasePort).createEmptyGraph(graphIdentifier);
-        verify(mockDatabasePort, never()).createGraph(any(), any());
+        verify(transaction).deleteGraph(graphIdentifier.graphUri());
+        verify(transaction)
+                .createGraph(eq(graphIdentifier.graphUri()), argThat(graph -> graph.isEmpty()));
     }
 }

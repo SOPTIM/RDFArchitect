@@ -1,6 +1,6 @@
 ---
 title: Comparing Schemas
-sidebar_position: 9
+sidebar_position: 10
 ---
 
 # Comparing Schemas

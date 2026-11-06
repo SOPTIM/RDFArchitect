@@ -19,7 +19,7 @@ package org.rdfarchitect.services.validation;
 
 import org.apache.jena.graph.Graph;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.api.dto.validation.SchemaValidationReportDTO;
+import org.rdfarchitect.api.dto.validation.ValidationReportDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 
 public interface SchemaValidationUseCase {
@@ -30,8 +30,7 @@ public interface SchemaValidationUseCase {
      * @param graphIdentifier the RDF graph identifier of the graph to validate
      * @return Validation report with the found errors
      */
-    SchemaValidationReportDTO validateSchema(
-            GraphIdentifier graphIdentifier, CGMESVersion cgmesVersion);
+    ValidationReportDTO validateSchema(GraphIdentifier graphIdentifier, CGMESVersion cgmesVersion);
 
     /**
      * Validates an RDFS-Schema
@@ -39,5 +38,5 @@ public interface SchemaValidationUseCase {
      * @param graph the RDF graph to validate
      * @return Validation report with the found errors
      */
-    SchemaValidationReportDTO validateSchema(Graph graph, CGMESVersion cgmesVersion);
+    ValidationReportDTO validateSchema(Graph graph, CGMESVersion cgmesVersion);
 }

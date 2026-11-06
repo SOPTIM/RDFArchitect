@@ -20,6 +20,7 @@ package org.rdfarchitect.services.dl.update;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -42,6 +43,7 @@ import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
@@ -63,10 +65,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         service.addClassesToCustomDatasetDiagram(
                 graphIdentifier.datasetName(), diagramUUID, List.of(classAInDiagram()));
 
-        var model =
-                databasePort
-                        .getDatasetDiagramLayout(graphIdentifier.datasetName())
-                        .getDiagramLayoutModel();
+        var model = workspaceLayoutModel();
         assertThat(
                         DLObjectFetcher.fetchDiagramDOForClass(
                                 model, diagramUUID, CrossProfileUtils.mergedUuid(CLASS_A_URI)))
@@ -85,13 +84,10 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         service.removeClassesFromCustomDatasetDiagram(
                 datasetName, diagramUUID, List.of(CrossProfileUtils.mergedUuid(CLASS_A_URI)));
 
-        assertThat(databasePort.getDatasetDiagrams(datasetName).get(diagramUUID).getClasses())
-                .isEmpty();
+        assertThat(workspaceDiagrams().get(diagramUUID).getClasses()).isEmpty();
         assertThat(
                         DLObjectFetcher.fetchDiagramDOForClass(
-                                databasePort
-                                        .getDatasetDiagramLayout(datasetName)
-                                        .getDiagramLayoutModel(),
+                                workspaceLayoutModel(),
                                 diagramUUID,
                                 CrossProfileUtils.mergedUuid(CLASS_A_URI)))
                 .isNull();
@@ -101,19 +97,17 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void addClassesToCustomDiagram_schemaDiagram_layoutIsKeyedByTheClassUuid() {
         addGraphFromFile("package_and_class.ttl");
         var diagramUUID = UUID.randomUUID();
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             ctx.getCustomDiagrams()
                     .put(diagramUUID, new CustomDiagram(diagramUUID, "custom", new ArrayList<>()));
-            ctx.commit("created custom diagram");
+            transaction.commit("created custom diagram");
         }
 
         service.addClassesToCustomDiagram(graphIdentifier, diagramUUID, List.of(classAInDiagram()));
 
-        var model =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModelDirect();
+        var model = layoutModelOf(graphIdentifier);
         assertThat(DLObjectFetcher.fetchDiagramDOForClass(model, diagramUUID, CLASS_A_UUID))
                 .isNotNull();
     }
@@ -125,17 +119,19 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     @AfterEach
     void cleanUpDatasetDiagrams() {
         var datasetName = graphIdentifier.datasetName();
-        databasePort.getDatasetDiagrams(datasetName).clear();
-        databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel().removeAll();
-        databasePort.deleteGraph(new GraphIdentifier(datasetName, GRAPH_URI));
+        withWorkspaceDiagrams(Map::clear);
+        withWorkspaceLayoutModel(Model::removeAll);
+        deleteGraph(databasePort, new GraphIdentifier(datasetName, GRAPH_URI));
     }
 
     private static UUID createWorkspaceDiagram() {
         addGraphFromFile("package_and_class.ttl", GRAPH_URI);
         var diagramUUID = UUID.randomUUID();
-        databasePort
-                .getDatasetDiagrams(graphIdentifier.datasetName())
-                .put(diagramUUID, new CustomDiagram(diagramUUID, "custom", new ArrayList<>()));
+        withWorkspaceDiagrams(
+                diagrams ->
+                        diagrams.put(
+                                diagramUUID,
+                                new CustomDiagram(diagramUUID, "custom", new ArrayList<>())));
         return diagramUUID;
     }
 
@@ -182,11 +178,40 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     }
 
     @Test
+    void createClassLayoutData_packageNeverOpened_createsTheDiagramItBelongsTo() {
+        // Layout data is only written once a package is opened, so a class can be the first thing
+        // a package ever gets. Without a diagram of its own the object below is invisible to both
+        // fetch queries: the position is lost and the next call adds a second object for it.
+        addGraphFromFile("package.ttl");
+        var packageDTO =
+                PackageDTO.builder()
+                        .uuid(PACKAGE_A_UUID)
+                        .label(PACKAGE_A_LABEL)
+                        .prefix("http://example.org#")
+                        .build();
+        var classLayoutPosition = new ClassLayoutPositionDTO();
+        classLayoutPosition.setXPosition(123.0F);
+        classLayoutPosition.setYPosition(456.0F);
+
+        // Act
+        service.createClassLayoutData(
+                graphIdentifier, packageDTO, CLASS_A_LABEL, CLASS_A_UUID, classLayoutPosition);
+
+        // Assert
+        assertDiagram(PACKAGE_A_UUID, "");
+        assertThat(
+                        DLObjectFetcher.fetchDiagramDOForClass(
+                                layoutModelOf(graphIdentifier), PACKAGE_A_UUID, CLASS_A_UUID))
+                .isNotNull();
+        assertDiagramObjectCoordinates(CLASS_A_UUID, 123.0F, 456.0F);
+    }
+
+    @Test
     void createClassLayoutData_layoutDataExists_keepsExistingLayoutData() {
         // Arrange: a class that already has layout data, as when it takes over an uri whose
         // class was deleted while references to it remained
         addGraphFromFile("package_and_class.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
         var packageDTO =
                 PackageDTO.builder()
                         .uuid(PACKAGE_A_UUID)
@@ -205,8 +230,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
         // Assert
         assertThat(
-                        diagramLayout
-                                .getDiagramLayoutModelDirect()
+                        layoutModelOf(graphIdentifier)
                                 .listSubjectsWithProperty(
                                         DL.belongsToIdentifiedObject,
                                         ResourceFactory.createResource(
@@ -220,12 +244,13 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void createClassLayoutData_layoutDataWithoutPoint_placesClassAtRequestedPosition() {
         // Arrange: a diagram object that lost its point, so the class has layout data but no place
         addGraphFromFile("package_and_class.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
         var doMRID = assertDiagramObject(CLASS_A_UUID, PACKAGE_A_UUID, CLASS_A_LABEL);
-        var diagramLayoutModel = diagramLayout.getDiagramLayoutModelDirect();
-        DLUpdates.deleteDiagramObjectPoint(
-                diagramLayoutModel,
-                DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, doMRID).getMRID());
+        withLayoutModel(
+                graphIdentifier,
+                model ->
+                        DLUpdates.deleteDiagramObjectPoint(
+                                model, DLObjectFetcher.fetchDOPForDO(model, doMRID).getMRID()));
         assertDiagramObjectPointDoesNotExist(doMRID);
 
         var packageDTO =
@@ -250,7 +275,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void updateClassPositions_fullGraph_repositionsClasses() {
         // Arrange
         addGraphFromFile("full_graph.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
 
         // Act
         var classAPositionDTO = new ClassPositionDTO();
@@ -267,7 +292,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void updateDiagramObjectName_classExists_updatesDiagramObjectName() {
         // Arrange
         addGraphFromFile("package_and_class.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
 
         // Act
         service.updateDiagramObjectName(graphIdentifier, CLASS_A_UUID, "newClassLabel");
@@ -280,10 +305,9 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     void deleteClassLayoutData_classExists_deletesClassLayoutData() {
         // Arrange
         addGraphFromFile("association.ttl");
-        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        initialiseDiagramLayout();
         var diagramObjects =
-                diagramLayout
-                        .getDiagramLayoutModelDirect()
+                layoutModelOf(graphIdentifier)
                         .listSubjectsWithProperty(
                                 DL.belongsToIdentifiedObject,
                                 ResourceFactory.createResource(

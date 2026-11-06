@@ -21,6 +21,7 @@ import {
     multiSelectState,
     SelectionLevel,
 } from "$lib/sharedState.svelte.js";
+import { graphUri as getUri } from "$lib/utils/graph-label.js";
 
 const ANY_GRAPH = Symbol("anyGraph");
 
@@ -250,17 +251,12 @@ export function packageHighlight(workspace, graph, pack, classEntries = []) {
     return null;
 }
 
-export function getUri(resource) {
-    if (typeof resource === "string") {
-        return resource;
-    }
-    const uri = resource.uri ? resource.uri : resource;
-    return (uri.prefix ?? "") + (uri.suffix ?? "");
-}
-
 export function getPackageId(pack) {
     if (typeof pack === "string") {
         return pack;
     }
     return pack?.uuid ?? "default";
 }
+
+/** The navigation knows the one URI helper under this name; there is no second copy of it. */
+export { getUri };

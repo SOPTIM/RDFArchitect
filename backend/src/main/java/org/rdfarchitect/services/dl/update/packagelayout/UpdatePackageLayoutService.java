@@ -28,6 +28,7 @@ import org.rdfarchitect.dl.data.dto.Diagram;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.rdfarchitect.services.dl.update.ReplaceDiagramUseCase;
 import org.springframework.stereotype.Service;
@@ -50,27 +51,39 @@ public class UpdatePackageLayoutService
         var cimPackage = packageMapper.toCIMObject(packageDTO);
         cimPackage.setUuid(newPackageUUID);
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             DiagramLayoutServiceUtils.insertDiagram(
                     diagramLayoutModel, cimPackage.getUuid(), cimPackage.getLabel().getValue());
-            ctx.commit();
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Laid out", "package", ChangeDescriptions.name(cimPackage.getLabel())));
         }
     }
 
     @Override
     public void deletePackageLayoutData(GraphIdentifier graphIdentifier, UUID packageUUID) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
+            var packageName =
+                    ChangeDescriptions.packageName(
+                            ctx.getRdfGraph(), diagramLayoutModel, packageUUID);
             DLUpdates.deleteDiagramCascade(diagramLayoutModel, new MRID(packageUUID));
-            ctx.commit();
+            transaction.commit(
+                    ChangeDescriptions.actionOn("Removed the layout of", "package", packageName));
         }
     }
 
     @Override
     public void replaceDiagram(
             GraphIdentifier graphIdentifier, UUID packageUUID, String packageName) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             var diagramMRID = new MRID(packageUUID);
             var newDiagram =
@@ -80,7 +93,7 @@ public class UpdatePackageLayoutService
                             .orientation(OrientationKind.NEGATIVE)
                             .build();
             DLUpdates.replaceDiagram(diagramLayoutModel, diagramMRID, newDiagram);
-            ctx.commit();
+            transaction.commit("Renamed diagram to \"%s\"".formatted(packageName));
         }
     }
 }

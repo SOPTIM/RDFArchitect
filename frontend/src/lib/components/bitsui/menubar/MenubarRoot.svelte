@@ -17,14 +17,23 @@
 <script>
     import { Menubar as BitsUiMenubar } from "bits-ui";
 
+    import { fileDragState } from "$lib/fileDragState.svelte.js";
+
     let {
         children,
-        value = $bindable(),
+        value = $bindable(""),
         onValueChange,
         loop,
         dir,
         class: className = "",
     } = $props();
+
+    // A menu left open would cover the drop zones the files are headed for.
+    $effect(() => {
+        if (fileDragState.active) {
+            value = "";
+        }
+    });
 
     function handleValueChange(next) {
         if (typeof onValueChange === "function") {
@@ -34,7 +43,7 @@
 </script>
 
 <BitsUiMenubar.Root
-    {value}
+    bind:value
     {loop}
     {dir}
     onValueChange={handleValueChange}

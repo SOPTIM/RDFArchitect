@@ -40,6 +40,8 @@ import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSource
 import org.rdfarchitect.services.compare.SchemaComparisonService;
 import org.springframework.web.multipart.MultipartFile;
 
+import utils.TestWorkspaces;
+
 import java.util.List;
 
 class SchemaComparisonServiceTest {
@@ -66,7 +68,7 @@ class SchemaComparisonServiceTest {
                         .setFile(file)
                         .setGraphName(GRAPH_IDENTIFIER.graphUri())
                         .build();
-        databasePort.createGraph(GRAPH_IDENTIFIER, graphSource.graph());
+        TestWorkspaces.createGraph(databasePort, GRAPH_IDENTIFIER, graphSource.graph());
     }
 
     @Test
@@ -429,7 +431,7 @@ class SchemaComparisonServiceTest {
                         .setFile(otherGraphFile)
                         .setGraphName(OTHER_GRAPH_IDENTIFIER.graphUri())
                         .build();
-        databasePort.createGraph(OTHER_GRAPH_IDENTIFIER, graphSource.graph());
+        TestWorkspaces.createGraph(databasePort, OTHER_GRAPH_IDENTIFIER, graphSource.graph());
 
         // act
         var result = service.compareSchemas(GRAPH_IDENTIFIER, OTHER_GRAPH_IDENTIFIER);

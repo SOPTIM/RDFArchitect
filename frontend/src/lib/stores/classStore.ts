@@ -17,6 +17,7 @@
 
 import { writable, get } from "svelte/store";
 
+import { graphStore } from "./graphStore";
 import { type GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./storeLogging";
 import { type AsyncSlot, createEmptySlot, type Result } from "./storeTypes";
@@ -278,7 +279,7 @@ function createClassStore() {
                 return { ...s, pendingDetails };
             });
 
-            if (error || !data) {
+            if (error || !data?.uuid) {
                 if (error) {
                     console.error(
                         `${LOG_PREFIX} Failed to load class details for classUUID="${classUUID}"`,
@@ -454,6 +455,8 @@ function createClassStore() {
             ...cls,
             uuid: classUUID,
         }));
+        // A CGMES 2.4.15 profile names itself on a class, and the navigation reads that name.
+        graphStore.invalidateWorkspace(workspaceName);
         console.log(`${LOG_PREFIX} Replaced class classUUID="${classUUID}"`);
         toastStore.success("Class saved", "Changes were applied.");
         return { error: null };
@@ -497,6 +500,8 @@ function createClassStore() {
             ...prev,
             attributes: upsertByUuid(prev.attributes ?? [], stored),
         }));
+        // A CGMES 2.4.15 profile states its name and version IRIs as fixed attribute values.
+        graphStore.invalidateWorkspace(workspaceName);
 
         console.log(
             `${LOG_PREFIX} Added attribute uuid="${newUUID ?? ""}" to class classUUID="${classUUID}"`,
@@ -550,6 +555,7 @@ function createClassStore() {
             ...prev,
             attributes: upsertByUuid(prev.attributes ?? [], attribute),
         }));
+        graphStore.invalidateWorkspace(workspaceName);
         console.log(
             `${LOG_PREFIX} Replaced attribute uuid="${attribute.uuid}"`,
         );

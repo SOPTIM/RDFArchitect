@@ -59,15 +59,19 @@ Per-workspace namespace table with validation for unique prefixes. Prefixes can 
 
 ### Undo, redo, and version history
 
-Graph edits are journaled. Up to 256 versions per graph by default; older states are compressed as history grows. Undo and redo are global per graph and available via menu and keyboard shortcut.
+Edits are journaled per workspace: one linear history across all of its schemas, including the changes that span several of them. Up to 256 changes per workspace by default; older states are folded into the state they started from as history grows. Schema import, deletion and renaming, the namespace table, custom SHACL, diagrams and diagram layout take part in the same history. Undo and redo are available via menu and keyboard shortcut, say what they took back and where, and ask before a step that would make a schema or diagram disappear.
 
 ### Changelog view
 
-A dedicated page that lists the change history of a graph: additions, updates, deletions, grouped by class, with full triple-level diff (green for additions, red for deletions) for each change.
+A dedicated page that lists the change history of a workspace: additions, updates, deletions, grouped by class, with full triple-level diff (green for additions, red for deletions) for each change, labelled with the schema it belongs to.
 
 ### Restore previous versions
 
-Roll a graph back to any earlier tracked state from the changelog.
+Roll a workspace back to any earlier tracked state from the changelog, in all of its schemas at once.
+
+### Workspace validation
+
+Checks whether the schemas of a workspace fit together: identical inheritance, datatypes that are not concrete classes elsewhere, properties defined in several schemas, one CIM version, unique profile headers, matching inverse associations and enum entries. Runs for a whole workspace or for one schema against its workspace, reports errors, warnings, and infos in a groupable table, and links every finding to the class editor of the schema it came from.
 
 ### Schema comparison
 

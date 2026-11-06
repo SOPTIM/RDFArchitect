@@ -85,7 +85,8 @@ public class CIMUpdatesEnumEntriesTest extends CIMUpdatesTestBase {
                                     enumEntryRequired));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 assertThat(
                                 ctx.getRdfGraph()
                                         .contains(
@@ -118,7 +119,8 @@ public class CIMUpdatesEnumEntriesTest extends CIMUpdatesTestBase {
                                     enumEntryOptional));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 assertThat(
                                 ctx.getRdfGraph()
                                         .contains(
@@ -188,7 +190,8 @@ public class CIMUpdatesEnumEntriesTest extends CIMUpdatesTestBase {
                                     enumEntryRequired));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 assertThat(
                                 ctx.getRdfGraph()
                                         .contains(
@@ -223,7 +226,8 @@ public class CIMUpdatesEnumEntriesTest extends CIMUpdatesTestBase {
                                     enumEntryOptional));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 assertThat(
                                 ctx.getRdfGraph()
                                         .contains(
@@ -280,7 +284,8 @@ public class CIMUpdatesEnumEntriesTest extends CIMUpdatesTestBase {
                                     newEnumEntry));
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 assertThat(
                                 ctx.getRdfGraph()
                                         .contains(
@@ -335,7 +340,8 @@ public class CIMUpdatesEnumEntriesTest extends CIMUpdatesTestBase {
                             .build());
 
             // Assert
-            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+            try (var transaction = beginTestTransaction(ReadWrite.READ)) {
+                var ctx = transaction.graph(GRAPH_URI);
                 // isFalse
                 assertThat(
                                 ctx.getRdfGraph()

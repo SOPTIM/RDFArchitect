@@ -61,6 +61,11 @@ public class DefaultCIMClassCategory implements ICIMClassCategory {
     }
 
     @Override
+    public RDFSLabel getLabelOrNull() {
+        return getLabel();
+    }
+
+    @Override
     public RDFSComment getComment() {
         return null;
     }
