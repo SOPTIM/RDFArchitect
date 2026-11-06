@@ -460,7 +460,8 @@
 />
 <SHACLClassSpecificPopUp
     workspaceName={editorState.selectedWorkspace.getValue()}
-    schemaName={editorState.selectedGraph.getValue()}
+    schemaName={(contextMenuClass?.schemaName ?? schemaName) ||
+        editorState.selectedGraph.getValue()}
     reactiveClass={shaclClass}
     bind:showDialog={showSHACLDialog}
 />
