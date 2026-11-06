@@ -19,7 +19,11 @@ package org.rdfarchitect.services.shacl.effective;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.graph.Triple;
 import org.apache.jena.shared.PrefixMapping;
+import org.apache.jena.sparql.graph.GraphFactory;
+import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
@@ -64,5 +68,48 @@ class EffectiveConstraintsDescribeTest {
                         null);
 
         assertThat(EffectiveConstraints.describe(constraint, prefixes)).contains("shacl:IRI");
+    }
+
+    private static final String BASE = CIM + "Base";
+    private static final String LEAF = CIM + "Leaf";
+
+    private static ClassHierarchy leafDerivesFromBase() {
+        var schema = GraphFactory.createDefaultGraph();
+        schema.add(
+                Triple.create(
+                        NodeFactory.createURI(LEAF),
+                        RDFS.subClassOf.asNode(),
+                        NodeFactory.createURI(BASE)));
+        return ClassHierarchy.of(schema);
+    }
+
+    private static String describeClasses(Set<String> classes, Set<String> types) {
+        return EffectiveConstraints.describe(
+                new EffectiveConstraints.Constraint(
+                        null, null, Set.of(), classes, types, Set.of(), null),
+                PrefixMapping.Factory.create().setNsPrefix("cim", CIM),
+                leafDerivesFromBase());
+    }
+
+    @Test
+    void aListOfARangeAndItsSubclassesReadsAsTheRange() {
+        assertThat(describeClasses(Set.of(), Set.of(BASE, LEAF))).isEqualTo("of class cim:Base");
+    }
+
+    @Test
+    void everyClassAValueMustBelongToIsNamedSinceTheyAllApply() {
+        assertThat(describeClasses(Set.of(BASE, LEAF), null))
+                .isEqualTo("of class cim:Base and cim:Leaf");
+    }
+
+    @Test
+    void aClassAndTheSameRangeAsAListReadOnce() {
+        assertThat(describeClasses(Set.of(BASE), Set.of(BASE, LEAF)))
+                .isEqualTo("of class cim:Base");
+    }
+
+    @Test
+    void listsWithNothingInCommonSaySo() {
+        assertThat(describeClasses(Set.of(), Set.of())).isEqualTo("of class nothing");
     }
 }

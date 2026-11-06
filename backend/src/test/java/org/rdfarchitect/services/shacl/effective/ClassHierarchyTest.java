@@ -143,6 +143,19 @@ class ClassHierarchyTest {
     }
 
     @Test
+    void classesInACycleAllStayAsRootsSinceNeitherIsMoreGeneral() {
+        var cyclic =
+                ClassHierarchy.of(
+                        schema(
+                                """
+                                ex:Base rdfs:subClassOf ex:Leaf .
+                                ex:Leaf rdfs:subClassOf ex:Base .
+                                """));
+
+        assertThat(cyclic.roots(Set.of(BASE, LEAF))).containsExactlyInAnyOrder(BASE, LEAF);
+    }
+
+    @Test
     void aCycleInTheHierarchyEnds() {
         var cyclic =
                 ClassHierarchy.of(
