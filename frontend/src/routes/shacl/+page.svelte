@@ -33,7 +33,10 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { guardUnsavedChanges } from "$lib/eventhandling/unsavedChanges.js";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
+    import { onOpenClass } from "$lib/monaco/turtleLanguageFeatures.js";
+    import { showClass } from "$lib/shacl/classNavigation.js";
     import { newDocumentText } from "$lib/shacl/newDocument.js";
+    import { SchemaTermSource } from "$lib/shacl/schemaTermSource.svelte.js";
     import {
         leavingNeedsConfirmation,
         WORKBENCH_PATH,
@@ -109,6 +112,13 @@
             : null,
     );
 
+    /** The workspace's CIM terms, which the editor completes and explains against. */
+    const termSource = $derived(
+        selectedWorkspace
+            ? new SchemaTermSource({ datasetName: selectedWorkspace })
+            : null,
+    );
+
     const generatedSchemaLabel = $derived(
         workbench?.schemas.find(
             schema => schema.uri === workbench.generatedSchema,
@@ -152,6 +162,9 @@
             }
             if (!ours && workbench && !workbench.loading) {
                 workbench.reload();
+                // Whatever happened may have changed the schema this was read from.
+                termSource?.invalidate();
+                termSource?.load();
             }
         });
     });
@@ -177,6 +190,30 @@
         }
         followedLink = link;
         followLink(target);
+    });
+
+    /**
+     * Following a term opens the class it belongs to and puts it on screen.
+     *
+     * The same three steps the search bar takes, because "go to definition" and "search for a
+     * class" are the same request: select the package so the right diagram is drawn, select the
+     * class so the editor fills, and set the focused class so the diagram scrolls to it and
+     * highlights it. Opening the class editor alone left the user looking at whatever diagram they
+     * had been on.
+     *
+     * Registered here because the workbench is where the navigation makes sense; the editor
+     * component only knows it was asked to follow something.
+     */
+    $effect(() => {
+        return onOpenClass(async (graphUri, classUUID, packageUUID) => {
+            // Asked before the selection moves: once it has, the workbench can be rebuilt for
+            // another workspace and the edits are gone before any navigation guard could see them.
+            if (!(await confirmDiscard())) {
+                return;
+            }
+            showClass(selectedWorkspace, graphUri, classUUID, packageUUID);
+            goto("/mainpage");
+        });
     });
 
     /** Ctrl+S saves wherever the focus is on this page, not only inside the editor. */
@@ -478,6 +515,7 @@
                                     bind:value={workbench.text}
                                     documentKey={workbench.bufferKey}
                                     findings={workbench.findings}
+                                    {termSource}
                                     readOnly={workbench.editorReadOnly}
                                     placeholder={workbench.editorReadOnly
                                         ? undefined

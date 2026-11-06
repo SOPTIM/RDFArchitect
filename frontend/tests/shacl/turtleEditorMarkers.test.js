@@ -105,6 +105,10 @@ vi.mock("$lib/monaco/monaco.js", () => ({
     loadMonaco: () => Promise.resolve(fake.api),
     TURTLE_LANGUAGE_ID: "turtle",
 }));
+vi.mock("$lib/monaco/turtleLanguageFeatures.js", () => ({
+    attachTermSource: () => {},
+    detachTermSource: () => {},
+}));
 
 afterEach(() => {
     if (mounted) unmount(mounted);

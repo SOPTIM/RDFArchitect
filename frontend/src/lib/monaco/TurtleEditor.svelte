@@ -22,6 +22,10 @@
     import { MARKER_OWNER, toMarkers } from "./markers.js";
     import { loadMonaco, TURTLE_LANGUAGE_ID } from "./monaco.js";
     import { resolveThemeName } from "./theme.js";
+    import {
+        attachTermSource,
+        detachTermSource,
+    } from "./turtleLanguageFeatures.js";
 
     import { browser } from "$app/environment";
 
@@ -41,6 +45,12 @@
         documentKey = undefined,
         /** Shown while the text is empty, to say what the box is for. */
         placeholder = undefined,
+        termSource = undefined,
+        /**
+         * Prefixes to read the text with besides its own declarations — for a shape shown on its
+         * own, whose document's `@prefix` lines are not part of it.
+         */
+        prefixes = undefined,
     } = $props();
 
     // All four are $state because the effects below key off them: the editor is created when
@@ -162,7 +172,7 @@
     /**
      * Pushes an external change into the editor.
      *
-     * Within one document it is an edit on the model rather than a `setValue`, so a form edit stays
+     * Within one document it is an edit on the model rather than a `setValue`, so an outside change stays
      * undoable and the view does not jump — see `pushExternalText`. Another document replaces the
      * model's text and history outright — see `openText`.
      */
@@ -208,6 +218,17 @@
 
     $effect(() => {
         editor?.updateOptions({ readOnly, placeholder });
+    });
+
+    // Completion, hover and go-to-definition answer only for a model that has been given a schema
+    // to answer from.
+    $effect(() => {
+        const model = editor?.getModel();
+        if (!model || !termSource) {
+            return;
+        }
+        attachTermSource(model, termSource, prefixes ?? null);
+        return () => detachTermSource(model);
     });
 
     $effect(() => {
