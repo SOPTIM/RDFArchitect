@@ -51,3 +51,20 @@ test.each([LIGHT_THEME, DARK_THEME])(
         expect(unreadable).toEqual([]);
     },
 );
+
+test.each([LIGHT_THEME, DARK_THEME])(
+    "the line numbers of %s can be read on the gutter",
+    name => {
+        const { colors } = THEMES[name];
+        const gutter = colors["editorGutter.background"].slice(1);
+
+        for (const key of [
+            "editorLineNumber.foreground",
+            "editorLineNumber.activeForeground",
+        ]) {
+            expect(
+                contrast(colors[key].slice(1), gutter),
+            ).toBeGreaterThanOrEqual(READABLE);
+        }
+    },
+);

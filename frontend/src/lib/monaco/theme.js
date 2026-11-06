@@ -132,8 +132,8 @@ const LIGHT = {
     colors: {
         "editor.background": "#ffffff",
         "editor.foreground": "#303030",
-        "editorLineNumber.foreground": "#a8a8a8",
-        "editorLineNumber.activeForeground": "#1f75cb",
+        "editorLineNumber.foreground": "#707070",
+        "editorLineNumber.activeForeground": "#1a6bbd",
         "editor.lineHighlightBackground": "#f1f1f1",
         "editor.selectionBackground": "#cfe3f8",
         "editorIndentGuide.background1": "#e0e0e0",
@@ -168,7 +168,7 @@ const DARK = {
     colors: {
         "editor.background": "#14162b",
         "editor.foreground": "#e0e0e0",
-        "editorLineNumber.foreground": "#5c6676",
+        "editorLineNumber.foreground": "#8a93a3",
         "editorLineNumber.activeForeground": "#6fb8f5",
         "editor.lineHighlightBackground": "#1e2140",
         "editor.selectionBackground": "#2c3a63",
