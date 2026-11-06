@@ -29,20 +29,20 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Managing the several sets of SHACL shapes a graph can hold.
+ * Managing the several sets of SHACL shapes a workspace can hold.
  *
  * <p>Every enabled document applies; there is no precedence between them (SHACL is conjunctive), so
  * nothing here lets a caller rank one document above another.
  */
 public interface SHACLDocumentUseCase {
 
-    /** Lists the graph's documents in {@code order}, without their content. */
+    /** Lists the workspace's documents in {@code order}, without their content. */
     List<ShapesDocumentInfo> listShapesDocuments(String datasetName);
 
     /**
      * Adds a document holding {@code content}.
      *
-     * @param name display name, unique within the graph
+     * @param name display name, unique within the workspace
      * @param sourceFileName file it came from, or {@code null} when authored here
      * @param content the shapes, in {@code lang}
      * @param lang syntax of {@code content}; Turtle keeps the text verbatim, anything else is
