@@ -1226,6 +1226,84 @@
         },
         "type" : "object"
       },
+      "NodeShapeModel" : {
+        "properties" : {
+          "closed" : {
+            "type" : "boolean"
+          },
+          "deactivated" : {
+            "type" : "boolean"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "editable" : {
+            "type" : "boolean"
+          },
+          "ignoredProperties" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "iri" : {
+            "type" : "string"
+          },
+          "line" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "properties" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PropertyShapeModel"
+            },
+            "type" : "array"
+          },
+          "readOnlyReason" : {
+            "type" : "string"
+          },
+          "retained" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RetainedClause"
+            },
+            "type" : "array"
+          },
+          "severity" : {
+            "type" : "string"
+          },
+          "targetClasses" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "targetNodes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "targetObjectsOf" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "targetSubjectsOf" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "OntologyDTO" : {
         "properties" : {
           "entries" : {
@@ -1514,6 +1592,134 @@
           },
           "triples" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PropertyShapeModel" : {
+        "properties" : {
+          "allowedValues" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "classIri" : {
+            "type" : "string"
+          },
+          "dataType" : {
+            "type" : "string"
+          },
+          "deactivated" : {
+            "type" : "boolean"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "editable" : {
+            "type" : "boolean"
+          },
+          "flags" : {
+            "type" : "string"
+          },
+          "group" : {
+            "type" : "string"
+          },
+          "hasValue" : {
+            "type" : "string"
+          },
+          "iri" : {
+            "type" : "string"
+          },
+          "line" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "maxCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "maxExclusive" : {
+            "type" : "string"
+          },
+          "maxInclusive" : {
+            "type" : "string"
+          },
+          "maxLength" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "minCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "minExclusive" : {
+            "type" : "string"
+          },
+          "minInclusive" : {
+            "type" : "string"
+          },
+          "minLength" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "nodeKind" : {
+            "type" : "string"
+          },
+          "order" : {
+            "type" : "string"
+          },
+          "path" : {
+            "type" : "string"
+          },
+          "pattern" : {
+            "type" : "string"
+          },
+          "readOnlyReason" : {
+            "type" : "string"
+          },
+          "retained" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RetainedClause"
+            },
+            "type" : "array"
+          },
+          "severity" : {
+            "type" : "string"
+          },
+          "sourceIndex" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "typed" : {
+            "type" : "boolean"
+          },
+          "usedBy" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "PropertyShapeSplit" : {
+        "properties" : {
+          "newIri" : {
+            "type" : "string"
+          },
+          "nodeShapeIri" : {
+            "type" : "string"
+          },
+          "sourceIndex" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -1840,6 +2046,23 @@
             "type" : "array"
           },
           "versionId" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "RetainedClause" : {
+        "properties" : {
+          "field" : {
+            "type" : "string"
+          },
+          "predicate" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "value" : {
             "type" : "string"
           }
         },
@@ -2209,6 +2432,43 @@
         },
         "type" : "object"
       },
+      "ShapeEditRequest" : {
+        "properties" : {
+          "baseTurtle" : {
+            "type" : "string"
+          },
+          "propertyShape" : {
+            "$ref" : "#/components/schemas/PropertyShapeModel"
+          },
+          "removeShapeIri" : {
+            "type" : "string"
+          },
+          "shape" : {
+            "$ref" : "#/components/schemas/NodeShapeModel"
+          },
+          "split" : {
+            "$ref" : "#/components/schemas/PropertyShapeSplit"
+          },
+          "turtle" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ShapeEditResult" : {
+        "properties" : {
+          "turtle" : {
+            "type" : "string"
+          },
+          "warnings" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "ShapesDocumentInfo" : {
         "properties" : {
           "enabled" : {
@@ -2250,6 +2510,71 @@
           "tripleCount" : {
             "format" : "int64",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "ShapesForm" : {
+        "properties" : {
+          "parseError" : {
+            "$ref" : "#/components/schemas/ShapesValidationFinding"
+          },
+          "propertyShapes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PropertyShapeModel"
+            },
+            "type" : "array"
+          },
+          "shapes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/NodeShapeModel"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "ShapesValidationFinding" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "column" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "foundInProfiles" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "line" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "severity" : {
+            "enum" : [
+              "ERROR",
+              "WARNING",
+              "INFO"
+            ],
+            "type" : "string"
+          },
+          "source" : {
+            "enum" : [
+              "SYNTAX",
+              "SHAPE",
+              "SPARQL",
+              "CONFLICT"
+            ],
+            "type" : "string"
+          },
+          "term" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -8486,6 +8811,147 @@
           }
         },
         "summary" : "export chosen constraints",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/form" : {
+      "post" : {
+        "description" : "Reads a Turtle document into the node shapes and property shapes a form can show. A shape using anything the form does not model — sh:or or an embedded query, say — comes back marked not editable, so it can be displayed without the form ever offering to write it back.",
+        "operationId" : "readForm",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "text/plain" : {
+              "schema" : {
+                "description" : "The SHACL shapes in Turtle syntax.",
+                "type" : "string"
+              }
+            },
+            "text/turtle" : {
+              "schema" : {
+                "description" : "The SHACL shapes in Turtle syntax.",
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesForm"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "read constraints as shapes",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/form/apply" : {
+      "post" : {
+        "description" : "Writes one shape back into a document and returns the new text. Only the edited shape's statement is rewritten; every other byte of the document is preserved, so an imported constraints file keeps its comments and layout.",
+        "operationId" : "applyEdit",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ShapeEditRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapeEditResult"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapeEditResult"
+                }
+              }
+            },
+            "description" : "The edit cannot be written back: the text changed since the form was read, the shape cannot be edited as a form, or the result would not say what was asked. The detail says which."
+          }
+        },
+        "summary" : "apply a form edit",
         "tags" : [
           "shacl"
         ]
