@@ -20,13 +20,14 @@ package org.rdfarchitect.database;
 import org.apache.jena.graph.Graph;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * A shapes document as it arrives from storage, before it belongs to a graph context.
+ * A shapes document as it arrives from storage, before it belongs to a workspace.
  *
- * <p>Used when loading a snapshot: the graph creates the real {@link ShapesDocument}, so that it
- * joins the workspace's transactions, and takes the metadata from here.
+ * <p>Used when loading a snapshot: the workspace creates the real {@link ShapesDocument}, so that
+ * it joins the workspace's transactions, and takes the metadata from here.
  *
  * @param id the document's id, kept so that links to it survive a reload
  * @param name display name
@@ -34,6 +35,7 @@ import java.util.UUID;
  * @param origin whether it was imported or authored
  * @param enabled whether its shapes take part in validation and export
  * @param order position in the document list
+ * @param schemas URIs of the schemas the document applies to
  * @param rawText verbatim Turtle source, or {@code null} when only the triples were stored
  * @param graph the shapes themselves
  */
@@ -44,6 +46,7 @@ public record ShapesDocumentSeed(
         ShapesDocument.Origin origin,
         boolean enabled,
         int order,
+        Set<String> schemas,
         String rawText,
         Graph graph) {
 
@@ -61,6 +64,7 @@ public record ShapesDocumentSeed(
                 document.getOrigin(),
                 document.isEnabled(),
                 document.getOrder(),
+                document.getSchemas(),
                 document.getRawText(),
                 graph);
     }

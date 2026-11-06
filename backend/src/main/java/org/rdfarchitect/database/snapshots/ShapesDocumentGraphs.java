@@ -26,8 +26,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * A graph's shapes documents written out as named graphs, the form in which share snapshots and a
- * persisted dataset store them and {@link ShapesDocumentSeeds} reads them back.
+ * A workspace's shapes documents written out as named graphs, the form in which share snapshots and
+ * a persisted dataset store them and {@link ShapesDocumentSeeds} reads them back.
  */
 public final class ShapesDocumentGraphs {
 
@@ -51,31 +51,20 @@ public final class ShapesDocumentGraphs {
      *
      * @return graphs by name, in document order with the metadata last
      */
-    public static Map<String, Graph> of(
-            String ownerGraphUri, Collection<ShapesDocument> documents) {
+    public static Map<String, Graph> of(Collection<ShapesDocument> documents) {
         var graphs = new LinkedHashMap<String, Graph>();
         var metadata = ShapesDocumentMetadata.emptyModel();
         for (var document : documents) {
             ShapesDocumentMetadata.write(metadata, document);
             if (!document.getGraph().isEmpty()) {
                 graphs.put(
-                        ShapesGraphNaming.encode(ownerGraphUri, document.getId().toString()),
+                        ShapesGraphNaming.encode(document.getId()),
                         GraphUtils.deepCopy(document.getGraph()));
             }
         }
         if (!metadata.isEmpty()) {
-            graphs.put(ShapesGraphNaming.encodeMetadata(ownerGraphUri), metadata.getGraph());
+            graphs.put(ShapesGraphNaming.metadataGraph(), metadata.getGraph());
         }
         return graphs;
-    }
-
-    /** Whether {@code graphUri} names a shapes or metadata graph of {@code ownerGraphUri}. */
-    public static boolean belongsTo(String graphUri, String ownerGraphUri) {
-        return ShapesGraphNaming.decode(graphUri)
-                        .map(name -> name.ownerGraphUri().equals(ownerGraphUri))
-                        .orElse(false)
-                || ShapesGraphNaming.decodeMetadata(graphUri)
-                        .map(ownerGraphUri::equals)
-                        .orElse(false);
     }
 }

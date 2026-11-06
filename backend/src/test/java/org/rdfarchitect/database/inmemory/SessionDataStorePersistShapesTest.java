@@ -43,9 +43,9 @@ import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabaseConnection;
-import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.ShapesDocument;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.rdf.formatter.ResultSetFormatterImpl;
 import org.rdfarchitect.rdf.graph.source.GraphSource;
@@ -143,8 +143,12 @@ class SessionDataStorePersistShapesTest {
 
     private UUID create(String name, String sourceFile) {
         return write(
-                graph -> {
-                    var document = graph.createShapesDocument(name, ShapesDocument.Origin.IMPORTED);
+                transaction -> {
+                    var document =
+                            transaction.createShapesDocument(
+                                    name,
+                                    ShapesDocument.Origin.IMPORTED,
+                                    List.of(GRAPH.graphUri()));
                     document.getGraph().add(SHAPE);
                     document.setRawText(SHAPES);
                     document.setSourceFileName(sourceFile);
@@ -152,9 +156,9 @@ class SessionDataStorePersistShapesTest {
                 });
     }
 
-    private <T> T write(Function<GraphContext, T> change) {
+    private <T> T write(Function<WorkspaceTransaction, T> change) {
         try (var transaction = store.beginTransaction(DATASET, ReadWrite.WRITE)) {
-            var result = change.apply(transaction.graph(GRAPH.graphUri()));
+            var result = change.apply(transaction);
             transaction.commit("Changed");
             return result;
         }
@@ -170,15 +174,15 @@ class SessionDataStorePersistShapesTest {
     void persistedDocumentsComeBackWithTheirTextAndMetadata() {
         var id = create("eq.ttl", "EQ.ttl");
         write(
-                graph -> {
-                    graph.getShapesDocuments().get(id).setEnabled(false);
+                transaction -> {
+                    transaction.shapesDocuments().get(id).setEnabled(false);
                     return null;
                 });
 
         store.writeToDatabase(connection, GRAPH);
 
         try (var transaction = fetched().beginTransaction(DATASET, ReadWrite.READ)) {
-            var document = transaction.graph(GRAPH.graphUri()).getShapesDocuments().get(id);
+            var document = transaction.shapesDocuments().get(id);
             assertThat(document.getName()).isEqualTo("eq.ttl");
             assertThat(document.getSourceFileName()).isEqualTo("EQ.ttl");
             assertThat(document.isEnabled()).isFalse();
@@ -194,17 +198,29 @@ class SessionDataStorePersistShapesTest {
         store.writeToDatabase(connection, GRAPH);
 
         write(
-                graph -> {
-                    graph.getShapesDocuments().get(kept).setName("renamed.ttl");
-                    graph.removeShapesDocument(deleted);
+                transaction -> {
+                    transaction.shapesDocuments().get(kept).setName("renamed.ttl");
+                    transaction.removeShapesDocument(deleted);
                     return null;
                 });
         store.writeToDatabase(connection, GRAPH);
 
         try (var transaction = fetched().beginTransaction(DATASET, ReadWrite.READ)) {
-            var documents = transaction.graph(GRAPH.graphUri()).getShapesDocuments();
+            var documents = transaction.shapesDocuments();
             assertThat(documents).containsOnlyKeys(kept);
             assertThat(documents.get(kept).getName()).isEqualTo("renamed.ttl");
+        }
+    }
+
+    @Test
+    void theSchemasADocumentAppliesToComeBackWithIt() {
+        var id = create("eq.ttl", null);
+
+        store.writeToDatabase(connection, GRAPH);
+
+        try (var transaction = fetched().beginTransaction(DATASET, ReadWrite.READ)) {
+            assertThat(transaction.shapesDocuments().get(id).getSchemas())
+                    .containsExactly(GRAPH.graphUri());
         }
     }
 
@@ -214,11 +230,11 @@ class SessionDataStorePersistShapesTest {
         var deleted = create("gone.ttl", null);
         store.writeToDatabase(connection, GRAPH);
         write(
-                graph -> {
-                    var document = graph.getShapesDocuments().get(kept);
+                transaction -> {
+                    var document = transaction.shapesDocuments().get(kept);
                     document.setName("renamed.ttl");
                     document.setRawText(SHAPES + "# edited\n");
-                    graph.removeShapesDocument(deleted);
+                    transaction.removeShapesDocument(deleted);
                     return null;
                 });
         var refused = new DataAccessException("The store refused the request");
@@ -227,7 +243,7 @@ class SessionDataStorePersistShapesTest {
         assertThatThrownBy(() -> store.writeToDatabase(connection, GRAPH)).isSameAs(refused);
 
         try (var transaction = fetched().beginTransaction(DATASET, ReadWrite.READ)) {
-            var documents = transaction.graph(GRAPH.graphUri()).getShapesDocuments();
+            var documents = transaction.shapesDocuments();
             assertThat(documents).containsOnlyKeys(kept, deleted);
             assertThat(documents.get(kept).getName()).isEqualTo("kept.ttl");
             assertThat(documents.get(kept).getRawText()).isEqualTo(SHAPES);
