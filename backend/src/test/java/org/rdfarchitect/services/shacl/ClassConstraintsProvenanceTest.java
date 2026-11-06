@@ -203,8 +203,8 @@ class ClassConstraintsProvenanceTest {
 
     @Test
     void anInlineRuleIsShownOnThePropertyItConstrains() {
-        // The form writes a new rule as a blank node without "a sh:PropertyShape"; being the value
-        // of sh:property is what makes it one.
+        // A blank node without "a sh:PropertyShape" is a rule too; being the value of sh:property
+        // is what makes it one.
         service.createShapesDocument(
                 GRAPH.datasetName(),
                 List.of(GRAPH.graphUri()),
