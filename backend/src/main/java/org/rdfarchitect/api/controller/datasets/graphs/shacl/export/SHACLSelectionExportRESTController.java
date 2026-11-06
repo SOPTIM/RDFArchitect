@@ -40,6 +40,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -116,7 +117,10 @@ public class SHACLSelectionExportRESTController {
                 shaclExportUseCase.exportSelectedSHACLGraph(
                         new GraphIdentifier(datasetName, extendedGraphURI),
                         format,
-                        documentIds == null ? List.of() : documentIds,
+                        // An empty documentId= arrives as null, and names nothing.
+                        documentIds == null
+                                ? List.of()
+                                : documentIds.stream().filter(Objects::nonNull).toList(),
                         includeGenerated);
 
         return SHACLFileResponse.of(extendedGraphURI, format, outStream);
