@@ -33,7 +33,9 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { guardUnsavedChanges } from "$lib/eventhandling/unsavedChanges.js";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
+    import { ConformanceView } from "$lib/shacl/conformanceState.svelte.js";
     import { newDocumentText } from "$lib/shacl/newDocument.js";
+    import { parsePrefixes } from "$lib/shacl/turtleTerms.js";
     import {
         leavingNeedsConfirmation,
         WORKBENCH_PATH,
@@ -48,6 +50,7 @@
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { graphUri as uriOf } from "$lib/utils/graph-label.js";
 
+    import ConformanceReportView from "./workbench/ConformanceReportView.svelte";
     import DocumentInspector from "./workbench/DocumentInspector.svelte";
     import DocumentList from "./workbench/DocumentList.svelte";
     import WorkspacePicker from "./workbench/WorkspacePicker.svelte";
@@ -107,6 +110,28 @@
             : null,
     );
 
+    /** Compares a schema with the constraints documents applying to it. */
+    const conformance = $derived(
+        selectedWorkspace
+            ? new ConformanceView({ datasetName: selectedWorkspace })
+            : null,
+    );
+
+    const comparedSchema = $derived(
+        workbench?.schemas.find(
+            schema => schema.uri === workbench.comparedSchema,
+        ) ?? null,
+    );
+
+    /** What the open comparison reads: the enabled documents applying to its schema. */
+    const comparedDocuments = $derived(
+        comparedSchema
+            ? workbench
+                  .documentsOf(comparedSchema.uri)
+                  .filter(document => document.enabled)
+            : [],
+    );
+
     const generatedSchemaLabel = $derived(
         workbench?.schemas.find(
             schema => schema.uri === workbench.generatedSchema,
@@ -125,6 +150,13 @@
                 reloadIsOurs = true;
                 forceReloadTrigger.trigger();
             });
+        }
+    });
+
+    // Any change to the documents can change what a comparison says, however it was made.
+    $effect(() => {
+        if (workbench?.documentsRevision) {
+            untrack(() => conformance?.forget());
         }
     });
 
@@ -283,6 +315,7 @@
             }
             await workbench.select(target.documentId);
         }
+        workbench.closeComparison();
         if (target.line) {
             // Held by the editor until it exists and holds the document, so a link followed on
             // the first load, while Monaco is still arriving, still lands on its line.
@@ -293,6 +326,26 @@
 
     function reveal(line, column = 1) {
         editor?.reveal(line, column);
+    }
+
+    /** A click in the outline or the problems panel from a comparison needs a visible cursor. */
+    function showLine(line, column = 1) {
+        reveal(line, column);
+        workbench.closeComparison();
+    }
+
+    /** Opens a document from a comparison, asking about unsaved changes on the way. */
+    async function openDocument(target) {
+        if (!target) {
+            return;
+        }
+        if (target === workbench.selectedId) {
+            workbench.closeComparison();
+            return;
+        }
+        if (await confirmSwitch()) {
+            await workbench.select(target);
+        }
     }
 
     /**
@@ -427,8 +480,24 @@
                             <LoadingSpinner />
                         </div>
                     {:else}
+                        <!--
+                          The editor stays mounted behind a comparison so looking at one does not
+                          throw away its undo history or scroll position.
+                        -->
                         <div class="flex h-full min-h-0 flex-col">
-                            {#if workbench.selectedId === null}
+                            {#if comparedSchema}
+                                <div class="min-h-0 flex-1">
+                                    <ConformanceReportView
+                                        {conformance}
+                                        schemaUri={comparedSchema.uri}
+                                        schemaLabel={comparedSchema.label}
+                                        documents={comparedDocuments}
+                                        dirty={workbench.dirty}
+                                        prefixes={parsePrefixes(workbench.text)}
+                                        onopen={openDocument}
+                                    />
+                                </div>
+                            {:else if workbench.selectedId === null}
                                 <div
                                     class="flex h-full items-center justify-center p-6"
                                 >
@@ -445,8 +514,8 @@
                                 </div>
                             {/if}
                             <div
-                                class="min-h-0 flex-1 {workbench.selectedId ===
-                                null
+                                class="min-h-0 flex-1 {comparedSchema ||
+                                workbench.selectedId === null
                                     ? 'hidden'
                                     : ''}"
                             >
@@ -465,7 +534,7 @@
                     {/if}
                 </Pane>
                 <Pane size={23} minSize={15} maxSize={40}>
-                    <DocumentInspector {workbench} onreveal={reveal} />
+                    <DocumentInspector {workbench} onreveal={showLine} />
                 </Pane>
             </Splitpanes>
         </div>
