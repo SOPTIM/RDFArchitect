@@ -36,6 +36,8 @@ import org.rdfarchitect.exception.database.InvalidContentException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.shacl.dto.ShapesDocumentInfo;
 
+import java.util.List;
+
 /** What the service accepts as the name of a constraints document. */
 class SHACLDocumentNamesTest {
 
@@ -64,7 +66,8 @@ class SHACLDocumentNamesTest {
     }
 
     private ShapesDocumentInfo create(String name) {
-        return service.createShapesDocument(GRAPH, name, null, "", Lang.TURTLE);
+        return service.createShapesDocument(
+                GRAPH.datasetName(), List.of(GRAPH.graphUri()), name, null, "", Lang.TURTLE);
     }
 
     @Test
@@ -106,10 +109,19 @@ class SHACLDocumentNamesTest {
         create("tp.ttl");
 
         assertThatExceptionOfType(InvalidContentException.class)
-                .isThrownBy(() -> service.updateShapesDocument(GRAPH, id, " ", null, null));
+                .isThrownBy(
+                        () ->
+                                service.updateShapesDocument(
+                                        GRAPH.datasetName(), id, " ", null, null, null));
         assertThatExceptionOfType(ResourceConflictException.class)
-                .isThrownBy(() -> service.updateShapesDocument(GRAPH, id, "TP.ttl", null, null));
-        assertThat(service.updateShapesDocument(GRAPH, id, " renamed.ttl ", null, null).getName())
+                .isThrownBy(
+                        () ->
+                                service.updateShapesDocument(
+                                        GRAPH.datasetName(), id, "TP.ttl", null, null, null));
+        assertThat(
+                        service.updateShapesDocument(
+                                        GRAPH.datasetName(), id, " renamed.ttl ", null, null, null)
+                                .getName())
                 .isEqualTo("renamed.ttl");
     }
 
@@ -117,7 +129,10 @@ class SHACLDocumentNamesTest {
     void renamingToADifferentCaseOfItsOwnNameIsAllowed() {
         var id = create("eq.ttl").getId();
 
-        assertThat(service.updateShapesDocument(GRAPH, id, "EQ.ttl", null, null).getName())
+        assertThat(
+                        service.updateShapesDocument(
+                                        GRAPH.datasetName(), id, "EQ.ttl", null, null, null)
+                                .getName())
                 .isEqualTo("EQ.ttl");
     }
 }

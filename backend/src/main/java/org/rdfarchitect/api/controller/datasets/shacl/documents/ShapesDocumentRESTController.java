@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs.shacl.documents;
+package org.rdfarchitect.api.controller.datasets.shacl.documents;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,7 +24,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLDocumentUseCase;
 import org.rdfarchitect.shacl.dto.ShapesDocumentInfo;
@@ -43,11 +42,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 /** A single set of SHACL shapes: its Turtle source, its metadata, and its removal. */
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/documents/{documentId}")
+@RequestMapping("api/datasets/{datasetName}/shacl/documents/{documentId}")
 @RequiredArgsConstructor
 public class ShapesDocumentRESTController {
 
@@ -67,7 +67,7 @@ public class ShapesDocumentRESTController {
                 @ApiResponse(responseCode = "200"),
                 @ApiResponse(
                         responseCode = "404",
-                        description = "No constraints document with this id in the graph.")
+                        description = "No constraints document with this id in the workspace.")
             })
     @GetMapping(produces = MediaType.TEXT_PLAIN_VALUE)
     public String getShapesDocumentText(
@@ -79,22 +79,15 @@ public class ShapesDocumentRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
             @Parameter(description = "The id of the constraints document.") @PathVariable
                     UUID documentId) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/documents/{{}}\" from \"{}\".",
+                "Received GET request: \"/api/datasets/{{}}/shacl/documents/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
                 documentId,
                 originURL);
 
-        return shaclDocumentUseCase.getShapesDocumentText(
-                graphIdentifier(datasetName, graphURI), documentId);
+        return shaclDocumentUseCase.getShapesDocumentText(datasetName, documentId);
     }
 
     @Operation(
@@ -108,7 +101,7 @@ public class ShapesDocumentRESTController {
                         description = "The content is not valid Turtle."),
                 @ApiResponse(
                         responseCode = "404",
-                        description = "No constraints document with this id in the graph."),
+                        description = "No constraints document with this id in the workspace."),
                 @ApiResponse(responseCode = "409", description = "The workspace is read-only."),
                 @ApiResponse(
                         responseCode = "412",
@@ -127,11 +120,6 @@ public class ShapesDocumentRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
             @Parameter(description = "The id of the constraints document.") @PathVariable
                     UUID documentId,
             @Parameter(
@@ -144,21 +132,21 @@ public class ShapesDocumentRESTController {
             @Parameter(description = "The SHACL shapes in Turtle syntax.") @RequestBody
                     String turtle) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/documents/{{}}\" from \"{}\".",
+                "Received PUT request: \"/api/datasets/{{}}/shacl/documents/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
                 documentId,
                 originURL);
 
         shaclDocumentUseCase.replaceShapesDocumentText(
-                graphIdentifier(datasetName, graphURI), documentId, turtle, expectedRevision);
+                datasetName, documentId, turtle, expectedRevision);
         return Response.SUCCESS;
     }
 
     @Operation(
             summary = "update constraints document metadata",
             description =
-                    "Renames a document, switches it on or off, or moves it in the list. Omitted "
+                    "Renames a document, switches it on or off, moves it in the list, or changes "
+                            + "the schemas it applies to. Omitted "
                             + "parameters are left unchanged. Order affects list position and "
                             + "serialisation order only — SHACL has no precedence between documents.",
             tags = {"shacl"},
@@ -166,11 +154,11 @@ public class ShapesDocumentRESTController {
                 @ApiResponse(responseCode = "200"),
                 @ApiResponse(
                         responseCode = "404",
-                        description = "No constraints document with this id in the graph."),
+                        description = "No constraints document with this id in the workspace."),
                 @ApiResponse(
                         responseCode = "409",
                         description =
-                                "Another document in this graph already has that name, or the"
+                                "Another document in this workspace already has that name, or the"
                                         + " workspace is read-only.")
             })
     @PatchMapping
@@ -183,11 +171,6 @@ public class ShapesDocumentRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
             @Parameter(description = "The id of the constraints document.") @PathVariable
                     UUID documentId,
             @Parameter(description = "New display name.") @RequestParam(required = false)
@@ -199,16 +182,28 @@ public class ShapesDocumentRESTController {
                     Boolean enabled,
             @Parameter(description = "New position in the document list.")
                     @RequestParam(required = false)
-                    Integer order) {
+                    Integer order,
+            @Parameter(
+                            description =
+                                    "URIs of the schemas it applies to, replacing the ones it has."
+                                            + " Given empty, it applies to none.")
+                    @RequestParam(name = "schema", required = false)
+                    List<String> schemas) {
         logger.info(
-                "Received PATCH request: \"/api/datasets/{{}}/graphs/{{}}/shacl/documents/{{}}\" from \"{}\".",
+                "Received PATCH request: \"/api/datasets/{{}}/shacl/documents/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
                 documentId,
                 originURL);
 
         return shaclDocumentUseCase.updateShapesDocument(
-                graphIdentifier(datasetName, graphURI), documentId, name, enabled, order);
+                datasetName,
+                documentId,
+                name,
+                enabled,
+                order,
+                schemas == null
+                        ? null
+                        : SchemaParameter.expanded(schemas, datasetName, expandURIUseCase));
     }
 
     @Operation(
@@ -219,7 +214,7 @@ public class ShapesDocumentRESTController {
                 @ApiResponse(responseCode = "200"),
                 @ApiResponse(
                         responseCode = "404",
-                        description = "No constraints document with this id in the graph."),
+                        description = "No constraints document with this id in the workspace."),
                 @ApiResponse(responseCode = "409", description = "The workspace is read-only.")
             })
     @DeleteMapping
@@ -232,26 +227,15 @@ public class ShapesDocumentRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
             @Parameter(description = "The id of the constraints document.") @PathVariable
                     UUID documentId) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/shacl/documents/{{}}\" from \"{}\".",
+                "Received DELETE request: \"/api/datasets/{{}}/shacl/documents/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
                 documentId,
                 originURL);
 
-        shaclDocumentUseCase.deleteShapesDocument(
-                graphIdentifier(datasetName, graphURI), documentId);
+        shaclDocumentUseCase.deleteShapesDocument(datasetName, documentId);
         return Response.SUCCESS;
-    }
-
-    private GraphIdentifier graphIdentifier(String datasetName, String graphURI) {
-        return new GraphIdentifier(datasetName, expandURIUseCase.expandUri(datasetName, graphURI));
     }
 }

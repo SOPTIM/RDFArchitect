@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs.shacl.export;
+package org.rdfarchitect.api.controller.datasets.shacl.export;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -25,7 +25,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.datasets.graphs.shacl.SHACLFileResponse;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.slf4j.Logger;
@@ -44,14 +43,14 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Exporting a chosen set of a graph's constraints.
+ * Exporting a chosen set of a workspace's constraints.
  *
- * <p>The older endpoints offer three fixed combinations — generated, custom, or both. Since a graph
- * holds several documents, which of them belongs in an export is a question only the user can
- * answer, so this one takes the answer.
+ * <p>The older endpoints offer three fixed combinations — generated, custom, or both. Since a
+ * workspace holds several documents, which of them belongs in an export is a question only the user
+ * can answer, so this one takes the answer.
  */
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/export")
+@RequestMapping("api/datasets/{datasetName}/shacl/export")
 @RequiredArgsConstructor
 public class SHACLSelectionExportRESTController {
 
@@ -66,7 +65,7 @@ public class SHACLSelectionExportRESTController {
             summary = "export chosen constraints",
             description =
                     "Exports the named constraints documents as one file, optionally merged with the "
-                            + "shapes generated from the schema. A document is included because it "
+                            + "shapes generated from schemas. A document is included because it "
                             + "was asked for, whether or not it is enabled for validation. A single "
                             + "document exported as Turtle on its own is returned as its stored text.",
             tags = {"shacl"},
@@ -76,7 +75,8 @@ public class SHACLSelectionExportRESTController {
                         content = {@Content(mediaType = "text/turtle")}),
                 @ApiResponse(
                         responseCode = "404",
-                        description = "A requested document does not exist in this graph."),
+                        description =
+                                "A requested document or schema does not exist in this workspace."),
                 @ApiResponse(
                         responseCode = "406",
                         description = "The Accept header names no supported RDF syntax.")
@@ -94,35 +94,37 @@ public class SHACLSelectionExportRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
             @Parameter(description = "The constraints documents to include.")
                     @RequestParam(name = "documentId", required = false)
                     List<UUID> documentIds,
-            @Parameter(description = "Whether to merge in the shapes derived from the schema.")
-                    @RequestParam(required = false, defaultValue = "false")
-                    boolean includeGenerated) {
+            @Parameter(description = "URIs of the schemas whose generated shapes to merge in.")
+                    @RequestParam(name = "generatedFor", required = false)
+                    List<String> generatedFor) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/export/file\" from \"{}\".",
+                "Received GET request: \"/api/datasets/{{}}/shacl/export/file\" from \"{}\".",
                 datasetName,
-                graphURI,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var format = SHACLFileResponse.rdfFormat(acceptHeader);
         var outStream =
                 shaclExportUseCase.exportSelectedSHACLGraph(
-                        new GraphIdentifier(datasetName, extendedGraphURI),
+                        datasetName,
                         format,
                         // An empty documentId= arrives as null, and names nothing.
                         documentIds == null
                                 ? List.of()
                                 : documentIds.stream().filter(Objects::nonNull).toList(),
-                        includeGenerated);
+                        generatedFor == null
+                                ? List.of()
+                                : generatedFor.stream()
+                                        .filter(Objects::nonNull)
+                                        .filter(schema -> !schema.isBlank())
+                                        .map(
+                                                schema ->
+                                                        expandURIUseCase.expandUri(
+                                                                datasetName, schema))
+                                        .toList());
 
-        return SHACLFileResponse.of(extendedGraphURI, format, outStream);
+        return SHACLFileResponse.ofWorkspace(datasetName, format, outStream);
     }
 }

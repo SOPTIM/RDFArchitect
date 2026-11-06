@@ -28,20 +28,30 @@ import org.rdfarchitect.rdf.graph.wrapper.SnapshotParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 
 /**
- * One set of SHACL shapes belonging to a graph — typically an official constraints file that was
+ * One set of SHACL shapes in a workspace — typically an official constraints file that was
  * imported, or a set of shapes authored in RDFArchitect.
  *
- * <p>A graph holds any number of these. They are kept apart rather than merged into one shapes
+ * <p>A workspace holds any number of these. They are kept apart rather than merged into one shapes
  * graph so that each can be replaced, exported, validated and reported on individually — merging
  * would make it impossible to say which file a constraint came from, or to hand an imported file
  * back unchanged.
+ *
+ * <h2>Why a document belongs to the workspace</h2>
+ *
+ * <p>Shapes target classes by IRI, so nothing ties them to the graph declaring those classes, and
+ * official files don't keep to one: cross-profile files span several schemas, and some have no
+ * schema of their own. {@link #getSchemas()} says which schemas a document applies to, and may name
+ * several, none, or one the workspace does not hold at the moment.
  *
  * <h2>Why the raw text is authoritative</h2>
  *
@@ -70,26 +80,37 @@ public final class ShapesDocument {
     /**
      * Everything about a document that is not its triples, versioned as one value.
      *
-     * @param name display name, unique within a graph
+     * @param name display name, unique within a workspace
      * @param sourceFileName file the document was uploaded from, or {@code null}
      * @param enabled whether the shapes take part in validation and combined export
-     * @param order position in the graph's document list, and the merge order for export
+     * @param order position in the workspace's document list, and the merge order for export
+     * @param schemas URIs of the schemas the document applies to
      * @param rawText verbatim source text, or {@code null} when only the triples are known; kept
      *     deflated, since every version in the history holds one
      */
     public record State(
-            String name, String sourceFileName, boolean enabled, int order, StoredText rawText) {}
+            String name,
+            String sourceFileName,
+            boolean enabled,
+            int order,
+            Set<String> schemas,
+            StoredText rawText) {
+
+        public State {
+            schemas = Set.copyOf(schemas);
+        }
+    }
 
     /**
      * A participant that belongs to a document.
      *
      * <p>A changelog entry holds on to the participants it names, including those of a document
      * that has been deleted since. This is how they can still be told apart: the workspace has to
-     * say which graph such a participant belongs to in order to step or restore it.
+     * recognise such a participant in order to step or restore it.
      */
     public interface Part {
 
-        /** Returns whatever the document was created for, which identifies the graph holding it. */
+        /** Returns whatever the document was created for, which is what recognises it. */
         Object holder();
     }
 
@@ -157,6 +178,11 @@ public final class ShapesDocument {
         return metadata.current().order();
     }
 
+    /** URIs of the schemas the document applies to. The workspace need not hold them right now. */
+    public Set<String> getSchemas() {
+        return metadata.current().schemas();
+    }
+
     /** Verbatim source text; see the class comment on why this is authoritative. */
     public String getRawText() {
         var stored = metadata.current().rawText();
@@ -174,28 +200,70 @@ public final class ShapesDocument {
 
     public void setName(String name) {
         var s = metadata.current();
-        metadata.set(new State(name, s.sourceFileName(), s.enabled(), s.order(), s.rawText()));
+        metadata.set(
+                new State(
+                        name,
+                        s.sourceFileName(),
+                        s.enabled(),
+                        s.order(),
+                        s.schemas(),
+                        s.rawText()));
     }
 
     public void setSourceFileName(String sourceFileName) {
         var s = metadata.current();
-        metadata.set(new State(s.name(), sourceFileName, s.enabled(), s.order(), s.rawText()));
+        metadata.set(
+                new State(
+                        s.name(),
+                        sourceFileName,
+                        s.enabled(),
+                        s.order(),
+                        s.schemas(),
+                        s.rawText()));
     }
 
     public void setEnabled(boolean enabled) {
         var s = metadata.current();
-        metadata.set(new State(s.name(), s.sourceFileName(), enabled, s.order(), s.rawText()));
+        metadata.set(
+                new State(
+                        s.name(),
+                        s.sourceFileName(),
+                        enabled,
+                        s.order(),
+                        s.schemas(),
+                        s.rawText()));
     }
 
     public void setOrder(int order) {
         var s = metadata.current();
-        metadata.set(new State(s.name(), s.sourceFileName(), s.enabled(), order, s.rawText()));
+        metadata.set(
+                new State(
+                        s.name(),
+                        s.sourceFileName(),
+                        s.enabled(),
+                        order,
+                        s.schemas(),
+                        s.rawText()));
+    }
+
+    public void setSchemas(Collection<String> schemas) {
+        var s = metadata.current();
+        metadata.set(
+                new State(
+                        s.name(),
+                        s.sourceFileName(),
+                        s.enabled(),
+                        s.order(),
+                        Set.copyOf(schemas),
+                        s.rawText()));
     }
 
     public void setRawText(String rawText) {
         var s = metadata.current();
         var stored = StoredText.of(rawText);
-        metadata.set(new State(s.name(), s.sourceFileName(), s.enabled(), s.order(), stored));
+        metadata.set(
+                new State(
+                        s.name(), s.sourceFileName(), s.enabled(), s.order(), s.schemas(), stored));
         if (stored != null) {
             inflated = new Inflated(stored, rawText);
         }
@@ -216,6 +284,7 @@ public final class ShapesDocument {
                 String.valueOf(s.sourceFileName()),
                 String.valueOf(s.enabled()),
                 String.valueOf(s.order()),
+                new TreeSet<>(s.schemas()).toString(),
                 s.rawText() == null ? "" : s.rawText().size() + ":" + s.rawText().hashCode());
     }
 
@@ -273,6 +342,19 @@ public final class ShapesDocument {
         }
 
         /**
+         * Shows the change in the changelog of every schema the document applies to, then or now.
+         */
+        @Override
+        protected List<String> describeAffectedGraphs(State before, State after) {
+            if (before.equals(after)) {
+                return List.of();
+            }
+            var schemas = new TreeSet<>(before.schemas());
+            schemas.addAll(after.schemas());
+            return List.copyOf(schemas);
+        }
+
+        /**
          * Says what changed under the document's name, because moving one document renumbers the
          * others and a single change can reach several of them. The text is given by size, as the
          * difference between two files is no value to show in a table.
@@ -295,6 +377,7 @@ public final class ShapesDocument {
             values.put(label + ": source file", state.sourceFileName());
             values.put(label + ": enabled", String.valueOf(state.enabled()));
             values.put(label + ": position", String.valueOf(state.order()));
+            values.put(label + ": applies to", String.join(", ", new TreeSet<>(state.schemas())));
             return values;
         }
 

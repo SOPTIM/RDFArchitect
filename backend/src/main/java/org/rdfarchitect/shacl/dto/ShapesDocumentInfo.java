@@ -22,6 +22,7 @@ import lombok.Data;
 
 import org.rdfarchitect.database.ShapesDocument;
 
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -47,6 +48,9 @@ public class ShapesDocumentInfo {
     private boolean enabled;
 
     private int order;
+
+    /** URIs of the schemas it applies to. A URI the workspace no longer holds counts as unset. */
+    private Set<String> schemas;
 
     /** Number of triples the document holds, so the UI can show an empty document as empty. */
     private long tripleCount;

@@ -35,6 +35,7 @@ import org.rdfarchitect.database.snapshots.ShapesGraphNaming;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -86,13 +87,12 @@ class WorkspaceLoadsShapesDocumentsTest {
     }
 
     private static void addShapes(Dataset dataset, UUID id, String localName) {
-        dataset.addNamedModel(
-                ShapesGraphNaming.encode(GRAPH_URI, id.toString()), shapeModel(localName));
+        dataset.addNamedModel(ShapesGraphNaming.encode(id), shapeModel(localName));
     }
 
     private static Map<UUID, ShapesDocument> documentsOf(Workspace workspace) {
         try (var transaction = workspace.begin(ReadWrite.READ)) {
-            return transaction.graph(GRAPH_URI).getShapesDocuments();
+            return transaction.shapesDocuments();
         }
     }
 
@@ -102,8 +102,7 @@ class WorkspaceLoadsShapesDocumentsTest {
         var scratch = new Workspace("scratch");
         try (var transaction = scratch.begin(ReadWrite.WRITE)) {
             transaction.createGraph(GRAPH_URI, GraphFactory.createDefaultGraph());
-            var graph = transaction.graph(GRAPH_URI);
-            graph.restoreShapesDocument(
+            transaction.restoreShapesDocument(
                     new ShapesDocumentSeed(
                             id,
                             name,
@@ -111,10 +110,11 @@ class WorkspaceLoadsShapesDocumentsTest {
                             ShapesDocument.Origin.IMPORTED,
                             enabled,
                             order,
+                            Set.of(GRAPH_URI),
                             rawText,
                             GraphFactory.createDefaultGraph()));
             var model = ShapesDocumentMetadata.emptyModel();
-            ShapesDocumentMetadata.write(model, graph.getShapesDocuments().get(id));
+            ShapesDocumentMetadata.write(model, transaction.shapesDocuments().get(id));
             return model;
         }
     }
@@ -124,7 +124,7 @@ class WorkspaceLoadsShapesDocumentsTest {
         for (var document : documents) {
             all.add(document);
         }
-        dataset.addNamedModel(ShapesGraphNaming.encodeMetadata(GRAPH_URI), all);
+        dataset.addNamedModel(ShapesGraphNaming.metadataGraph(), all);
     }
 
     @Test
@@ -137,15 +137,12 @@ class WorkspaceLoadsShapesDocumentsTest {
 
     @Test
     void writingNoDocumentsAddsNothingToADataset() {
-        assertThat(ShapesDocumentGraphs.of(GRAPH_URI, List.of())).isEmpty();
+        assertThat(ShapesDocumentGraphs.of(List.of())).isEmpty();
     }
 
-    /**
-     * A schema with no triples isn't stored at all, since a store keeps no empty graphs. Its
-     * documents are, and without bringing the schema back they would load into nothing.
-     */
+    /** A store keeps no empty graphs, so a schema with no triples isn't in the dataset at all. */
     @Test
-    void documentsBringBackASchemaWithNoTriples() {
+    void aSchemaWithNoTriplesStaysGoneAndItsDocumentsStillLoad() {
         var id = UUID.randomUUID();
         var dataset = DatasetFactory.createGeneral();
         addShapes(dataset, id, "Shape");
@@ -153,25 +150,9 @@ class WorkspaceLoadsShapesDocumentsTest {
 
         var workspace = new Workspace("loaded", dataset);
 
-        assertThat(workspace.listGraphUris()).containsExactly(GRAPH_URI);
+        assertThat(workspace.listGraphUris()).isEmpty();
         assertThat(documentsOf(workspace)).containsOnlyKeys(id);
-    }
-
-    @Test
-    void documentsBringBackAnEmptyDefaultGraph() {
-        var id = UUID.randomUUID();
-        var dataset = DatasetFactory.createGeneral();
-        dataset.addNamedModel(ShapesGraphNaming.encode("default", id.toString()), shapeModel("S"));
-        var all = ShapesDocumentMetadata.emptyModel();
-        all.add(metadata(id, "eq.ttl", null, 0, true, null));
-        dataset.addNamedModel(ShapesGraphNaming.encodeMetadata("default"), all);
-
-        var workspace = new Workspace("loaded", dataset);
-
-        assertThat(workspace.listGraphUris()).containsExactly("default");
-        try (var transaction = workspace.begin(ReadWrite.READ)) {
-            assertThat(transaction.graph("default").getShapesDocuments()).containsOnlyKeys(id);
-        }
+        assertThat(documentsOf(workspace).get(id).getSchemas()).containsExactly(GRAPH_URI);
     }
 
     @Test
@@ -223,8 +204,7 @@ class WorkspaceLoadsShapesDocumentsTest {
 
         assertThat(workspace.canUndo()).isFalse();
         try (var transaction = workspace.begin(ReadWrite.READ)) {
-            assertThat(transaction.graph(GRAPH_URI).getShapesDocuments().get(id).getGraph().size())
-                    .isEqualTo(1);
+            assertThat(transaction.shapesDocuments().get(id).getGraph().size()).isEqualTo(1);
         }
     }
 
@@ -236,23 +216,13 @@ class WorkspaceLoadsShapesDocumentsTest {
         addMetadata(dataset, metadata(id, "eq.ttl", null, 0, true, shapeText("Shape")));
         var workspace = new Workspace("loaded", dataset);
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.graph(GRAPH_URI).getShapesDocuments().get(id).setRawText("edited");
+            transaction.shapesDocuments().get(id).setRawText("edited");
             transaction.commit("Edited");
         }
 
         workspace.undo();
 
         assertThat(documentsOf(workspace).get(id).getRawText()).isEqualTo(shapeText("Shape"));
-    }
-
-    @Test
-    void documentsWhoseOwnerIsMissingAreDropped() {
-        var dataset = DatasetFactory.createGeneral();
-        addShapes(dataset, UUID.randomUUID(), "Shape");
-
-        var workspace = new Workspace("loaded", dataset);
-
-        assertThat(workspace.listGraphUris()).isEmpty();
     }
 
     @Test
@@ -270,7 +240,21 @@ class WorkspaceLoadsShapesDocumentsTest {
     @Test
     void aGraphInTheReservedNamespaceWithoutADocumentIdIsIgnored() {
         var dataset = datasetWithSchema();
-        dataset.addNamedModel(ShapesGraphNaming.encode(GRAPH_URI, "not-a-uuid"), shapeModel("S"));
+        dataset.addNamedModel("urn:rdfa:shacl:not-a-uuid", shapeModel("Shape"));
+
+        var workspace = new Workspace("loaded", dataset);
+
+        assertThat(workspace.listGraphUris()).containsExactly(GRAPH_URI);
+        assertThat(documentsOf(workspace)).isEmpty();
+    }
+
+    @Test
+    void graphsFromTheFormerPerSchemaLayoutAreIgnoredAndNeverBecomeSchemas() {
+        var dataset = datasetWithSchema();
+        var owner = "http%3A%2F%2Fexample.org%2FEQ";
+        dataset.addNamedModel(
+                "urn:rdfa:shacl:" + owner + ":" + UUID.randomUUID(), shapeModel("Shape"));
+        dataset.addNamedModel("urn:rdfa:shacl-meta:" + owner, shapeModel("Metadata"));
 
         var workspace = new Workspace("loaded", dataset);
 
@@ -317,7 +301,7 @@ class WorkspaceLoadsShapesDocumentsTest {
         var workspace = new Workspace("loaded", dataset);
 
         try (var transaction = workspace.begin(ReadWrite.READ)) {
-            var graph = transaction.graph(GRAPH_URI).getShapesDocuments().get(id).getGraph();
+            var graph = transaction.shapesDocuments().get(id).getGraph();
             assertThat(graph.getPrefixMapping().getNsPrefixURI("eq")).isEqualTo(GRAPH_URI + "#");
             assertThat(graph.isIsomorphicWith(shapeModel("Shape").getGraph())).isTrue();
         }
@@ -332,8 +316,7 @@ class WorkspaceLoadsShapesDocumentsTest {
         var workspace = new Workspace("loaded", dataset);
 
         try (var transaction = workspace.begin(ReadWrite.READ)) {
-            assertThat(transaction.graph(GRAPH_URI).getShapesDocuments().get(id).getGraph().size())
-                    .isEqualTo(1);
+            assertThat(transaction.shapesDocuments().get(id).getGraph().size()).isEqualTo(1);
         }
     }
 }

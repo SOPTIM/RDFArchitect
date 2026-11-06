@@ -91,14 +91,24 @@ class ShapesDocumentsAgainstEntsoeProfilesTest {
     @Test
     void anImportedFileIsHeldAndExportedExactlyAsWritten() {
         var created =
-                service.createShapesDocument(GRAPH, "eq.ttl", "eq.ttl", official, Lang.TURTLE);
+                service.createShapesDocument(
+                        GRAPH.datasetName(),
+                        List.of(GRAPH.graphUri()),
+                        "eq.ttl",
+                        "eq.ttl",
+                        official,
+                        Lang.TURTLE);
 
         assertThat(created.getTripleCount()).isEqualTo(officialTriples);
         assertThat(created.getNodeShapeCount()).isPositive();
-        assertThat(service.getShapesDocumentText(GRAPH, created.getId())).isEqualTo(official);
+        assertThat(service.getShapesDocumentText(GRAPH.datasetName(), created.getId()))
+                .isEqualTo(official);
         assertThat(
                         service.exportSelectedSHACLGraph(
-                                        GRAPH, RDFFormat.TURTLE, List.of(created.getId()), false)
+                                        GRAPH.datasetName(),
+                                        RDFFormat.TURTLE,
+                                        List.of(created.getId()),
+                                        List.of())
                                 .toString(StandardCharsets.UTF_8))
                 .isEqualTo(official);
     }
@@ -106,24 +116,35 @@ class ShapesDocumentsAgainstEntsoeProfilesTest {
     @Test
     void anEditDeleteAndRestoreComeBackToTheFileAsWritten() {
         var id =
-                service.createShapesDocument(GRAPH, "eq.ttl", "eq.ttl", official, Lang.TURTLE)
+                service.createShapesDocument(
+                                GRAPH.datasetName(),
+                                List.of(GRAPH.graphUri()),
+                                "eq.ttl",
+                                "eq.ttl",
+                                official,
+                                Lang.TURTLE)
                         .getId();
         var target = databasePort.listChanges(GRAPH.datasetName()).getFirst().changeId();
 
-        service.replaceShapesDocumentText(GRAPH, id, official + "\n# edited\n");
-        service.deleteShapesDocument(GRAPH, id);
-        databasePort.restoreToVersion(
-                GRAPH.datasetName(), target, RevertScope.ofGraphs(GRAPH.graphUri()), null);
+        service.replaceShapesDocumentText(GRAPH.datasetName(), id, official + "\n# edited\n");
+        service.deleteShapesDocument(GRAPH.datasetName(), id);
+        databasePort.restoreToVersion(GRAPH.datasetName(), target, RevertScope.everything(), null);
 
-        assertThat(service.getShapesDocumentText(GRAPH, id)).isEqualTo(official);
-        assertThat(service.listShapesDocuments(GRAPH).getFirst().getTripleCount())
+        assertThat(service.getShapesDocumentText(GRAPH.datasetName(), id)).isEqualTo(official);
+        assertThat(service.listShapesDocuments(GRAPH.datasetName()).getFirst().getTripleCount())
                 .isEqualTo(officialTriples);
     }
 
     @Test
     void aShareBringsBackTheFileAsWritten() {
         var id =
-                service.createShapesDocument(GRAPH, "eq.ttl", "eq.ttl", official, Lang.TURTLE)
+                service.createShapesDocument(
+                                GRAPH.datasetName(),
+                                List.of(GRAPH.graphUri()),
+                                "eq.ttl",
+                                "eq.ttl",
+                                official,
+                                Lang.TURTLE)
                         .getId();
         var adapter = new InMemorySnapshotAdapter(databasePort);
         var token = adapter.createSnapshot(GRAPH.datasetName());
@@ -131,10 +152,7 @@ class ShapesDocumentsAgainstEntsoeProfilesTest {
         SessionContext.setSessionId(getClass().getSimpleName() + "-other");
         adapter.fetchSnapshot(token);
 
-        var shared =
-                new GraphIdentifier(
-                        SnapshotUtils.constructSnapshotName(GRAPH.datasetName(), token),
-                        GRAPH.graphUri());
+        var shared = SnapshotUtils.constructSnapshotName(GRAPH.datasetName(), token);
         assertThat(service.getShapesDocumentText(shared, id)).isEqualTo(official);
     }
 }

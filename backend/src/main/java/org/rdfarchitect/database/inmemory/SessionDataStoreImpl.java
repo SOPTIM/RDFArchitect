@@ -34,6 +34,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.snapshots.ShapesDocumentGraphs;
+import org.rdfarchitect.database.snapshots.ShapesGraphNaming;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
@@ -219,12 +220,12 @@ public class SessionDataStoreImpl implements SessionDataStore {
                             .setGraphName(SchemaIri.of(schemaName))
                             .build();
             databaseConnection.insertGraph(graphSource, workspaceName);
-            writeShapesDocuments(databaseConnection, workspaceName, schemaName, transaction);
+            writeShapesDocuments(databaseConnection, workspaceName, transaction);
         }
     }
 
     /**
-     * Makes the database hold the graph's shapes documents as they stand, in the layout {@link
+     * Makes the database hold the workspace's shapes documents as they stand, in the layout {@link
      * ShapesDocumentGraphs} defines.
      *
      * <p>All in one request, because an insert appends and so what is stored has to go first, and a
@@ -233,15 +234,12 @@ public class SessionDataStoreImpl implements SessionDataStore {
     private void writeShapesDocuments(
             DatabaseConnection databaseConnection,
             String datasetName,
-            String graphUri,
             WorkspaceTransaction transaction) {
         var stored =
                 listGraphNames(databaseConnection, datasetName).stream()
-                        .filter(name -> ShapesDocumentGraphs.belongsTo(name, graphUri))
+                        .filter(ShapesGraphNaming::isReserved)
                         .toList();
-        var current =
-                ShapesDocumentGraphs.of(
-                        graphUri, transaction.graph(graphUri).getShapesDocuments().values());
+        var current = ShapesDocumentGraphs.of(transaction.shapesDocuments().values());
         if (!stored.isEmpty() || !current.isEmpty()) {
             databaseConnection.replaceGraphs(stored, current, datasetName);
         }

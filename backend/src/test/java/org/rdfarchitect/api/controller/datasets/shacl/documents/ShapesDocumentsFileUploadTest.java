@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs.shacl.documents;
+package org.rdfarchitect.api.controller.datasets.shacl.documents;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,7 +30,6 @@ import org.apache.jena.riot.Lang;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLDocumentUseCase;
 import org.rdfarchitect.shacl.dto.ShapesDocumentInfo;
@@ -39,6 +38,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -47,8 +47,7 @@ import java.util.UUID;
  */
 class ShapesDocumentsFileUploadTest {
 
-    private static final String URL =
-            "/api/datasets/cgmes/graphs/http%3A%2F%2Fexample.org%2FDL/shacl/documents/file";
+    private static final String URL = "/api/datasets/cgmes/shacl/documents/file";
 
     private static final String GRAPH_URI = "http://example.org/DL";
 
@@ -71,7 +70,7 @@ class ShapesDocumentsFileUploadTest {
         var expandURIUseCase = mock(ExpandURIUseCase.class);
         documents = mock(SHACLDocumentUseCase.class);
         when(expandURIUseCase.expandUri(any(), any())).thenReturn(GRAPH_URI);
-        when(documents.createShapesDocument(any(), any(), any(), any(), any()))
+        when(documents.createShapesDocument(any(), any(), any(), any(), any(), any()))
                 .thenReturn(ShapesDocumentInfo.builder().id(UUID.randomUUID()).build());
 
         mockMvc =
@@ -91,11 +90,7 @@ class ShapesDocumentsFileUploadTest {
 
         verify(documents)
                 .createShapesDocument(
-                        new GraphIdentifier("cgmes", GRAPH_URI),
-                        FILE_NAME,
-                        FILE_NAME,
-                        SHAPES,
-                        Lang.TURTLE);
+                        "cgmes", List.of(), FILE_NAME, FILE_NAME, SHAPES, Lang.TURTLE);
     }
 
     @Test
@@ -105,7 +100,7 @@ class ShapesDocumentsFileUploadTest {
                 .andExpect(status().isOk());
 
         var name = ArgumentCaptor.forClass(String.class);
-        verify(documents).createShapesDocument(any(), name.capture(), any(), any(), any());
+        verify(documents).createShapesDocument(any(), any(), name.capture(), any(), any(), any());
         assertThat(name.getValue()).isEqualTo(FILE_NAME + " (2)");
     }
 
@@ -114,7 +109,7 @@ class ShapesDocumentsFileUploadTest {
         mockMvc.perform(multipart(URL).file(file())).andExpect(status().isOk());
 
         var text = ArgumentCaptor.forClass(String.class);
-        verify(documents).createShapesDocument(any(), any(), any(), text.capture(), any());
+        verify(documents).createShapesDocument(any(), any(), any(), any(), text.capture(), any());
         // Comments and ordering are what an official file is expected to give back byte for byte.
         assertThat(text.getValue()).isEqualTo(SHAPES);
     }
@@ -131,7 +126,7 @@ class ShapesDocumentsFileUploadTest {
 
         mockMvc.perform(multipart(URL).file(latin1)).andExpect(status().isBadRequest());
 
-        verify(documents, never()).createShapesDocument(any(), any(), any(), any(), any());
+        verify(documents, never()).createShapesDocument(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -146,6 +141,6 @@ class ShapesDocumentsFileUploadTest {
 
         mockMvc.perform(multipart(URL).file(latin1)).andExpect(status().isBadRequest());
 
-        verify(documents, never()).createShapesDocument(any(), any(), any(), any(), any());
+        verify(documents, never()).createShapesDocument(any(), any(), any(), any(), any(), any());
     }
 }

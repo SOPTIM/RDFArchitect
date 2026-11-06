@@ -23,57 +23,45 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.UUID;
+
 class ShapesGraphNamingTest {
 
-    private static final String DOCUMENT_ID = "1fac0fd3-d607-42e5-931f-850d3361caab";
+    @Test
+    void aDocumentIdSurvivesEncoding() {
+        var id = UUID.randomUUID();
 
-    @ParameterizedTest
-    @ValueSource(
-            strings = {
-                "http://iec.ch/TC57/ns/CIM/CoreEquipment-EU/3.0",
-                // Colons and hashes in the owner uri must not confuse the id separator.
-                "http://example.org/profile#EQ",
-                "urn:uuid:1fac0fd3-d607-42e5-931f-850d3361caab",
-                "default"
-            })
-    void encode_thenDecode_returnsTheOwnerUnchanged(String ownerGraphUri) {
-        var name = ShapesGraphNaming.encode(ownerGraphUri, DOCUMENT_ID);
-
-        assertThat(ShapesGraphNaming.isShapesGraph(name)).isTrue();
-        assertThat(ShapesGraphNaming.decode(name))
-                .contains(new ShapesGraphNaming.ShapesGraphName(ownerGraphUri, DOCUMENT_ID));
+        assertThat(ShapesGraphNaming.decode(ShapesGraphNaming.encode(id))).contains(id);
     }
 
     @Test
-    void encode_keepsTheDocumentIdRecoverable() {
-        var name = ShapesGraphNaming.encode("http://example.org/EQ", "a-second-document");
-
-        assertThat(ShapesGraphNaming.decode(name))
-                .map(ShapesGraphNaming.ShapesGraphName::documentId)
-                .contains("a-second-document");
+    void bothKindsOfGraphAreReserved() {
+        assertThat(ShapesGraphNaming.isReserved(ShapesGraphNaming.encode(UUID.randomUUID())))
+                .isTrue();
+        assertThat(ShapesGraphNaming.isReserved(ShapesGraphNaming.metadataGraph())).isTrue();
     }
 
     @ParameterizedTest
     @ValueSource(
             strings = {
-                "http://iec.ch/TC57/ns/CIM/CoreEquipment-EU/3.0",
-                "default",
-                "urn:rdfa:diagrams:something"
+                "urn:rdfa:shacl:http%3A%2F%2Fexample.org%2FEQ:1fac0fd3-d607-4b1e-8e3c-0a6f3c2d9b11",
+                "urn:rdfa:shacl-meta:http%3A%2F%2Fexample.org%2FEQ"
             })
-    void isShapesGraph_isFalseForEveryOtherGraphName(String graphUri) {
-        assertThat(ShapesGraphNaming.isShapesGraph(graphUri)).isFalse();
+    void theFormerPerSchemaNamesAreReservedButNameNoDocument(String graphUri) {
+        assertThat(ShapesGraphNaming.isReserved(graphUri)).isTrue();
+        assertThat(ShapesGraphNaming.decode(graphUri)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"http://iec.ch/TC57/CIM100", "default", "urn:rdfa:other"})
+    void everyOtherGraphNameIsNotReserved(String graphUri) {
+        assertThat(ShapesGraphNaming.isReserved(graphUri)).isFalse();
         assertThat(ShapesGraphNaming.decode(graphUri)).isEmpty();
     }
 
     @Test
-    void decode_isEmptyForAMalformedName() {
-        assertThat(ShapesGraphNaming.decode("urn:rdfa:shacl:")).isEmpty();
-        assertThat(ShapesGraphNaming.decode("urn:rdfa:shacl:no-id-separator")).isEmpty();
-        assertThat(ShapesGraphNaming.decode("urn:rdfa:shacl:trailing-separator:")).isEmpty();
-    }
-
-    @Test
-    void isShapesGraph_toleratesNull() {
-        assertThat(ShapesGraphNaming.isShapesGraph(null)).isFalse();
+    void aMissingNameIsTolerated() {
+        assertThat(ShapesGraphNaming.isReserved(null)).isFalse();
+        assertThat(ShapesGraphNaming.decode(null)).isEmpty();
     }
 }

@@ -20,12 +20,14 @@ package org.rdfarchitect.database.snapshots;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.rdfarchitect.database.ShapesDocument;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -47,6 +49,7 @@ public final class ShapesDocumentMetadata {
     private static final Property ORIGIN = ResourceFactory.createProperty(NS + "documentOrigin");
     private static final Property ENABLED = ResourceFactory.createProperty(NS + "documentEnabled");
     private static final Property ORDER = ResourceFactory.createProperty(NS + "documentOrder");
+    private static final Property SCHEMA = ResourceFactory.createProperty(NS + "documentSchema");
     private static final Property RAW_TEXT = ResourceFactory.createProperty(NS + "documentRawText");
 
     private ShapesDocumentMetadata() {}
@@ -58,6 +61,7 @@ public final class ShapesDocumentMetadata {
         metadata.add(subject, ORIGIN, document.getOrigin().name());
         metadata.add(subject, ORDER, metadata.createTypedLiteral(document.getOrder()));
         metadata.add(subject, ENABLED, metadata.createTypedLiteral(document.isEnabled()));
+        document.getSchemas().forEach(schema -> metadata.add(subject, SCHEMA, schema));
         if (document.getSourceFileName() != null) {
             metadata.add(subject, SOURCE_FILE, document.getSourceFileName());
         }
@@ -84,6 +88,7 @@ public final class ShapesDocumentMetadata {
             ShapesDocument.Origin origin,
             boolean enabled,
             int order,
+            Set<String> schemas,
             String rawText) {}
 
     /**
@@ -129,6 +134,7 @@ public final class ShapesDocumentMetadata {
                         readOrigin(metadata, subject),
                         readBoolean(metadata, subject),
                         readInt(metadata, subject),
+                        readSchemas(metadata, subject),
                         literal(metadata, subject, RAW_TEXT)));
     }
 
@@ -154,6 +160,14 @@ public final class ShapesDocumentMetadata {
         } catch (IllegalArgumentException _) {
             return ShapesDocument.Origin.IMPORTED;
         }
+    }
+
+    private static Set<String> readSchemas(
+            Model metadata, org.apache.jena.rdf.model.Resource subject) {
+        return metadata.listObjectsOfProperty(subject, SCHEMA)
+                .filterKeep(RDFNode::isLiteral)
+                .mapWith(schema -> schema.asLiteral().getString())
+                .toSet();
     }
 
     private static boolean readBoolean(Model metadata, org.apache.jena.rdf.model.Resource subject) {

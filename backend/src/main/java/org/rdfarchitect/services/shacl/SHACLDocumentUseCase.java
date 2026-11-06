@@ -18,12 +18,12 @@
 package org.rdfarchitect.services.shacl;
 
 import org.apache.jena.riot.Lang;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.shacl.dto.ShapesDocumentInfo;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Collection;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
@@ -37,7 +37,7 @@ import java.util.UUID;
 public interface SHACLDocumentUseCase {
 
     /** Lists the graph's documents in {@code order}, without their content. */
-    List<ShapesDocumentInfo> listShapesDocuments(GraphIdentifier graphIdentifier);
+    List<ShapesDocumentInfo> listShapesDocuments(String datasetName);
 
     /**
      * Adds a document holding {@code content}.
@@ -49,19 +49,19 @@ public interface SHACLDocumentUseCase {
      *     converted to Turtle once on import because that is what the editor works in
      */
     ShapesDocumentInfo createShapesDocument(
-            GraphIdentifier graphIdentifier,
+            String datasetName,
+            Collection<String> schemas,
             String name,
             String sourceFileName,
             String content,
             Lang lang);
 
     /** Returns the document's Turtle source. */
-    String getShapesDocumentText(GraphIdentifier graphIdentifier, UUID documentId);
+    String getShapesDocumentText(String datasetName, UUID documentId);
 
     /** Replaces the document's content with {@code turtle}, keeping the text verbatim. */
-    default void replaceShapesDocumentText(
-            GraphIdentifier graphIdentifier, UUID documentId, String turtle) {
-        replaceShapesDocumentText(graphIdentifier, documentId, turtle, null);
+    default void replaceShapesDocumentText(String datasetName, UUID documentId, String turtle) {
+        replaceShapesDocumentText(datasetName, documentId, turtle, null);
     }
 
     /**
@@ -74,10 +74,7 @@ public interface SHACLDocumentUseCase {
      *     since — in another tab, or by an undo — and writing would discard that change unseen
      */
     void replaceShapesDocumentText(
-            GraphIdentifier graphIdentifier,
-            UUID documentId,
-            String turtle,
-            String expectedRevision);
+            String datasetName, UUID documentId, String turtle, String expectedRevision);
 
     /**
      * Names one version of a document's text: the lowercase hex SHA-256 of its UTF-8 bytes, as
@@ -98,15 +95,16 @@ public interface SHACLDocumentUseCase {
      * @param order new list position; other documents shift to keep the order dense
      */
     ShapesDocumentInfo updateShapesDocument(
-            GraphIdentifier graphIdentifier,
+            String datasetName,
             UUID documentId,
             String name,
             Boolean enabled,
-            Integer order);
+            Integer order,
+            Collection<String> schemas);
 
     /**
      * Deletes a document. Which documents exist is versioned with their content, so an undo brings
      * it back.
      */
-    void deleteShapesDocument(GraphIdentifier graphIdentifier, UUID documentId);
+    void deleteShapesDocument(String datasetName, UUID documentId);
 }

@@ -85,11 +85,23 @@ public final class SHACLFileResponse {
      */
     public static ResponseEntity<byte[]> of(
             String extendedGraphURI, RDFFormat format, ByteArrayOutputStream outStream) {
-        var fileName =
+        return named(
                 "default".equals(extendedGraphURI)
                         ? "shacl"
-                        : new URI(extendedGraphURI + "-shacl").getSuffix();
-        fileName += "." + format.getLang().getFileExtensions().getFirst();
+                        : new URI(extendedGraphURI + "-shacl").getSuffix(),
+                format,
+                outStream);
+    }
+
+    /** The download, named after the workspace it was exported from. */
+    public static ResponseEntity<byte[]> ofWorkspace(
+            String datasetName, RDFFormat format, ByteArrayOutputStream outStream) {
+        return named(datasetName + "-shacl", format, outStream);
+    }
+
+    private static ResponseEntity<byte[]> named(
+            String stem, RDFFormat format, ByteArrayOutputStream outStream) {
+        var fileName = stem + "." + format.getLang().getFileExtensions().getFirst();
 
         var headers = new HttpHeaders();
         headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));

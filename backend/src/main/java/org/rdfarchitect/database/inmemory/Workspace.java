@@ -21,7 +21,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Resource;
@@ -29,7 +28,6 @@ import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.config.GraphCompressionConfig;
 import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.SchemaNames;
-import org.rdfarchitect.database.ShapesDocumentSeed;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagramCollection;
@@ -122,6 +120,9 @@ public class Workspace {
     @Getter(AccessLevel.PACKAGE)
     private final WorkspacePrefixes prefixes;
 
+    @Getter(AccessLevel.PACKAGE)
+    private final ShapesDocumentCollection shapesDocuments;
+
     public Workspace(String workspaceName) {
         this.txnContext = new WorkspaceTransactionContext(workspaceName);
         this.changeLog =
@@ -133,6 +134,7 @@ public class Workspace {
         this.diagramLayout = new DiagramLayoutDelta(txnContext);
         this.crossProfileDiagramInfo = new CrossProfileDiagramInfo(txnContext);
         this.prefixes = new WorkspacePrefixes(txnContext);
+        this.shapesDocuments = new ShapesDocumentCollection(txnContext);
     }
 
     /**
@@ -147,43 +149,22 @@ public class Workspace {
         this(workspaceName);
         try (var transaction = begin(ReadWrite.WRITE)) {
             this.prefixes.addAll(dataset.getPrefixMapping());
-            var documents = ShapesDocumentSeeds.of(dataset);
             for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
                 var graphIri = it.next().getURI();
-                // A dataset stores shapes documents in graphs of their own, which belong to the
-                // graph owning them rather than being graphs of the workspace.
+                // A dataset stores shapes documents in graphs of their own, which are not graphs
+                // of the workspace.
                 if (!ShapesGraphNaming.isReserved(graphIri)) {
-                    loadGraph(
+                    graphs.put(
                             SchemaNames.unique(SchemaIri.toName(graphIri), graphs.uris()),
-                            dataset.getNamedModel(graphIri).getGraph(),
-                            documents.getOrDefault(graphIri, List.of()));
+                            new GraphWithContext(
+                                    dataset.getNamedModel(graphIri).getGraph(), txnContext));
                 }
             }
-            // A store keeps no empty graphs, so a schema with no triples isn't in the dataset, but
-            // its documents are. The metadata says it was written that way, which a stray graph
-            // left behind by something else doesn't.
-            documents.keySet().stream()
-                    .filter(graphURI -> !graphs.contains(graphURI))
-                    .filter(
-                            graphURI ->
-                                    dataset.containsNamedModel(
-                                            ShapesGraphNaming.encodeMetadata(graphURI)))
-                    .forEach(
-                            graphURI ->
-                                    loadGraph(
-                                            graphURI,
-                                            GraphFactory.createDefaultGraph(),
-                                            documents));
+            ShapesDocumentSeeds.of(dataset).forEach(shapesDocuments::restore);
             transaction.commit(INITIAL_CHANGE_MESSAGE);
         }
         // The load itself is not something the user can undo; it is the state they started from.
         changeLog.forgetHistory(INITIAL_CHANGE_MESSAGE);
-    }
-
-    private void loadGraph(String schemaName, Graph content, List<ShapesDocumentSeed> documents) {
-        var graph = new GraphWithContext(content, txnContext);
-        graphs.put(schemaName, graph);
-        documents.forEach(graph::restoreShapesDocument);
     }
 
     // -------------------------------------------------------------------------
@@ -285,6 +266,9 @@ public class Workspace {
         if (participant == graphs) {
             return ParticipantId.ofWorkspace(ParticipantId.Kind.GRAPHS);
         }
+        if (shapesDocuments.holds(participant)) {
+            return ParticipantId.ofWorkspace(ParticipantId.Kind.SHACL);
+        }
         if (participant == customDiagrams) {
             return ParticipantId.ofWorkspace(ParticipantId.Kind.DIAGRAMS);
         }
@@ -304,7 +288,7 @@ public class Workspace {
         if (participant == graph.getRdfGraph()) {
             return ParticipantId.Kind.RDF;
         }
-        if (participant == graph.getCustomSHACL() || graph.shapesDocuments().holds(participant)) {
+        if (participant == graph.getCustomSHACL()) {
             return ParticipantId.Kind.SHACL;
         }
         if (participant == graph.getDiagramLayout()) {

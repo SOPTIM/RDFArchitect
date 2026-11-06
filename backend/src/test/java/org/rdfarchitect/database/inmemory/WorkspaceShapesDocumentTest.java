@@ -29,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.ShapesDocument;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
 import org.rdfarchitect.models.changelog.ContextDelta;
 import org.rdfarchitect.models.changelog.RevertScope;
@@ -38,6 +39,7 @@ import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -72,6 +74,14 @@ class WorkspaceShapesDocumentTest {
         }
     }
 
+    /** A change to the documents, which belong to no graph. */
+    private void change(Consumer<WorkspaceTransaction> change, String message) {
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            change.accept(transaction);
+            transaction.commit(message);
+        }
+    }
+
     private <T> T read(Function<GraphContext, T> reader) {
         return read(GRAPH, reader);
     }
@@ -82,16 +92,18 @@ class WorkspaceShapesDocumentTest {
         }
     }
 
-    private Map<UUID, ShapesDocument> documents() {
-        return documents(GRAPH);
+    private <T> T readDocuments(Function<WorkspaceTransaction, T> reader) {
+        try (var transaction = workspace.begin(ReadWrite.READ)) {
+            return reader.apply(transaction);
+        }
     }
 
-    private Map<UUID, ShapesDocument> documents(String graphUri) {
-        return read(graphUri, GraphContext::getShapesDocuments);
+    private Map<UUID, ShapesDocument> documents() {
+        return readDocuments(WorkspaceTransaction::shapesDocuments);
     }
 
     private UUID documentsVersion() {
-        return read(GraphContext::getShapesDocumentsVersion);
+        return readDocuments(WorkspaceTransaction::shapesDocumentsVersion);
     }
 
     private UUID schemaVersion() {
@@ -99,23 +111,23 @@ class WorkspaceShapesDocumentTest {
     }
 
     private int order(UUID id) {
-        return read(context -> document(context, id).getOrder());
+        return readDocuments(transaction -> document(transaction, id).getOrder());
     }
 
     private boolean enabled(UUID id) {
-        return read(context -> document(context, id).isEnabled());
+        return readDocuments(transaction -> document(transaction, id).isEnabled());
     }
 
     private String name(UUID id) {
-        return read(context -> document(context, id).getName());
+        return readDocuments(transaction -> document(transaction, id).getName());
     }
 
     private String sourceFile(UUID id) {
-        return read(context -> document(context, id).getSourceFileName());
+        return readDocuments(transaction -> document(transaction, id).getSourceFileName());
     }
 
-    private String textOf(String graphUri, UUID id) {
-        return read(graphUri, context -> document(context, id).getRawText());
+    private Set<String> schemasOf(UUID id) {
+        return readDocuments(transaction -> document(transaction, id).getSchemas());
     }
 
     private boolean schemaHas(String graphUri, Triple triple) {
@@ -127,37 +139,31 @@ class WorkspaceShapesDocumentTest {
     }
 
     private List<Integer> orders() {
-        return read(
-                context ->
-                        context.getShapesDocuments().values().stream()
-                                .map(ShapesDocument::getOrder)
-                                .toList());
+        return documents().values().stream().map(ShapesDocument::getOrder).toList();
     }
 
     private UUID create(String name) {
-        return create(GRAPH, name);
+        return create(name, GRAPH);
     }
 
-    private UUID create(String graphUri, String name) {
+    private UUID create(String name, String... schemas) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
             var document =
-                    transaction
-                            .graph(graphUri)
-                            .createShapesDocument(name, ShapesDocument.Origin.AUTHORED);
+                    transaction.createShapesDocument(
+                            name, ShapesDocument.Origin.AUTHORED, List.of(schemas));
             transaction.commit("Created " + name);
             return document.getId();
         }
     }
 
-    private ShapesDocument document(GraphContext context, UUID id) {
-        return context.getShapesDocuments().get(id);
+    private ShapesDocument document(WorkspaceTransaction transaction, UUID id) {
+        return transaction.shapesDocuments().get(id);
     }
 
     private void edit(UUID id, String text, Triple... triples) {
-        write(
-                GRAPH,
-                context -> {
-                    var document = document(context, id);
+        change(
+                transaction -> {
+                    var document = document(transaction, id);
                     document.getGraph().clear();
                     for (var triple : triples) {
                         document.getGraph().add(triple);
@@ -168,19 +174,15 @@ class WorkspaceShapesDocumentTest {
     }
 
     private String textOf(UUID id) {
-        return textOf(GRAPH, id);
+        return readDocuments(transaction -> document(transaction, id).getRawText());
     }
 
     private List<Triple> triplesOf(UUID id) {
-        return read(context -> document(context, id).getGraph().find().toList());
+        return readDocuments(transaction -> document(transaction, id).getGraph().find().toList());
     }
 
     private List<String> namesInOrder() {
-        return read(
-                context ->
-                        context.getShapesDocuments().values().stream()
-                                .map(ShapesDocument::getName)
-                                .toList());
+        return documents().values().stream().map(ShapesDocument::getName).toList();
     }
 
     private WorkspaceChangeLogEntry newestChange() {
@@ -199,7 +201,7 @@ class WorkspaceShapesDocumentTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void aGraphStartsWithoutDocuments() {
+    void aWorkspaceStartsWithoutDocuments() {
         assertThat(documents()).isEmpty();
     }
 
@@ -216,10 +218,27 @@ class WorkspaceShapesDocumentTest {
     }
 
     @Test
-    void documentsBelongToTheirGraph() {
-        create("mine.ttl");
+    void aDocumentCanApplyToOneSchemaSeveralOrNone() {
+        var one = create("one.ttl", GRAPH);
+        var two = create("two.ttl", GRAPH, OTHER_GRAPH);
+        var none = create("none.ttl", new String[0]);
 
-        assertThat(documents(OTHER_GRAPH)).isEmpty();
+        assertThat(schemasOf(one)).containsExactly(GRAPH);
+        assertThat(schemasOf(two)).containsExactlyInAnyOrder(GRAPH, OTHER_GRAPH);
+        assertThat(schemasOf(none)).isEmpty();
+    }
+
+    @Test
+    void theSchemasADocumentAppliesToAreUndoneLikeTheRest() {
+        var id = create("document.ttl", GRAPH);
+
+        change(
+                transaction -> document(transaction, id).setSchemas(List.of(OTHER_GRAPH)),
+                "Moved it");
+        assertThat(schemasOf(id)).containsExactly(OTHER_GRAPH);
+
+        workspace.undo();
+        assertThat(schemasOf(id)).containsExactly(GRAPH);
     }
 
     @Test
@@ -236,7 +255,7 @@ class WorkspaceShapesDocumentTest {
     void aDocumentCreatedAfterADeletionDoesNotShareAPosition() {
         var first = create("first.ttl");
         create("second.ttl");
-        write(GRAPH, context -> context.removeShapesDocument(first), "Removed");
+        change(transaction -> transaction.removeShapesDocument(first), "Removed");
 
         var third = create("third.ttl");
 
@@ -247,7 +266,9 @@ class WorkspaceShapesDocumentTest {
     void removingAnUnknownDocumentChangesNothing() {
         var before = workspace.getChangeHistory().size();
 
-        write(GRAPH, context -> context.removeShapesDocument(UUID.randomUUID()), "Removed nothing");
+        change(
+                transaction -> transaction.removeShapesDocument(UUID.randomUUID()),
+                "Removed nothing");
 
         assertThat(workspace.getChangeHistory()).hasSize(before);
     }
@@ -257,16 +278,14 @@ class WorkspaceShapesDocumentTest {
         var id = create("document.ttl");
 
         try (var transaction = workspace.begin(ReadWrite.READ)) {
-            var context = transaction.graph(GRAPH);
-
-            assertThatThrownBy(() -> document(context, id).setName("renamed.ttl"))
+            assertThatThrownBy(() -> document(transaction, id).setName("renamed.ttl"))
                     .isInstanceOf(GraphTransactionException.class);
             assertThatThrownBy(
                             () ->
-                                    context.createShapesDocument(
-                                            "new.ttl", ShapesDocument.Origin.AUTHORED))
+                                    transaction.createShapesDocument(
+                                            "new.ttl", ShapesDocument.Origin.AUTHORED, List.of()))
                     .isInstanceOf(GraphTransactionException.class);
-            assertThatThrownBy(() -> context.removeShapesDocument(id))
+            assertThatThrownBy(() -> transaction.removeShapesDocument(id))
                     .isInstanceOf(GraphTransactionException.class);
         }
         assertThat(namesInOrder()).containsExactly("document.ttl");
@@ -277,7 +296,7 @@ class WorkspaceShapesDocumentTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void aGraphWithoutDocumentsRecordsNothingAboutThem() {
+    void aWorkspaceWithoutDocumentsRecordsNothingAboutThem() {
         write(GRAPH, context -> context.getRdfGraph().add(triple("schema")), "Edited the schema");
 
         var change = newestChange();
@@ -352,8 +371,9 @@ class WorkspaceShapesDocumentTest {
     void undoingACreationThatWroteContentTakesItAllBack() {
         UUID id;
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            var context = transaction.graph(GRAPH);
-            var document = context.createShapesDocument("new.ttl", ShapesDocument.Origin.IMPORTED);
+            var document =
+                    transaction.createShapesDocument(
+                            "new.ttl", ShapesDocument.Origin.IMPORTED, List.of(GRAPH));
             document.getGraph().add(triple("a"));
             document.setRawText("text");
             document.setSourceFileName("new.ttl");
@@ -387,11 +407,10 @@ class WorkspaceShapesDocumentTest {
     @Test
     void schemaAndShapesChangedInOneCommitAreUndoneTogether() {
         var id = create("document.ttl");
-        write(
-                GRAPH,
-                context -> {
-                    context.getRdfGraph().add(triple("schema"));
-                    document(context, id).getGraph().add(triple("shape"));
+        change(
+                transaction -> {
+                    transaction.graph(GRAPH).getRdfGraph().add(triple("schema"));
+                    document(transaction, id).getGraph().add(triple("shape"));
                 },
                 "Edited both");
 
@@ -406,9 +425,9 @@ class WorkspaceShapesDocumentTest {
         var id = create("document.ttl");
         edit(id, "text", triple("a"));
 
-        write(GRAPH, context -> document(context, id).setName("renamed.ttl"), "Renamed");
-        write(GRAPH, context -> document(context, id).setEnabled(false), "Disabled");
-        write(GRAPH, context -> document(context, id).setOrder(4), "Moved");
+        change(transaction -> document(transaction, id).setName("renamed.ttl"), "Renamed");
+        change(transaction -> document(transaction, id).setEnabled(false), "Disabled");
+        change(transaction -> document(transaction, id).setOrder(4), "Moved");
 
         workspace.undo();
         assertThat(order(id)).isZero();
@@ -428,9 +447,9 @@ class WorkspaceShapesDocumentTest {
     void aRemovalIsUndoneWithEverythingTheDocumentHeld() {
         var id = create("document.ttl");
         edit(id, "text", triple("a"));
-        write(GRAPH, context -> document(context, id).setEnabled(false), "Disabled");
+        change(transaction -> document(transaction, id).setEnabled(false), "Disabled");
 
-        write(GRAPH, context -> context.removeShapesDocument(id), "Removed");
+        change(transaction -> transaction.removeShapesDocument(id), "Removed");
         assertThat(documents()).isEmpty();
 
         workspace.undo();
@@ -450,9 +469,8 @@ class WorkspaceShapesDocumentTest {
         var before = workspace.getChangeHistory().size();
 
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            var context = transaction.graph(GRAPH);
-            context.removeShapesDocument(id);
-            context.createShapesDocument("new.ttl", ShapesDocument.Origin.AUTHORED);
+            transaction.removeShapesDocument(id);
+            transaction.createShapesDocument("new.ttl", ShapesDocument.Origin.AUTHORED, List.of());
             transaction.abort();
         }
 
@@ -467,7 +485,7 @@ class WorkspaceShapesDocumentTest {
         edit(id, "text", triple("a"));
 
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            var document = document(transaction.graph(GRAPH), id);
+            var document = document(transaction, id);
             document.setRawText("changed");
             document.setName("changed.ttl");
             document.getGraph().add(triple("b"));
@@ -485,10 +503,9 @@ class WorkspaceShapesDocumentTest {
         edit(id, "text", triple("a"));
         var before = workspace.getChangeHistory().size();
 
-        write(
-                GRAPH,
-                context -> {
-                    var document = document(context, id);
+        change(
+                transaction -> {
+                    var document = document(transaction, id);
                     document.setRawText("text");
                     document.setName("document.ttl");
                     document.setEnabled(true);
@@ -507,7 +524,7 @@ class WorkspaceShapesDocumentTest {
         var id = create("document.ttl");
         edit(id, "text", triple("a"), triple("b"));
 
-        write(GRAPH, context -> context.removeShapesDocument(id), "Removed");
+        change(transaction -> transaction.removeShapesDocument(id), "Removed");
 
         var deletions =
                 newestChange().deltas().stream()
@@ -520,11 +537,44 @@ class WorkspaceShapesDocumentTest {
     }
 
     @Test
-    void anEntryIsFiledUnderTheGraphTheDocumentBelongsTo() {
-        create(OTHER_GRAPH, "other.ttl");
+    void anEntryIsFiledUnderEverySchemaTheDocumentAppliesTo() {
+        var id = create("both.ttl", GRAPH, OTHER_GRAPH);
 
-        assertThat(newestChange().affectedGraphUris()).containsExactly(OTHER_GRAPH);
+        assertThat(newestChange().affectedGraphUris())
+                .containsExactlyInAnyOrder(GRAPH, OTHER_GRAPH);
         assertThat(newestChange().affectedKinds()).containsExactly("shacl");
+
+        edit(id, "text", triple("a"));
+
+        assertThat(newestChange().affectedGraphUris())
+                .containsExactlyInAnyOrder(GRAPH, OTHER_GRAPH);
+    }
+
+    @Test
+    void aDocumentChangeShowsInASchemasChangelogButIsNotRestorableThere() {
+        create("document.ttl");
+
+        assertThat(newestChange().affectsGraph(GRAPH)).isTrue();
+        assertThat(newestChange().restorableGraphUris()).isEmpty();
+    }
+
+    @Test
+    void anEntryOfADocumentApplyingToNoSchemaIsFiledUnderNone() {
+        create("none.ttl", new String[0]);
+
+        assertThat(newestChange().affectedGraphUris()).isEmpty();
+    }
+
+    @Test
+    void anEntryIsFiledUnderTheSchemaADocumentLeftAsWellAsTheOneItJoined() {
+        var id = create("document.ttl", GRAPH);
+
+        change(
+                transaction -> document(transaction, id).setSchemas(List.of(OTHER_GRAPH)),
+                "Moved it");
+
+        assertThat(newestChange().affectedGraphUris())
+                .containsExactlyInAnyOrder(GRAPH, OTHER_GRAPH);
     }
 
     @Test
@@ -538,11 +588,10 @@ class WorkspaceShapesDocumentTest {
     void aMetadataChangeIsReportedValueByValueUnderTheDocumentsName() {
         var id = create("document.ttl");
 
-        write(
-                GRAPH,
-                context -> {
-                    document(context, id).setName("renamed.ttl");
-                    document(context, id).setEnabled(false);
+        change(
+                transaction -> {
+                    document(transaction, id).setName("renamed.ttl");
+                    document(transaction, id).setEnabled(false);
                 },
                 "Changed");
 
@@ -572,49 +621,28 @@ class WorkspaceShapesDocumentTest {
     // -------------------------------------------------------------------------
 
     @Test
-    void restoringOneSchemaBringsBackItsDocumentsTextAndTriples() {
+    void restoringOneSchemaLeavesDocumentsAlone() {
         var id = create("document.ttl");
         edit(id, "first", triple("a"));
+        write(GRAPH, context -> context.getRdfGraph().add(triple("old")), "Edited the schema");
         var target = newestChange().changeId();
+        write(GRAPH, context -> context.getRdfGraph().add(triple("new")), "Edited the schema");
         edit(id, "second", triple("b"));
 
         workspace.restoreToVersion(target, RevertScope.ofGraphs(GRAPH));
 
-        assertThat(textOf(id)).isEqualTo("first");
-        assertThat(triplesOf(id)).containsExactly(triple("a"));
+        assertThat(schemaHas(GRAPH, triple("new"))).isFalse();
+        assertThat(textOf(id)).isEqualTo("second");
+        assertThat(triplesOf(id)).containsExactly(triple("b"));
     }
 
     @Test
-    void restoringOneSchemaBringsBackADeletedDocument() {
+    void restoringOneSchemaDoesNotBringBackADeletedDocument() {
         var id = create("document.ttl");
-        edit(id, "text", triple("a"));
+        write(GRAPH, context -> context.getRdfGraph().add(triple("old")), "Edited the schema");
         var target = newestChange().changeId();
-        write(GRAPH, context -> context.removeShapesDocument(id), "Removed");
-
-        workspace.restoreToVersion(target, RevertScope.ofGraphs(GRAPH));
-
-        assertThat(textOf(id)).isEqualTo("text");
-        assertThat(triplesOf(id)).containsExactly(triple("a"));
-    }
-
-    @Test
-    void restoringOneSchemaThroughAnEditAndADeletionUndoesBoth() {
-        var id = create("document.ttl");
-        edit(id, "first", triple("a"));
-        var target = newestChange().changeId();
-        edit(id, "second", triple("b"));
-        write(GRAPH, context -> context.removeShapesDocument(id), "Removed");
-
-        workspace.restoreToVersion(target, RevertScope.ofGraphs(GRAPH));
-
-        assertThat(textOf(id)).isEqualTo("first");
-        assertThat(triplesOf(id)).containsExactly(triple("a"));
-    }
-
-    @Test
-    void restoringOneSchemaRemovesADocumentCreatedSince() {
-        var target = newestChange().changeId();
-        create("document.ttl");
+        write(GRAPH, context -> context.getRdfGraph().add(triple("new")), "Edited the schema");
+        change(transaction -> transaction.removeShapesDocument(id), "Removed");
 
         workspace.restoreToVersion(target, RevertScope.ofGraphs(GRAPH));
 
@@ -622,38 +650,28 @@ class WorkspaceShapesDocumentTest {
     }
 
     @Test
-    void restoringOneSchemaLeavesTheDocumentsOfAnotherAlone() {
-        var mine = create("mine.ttl");
-        var theirs = create(OTHER_GRAPH, "theirs.ttl");
+    void restoringOneSchemaKeepsADocumentCreatedSince() {
+        write(GRAPH, context -> context.getRdfGraph().add(triple("old")), "Edited the schema");
         var target = newestChange().changeId();
-        edit(mine, "edited", triple("a"));
-        write(
-                OTHER_GRAPH,
-                context -> {
-                    var document = document(context, theirs);
-                    document.setRawText("edited");
-                    document.getGraph().add(triple("b"));
-                },
-                "Edited theirs");
+        write(GRAPH, context -> context.getRdfGraph().add(triple("new")), "Edited the schema");
+        var id = create("document.ttl");
 
         workspace.restoreToVersion(target, RevertScope.ofGraphs(GRAPH));
 
-        assertThat(textOf(mine)).isNull();
-        assertThat(textOf(OTHER_GRAPH, theirs)).isEqualTo("edited");
+        assertThat(documents()).containsOnlyKeys(id);
     }
 
     @Test
-    void aRestoreOfOneSchemaCanBeUndone() {
+    void restoringOneSchemaOverNothingButDocumentEditsChangesNothing() {
         var id = create("document.ttl");
         edit(id, "first", triple("a"));
         var target = newestChange().changeId();
         edit(id, "second", triple("b"));
-        workspace.restoreToVersion(target, RevertScope.ofGraphs(GRAPH));
 
-        workspace.undo();
+        var step = workspace.restoreToVersion(target, RevertScope.ofGraphs(GRAPH));
 
+        assertThat(step.change()).isNull();
         assertThat(textOf(id)).isEqualTo("second");
-        assertThat(triplesOf(id)).containsExactly(triple("b"));
     }
 
     @Test
@@ -685,7 +703,7 @@ class WorkspaceShapesDocumentTest {
         var afterEdit = documentsVersion();
         assertThat(afterEdit).isNotEqualTo(afterCreate);
 
-        write(GRAPH, context -> document(context, id).setEnabled(false), "Disabled");
+        change(transaction -> document(transaction, id).setEnabled(false), "Disabled");
         assertThat(documentsVersion()).isNotEqualTo(afterEdit);
 
         workspace.undo();
@@ -698,7 +716,7 @@ class WorkspaceShapesDocumentTest {
         edit(id, "# one", triple("a"));
         var before = documentsVersion();
 
-        write(GRAPH, context -> document(context, id).setRawText("# two"), "Edited a comment");
+        change(transaction -> document(transaction, id).setRawText("# two"), "Edited a comment");
 
         assertThat(documentsVersion()).isNotEqualTo(before);
     }
@@ -720,87 +738,65 @@ class WorkspaceShapesDocumentTest {
     }
 
     // -------------------------------------------------------------------------
-    // What becomes of the graph
+    // What becomes of a schema
     // -------------------------------------------------------------------------
 
     @Test
-    void documentsFollowARename() {
-        var id = create("document.ttl");
-        edit(id, "text", triple("a"));
+    void renamingASchemaPointsItsDocumentsAtTheNewUri() {
+        var id = create("both.ttl", GRAPH, OTHER_GRAPH);
+        var elsewhere = create("elsewhere.ttl", OTHER_GRAPH);
         var renamed = "http://example.org/renamed";
+
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
             transaction.renameGraph(GRAPH, renamed);
-            transaction.commit("Renamed the graph");
+            transaction.commit("Renamed the schema");
         }
 
-        assertThat(textOf(renamed, id)).isEqualTo("text");
-        assertThat(changeNamed("Edited").affectedGraphUris()).containsExactly(renamed);
-    }
-
-    @Test
-    void documentsComeBackWithADeletedGraph() {
-        var id = create("document.ttl");
-        edit(id, "text", triple("a"));
-        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.deleteGraph(GRAPH);
-            transaction.commit("Deleted the graph");
-        }
+        assertThat(schemasOf(id)).containsExactlyInAnyOrder(renamed, OTHER_GRAPH);
+        assertThat(schemasOf(elsewhere)).containsExactly(OTHER_GRAPH);
 
         workspace.undo();
 
-        assertThat(textOf(id)).isEqualTo("text");
-        assertThat(triplesOf(id)).containsExactly(triple("a"));
+        assertThat(schemasOf(id)).containsExactlyInAnyOrder(GRAPH, OTHER_GRAPH);
     }
 
     @Test
-    void replacingAGraphKeepsItsDocumentsAndGivesItTheNewSchema() {
+    void deletingASchemaLeavesItsDocumentsAsTheyAre() {
+        var id = create("document.ttl");
+        edit(id, "text", triple("a"));
+        var version = documentsVersion();
+
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.deleteGraph(GRAPH);
+            transaction.commit("Deleted the schema");
+        }
+
+        assertThat(textOf(id)).isEqualTo("text");
+        assertThat(schemasOf(id)).containsExactly(GRAPH);
+        assertThat(documentsVersion()).isEqualTo(version);
+    }
+
+    @Test
+    void replacingASchemaKeepsItsDocumentsWithNothingAskedOfThem() {
         var id = create("document.ttl");
         edit(id, "text", triple("a"));
         var replacement = GraphFactory.createDefaultGraph();
         replacement.add(triple("new-schema"));
 
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.replaceGraph(GRAPH, replacement);
-            transaction.commit("Replaced the graph");
+            transaction.deleteGraph(GRAPH);
+            transaction.createGraph(GRAPH, replacement);
+            transaction.commit("Replaced the schema");
         }
 
         assertThat(textOf(id)).isEqualTo("text");
+        assertThat(schemasOf(id)).containsExactly(GRAPH);
         assertThat(schemaHas(GRAPH, triple("new-schema"))).isTrue();
+        assertThat(newestChange().affectedKinds()).doesNotContain("shacl");
 
         workspace.undo();
 
         assertThat(textOf(id)).isEqualTo("text");
         assertThat(schemaHas(GRAPH, triple("new-schema"))).isFalse();
-    }
-
-    @Test
-    void documentsCanBeEditedAndUndoneAfterTheirGraphWasReplaced() {
-        var id = create("document.ttl");
-        edit(id, "before", triple("a"));
-        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.replaceGraph(GRAPH, GraphFactory.createDefaultGraph());
-            transaction.commit("Replaced the graph");
-        }
-
-        edit(id, "after", triple("b"));
-        assertThat(newestChange().affectedGraphUris()).containsExactly(GRAPH);
-
-        workspace.undo();
-        assertThat(textOf(id)).isEqualTo("before");
-    }
-
-    @Test
-    void replacingAGraphThatDoesNotExistCreatesIt() {
-        var created = "http://example.org/created";
-        var schema = GraphFactory.createDefaultGraph();
-        schema.add(triple("schema"));
-
-        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.replaceGraph(created, schema);
-            transaction.commit("Created by replacing");
-        }
-
-        assertThat(schemaHas(created, triple("schema"))).isTrue();
-        assertThat(documents(created)).isEmpty();
     }
 }
