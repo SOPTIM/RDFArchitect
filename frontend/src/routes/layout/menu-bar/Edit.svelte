@@ -36,7 +36,9 @@
 
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
+    import { confirmUnsavedChanges } from "$lib/eventhandling/unsavedChanges.js";
     import { PASTE_VARIANTS } from "$lib/pasteOptions.js";
+    import { WORKBENCH_PATH } from "$lib/shacl/workbenchLink.js";
     import {
         copyState,
         editorState,
@@ -64,6 +66,8 @@
     import RenameGraphDialog from "../../RenameGraphDialog.svelte";
     import RenameWorkspaceDialog from "../../RenameWorkspaceDialog.svelte";
     import WorkspaceDeleteDialog from "../../WorkspaceDeleteDialog.svelte";
+
+    import { page } from "$app/state";
 
     let { canUndo, canRedo, isWorkspaceReadOnly, reload = () => {} } = $props();
 
@@ -405,6 +409,9 @@
     }
 
     async function undo() {
+        if (!(await confirmUnsavedChanges({ allowSave: false }))) {
+            return;
+        }
         const { error, skipped } = await versionControlStore.undo();
         if (!error && !skipped) {
             reload();
@@ -412,9 +419,28 @@
     }
 
     async function redo() {
+        if (!(await confirmUnsavedChanges({ allowSave: false }))) {
+            return;
+        }
         const { error, skipped } = await versionControlStore.redo();
         if (!error && !skipped) {
             reload();
+        }
+    }
+
+    /**
+     * Whether the constraints workbench is showing. Delete and paste act on the navigation's
+     * selection, which that page does not show — pressing Delete there must not offer to delete
+     * the schema being edited.
+     */
+    function onWorkbench() {
+        return page.url.pathname.startsWith(WORKBENCH_PATH);
+    }
+
+    /** Opens a dialog that changes the selected schema or workspace, once unsaved work is settled. */
+    async function openSelectionChange(open) {
+        if (await confirmUnsavedChanges()) {
+            open();
         }
     }
 
@@ -444,6 +470,9 @@
     }
 
     function deleteSelectionWithShortcut() {
+        if (onWorkbench()) {
+            return;
+        }
         switch (deleteShortcutTarget) {
             case SelectionLevel.CLASS:
                 if (!disableDeleteClassButton) {
@@ -470,16 +499,16 @@
         }
         switch (renameShortcutTarget) {
             case SelectionLevel.GRAPH:
-                showGraphRenameDialog = true;
+                openSelectionChange(() => (showGraphRenameDialog = true));
                 break;
             case SelectionLevel.WORKSPACE:
-                showWorkspaceRenameDialog = true;
+                openSelectionChange(() => (showWorkspaceRenameDialog = true));
                 break;
         }
     }
 
     function pasteClassWithShortcut(options) {
-        if (!disablePasteButton) {
+        if (!disablePasteButton && !onWorkbench()) {
             pasteClass(options);
         }
     }
@@ -516,7 +545,8 @@
                     Package
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
-                    onSelect={() => (showNewGraphDialog = true)}
+                    onSelect={() =>
+                        openSelectionChange(() => (showNewGraphDialog = true))}
                     faIcon={faDiagramProject}
                 >
                     Schema
@@ -629,14 +659,20 @@
             </Menubar.SubMenu.Trigger>
             <Menubar.SubMenu.Content>
                 <Menubar.Item.Button
-                    onSelect={() => (showWorkspaceRenameDialog = true)}
+                    onSelect={() =>
+                        openSelectionChange(
+                            () => (showWorkspaceRenameDialog = true),
+                        )}
                     disabled={!hasWorkspaceSelected || isWorkspaceReadOnly}
                     faIcon={faPen}
                 >
                     Workspace
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
-                    onSelect={() => (showGraphRenameDialog = true)}
+                    onSelect={() =>
+                        openSelectionChange(
+                            () => (showGraphRenameDialog = true),
+                        )}
                     disabled={!hasGraphSelected || isWorkspaceReadOnly}
                     faIcon={faDiagramProject}
                 >
