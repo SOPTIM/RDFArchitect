@@ -20,6 +20,7 @@ package org.rdfarchitect.api.controller.datasets.graphs.shacl.documents;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -116,5 +117,35 @@ class ShapesDocumentsFileUploadTest {
         verify(documents).createShapesDocument(any(), any(), any(), text.capture(), any());
         // Comments and ordering are what an official file is expected to give back byte for byte.
         assertThat(text.getValue()).isEqualTo(SHAPES);
+    }
+
+    @Test
+    void aTurtleFileThatIsNotUtf8IsRefusedRatherThanStoredDamaged() throws Exception {
+        var latin1 =
+                new MockMultipartFile(
+                        "file",
+                        "latin1.ttl",
+                        "text/turtle",
+                        "<http://e/a> <http://e/b> \"Gr\u00f6\u00dfe\" .\n"
+                                .getBytes(StandardCharsets.ISO_8859_1));
+
+        mockMvc.perform(multipart(URL).file(latin1)).andExpect(status().isBadRequest());
+
+        verify(documents, never()).createShapesDocument(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void anNTriplesFileThatIsNotUtf8IsRefusedRatherThanStoredDamaged() throws Exception {
+        var latin1 =
+                new MockMultipartFile(
+                        "file",
+                        "latin1.nt",
+                        "application/n-triples",
+                        "<http://e/a> <http://e/b> \"Gr\u00f6\u00dfe\" .\n"
+                                .getBytes(StandardCharsets.ISO_8859_1));
+
+        mockMvc.perform(multipart(URL).file(latin1)).andExpect(status().isBadRequest());
+
+        verify(documents, never()).createShapesDocument(any(), any(), any(), any(), any());
     }
 }

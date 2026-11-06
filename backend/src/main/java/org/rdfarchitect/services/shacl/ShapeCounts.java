@@ -34,8 +34,8 @@ import java.util.Set;
  *
  * @param nodeShapes subjects typed {@code sh:NodeShape}, or with a target, that are not property
  *     shapes
- * @param propertyShapes subjects typed {@code sh:PropertyShape} and every value of {@code
- *     sh:property}, inline ones included
+ * @param propertyShapes subjects typed {@code sh:PropertyShape} or with an {@code sh:path}, and
+ *     every value of {@code sh:property}, inline ones included
  * @param sparqlConstraints distinct values of {@code sh:sparql}
  */
 public record ShapeCounts(int nodeShapes, int propertyShapes, int sparqlConstraints) {
@@ -51,6 +51,8 @@ public record ShapeCounts(int nodeShapes, int propertyShapes, int sparqlConstrai
     public static ShapeCounts of(Graph shapes) {
         var propertyShapes = new HashSet<Node>();
         shapes.find(Node.ANY, RDF.type.asNode(), SHACLM.PropertyShape.asNode())
+                .forEachRemaining(triple -> propertyShapes.add(triple.getSubject()));
+        shapes.find(Node.ANY, SHACLM.path.asNode(), Node.ANY)
                 .forEachRemaining(triple -> propertyShapes.add(triple.getSubject()));
         shapes.find(Node.ANY, SHACLM.property.asNode(), Node.ANY)
                 .filterDrop(triple -> triple.getObject().isLiteral())

@@ -19,11 +19,16 @@ package org.rdfarchitect.database.implementations.http.command;
 
 import org.apache.jena.atlas.web.HttpException;
 import org.apache.jena.graph.Graph;
+import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.shared.JenaException;
 import org.apache.jena.sparql.engine.http.QueryExceptionHTTP;
 import org.apache.jena.sparql.exec.http.GSP;
 import org.apache.jena.sparql.exec.http.UpdateExecutionHTTPBuilder;
+import org.apache.jena.sparql.modify.request.QuadDataAcc;
+import org.apache.jena.sparql.modify.request.UpdateDataInsert;
+import org.apache.jena.sparql.modify.request.UpdateDrop;
 import org.apache.jena.update.Update;
+import org.apache.jena.update.UpdateRequest;
 import org.rdfarchitect.database.command.DatabaseUpdateCommand;
 import org.rdfarchitect.database.implementations.DatabaseAdminProtocol;
 import org.rdfarchitect.exception.database.DataAccessException;
@@ -38,6 +43,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Map;
 
 public class HttpUpdateCommandImpl implements DatabaseUpdateCommand {
 
@@ -114,11 +122,15 @@ public class HttpUpdateCommandImpl implements DatabaseUpdateCommand {
                 "Successfully executed update@{} against endpoint: \"{}\"", hex, this.endpoint);
     }
 
-    @Override
-    public void insertGraph(GraphSource graphSource) throws DataAccessException {
+    private void ensureDatasetExists() {
         if (!databaseAdminProtocol.listDatasets().contains(this.datasetName)) {
             databaseAdminProtocol.createDataset(this.datasetName);
         }
+    }
+
+    @Override
+    public void insertGraph(GraphSource graphSource) throws DataAccessException {
+        ensureDatasetExists();
         // insert graph into dataset/database
         String graphName = graphSource.graphName();
         Graph graph = graphSource.graph();
@@ -128,6 +140,41 @@ public class HttpUpdateCommandImpl implements DatabaseUpdateCommand {
         } else {
             GSP.service(endpoint).graphName(graphName).POST(graph);
             logger.debug("Insert graph \"{}\" into endpoint \"{}\"", graphName, this.endpoint);
+        }
+    }
+
+    /**
+     * A SPARQL update rather than a graph store PUT, for two reasons. Fuseki applies one update
+     * request as one transaction, where several PUTs are several. And a PUT over an existing graph
+     * clears the prefixes of the whole dataset, which is every schema's prefixes.
+     */
+    @Override
+    public void replaceGraphs(Collection<String> removed, Map<String, Graph> written)
+            throws DataAccessException {
+        ensureDatasetExists();
+        var request = new UpdateRequest();
+        var names = new LinkedHashSet<>(removed);
+        names.addAll(written.keySet());
+        names.forEach(name -> request.add(new UpdateDrop(NodeFactory.createURI(name), true)));
+        if (!written.isEmpty()) {
+            var quads = new QuadDataAcc();
+            written.forEach(
+                    (name, graph) -> {
+                        quads.setGraph(NodeFactory.createURI(name));
+                        graph.find().forEachRemaining(quads::addTriple);
+                    });
+            request.add(new UpdateDataInsert(quads));
+        }
+        logger.debug("Replace graphs {} in endpoint \"{}\"", names, this.endpoint);
+        try {
+            UpdateExecutionHTTPBuilder.create()
+                    .endpoint(this.endpoint)
+                    .update(request)
+                    .build()
+                    .execute();
+        } catch (HttpException | JenaException e) {
+            throw new DataAccessException(
+                    "Failed to replace graphs at endpoint " + this.endpoint + ".", e);
         }
     }
 

@@ -22,6 +22,7 @@ import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.riot.RDFParser;
 import org.apache.jena.riot.RiotException;
+import org.apache.jena.riot.system.ErrorHandlerFactory;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.InvalidContentException;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Set;
@@ -44,7 +48,7 @@ final class ShapesUpload {
 
     private static final Set<Lang> ACCEPTED = Set.of(Lang.TURTLE, Lang.RDFXML, Lang.NTRIPLES);
 
-    private static final char BOM = '﻿';
+    private static final char BOM = '\uFEFF';
 
     private ShapesUpload() {}
 
@@ -88,17 +92,26 @@ final class ShapesUpload {
      * The upload as Turtle text.
      *
      * <p>Turtle is kept as written, less a leading byte order mark, since the text is what the
-     * editor shows and what is exported again. Anything else is parsed from the bytes rather than
-     * from a decoded string, so an XML encoding declaration is honoured, and converted once here.
+     * editor shows and what is exported again. RDF/XML is parsed from the bytes, so its encoding
+     * declaration is honoured, and anything else is converted once here.
+     *
+     * @throws InvalidContentException when a syntax that has to be UTF-8 is not
      */
     static String toTurtle(byte[] content, Lang lang) {
         if (Lang.TURTLE.equals(lang)) {
-            var text = new String(content, StandardCharsets.UTF_8);
+            var text = decodeUtf8(content, lang);
             return !text.isEmpty() && text.charAt(0) == BOM ? text.substring(1) : text;
+        }
+        if (!Lang.RDFXML.equals(lang)) {
+            decodeUtf8(content, lang);
         }
         var model = ModelFactory.createDefaultModel();
         try {
-            RDFParser.source(new ByteArrayInputStream(content)).lang(lang).parse(model);
+            // Without logging: this is the client's file and goes back to it as a 400.
+            RDFParser.source(new ByteArrayInputStream(content))
+                    .lang(lang)
+                    .errorHandler(ErrorHandlerFactory.errorHandlerNoLogging)
+                    .parse(model);
         } catch (RiotException e) {
             throw new InvalidContentException(
                     "The constraints could not be read as %s: %s"
@@ -109,6 +122,25 @@ final class ShapesUpload {
             return out.toString(StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new DataAccessException("Error while writing constraints as Turtle", e);
+        }
+    }
+
+    /**
+     * Refuses bytes that aren't UTF-8, as a lenient decode would turn each into U+FFFD. The result
+     * still parses, so the file would import with its text quietly damaged.
+     */
+    private static String decodeUtf8(byte[] content, Lang lang) {
+        try {
+            return StandardCharsets.UTF_8
+                    .newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .decode(ByteBuffer.wrap(content))
+                    .toString();
+        } catch (CharacterCodingException e) {
+            throw new InvalidContentException(
+                    "%s has to be UTF-8, and this file is not. Save it as UTF-8 and import it again."
+                            .formatted(lang.getLabel()));
         }
     }
 }
