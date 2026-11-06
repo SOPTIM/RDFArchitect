@@ -134,10 +134,6 @@ class WorkspaceShapesDocumentTest {
         return read(graphUri, context -> context.getRdfGraph().contains(triple));
     }
 
-    private List<Triple> customShacl() {
-        return read(context -> context.getCustomSHACL().find().toList());
-    }
-
     private List<Integer> orders() {
         return documents().values().stream().map(ShapesDocument::getOrder).toList();
     }
@@ -303,27 +299,6 @@ class WorkspaceShapesDocumentTest {
         assertThat(change.affectedKinds()).containsExactly("rdf");
         assertThat(change.deltas()).hasSize(1);
         assertThat(change.removedOnUndo()).isEmpty();
-    }
-
-    @Test
-    void customShaclAndDocumentsAreSeparateStores() {
-        var id = create("document.ttl");
-
-        write(GRAPH, context -> context.getCustomSHACL().add(triple("custom")), "Edited custom");
-        edit(id, "text", triple("document"));
-
-        assertThat(customShacl()).containsExactly(triple("custom"));
-        assertThat(triplesOf(id)).containsExactly(triple("document"));
-    }
-
-    @Test
-    void anEditOfCustomShaclDoesNotChangeTheDocumentsVersion() {
-        create("document.ttl");
-        var before = documentsVersion();
-
-        write(GRAPH, context -> context.getCustomSHACL().add(triple("custom")), "Edited custom");
-
-        assertThat(documentsVersion()).isEqualTo(before);
     }
 
     @Test

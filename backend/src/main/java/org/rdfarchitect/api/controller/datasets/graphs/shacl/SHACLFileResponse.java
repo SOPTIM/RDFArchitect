@@ -29,7 +29,14 @@ import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Map;
 
-/** What a SHACL download is negotiated and named as. */
+/**
+ * What a SHACL download is negotiated and named as.
+ *
+ * <p>Four endpoints answer with one — the graph's shapes, the generated ones, the custom ones, and
+ * a chosen selection of documents — and they have to agree on the media types offered and on what
+ * the file is called. Each held its own copy of both before this existed, so adding a media type
+ * meant four edits and the copies were free to drift apart.
+ */
 public final class SHACLFileResponse {
 
     /**

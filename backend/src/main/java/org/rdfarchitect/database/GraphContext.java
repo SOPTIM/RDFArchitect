@@ -24,8 +24,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * The contents of a single named graph: its RDF schema, its diagram layout, its custom SHACL and
- * its custom diagrams.
+ * The contents of a single named graph: its RDF schema, its diagram layout and its custom diagrams.
  *
  * <p>Carries no transaction of its own. Graphs take part in the transaction of the workspace that
  * holds them and are reachable only through {@link WorkspaceTransaction#graph(String)}, so a graph
@@ -38,9 +37,6 @@ public interface GraphContext {
 
     /** Returns the diagram layout belonging to the graph. */
     DiagramLayout getDiagramLayout();
-
-    /** Returns the custom SHACL shapes of the graph. */
-    Graph getCustomSHACL();
 
     /** Returns the custom diagrams defined on the graph, by id. */
     Map<UUID, CustomDiagram> getCustomDiagrams();

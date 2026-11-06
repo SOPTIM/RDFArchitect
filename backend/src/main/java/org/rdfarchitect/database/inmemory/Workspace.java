@@ -293,9 +293,6 @@ public class Workspace {
         if (participant == graph.getRdfGraph()) {
             return ParticipantId.Kind.RDF;
         }
-        if (participant == graph.getCustomSHACL()) {
-            return ParticipantId.Kind.SHACL;
-        }
         if (participant == graph.getDiagramLayout()) {
             return ParticipantId.Kind.DL;
         }

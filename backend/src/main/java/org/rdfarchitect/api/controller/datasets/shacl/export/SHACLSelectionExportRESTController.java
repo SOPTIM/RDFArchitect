@@ -45,9 +45,9 @@ import java.util.UUID;
 /**
  * Exporting a chosen set of a workspace's constraints.
  *
- * <p>The older endpoints offer three fixed combinations — generated, custom, or both. Since a
- * workspace holds several documents, which of them belongs in an export is a question only the user
- * can answer, so this one takes the answer.
+ * <p>The older endpoints offer three fixed combinations — generated, all enabled documents, or
+ * both. Since a workspace holds several documents, which of them belongs in an export is a question
+ * only the user can answer, so this one takes the answer.
  */
 @RestController
 @RequestMapping("api/datasets/{datasetName}/shacl/export")
