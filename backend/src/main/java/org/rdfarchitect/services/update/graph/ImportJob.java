@@ -19,6 +19,7 @@ package org.rdfarchitect.services.update.graph;
 
 import lombok.Getter;
 
+import org.rdfarchitect.services.archive.importing.ImportWorkspaceUseCase.WorkspaceImportResult;
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportResult;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.FileState;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.ImportFileStatus;
@@ -181,15 +182,24 @@ class ImportJob implements ImportProgressListener {
     }
 
     synchronized void complete(ImportResult result) {
-        importedGraphUris = List.copyOf(result.importedGraphUris());
         failedImports = List.copyOf(result.failedFileNames());
         warnings = List.copyOf(result.warnings());
-        state = cancelRequested ? JobState.CANCELLED : JobState.COMPLETED;
-        finishedAt = Instant.now();
+        finish(result.importedGraphUris(), cancelRequested);
     }
 
-    synchronized void notice(List<String> notices) {
-        this.notices = List.copyOf(notices);
+    /**
+     * Ends a workspace import, which keeps everything or nothing. A cancellation that came too late
+     * to stop it leaves a completed import.
+     */
+    synchronized void complete(WorkspaceImportResult result) {
+        notices = List.copyOf(result.notices());
+        finish(result.importedGraphUris(), result.cancelled());
+    }
+
+    private void finish(List<String> importedGraphUris, boolean cancelled) {
+        this.importedGraphUris = List.copyOf(importedGraphUris);
+        state = cancelled ? JobState.CANCELLED : JobState.COMPLETED;
+        finishedAt = Instant.now();
     }
 
     synchronized void reject(List<String> problems) {

@@ -30,8 +30,8 @@ import org.apache.jena.riot.RiotException;
 import org.apache.jena.riot.system.ErrorHandlerFactory;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
+import org.rdfarchitect.database.inmemory.Workspace;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.services.archive.ArchivedDiagrams;
 import org.rdfarchitect.services.archive.ArchivedGraphDiagram;
 import org.rdfarchitect.services.archive.ArchivedWorkspaceDiagram;
@@ -59,8 +59,6 @@ public final class WorkspaceArchiveReader {
 
     static final int MAX_ENTRIES = 10_000;
     static final long MAX_UNPACKED_SIZE = FileUtils.ONE_GB;
-
-    private static final String DEFAULT_GRAPH_NAME = "default";
 
     // Newer minor versions may add fields.
     private static final ObjectMapper JSON =
@@ -121,16 +119,7 @@ public final class WorkspaceArchiveReader {
         var graphUriByFolder = readGraphEntries(manifest.graphs());
 
         var graphs = new ArrayList<WorkspaceArchive.ArchivedGraph>();
-        for (var graph :
-                manifest.graphs() == null
-                        ? List.<WorkspaceArchiveManifest.GraphEntry>of()
-                        : manifest.graphs()) {
-            if (graph != null
-                    && graph.uri() != null
-                    && graph.uri().equals(graphUriByFolder.get(graph.folder()))) {
-                graphs.add(readGraph(graph));
-            }
-        }
+        graphUriByFolder.forEach((folder, uri) -> graphs.add(readGraph(folder, uri)));
         var layout = readLayout(WorkspaceArchiveFormat.LAYOUT);
         var diagrams = readWorkspaceDiagrams(graphUriByFolder);
         var colors = readColors(graphUriByFolder);
@@ -179,17 +168,10 @@ public final class WorkspaceArchiveReader {
         }
         var current = FormatVersion.CURRENT;
         var writtenBy = appVersion == null ? "" : " (RDFArchitect " + appVersion + ")";
-        if (version.major() > current.major()) {
+        if (version.major() != current.major()) {
             problems.add(
-                    "The archive was written in format %s by a newer version of RDFArchitect%s."
-                                    .formatted(version, writtenBy)
-                            + " This version reads format %s.".formatted(current));
-            return false;
-        }
-        if (version.major() < current.major()) {
-            problems.add(
-                    "The archive was written in format %s%s, which this version of RDFArchitect no longer reads."
-                            .formatted(version, writtenBy));
+                    "The archive was written in format %s%s. This version of RDFArchitect reads format %s."
+                            .formatted(version, writtenBy, current));
             return false;
         }
         if (version.minor() > current.minor()) {
@@ -252,8 +234,7 @@ public final class WorkspaceArchiveReader {
                 problems.add(where + ": two graphs are stored in this folder.");
                 valid = false;
             }
-            if (graph.uri() == null
-                    || !(DEFAULT_GRAPH_NAME.equals(graph.uri()) || RDFUtils.isURL(graph.uri()))) {
+            if (graph.uri() == null || !Workspace.isValidGraphName(graph.uri())) {
                 problems.add(where + ": \"" + graph.uri() + "\" is not a valid graph URI.");
                 valid = false;
             } else if (!uris.add(graph.uri())) {
@@ -267,11 +248,10 @@ public final class WorkspaceArchiveReader {
         return graphUriByFolder;
     }
 
-    private WorkspaceArchive.ArchivedGraph readGraph(WorkspaceArchiveManifest.GraphEntry graph) {
-        var folder = graph.folder();
-        var diagrams = readGraphDiagrams(folder, graph.uri());
+    private WorkspaceArchive.ArchivedGraph readGraph(String folder, String uri) {
+        var diagrams = readGraphDiagrams(folder, uri);
         return new WorkspaceArchive.ArchivedGraph(
-                graph.uri(),
+                uri,
                 diagrams.defaultPackageMRID(),
                 readRdf(WorkspaceArchiveFormat.graphEntry(folder, WorkspaceArchiveFormat.SCHEMA)),
                 readRdf(WorkspaceArchiveFormat.graphEntry(folder, WorkspaceArchiveFormat.SHACL)),
@@ -378,12 +358,13 @@ public final class WorkspaceArchiveReader {
         var diagrams = new ArrayList<CustomDiagram>();
         var ids = new HashSet<UUID>();
         for (var diagram : archived.customDiagrams()) {
-            if (diagram == null || idOf.apply(diagram) == null) {
+            var id = diagram == null ? null : idOf.apply(diagram);
+            if (id == null) {
                 problems.add(path + ": a diagram has no \"diagramId\".");
                 continue;
             }
-            var where = path + ": diagram " + idOf.apply(diagram);
-            if (!ids.add(idOf.apply(diagram))) {
+            var where = path + ": diagram " + id;
+            if (!ids.add(id)) {
                 problems.add(where + " is there twice.");
                 continue;
             }

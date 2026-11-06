@@ -839,8 +839,13 @@ public class Workspace {
         }
     }
 
+    /** Whether a graph can be stored under this name: the default graph or a URL. */
+    public static boolean isValidGraphName(String graphUri) {
+        return graphUri.equals(DEFAULT_GRAPH_NAME) || RDFUtils.isURL(graphUri);
+    }
+
     static void assertValidGraphName(String graphUri) {
-        if (!graphUri.equals(DEFAULT_GRAPH_NAME) && !RDFUtils.isURL(graphUri)) {
+        if (!isValidGraphName(graphUri)) {
             throw new IllegalArgumentException("Graph Uri " + graphUri + " is not a valid URI");
         }
     }

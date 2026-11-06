@@ -200,10 +200,7 @@ public class ImportJobService implements ImportJobUseCase {
     private void runWorkspaceImport(ImportJob job, MultipartFile archive) {
         try (var content = archive.getInputStream()) {
             var result = importWorkspaceUseCase.importWorkspace(job.getDatasetName(), content, job);
-            job.notice(result.notices());
-            job.complete(
-                    new ImportGraphsUseCase.ImportResult(
-                            result.importedGraphUris(), List.of(), List.of()));
+            job.complete(result);
             logger.info(
                     "Workspace import job {} finished: {} graph(s) restored.",
                     job.getId(),

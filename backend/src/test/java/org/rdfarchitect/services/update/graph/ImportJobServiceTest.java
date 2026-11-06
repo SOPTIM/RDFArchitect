@@ -602,7 +602,8 @@ class ImportJobServiceTest {
                             listener.finished(0, Outcome.IMPORTED, "http://example.org/core");
                             return new WorkspaceImportResult(
                                     List.of("http://example.org/core"),
-                                    List.of("Written by a newer version."));
+                                    List.of("Written by a newer version."),
+                                    false);
                         });
 
         var jobId = service.startWorkspaceImport(DATASET, archiveFile("the archive"));
@@ -619,15 +620,30 @@ class ImportJobServiceTest {
     }
 
     @Test
+    void startWorkspaceImport_cancelledTooLateToStopIt_isCompleted() {
+        service =
+                new ImportJobService(
+                        realImportService(),
+                        (workspaceName, archive, listener) -> {
+                            ((ImportJob) listener).requestCancel();
+                            return new WorkspaceImportResult(
+                                    List.of("http://example.org/core"), List.of(), false);
+                        });
+
+        var status = awaitFinished(service.startWorkspaceImport(DATASET, archiveFile("archive")));
+
+        assertThat(status.state()).isEqualTo(JobState.COMPLETED);
+        assertThat(status.importedGraphUris()).containsExactly("http://example.org/core");
+    }
+
+    @Test
     void startWorkspaceImport_invalidArchive_failsListingEveryProblem() {
         service =
                 new ImportJobService(
                         realImportService(),
                         (workspaceName, archive, listener) -> {
                             throw new InvalidWorkspaceArchiveException(
-                                    List.of(
-                                            "manifest.json: first",
-                                            "workspace/colors.json: second"));
+                                    List.of("manifest.json: first", "colors.json: second"));
                         });
 
         var status = awaitFinished(service.startWorkspaceImport(DATASET, archiveFile("broken")));
@@ -635,7 +651,7 @@ class ImportJobServiceTest {
         assertThat(status.state()).isEqualTo(JobState.FAILED);
         assertThat(status.errorMessage()).isEqualTo("The workspace archive cannot be imported.");
         assertThat(status.problems())
-                .containsExactly("manifest.json: first", "workspace/colors.json: second");
+                .containsExactly("manifest.json: first", "colors.json: second");
         assertThat(status.importedGraphUris()).isEmpty();
     }
 
@@ -649,7 +665,7 @@ class ImportJobServiceTest {
                         (workspaceName, archive, listener) -> {
                             running.countDown();
                             await().atMost(TIMEOUT).until(() -> release.getCount() == 0);
-                            return new WorkspaceImportResult(List.of(), List.of());
+                            return new WorkspaceImportResult(List.of(), List.of(), false);
                         });
         var jobId = service.startWorkspaceImport(DATASET, archiveFile("archive"));
         assertThat(running.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)).isTrue();

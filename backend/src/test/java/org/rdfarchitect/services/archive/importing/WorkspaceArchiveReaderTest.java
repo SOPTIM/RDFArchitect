@@ -33,6 +33,8 @@ import org.apache.jena.vocabulary.RDF;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.config.AppVersionResolver;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
@@ -159,21 +161,16 @@ class WorkspaceArchiveReaderTest {
                 .contains("imported as schemas");
     }
 
-    @Test
-    void read_newerMajorVersion_isRejectedNamingBothVersions() {
-        var problems = problemsOf(withManifest(manifest -> manifest.put("formatVersion", "2.0")));
+    @ParameterizedTest
+    @ValueSource(strings = {"2.0", "0.9"})
+    void read_otherMajorVersion_isRejectedNamingBothVersions(String formatVersion) {
+        var problems =
+                problemsOf(withManifest(manifest -> manifest.put("formatVersion", formatVersion)));
 
         assertThat(problems)
                 .singleElement()
                 .asString()
-                .contains("format 2.0", "newer version", "RDFArchitect 1.2.3", "reads format 1.0");
-    }
-
-    @Test
-    void read_olderMajorVersion_isRejected() {
-        var problems = problemsOf(withManifest(manifest -> manifest.put("formatVersion", "0.9")));
-
-        assertThat(problems).singleElement().asString().contains("format 0.9", "no longer reads");
+                .contains("format " + formatVersion, "RDFArchitect 1.2.3", "reads format 1.0");
     }
 
     @Test

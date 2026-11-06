@@ -179,6 +179,7 @@ class ImportWorkspaceServiceTest {
 
         var result = importAs("restored", archive, listener);
 
+        assertThat(result.cancelled()).isTrue();
         assertThat(result.importedGraphUris()).isEmpty();
         assertThat(databasePort.listDatasets()).doesNotContain("restored");
         assertThat(outcomes.values()).containsOnly(Outcome.SKIPPED);
@@ -225,6 +226,7 @@ class ImportWorkspaceServiceTest {
 
         var result = importAs("restored", archive, listener);
 
+        assertThat(result.cancelled()).isTrue();
         assertThat(result.importedGraphUris()).isEmpty();
         assertThat(databasePort.listDatasets()).doesNotContain("restored");
         assertThat(outcomes.values()).containsOnly(Outcome.SKIPPED);

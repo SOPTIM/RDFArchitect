@@ -59,26 +59,28 @@ public class ImportWorkspaceService implements ImportWorkspaceUseCase {
         var restored = false;
         try {
             restored = restore(workspaceName, contents, listener);
-            if (restored && contents.readOnly()) {
-                databasePort.disableEditing(workspaceName);
-            }
         } finally {
             if (!restored) {
                 databasePort.deleteDataset(workspaceName);
             }
         }
         if (!restored) {
-            return new WorkspaceImportResult(List.of(), contents.notices());
+            return new WorkspaceImportResult(List.of(), contents.notices(), true);
+        }
+        if (contents.readOnly()) {
+            databasePort.disableEditing(workspaceName);
         }
         return new WorkspaceImportResult(
                 graphs.stream().map(WorkspaceArchive.ArchivedGraph::uri).toList(),
-                contents.notices());
+                contents.notices(),
+                false);
     }
 
+    /** Returns {@code false} if the import was cancelled before it was committed. */
     private boolean restore(
             String workspaceName, WorkspaceArchive contents, ImportProgressListener listener) {
         var graphs = contents.graphs();
-        var restored = false;
+        var committed = false;
         try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             for (var index = 0; index < graphs.size(); index++) {
                 if (listener.isCancelled()) {
@@ -100,16 +102,16 @@ public class ImportWorkspaceService implements ImportWorkspaceUseCase {
                 return false;
             }
             transaction.commitWithoutHistory();
-            restored = true;
+            committed = true;
+            return true;
         } finally {
-            if (!restored) {
+            if (!committed) {
                 skipAll(listener, graphs.size());
             }
         }
-        return true;
     }
 
-    // Graphs reported as imported are rolled back with the rest.
+    // The graphs reported as imported so far were rolled back with the rest of the workspace.
     private static void skipAll(ImportProgressListener listener, int graphCount) {
         for (var index = 0; index < graphCount; index++) {
             listener.finished(index, Outcome.SKIPPED, null);
