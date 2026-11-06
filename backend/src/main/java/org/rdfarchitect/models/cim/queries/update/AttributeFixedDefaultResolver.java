@@ -19,7 +19,6 @@ package org.rdfarchitect.models.cim.queries.update;
 
 import lombok.experimental.UtilityClass;
 
-import org.apache.jena.datatypes.TypeMapper;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -223,7 +222,7 @@ class AttributeFixedDefaultResolver {
             return defaultXsdString();
         }
         var rdfDatatype = XSDDatatypeMapper.classLabelToDatatype(label);
-        if (TypeMapper.getInstance().getTypeByName(rdfDatatype.getURI()) == null) {
+        if (!XSDDatatypeMapper.canTypeAPlainValue(rdfDatatype)) {
             return defaultXsdString();
         }
         return new URI(rdfDatatype.getURI());

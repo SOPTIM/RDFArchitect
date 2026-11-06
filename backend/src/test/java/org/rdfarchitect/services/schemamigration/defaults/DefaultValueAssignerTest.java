@@ -155,6 +155,32 @@ class DefaultValueAssignerTest {
         }
 
         @Test
+        void populateDefaultsForAttributes_langString_migratesAPlainValueAsAString() {
+            // A default is only text, and a language-tagged string needs a tag on top of that.
+            var attr = model.createResource(PREFIX + "Attribute1");
+            attr.addProperty(RDF.type, RDF.Property);
+            attr.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
+            var langString = model.createResource(RDF.getURI() + "LangString");
+            langString.addProperty(RDFS.label, "LangString");
+            langString.addProperty(CIMS.stereotype, CIMStereotypes.primitive);
+            attr.addProperty(CIMS.datatype, langString);
+            attr.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:1..1"));
+
+            var attributeChange =
+                    SemanticAttributeChange.builder()
+                            .iri(PREFIX + "Attribute1")
+                            .label("Attribute1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
+
+            DefaultValueAssigner.assignDefaultValueToAttributes(List.of(attributeChange), model);
+
+            assertThat(attributeChange.getPrimitiveDataType())
+                    .isEqualTo("http://www.w3.org/2001/XMLSchema#string");
+            assertThat(attributeChange.getDataType()).isEqualTo(RDF.getURI() + "LangString");
+        }
+
+        @Test
         void populateDefaultsForAttributes_datatypeChanged_setsOldDataType() {
             var attr = model.createResource(PREFIX + "Attribute1");
             var xsdString = model.createResource("http://www.w3.org/2001/XMLSchema#string");

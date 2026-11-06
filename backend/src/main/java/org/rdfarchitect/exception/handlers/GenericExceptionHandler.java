@@ -40,10 +40,21 @@ public class GenericExceptionHandler extends ResponseEntityExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GenericExceptionHandler.class);
 
     private void logException(Exception e, WebRequest request) {
-        log.error("Error message: {}", e.getMessage(), e);
-
         HttpServletRequest req = ((ServletWebRequest) request).getRequest();
         String requestURL = req.getRequestURI();
+
+        // A 4xx is the client's mistake, answered as designed; a stack trace at ERROR for every
+        // unknown id or taken name buries the faults that do need looking at.
+        if (e instanceof ResponseStatusException status
+                && status.getStatusCode().is4xxClientError()) {
+            log.info(
+                    "Answering \"{}\" with {}: {}",
+                    requestURL,
+                    status.getStatusCode().value(),
+                    status.getReason());
+            return;
+        }
+        log.error("Error message: {}", e.getMessage(), e);
 
         String requestRemoteAddr =
                 req.getHeader(HttpHeaders.ORIGIN) != null
