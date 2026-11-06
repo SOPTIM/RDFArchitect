@@ -33,7 +33,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * The contents of one named graph: RDF schema, diagram layout, custom SHACL and custom diagrams.
+ * The contents of one named graph: RDF schema, diagram layout, shapes documents and custom
+ * diagrams.
  *
  * <p>Holds no transaction and no lock. The graph takes part in the transaction of the workspace
  * that owns it, which is also what decides when its participants commit, abort or step through
@@ -44,7 +45,6 @@ public class GraphWithContext implements GraphContext {
 
     private final RDFGraphDelta rdfGraph;
     private final DiagramLayoutDelta diagramLayout;
-    private final RDFGraphDelta customSHACL;
     private final CustomDiagramCollection customDiagrams;
 
     /**
@@ -62,7 +62,6 @@ public class GraphWithContext implements GraphContext {
         rdfModel.setNsPrefixes(base.getPrefixMapping());
         rdfModel.add(ModelFactory.createModelForGraph(base));
         this.diagramLayout = new DiagramLayoutDelta(txnContext);
-        this.customSHACL = new RDFGraphDelta(GraphFactory.createDefaultGraph(), txnContext);
         this.customDiagrams = new CustomDiagramCollection(txnContext);
     }
 
@@ -74,11 +73,6 @@ public class GraphWithContext implements GraphContext {
     @Override
     public DiagramLayoutDelta getDiagramLayout() {
         return diagramLayout;
-    }
-
-    @Override
-    public RDFGraphDelta getCustomSHACL() {
-        return customSHACL;
     }
 
     @Override

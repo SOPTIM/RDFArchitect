@@ -24,8 +24,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.riot.RDFFormat;
-import org.rdfarchitect.api.controller.DownloadHeaders;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.slf4j.Logger;
@@ -37,10 +35,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.io.ByteArrayOutputStream;
-import java.util.AbstractMap;
-import java.util.Map;
 
 @RestController
 @RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/shacl/combined")
@@ -69,7 +63,7 @@ public class SHACLContentRestController {
     @GetMapping("/file")
     public ResponseEntity<byte[]> getCombinedSHACLAsFile(
             @Parameter(description = "The requested Datatype.", hidden = true)
-                    @RequestHeader("Accept")
+                    @RequestHeader(value = HttpHeaders.ACCEPT, required = false)
                     String acceptHeader,
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
@@ -86,13 +80,13 @@ public class SHACLContentRestController {
                 schemaName,
                 originURL);
 
-        var format = getRdfFormat(acceptHeader);
+        var format = SHACLFileResponse.rdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 shaclExportUseCase.exportCombinedSHACLGraph(
                         new GraphIdentifier(workspaceName, schemaName), format);
-        var body = buildResponseEntity(schemaName, format, outStream);
+        var body = SHACLFileResponse.of(schemaName, format, outStream);
 
         logger.info(
                 "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/file\" to \"{}\".",
@@ -100,32 +94,5 @@ public class SHACLContentRestController {
                 schemaName,
                 originURL);
         return body;
-    }
-
-    private ResponseEntity<byte[]> buildResponseEntity(
-            String schemaName, RDFFormat format, ByteArrayOutputStream outStream) {
-        // add suggested file name to response
-        var fileName = schemaName + "-shacl";
-        fileName += "." + format.getLang().getFileExtensions().getFirst();
-
-        return ResponseEntity.ok()
-                .headers(DownloadHeaders.attachment(fileName))
-                .body(outStream.toByteArray());
-    }
-
-    private final Map<String, RDFFormat> supportedFormats =
-            Map.ofEntries(
-                    new AbstractMap.SimpleEntry<>("text/turtle", RDFFormat.TURTLE),
-                    new AbstractMap.SimpleEntry<>("application/rdf+xml", RDFFormat.RDFXML),
-                    new AbstractMap.SimpleEntry<>("application/rdf+json", RDFFormat.RDFJSON),
-                    new AbstractMap.SimpleEntry<>("application/n-triples", RDFFormat.NTRIPLES));
-
-    private RDFFormat getRdfFormat(String acceptHeader) {
-        for (var entry : supportedFormats.entrySet()) {
-            if (acceptHeader.contains(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-        throw new IllegalArgumentException("unsupported Media Type");
     }
 }
