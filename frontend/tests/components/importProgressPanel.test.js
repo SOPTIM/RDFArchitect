@@ -184,4 +184,46 @@ describe("ImportProgressPanel", () => {
         expect(panel.textContent).toContain("Import failed");
         expect(panel.textContent).toContain("Another import is still running.");
     });
+
+    test("lists every problem of a rejected workspace archive", () => {
+        const progress = new ImportProgress();
+        progress.apply({
+            ...statusOf([], JobState.FAILED),
+            errorMessage: "The workspace archive cannot be imported.",
+            problems: [
+                "graphs/core/shacl.ttl is missing.",
+                'workspace/colors.json: "gone" is not a graph of the archive.',
+            ],
+        });
+
+        const panel = render(progress);
+
+        expect(panel.textContent).toContain(
+            "The workspace archive cannot be imported.",
+        );
+        const problems = [...panel.querySelectorAll("li")].map(item =>
+            item.textContent.trim(),
+        );
+        expect(problems).toEqual([
+            "graphs/core/shacl.ttl is missing.",
+            'workspace/colors.json: "gone" is not a graph of the archive.',
+        ]);
+    });
+
+    test("shows what the user should know about an imported archive", () => {
+        const progress = new ImportProgress();
+        progress.apply({
+            ...statusOf(
+                [fileOf(0, "core", FileState.IMPORTED)],
+                JobState.COMPLETED,
+            ),
+            notices: ["The archive was written in format 1.4."],
+        });
+
+        const panel = render(progress);
+
+        expect(panel.textContent).toContain(
+            "The archive was written in format 1.4.",
+        );
+    });
 });
