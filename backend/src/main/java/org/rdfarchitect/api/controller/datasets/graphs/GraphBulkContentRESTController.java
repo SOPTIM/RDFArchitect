@@ -101,6 +101,44 @@ public class GraphBulkContentRESTController {
     }
 
     @Operation(
+            summary = "Start importing a workspace archive",
+            description =
+                    "Starts restoring a workspace archive, as written by the workspace export, as a new workspace of the given name. Returns the id of the job to poll for progress. The archive is checked completely first: if anything in it is invalid, nothing is imported and the job's status lists every problem.",
+            tags = {"dataset"},
+            responses = {
+                @ApiResponse(responseCode = "202", description = "Import started"),
+                @ApiResponse(
+                        responseCode = "409",
+                        description = "An import is already running for this session")
+            })
+    @PostMapping(value = "/archive", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ImportJobCreatedResponse> startWorkspaceImport(
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The name of the workspace to create.") @PathVariable
+                    String datasetName,
+            @Parameter(description = "The workspace archive") @RequestParam("file")
+                    MultipartFile file) {
+        logger.info(
+                "Received POST request: \"/api/datasets/{{}}/graphs/content/imports/archive\" from \"{}\".",
+                datasetName,
+                originURL);
+
+        var jobId = importJobUseCase.startWorkspaceImport(datasetName, file);
+
+        logger.info(
+                "Sending response to POST request: \"/api/datasets/{{}}/graphs/content/imports/archive\" to \"{}\": job {}.",
+                datasetName,
+                originURL,
+                jobId);
+        return ResponseEntity.accepted().body(new ImportJobCreatedResponse(jobId));
+    }
+
+    @Operation(
             summary = "Get the progress of an import",
             description =
                     "Returns the progress of a running import and the result of a finished one, including the graphs that were imported, the files that failed and any warnings.",

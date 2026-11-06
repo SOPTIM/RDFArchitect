@@ -26,12 +26,15 @@ import org.rdfarchitect.context.UserSettings;
 import org.rdfarchitect.context.UserSettingsContext;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.services.archive.importing.ImportWorkspaceUseCase;
+import org.rdfarchitect.services.archive.importing.InvalidWorkspaceArchiveException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -42,6 +45,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 
 @Service
@@ -60,11 +64,28 @@ public class ImportJobService implements ImportJobUseCase {
     private static final Duration ABANDONED_AFTER = Duration.ofSeconds(60);
 
     private final ImportGraphsUseCase importGraphsUseCase;
+    private final ImportWorkspaceUseCase importWorkspaceUseCase;
     private final Map<UUID, ImportJob> jobs = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     @Override
     public UUID startImport(String datasetName, List<MultipartFile> files, List<String> graphUris) {
+        return start(
+                datasetName, files, (job, ownedFiles) -> runImport(job, ownedFiles, graphUris));
+    }
+
+    @Override
+    public UUID startWorkspaceImport(String workspaceName, MultipartFile archive) {
+        return start(
+                workspaceName,
+                List.of(archive),
+                (job, ownedFiles) -> runWorkspaceImport(job, ownedFiles.getFirst()));
+    }
+
+    private UUID start(
+            String datasetName,
+            List<MultipartFile> files,
+            BiConsumer<ImportJob, List<MultipartFile>> task) {
         dropExpiredJobs();
 
         var sessionId = SessionContext.getSessionId();
@@ -89,7 +110,7 @@ public class ImportJobService implements ImportJobUseCase {
             // The servlet container deletes the temporary files of the request once its response
             // is sent, so the job has to take over the uploaded content before that happens.
             var ownedFiles = copyOf(files);
-            executor.execute(() -> runImport(job, ownedFiles, graphUris, userSettings));
+            executor.execute(() -> run(job, userSettings, () -> task.accept(job, ownedFiles)));
             started = true;
         } finally {
             if (!started) {
@@ -144,27 +165,16 @@ public class ImportJobService implements ImportJobUseCase {
     }
 
     /**
-     * Runs the import on its own thread. Every throwable ends the job: one left unfinished is never
+     * Runs a job on its own thread. Every throwable ends the job: one left unfinished is never
      * reaped and holds the session's only import slot for as long as the session lives.
      */
-    private void runImport(
-            ImportJob job,
-            List<MultipartFile> files,
-            List<String> graphUris,
-            UserSettings userSettings) {
+    private void run(ImportJob job, UserSettings userSettings, Runnable task) {
         // Both contexts live in thread locals that the request thread filled in, and the database
         // is looked up per session, so they have to be re-established on this thread.
         SessionContext.setSessionId(job.getSessionId());
         UserSettingsContext.set(userSettings);
         try {
-            var result =
-                    importGraphsUseCase.importGraphs(job.getDatasetName(), files, graphUris, job);
-            job.complete(result);
-            logger.info(
-                    "Import job {} finished: {} graph(s) imported, {} file(s) failed.",
-                    job.getId(),
-                    result.importedGraphUris().size(),
-                    result.failedFileNames().size());
+            task.run();
         } catch (Throwable throwable) {
             logger.error("Import job {} failed.", job.getId(), throwable);
             job.fail(throwable.getMessage());
@@ -174,6 +184,38 @@ public class ImportJobService implements ImportJobUseCase {
         } finally {
             SessionContext.clear();
             UserSettingsContext.clear();
+        }
+    }
+
+    private void runImport(ImportJob job, List<MultipartFile> files, List<String> graphUris) {
+        var result = importGraphsUseCase.importGraphs(job.getDatasetName(), files, graphUris, job);
+        job.complete(result);
+        logger.info(
+                "Import job {} finished: {} graph(s) imported, {} file(s) failed.",
+                job.getId(),
+                result.importedGraphUris().size(),
+                result.failedFileNames().size());
+    }
+
+    private void runWorkspaceImport(ImportJob job, MultipartFile archive) {
+        try (var content = archive.getInputStream()) {
+            var result = importWorkspaceUseCase.importWorkspace(job.getDatasetName(), content, job);
+            job.notice(result.notices());
+            job.complete(
+                    new ImportGraphsUseCase.ImportResult(
+                            result.importedGraphUris(), List.of(), List.of()));
+            logger.info(
+                    "Workspace import job {} finished: {} graph(s) restored.",
+                    job.getId(),
+                    result.importedGraphUris().size());
+        } catch (InvalidWorkspaceArchiveException e) {
+            logger.info(
+                    "Workspace import job {} rejected the archive: {}",
+                    job.getId(),
+                    e.getProblems());
+            job.reject(e.getProblems());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 

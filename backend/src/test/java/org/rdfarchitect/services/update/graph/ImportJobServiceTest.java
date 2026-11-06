@@ -100,7 +100,7 @@ class ImportJobServiceTest {
 
     @Test
     void startImport_realImport_reportsEveryFileAndTheImportedGraphs() {
-        service = new ImportJobService(realImportService());
+        service = jobService(realImportService());
 
         var jobId =
                 service.startImport(
@@ -124,7 +124,7 @@ class ImportJobServiceTest {
         var observedSession = new AtomicReference<String>();
         var observedSettings = new AtomicReference<UserSettings>();
         service =
-                new ImportJobService(
+                jobService(
                         (datasetName, files, graphUris, listener) -> {
                             observedSession.set(SessionContext.getSessionId());
                             observedSettings.set(UserSettingsContext.get());
@@ -142,7 +142,7 @@ class ImportJobServiceTest {
     void startImport_uploadedFilesAreTakenOverSoTheySurviveTheRequest() throws Exception {
         var received = new AtomicReference<MultipartFile>();
         service =
-                new ImportJobService(
+                jobService(
                         (datasetName, files, graphUris, listener) -> {
                             received.set(files.getFirst());
                             return new ImportResult();
@@ -159,7 +159,7 @@ class ImportJobServiceTest {
     void startImport_whileAnotherImportOfTheSameSessionRuns_isRejected() throws Exception {
         var running = new CountDownLatch(1);
         var release = new CountDownLatch(1);
-        service = new ImportJobService(blockingImportService(running, release));
+        service = jobService(blockingImportService(running, release));
 
         service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
         assertThat(running.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS)).isTrue();
@@ -175,7 +175,7 @@ class ImportJobServiceTest {
     void startImport_racingStartsOfTheSameSession_letOnlyOneThrough() throws Exception {
         var running = new CountDownLatch(1);
         var release = new CountDownLatch(1);
-        service = new ImportJobService(blockingImportService(running, release));
+        service = jobService(blockingImportService(running, release));
         var start = new CountDownLatch(1);
         var accepted = new AtomicInteger();
 
@@ -218,7 +218,7 @@ class ImportJobServiceTest {
         var running = new CountDownLatch(1);
         var release = new CountDownLatch(1);
         service =
-                new ImportJobService(
+                jobService(
                         (datasetName, files, graphUris, listener) -> {
                             listener.planned(List.of(new PlannedImport(0, "first.ttl", 1)));
                             listener.started(0);
@@ -244,7 +244,7 @@ class ImportJobServiceTest {
     @Test
     void startImport_importDyingOnAnError_settlesTheJobAndFreesTheSession() {
         service =
-                new ImportJobService(
+                jobService(
                         (datasetName, files, graphUris, listener) -> {
                             throw new StackOverflowError("nesting too deep");
                         });
@@ -259,7 +259,7 @@ class ImportJobServiceTest {
     @Test
     void resolvePrefixConflicts_renameOntoAPrefixNobodyGivesUp_isRejected() {
         service =
-                new ImportJobService(
+                jobService(
                         prefixAskingImportService(
                                 new AtomicReference<>(), List.of(COMPARISON, RDFS_COMPARISON)));
         var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
@@ -285,7 +285,7 @@ class ImportJobServiceTest {
     void startImport_whileAnotherSessionImports_isAllowed() throws Exception {
         var running = new CountDownLatch(1);
         var release = new CountDownLatch(1);
-        service = new ImportJobService(blockingImportService(running, release));
+        service = jobService(blockingImportService(running, release));
 
         service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
         assertThat(running.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS)).isTrue();
@@ -300,7 +300,7 @@ class ImportJobServiceTest {
     @Test
     void startImport_importDiesHalfWay_stillReportsWhatItWrote() {
         service =
-                new ImportJobService(
+                jobService(
                         (datasetName, files, graphUris, listener) -> {
                             listener.planned(
                                     List.of(
@@ -325,7 +325,7 @@ class ImportJobServiceTest {
     @Test
     void startImport_importDiesHalfWay_settlesTheFilesItNeverFinished() {
         service =
-                new ImportJobService(
+                jobService(
                         (datasetName, files, graphUris, listener) -> {
                             listener.planned(
                                     List.of(
@@ -349,7 +349,7 @@ class ImportJobServiceTest {
 
     @Test
     void getStatus_jobOfAnotherSession_isNotVisible() {
-        service = new ImportJobService(realImportService());
+        service = jobService(realImportService());
         var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
         awaitFinished(jobId);
 
@@ -361,7 +361,7 @@ class ImportJobServiceTest {
 
     @Test
     void getStatus_jobOfAnotherDataset_isNotVisible() {
-        service = new ImportJobService(realImportService());
+        service = jobService(realImportService());
         var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
         awaitFinished(jobId);
 
@@ -371,7 +371,7 @@ class ImportJobServiceTest {
 
     @Test
     void getStatus_unknownJob_isEmpty() {
-        service = new ImportJobService(realImportService());
+        service = jobService(realImportService());
 
         assertThat(service.getStatus(DATASET, UUID.randomUUID())).isEmpty();
     }
@@ -379,7 +379,7 @@ class ImportJobServiceTest {
     @Test
     void cancel_runningImport_stopsItAndReportsTheJobAsCancelled() {
         service =
-                new ImportJobService(
+                jobService(
                         (datasetName, files, graphUris, listener) -> {
                             listener.planned(List.of(new PlannedImport(0, "first.ttl", 1)));
                             await().pollInSameThread().atMost(TIMEOUT).until(listener::isCancelled);
@@ -404,7 +404,7 @@ class ImportJobServiceTest {
     @Test
     void startImport_importThrowing_reportsTheJobAsFailed() {
         service =
-                new ImportJobService(
+                jobService(
                         (datasetName, files, graphUris, listener) -> {
                             throw new IllegalStateException("import blew up");
                         });
@@ -419,7 +419,7 @@ class ImportJobServiceTest {
     @Test
     void startImport_contestedPrefixes_waitForADecisionWithoutImportingAnything() {
         var received = new AtomicReference<ResolvedPrefixes>();
-        service = new ImportJobService(prefixAskingImportService(received));
+        service = jobService(prefixAskingImportService(received));
 
         var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
 
@@ -445,7 +445,7 @@ class ImportJobServiceTest {
 
     @Test
     void resolvePrefixConflicts_invalidNewPrefix_isRejectedAndLeavesTheJobWaiting() {
-        service = new ImportJobService(prefixAskingImportService(new AtomicReference<>()));
+        service = jobService(prefixAskingImportService(new AtomicReference<>()));
         var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
         awaitState(jobId, JobState.AWAITING_PREFIX_RESOLUTION);
 
@@ -471,7 +471,7 @@ class ImportJobServiceTest {
     void resolvePrefixConflicts_importThatIsNotWaiting_isRejected() throws Exception {
         var running = new CountDownLatch(1);
         var release = new CountDownLatch(1);
-        service = new ImportJobService(blockingImportService(running, release));
+        service = jobService(blockingImportService(running, release));
         var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
         assertThat(running.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS)).isTrue();
 
@@ -483,14 +483,14 @@ class ImportJobServiceTest {
 
     @Test
     void resolvePrefixConflicts_unknownJob_isNotFound() {
-        service = new ImportJobService(realImportService());
+        service = jobService(realImportService());
 
         assertThat(service.resolvePrefixConflicts(DATASET, UUID.randomUUID(), List.of())).isFalse();
     }
 
     @Test
     void cancel_importWaitingForADecision_stopsItWithoutImportingAnything() {
-        service = new ImportJobService(prefixAskingImportService(new AtomicReference<>()));
+        service = jobService(prefixAskingImportService(new AtomicReference<>()));
         var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
         awaitState(jobId, JobState.AWAITING_PREFIX_RESOLUTION);
 
@@ -507,7 +507,7 @@ class ImportJobServiceTest {
 
     @Test
     void startImport_whileAnotherImportOfTheSessionAwaitsADecision_takesItsPlace() {
-        service = new ImportJobService(prefixAskingImportService(new AtomicReference<>()));
+        service = jobService(prefixAskingImportService(new AtomicReference<>()));
         var abandonedJobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
         awaitState(abandonedJobId, JobState.AWAITING_PREFIX_RESOLUTION);
 
@@ -578,6 +578,14 @@ class ImportJobServiceTest {
             result.importedGraphUris().add(RDFA.GRAPH_URI + "first");
             return result;
         };
+    }
+
+    private static ImportJobService jobService(ImportGraphsUseCase importGraphsUseCase) {
+        return new ImportJobService(
+                importGraphsUseCase,
+                (workspaceName, archive, listener) -> {
+                    throw new UnsupportedOperationException();
+                });
     }
 
     private ImportGraphsUseCase realImportService() {

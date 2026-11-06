@@ -47,6 +47,8 @@ class ImportJob implements ImportProgressListener {
     private List<String> failedImports = List.of();
     private List<ImportGraphsUseCase.ImportWarning> warnings = List.of();
     private String errorMessage;
+    private List<String> problems = List.of();
+    private List<String> notices = List.of();
     private boolean cancelRequested;
     private boolean startedAFile;
     private Instant finishedAt;
@@ -186,6 +188,15 @@ class ImportJob implements ImportProgressListener {
         finishedAt = Instant.now();
     }
 
+    synchronized void notice(List<String> notices) {
+        this.notices = List.copyOf(notices);
+    }
+
+    synchronized void reject(List<String> problems) {
+        this.problems = List.copyOf(problems);
+        fail("The workspace archive cannot be imported.");
+    }
+
     synchronized void fail(String message) {
         // The import stopped where it stood: the file it was on never finished and the ones behind
         // it never started. Left as they are, the dialog keeps spinning on a file that is gone and
@@ -229,7 +240,9 @@ class ImportJob implements ImportProgressListener {
                 failedImports,
                 warnings,
                 prefixComparison,
-                errorMessage);
+                errorMessage,
+                problems,
+                notices);
     }
 
     private FileProgress fileAt(int index) {

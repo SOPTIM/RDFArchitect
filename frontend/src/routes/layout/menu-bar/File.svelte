@@ -47,6 +47,7 @@
     import SnapshotDialog from "../../SnapshotDialog.svelte";
     import UserSettingDialog from "../../UserSettingDialog.svelte";
     import WorkspaceDeleteDialog from "../../WorkspaceDeleteDialog.svelte";
+    import WorkspaceImportDialog from "../../WorkspaceImportDialog.svelte";
 
     let { isWorkspaceReadOnly } = $props();
 
@@ -55,6 +56,7 @@
     let showExportDialog = $state(false);
     let showSnapshotDialog = $state(false);
     let showImportDialog = $state(false);
+    let showWorkspaceImportDialog = $state(false);
     let showSHACLExportDialog = $state(false);
     let showSHACLUploadDialog = $state(false);
     let showDeleteDialog = $state(false);
@@ -177,6 +179,12 @@
                 >
                     Constraints (SHACL)
                 </Menubar.Item.Button>
+                <Menubar.Item.Button
+                    onSelect={() => (showWorkspaceImportDialog = true)}
+                    faIcon={faBoxArchive}
+                >
+                    Workspace (archive)
+                </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
         <Menubar.SubMenu.Root>
@@ -258,6 +266,7 @@
 </Menubar.Menu>
 
 <ImportDialog bind:showDialog={showImportDialog} />
+<WorkspaceImportDialog bind:showDialog={showWorkspaceImportDialog} />
 <ExportDialog bind:showDialog={showExportDialog} />
 <SnapshotDialog bind:showDialog={showSnapshotDialog} />
 <SHACLUploadDialog bind:showDialog={showSHACLUploadDialog} />

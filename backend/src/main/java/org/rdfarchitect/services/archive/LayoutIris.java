@@ -44,6 +44,10 @@ public final class LayoutIris {
         return mapIris(layout, iri -> ABSOLUTE_IRI.matcher(iri).matches() ? iri : BASE + iri);
     }
 
+    public static Graph fromArchived(Graph layout) {
+        return mapIris(layout, iri -> iri.startsWith(BASE) ? iri.substring(BASE.length()) : iri);
+    }
+
     private static Graph mapIris(Graph source, UnaryOperator<String> mapping) {
         var result = GraphFactory.createDefaultGraph();
         result.getPrefixMapping().setNsPrefixes(source.getPrefixMapping());

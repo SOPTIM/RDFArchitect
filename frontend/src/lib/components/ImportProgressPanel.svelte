@@ -108,6 +108,28 @@
         >
             <p class="font-semibold">The import stopped</p>
             <p class="mt-1 text-xs">{progress.errorMessage}</p>
+            {#if progress.problems.length > 0}
+                <ul
+                    class="mt-1 max-h-40 list-disc overflow-y-auto pl-5 text-xs"
+                >
+                    {#each progress.problems as problem}
+                        <li>{problem}</li>
+                    {/each}
+                </ul>
+            {/if}
+        </div>
+    {/if}
+
+    {#if progress.notices.length > 0}
+        <div
+            class="border-orange bg-background-subtle text-default-text mt-3 rounded border px-3 py-2 text-xs"
+        >
+            {#each progress.notices as notice}
+                <p class="flex items-center gap-2">
+                    <Fa class="text-orange" icon={faTriangleExclamation} />
+                    {notice}
+                </p>
+            {/each}
         </div>
     {/if}
 
