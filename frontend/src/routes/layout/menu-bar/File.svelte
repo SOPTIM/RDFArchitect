@@ -17,6 +17,7 @@
 
 <script>
     import {
+        faBoxArchive,
         faDownload,
         faFileExport,
         faFileImport,
@@ -27,9 +28,15 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { onDestroy, onMount } from "svelte";
 
+    import { exportWorkspace } from "$lib/api/generated/index.ts";
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
+    import {
+        saveFile,
+        workspaceArchiveMediaType,
+    } from "$lib/utils/fileUtils.ts";
 
     import DocumentationExportDialog from "../../DocumentationExportDialog.svelte";
     import ExportDialog from "../../ExportDialog.svelte";
@@ -40,6 +47,7 @@
     import SnapshotDialog from "../../SnapshotDialog.svelte";
     import UserSettingDialog from "../../UserSettingDialog.svelte";
     import WorkspaceDeleteDialog from "../../WorkspaceDeleteDialog.svelte";
+    import WorkspaceImportDialog from "../../WorkspaceImportDialog.svelte";
 
     let { isWorkspaceReadOnly } = $props();
 
@@ -48,6 +56,7 @@
     let showExportDialog = $state(false);
     let showSnapshotDialog = $state(false);
     let showImportDialog = $state(false);
+    let showWorkspaceImportDialog = $state(false);
     let showSHACLExportDialog = $state(false);
     let showSHACLUploadDialog = $state(false);
     let showDeleteDialog = $state(false);
@@ -115,6 +124,37 @@
     onDestroy(() => {
         shortcutsUnregister.forEach(unregister => unregister());
     });
+
+    async function downloadWorkspaceArchive() {
+        const workspaceName = selectedWorkspace;
+        try {
+            const { data, error, response } = await exportWorkspace({
+                path: { datasetName: workspaceName },
+            });
+            if (error) {
+                toastStore.error(
+                    "Export failed",
+                    `Could not export workspace "${workspaceName}".`,
+                );
+                return;
+            }
+            saveFile(
+                data,
+                response.headers.get("content-disposition"),
+                workspaceArchiveMediaType,
+            );
+            toastStore.success(
+                "Export ready",
+                `Workspace "${workspaceName}" downloaded as an archive.`,
+            );
+        } catch (e) {
+            console.error("Failed to export workspace:", e);
+            toastStore.error(
+                "Export failed",
+                "An unexpected error occurred while exporting.",
+            );
+        }
+    }
 </script>
 
 <Menubar.Menu value="file">
@@ -138,6 +178,12 @@
                     altText="Ctrl+Shift+I"
                 >
                     Constraints (SHACL)
+                </Menubar.Item.Button>
+                <Menubar.Item.Button
+                    onSelect={() => (showWorkspaceImportDialog = true)}
+                    faIcon={faBoxArchive}
+                >
+                    Workspace (archive)
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
@@ -166,6 +212,13 @@
                     altText="Ctrl+Alt+H"
                 >
                     Documentation (HTML, AsciiDoc)
+                </Menubar.Item.Button>
+                <Menubar.Item.Button
+                    onSelect={downloadWorkspaceArchive}
+                    disabled={!hasWorkspaceSelected}
+                    faIcon={faBoxArchive}
+                >
+                    Workspace (archive)
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
@@ -213,6 +266,7 @@
 </Menubar.Menu>
 
 <ImportDialog bind:showDialog={showImportDialog} />
+<WorkspaceImportDialog bind:showDialog={showWorkspaceImportDialog} />
 <ExportDialog bind:showDialog={showExportDialog} />
 <SnapshotDialog bind:showDialog={showSnapshotDialog} />
 <SHACLUploadDialog bind:showDialog={showSHACLUploadDialog} />

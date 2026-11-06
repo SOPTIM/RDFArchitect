@@ -37,6 +37,25 @@ export const sparqlMediaType: MediaType = {
     fileExtension: ".sparql",
 };
 
+// A zip, but not named one: the schema import unpacks every `.zip`.
+export const workspaceArchiveMediaType: MediaType = {
+    mimeType: "application/zip",
+    name: "Workspace archive",
+    fileExtension: ".rdfa",
+};
+
+export function isWorkspaceArchiveFile(fileName: string): boolean {
+    const lowered = (fileName ?? "").toLowerCase();
+    return (
+        lowered.endsWith(workspaceArchiveMediaType.fileExtension) ||
+        isZipFile(lowered)
+    );
+}
+
+export function workspaceNameOfArchiveFile(fileName: string): string {
+    return (fileName ?? "").replace(/\.zip$/i, "").replace(/\.rdfa$/i, "");
+}
+
 /** Whether the file is a ZIP archive, which the import unpacks on its own. */
 export function isZipFile(fileName: string): boolean {
     return (fileName ?? "").toLowerCase().endsWith(".zip");

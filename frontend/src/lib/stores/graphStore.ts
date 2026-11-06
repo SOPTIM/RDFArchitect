@@ -208,6 +208,7 @@ function createGraphStore() {
         addEmptyGraph,
         renameGraph,
         startImport,
+        startWorkspaceImport,
         getImportStatus,
         resolvePrefixConflicts,
         cancelImport,
@@ -267,6 +268,38 @@ async function startImport(
         return { error: null, data: { jobId } };
     } catch (error) {
         console.error(`${LOG_PREFIX} Failed to start the import`, error);
+        return { error };
+    }
+}
+
+async function startWorkspaceImport(
+    workspaceName: string,
+    archive: File,
+    options: {
+        onUploadProgress?: (percent: number) => void;
+        signal?: AbortSignal;
+    } = {},
+): Promise<Result<{ jobId: string }>> {
+    console.log(
+        `${LOG_PREFIX} Starting the import of workspace "${workspaceName}"`,
+    );
+
+    const formData = new FormData();
+    formData.append("file", archive);
+    try {
+        const jobId = await upload(
+            `${PUBLIC_BACKEND_URL}/api/datasets/${encodeURIComponent(workspaceName)}` +
+                "/graphs/content/imports/archive",
+            formData,
+            options,
+        );
+        console.log(`${LOG_PREFIX} Workspace import job "${jobId}" started`);
+        return { error: null, data: { jobId } };
+    } catch (error) {
+        console.error(
+            `${LOG_PREFIX} Failed to start the workspace import`,
+            error,
+        );
         return { error };
     }
 }
@@ -374,7 +407,18 @@ function uploadImport(
     for (const file of files) {
         formData.append("files", file);
     }
+    return upload(url, formData, options);
+}
 
+// XMLHttpRequest rather than fetch, since only it reports upload progress.
+function upload(
+    url: string,
+    formData: FormData,
+    options: {
+        onUploadProgress?: (percent: number) => void;
+        signal?: AbortSignal;
+    },
+): Promise<string> {
     return new Promise((resolve, reject) => {
         const request = new XMLHttpRequest();
         request.open("POST", url);

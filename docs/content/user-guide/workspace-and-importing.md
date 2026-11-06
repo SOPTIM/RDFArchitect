@@ -21,7 +21,7 @@ A colour legend and classic diagram conventions are used throughout: stereotypes
 
 ## Getting data into RDFArchitect
 
-There are three ways content lands in the editor.
+There are four ways content lands in the editor.
 
 ### Import a schema (File → Import → Schema (RDFS))
 
@@ -36,6 +36,12 @@ The dialog stays open while the import runs and shows a progress bar together wi
 ### Import a SHACL file (File → Import → Constraints (SHACL))
 
 A separate import path for custom SHACL shapes. These are stored *next to* the schema graph and can later be viewed from the same UI as the generated SHACL (see [SHACL](./shacl)).
+
+### Import a workspace archive (File → Import → Workspace (archive))
+
+**File → Export → Workspace (archive)** saves the whole workspace as one `.rdfa` file: every schema with its custom SHACL, diagrams and layouts, plus the workspace's namespaces, diagrams, cross-profile colours and read-only state. The undo history is not included. Importing the archive creates a **new** workspace; its name defaults to the one the workspace was exported under. Nothing is imported unless the whole archive is valid; otherwise the dialog lists every problem, with the file inside the archive it concerns.
+
+The archive is a zip; rename it to `.zip` to look inside. Its top level holds the workspace, each schema sits in `graphs/<folder>/schema.ttl` and can be used on its own, and `manifest.json` names the graph each folder holds. The manifest's `formatVersion` (`MAJOR.MINOR`) says which RDFArchitect versions read it: any archive of the same major version imports, and one with a newer minor version imports with a notice that the parts this version does not know were left out.
 
 ### Create an empty schema (Edit → New → Schema)
 

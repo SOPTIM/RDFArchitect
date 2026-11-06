@@ -104,6 +104,8 @@ export class ImportProgress {
     prefixComparison = $state([]);
     /** Set when the import could not be started or ended unexpectedly. */
     errorMessage = $state(null);
+    problems = $state([]);
+    notices = $state([]);
     cancelling = $state(false);
 
     #controller = new AbortController();
@@ -189,6 +191,8 @@ export class ImportProgress {
         this.importedGraphUris = status.importedGraphUris ?? [];
         this.failedImports = status.failedImports ?? [];
         this.warnings = status.warnings ?? [];
+        this.problems = status.problems ?? [];
+        this.notices = status.notices ?? [];
         const reportedComparison = status.prefixComparison ?? [];
         if (
             reportedComparison.length === 0 ||

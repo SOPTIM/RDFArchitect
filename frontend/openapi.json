@@ -1061,9 +1061,21 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "notices" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "prefixComparison" : {
             "items" : {
               "$ref" : "#/components/schemas/PrefixComparison"
+            },
+            "type" : "array"
+          },
+          "problems" : {
+            "items" : {
+              "type" : "string"
             },
             "type" : "array"
           },
@@ -2614,6 +2626,45 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/archive" : {
+      "get" : {
+        "description" : "Exports the whole workspace as a workspace archive: every graph with its custom SHACL, layout and custom diagrams, and the workspace's prefixes, diagrams, layout and cross-profile colours.",
+        "operationId" : "exportWorkspace",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/zip" : { }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "export workspace",
+        "tags" : [
+          "dataset"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/canRedo" : {
       "post" : {
         "description" : "Check whether the last undone change can be redone",
@@ -3562,6 +3613,78 @@
         "summary" : "Start importing multiple graphs",
         "tags" : [
           "graph"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/content/imports/archive" : {
+      "post" : {
+        "description" : "Starts restoring a workspace archive, as written by the workspace export, as a new workspace of the given name. Returns the id of the job to poll for progress. The archive is checked completely first: if anything in it is invalid, nothing is imported and the job's status lists every problem.",
+        "operationId" : "startWorkspaceImport",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The name of the workspace to create.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "properties" : {
+                  "file" : {
+                    "description" : "The workspace archive",
+                    "format" : "binary",
+                    "type" : "string"
+                  }
+                },
+                "required" : [
+                  "file"
+                ],
+                "type" : "object"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "202" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobCreatedResponse"
+                }
+              }
+            },
+            "description" : "Import started"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobCreatedResponse"
+                }
+              }
+            },
+            "description" : "An import is already running for this session"
+          }
+        },
+        "summary" : "Start importing a workspace archive",
+        "tags" : [
+          "dataset"
         ]
       }
     },
