@@ -98,7 +98,7 @@ public final class EffectiveConstraints {
     /**
      * What several documents require together, and which of them requires each thing.
      *
-     * <p>A graph's constraints are the conjunction of its enabled documents, so this is the only
+     * <p>A schema's constraints are the conjunction of its enabled documents, so this is the only
      * honest right-hand side for the comparison. Official constraints arrive split across files —
      * the CGMES 3.0 DiagramLayout file states 11 of its property shapes itself and defers 41 to the
      * shared IdentifiedObject file — and reading one of them alone reports its neighbours' coverage
@@ -119,7 +119,7 @@ public final class EffectiveConstraints {
         }
     }
 
-    /** One graph's constraints, split by whether they can fail validation. */
+    /** One set of constraints, split by whether they can fail validation. */
     private record Read(Map<Key, Constraint> enforced, Map<Key, Constraint> advisory) {}
 
     private EffectiveConstraints() {}
