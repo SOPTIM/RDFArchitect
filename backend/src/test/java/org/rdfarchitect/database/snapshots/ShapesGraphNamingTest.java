@@ -47,7 +47,7 @@ class ShapesGraphNamingTest {
                 "urn:rdfa:shacl:http%3A%2F%2Fexample.org%2FEQ:1fac0fd3-d607-4b1e-8e3c-0a6f3c2d9b11",
                 "urn:rdfa:shacl-meta:http%3A%2F%2Fexample.org%2FEQ"
             })
-    void theFormerPerSchemaNamesAreReservedButNameNoDocument(String graphUri) {
+    void namesAfterASchemaAreReservedButNameNoDocument(String graphUri) {
         assertThat(ShapesGraphNaming.isReserved(graphUri)).isTrue();
         assertThat(ShapesGraphNaming.decode(graphUri)).isEmpty();
     }
