@@ -196,7 +196,7 @@ public final class EffectiveConstraints {
         // A property shape can carry the target itself, with no node shape around it. What it nests
         // is then about the values of its path, and not about the target class.
         var properties =
-                shapes.contains(shape, SHACL.path, Node.ANY)
+                definedIn(shape, shapes, documents).contains(shape, SHACL.path, Node.ANY)
                         ? Stream.of(shape)
                         : shapes.stream(shape, SHACL.property, Node.ANY).map(Triple::getObject);
         properties.forEach(
@@ -297,16 +297,18 @@ public final class EffectiveConstraints {
         if (!constraint.dataTypes().isEmpty()) {
             parts.add(terms(constraint.dataTypes(), prefixes));
         }
-        // Every sh:class applies, so all of them are named. A list only offers alternatives, which
-        // is what lets it read as its most general classes.
-        var classes = new LinkedHashSet<>(constraint.valueClasses());
-        if (constraint.valueTypes() != null) {
-            classes.addAll(hierarchy.roots(constraint.valueTypes()));
+        // Every sh:class applies, while a list offers alternatives and reads as the most general of
+        // them. A list saying nothing the classes don't already say is left out.
+        if (!constraint.valueClasses().isEmpty()) {
+            parts.add("of class " + terms(constraint.valueClasses(), prefixes));
         }
-        if (!classes.isEmpty()) {
-            parts.add("of class " + terms(classes, prefixes));
-        } else if (constraint.valueTypes() != null) {
-            parts.add("of class nothing");
+        if (constraint.valueTypes() != null) {
+            var alternatives = hierarchy.roots(constraint.valueTypes());
+            if (alternatives.isEmpty()) {
+                parts.add("of class nothing");
+            } else if (!constraint.valueClasses().containsAll(alternatives)) {
+                parts.add("of class " + terms(alternatives, prefixes, " or "));
+            }
         }
         if (!constraint.nodeKinds().isEmpty()) {
             parts.add(terms(constraint.nodeKinds(), prefixes));
@@ -319,11 +321,14 @@ public final class EffectiveConstraints {
 
     /** The terms of a set, shortest form first, joined as prose. */
     public static String terms(Set<String> iris, PrefixMapping prefixes) {
+        return terms(iris, prefixes, " and ");
+    }
+
+    private static String terms(Set<String> iris, PrefixMapping prefixes, String separator) {
         return iris.stream()
                 .map(iri -> term(iri, prefixes))
                 .sorted()
-                .reduce((a, b) -> a + " and " + b)
-                .orElse("");
+                .collect(Collectors.joining(separator));
     }
 
     /** The values of an {@code sh:in} list as a reader would write them, sorted. */

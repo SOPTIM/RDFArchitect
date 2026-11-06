@@ -72,6 +72,7 @@ class EffectiveConstraintsDescribeTest {
 
     private static final String BASE = CIM + "Base";
     private static final String LEAF = CIM + "Leaf";
+    private static final String OTHER = CIM + "Other";
 
     private static ClassHierarchy leafDerivesFromBase() {
         var schema = GraphFactory.createDefaultGraph();
@@ -106,6 +107,24 @@ class EffectiveConstraintsDescribeTest {
     void aClassAndTheSameRangeAsAListReadOnce() {
         assertThat(describeClasses(Set.of(BASE), Set.of(BASE, LEAF)))
                 .isEqualTo("of class cim:Base");
+    }
+
+    @Test
+    void aListOfUnrelatedClassesOffersThemAsAlternatives() {
+        assertThat(describeClasses(Set.of(), Set.of(BASE, OTHER)))
+                .isEqualTo("of class cim:Base or cim:Other");
+    }
+
+    @Test
+    void aClassBesideAListWithSomethingElseInItNamesBoth() {
+        assertThat(describeClasses(Set.of(LEAF), Set.of(BASE, OTHER)))
+                .isEqualTo("of class cim:Leaf, of class cim:Base or cim:Other");
+    }
+
+    @Test
+    void anEmptyListIsSaidEvenBesideAClass() {
+        assertThat(describeClasses(Set.of(BASE), Set.of()))
+                .isEqualTo("of class cim:Base, of class nothing");
     }
 
     @Test
