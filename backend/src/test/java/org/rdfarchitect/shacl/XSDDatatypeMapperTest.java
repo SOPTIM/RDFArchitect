@@ -20,7 +20,9 @@ package org.rdfarchitect.shacl;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.jena.datatypes.TypeMapper;
+import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.XSD;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -39,7 +41,10 @@ class XSDDatatypeMapperTest {
         "URI, anyURI",
         "IRI, anyURI",
         "StringIRI, anyURI",
-        "StringFixedLanguage, string"
+        "URL, anyURI",
+        "StringFixedLanguage, string",
+        "UUID, string",
+        "Version, string"
     })
     void mapsCimPrimitivesToTheXsdDatatypeTheOfficialConstraintsUse(String label, String local) {
         var datatype = XSDDatatypeMapper.classLabelToDatatype(label);
@@ -47,5 +52,26 @@ class XSDDatatypeMapperTest {
         assertThat(datatype.getURI()).isEqualTo(XSD.getURI() + local);
         // A datatype Jena knows, not one composed from the label.
         assertThat(TypeMapper.getInstance().getTypeByName(datatype.getURI())).isSameAs(datatype);
+    }
+
+    @Test
+    void aLanguageTaggedStringIsTheRdfDatatypeNotAnXsdOne() {
+        var datatype = XSDDatatypeMapper.classLabelToDatatype("LangString");
+
+        assertThat(datatype.getURI()).isEqualTo(RDF.dtLangString.getURI());
+        assertThat(TypeMapper.getInstance().getTypeByName(datatype.getURI())).isSameAs(datatype);
+    }
+
+    @Test
+    void aPlainValueCanBeTypedOnlyWithADatatypeThatExistsAndNeedsNoLanguage() {
+        assertThat(canTypeAPlainValue("String")).isTrue();
+        assertThat(canTypeAPlainValue("MonthDay")).isTrue();
+        // It would need a language tag, and a fixed or default value has only its text.
+        assertThat(canTypeAPlainValue("LangString")).isFalse();
+        assertThat(canTypeAPlainValue("SomethingNobodyDefined")).isFalse();
+    }
+
+    private static boolean canTypeAPlainValue(String label) {
+        return XSDDatatypeMapper.canTypeAPlainValue(XSDDatatypeMapper.classLabelToDatatype(label));
     }
 }
