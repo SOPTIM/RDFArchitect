@@ -266,6 +266,28 @@
                     {/if}
                 {/if}
             </section>
+
+            <section>
+                <h3
+                    class="text-text-subtle mb-1 text-xs font-semibold uppercase"
+                >
+                    Checked against ({workbench.profiles.length})
+                </h3>
+                <!--
+                  Constraints are checked against every profile in the workspace, not only the
+                  schemas they apply to: the official cross-profile constraints files reference
+                  terms from their neighbours on purpose.
+                -->
+                {#if workbench.profiles.length === 0}
+                    <p class="text-text-subtle italic">Not validated yet.</p>
+                {:else}
+                    <ul class="text-text-subtle space-y-0.5 font-mono text-xs">
+                        {#each workbench.profiles as profile (profile)}
+                            <li class="break-all">{profile}</li>
+                        {/each}
+                    </ul>
+                {/if}
+            </section>
         {/if}
     </div>
 </div>

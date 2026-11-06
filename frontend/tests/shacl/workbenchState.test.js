@@ -71,6 +71,47 @@ function fakeServer(overrides = {}) {
         texts: { [EQ]: SHAPES, [CUSTOM]: "" },
         generated:
             "# generated from the schema\nex:Generated a sh:NodeShape .\n",
+        report: {
+            valid: false,
+            errorCount: 1,
+            warningCount: 0,
+            infoCount: 0,
+            profiles: ["http://example.org/EQ/1.0"],
+            documents: [
+                {
+                    documentId: EQ,
+                    documentName: "eq.ttl",
+                    valid: false,
+                    errorCount: 1,
+                    warningCount: 0,
+                    infoCount: 0,
+                    findings: [
+                        {
+                            severity: "ERROR",
+                            source: "SHAPE",
+                            code: "UNKNOWN_CLASS",
+                            message: "stored finding",
+                            line: 4,
+                            column: 1,
+                        },
+                    ],
+                },
+            ],
+        },
+        bufferReport: {
+            valid: true,
+            errorCount: 0,
+            warningCount: 0,
+            infoCount: 0,
+            documents: [
+                {
+                    documentId: EQ,
+                    documentName: "eq.ttl",
+                    valid: true,
+                    findings: [],
+                },
+            ],
+        },
         ...overrides,
     };
 
@@ -103,6 +144,12 @@ function fakeServer(overrides = {}) {
                 status: 200,
                 headers: { "content-type": "text/plain" },
             });
+        }
+        if (entry.path.endsWith("/shacl/validate")) {
+            return json(server.report);
+        }
+        if (entry.path.endsWith("/shacl/validate/text")) {
+            return json(server.bufferReport);
         }
         if (documentId && entry.method === "GET") {
             return new Response(server.texts[documentId] ?? "", {
@@ -181,7 +228,7 @@ beforeEach(async () => {
 });
 
 describe("loading", () => {
-    test("orders the documents and opens the first", async () => {
+    test("orders the documents, opens the first and validates what is stored", async () => {
         await workbench.load();
 
         expect(workbench.documents.map(document => document.name)).toEqual([
@@ -191,6 +238,7 @@ describe("loading", () => {
         expect(workbench.selectedId).toBe(EQ);
         expect(workbench.text).toBe(SHAPES);
         expect(workbench.dirty).toBe(false);
+        expect(workbench.profiles).toEqual(["http://example.org/EQ/1.0"]);
         expect(workbench.loading).toBe(false);
     });
 
@@ -383,7 +431,7 @@ describe("editing and saving", () => {
         expect(workbench.saving).toBe(false);
     });
 
-    test("re-reads the documents after a save", async () => {
+    test("re-reads the documents and revalidates after a save", async () => {
         await workbench.load();
         workbench.text = "ex:X a sh:NodeShape .";
         server.requests.length = 0;
@@ -395,6 +443,7 @@ describe("editing and saving", () => {
         ).toEqual([
             expect.stringContaining("PUT"),
             expect.stringContaining("GET"),
+            expect.stringContaining("POST"),
         ]);
     });
 
@@ -492,10 +541,12 @@ describe("a read-only workspace", () => {
         expect(server.requests).toHaveLength(0);
     });
 
-    test("still reads, because looking is not changing", async () => {
+    test("still reads and validates, because looking is not changing", async () => {
         await workbench.load();
 
         expect(workbench.text).toBe(SHAPES);
+        expect(workbench.report).not.toBeNull();
+        expect(await workbench.validateBuffer()).not.toBeNull();
     });
 
     test("stays locked when the workspace cannot be asked", async () => {
@@ -509,7 +560,134 @@ describe("a read-only workspace", () => {
     });
 });
 
+describe("validation", () => {
+    test("names the open document so its own saved copy is not counted as a conflict", async () => {
+        await workbench.load();
+        workbench.text = `${SHAPES}\n`;
+
+        await workbench.validateBuffer();
+
+        const post = server.requests.at(-1);
+        expect(post.path).toMatch(/\/shacl\/validate\/text$/);
+        expect(post.query.get("documentId")).toBe(EQ);
+        expect(post.query.get("name")).toBe("eq.ttl");
+        expect(post.contentType).toBe("text/plain");
+    });
+
+    test("prefers the buffer result for the open document while it is current", async () => {
+        await workbench.load();
+        expect(workbench.findings.map(finding => finding.message)).toEqual([
+            "stored finding",
+        ]);
+
+        workbench.text = `${SHAPES}\n`;
+        await workbench.validateBuffer();
+        expect(workbench.findings).toEqual([]);
+
+        // Typing again makes the answer stale, so the stored report is shown until the next run.
+        workbench.text = `${SHAPES}\n\n`;
+        expect(workbench.findings.map(finding => finding.message)).toEqual([
+            "stored finding",
+        ]);
+    });
+
+    test("drops an answer that arrives after the text moved on", async () => {
+        await workbench.load();
+        let release;
+        const held = new Promise(resolve => {
+            release = () =>
+                resolve(
+                    new Response(JSON.stringify(server.bufferReport), {
+                        status: 200,
+                        headers: { "content-type": "application/json" },
+                    }),
+                );
+        });
+        server.respond = entry =>
+            entry.path.endsWith("/validate/text")
+                ? held
+                : new Response("{}", {
+                      status: 200,
+                      headers: { "content-type": "application/json" },
+                  });
+
+        workbench.text = "first";
+        const inFlight = workbench.validateBuffer();
+        workbench.text = "second";
+        release();
+        await inFlight;
+
+        expect(workbench.bufferReport).toBeNull();
+        expect(workbench.findings.map(finding => finding.message)).toEqual([
+            "stored finding",
+        ]);
+    });
+
+    test("a burst of keystrokes produces one request", async () => {
+        vi.useFakeTimers();
+        await workbench.load();
+        server.requests.length = 0;
+
+        workbench.text = "a";
+        workbench.scheduleValidation(50);
+        workbench.text = "ab";
+        workbench.scheduleValidation(50);
+        workbench.text = "abc";
+        workbench.scheduleValidation(50);
+
+        expect(server.requests).toHaveLength(0);
+        await vi.advanceTimersByTimeAsync(60);
+
+        expect(
+            server.requests.filter(entry =>
+                entry.path.endsWith("/validate/text"),
+            ),
+        ).toHaveLength(1);
+    });
+
+    test("selecting another document cancels a pending run", async () => {
+        vi.useFakeTimers();
+        await workbench.load();
+        workbench.text = "a";
+        workbench.scheduleValidation(50);
+        server.requests.length = 0;
+
+        await workbench.select(CUSTOM);
+        await vi.advanceTimersByTimeAsync(60);
+
+        expect(
+            server.requests.filter(entry =>
+                entry.path.endsWith("/validate/text"),
+            ),
+        ).toHaveLength(0);
+    });
+});
+
 describe("the document list", () => {
+    test("totals the counts across documents", async () => {
+        await workbench.load();
+
+        expect(workbench.totals).toEqual({
+            errorCount: 1,
+            warningCount: 0,
+            infoCount: 0,
+        });
+        expect(workbench.results.map(result => result.documentName)).toEqual([
+            "eq.ttl",
+            "custom.ttl",
+        ]);
+    });
+
+    test("a document with no result yet counts as clean rather than missing", async () => {
+        await workbench.load();
+
+        expect(workbench.resultFor(CUSTOM)).toMatchObject({
+            valid: true,
+            errorCount: 0,
+            findings: [],
+        });
+    });
+
     test("does not try to move a document past either end", async () => {
         await workbench.load();
         server.requests.length = 0;
@@ -852,6 +1030,9 @@ describe("the generated shapes", () => {
         expect(server.requests[0].path).toContain(
             encodeURIComponent(SSH_SCHEMA),
         );
+        expect(workbench.resultFor(generatedId(SSH_SCHEMA)).findings).toEqual(
+            [],
+        );
     });
 
     test("leave when their schema does", async () => {
@@ -904,10 +1085,20 @@ describe("the generated shapes", () => {
         expect(server.requests).toHaveLength(0);
     });
 
+    test("are not sent for validation", async () => {
+        await workbench.load();
+        await workbench.select(GENERATED_ID);
+        server.requests.length = 0;
+
+        expect(await workbench.validateBuffer()).toBeNull();
+        expect(server.requests).toHaveLength(0);
+    });
+
     test("stay selected when the document list is refreshed", async () => {
         await workbench.load();
         await workbench.select(GENERATED_ID);
 
+        await workbench.validateAll();
         // A refresh used to fall back to the first document, because the generated entry is in no
         // document list.
         await workbench.setEnabled(EQ, false);
@@ -1017,6 +1208,34 @@ describe("saving while a save is on its way", () => {
         expect(
             server.requests.filter(entry => entry.method === "PUT"),
         ).toHaveLength(1);
+    });
+});
+
+describe("validation in flight", () => {
+    test("stays marked as running until the last run is back", async () => {
+        await workbench.load();
+        const gates = [held(), held()];
+        let run = 0;
+        const answer = server.respond;
+        server.respond = async (entry, url) => {
+            if (entry.path.endsWith("/validate/text")) {
+                await gates[run++].promise;
+            }
+            return answer(entry, url);
+        };
+
+        workbench.text = "first";
+        const first = workbench.validateBuffer();
+        workbench.text = "second";
+        const second = workbench.validateBuffer();
+        await vi.waitFor(() => expect(run).toBe(2));
+        gates[0].release();
+        await first;
+
+        expect(workbench.validating).toBe(true);
+        gates[1].release();
+        await second;
+        expect(workbench.validating).toBe(false);
     });
 });
 
