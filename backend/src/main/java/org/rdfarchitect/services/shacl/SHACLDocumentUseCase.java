@@ -36,7 +36,7 @@ import java.util.UUID;
  */
 public interface SHACLDocumentUseCase {
 
-    /** Lists the graph's documents in {@code order}, without their content. */
+    /** Lists the workspace's documents in {@code order}, without their content. */
     List<ShapesDocumentInfo> listShapesDocuments(String datasetName);
 
     /**
