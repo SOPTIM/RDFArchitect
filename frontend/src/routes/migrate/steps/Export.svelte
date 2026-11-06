@@ -34,59 +34,39 @@
         await goto("/mainpage");
     }
 
-    async function downloadMigrationScript() {
+    async function downloadFile(label, request) {
         try {
-            const { data, error, response } = await generateMigrationScript();
-            if (error) {
-                console.error("Failed to generate script:", error);
-                toastStore.error(
-                    "Export failed",
-                    "Could not generate the migration script.",
-                );
-                return;
-            }
+            const { data, error, response } = await request();
+            if (error) throw error;
+
             const suggestedFilename = response.headers.get(
                 "content-disposition",
             );
             saveFile(data, suggestedFilename, sparqlMediaType);
         } catch (e) {
-            console.error("Failed to generate script:", e);
+            console.error(`Failed to generate ${label}:`, e);
             toastStore.error(
                 "Export failed",
-                "Could not generate the migration script.",
+                `Could not generate the migration ${label}.`,
             );
         }
     }
 
-    async function downloadMigrationReport(reportType) {
+    function downloadMigrationScript() {
+        return downloadFile("script", () => generateMigrationScript());
+    }
+
+    function downloadMigrationReport(reportType) {
         const state = get(migrationState);
-        try {
-            const { data, error, response } = await generateMigrationReport({
+        return downloadFile("report", () =>
+            generateMigrationReport({
                 query: {
-                    reportType: reportType,
+                    reportType,
                     originalCGMESVersion: state.cgmesVersionA,
                     updatedCGMESVersion: state.cgmesVersionB,
                 },
-            });
-            if (error) {
-                console.error("Failed to generate report:", error);
-                toastStore.error(
-                    "Export failed",
-                    "Could not generate the migration report.",
-                );
-                return;
-            }
-            const suggestedFilename = response.headers.get(
-                "content-disposition",
-            );
-            saveFile(data, suggestedFilename, sparqlMediaType);
-        } catch (e) {
-            console.error("Failed to generate report:", e);
-            toastStore.error(
-                "Export failed",
-                "Could not generate the migration report.",
-            );
-        }
+            }),
+        );
     }
 </script>
 

@@ -17,11 +17,8 @@
 
 package org.rdfarchitect.services.schemamigration;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
@@ -65,20 +62,25 @@ import org.rdfarchitect.services.validation.SchemaValidationService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class SchemaMigrationService
         implements SetMigrationContextUseCase,
-        GetClassRenamingsUseCase,
-        GetPropertyRenamingsUseCase,
-        GenerateMigrationScriptUseCase,
-        ClassRenamingsUseCase,
-        ConfirmPropertyRenamingsUseCase,
-        ClearMigrationContextUseCase,
-        GetDefaultValueViewsUseCase,
-        SubmitDefaultValuesUseCase,
-        GenerateMigrationReportUseCase,
-        MigrationChangesUseCase {
+                GetClassRenamingsUseCase,
+                GetPropertyRenamingsUseCase,
+                GenerateMigrationScriptUseCase,
+                ClassRenamingsUseCase,
+                ConfirmPropertyRenamingsUseCase,
+                ClearMigrationContextUseCase,
+                GetDefaultValueViewsUseCase,
+                SubmitDefaultValuesUseCase,
+                GenerateMigrationReportUseCase,
+                MigrationChangesUseCase {
 
     private final MigrationSessionStore migrationSessionStore;
     private final DatabasePort databasePort;
@@ -101,7 +103,7 @@ public class SchemaMigrationService
 
         Graph updatedGraph;
         try (var updatedCtx =
-                     databasePort.getGraphWithContext(updatedSchema).begin(ReadWrite.READ)) {
+                databasePort.getGraphWithContext(updatedSchema).begin(ReadWrite.READ)) {
             updatedGraph = GraphUtils.deepCopy(updatedCtx.getRdfGraph());
         }
 
@@ -113,13 +115,13 @@ public class SchemaMigrationService
             GraphIdentifier originalSchema, GraphIdentifier updatedSchema, boolean ignorePrefixes) {
         Graph originalGraph;
         try (var originalCtx =
-                     databasePort.getGraphWithContext(originalSchema).begin(ReadWrite.READ)) {
+                databasePort.getGraphWithContext(originalSchema).begin(ReadWrite.READ)) {
             originalGraph = GraphUtils.deepCopy(originalCtx.getRdfGraph());
         }
 
         Graph updatedGraph;
         try (var updatedCtx =
-                     databasePort.getGraphWithContext(updatedSchema).begin(ReadWrite.READ)) {
+                databasePort.getGraphWithContext(updatedSchema).begin(ReadWrite.READ)) {
             updatedGraph = GraphUtils.deepCopy(updatedCtx.getRdfGraph());
         }
 
@@ -131,7 +133,7 @@ public class SchemaMigrationService
             GraphIdentifier originalSchema, MultipartFile updatedSchema, boolean ignorePrefixes) {
         Graph originalGraph;
         try (var originalCtx =
-                     databasePort.getGraphWithContext(originalSchema).begin(ReadWrite.READ)) {
+                databasePort.getGraphWithContext(originalSchema).begin(ReadWrite.READ)) {
             originalGraph = GraphUtils.deepCopy(originalCtx.getRdfGraph());
         }
 
@@ -287,8 +289,8 @@ public class SchemaMigrationService
                         RenameDetector.detectPropertyRenames(cls.getEnumEntries()));
             }
             if (cls.getAttributes().size()
-                    + cls.getAssociations().size()
-                    + cls.getEnumEntries().size()
+                            + cls.getAssociations().size()
+                            + cls.getEnumEntries().size()
                     > 0) {
                 result.add(new PropertyOverview(cls));
             }
