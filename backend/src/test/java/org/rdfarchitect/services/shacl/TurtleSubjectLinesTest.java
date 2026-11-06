@@ -15,26 +15,18 @@
  *
  */
 
-package org.rdfarchitect.services.shacl.form;
+package org.rdfarchitect.services.shacl;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
-/**
- * Splitting a Turtle document into the statements a form edit can replace.
- *
- * <p>These are the tests that make surgical editing safe: everything else in the form path assumes
- * that a statement's span is exactly right, and getting it wrong would corrupt a file rather than
- * merely reformat it.
- */
-class ShapeBlockLocatorTest {
+class TurtleSubjectLinesTest {
 
     private static final String SHACL = "http://www.w3.org/ns/shacl#";
     private static final String EX = "http://example.org/";
@@ -43,7 +35,13 @@ class ShapeBlockLocatorTest {
         return new PrefixMappingImpl().setNsPrefix("sh", SHACL).setNsPrefix("ex", EX);
     }
 
-    private static String textOf(String turtle, ShapeBlockLocator.Statement statement) {
+    private static Optional<TurtleSubjectLines.Statement> locate(String turtle, String iri) {
+        return TurtleSubjectLines.statements(turtle).stream()
+                .filter(s -> iri.equals(TurtleSubjectLines.expand(s.subjectToken(), prefixes())))
+                .findFirst();
+    }
+
+    private static String textOf(String turtle, TurtleSubjectLines.Statement statement) {
         return turtle.substring(statement.start(), statement.end());
     }
 
@@ -53,7 +51,7 @@ class ShapeBlockLocatorTest {
                 "@prefix ex: <http://example.org/> .\n"
                         + "ex:First ex:p <urn:o>.ex:Second ex:p \"x\".<urn:Third> ex:p [ ex:q 1 ].ex:Fourth ex:p 1 .\n";
 
-        assertThat(ShapeBlockLocator.statements(turtle).stream().map(s -> textOf(turtle, s)))
+        assertThat(TurtleSubjectLines.statements(turtle).stream().map(s -> textOf(turtle, s)))
                 .contains(
                         "ex:First ex:p <urn:o>.",
                         "ex:Second ex:p \"x\".",
@@ -65,7 +63,7 @@ class ShapeBlockLocatorTest {
     void aDotInsideAPrefixedNameBeforeANameStaysInIt() {
         var turtle = "@prefix ex: <http://example.org/> .\nex:S ex:p ex:a.b .\n";
 
-        assertThat(ShapeBlockLocator.statements(turtle).stream().map(s -> textOf(turtle, s)))
+        assertThat(TurtleSubjectLines.statements(turtle).stream().map(s -> textOf(turtle, s)))
                 .contains("ex:S ex:p ex:a.b .");
     }
 
@@ -74,8 +72,8 @@ class ShapeBlockLocatorTest {
         var commented = "@prefix ex: <http://example.org/> .\nex:S# comment\n ex:p ex:o .\n";
         var glued = "@prefix ex: <http://example.org/> .\nex:S<urn:p> <urn:o> .\n";
 
-        assertThat(ShapeBlockLocator.locate(commented, EX + "S", prefixes())).isPresent();
-        assertThat(ShapeBlockLocator.locate(glued, EX + "S", prefixes())).isPresent();
+        assertThat(locate(commented, EX + "S")).isPresent();
+        assertThat(locate(glued, EX + "S")).isPresent();
     }
 
     @Test
@@ -92,7 +90,7 @@ class ShapeBlockLocatorTest {
                     sh:targetClass ex:Thing .
                 """;
 
-        var statement = ShapeBlockLocator.locate(turtle, EX + "Second", prefixes()).orElseThrow();
+        var statement = locate(turtle, EX + "Second").orElseThrow();
 
         assertThat(textOf(turtle, statement))
                 .isEqualTo("ex:Second\n    a sh:NodeShape ;\n    sh:targetClass ex:Thing .");
@@ -110,7 +108,7 @@ class ShapeBlockLocatorTest {
                     sh:minCount 1 .
                 """;
 
-        var statement = ShapeBlockLocator.locate(turtle, EX + "Shape", prefixes()).orElseThrow();
+        var statement = locate(turtle, EX + "Shape").orElseThrow();
 
         assertThat(textOf(turtle, statement)).endsWith("sh:minCount 1 .");
         assertThat(textOf(turtle, statement)).contains("ex:ACLineSegment.length");
@@ -134,11 +132,11 @@ class ShapeBlockLocatorTest {
                 ex:After a sh:NodeShape .
                 """;
 
-        var statement = ShapeBlockLocator.locate(turtle, EX + "Shape", prefixes()).orElseThrow();
+        var statement = locate(turtle, EX + "Shape").orElseThrow();
 
         assertThat(textOf(turtle, statement)).endsWith("] .");
         assertThat(textOf(turtle, statement)).contains("SELECT $this");
-        assertThat(ShapeBlockLocator.locate(turtle, EX + "After", prefixes())).isPresent();
+        assertThat(locate(turtle, EX + "After")).isPresent();
     }
 
     @Test
@@ -154,7 +152,7 @@ class ShapeBlockLocatorTest {
                     sh:minCount 1 .
                 """;
 
-        var statement = ShapeBlockLocator.locate(turtle, EX + "Shape", prefixes()).orElseThrow();
+        var statement = locate(turtle, EX + "Shape").orElseThrow();
 
         assertThat(textOf(turtle, statement)).startsWith("ex:Shape");
         assertThat(textOf(turtle, statement)).endsWith("sh:minCount 1 .");
@@ -175,7 +173,7 @@ class ShapeBlockLocatorTest {
                     sh:property [ sh:path ex:other ] .
                 """;
 
-        var statement = ShapeBlockLocator.locate(turtle, EX + "Shape", prefixes()).orElseThrow();
+        var statement = locate(turtle, EX + "Shape").orElseThrow();
 
         assertThat(textOf(turtle, statement)).endsWith("sh:property [ sh:path ex:other ] .");
     }
@@ -192,7 +190,7 @@ class ShapeBlockLocatorTest {
                 ex:Shape a sh:NodeShape .
                 """;
 
-        var statement = ShapeBlockLocator.locate(turtle, EX + "Shape", prefixes()).orElseThrow();
+        var statement = locate(turtle, EX + "Shape").orElseThrow();
 
         assertThat(textOf(turtle, statement)).isEqualTo("ex:Shape a sh:NodeShape .");
     }
@@ -201,7 +199,7 @@ class ShapeBlockLocatorTest {
     void findsAShapeWrittenAsAnAbsoluteIri() {
         var turtle = "<http://example.org/Shape> a <" + SHACL + "NodeShape> .\n";
 
-        var statement = ShapeBlockLocator.locate(turtle, EX + "Shape", prefixes()).orElseThrow();
+        var statement = locate(turtle, EX + "Shape").orElseThrow();
 
         assertThat(textOf(turtle, statement)).isEqualTo(turtle.strip());
     }
@@ -216,36 +214,7 @@ class ShapeBlockLocatorTest {
                 ex:Other a sh:NodeShape .
                 """;
 
-        assertThat(ShapeBlockLocator.locate(turtle, EX + "Missing", prefixes())).isEmpty();
-    }
-
-    @Test
-    void leavesEveryOtherByteAloneWhenReplacing() {
-        var turtle =
-                """
-                @prefix ex: <http://example.org/> .
-
-                # keep this comment
-                ex:First a ex:Thing .
-
-                # and this one
-                ex:Second a ex:Thing .
-                """;
-        var statement = ShapeBlockLocator.locate(turtle, EX + "First", prefixes()).orElseThrow();
-
-        var edited = ShapeBlockLocator.replace(turtle, statement, "ex:First a ex:Other .");
-
-        assertThat(edited)
-                .isEqualTo(
-                        """
-                        @prefix ex: <http://example.org/> .
-
-                        # keep this comment
-                        ex:First a ex:Other .
-
-                        # and this one
-                        ex:Second a ex:Thing .
-                        """);
+        assertThat(locate(turtle, EX + "Missing")).isEmpty();
     }
 
     @Test
@@ -260,65 +229,18 @@ class ShapeBlockLocatorTest {
                 ex:Two a sh:NodeShape .
                 """;
 
-        assertThat(ShapeBlockLocator.statements(turtle))
-                .extracting(ShapeBlockLocator.Statement::subjectToken)
+        assertThat(TurtleSubjectLines.statements(turtle))
+                .extracting(TurtleSubjectLines.Statement::subjectToken)
                 .containsExactly("ex:One", "ex:Two");
     }
 
     @Test
     void copesWithAnEmptyOrUnterminatedDocument() {
-        assertThat(ShapeBlockLocator.statements("")).isEmpty();
-        assertThat(ShapeBlockLocator.statements(null)).isEmpty();
+        assertThat(TurtleSubjectLines.statements("")).isEmpty();
+        assertThat(TurtleSubjectLines.statements(null)).isEmpty();
 
         var unterminated = "@prefix ex: <http://example.org/> .\n\nex:Shape a ex:Thing ;\n";
-        assertThat(ShapeBlockLocator.locate(unterminated, EX + "Shape", prefixes())).isPresent();
-    }
-
-    @Test
-    void findsEveryStatementASubjectIsWrittenAs() {
-        var turtle =
-                """
-                @prefix sh: <http://www.w3.org/ns/shacl#> .
-                @prefix ex: <http://example.org/> .
-
-                ex:Shape a sh:NodeShape .
-
-                ex:Other a sh:NodeShape .
-
-                ex:Shape sh:targetClass ex:Thing .
-                """;
-
-        var found = ShapeBlockLocator.locateAll(turtle, EX + "Shape", prefixes());
-
-        assertThat(found).hasSize(2);
-        assertThat(textOf(turtle, found.get(0))).isEqualTo("ex:Shape a sh:NodeShape .");
-        assertThat(textOf(turtle, found.get(1))).isEqualTo("ex:Shape sh:targetClass ex:Thing .");
-        // `locate` is the first of them, which is what a caller replacing one statement gets.
-        assertThat(ShapeBlockLocator.locate(turtle, EX + "Shape", prefixes()).orElseThrow())
-                .isEqualTo(found.get(0));
-    }
-
-    @Test
-    void everyStatementOfASubjectIsGatheredUnderIt() {
-        // How many statements a subject is written as decides whether the form may edit it, and
-        // ShapeSource is where that is asked now: one scan for the whole document rather than one
-        // per subject, which on a file with thousands of them was quadratic in its length.
-        var turtle =
-                """
-                @prefix sh: <http://www.w3.org/ns/shacl#> .
-                @prefix ex: <http://example.org/> .
-
-                ex:Shape a sh:NodeShape .
-                ex:Shape sh:targetClass ex:Thing .
-                ex:Other a sh:NodeShape .
-                """;
-
-        var source = ShapeSource.of(turtle, prefixes());
-
-        assertThat(source.forSubject(EX + "Shape").statements()).hasSize(2);
-        assertThat(source.forSubject(EX + "Other").statements()).hasSize(1);
-        assertThat(source.forSubject(EX + "Missing")).isNull();
-        assertThat(ShapeSource.of("", prefixes()).forSubject(EX + "Shape")).isNull();
+        assertThat(locate(unterminated, EX + "Shape")).isPresent();
     }
 
     @Test
@@ -337,10 +259,10 @@ class ShapeBlockLocatorTest {
                             + delimiter
                             + " ; sh:name \"n\" .\nex:Other a sh:NodeShape .\n";
 
-            var statements = ShapeBlockLocator.statements(turtle);
+            var statements = TurtleSubjectLines.statements(turtle);
 
             assertThat(statements)
-                    .extracting(ShapeBlockLocator.Statement::subjectToken)
+                    .extracting(TurtleSubjectLines.Statement::subjectToken)
                     .containsExactly("ex:Shape", "ex:Other");
             assertThat(textOf(turtle, statements.get(0))).endsWith("sh:name \"n\" .");
         }
@@ -357,63 +279,65 @@ class ShapeBlockLocatorTest {
                 ex:Other a sh:NodeShape .
                 """;
 
-        var statements = ShapeBlockLocator.statements(turtle);
+        var statements = TurtleSubjectLines.statements(turtle);
 
         assertThat(statements)
-                .extracting(ShapeBlockLocator.Statement::subjectToken)
+                .extracting(TurtleSubjectLines.Statement::subjectToken)
                 .containsExactly("ex:Shape", "ex:Other");
-        assertThat(ShapeBlockLocator.expand("ex:A\\.", prefixes())).isEqualTo(EX + "A.");
-        assertThat(ShapeBlockLocator.containsComment("ex:B\\#c")).isFalse();
+        assertThat(TurtleSubjectLines.expand("ex:A\\.", prefixes())).isEqualTo(EX + "A.");
     }
 
-    @Test
-    void aRelativeIriResolvesAgainstTheDocumentsBase() {
-        var turtle =
-                """
-                @base <http://example.org/base/> .
-                <Shape> a <http://www.w3.org/ns/shacl#NodeShape> .
-                """;
-
-        var names = ShapeBlockLocator.documentPrefixes(turtle, prefixes());
-
-        assertThat(ShapeBlockLocator.locate(turtle, EX + "base/Shape", names)).isPresent();
-        assertThat(ShapeBlockLocator.expand("<http://absolute.org/x>", names))
-                .isEqualTo("http://absolute.org/x");
-    }
+    // -------------------------------------------------------------------------
+    // The line each subject starts on
+    // -------------------------------------------------------------------------
 
     @Test
-    void readsEverySpellingOfADirective() {
+    void reportsTheLineEachSubjectStartsOn() {
         var turtle =
                 """
-                @base <http://example.org/> .
+                @prefix sh: <http://www.w3.org/ns/shacl#> .
                 @prefix ex: <http://example.org/> .
-                PREFIX sh: <http://www.w3.org/ns/shacl#>
-                prefix relative: <nested/>
+
+                # A comment
+                ex:First a sh:NodeShape ;
+                    sh:select \"""
+                        SELECT ?this WHERE { ?this a ?type }
+                    \""" .
+
+                ex:Second a sh:NodeShape .
                 """;
 
-        var mapping = ShapeBlockLocator.prefixesBefore(turtle, Integer.MAX_VALUE);
+        var lines = TurtleSubjectLines.linesBySubject(turtle, prefixes());
 
-        assertThat(mapping.getNsPrefixURI("ex")).isEqualTo(EX);
-        assertThat(mapping.getNsPrefixURI("sh")).isEqualTo(SHACL);
-        assertThat(mapping.getNsPrefixURI("relative")).isEqualTo(EX + "nested/");
+        // Counted past the newlines inside the triple-quoted literal, which is where the embedded
+        // SPARQL of a real constraints file lives.
+        assertThat(lines).containsEntry(EX + "First", 5).containsEntry(EX + "Second", 10);
     }
 
     @Test
-    void readsADirectiveThatNeverClosesAnIriInLinearTime() {
-        // The text is whatever was uploaded, and retrying from every "<" is quadratic.
-        var unclosed = "<=".repeat(200_000);
+    void theFirstStatementOfASubjectWrittenTwiceGivesItsLine() {
+        var turtle =
+                """
+                ex:Shape a sh:NodeShape .
+                ex:Other a sh:NodeShape .
+                ex:Shape sh:targetClass ex:Thing .
+                """;
 
-        assertTimeoutPreemptively(
-                Duration.ofSeconds(10),
-                () -> {
-                    assertThat(
-                                    ShapeBlockLocator.prefixesBefore(
-                                                    "@prefix ex: " + unclosed, Integer.MAX_VALUE)
-                                            .getNsPrefixMap())
-                            .isEmpty();
-                    var given = prefixes();
-                    assertThat(ShapeBlockLocator.documentPrefixes("@base " + unclosed, given))
-                            .isSameAs(given);
-                });
+        assertThat(TurtleSubjectLines.linesBySubject(turtle, prefixes()))
+                .containsEntry(EX + "Shape", 1)
+                .containsEntry(EX + "Other", 2);
+    }
+
+    @Test
+    void aBlankNodeSubjectHasNoLine() {
+        var turtle = "_:b sh:path ex:p .\n[] sh:path ex:q .\n";
+
+        assertThat(TurtleSubjectLines.linesBySubject(turtle, prefixes())).isEmpty();
+    }
+
+    @Test
+    void hasNothingToSayAboutTextThatIsNotThere() {
+        assertThat(TurtleSubjectLines.linesBySubject(null, prefixes())).isEmpty();
+        assertThat(TurtleSubjectLines.linesBySubject("", prefixes())).isEmpty();
     }
 }
