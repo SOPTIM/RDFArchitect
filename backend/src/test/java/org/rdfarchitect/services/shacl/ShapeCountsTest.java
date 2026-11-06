@@ -48,6 +48,21 @@ class ShapeCountsTest {
     }
 
     @Test
+    void aShapeWithAPathIsAPropertyShapeWithNoTypeAndNoReferenceToSaySo() {
+        var graph = GraphFactory.createDefaultGraph();
+        RDFParser.fromString(
+                        """
+                        @prefix sh: <http://www.w3.org/ns/shacl#> .
+                        @prefix ex: <http://ex.org/> .
+                        ex:Rule sh:targetClass ex:C ; sh:path ex:p ; sh:minCount 1 .
+                        """,
+                        Lang.TURTLE)
+                .parse(graph);
+
+        assertThat(ShapeCounts.of(graph)).isEqualTo(new ShapeCounts(0, 1, 0));
+    }
+
+    @Test
     void agreesWithTheFormOnAnOfficialFile() {
         var file =
                 Path.of(

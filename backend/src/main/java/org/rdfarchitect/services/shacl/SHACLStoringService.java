@@ -31,7 +31,9 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFFormat;
+import org.apache.jena.riot.RDFParser;
 import org.apache.jena.riot.RiotException;
+import org.apache.jena.riot.system.ErrorHandlerFactory;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.apache.jena.shacl.vocabulary.SHACL;
 import org.apache.jena.shared.PrefixMapping;
@@ -912,8 +914,12 @@ public class SHACLStoringService
         // Only RDF/XML needs this, which allows nothing before its declaration. Trimming anything
         // else would move the line and column a syntax error reports.
         var text = content == null ? "" : content;
-        try (var reader = new StringReader(Lang.RDFXML.equals(lang) ? text.trim() : text)) {
-            model.read(reader, null, lang.getName());
+        try {
+            // Without logging: this is the client's text and goes back to it as a 400, so it isn't
+            // an error of this server's for Jena to log as one.
+            RDFParser.fromString(Lang.RDFXML.equals(lang) ? text.trim() : text, lang)
+                    .errorHandler(ErrorHandlerFactory.errorHandlerNoLogging)
+                    .parse(model);
         } catch (RiotException e) {
             throw new InvalidContentException(
                     "The constraints could not be read as %s: %s"

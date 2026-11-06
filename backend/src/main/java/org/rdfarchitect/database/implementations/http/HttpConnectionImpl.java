@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.database.implementations.http;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.Query;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.apache.jena.update.Update;
@@ -30,7 +31,9 @@ import org.rdfarchitect.rdf.graph.source.GraphSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 public class HttpConnectionImpl implements DatabaseConnection {
 
@@ -77,6 +80,16 @@ public class HttpConnectionImpl implements DatabaseConnection {
                 .setEndpoint(this.url)
                 .setDatasetName(datasetName)
                 .insertGraph(graphsource);
+    }
+
+    @Override
+    public void replaceGraphs(
+            Collection<String> removed, Map<String, Graph> written, String datasetName)
+            throws DataAccessException {
+        new HttpUpdateCommandImpl(this.databaseAdminProtocol)
+                .setEndpoint(this.url)
+                .setDatasetName(datasetName)
+                .replaceGraphs(removed, written);
     }
 
     @Override

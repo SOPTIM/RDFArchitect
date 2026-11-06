@@ -223,31 +223,27 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     /**
-     * Replaces the graph's shapes documents in the database with the ones it holds, in the layout
-     * {@link ShapesDocumentGraphs} defines.
+     * Makes the database hold the graph's shapes documents as they stand, in the layout {@link
+     * ShapesDocumentGraphs} defines.
      *
-     * <p>Replaced rather than added: an insert appends, so writing metadata twice would leave two
-     * names for one document, and a document deleted since the last write would come back.
+     * <p>All in one request, because an insert appends and so what is stored has to go first, and a
+     * failure between the two would lose it.
      */
     private void writeShapesDocuments(
             DatabaseConnection databaseConnection,
             String datasetName,
             String graphUri,
             WorkspaceTransaction transaction) {
-        for (var stored : listGraphNames(databaseConnection, datasetName)) {
-            if (ShapesDocumentGraphs.belongsTo(stored, graphUri)) {
-                databaseConnection.deleteGraph(datasetName, stored);
-            }
+        var stored =
+                listGraphNames(databaseConnection, datasetName).stream()
+                        .filter(name -> ShapesDocumentGraphs.belongsTo(name, graphUri))
+                        .toList();
+        var current =
+                ShapesDocumentGraphs.of(
+                        graphUri, transaction.graph(graphUri).getShapesDocuments().values());
+        if (!stored.isEmpty() || !current.isEmpty()) {
+            databaseConnection.replaceGraphs(stored, current, datasetName);
         }
-        ShapesDocumentGraphs.of(graphUri, transaction.graph(graphUri).getShapesDocuments().values())
-                .forEach(
-                        (name, graph) ->
-                                databaseConnection.insertGraph(
-                                        new GraphSourceBuilderImpl()
-                                                .setGraph(graph)
-                                                .setGraphName(name)
-                                                .build(),
-                                        datasetName));
     }
 
     private void clearGraphCollections() {
