@@ -23,6 +23,7 @@
         placeholder = "",
         value = $bindable(),
         callOnInput = () => {},
+        callOnChange = () => {},
         id = crypto.randomUUID(),
         disabled = false,
         readonly = false,
@@ -42,6 +43,7 @@
         {placeholder}
         bind:value
         {callOnInput}
+        {callOnChange}
         {id}
         {disabled}
         {readonly}
