@@ -30,12 +30,16 @@ test("a failed load of the grammar is tried again by the next editor", async () 
     const fetchWasm = vi
         .fn()
         .mockRejectedValueOnce(new TypeError("offline"))
+        // An error page rather than the file. The regex engine remembers a failed start for good,
+        // so this has to be turned away before it gets there.
+        .mockResolvedValueOnce(new Response("Bad Gateway", { status: 503 }))
         .mockResolvedValueOnce(new Response(wasm));
     vi.stubGlobal("fetch", fetchWasm);
 
     await expect(createTurtleTokensProvider()).rejects.toThrow("offline");
+    await expect(createTurtleTokensProvider()).rejects.toThrow("503");
     const provider = await createTurtleTokensProvider();
 
-    expect(fetchWasm).toHaveBeenCalledTimes(2);
+    expect(fetchWasm).toHaveBeenCalledTimes(3);
     expect(provider.tokenize).toBeInstanceOf(Function);
 });

@@ -23,6 +23,10 @@
  * an editor exists to resolve `var(--color-blue)` against. Keep the light theme in step with
  * `app.css` when that palette changes.
  *
+ * The exceptions are the palette's orange, pink and subtle gray, which are made for accents and
+ * read too faintly as 13px text on white: comments, strings, query predicates and SPARQL variables
+ * use darker shades of them. `tests/monaco/themeContrast.test.js` holds every token to 4.5:1.
+ *
  * The app itself is light-only today. The dark theme is here because a code editor is where a
  * light background hurts first, and because `resolveThemeName` is the single place app-wide dark
  * mode would have to hook into once it exists.
@@ -106,22 +110,22 @@ const LIGHT = {
     base: "vs",
     inherit: true,
     rules: [
-        { token: "comment", foreground: "787878", fontStyle: "italic" },
+        { token: "comment", foreground: "696969", fontStyle: "italic" },
         { token: "directive", foreground: "6e49cb", fontStyle: "bold" },
         { token: "prefix", foreground: "1f75cb" },
         { token: "localName", foreground: "2e2e2e" },
         { token: "iri", foreground: "1f75cb", fontStyle: "underline" },
         { token: "blankNode", foreground: "6e49cb" },
-        { token: "string", foreground: "fc6d26" },
+        { token: "string", foreground: "c2410c" },
         { token: "escape", foreground: "db3b21" },
         { token: "number", foreground: "6e49cb" },
         { token: "boolean", foreground: "6e49cb" },
         { token: "typeKeyword", foreground: "1f75cb", fontStyle: "bold" },
-        { token: "typeMarker", foreground: "787878" },
-        { token: "shaclQuery", foreground: "e74890", fontStyle: "bold" },
+        { token: "typeMarker", foreground: "696969" },
+        { token: "shaclQuery", foreground: "c21d68", fontStyle: "bold" },
         { token: "sparqlKeyword", foreground: "1f75cb", fontStyle: "bold" },
         { token: "sparqlFunction", foreground: "6e49cb" },
-        { token: "sparqlVariable", foreground: "f0881a" },
+        { token: "sparqlVariable", foreground: "a8480e" },
         { token: "sparqlOperator", foreground: "2e2e2e" },
         { token: "invalid", foreground: "db3b21", fontStyle: "underline" },
     ],
