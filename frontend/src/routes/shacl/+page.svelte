@@ -33,7 +33,10 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { guardUnsavedChanges } from "$lib/eventhandling/unsavedChanges.js";
     import TurtleEditor from "$lib/monaco/TurtleEditor.svelte";
+    import { onOpenClass } from "$lib/monaco/turtleLanguageFeatures.js";
+    import { showClass } from "$lib/shacl/classNavigation.js";
     import { newDocumentText } from "$lib/shacl/newDocument.js";
+    import { SchemaTermSource } from "$lib/shacl/schemaTermSource.svelte.js";
     import {
         leavingNeedsConfirmation,
         WORKBENCH_PATH,
@@ -50,12 +53,14 @@
 
     import DocumentInspector from "./workbench/DocumentInspector.svelte";
     import DocumentList from "./workbench/DocumentList.svelte";
+    import ProblemsPanel from "./workbench/ProblemsPanel.svelte";
     import WorkspacePicker from "./workbench/WorkspacePicker.svelte";
 
     import { beforeNavigate, goto } from "$app/navigation";
     import { page } from "$app/state";
 
     let editor = $state(null);
+    let problemsExpanded = $state(true);
 
     /** The link already followed, so selecting its document does not re-trigger the follow. */
     let followedLink = null;
@@ -92,9 +97,9 @@
     /**
      * One workbench per workspace, thrown away when the selection changes.
      *
-     * Rebuilding rather than reusing keeps the loaded documents and the editor buffer from ever
-     * describing different workspaces. The selected schema only says what opens first, so it is
-     * read once.
+     * Rebuilding rather than reusing keeps the loaded documents, the editor buffer and the
+     * validation report from ever describing different workspaces. The selected schema only says
+     * what opens first, so it is read once.
      */
     const workbench = $derived(
         selectedWorkspace
@@ -104,6 +109,13 @@
                       editorState.selectedGraph.getValue(),
                   ),
               })
+            : null,
+    );
+
+    /** The workspace's CIM terms, which the editor completes and explains against. */
+    const termSource = $derived(
+        selectedWorkspace
+            ? new SchemaTermSource({ datasetName: selectedWorkspace })
             : null,
     );
 
@@ -150,6 +162,9 @@
             }
             if (!ours && workbench && !workbench.loading) {
                 workbench.reload();
+                // Whatever happened may have changed the schema this was read from.
+                termSource?.invalidate();
+                termSource?.load();
             }
         });
     });
@@ -175,6 +190,30 @@
         }
         followedLink = link;
         followLink(target);
+    });
+
+    /**
+     * Following a term opens the class it belongs to and puts it on screen.
+     *
+     * The same three steps the search bar takes, because "go to definition" and "search for a
+     * class" are the same request: select the package so the right diagram is drawn, select the
+     * class so the editor fills, and set the focused class so the diagram scrolls to it and
+     * highlights it. Opening the class editor alone left the user looking at whatever diagram they
+     * had been on.
+     *
+     * Registered here because the workbench is where the navigation makes sense; the editor
+     * component only knows it was asked to follow something.
+     */
+    $effect(() => {
+        return onOpenClass(async (graphUri, classUUID, packageUUID) => {
+            // Asked before the selection moves: once it has, the workbench can be rebuilt for
+            // another workspace and the edits are gone before any navigation guard could see them.
+            if (!(await confirmDiscard())) {
+                return;
+            }
+            showClass(selectedWorkspace, graphUri, classUUID, packageUUID);
+            goto("/mainpage");
+        });
     });
 
     /** Ctrl+S saves wherever the focus is on this page, not only inside the editor. */
@@ -291,8 +330,24 @@
         goto(WORKBENCH_PATH, { replaceState: true, noScroll: true });
     }
 
+    function onTextChanged() {
+        workbench?.scheduleValidation();
+    }
+
     function reveal(line, column = 1) {
         editor?.reveal(line, column);
+    }
+
+    async function jumpTo(problem) {
+        if (problem.documentId && problem.documentId !== workbench.selectedId) {
+            if (!(await confirmSwitch())) {
+                return;
+            }
+            await workbench.select(problem.documentId);
+        }
+        if (problem.line) {
+            reveal(problem.line, problem.column ?? 1);
+        }
     }
 
     /**
@@ -384,6 +439,11 @@
                     unsaved changes
                 </span>
             {/if}
+            {#if workbench.validating}
+                <span class="text-text-subtle shrink-0 text-xs">
+                    validating…
+                </span>
+            {/if}
             {#if workbench.generating}
                 <span class="text-text-subtle shrink-0 text-xs">
                     generating…
@@ -454,11 +514,14 @@
                                     bind:this={editor}
                                     bind:value={workbench.text}
                                     documentKey={workbench.bufferKey}
+                                    findings={workbench.findings}
+                                    {termSource}
                                     readOnly={workbench.editorReadOnly}
                                     placeholder={workbench.editorReadOnly
                                         ? undefined
                                         : "Empty document — write shapes in Turtle here."}
                                     onSave={() => save()}
+                                    onchange={onTextChanged}
                                 />
                             </div>
                         </div>
@@ -468,6 +531,12 @@
                     <DocumentInspector {workbench} onreveal={reveal} />
                 </Pane>
             </Splitpanes>
+
+            <ProblemsPanel
+                {workbench}
+                bind:expanded={problemsExpanded}
+                onselect={jumpTo}
+            />
         </div>
     {/if}
 </div>
