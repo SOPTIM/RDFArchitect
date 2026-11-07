@@ -22,6 +22,8 @@ import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.database.GraphIdentifier;
 
 import java.io.ByteArrayOutputStream;
+import java.util.Collection;
+import java.util.UUID;
 
 public interface SHACLExportUseCase {
 
@@ -57,6 +59,24 @@ public interface SHACLExportUseCase {
             GraphIdentifier graphIdentifier, RDFFormat format);
 
     ByteArrayOutputStream exportGeneratedSHACLGraph(Graph graph, RDFFormat format);
+
+    /**
+     * Exports the chosen shapes documents as one file, optionally merged with shapes generated from
+     * schemas.
+     *
+     * <p>A document is included because the caller named it, whether or not it is enabled.
+     *
+     * @param datasetName The workspace holding the documents.
+     * @param format The format to export in.
+     * @param documentIds The documents to include.
+     * @param generatedFor URIs of the schemas whose generated shapes to merge in.
+     * @return A ByteArrayOutputStream containing the export.
+     */
+    ByteArrayOutputStream exportSelectedSHACLGraph(
+            String datasetName,
+            RDFFormat format,
+            Collection<UUID> documentIds,
+            Collection<String> generatedFor);
 
     /**
      * Export the custom SHACL namespaces for a given graph identifier.

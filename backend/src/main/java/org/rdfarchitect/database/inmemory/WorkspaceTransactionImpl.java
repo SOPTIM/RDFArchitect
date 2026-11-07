@@ -21,6 +21,8 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.database.GraphContext;
+import org.rdfarchitect.database.ShapesDocument;
+import org.rdfarchitect.database.ShapesDocumentSeed;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
@@ -58,6 +60,7 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     private final DiagramLayoutDelta diagramLayout;
     private final CrossProfileDiagramInfo crossProfileDiagramInfo;
     private final WorkspacePrefixes prefixes;
+    private final ShapesDocumentCollection shapesDocuments;
 
     private boolean closed;
 
@@ -70,6 +73,7 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
         this.diagramLayout = workspace.getDiagramLayout();
         this.crossProfileDiagramInfo = workspace.getCrossProfileDiagramInfo();
         this.prefixes = workspace.getPrefixes();
+        this.shapesDocuments = workspace.getShapesDocuments();
     }
 
     @Override
@@ -140,12 +144,39 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
         }
         graphs.rename(oldUri, newUri);
         renameGraphInDiagrams(oldUri, newUri);
+        shapesDocuments.renameSchema(oldUri, newUri);
         crossProfileDiagramInfo.renameGraph(oldUri, newUri);
     }
 
     @Override
     public void setPrefixes(PrefixMapping prefixMapping) {
         prefixes.setAll(prefixMapping);
+    }
+
+    @Override
+    public Map<UUID, ShapesDocument> shapesDocuments() {
+        return shapesDocuments.view();
+    }
+
+    @Override
+    public UUID shapesDocumentsVersion() {
+        return shapesDocuments.contentVersion();
+    }
+
+    @Override
+    public ShapesDocument createShapesDocument(
+            String name, ShapesDocument.Origin origin, Collection<String> schemas) {
+        return shapesDocuments.create(name, origin, schemas);
+    }
+
+    @Override
+    public void restoreShapesDocument(ShapesDocumentSeed seed) {
+        shapesDocuments.restore(seed);
+    }
+
+    @Override
+    public void removeShapesDocument(UUID documentId) {
+        shapesDocuments.remove(documentId);
     }
 
     @Override

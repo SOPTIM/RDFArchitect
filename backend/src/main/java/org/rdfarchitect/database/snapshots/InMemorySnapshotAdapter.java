@@ -25,12 +25,14 @@ import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.ShapesDocumentSeed;
 import org.rdfarchitect.database.SnapshotPort;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.SnapshotException;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -47,7 +49,10 @@ public class InMemorySnapshotAdapter implements SnapshotPort {
     private final ConcurrentMap<String, StoredSnapshot> snapshots = new ConcurrentHashMap<>();
 
     private record StoredSnapshot(
-            String snapshotName, Map<String, Graph> graphsByUri, PrefixMapping prefixMapping) {}
+            String snapshotName,
+            Map<String, Graph> graphsByUri,
+            List<ShapesDocumentSeed> documents,
+            PrefixMapping prefixMapping) {}
 
     public InMemorySnapshotAdapter(DatabasePort databasePort) {
         this.databasePort = databasePort;
@@ -63,15 +68,22 @@ public class InMemorySnapshotAdapter implements SnapshotPort {
         var snapshotName = constructSnapshotName(datasetName, base64Token);
 
         var graphsByUri = new LinkedHashMap<String, Graph>();
+        List<ShapesDocumentSeed> documents;
         PrefixMapping prefixMapping;
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
             for (var graphUri : transaction.graphUris()) {
                 graphsByUri.put(graphUri, copyGraph(transaction.graph(graphUri).getRdfGraph()));
             }
+            documents =
+                    transaction.shapesDocuments().values().stream()
+                            .map(ShapesDocumentSeed::copyOf)
+                            .toList();
             prefixMapping = new PrefixMappingImpl().setNsPrefixes(transaction.prefixes());
         }
 
-        snapshots.put(base64Token, new StoredSnapshot(snapshotName, graphsByUri, prefixMapping));
+        snapshots.put(
+                base64Token,
+                new StoredSnapshot(snapshotName, graphsByUri, documents, prefixMapping));
         return base64Token;
     }
 
@@ -87,6 +99,7 @@ public class InMemorySnapshotAdapter implements SnapshotPort {
             for (var entry : snapshot.graphsByUri().entrySet()) {
                 transaction.createGraph(entry.getKey(), GraphUtils.deepCopy(entry.getValue()));
             }
+            snapshot.documents().forEach(transaction::restoreShapesDocument);
             transaction.setPrefixes(snapshot.prefixMapping());
             // Loading a snapshot is not a change the user made and cannot mean to undo.
             transaction.commitWithoutHistory();

@@ -86,6 +86,11 @@ public class GraphWithContext implements GraphContext {
         return customDiagrams.get();
     }
 
+    @Override
+    public UUID getRdfGraphVersion() {
+        return rdfGraph.versionIdAt(0);
+    }
+
     /**
      * The collection behind {@link #getCustomDiagrams()}, for the workspace to enrol and commit.
      */

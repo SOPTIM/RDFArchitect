@@ -30,6 +30,8 @@ import org.rdfarchitect.config.GraphCompressionConfig;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagramCollection;
+import org.rdfarchitect.database.snapshots.ShapesDocumentSeeds;
+import org.rdfarchitect.database.snapshots.ShapesGraphNaming;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
 import org.rdfarchitect.exception.graph.GraphVersionControlException;
@@ -120,6 +122,9 @@ public class Workspace {
     @Getter(AccessLevel.PACKAGE)
     private final WorkspacePrefixes prefixes;
 
+    @Getter(AccessLevel.PACKAGE)
+    private final ShapesDocumentCollection shapesDocuments;
+
     public Workspace(String workspaceName) {
         this.txnContext = new WorkspaceTransactionContext(workspaceName);
         this.changeLog =
@@ -131,6 +136,7 @@ public class Workspace {
         this.diagramLayout = new DiagramLayoutDelta(txnContext);
         this.crossProfileDiagramInfo = new CrossProfileDiagramInfo(txnContext);
         this.prefixes = new WorkspacePrefixes(txnContext);
+        this.shapesDocuments = new ShapesDocumentCollection(txnContext);
     }
 
     /**
@@ -150,11 +156,16 @@ public class Workspace {
             }
             for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
                 var graphURI = it.next().getURI();
-                graphs.put(
-                        graphURI,
-                        new GraphWithContext(
-                                dataset.getNamedModel(graphURI).getGraph(), txnContext));
+                // A dataset stores shapes documents in graphs of their own, which are not graphs
+                // of the workspace.
+                if (!ShapesGraphNaming.isReserved(graphURI)) {
+                    graphs.put(
+                            graphURI,
+                            new GraphWithContext(
+                                    dataset.getNamedModel(graphURI).getGraph(), txnContext));
+                }
             }
+            ShapesDocumentSeeds.of(dataset).forEach(shapesDocuments::restore);
             transaction.commit(INITIAL_CHANGE_MESSAGE);
         }
         // The load itself is not something the user can undo; it is the state they started from.
@@ -259,6 +270,9 @@ public class Workspace {
         }
         if (participant == graphs) {
             return ParticipantId.ofWorkspace(ParticipantId.Kind.GRAPHS);
+        }
+        if (shapesDocuments.holds(participant)) {
+            return ParticipantId.ofWorkspace(ParticipantId.Kind.SHACL);
         }
         if (participant == customDiagrams) {
             return ParticipantId.ofWorkspace(ParticipantId.Kind.DIAGRAMS);
