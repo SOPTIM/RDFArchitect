@@ -20,7 +20,7 @@
         faClockRotateLeft,
         faCodeBranch,
         faRightLeft,
-        faEye,
+        faFileShield,
         faCircleCheck,
         faListCheck,
     } from "@fortawesome/free-solid-svg-icons";
@@ -35,25 +35,20 @@
     } from "$lib/sharedState.svelte.js";
 
     import CompareDialog from "../../compare/CompareDialog.svelte";
-    import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
     import ValidationDialog from "../../validate/ValidationDialog.svelte";
 
     import { goto } from "$app/navigation";
 
     const shortcutsUnregister = [];
 
-    let showSHACLFullViewDialog = $state(false);
     let showCompareDialog = $state(false);
     let showValidationDialog = $state(false);
 
     let selectedWorkspace = $derived(editorState.selectedWorkspace.getValue());
-    let selectedGraph = $derived(editorState.selectedGraph.getValue());
-    let hasGraphSelected = $derived(!!selectedWorkspace && selectedGraph);
 
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
         editorState.selectedClass.subscribe();
-        editorState.selectedGraph.subscribe();
         editorState.selectedWorkspace.subscribe();
         forceReloadTrigger.subscribe();
     });
@@ -73,12 +68,12 @@
                 goto("/migrate"),
             ),
             shortcutStore.register(
-                "shaclFullView",
+                "shaclWorkbench",
                 ["ctrl", "shift", "l"],
                 () => {
-                    if (hasGraphSelected) showSHACLFullViewDialog = true;
+                    if (selectedWorkspace) goto("/shacl");
                 },
-                hasGraphSelected,
+                !!selectedWorkspace,
             ),
             shortcutStore.register(
                 "validation",
@@ -133,15 +128,14 @@
             Validate Workspace
         </Menubar.Item.Button>
         <Menubar.Item.Button
-            onSelect={() => (showSHACLFullViewDialog = true)}
-            disabled={!hasGraphSelected}
-            faIcon={faEye}
+            onSelect={() => goto("/shacl")}
+            disabled={!selectedWorkspace}
+            faIcon={faFileShield}
             altText="Ctrl+Shift+L"
         >
-            View Constraints (SHACL)
+            Constraints (SHACL)
         </Menubar.Item.Button>
     </Menubar.Content>
 </Menubar.Menu>
-<SHACLFullViewDialog bind:showDialog={showSHACLFullViewDialog} />
 <CompareDialog bind:showDialog={showCompareDialog} />
 <ValidationDialog bind:showDialog={showValidationDialog} />

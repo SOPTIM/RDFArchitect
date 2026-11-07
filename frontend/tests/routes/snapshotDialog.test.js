@@ -98,15 +98,15 @@ describe("SnapshotDialog", () => {
         expect(workspaceSelect().disabled).toBe(true);
     });
 
-    test("sends the workspace name as an unquoted request body", async () => {
+    // Serialization is the generated client's job now that the endpoint declares
+    // text/plain; that it stays unquoted is pinned by tests/api/rawTextRequestBodies.
+    test("sends the workspace name as the request body", async () => {
         await render({ lockedWorkspaceName: "cgmes" });
 
         primaryButton().click();
 
         await vi.waitFor(() => expect(createSnapshot).toHaveBeenCalledTimes(1));
-        const options = createSnapshot.mock.calls[0][0];
-        expect(options.body).toBe("cgmes");
-        expect(options.bodySerializer).toBeNull();
+        expect(createSnapshot.mock.calls[0][0].body).toBe("cgmes");
     });
 
     test("builds the share link from the returned token", async () => {

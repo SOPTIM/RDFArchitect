@@ -21,8 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.apache.jena.graph.NodeFactory;
-import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFFormat;
@@ -504,35 +502,6 @@ class SHACLDocumentServiceTest {
                             assertThat(info.isEnabled()).isTrue();
                             assertThat(info.getTripleCount()).isEqualTo(created.getTripleCount());
                         });
-    }
-
-    @Test
-    void documentsStayOutOfWhatTheCustomShaclPathReads() {
-        createTurtleDocument("eq.ttl");
-
-        var custom =
-                service.exportCustomSHACLGraph(GRAPH, RDFFormat.TURTLE)
-                        .toString(StandardCharsets.UTF_8);
-        var combined =
-                service.exportCombinedSHACLGraph(GRAPH, RDFFormat.TURTLE)
-                        .toString(StandardCharsets.UTF_8);
-
-        assertThat(custom).doesNotContain("ACLineSegmentShape");
-        assertThat(combined).doesNotContain("ACLineSegmentShape");
-    }
-
-    @Test
-    void theCustomShaclPathStaysOutOfTheDocuments() {
-        var shacl = GraphFactory.createDefaultGraph();
-        shacl.add(
-                Triple.create(
-                        NodeFactory.createURI("http://ex.org/CustomShape"),
-                        NodeFactory.createURI("http://www.w3.org/ns/shacl#targetClass"),
-                        NodeFactory.createURI("http://ex.org/Thing")));
-
-        service.replaceCustomSHACLGraph(GRAPH, shacl);
-
-        assertThat(service.listShapesDocuments(GRAPH.datasetName())).isEmpty();
     }
 
     @Test

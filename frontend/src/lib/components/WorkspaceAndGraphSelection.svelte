@@ -30,6 +30,8 @@
         lockedGraphUri,
         allowSelectionOfReadonlyWorkspaces = true,
         displayAsCard = true,
+        /** Off for a caller that asks about the workspace's schemas in its own way. */
+        showGraphSelection = true,
     } = $props();
 
     const workspaceSelectId = `workspaceSelect-${uuidv4()}`;
@@ -101,7 +103,7 @@
             bind:value={workspace}
             options={workspaces}
             getOptionIsDisabled={workspace =>
-                !allowSelectionOfReadonlyWorkspaces && workspace.readonly}
+                !allowSelectionOfReadonlyWorkspaces && workspace.readOnly}
             getOptionValue={workspace => workspace.label}
             getOptionLabel={workspace =>
                 workspace.label + (workspace.readOnly ? " (readonly)" : "")}
@@ -111,19 +113,23 @@
         />
     {/if}
 
-    <label
-        for={graphSelectId}
-        class={`mb-1 block text-sm ${workspaceLocked ? "" : "mt-3"}`}
-    >
-        Schema (RDFS)
-    </label>
-    <SelectEditControl
-        id={graphSelectId}
-        bind:value={graph}
-        options={graphs}
-        disabled={graphSelectDisabled}
-        placeholder={workspace ? "Select schema" : "Select a workspace first"}
-        getOptionValue={graphUri}
-        getOptionLabel={graphName}
-    />
+    {#if showGraphSelection}
+        <label
+            for={graphSelectId}
+            class={`mb-1 block text-sm ${workspaceLocked ? "" : "mt-3"}`}
+        >
+            Schema (RDFS)
+        </label>
+        <SelectEditControl
+            id={graphSelectId}
+            bind:value={graph}
+            options={graphs}
+            disabled={graphSelectDisabled}
+            placeholder={workspace
+                ? "Select schema"
+                : "Select a workspace first"}
+            getOptionValue={graphUri}
+            getOptionLabel={graphName}
+        />
+    {/if}
 </div>

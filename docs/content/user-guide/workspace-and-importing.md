@@ -35,7 +35,7 @@ The dialog stays open while the import runs and shows a progress bar together wi
 
 ### Import a SHACL file (File → Import → Constraints (SHACL))
 
-A separate import path for custom SHACL shapes. These are stored *next to* the schema graph and can later be viewed from the same UI as the generated SHACL (see [SHACL](./shacl)).
+A separate import path for custom SHACL shapes. Each imported file becomes its own constraints document next to the schema graph, keeping its name and its text exactly as written, and can then be edited, validated and compared with the schema in the constraints workbench (see [SHACL](./shacl)).
 
 ### Create an empty schema (Edit → New → Schema)
 

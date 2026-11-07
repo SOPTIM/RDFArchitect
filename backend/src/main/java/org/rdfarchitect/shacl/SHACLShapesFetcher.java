@@ -201,23 +201,7 @@ public class SHACLShapesFetcher {
         return outputStream.toString(StandardCharsets.UTF_8).replaceAll(regex, "").trim();
     }
 
-    /**
-     * Copies the SHACL shape and its constraints to a new model.
-     *
-     * @param originalModel the original model containing the SHACL shapes
-     * @param newModel the new model to copy the SHACL shapes to
-     * @param subject the subject/uri of the SHACL shape
-     */
     private void copySHACLShapeToNewModel(Model originalModel, Model newModel, RDFNode subject) {
-        var sub = subject.asResource();
-        var stmtIterator = originalModel.listStatements(sub, null, (RDFNode) null);
-        while (stmtIterator.hasNext()) {
-            var stmt = stmtIterator.nextStatement();
-            newModel.add(stmt);
-            var object = stmt.getObject();
-            if (object.isAnon() || stmt.getPredicate().toString().equals(SHACL.sparql.getURI())) {
-                copySHACLShapeToNewModel(originalModel, newModel, object);
-            }
-        }
+        ShapeClosure.copy(originalModel, newModel, subject.asResource());
     }
 }

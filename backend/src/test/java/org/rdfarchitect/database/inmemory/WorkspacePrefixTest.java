@@ -26,6 +26,10 @@ import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.database.ShapesDocument;
+import org.rdfarchitect.database.WorkspaceTransaction;
+
+import java.util.List;
 
 class WorkspacePrefixTest {
 
@@ -39,15 +43,19 @@ class WorkspacePrefixTest {
     void setUp() {
         workspace = new Workspace(WORKSPACE);
         createGraph(workspace, GRAPH_URI, GraphFactory.createDefaultGraph());
+        try (var transaction = workspace.begin(ReadWrite.WRITE)) {
+            transaction.createShapesDocument(
+                    "shapes.ttl", ShapesDocument.Origin.AUTHORED, List.of(GRAPH_URI));
+            transaction.commit("created a shapes document");
+        }
     }
 
     @Test
-    void commit_customShaclPrefix_isVisibleInSubsequentReadTransaction() {
+    void commit_shapesPrefix_isVisibleInSubsequentReadTransaction() {
         setPrefix();
 
         try (var transaction = workspace.begin(ReadWrite.READ)) {
-            var model =
-                    ModelFactory.createModelForGraph(transaction.graph(GRAPH_URI).getCustomSHACL());
+            var model = ModelFactory.createModelForGraph(shapes(transaction));
             assertThat(model.getNsPrefixURI("foo")).isEqualTo(FOO_URI);
         }
     }
@@ -60,36 +68,38 @@ class WorkspacePrefixTest {
     }
 
     @Test
-    void undo_revertsCustomShaclPrefix() {
+    void undo_revertsShapesPrefix() {
         setPrefix();
 
         workspace.undo();
 
         try (var transaction = workspace.begin(ReadWrite.READ)) {
-            var model =
-                    ModelFactory.createModelForGraph(transaction.graph(GRAPH_URI).getCustomSHACL());
+            var model = ModelFactory.createModelForGraph(shapes(transaction));
             assertThat(model.getNsPrefixURI("foo")).isNull();
         }
     }
 
     @Test
-    void redo_reappliesCustomShaclPrefix() {
+    void redo_reappliesShapesPrefix() {
         setPrefix();
         workspace.undo();
 
         workspace.redo();
 
         try (var transaction = workspace.begin(ReadWrite.READ)) {
-            var model =
-                    ModelFactory.createModelForGraph(transaction.graph(GRAPH_URI).getCustomSHACL());
+            var model = ModelFactory.createModelForGraph(shapes(transaction));
             assertThat(model.getNsPrefixURI("foo")).isEqualTo(FOO_URI);
         }
     }
 
+    /** A shapes document's graph, which keeps prefixes of its own. */
+    private static Graph shapes(WorkspaceTransaction transaction) {
+        return transaction.shapesDocuments().values().iterator().next().getGraph();
+    }
+
     private void setPrefix() {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            ModelFactory.createModelForGraph(transaction.graph(GRAPH_URI).getCustomSHACL())
-                    .setNsPrefix("foo", FOO_URI);
+            ModelFactory.createModelForGraph(shapes(transaction)).setNsPrefix("foo", FOO_URI);
             transaction.commit("set prefix");
         }
     }

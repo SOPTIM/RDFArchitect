@@ -133,6 +133,12 @@
                         {/each}
                     </ul>
                 {/if}
+                {#if restoringOneSchema}
+                    <p class="text-sm leading-relaxed">
+                        Constraints documents belong to the workspace, so this
+                        leaves them as they are.
+                    </p>
+                {/if}
                 {#if graphUri && !goingForward && !schemaCanGoBack}
                     <p class="border-border border-t pt-2 text-xs">
                         This schema did not exist yet at that version, so only

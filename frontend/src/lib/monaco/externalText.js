@@ -26,10 +26,8 @@
  * Replaces the editor's text with `next`, keeping the undo stack and the view.
  *
  * `setValue` is the obvious call and the wrong one: it discards the model's undo stack and scrolls
- * back to the top. Everything that writes the buffer from outside the editor went through it — a
- * form edit above all — so a form edit could not be undone with Ctrl+Z, and switching to the
- * Turtle view after one landed you at the start of the file instead of at the shape you had been
- * looking at.
+ * back to the top. Anything writing the buffer from outside the editor would then cost the reader
+ * their Ctrl+Z and their place in the file.
  *
  * An edit operation over the whole model does the same replacement as part of the model's history.
  * The stack elements around it keep it as one undo step rather than merging it into what was typed

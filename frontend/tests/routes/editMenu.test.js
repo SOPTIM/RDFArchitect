@@ -19,8 +19,10 @@ import { flushSync, mount, unmount } from "svelte";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
+import { guardUnsavedChanges } from "$lib/eventhandling/unsavedChanges.js";
 import { editorState } from "$lib/sharedState.svelte.js";
 import { graphStore } from "$lib/stores/graphStore.ts";
+import { versionControlStore } from "$lib/stores/versionControlStore.ts";
 
 import EditMenuHarness from "./EditMenuHarness.svelte";
 
@@ -40,6 +42,38 @@ const LEGACY = {
 let mounted = null;
 let target = null;
 
+/** Mounts the menu afresh, for a test that needs other props than the default. */
+function remount(props) {
+    unmount(mounted);
+    mounted = mount(EditMenuHarness, { target, props });
+    flushSync();
+}
+
+/** Opens the Edit menu and picks the item labelled `label`. */
+async function choose(label) {
+    const trigger = [...document.querySelectorAll("button")].find(
+        button => button.textContent.trim() === "Edit",
+    );
+    // bits-ui opens a menu bar menu on pointerdown; the click alone does not reach it in jsdom.
+    trigger.dispatchEvent(
+        new PointerEvent("pointerdown", {
+            bubbles: true,
+            button: 0,
+            pointerType: "mouse",
+        }),
+    );
+    trigger.click();
+    flushSync();
+    let item;
+    await vi.waitFor(() => {
+        item = [...document.querySelectorAll("[role=menuitem]")].find(
+            candidate => candidate.textContent.includes(label),
+        );
+        expect(item).toBeDefined();
+    });
+    item.click();
+}
+
 function headerHintButton() {
     return [...document.querySelectorAll("button")].find(candidate =>
         candidate.textContent.trim().startsWith("Edit on"),
@@ -58,7 +92,10 @@ vi.mock("$lib/stores/packageStore.ts", () => ({
     packageStore: { getPackages: vi.fn(async () => []) },
 }));
 vi.mock("$lib/stores/versionControlStore.ts", () => ({
-    versionControlStore: { undo: vi.fn(), redo: vi.fn() },
+    versionControlStore: {
+        undo: vi.fn(async () => ({})),
+        redo: vi.fn(async () => ({})),
+    },
 }));
 vi.mock("$lib/stores/workspaceStore.ts", () => ({
     workspaceStore: {
@@ -110,4 +147,29 @@ describe("Edit menu", () => {
         expect(editorState.selectedClassGraph.getValue()).toBe(GRAPH);
         expect(editorState.selectedClassWorkspace.getValue()).toBe(WORKSPACE);
     });
+
+    // A save offered before an undo is the change the undo then takes back, so the edits the
+    // user asked to keep are gone again the moment they were written.
+    test.each(["Undo", "Redo"])(
+        "%s asks about unsaved work without offering to save it",
+        async label => {
+            remount({
+                canUndo: true,
+                canRedo: true,
+                isWorkspaceReadOnly: false,
+            });
+            const ask = vi.fn().mockResolvedValue(false);
+            const release = guardUnsavedChanges(ask);
+            try {
+                await choose(label);
+
+                await vi.waitFor(() => expect(ask).toHaveBeenCalled());
+                expect(ask).toHaveBeenCalledWith({ allowSave: false });
+                expect(versionControlStore.undo).not.toHaveBeenCalled();
+                expect(versionControlStore.redo).not.toHaveBeenCalled();
+            } finally {
+                release();
+            }
+        },
+    );
 });

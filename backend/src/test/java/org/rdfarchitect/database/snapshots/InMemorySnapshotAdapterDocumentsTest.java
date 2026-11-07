@@ -19,7 +19,6 @@ package org.rdfarchitect.database.snapshots;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.ReadWrite;
@@ -202,24 +201,5 @@ class InMemorySnapshotAdapterDocumentsTest {
         read(
                 SnapshotUtils.constructSnapshotName(DATASET, token),
                 transaction -> assertThat(transaction.shapesDocuments()).isEmpty());
-    }
-
-    @Test
-    void customShaclStaysOutOfASnapshotAsBefore() {
-        write(DATASET, transaction -> addTo(transaction.graph(GRAPH_URI).getCustomSHACL()));
-        var token = adapter.createSnapshot(DATASET);
-
-        SessionContext.setSessionId("session-b");
-        adapter.fetchSnapshot(token);
-
-        read(
-                SnapshotUtils.constructSnapshotName(DATASET, token),
-                transaction ->
-                        assertThat(transaction.graph(GRAPH_URI).getCustomSHACL().isEmpty())
-                                .isTrue());
-    }
-
-    private static void addTo(Graph graph) {
-        graph.add(SHAPE);
     }
 }
