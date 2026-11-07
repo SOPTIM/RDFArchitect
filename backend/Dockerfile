@@ -10,7 +10,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # ---------- Runtime stage ----------
-FROM eclipse-temurin:25.0.4_7-jre
+FROM eclipse-temurin:25.0.5_8-jre
 
 ARG APP_VERSION=""
 

@@ -86,7 +86,7 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.72.0
+- **Version:** 8.72.1
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
@@ -104,12 +104,12 @@
 
 ### autoprefixer
 - **Package:** autoprefixer
-- **Version:** 10.6.1
+- **Version:** 10.6.2
 - **License:** MIT
 
 ### bits-ui
 - **Package:** bits-ui
-- **Version:** 2.20.0
+- **Version:** 2.20.2
 - **License:** MIT
 
 ### codemirror
@@ -126,13 +126,13 @@
 
 ### elkjs
 - **Package:** elkjs
-- **Version:** 0.12.0
+- **Version:** 0.12.1
 - **License:** EPL-2.0 OR GPL-3.0-or-later
 - **URL:** [https://github.com/kieler/elkjs](https://github.com/kieler/elkjs)
 
 ### eslint
 - **Package:** eslint
-- **Version:** 10.13.0
+- **Version:** 10.14.0
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -191,7 +191,7 @@
 
 ### postcss
 - **Package:** postcss
-- **Version:** 8.5.31
+- **Version:** 8.5.32
 - **License:** MIT
 - **URL:** [https://postcss.org/](https://postcss.org/)
 
@@ -215,7 +215,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.57.2
+- **Version:** 5.57.3
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -227,7 +227,7 @@
 
 ### svelte-eslint-parser
 - **Package:** svelte-eslint-parser
-- **Version:** 1.9.0
+- **Version:** 1.10.0
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/svelte-eslint-parser#readme](https://github.com/sveltejs/svelte-eslint-parser#readme)
 
@@ -257,7 +257,7 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.72.0
+- **Version:** 8.72.1
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
