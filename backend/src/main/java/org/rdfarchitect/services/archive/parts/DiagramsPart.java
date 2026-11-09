@@ -84,9 +84,10 @@ abstract class DiagramsPart<S, D> implements WorkspaceFilePart<S, ArchivedDiagra
                 : null;
     }
 
+    /** What {@code diagrams.json} stores for the source. */
     abstract ArchivedDiagrams<D> archive(S source, PartWriter out);
 
-    /** Whether the ids beyond those every diagrams file has are there. */
+    /** Whether the ids only some diagrams files have are there, reporting those that are not. */
     boolean hasIds(ArchivedDiagrams<D> archived, PartReader in) {
         return true;
     }
@@ -94,6 +95,8 @@ abstract class DiagramsPart<S, D> implements WorkspaceFilePart<S, ArchivedDiagra
     abstract UUID idOf(D diagram);
 
     /**
+     * Turns a stored diagram back into one of the editor.
+     *
      * @return the diagram, {@code null} if it reported a problem
      */
     abstract CustomDiagram restoreDiagram(D diagram, String where, PartReader in);

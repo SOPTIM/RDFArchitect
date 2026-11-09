@@ -23,6 +23,7 @@ import org.rdfarchitect.database.WorkspaceTransaction;
 /** A graph of the workspace, which the parts of a graph are written from and restored into. */
 public record GraphScope(WorkspaceTransaction transaction, String uri) {
 
+    /** Only exists once {@link SchemaPart} restored it. */
     public GraphContext graph() {
         return transaction.graph(uri);
     }

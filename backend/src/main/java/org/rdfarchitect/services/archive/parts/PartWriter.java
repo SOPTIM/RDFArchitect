@@ -61,10 +61,12 @@ public final class PartWriter {
         return folderByGraphUri;
     }
 
+    /** Writes a graph as Turtle. */
     public void writeRdf(String name, Graph graph) {
         write(name, () -> RDFDataMgr.write(zip, graph, RDFFormat.TURTLE));
     }
 
+    /** Writes a value as indented JSON. */
     public void writeJson(String name, Object value) {
         write(name, () -> zip.write(JSON.writeValueAsBytes(value)));
     }

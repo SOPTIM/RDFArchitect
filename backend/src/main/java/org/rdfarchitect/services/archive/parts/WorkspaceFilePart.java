@@ -28,14 +28,17 @@ package org.rdfarchitect.services.archive.parts;
  */
 public interface WorkspaceFilePart<S, T> {
 
+    /** Writes the part, from inside the export's transaction. */
     void write(S source, PartWriter out);
 
     /**
-     * Reads the part and reports to {@code in} whatever keeps it from being restored.
+     * Reads the part and reports to {@code in} whatever keeps it from being restored. Changes
+     * nothing, since the import reads every part before it restores the first.
      *
      * @return what the part holds, {@code null} if it reported a problem
      */
     T read(PartReader in);
 
+    /** Restores what {@link #read} returned, once no part of the file reported a problem. */
     void restore(S target, T value);
 }

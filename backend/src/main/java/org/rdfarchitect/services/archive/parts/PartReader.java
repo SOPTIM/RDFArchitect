@@ -55,6 +55,7 @@ public final class PartReader {
     private final List<String> problems;
     private final String folder;
 
+    /** Reads the top level of the unpacked file, collecting the problems into {@code problems}. */
     public PartReader(
             Map<String, byte[]> entries,
             Map<String, String> graphUriByFolder,

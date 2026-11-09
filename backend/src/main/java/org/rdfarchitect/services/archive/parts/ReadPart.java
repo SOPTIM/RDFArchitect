@@ -20,10 +20,12 @@ package org.rdfarchitect.services.archive.parts;
 /** A part as read from the workspace file, ready to be restored. */
 public record ReadPart<S, T>(WorkspaceFilePart<S, T> part, T value) {
 
+    /** Reads the part; the value is {@code null} if the part reported a problem. */
     public static <S, T> ReadPart<S, T> read(WorkspaceFilePart<S, T> part, PartReader in) {
         return new ReadPart<>(part, part.read(in));
     }
 
+    /** Restores what was read, see {@link WorkspaceFilePart#restore}. */
     public void restore(S target) {
         part.restore(target, value);
     }
