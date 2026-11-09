@@ -17,13 +17,16 @@
 
 package org.rdfarchitect.services.archive;
 
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
+
 import java.util.List;
 
 public record WorkspaceArchiveManifest(
         String formatVersion,
-        String appVersion,
-        String exportedAt,
-        String name,
+        @JsonSetter(nulls = Nulls.SET) String appVersion,
+        @JsonSetter(nulls = Nulls.SET) String exportedAt,
+        @JsonSetter(nulls = Nulls.SET) String name,
         boolean readOnly,
         List<GraphEntry> graphs) {
 

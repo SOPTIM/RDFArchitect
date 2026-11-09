@@ -18,10 +18,15 @@
 package org.rdfarchitect.services.archive;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 
 import java.util.List;
 import java.util.UUID;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ArchivedDiagrams<D>(
-        UUID crossProfileDiagramId, UUID defaultPackageMRID, List<D> customDiagrams) {}
+        // Only the workspace has a cross-profile diagram.
+        @JsonSetter(nulls = Nulls.SET) UUID crossProfileDiagramId,
+        UUID defaultPackageMRID,
+        List<D> customDiagrams) {}

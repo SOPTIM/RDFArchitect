@@ -17,10 +17,13 @@
 
 package org.rdfarchitect.services.archive.importing;
 
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidNullException;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.jena.graph.Graph;
@@ -52,19 +55,20 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 import java.util.zip.ZipInputStream;
 
 public final class WorkspaceArchiveReader {
 
-    static final int MAX_ENTRIES = 10_000;
+    // As many as the schema import takes from a zip.
+    static final int MAX_ENTRIES = 1000;
     static final long MAX_UNPACKED_SIZE = FileUtils.ONE_GB;
 
-    // Newer minor versions may add fields.
+    // Newer minor versions may add fields. Every field is required unless it opts out with
+    // @JsonSetter(nulls = Nulls.SET), so a missing or null one fails like broken JSON does.
     private static final ObjectMapper JSON =
-            new ObjectMapper().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-
-    private static final Pattern FOLDER_NAME = Pattern.compile("[A-Za-z0-9._-]+");
+            new ObjectMapper()
+                    .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                    .setDefaultSetterInfo(JsonSetter.Value.forValueNulls(Nulls.FAIL, Nulls.FAIL));
 
     private final Map<String, byte[]> entries;
     private final List<String> problems = new ArrayList<>();
@@ -193,18 +197,13 @@ public final class WorkspaceArchiveReader {
         }
         prefixes.forEach(
                 (prefix, namespace) -> {
-                    var problem =
-                            path
-                                    + ": \"%s\" -> \"%s\" is not a valid namespace prefix."
-                                            .formatted(prefix, namespace);
-                    if (namespace == null) {
-                        problems.add(problem);
-                        return;
-                    }
                     try {
                         mapping.setNsPrefix(prefix, namespace);
                     } catch (PrefixMapping.IllegalPrefixException _) {
-                        problems.add(problem);
+                        problems.add(
+                                path
+                                        + ": \"%s\" is not a valid namespace prefix."
+                                                .formatted(prefix));
                     }
                 });
         return mapping;
@@ -212,29 +211,15 @@ public final class WorkspaceArchiveReader {
 
     private Map<String, String> readGraphEntries(List<WorkspaceArchiveManifest.GraphEntry> graphs) {
         var graphUriByFolder = new LinkedHashMap<String, String>();
-        if (graphs == null) {
-            problems.add(WorkspaceArchiveFormat.MANIFEST + ": \"graphs\" is missing.");
-            return graphUriByFolder;
-        }
         var uris = new HashSet<String>();
         for (var graph : graphs) {
-            if (graph == null) {
-                problems.add(WorkspaceArchiveFormat.MANIFEST + ": a graph entry is empty.");
-                continue;
-            }
             var where = WorkspaceArchiveFormat.MANIFEST + ": graph \"" + graph.folder() + "\"";
             var valid = true;
-            if (graph.folder() == null || !FOLDER_NAME.matcher(graph.folder()).matches()) {
-                problems.add(
-                        where
-                                + ": \"folder\" has to be a folder name made of letters, digits,"
-                                + " '.', '-' and '_'.");
-                valid = false;
-            } else if (graphUriByFolder.containsKey(graph.folder())) {
+            if (graphUriByFolder.containsKey(graph.folder())) {
                 problems.add(where + ": two graphs are stored in this folder.");
                 valid = false;
             }
-            if (graph.uri() == null || !Workspace.isValidGraphName(graph.uri())) {
+            if (!Workspace.isValidGraphName(graph.uri())) {
                 problems.add(where + ": \"" + graph.uri() + "\" is not a valid graph URI.");
                 valid = false;
             } else if (!uris.add(graph.uri())) {
@@ -295,23 +280,14 @@ public final class WorkspaceArchiveReader {
                 true,
                 ArchivedWorkspaceDiagram::diagramId,
                 (where, diagram) -> {
-                    if (diagram.classes() == null) {
-                        problems.add(where + ": \"classes\" is missing.");
-                        return null;
-                    }
                     var valid = true;
-                    for (var classes : diagram.classes().entrySet()) {
-                        var folder = classes.getKey();
+                    for (var folder : diagram.classes().keySet()) {
                         if (!graphUriByFolder.containsKey(folder)) {
                             problems.add(
                                     where
                                             + ": \""
                                             + folder
                                             + "\" is not a graph of the workspace file.");
-                            valid = false;
-                        } else if (classes.getValue() == null
-                                || classes.getValue().contains(null)) {
-                            problems.add(where + ": a class of \"" + folder + "\" has no UUID.");
                             valid = false;
                         }
                     }
@@ -325,17 +301,7 @@ public final class WorkspaceArchiveReader {
                 new TypeReference<ArchivedDiagrams<ArchivedGraphDiagram>>() {},
                 false,
                 ArchivedGraphDiagram::diagramId,
-                (where, diagram) -> {
-                    if (diagram.classes() == null) {
-                        problems.add(where + ": \"classes\" is missing.");
-                        return null;
-                    }
-                    if (diagram.classes().contains(null)) {
-                        problems.add(where + ": a class has no UUID.");
-                        return null;
-                    }
-                    return diagram.toCustomDiagram(graphUri);
-                });
+                (where, diagram) -> diagram.toCustomDiagram(graphUri));
     }
 
     private <D> Diagrams readDiagrams(
@@ -351,21 +317,10 @@ public final class WorkspaceArchiveReader {
         if (ofWorkspace && archived.crossProfileDiagramId() == null) {
             problems.add(path + ": \"crossProfileDiagramId\" is missing.");
         }
-        if (archived.defaultPackageMRID() == null) {
-            problems.add(path + ": \"defaultPackageMRID\" is missing.");
-        }
-        if (archived.customDiagrams() == null) {
-            problems.add(path + ": \"customDiagrams\" is missing.");
-            return new Diagrams(null, null, List.of());
-        }
         var diagrams = new ArrayList<CustomDiagram>();
         var ids = new HashSet<UUID>();
         for (var diagram : archived.customDiagrams()) {
-            var id = diagram == null ? null : idOf.apply(diagram);
-            if (id == null) {
-                problems.add(path + ": a diagram has no \"diagramId\".");
-                continue;
-            }
+            var id = idOf.apply(diagram);
             var where = path + ": diagram " + id;
             if (!ids.add(id)) {
                 problems.add(where + " is there twice.");
@@ -400,7 +355,7 @@ public final class WorkspaceArchiveReader {
                                         + ": \""
                                         + folder
                                         + "\" is not a graph of the workspace file.");
-                    } else if (color == null || color.isBlank()) {
+                    } else if (color.isBlank()) {
                         problems.add(path + ": the graph \"" + folder + "\" has no colour.");
                     } else {
                         colors.put(graphUri, color);
@@ -436,7 +391,7 @@ public final class WorkspaceArchiveReader {
 
     private static String describe(IOException e) {
         return e instanceof JacksonException jackson
-                ? jackson.getOriginalMessage()
+                ? messageOf(jackson)
                         + (jackson.getLocation() == null
                                 ? ""
                                 : " (line %d, column %d)"
@@ -444,6 +399,15 @@ public final class WorkspaceArchiveReader {
                                                 jackson.getLocation().getLineNr(),
                                                 jackson.getLocation().getColumnNr()))
                 : e.getMessage();
+    }
+
+    private static String messageOf(JacksonException e) {
+        if (!(e instanceof InvalidNullException invalidNull)) {
+            return e.getOriginalMessage();
+        }
+        var property = invalidNull.getPropertyName();
+        return (property == null ? "a value" : "\"" + property.getSimpleName() + "\"")
+                + " is missing or null";
     }
 
     private static InvalidWorkspaceArchiveException invalid(String problem) {

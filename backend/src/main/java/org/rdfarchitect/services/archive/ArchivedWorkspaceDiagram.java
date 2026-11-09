@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.services.archive;
 
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
+
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
@@ -28,7 +31,9 @@ import java.util.Map;
 import java.util.UUID;
 
 public record ArchivedWorkspaceDiagram(
-        UUID diagramId, String name, Map<String, List<UUID>> classes) {
+        UUID diagramId,
+        @JsonSetter(nulls = Nulls.SET) String name,
+        Map<String, List<UUID>> classes) {
 
     public static ArchivedWorkspaceDiagram of(
             CustomDiagram diagram, Map<String, String> folderByGraphUri) {
