@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
+import org.rdfarchitect.api.controller.datasets.ImportJobRESTController.ImportJobCreatedResponse;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase;
 import org.rdfarchitect.services.update.graph.PrefixResolutionDTO;
 import org.slf4j.Logger;
@@ -56,13 +57,10 @@ public class GraphBulkContentRESTController {
 
     private final ImportJobUseCase importJobUseCase;
 
-    /** Response to starting an import, identifying the job to poll for its progress. */
-    public record ImportJobCreatedResponse(UUID jobId) {}
-
     @Operation(
             summary = "Start importing multiple graphs",
             description =
-                    "Starts a background import of one or more rdf graphs into the dataset. Accepts multiple files and/or zip archives containing several graph files, and returns the id of the job to poll for progress.",
+                    "Starts a background import of one or more rdf graphs into the dataset. Accepts multiple files and/or zip archives containing several graph files, and returns the id of the job to poll for progress at /api/datasets/{datasetName}/imports/{jobId}.",
             tags = {"graph"},
             responses = {
                 @ApiResponse(responseCode = "202", description = "Import started"),
@@ -100,48 +98,13 @@ public class GraphBulkContentRESTController {
         return ResponseEntity.accepted().body(new ImportJobCreatedResponse(jobId));
     }
 
+    @Deprecated
     @Operation(
-            summary = "Start importing a workspace archive",
-            description =
-                    "Starts restoring a workspace archive, as written by the workspace export, as a new workspace of the given name. Returns the id of the job to poll for progress. The archive is checked completely first: if anything in it is invalid, nothing is imported and the job's status lists every problem.",
-            tags = {"dataset"},
-            responses = {
-                @ApiResponse(responseCode = "202", description = "Import started"),
-                @ApiResponse(
-                        responseCode = "409",
-                        description = "An import is already running for this session")
-            })
-    @PostMapping(value = "/archive", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ImportJobCreatedResponse> startWorkspaceImport(
-            @Parameter(description = "The name/url of the inquirer.")
-                    @RequestHeader(
-                            value = HttpHeaders.ORIGIN,
-                            required = false,
-                            defaultValue = "unknown")
-                    String originURL,
-            @Parameter(description = "The name of the workspace to create.") @PathVariable
-                    String datasetName,
-            @Parameter(description = "The workspace archive") @RequestParam("file")
-                    MultipartFile file) {
-        logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/content/imports/archive\" from \"{}\".",
-                datasetName,
-                originURL);
-
-        var jobId = importJobUseCase.startWorkspaceImport(datasetName, file);
-
-        logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/content/imports/archive\" to \"{}\": job {}.",
-                datasetName,
-                originURL,
-                jobId);
-        return ResponseEntity.accepted().body(new ImportJobCreatedResponse(jobId));
-    }
-
-    @Operation(
+            operationId = "getImportStatusOfGraphImport",
+            deprecated = true,
             summary = "Get the progress of an import",
             description =
-                    "Returns the progress of a running import and the result of a finished one, including the graphs that were imported, the files that failed and any warnings.",
+                    "Deprecated, use the same request below /api/datasets/{datasetName}/imports instead. Returns the progress of a running import and the result of a finished one, including the graphs that were imported, the files that failed and any warnings.",
             tags = {"graph"},
             responses = {
                 @ApiResponse(responseCode = "200"),
@@ -158,10 +121,13 @@ public class GraphBulkContentRESTController {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
+    @Deprecated
     @Operation(
+            operationId = "resolvePrefixConflictsOfGraphImport",
+            deprecated = true,
             summary = "Resolve the namespace prefix conflicts of an import",
             description =
-                    "Hands an import that is waiting for namespace prefix decisions the decisions it asked for and lets it go on. A contested namespace left out of the request is imported without a prefix, leaving the prefixes of the dataset as they are.",
+                    "Deprecated, use the same request below /api/datasets/{datasetName}/imports instead. Hands an import that is waiting for namespace prefix decisions the decisions it asked for and lets it go on. A contested namespace left out of the request is imported without a prefix, leaving the prefixes of the dataset as they are.",
             tags = {"graph"},
             responses = {
                 @ApiResponse(responseCode = "204", description = "Import continues"),
@@ -203,10 +169,13 @@ public class GraphBulkContentRESTController {
                 : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
+    @Deprecated
     @Operation(
+            operationId = "cancelGraphImport",
+            deprecated = true,
             summary = "Cancel an import",
             description =
-                    "Asks a running import to stop after the file it is currently importing. The graphs imported up to that point are kept.",
+                    "Deprecated, use the same request below /api/datasets/{datasetName}/imports instead. Asks a running import to stop after the file it is currently importing. The graphs imported up to that point are kept.",
             tags = {"graph"},
             responses = {
                 @ApiResponse(responseCode = "204", description = "Cancellation requested"),

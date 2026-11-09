@@ -289,7 +289,7 @@ async function startWorkspaceImport(
     try {
         const jobId = await upload(
             `${PUBLIC_BACKEND_URL}/api/datasets/${encodeURIComponent(workspaceName)}` +
-                "/graphs/content/imports/archive",
+                "/import",
             formData,
             options,
         );

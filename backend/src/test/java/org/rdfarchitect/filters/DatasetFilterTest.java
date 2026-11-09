@@ -144,6 +144,29 @@ class DatasetFilterTest {
     }
 
     @Test
+    void doFilter_workspaceFileImport_isAllowedForAnUnknownName() throws Exception {
+        filter.doFilter(request("POST", "/api/datasets/brandNew/import"), response, chain);
+
+        assertThat(chain.getRequest()).isNotNull();
+    }
+
+    @Test
+    void doFilter_importJobProgress_isAllowedForAnUnknownName() throws Exception {
+        filter.doFilter(request("GET", "/api/datasets/brandNew/imports/42"), response, chain);
+
+        assertThat(chain.getRequest()).isNotNull();
+    }
+
+    @Test
+    void doFilter_exportOfAWorkspaceThatDoesNotExist_isRejected() {
+        // Only the import may name a workspace it is about to create.
+        var request = request("GET", "/api/datasets/brandNew/export");
+
+        assertThatThrownBy(() -> filter.doFilter(request, response, chain))
+                .isInstanceOf(DatasetAccessDeniedException.class);
+    }
+
+    @Test
     void doFilter_getOnAWorkspaceThatDoesNotExist_isRejected() {
         // Only PUT is whitelisted; a GET must not be able to address an unknown workspace.
         var request = request("GET", "/api/datasets/brandNew");

@@ -1,0 +1,156 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+package org.rdfarchitect.api.controller.datasets;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
+import lombok.RequiredArgsConstructor;
+
+import org.rdfarchitect.services.update.graph.ImportJobUseCase;
+import org.rdfarchitect.services.update.graph.PrefixResolutionDTO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Follows the import jobs of a workspace, whichever request started them: the import of graphs and
+ * the import of a workspace file.
+ */
+@RestController
+@RequestMapping("api/datasets/{datasetName}/imports")
+@RequiredArgsConstructor
+public class ImportJobRESTController {
+
+    private static final Logger logger = LoggerFactory.getLogger(ImportJobRESTController.class);
+
+    private final ImportJobUseCase importJobUseCase;
+
+    /** Response to starting an import, identifying the job to poll for its progress. */
+    public record ImportJobCreatedResponse(UUID jobId) {}
+
+    @Operation(
+            summary = "Get the progress of an import",
+            description =
+                    "Returns the progress of a running import and the result of a finished one, including the graphs that were imported, the files that failed and any warnings.",
+            tags = {"dataset"},
+            responses = {
+                @ApiResponse(responseCode = "200"),
+                @ApiResponse(responseCode = "404", description = "No such import job")
+            })
+    @GetMapping("/{jobId}")
+    public ResponseEntity<ImportJobUseCase.ImportJobStatus> getImportStatus(
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(description = "The id of the import job.") @PathVariable UUID jobId) {
+        return importJobUseCase
+                .getStatus(datasetName, jobId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+    }
+
+    @Operation(
+            summary = "Resolve the namespace prefix conflicts of an import",
+            description =
+                    "Hands an import that is waiting for namespace prefix decisions the decisions it asked for and lets it go on. A contested namespace left out of the request is imported without a prefix, leaving the prefixes of the dataset as they are.",
+            tags = {"dataset"},
+            responses = {
+                @ApiResponse(responseCode = "204", description = "Import continues"),
+                @ApiResponse(responseCode = "400", description = "Invalid namespace prefix"),
+                @ApiResponse(responseCode = "404", description = "No such import job"),
+                @ApiResponse(
+                        responseCode = "409",
+                        description = "The import is not waiting for decisions")
+            })
+    @PutMapping("/{jobId}/prefix-resolutions")
+    public ResponseEntity<Void> resolvePrefixConflicts(
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(description = "The id of the import job.") @PathVariable UUID jobId,
+            @Parameter(description = "What to do with each contested namespace binding.")
+                    @RequestBody
+                    List<PrefixResolutionDTO> resolutions) {
+        logger.info(
+                "Received PUT request: \"/api/datasets/{{}}/imports/{{}}/prefix-resolutions\" from \"{}\".",
+                datasetName,
+                jobId,
+                originURL);
+
+        var resolved = importJobUseCase.resolvePrefixConflicts(datasetName, jobId, resolutions);
+
+        logger.info(
+                "Sending response to PUT request: \"/api/datasets/{{}}/imports/{{}}/prefix-resolutions\" to \"{}\".",
+                datasetName,
+                jobId,
+                originURL);
+        return resolved
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
+
+    @Operation(
+            summary = "Cancel an import",
+            description =
+                    "Asks a running import to stop after the file it is currently importing. The graphs imported up to that point are kept.",
+            tags = {"dataset"},
+            responses = {
+                @ApiResponse(responseCode = "204", description = "Cancellation requested"),
+                @ApiResponse(responseCode = "404", description = "No such import job")
+            })
+    @DeleteMapping("/{jobId}")
+    public ResponseEntity<Void> cancelImport(
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(description = "The id of the import job.") @PathVariable UUID jobId) {
+        logger.info(
+                "Received DELETE request: \"/api/datasets/{{}}/imports/{{}}\" from \"{}\".",
+                datasetName,
+                jobId,
+                originURL);
+
+        return importJobUseCase.cancel(datasetName, jobId)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
+}
