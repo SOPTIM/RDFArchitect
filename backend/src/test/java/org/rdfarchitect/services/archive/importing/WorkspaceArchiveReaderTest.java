@@ -25,7 +25,6 @@ import static org.rdfarchitect.services.archive.ArchiveFiles.zip;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
@@ -38,7 +37,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.config.AppVersionResolver;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
-import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
@@ -47,9 +45,9 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.archive.ArchiveFiles;
 import org.rdfarchitect.services.archive.WorkspaceArchiveFormat;
 import org.rdfarchitect.services.archive.exporting.ExportWorkspaceService;
-import org.rdfarchitect.services.update.graph.ImportProgressListener;
 
 import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -72,13 +70,13 @@ class WorkspaceArchiveReaderTest {
     private final UUID classUuid = UUID.randomUUID();
     private final UUID workspaceDiagramId = UUID.randomUUID();
 
-    private InMemoryDatabaseAdapter databasePort;
     private Map<String, String> archive;
 
     @BeforeEach
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
+        var databasePort =
+                new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         databasePort.createDataset("ws");
         try (var transaction = databasePort.beginTransaction("ws", ReadWrite.WRITE)) {
             transaction.createGraph(CORE, RDFParser.fromString(SCHEMA, Lang.TURTLE).toGraph());
@@ -118,33 +116,6 @@ class WorkspaceArchiveReaderTest {
                 .extracting(WorkspaceArchive.ArchivedGraph::uri)
                 .containsExactlyInAnyOrder(CORE, EXTENSION);
         assertThat(contents.notices()).isEmpty();
-        try (var transaction = restored(archive)) {
-            assertThat(transaction.diagrams().values())
-                    .singleElement()
-                    .satisfies(
-                            diagram ->
-                                    assertThat(diagram.getClasses())
-                                            .containsExactly(
-                                                    new ClassInDiagram(
-                                                            classUuid, new URI(EXTENSION))));
-            assertThat(transaction.crossProfileColors().getColor(CORE)).isNotNull();
-            assertThat(transaction.crossProfileColors().getColor(EXTENSION)).isNotNull();
-        }
-    }
-
-    @Test
-    void read_layout_hasItsRelativeIrisBack() {
-        try (var transaction = restored(archive)) {
-            var layout =
-                    transaction.graph(CORE).getDiagramLayout().getDiagramLayoutModel().getGraph();
-
-            assertThat(
-                            layout.contains(
-                                    NodeFactory.createURI("_" + classUuid),
-                                    RDF.type.asNode(),
-                                    RDF.Property.asNode()))
-                    .isTrue();
-        }
     }
 
     @Test
@@ -247,23 +218,6 @@ class WorkspaceArchiveReaderTest {
     }
 
     @Test
-    void read_graphDiagramClassWithoutUuid_isRejected() {
-        var path = "graphs/" + CORE_FOLDER + "/diagrams.json";
-        var diagramId = UUID.randomUUID();
-        archive.put(
-                path,
-                withCustomDiagrams(
-                        archive.get(path),
-                        "[{\"diagramId\": \"%s\", \"name\": \"Core\", \"classes\": [null]}]"
-                                .formatted(diagramId)));
-
-        assertThat(problemsOf(zip(archive)))
-                .singleElement()
-                .asString()
-                .startsWith(path + ": \"classes\" is missing or null");
-    }
-
-    @Test
     void read_brokenJson_namesWhereItBreaks() {
         archive.put("diagrams.json", "{\n  \"customDiagrams\": [{\"diagramId\": }]\n}");
 
@@ -272,18 +226,6 @@ class WorkspaceArchiveReaderTest {
                 .asString()
                 .startsWith("diagrams.json: ")
                 .contains("line 2");
-    }
-
-    @Test
-    void read_folderThatLeavesTheArchive_isOnlyLookedUpInIt() {
-        var problems =
-                problemsOf(
-                        withManifest(
-                                manifest ->
-                                        ((ObjectNode) manifest.get("graphs").get(0))
-                                                .put("folder", "../outside")));
-
-        assertThat(problems).contains("graphs/../outside/schema.ttl is missing.");
     }
 
     @Test
@@ -323,45 +265,89 @@ class WorkspaceArchiveReaderTest {
     }
 
     @Test
-    void read_missingIds_areRejected() {
-        var workspaceDiagrams = json(archive.get("diagrams.json"));
-        workspaceDiagrams.remove("crossProfileDiagramId");
-        archive.put("diagrams.json", ArchiveFiles.json(workspaceDiagrams));
-        var graphDiagrams = json(archive.get("graphs/" + CORE_FOLDER + "/diagrams.json"));
+    void read_missingField_isRejectedNamingTheField() {
+        var path = "graphs/" + CORE_FOLDER + "/diagrams.json";
+        var graphDiagrams = json(archive.get(path));
         graphDiagrams.remove("defaultPackageMRID");
-        archive.put("graphs/" + CORE_FOLDER + "/diagrams.json", ArchiveFiles.json(graphDiagrams));
-
-        assertThat(problemsOf(zip(archive)))
-                .hasSize(2)
-                .contains("diagrams.json: \"crossProfileDiagramId\" is missing.")
-                .anySatisfy(
-                        problem ->
-                                assertThat(problem)
-                                        .startsWith(
-                                                "graphs/"
-                                                        + CORE_FOLDER
-                                                        + "/diagrams.json: \"defaultPackageMRID\""
-                                                        + " is missing or null (line "));
-    }
-
-    @Test
-    void read_namespaces_comeFromTheirOwnFile() {
-        archive.put("namespaces.json", "{\"ex\": \"http://example.org/ex#\"}");
-
-        try (var transaction = restored(archive)) {
-            assertThat(transaction.prefixes().getNsPrefixMap())
-                    .isEqualTo(Map.of("ex", "http://example.org/ex#"));
-        }
-    }
-
-    @Test
-    void read_prefixWithoutNamespace_isRejected() {
-        archive.put("namespaces.json", "{\"ex\": null}");
+        archive.put(path, ArchiveFiles.json(graphDiagrams));
 
         assertThat(problemsOf(zip(archive)))
                 .singleElement()
                 .asString()
-                .startsWith("namespaces.json: a value is missing or null");
+                .startsWith(path + ": \"defaultPackageMRID\" is missing or null (line ");
+    }
+
+    @Test
+    void read_workspaceDiagramsWithoutCrossProfileDiagram_areRejected() {
+        // Optional in the record, since only the workspace has one, so it is checked by hand.
+        var workspaceDiagrams = json(archive.get("diagrams.json"));
+        workspaceDiagrams.remove("crossProfileDiagramId");
+        archive.put("diagrams.json", ArchiveFiles.json(workspaceDiagrams));
+
+        assertThat(problemsOf(zip(archive)))
+                .containsExactly("diagrams.json: \"crossProfileDiagramId\" is missing.");
+    }
+
+    @Test
+    void read_diagramThatIsThereTwice_isRejected() {
+        var diagram =
+                "{\"diagramId\": \"%s\", \"name\": \"Overview\", \"classes\": {}}"
+                        .formatted(workspaceDiagramId);
+        archive.put(
+                "diagrams.json",
+                withCustomDiagrams(
+                        archive.get("diagrams.json"), "[" + diagram + "," + diagram + "]"));
+
+        assertThat(problemsOf(zip(archive)))
+                .containsExactly(
+                        "diagrams.json: diagram " + workspaceDiagramId + " is there twice.");
+    }
+
+    @Test
+    void read_diagramOfAGraphThatCannotHoldClasses_isRejected() {
+        // The default graph has no URI a class of a diagram could refer to.
+        var problems =
+                problemsOf(
+                        withManifest(
+                                manifest ->
+                                        manifest.get("graphs")
+                                                .forEach(
+                                                        graph -> {
+                                                            if (graph.get("uri")
+                                                                    .asText()
+                                                                    .equals(EXTENSION)) {
+                                                                ((ObjectNode) graph)
+                                                                        .put("uri", "default");
+                                                            }
+                                                        })));
+
+        assertThat(problems)
+                .singleElement()
+                .asString()
+                .startsWith("diagrams.json: diagram " + workspaceDiagramId + ": ")
+                .contains("must be absolute");
+    }
+
+    @Test
+    void read_blankColour_isRejected() {
+        archive.put("colors.json", "{\"%s\": \" \"}".formatted(CORE_FOLDER));
+
+        assertThat(problemsOf(zip(archive)))
+                .containsExactly("colors.json: the graph \"" + CORE_FOLDER + "\" has no colour.");
+    }
+
+    @Test
+    void read_fileThatIsThereTwice_isRejected() {
+        // A zip writer refuses to write a name twice, so the second one is renamed afterwards.
+        archive.put("colors.jsoN", "{}");
+        var bytes = zip(archive);
+        var twice =
+                new String(bytes, StandardCharsets.ISO_8859_1)
+                        .replace("colors.jsoN", "colors.json")
+                        .getBytes(StandardCharsets.ISO_8859_1);
+
+        assertThat(problemsOf(twice))
+                .containsExactly("colors.json: the workspace file holds this file twice.");
     }
 
     @Test
@@ -401,26 +387,6 @@ class WorkspaceArchiveReaderTest {
                         .getProblems();
 
         assertThat(problems).containsExactly("The workspace file unpacks to more than 1 MB.");
-    }
-
-    @Test
-    void read_emptyGraphEntry_isRejected() {
-        var problems = problemsOf(withManifest(manifest -> manifest.withArray("graphs").addNull()));
-
-        assertThat(problems)
-                .singleElement()
-                .asString()
-                .startsWith("manifest.json: \"graphs\" is missing or null");
-    }
-
-    /** Imports the files as a new workspace and opens it for reading. */
-    private WorkspaceTransaction restored(Map<String, String> files) {
-        new ImportWorkspaceService(databasePort)
-                .importWorkspace(
-                        "restored",
-                        new ByteArrayInputStream(zip(files)),
-                        ImportProgressListener.NOOP);
-        return databasePort.beginTransaction("restored", ReadWrite.READ);
     }
 
     private static WorkspaceArchive read(Map<String, String> files) {

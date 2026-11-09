@@ -91,6 +91,72 @@ describe("ImportJobRunner", () => {
         expect(runner.progress).toBeNull();
     });
 
+    test("reports what a job dismissed while running still finished", async () => {
+        const running = { state: JobState.RUNNING, files: [] };
+        // Cancelled too late: the backend had already committed the workspace.
+        const finished = {
+            state: JobState.COMPLETED,
+            files: [],
+            importedGraphUris: ["http://example.org/core"],
+        };
+        vi.mocked(graphStore.getImportStatus)
+            .mockResolvedValueOnce({ data: running })
+            .mockResolvedValueOnce({ data: finished });
+        const runner = new ImportJobRunner();
+        await runner.start("ws", async () => ({ data: { jobId: "job" } }));
+        await vi.advanceTimersToNextTimerAsync();
+
+        const result = await runner.dismiss();
+
+        expect(graphStore.cancelImport).toHaveBeenCalledWith("ws", "job");
+        expect(result).toEqual({
+            workspaceName: "ws",
+            state: JobState.COMPLETED,
+            importedGraphUris: ["http://example.org/core"],
+        });
+    });
+
+    test("keeps polling through a few failed polls", async () => {
+        vi.mocked(graphStore.getImportStatus)
+            .mockResolvedValueOnce({ error: new Error("gone") })
+            .mockResolvedValueOnce({ error: new Error("gone") })
+            .mockResolvedValueOnce({
+                data: { state: JobState.COMPLETED, files: [] },
+            });
+        const runner = new ImportJobRunner();
+
+        await runner.start("ws", async () => ({ data: { jobId: "job" } }));
+        await vi.runAllTimersAsync();
+
+        expect(runner.progress.jobState).toBe(JobState.COMPLETED);
+    });
+
+    test("gives up once the progress cannot be read any more", async () => {
+        vi.mocked(graphStore.getImportStatus).mockResolvedValue({
+            error: new Error("gone"),
+        });
+        const runner = new ImportJobRunner();
+
+        await runner.start("ws", async () => ({ data: { jobId: "job" } }));
+        await vi.runAllTimersAsync();
+
+        expect(graphStore.getImportStatus).toHaveBeenCalledTimes(4);
+        expect(runner.progress.jobState).toBe(JobState.FAILED);
+        expect(runner.progress.errorMessage).toContain("could not be read");
+    });
+
+    test("fails without polling when the upload fails", async () => {
+        const runner = new ImportJobRunner();
+
+        await runner.start("ws", async () => ({
+            error: new Error("Payload too large"),
+        }));
+
+        expect(runner.progress.jobState).toBe(JobState.FAILED);
+        expect(runner.progress.errorMessage).toBe("Payload too large");
+        expect(graphStore.getImportStatus).not.toHaveBeenCalled();
+    });
+
     test("cancels a job dismissed while it was being uploaded", async () => {
         const runner = new ImportJobRunner();
         let finishUpload;

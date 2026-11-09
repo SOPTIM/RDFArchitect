@@ -66,8 +66,8 @@ class ExportWorkspaceServiceTest {
         SessionContext.setSessionId(UUID.randomUUID().toString());
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         service = new ExportWorkspaceService(databasePort, new AppVersionResolver("1.2.3"));
-        databasePort.createDataset("Team/Draft");
-        try (var transaction = databasePort.beginTransaction("Team/Draft", ReadWrite.WRITE)) {
+        databasePort.createDataset("CGMES Draft");
+        try (var transaction = databasePort.beginTransaction("CGMES Draft", ReadWrite.WRITE)) {
             transaction.createGraph(CORE, RDFParser.fromString(SCHEMA, Lang.TURTLE).toGraph());
             transaction.setPrefixes(
                     new PrefixMappingImpl()
@@ -90,17 +90,17 @@ class ExportWorkspaceServiceTest {
 
     @Test
     void manifest_describesTheWorkspace() {
-        databasePort.disableEditing("Team/Draft");
+        databasePort.disableEditing("CGMES Draft");
 
         var manifest =
                 json(
-                        unzip(service.exportWorkspace("Team/Draft"))
+                        unzip(service.exportWorkspace("CGMES Draft"))
                                 .get(WorkspaceArchiveFormat.MANIFEST));
 
         assertThat(manifest.get("formatVersion").asText())
                 .isEqualTo(WorkspaceArchiveFormat.FORMAT_VERSION);
         assertThat(manifest.get("appVersion").asText()).isEqualTo("1.2.3");
-        assertThat(manifest.get("name").asText()).isEqualTo("Team/Draft");
+        assertThat(manifest.get("name").asText()).isEqualTo("CGMES Draft");
         assertThat(manifest.get("readOnly").asBoolean()).isTrue();
         assertThat(manifest.get("graphs"))
                 .isEqualTo(tree("[{\"folder\": \"%s\", \"uri\": \"%s\"}]".formatted(FOLDER, CORE)));
@@ -108,14 +108,14 @@ class ExportWorkspaceServiceTest {
 
     @Test
     void namespaces_haveAFileOfTheirOwn() {
-        var namespaces = unzip(service.exportWorkspace("Team/Draft")).get("namespaces.json");
+        var namespaces = unzip(service.exportWorkspace("CGMES Draft")).get("namespaces.json");
 
         assertThat(tree(namespaces)).isEqualTo(tree("{\"only\": \"http://example.org/only#\"}"));
     }
 
     @Test
     void graphDiagrams_listTheirClassesByUuid_andColorsReferToGraphsByFolder() {
-        var files = unzip(service.exportWorkspace("Team/Draft"));
+        var files = unzip(service.exportWorkspace("CGMES Draft"));
 
         assertThat(json(files.get("graphs/" + FOLDER + "/diagrams.json")).get("customDiagrams"))
                 .isEqualTo(
