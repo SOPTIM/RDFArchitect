@@ -204,7 +204,7 @@ class ImportJob implements ImportProgressListener {
 
     synchronized void reject(List<String> problems) {
         this.problems = List.copyOf(problems);
-        fail("The workspace archive cannot be imported.");
+        fail("The workspace file cannot be imported.");
     }
 
     synchronized void fail(String message) {

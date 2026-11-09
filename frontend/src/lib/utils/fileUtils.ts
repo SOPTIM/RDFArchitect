@@ -40,7 +40,7 @@ export const sparqlMediaType: MediaType = {
 // A zip, but not named one: the schema import unpacks every `.zip`.
 export const workspaceArchiveMediaType: MediaType = {
     mimeType: "application/zip",
-    name: "Workspace archive",
+    name: "Workspace file",
     fileExtension: ".rdfa",
 };
 

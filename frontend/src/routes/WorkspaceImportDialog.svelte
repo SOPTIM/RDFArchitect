@@ -145,7 +145,7 @@
     onSecondary={() => job.cancel()}
     disableSecondary={progress?.cancelling}
     closeOnPrimary={false}
-    title="Import Workspace (archive)"
+    title={`Import Workspace (${workspaceArchiveMediaType.fileExtension})`}
     size="w-1/3"
 >
     {#if progress}
@@ -179,20 +179,20 @@
                         </ButtonControl>
                     </div>
                     <p class="text-font-secondary text-sm">
-                        or drag and drop a workspace archive
+                        or drag and drop a workspace file
                     </p>
                 </div>
                 <p class="text-font-secondary mt-2 text-xs">
                     A <b>{workspaceArchiveMediaType.fileExtension}</b>
-                    file written by File → Export → Workspace (archive). It is imported
-                    as a new workspace, with all of its schemas, constraints, diagrams
-                    and layouts.
+                    file written by File → Export → Workspace ({workspaceArchiveMediaType.fileExtension}).
+                    It is imported as a new workspace, with all of its schemas,
+                    constraints, diagrams and layouts.
                 </p>
                 {#if rejectedFileName}
                     <div
                         class="bg-red-background text-red-text border-red-border mt-3 rounded border px-3 py-2 text-xs"
                     >
-                        {rejectedFileName} is not a workspace archive.
+                        {rejectedFileName} is not a workspace file.
                     </div>
                 {/if}
             </FileDropZone>

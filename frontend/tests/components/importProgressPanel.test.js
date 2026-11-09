@@ -185,28 +185,28 @@ describe("ImportProgressPanel", () => {
         expect(panel.textContent).toContain("Another import is still running.");
     });
 
-    test("lists every problem of a rejected workspace archive", () => {
+    test("lists every problem of a rejected workspace file", () => {
         const progress = new ImportProgress();
         progress.apply({
             ...statusOf([], JobState.FAILED),
-            errorMessage: "The workspace archive cannot be imported.",
+            errorMessage: "The workspace file cannot be imported.",
             problems: [
                 "graphs/core/shacl.ttl is missing.",
-                'workspace/colors.json: "gone" is not a graph of the archive.',
+                'workspace/colors.json: "gone" is not a graph of the workspace file.',
             ],
         });
 
         const panel = render(progress);
 
         expect(panel.textContent).toContain(
-            "The workspace archive cannot be imported.",
+            "The workspace file cannot be imported.",
         );
         const problems = [...panel.querySelectorAll("li")].map(item =>
             item.textContent.trim(),
         );
         expect(problems).toEqual([
             "graphs/core/shacl.ttl is missing.",
-            'workspace/colors.json: "gone" is not a graph of the archive.',
+            'workspace/colors.json: "gone" is not a graph of the workspace file.',
         ]);
     });
 
@@ -217,13 +217,13 @@ describe("ImportProgressPanel", () => {
                 [fileOf(0, "core", FileState.IMPORTED)],
                 JobState.COMPLETED,
             ),
-            notices: ["The archive was written in format 1.4."],
+            notices: ["The workspace file was written in format 1.4."],
         });
 
         const panel = render(progress);
 
         expect(panel.textContent).toContain(
-            "The archive was written in format 1.4.",
+            "The workspace file was written in format 1.4.",
         );
     });
 });

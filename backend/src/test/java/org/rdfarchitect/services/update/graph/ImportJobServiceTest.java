@@ -649,7 +649,7 @@ class ImportJobServiceTest {
         var status = awaitFinished(service.startWorkspaceImport(DATASET, archiveFile("broken")));
 
         assertThat(status.state()).isEqualTo(JobState.FAILED);
-        assertThat(status.errorMessage()).isEqualTo("The workspace archive cannot be imported.");
+        assertThat(status.errorMessage()).isEqualTo("The workspace file cannot be imported.");
         assertThat(status.problems())
                 .containsExactly("manifest.json: first", "colors.json: second");
         assertThat(status.importedGraphUris()).isEmpty();

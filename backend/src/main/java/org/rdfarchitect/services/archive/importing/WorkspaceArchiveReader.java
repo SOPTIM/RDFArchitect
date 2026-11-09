@@ -91,17 +91,17 @@ public final class WorkspaceArchiveReader {
                     continue;
                 }
                 if (entries.size() >= MAX_ENTRIES) {
-                    throw invalid("The archive holds more than " + MAX_ENTRIES + " files.");
+                    throw invalid("The workspace file holds more than " + MAX_ENTRIES + " files.");
                 }
                 var content = zip.readNBytes((int) Math.min(remaining, Integer.MAX_VALUE - 8));
                 if (zip.read() != -1) {
                     throw invalid(
-                            "The archive unpacks to more than %d MB."
+                            "The workspace file unpacks to more than %d MB."
                                     .formatted(maxUnpackedSize / FileUtils.ONE_MB));
                 }
                 remaining -= content.length;
                 if (entries.put(entry.getName(), content) != null) {
-                    throw invalid(entry.getName() + ": the archive holds this file twice.");
+                    throw invalid(entry.getName() + ": the workspace file holds this file twice.");
                 }
             }
         } catch (IOException e) {
@@ -145,7 +145,7 @@ public final class WorkspaceArchiveReader {
         if (content == null) {
             problems.add(
                     WorkspaceArchiveFormat.MANIFEST
-                            + " is missing, so this is not a workspace archive. Schema files and"
+                            + " is missing, so this is not a workspace file. Schema files and"
                             + " plain zip archives of them are imported as schemas instead.");
             return null;
         }
@@ -170,13 +170,13 @@ public final class WorkspaceArchiveReader {
         var writtenBy = appVersion == null ? "" : " (RDFArchitect " + appVersion + ")";
         if (version.major() != current.major()) {
             problems.add(
-                    "The archive was written in format %s%s. This version of RDFArchitect reads format %s."
+                    "The workspace file was written in format %s%s. This version of RDFArchitect reads format %s."
                             .formatted(version, writtenBy, current));
             return false;
         }
         if (version.minor() > current.minor()) {
             notices.add(
-                    ("The archive was written in format %s by a newer version of RDFArchitect%s."
+                    ("The workspace file was written in format %s by a newer version of RDFArchitect%s."
                                     + " Anything this version (format %s) does not know about was"
                                     + " left out.")
                             .formatted(version, writtenBy, current));
@@ -304,7 +304,10 @@ public final class WorkspaceArchiveReader {
                         var folder = classes.getKey();
                         if (!graphUriByFolder.containsKey(folder)) {
                             problems.add(
-                                    where + ": \"" + folder + "\" is not a graph of the archive.");
+                                    where
+                                            + ": \""
+                                            + folder
+                                            + "\" is not a graph of the workspace file.");
                             valid = false;
                         } else if (classes.getValue() == null
                                 || classes.getValue().contains(null)) {
@@ -392,7 +395,11 @@ public final class WorkspaceArchiveReader {
                 (folder, color) -> {
                     var graphUri = graphUriByFolder.get(folder);
                     if (graphUri == null) {
-                        problems.add(path + ": \"" + folder + "\" is not a graph of the archive.");
+                        problems.add(
+                                path
+                                        + ": \""
+                                        + folder
+                                        + "\" is not a graph of the workspace file.");
                     } else if (color == null || color.isBlank()) {
                         problems.add(path + ": the graph \"" + folder + "\" has no colour.");
                     } else {

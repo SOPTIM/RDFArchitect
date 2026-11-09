@@ -349,7 +349,7 @@ describe("ImportProgress", () => {
         progress.apply(
             running({
                 state: JobState.FAILED,
-                errorMessage: "The workspace archive cannot be imported.",
+                errorMessage: "The workspace file cannot be imported.",
                 problems: ["manifest.json is missing."],
                 notices: ["Written by a newer version."],
             }),
@@ -358,7 +358,7 @@ describe("ImportProgress", () => {
         expect(progress.problems).toEqual(["manifest.json is missing."]);
         expect(progress.notices).toEqual(["Written by a newer version."]);
         expect(progress.errorMessage).toBe(
-            "The workspace archive cannot be imported.",
+            "The workspace file cannot be imported.",
         );
     });
 

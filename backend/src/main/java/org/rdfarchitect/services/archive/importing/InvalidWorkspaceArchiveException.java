@@ -27,7 +27,7 @@ public class InvalidWorkspaceArchiveException extends RuntimeException {
     private final List<String> problems;
 
     public InvalidWorkspaceArchiveException(List<String> problems) {
-        super("The workspace archive cannot be imported: " + String.join("; ", problems));
+        super("The workspace file cannot be imported: " + String.join("; ", problems));
         this.problems = List.copyOf(problems);
     }
 }

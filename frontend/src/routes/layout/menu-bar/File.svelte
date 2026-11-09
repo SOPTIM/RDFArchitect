@@ -145,7 +145,7 @@
             );
             toastStore.success(
                 "Export ready",
-                `Workspace "${workspaceName}" downloaded as an archive.`,
+                `Workspace "${workspaceName}" downloaded as a ${workspaceArchiveMediaType.fileExtension} file.`,
             );
         } catch (e) {
             console.error("Failed to export workspace:", e);
@@ -183,7 +183,7 @@
                     onSelect={() => (showWorkspaceImportDialog = true)}
                     faIcon={faBoxArchive}
                 >
-                    Workspace (archive)
+                    Workspace ({workspaceArchiveMediaType.fileExtension})
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
@@ -218,7 +218,7 @@
                     disabled={!hasWorkspaceSelected}
                     faIcon={faBoxArchive}
                 >
-                    Workspace (archive)
+                    Workspace ({workspaceArchiveMediaType.fileExtension})
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>

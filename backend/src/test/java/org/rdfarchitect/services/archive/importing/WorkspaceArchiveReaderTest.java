@@ -157,7 +157,7 @@ class WorkspaceArchiveReaderTest {
         assertThat(problems)
                 .singleElement()
                 .asString()
-                .contains("not a workspace archive")
+                .contains("not a workspace file")
                 .contains("imported as schemas");
     }
 
@@ -390,7 +390,7 @@ class WorkspaceArchiveReaderTest {
                                                 1024 * 1024))
                         .getProblems();
 
-        assertThat(problems).containsExactly("The archive unpacks to more than 1 MB.");
+        assertThat(problems).containsExactly("The workspace file unpacks to more than 1 MB.");
     }
 
     @Test
