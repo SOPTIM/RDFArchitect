@@ -17,33 +17,19 @@
 
 package org.rdfarchitect.services.archive.importing;
 
-import com.fasterxml.jackson.annotation.JsonSetter;
-import com.fasterxml.jackson.annotation.Nulls;
-import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.exc.InvalidNullException;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.jena.graph.Graph;
-import org.apache.jena.riot.Lang;
-import org.apache.jena.riot.RDFParser;
-import org.apache.jena.riot.RiotException;
-import org.apache.jena.riot.system.ErrorHandlerFactory;
-import org.apache.jena.shared.PrefixMapping;
-import org.apache.jena.shared.impl.PrefixMappingImpl;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.Workspace;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.services.archive.ArchivedDiagrams;
-import org.rdfarchitect.services.archive.ArchivedGraphDiagram;
-import org.rdfarchitect.services.archive.ArchivedWorkspaceDiagram;
 import org.rdfarchitect.services.archive.FormatVersion;
-import org.rdfarchitect.services.archive.LayoutIris;
 import org.rdfarchitect.services.archive.WorkspaceArchiveFormat;
 import org.rdfarchitect.services.archive.WorkspaceArchiveManifest;
+import org.rdfarchitect.services.archive.parts.GraphScope;
+import org.rdfarchitect.services.archive.parts.PartReader;
+import org.rdfarchitect.services.archive.parts.ReadPart;
+import org.rdfarchitect.services.archive.parts.WorkspaceFileParts;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -52,23 +38,17 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.zip.ZipInputStream;
 
+/**
+ * Reads a workspace file and checks it as a whole: the manifest, then every part of every graph and
+ * of the workspace. Every problem found is reported at once, nothing is stored.
+ */
 public final class WorkspaceArchiveReader {
 
     // As many as the schema import takes from a zip.
     static final int MAX_ENTRIES = 1000;
     static final long MAX_UNPACKED_SIZE = FileUtils.ONE_GB;
-
-    // Newer minor versions may add fields. Every field is required unless it opts out with
-    // @JsonSetter(nulls = Nulls.SET), so a missing or null one fails like broken JSON does.
-    private static final ObjectMapper JSON =
-            new ObjectMapper()
-                    .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                    .setDefaultSetterInfo(JsonSetter.Value.forValueNulls(Nulls.FAIL, Nulls.FAIL));
 
     private final Map<String, byte[]> entries;
     private final List<String> problems = new ArrayList<>();
@@ -121,44 +101,40 @@ public final class WorkspaceArchiveReader {
         }
 
         var graphUriByFolder = readGraphEntries(manifest.graphs());
-
+        var in = new PartReader(entries, graphUriByFolder, problems);
         var graphs = new ArrayList<WorkspaceArchive.ArchivedGraph>();
-        graphUriByFolder.forEach((folder, uri) -> graphs.add(readGraph(folder, uri)));
-        var layout = readLayout(WorkspaceArchiveFormat.LAYOUT);
-        var diagrams = readWorkspaceDiagrams(graphUriByFolder);
-        var colors = readColors(graphUriByFolder);
-        var prefixes = readNamespaces();
+        graphUriByFolder.forEach(
+                (folder, uri) ->
+                        graphs.add(
+                                new WorkspaceArchive.ArchivedGraph(
+                                        uri,
+                                        WorkspaceFileParts.OF_GRAPH.stream()
+                                                .<ReadPart<GraphScope, ?>>map(
+                                                        part ->
+                                                                ReadPart.read(
+                                                                        part, in.inGraph(folder)))
+                                                .toList())));
+        var workspaceParts =
+                WorkspaceFileParts.OF_WORKSPACE.stream()
+                        .<ReadPart<WorkspaceTransaction, ?>>map(part -> ReadPart.read(part, in))
+                        .toList();
 
         if (!problems.isEmpty()) {
             throw new InvalidWorkspaceArchiveException(problems);
         }
-        return new WorkspaceArchive(
-                prefixes,
-                manifest.readOnly(),
-                diagrams.crossProfileDiagramId(),
-                diagrams.defaultPackageMRID(),
-                graphs,
-                layout,
-                diagrams.customDiagrams(),
-                colors,
-                notices);
+        return new WorkspaceArchive(manifest.readOnly(), graphs, workspaceParts, notices);
     }
 
     private WorkspaceArchiveManifest readManifest() {
-        var content = entries.get(WorkspaceArchiveFormat.MANIFEST);
-        if (content == null) {
+        if (!entries.containsKey(WorkspaceArchiveFormat.MANIFEST)) {
             problems.add(
                     WorkspaceArchiveFormat.MANIFEST
                             + " is missing, so this is not a workspace file. Schema files and"
                             + " plain zip archives of them are imported as schemas instead.");
             return null;
         }
-        try {
-            return JSON.readValue(content, WorkspaceArchiveManifest.class);
-        } catch (IOException e) {
-            problems.add(WorkspaceArchiveFormat.MANIFEST + ": " + describe(e));
-            return null;
-        }
+        return new PartReader(entries, Map.of(), problems)
+                .readJson(WorkspaceArchiveFormat.MANIFEST, new TypeReference<>() {});
     }
 
     private boolean isReadable(String formatVersion, String appVersion) {
@@ -188,27 +164,6 @@ public final class WorkspaceArchiveReader {
         return true;
     }
 
-    private PrefixMapping readNamespaces() {
-        var path = WorkspaceArchiveFormat.NAMESPACES;
-        var prefixes = readJson(path, new TypeReference<Map<String, String>>() {});
-        var mapping = new PrefixMappingImpl();
-        if (prefixes == null) {
-            return mapping;
-        }
-        prefixes.forEach(
-                (prefix, namespace) -> {
-                    try {
-                        mapping.setNsPrefix(prefix, namespace);
-                    } catch (PrefixMapping.IllegalPrefixException _) {
-                        problems.add(
-                                path
-                                        + ": \"%s\" is not a valid namespace prefix."
-                                                .formatted(prefix));
-                    }
-                });
-        return mapping;
-    }
-
     private Map<String, String> readGraphEntries(List<WorkspaceArchiveManifest.GraphEntry> graphs) {
         var graphUriByFolder = new LinkedHashMap<String, String>();
         var uris = new HashSet<String>();
@@ -231,183 +186,6 @@ public final class WorkspaceArchiveReader {
             }
         }
         return graphUriByFolder;
-    }
-
-    private WorkspaceArchive.ArchivedGraph readGraph(String folder, String uri) {
-        var diagrams = readGraphDiagrams(folder, uri);
-        return new WorkspaceArchive.ArchivedGraph(
-                uri,
-                diagrams.defaultPackageMRID(),
-                readRdf(WorkspaceArchiveFormat.graphEntry(folder, WorkspaceArchiveFormat.SCHEMA)),
-                readRdf(WorkspaceArchiveFormat.graphEntry(folder, WorkspaceArchiveFormat.SHACL)),
-                readLayout(
-                        WorkspaceArchiveFormat.graphEntry(folder, WorkspaceArchiveFormat.LAYOUT)),
-                diagrams.customDiagrams());
-    }
-
-    private Graph readLayout(String path) {
-        var layout = readRdf(path);
-        return layout == null ? null : LayoutIris.fromArchived(layout);
-    }
-
-    private Graph readRdf(String path) {
-        var content = entry(path);
-        if (content == null) {
-            return null;
-        }
-        try {
-            return RDFParser.source(new ByteArrayInputStream(content))
-                    .lang(Lang.TURTLE)
-                    // Keep IRIs as written instead of resolving them against a base.
-                    .resolveURIs(false)
-                    .errorHandler(ErrorHandlerFactory.errorHandlerNoLogging)
-                    .toGraph();
-        } catch (RiotException e) {
-            problems.add(path + ": " + e.getMessage());
-            return null;
-        }
-    }
-
-    private record Diagrams(
-            UUID crossProfileDiagramId,
-            UUID defaultPackageMRID,
-            List<CustomDiagram> customDiagrams) {}
-
-    private Diagrams readWorkspaceDiagrams(Map<String, String> graphUriByFolder) {
-        return readDiagrams(
-                WorkspaceArchiveFormat.DIAGRAMS,
-                new TypeReference<ArchivedDiagrams<ArchivedWorkspaceDiagram>>() {},
-                true,
-                ArchivedWorkspaceDiagram::diagramId,
-                (where, diagram) -> {
-                    var valid = true;
-                    for (var folder : diagram.classes().keySet()) {
-                        if (!graphUriByFolder.containsKey(folder)) {
-                            problems.add(
-                                    where
-                                            + ": \""
-                                            + folder
-                                            + "\" is not a graph of the workspace file.");
-                            valid = false;
-                        }
-                    }
-                    return valid ? diagram.toCustomDiagram(graphUriByFolder) : null;
-                });
-    }
-
-    private Diagrams readGraphDiagrams(String folder, String graphUri) {
-        return readDiagrams(
-                WorkspaceArchiveFormat.graphEntry(folder, WorkspaceArchiveFormat.DIAGRAMS),
-                new TypeReference<ArchivedDiagrams<ArchivedGraphDiagram>>() {},
-                false,
-                ArchivedGraphDiagram::diagramId,
-                (where, diagram) -> diagram.toCustomDiagram(graphUri));
-    }
-
-    private <D> Diagrams readDiagrams(
-            String path,
-            TypeReference<ArchivedDiagrams<D>> type,
-            boolean ofWorkspace,
-            Function<D, UUID> idOf,
-            BiFunction<String, D, CustomDiagram> restore) {
-        var archived = readJson(path, type);
-        if (archived == null) {
-            return new Diagrams(null, null, List.of());
-        }
-        if (ofWorkspace && archived.crossProfileDiagramId() == null) {
-            problems.add(path + ": \"crossProfileDiagramId\" is missing.");
-        }
-        var diagrams = new ArrayList<CustomDiagram>();
-        var ids = new HashSet<UUID>();
-        for (var diagram : archived.customDiagrams()) {
-            var id = idOf.apply(diagram);
-            var where = path + ": diagram " + id;
-            if (!ids.add(id)) {
-                problems.add(where + " is there twice.");
-                continue;
-            }
-            try {
-                var restored = restore.apply(where, diagram);
-                if (restored != null) {
-                    diagrams.add(restored);
-                }
-            } catch (IllegalArgumentException e) {
-                problems.add(where + ": " + e.getMessage());
-            }
-        }
-        return new Diagrams(
-                archived.crossProfileDiagramId(), archived.defaultPackageMRID(), diagrams);
-    }
-
-    private Map<String, String> readColors(Map<String, String> graphUriByFolder) {
-        var path = WorkspaceArchiveFormat.COLORS;
-        var archived = readJson(path, new TypeReference<Map<String, String>>() {});
-        var colors = new LinkedHashMap<String, String>();
-        if (archived == null) {
-            return colors;
-        }
-        archived.forEach(
-                (folder, color) -> {
-                    var graphUri = graphUriByFolder.get(folder);
-                    if (graphUri == null) {
-                        problems.add(
-                                path
-                                        + ": \""
-                                        + folder
-                                        + "\" is not a graph of the workspace file.");
-                    } else if (color.isBlank()) {
-                        problems.add(path + ": the graph \"" + folder + "\" has no colour.");
-                    } else {
-                        colors.put(graphUri, color);
-                    }
-                });
-        return colors;
-    }
-
-    private <T> T readJson(String path, TypeReference<T> type) {
-        var content = entry(path);
-        if (content == null) {
-            return null;
-        }
-        try {
-            var value = JSON.readValue(content, type);
-            if (value == null) {
-                problems.add(path + ": the file is empty.");
-            }
-            return value;
-        } catch (IOException e) {
-            problems.add(path + ": " + describe(e));
-            return null;
-        }
-    }
-
-    private byte[] entry(String path) {
-        var content = entries.get(path);
-        if (content == null) {
-            problems.add(path + " is missing.");
-        }
-        return content;
-    }
-
-    private static String describe(IOException e) {
-        return e instanceof JacksonException jackson
-                ? messageOf(jackson)
-                        + (jackson.getLocation() == null
-                                ? ""
-                                : " (line %d, column %d)"
-                                        .formatted(
-                                                jackson.getLocation().getLineNr(),
-                                                jackson.getLocation().getColumnNr()))
-                : e.getMessage();
-    }
-
-    private static String messageOf(JacksonException e) {
-        if (!(e instanceof InvalidNullException invalidNull)) {
-            return e.getOriginalMessage();
-        }
-        var property = invalidNull.getPropertyName();
-        return (property == null ? "a value" : "\"" + property.getSimpleName() + "\"")
-                + " is missing or null";
     }
 
     private static InvalidWorkspaceArchiveException invalid(String problem) {

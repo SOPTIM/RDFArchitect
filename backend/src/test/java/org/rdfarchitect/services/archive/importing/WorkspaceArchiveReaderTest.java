@@ -38,6 +38,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.config.AppVersionResolver;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
@@ -46,6 +47,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.archive.ArchiveFiles;
 import org.rdfarchitect.services.archive.WorkspaceArchiveFormat;
 import org.rdfarchitect.services.archive.exporting.ExportWorkspaceService;
+import org.rdfarchitect.services.update.graph.ImportProgressListener;
 
 import java.io.ByteArrayInputStream;
 import java.util.List;
@@ -70,13 +72,13 @@ class WorkspaceArchiveReaderTest {
     private final UUID classUuid = UUID.randomUUID();
     private final UUID workspaceDiagramId = UUID.randomUUID();
 
+    private InMemoryDatabaseAdapter databasePort;
     private Map<String, String> archive;
 
     @BeforeEach
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        var databasePort =
-                new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
+        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         databasePort.createDataset("ws");
         try (var transaction = databasePort.beginTransaction("ws", ReadWrite.WRITE)) {
             transaction.createGraph(CORE, RDFParser.fromString(SCHEMA, Lang.TURTLE).toGraph());
@@ -115,32 +117,34 @@ class WorkspaceArchiveReaderTest {
         assertThat(contents.graphs())
                 .extracting(WorkspaceArchive.ArchivedGraph::uri)
                 .containsExactlyInAnyOrder(CORE, EXTENSION);
-        assertThat(contents.diagrams())
-                .singleElement()
-                .satisfies(
-                        diagram ->
-                                assertThat(diagram.getClasses())
-                                        .containsExactly(
-                                                new ClassInDiagram(classUuid, new URI(EXTENSION))));
-        assertThat(contents.colors()).containsOnlyKeys(CORE, EXTENSION);
         assertThat(contents.notices()).isEmpty();
+        try (var transaction = restored(archive)) {
+            assertThat(transaction.diagrams().values())
+                    .singleElement()
+                    .satisfies(
+                            diagram ->
+                                    assertThat(diagram.getClasses())
+                                            .containsExactly(
+                                                    new ClassInDiagram(
+                                                            classUuid, new URI(EXTENSION))));
+            assertThat(transaction.crossProfileColors().getColor(CORE)).isNotNull();
+            assertThat(transaction.crossProfileColors().getColor(EXTENSION)).isNotNull();
+        }
     }
 
     @Test
     void read_layout_hasItsRelativeIrisBack() {
-        var core =
-                read(archive).graphs().stream()
-                        .filter(graph -> graph.uri().equals(CORE))
-                        .findFirst()
-                        .orElseThrow();
+        try (var transaction = restored(archive)) {
+            var layout =
+                    transaction.graph(CORE).getDiagramLayout().getDiagramLayoutModel().getGraph();
 
-        assertThat(
-                        core.layout()
-                                .contains(
-                                        NodeFactory.createURI("_" + classUuid),
-                                        RDF.type.asNode(),
-                                        RDF.Property.asNode()))
-                .isTrue();
+            assertThat(
+                            layout.contains(
+                                    NodeFactory.createURI("_" + classUuid),
+                                    RDF.type.asNode(),
+                                    RDF.Property.asNode()))
+                    .isTrue();
+        }
     }
 
     @Test
@@ -344,8 +348,10 @@ class WorkspaceArchiveReaderTest {
     void read_namespaces_comeFromTheirOwnFile() {
         archive.put("namespaces.json", "{\"ex\": \"http://example.org/ex#\"}");
 
-        assertThat(read(archive).prefixes().getNsPrefixMap())
-                .isEqualTo(Map.of("ex", "http://example.org/ex#"));
+        try (var transaction = restored(archive)) {
+            assertThat(transaction.prefixes().getNsPrefixMap())
+                    .isEqualTo(Map.of("ex", "http://example.org/ex#"));
+        }
     }
 
     @Test
@@ -405,6 +411,16 @@ class WorkspaceArchiveReaderTest {
                 .singleElement()
                 .asString()
                 .startsWith("manifest.json: \"graphs\" is missing or null");
+    }
+
+    /** Imports the files as a new workspace and opens it for reading. */
+    private WorkspaceTransaction restored(Map<String, String> files) {
+        new ImportWorkspaceService(databasePort)
+                .importWorkspace(
+                        "restored",
+                        new ByteArrayInputStream(zip(files)),
+                        ImportProgressListener.NOOP);
+        return databasePort.beginTransaction("restored", ReadWrite.READ);
     }
 
     private static WorkspaceArchive read(Map<String, String> files) {

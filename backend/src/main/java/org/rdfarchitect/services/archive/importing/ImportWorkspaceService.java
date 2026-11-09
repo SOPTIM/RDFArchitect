@@ -19,15 +19,9 @@ package org.rdfarchitect.services.archive.importing;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.DiagramLayout;
-import org.rdfarchitect.database.WorkspaceTransaction;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.dl.data.dto.relations.MRID;
-import org.rdfarchitect.rdf.graph.GraphUtils;
+import org.rdfarchitect.services.archive.parts.GraphScope;
 import org.rdfarchitect.services.update.graph.ImportProgressListener;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
@@ -35,8 +29,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import java.util.stream.IntStream;
 
 @Service
@@ -88,15 +80,12 @@ public class ImportWorkspaceService implements ImportWorkspaceUseCase {
                     return false;
                 }
                 listener.started(index);
-                restoreGraph(transaction, graphs.get(index));
-                listener.finished(index, Outcome.IMPORTED, graphs.get(index).uri());
+                var graph = graphs.get(index);
+                var scope = new GraphScope(transaction, graph.uri());
+                graph.parts().forEach(part -> part.restore(scope));
+                listener.finished(index, Outcome.IMPORTED, graph.uri());
             }
-            restoreLayout(transaction.layout(), contents.layout(), contents.defaultPackageMRID());
-            restoreDiagrams(transaction.diagrams(), contents.diagrams());
-            contents.colors().forEach(transaction.crossProfileColors()::setColor);
-            transaction.restoreCrossProfileDiagramId(contents.crossProfileDiagramId());
-            // Last, because creating a graph adds the prefixes of its schema file.
-            transaction.setPrefixes(contents.prefixes());
+            contents.workspaceParts().forEach(part -> part.restore(transaction));
             if (listener.isCancelled()) {
                 transaction.abort();
                 return false;
@@ -116,27 +105,5 @@ public class ImportWorkspaceService implements ImportWorkspaceUseCase {
         for (var index = 0; index < graphCount; index++) {
             listener.finished(index, Outcome.SKIPPED, null);
         }
-    }
-
-    private static void restoreGraph(
-            WorkspaceTransaction transaction, WorkspaceArchive.ArchivedGraph graph) {
-        transaction.createGraph(graph.uri(), graph.schema());
-        var restored = transaction.graph(graph.uri());
-        var shaclModel = ModelFactory.createModelForGraph(restored.getCustomSHACL());
-        var shacl = GraphUtils.normalizeBlankNodes(graph.shacl());
-        shaclModel.add(ModelFactory.createModelForGraph(shacl));
-        shaclModel.setNsPrefixes(shacl.getPrefixMapping());
-        restoreLayout(restored.getDiagramLayout(), graph.layout(), graph.defaultPackageMRID());
-        restoreDiagrams(restored.getCustomDiagrams(), graph.diagrams());
-    }
-
-    private static void restoreLayout(DiagramLayout layout, Graph archived, UUID defaultPackage) {
-        layout.getDiagramLayoutModel().add(ModelFactory.createModelForGraph(archived));
-        layout.restoreDefaultPackageMRID(new MRID(defaultPackage));
-    }
-
-    private static void restoreDiagrams(
-            Map<UUID, CustomDiagram> target, List<CustomDiagram> diagrams) {
-        diagrams.forEach(diagram -> target.put(diagram.getDiagramId(), diagram));
     }
 }

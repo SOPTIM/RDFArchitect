@@ -17,30 +17,18 @@
 
 package org.rdfarchitect.services.archive.importing;
 
-import org.apache.jena.graph.Graph;
-import org.apache.jena.shared.PrefixMapping;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.database.WorkspaceTransaction;
+import org.rdfarchitect.services.archive.parts.GraphScope;
+import org.rdfarchitect.services.archive.parts.ReadPart;
 
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
+/** A workspace file that was read and found valid as a whole, ready to be restored. */
 public record WorkspaceArchive(
-        PrefixMapping prefixes,
         boolean readOnly,
-        UUID crossProfileDiagramId,
-        UUID defaultPackageMRID,
         List<ArchivedGraph> graphs,
-        Graph layout,
-        List<CustomDiagram> diagrams,
-        Map<String, String> colors,
+        List<ReadPart<WorkspaceTransaction, ?>> workspaceParts,
         List<String> notices) {
 
-    public record ArchivedGraph(
-            String uri,
-            UUID defaultPackageMRID,
-            Graph schema,
-            Graph shacl,
-            Graph layout,
-            List<CustomDiagram> diagrams) {}
+    public record ArchivedGraph(String uri, List<ReadPart<GraphScope, ?>> parts) {}
 }
