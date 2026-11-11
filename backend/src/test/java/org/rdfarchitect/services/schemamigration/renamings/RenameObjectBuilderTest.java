@@ -359,6 +359,51 @@ class RenameObjectBuilderTest {
         }
 
         @Test
+        void mergePropertyList_matchingLabelButDifferentPrefix_keepsBothForPropertyRenameStep() {
+            var deletedEntry =
+                    SemanticEnumEntryChange.builder()
+                            .label("high")
+                            .iri("http://cim16.example.org/CIM-schema-cim16#PhaseCode.high")
+                            .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
+                            .changes(List.of())
+                            .build();
+
+            var addedEntry =
+                    SemanticEnumEntryChange.builder()
+                            .label("high")
+                            .iri("http://cim100.example.org/CIM100#PhaseCode.high")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .changes(List.of())
+                            .build();
+
+            var domain =
+                    SemanticClassChange.builder()
+                            .label("PhaseCode")
+                            .iri("http://cim100.example.org/CIM100#PhaseCode")
+                            .oldIRI("http://cim16.example.org/CIM-schema-cim16#PhaseCode")
+                            .build();
+
+            var result =
+                    RenameObjectBuilder.mergePropertyList(
+                            List.of(addedEntry), List.of(deletedEntry), domain);
+
+            // A namespace-only IRI change on a same-labeled entry is not auto-merged here - it is
+            // left as a separate delete/add pair so it goes through the same rename
+            // detection/confirmation step as every other property rename, instead of being
+            // special-cased during the class-level merge.
+            assertThat(result)
+                    .hasSize(2)
+                    .anyMatch(
+                            entry ->
+                                    entry.getSemanticResourceChangeType()
+                                            == SemanticResourceChangeType.DELETE)
+                    .anyMatch(
+                            entry ->
+                                    entry.getSemanticResourceChangeType()
+                                            == SemanticResourceChangeType.ADD);
+        }
+
+        @Test
         void mergePropertyList_associations_handlesCorrectly() {
             var deletedAssoc =
                     SemanticAssociationChange.builder()

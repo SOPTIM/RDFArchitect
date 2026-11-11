@@ -388,9 +388,7 @@ public class SchemaMigrationService
                             property.getIri().equals(oldIri) || property.getIri().equals(newIri));
 
             var merged = RenameObjectBuilder.createRenameObject(rename);
-            if (!merged.getChanges().isEmpty()) {
-                properties.add(merged);
-            }
+            properties.add(merged);
         }
     }
 
