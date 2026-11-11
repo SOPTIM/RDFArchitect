@@ -151,7 +151,8 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         var classesIterator = cimCollection.getClasses().iterator();
         var subClass = classesIterator.next();
         var superClass = classesIterator.next();
-        subClass.setSuperClass(new RDFSSubClassOf(superClass.getUri(), superClass.getLabel()));
+        subClass.setSuperClasses(
+                List.of(new RDFSSubClassOf(superClass.getUri(), superClass.getLabel())));
 
         // Act
         var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null);

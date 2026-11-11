@@ -86,10 +86,11 @@ class ClassUMLAdaptedMapperTest {
 
         @Test
         void toDTO_allCoreFields() {
-            cimClass.setSuperClass(
-                    new RDFSSubClassOf(
-                            new URI("http://example.com/superClass#SuperClass"),
-                            new RDFSLabel("SuperClass")));
+            cimClass.setSuperClasses(
+                    List.of(
+                            new RDFSSubClassOf(
+                                    new URI("http://example.com/superClass#SuperClass"),
+                                    new RDFSLabel("SuperClass"))));
             cimClass.setComment(
                     new RDFSComment(
                             "This is a test class",
@@ -150,7 +151,7 @@ class ClassUMLAdaptedMapperTest {
                     () ->
                             assertThat(mappedCIMClass.getLabel())
                                     .isEqualTo(new RDFSLabel("TestClass", "en")),
-                    () -> assertThat(mappedCIMClass.getSuperClass()).isNull(),
+                    () -> assertThat(mappedCIMClass.getSuperClasses()).isEqualTo(List.of()),
                     () -> assertThat(mappedCIMClass.getStereotypes()).isEqualTo(List.of()),
                     () ->
                             assertThat(mappedCIMClass.getAttributes())
@@ -187,7 +188,7 @@ class ClassUMLAdaptedMapperTest {
                             assertThat(mappedCIMClass.getLabel())
                                     .isEqualTo(new RDFSLabel("TestClass", "en")),
                     () ->
-                            assertThat(mappedCIMClass.getSuperClass().getUri())
+                            assertThat(mappedCIMClass.firstSuperClass().getUri())
                                     .isEqualTo(new URI("http://example.com/superClass#SuperClass")),
                     () ->
                             assertThat(mappedCIMClass.getComment())

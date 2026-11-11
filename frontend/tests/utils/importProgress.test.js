@@ -21,7 +21,9 @@ import {
     FileState,
     ImportPhase,
     ImportProgress,
+    importedGraphUrisOf,
     JobState,
+    OutcomeKind,
 } from "$lib/utils/importProgress.svelte.js";
 
 function file(overrides) {
@@ -41,10 +43,22 @@ function running(status) {
         datasetName: "ds",
         state: JobState.RUNNING,
         files: [],
-        importedGraphUris: [],
-        failedImports: [],
-        warnings: [],
+        outcome: null,
         ...status,
+    };
+}
+
+/** The outcome a finished graph import reports. */
+function graphsImported({
+    graphUris = [],
+    failedFileNames = [],
+    warnings = [],
+}) {
+    return {
+        kind: OutcomeKind.GRAPHS_IMPORTED,
+        graphUris,
+        failedFileNames,
+        warnings,
     };
 }
 
@@ -92,6 +106,29 @@ describe("ImportProgress", () => {
         expect(progress.finishedCount).toBe(1);
     });
 
+    test("uses the share a step reports instead of guessing at it", () => {
+        // Reading an export is one long step that says how far it is; without that the bar
+        // would jump from a quarter to two thirds and then to done.
+        const progress = new ImportProgress();
+        progress.uploaded();
+
+        progress.apply(
+            running({
+                files: [
+                    file({
+                        index: 0,
+                        sizeBytes: -1,
+                        state: FileState.RUNNING,
+                        done: 40,
+                        total: 200,
+                    }),
+                ],
+            }),
+        );
+
+        expect(progress.percent).toBe(25 + 75 * 0.2);
+    });
+
     test("counts the file it is on as half done and names it", () => {
         const progress = new ImportProgress();
         progress.uploaded();
@@ -135,7 +172,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.COMPLETED,
                 files: [file({ state: FileState.IMPORTED })],
-                importedGraphUris: ["http://graph#first"],
+                outcome: graphsImported({ graphUris: ["http://graph#first"] }),
             }),
         );
 
@@ -150,8 +187,10 @@ describe("ImportProgress", () => {
         progress.apply(
             running({
                 state: JobState.COMPLETED,
-                importedGraphUris: ["http://graph#first"],
-                failedImports: ["broken.ttl"],
+                outcome: graphsImported({
+                    graphUris: ["http://graph#first"],
+                    failedFileNames: ["broken.ttl"],
+                }),
             }),
         );
 
@@ -164,10 +203,9 @@ describe("ImportProgress", () => {
         progress.apply(
             running({
                 state: JobState.CANCELLED,
-                importedGraphUris: [
-                    "http://graph#first",
-                    "http://graph#second",
-                ],
+                outcome: graphsImported({
+                    graphUris: ["http://graph#first", "http://graph#second"],
+                }),
             }),
         );
 
@@ -181,7 +219,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.FAILED,
                 errorMessage: "out of memory",
-                importedGraphUris: ["http://graph#first"],
+                outcome: graphsImported({ graphUris: ["http://graph#first"] }),
             }),
         );
 
@@ -333,6 +371,64 @@ describe("ImportProgress", () => {
         expect(progress.prefixComparison).toBe(shown);
     });
 
+    test("a read reports what the export holds, prefix table included", () => {
+        const progress = new ImportProgress();
+        progress.uploaded();
+
+        progress.apply(
+            running({
+                state: JobState.COMPLETED,
+                outcome: {
+                    kind: OutcomeKind.PACKAGES_SCANNED,
+                    packages: [{ id: "EAPK_TOPOLOGY", name: "Topology" }],
+                    diagrams: [{ id: "EAID_DIAG_TP" }],
+                    supplierGroups: [{ fileIndex: 0, index: 0 }],
+                    classNames: ["Terminal"],
+                    prefixes: [
+                        {
+                            fileIndex: 0,
+                            prefix: "cim",
+                            namespace: "http://cim#",
+                        },
+                    ],
+                },
+            }),
+        );
+
+        expect(progress.packages).toHaveLength(1);
+        expect(progress.prefixes).toEqual([
+            { fileIndex: 0, prefix: "cim", namespace: "http://cim#" },
+        ]);
+    });
+
+    test("an import of rdf files carries no prefix table over from a read", () => {
+        const progress = new ImportProgress();
+        progress.apply(
+            running({
+                state: JobState.COMPLETED,
+                outcome: {
+                    kind: OutcomeKind.PACKAGES_SCANNED,
+                    prefixes: [
+                        {
+                            fileIndex: 0,
+                            prefix: "cim",
+                            namespace: "http://cim#",
+                        },
+                    ],
+                },
+            }),
+        );
+
+        progress.apply(
+            running({
+                state: JobState.COMPLETED,
+                outcome: graphsImported({ graphUris: ["http://graph#first"] }),
+            }),
+        );
+
+        expect(progress.prefixes).toEqual([]);
+    });
+
     test("a failure to start is shown as a finished, failed import", () => {
         const progress = new ImportProgress();
 
@@ -341,5 +437,38 @@ describe("ImportProgress", () => {
         expect(progress.finished).toBe(true);
         expect(progress.jobState).toBe(JobState.FAILED);
         expect(progress.errorMessage).toBe("Another import is still running.");
+    });
+});
+
+describe("importedGraphUrisOf", () => {
+    test("takes the schemas the outcome names once the job has ended", () => {
+        expect(
+            importedGraphUrisOf({
+                state: JobState.CANCELLED,
+                outcome: {
+                    kind: OutcomeKind.GRAPHS_IMPORTED,
+                    graphUris: ["http://graph#A"],
+                },
+            }),
+        ).toEqual(["http://graph#A"]);
+    });
+
+    test("takes the files imported so far while a cancelled job has not stopped yet", () => {
+        expect(
+            importedGraphUrisOf({
+                state: JobState.RUNNING,
+                files: [
+                    file({
+                        state: FileState.IMPORTED,
+                        graphUri: "http://graph#A",
+                    }),
+                    file({ index: 1, state: FileState.RUNNING }),
+                ],
+            }),
+        ).toEqual(["http://graph#A"]);
+    });
+
+    test("finds nothing without a status", () => {
+        expect(importedGraphUrisOf(undefined)).toEqual([]);
     });
 });

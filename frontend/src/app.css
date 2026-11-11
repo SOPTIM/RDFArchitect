@@ -57,6 +57,15 @@
     button {
         display: inline-flex !important;
         align-items: center !important;
+    }
+
+    /*
+     * A button that states a justification of its own means it; one that states none is centred.
+     * The rule has to let those through rather than be overridden by them: this is the base layer,
+     * and an important declaration here cannot be answered from a later one — reversing the layer
+     * order is what important does.
+     */
+    button:not([class*="justify-"]) {
         justify-content: center !important;
     }
 

@@ -31,6 +31,13 @@ export const supportedRDFMediaTypes: MediaType[] = [
     },
 ];
 
+/**
+ * The file extensions an Enterprise Architect XMI export comes under. Kept apart from
+ * {@link supportedRDFMediaTypes}, which the export dialogs and the user settings read as well: an
+ * export is read but never written, and it has an import of its own.
+ */
+export const xmiFileExtensions: string[] = [".xmi", ".xml"];
+
 export const sparqlMediaType: MediaType = {
     mimeType: "application/sparql-query",
     name: "SPARQL",
@@ -53,6 +60,12 @@ export function isSupportedGraphFile(fileName: string): boolean {
 /** Whether the import takes the file at all, be it as a graph or as an archive of graphs. */
 export function isImportableFile(fileName: string): boolean {
     return isZipFile(fileName) || isSupportedGraphFile(fileName);
+}
+
+/** Whether the file is an Enterprise Architect XMI export, which has an import of its own. */
+export function isXmiExportFile(fileName: string): boolean {
+    const lowered = (fileName ?? "").toLowerCase();
+    return xmiFileExtensions.some(extension => lowered.endsWith(extension));
 }
 
 export function saveFile(

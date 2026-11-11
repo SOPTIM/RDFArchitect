@@ -44,7 +44,7 @@ public class CIMClassUMLAdapted extends CIMClass {
         this.setUuid(cimClass.getUuid());
         this.setLabel(cimClass.getLabel());
         this.setComment(cimClass.getComment());
-        this.setSuperClass(cimClass.getSuperClass());
+        this.setSuperClasses(cimClass.getSuperClasses());
         this.setBelongsToCategory(cimClass.getBelongsToCategory());
         this.setStereotypes(cimClass.getStereotypes());
     }

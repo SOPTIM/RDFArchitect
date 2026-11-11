@@ -274,7 +274,7 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
         var classesIterator = cimCollection.getClasses().iterator();
         var class1 = classesIterator.next();
         var class2 = classesIterator.next();
-        class1.setSuperClass(new RDFSSubClassOf(class2.getUri(), class2.getLabel()));
+        class1.setSuperClasses(List.of(new RDFSSubClassOf(class2.getUri(), class2.getLabel())));
         addAttribute("attribute1", XSDDatatype.XSDstring);
         addAttribute("attribute2", XSDDatatype.XSDint);
         addAssociation("class2", AssociationUsed.YES);

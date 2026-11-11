@@ -21,10 +21,14 @@
     import FileDropZone from "$lib/components/FileDropZone.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { fileDragState } from "$lib/fileDragState.svelte.js";
-    import { supportedRDFMediaTypes } from "$lib/utils/fileUtils";
+    import {
+        supportedRDFMediaTypes,
+        xmiFileExtensions,
+    } from "$lib/utils/fileUtils";
 
-    import { acceptSchemaDrop } from "./schemaDrop.js";
+    import { acceptNewWorkspaceDrop, acceptSchemaDrop } from "./schemaDrop.js";
     import ImportDialog from "../ImportDialog.svelte";
+    import XmiImportDialog from "../XmiImportDialog.svelte";
 
     let {
         workspaceName = null,
@@ -34,12 +38,21 @@
         children,
     } = $props();
 
-    const info = `${supportedRDFMediaTypes
+    const rdfInfo = `${supportedRDFMediaTypes
         .map(type => type.fileExtension)
         .join(", ")} or .zip`;
 
     let droppedItems = $state(null);
+    let droppedExport = $state(null);
     let showImportDialog = $state(false);
+    let showXmiImportDialog = $state(false);
+    // Where the drop would create the workspace, an export is one of the things that can create
+    // it, so saying so is the difference between it working and it looking as if it cannot.
+    const info = $derived(
+        workspaceName
+            ? rdfInfo
+            : `${rdfInfo}, or an Enterprise Architect export (${xmiFileExtensions.join(", ")})`,
+    );
 
     const message = $derived(
         workspaceName
@@ -54,7 +67,25 @@
             : "opacity-100",
     );
 
+    /**
+     * Opens what the drop asks for. An Enterprise Architect export becomes a workspace of its
+     * own, so it is only taken where a workspace is what the drop would create anyway; dropped
+     * onto one that exists it is refused, with the + as the place to put it.
+     */
     function openImport(items) {
+        if (!workspaceName) {
+            const accepted = acceptNewWorkspaceDrop(items);
+            if (accepted?.kind === "export") {
+                droppedExport = accepted.file;
+                showXmiImportDialog = true;
+                return;
+            }
+            if (accepted) {
+                droppedItems = accepted.items;
+                showImportDialog = true;
+            }
+            return;
+        }
         const accepted = acceptSchemaDrop(items);
         if (!accepted) {
             return;
@@ -97,4 +128,9 @@
     bind:showDialog={showImportDialog}
     lockedWorkspaceName={workspaceName}
     {droppedItems}
+/>
+
+<XmiImportDialog
+    bind:showDialog={showXmiImportDialog}
+    droppedFile={droppedExport}
 />
