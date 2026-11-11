@@ -221,7 +221,7 @@ class SparqlMigrationBuilderTest {
                 SemanticAttributeChange.builder()
                         .iri(PREFIX + "Sub1.voltage")
                         .label("voltage")
-                        .semanticResourceChangeType(SemanticResourceChangeType.DELETED_FROM_MAPPING)
+                        .semanticResourceChangeType(SemanticResourceChangeType.REMOVED_VIA_MAPPING)
                         .build();
 
         var script = generateFor(attributeChange);
@@ -235,7 +235,7 @@ class SparqlMigrationBuilderTest {
                 SemanticAssociationChange.builder()
                         .iri(PREFIX + "Sub1.link")
                         .label("link")
-                        .semanticResourceChangeType(SemanticResourceChangeType.DELETED_FROM_MAPPING)
+                        .semanticResourceChangeType(SemanticResourceChangeType.REMOVED_VIA_MAPPING)
                         .build();
 
         var script = generateForAssociation(associationChange);

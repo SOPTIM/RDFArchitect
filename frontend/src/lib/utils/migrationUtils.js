@@ -106,28 +106,26 @@ function oldLabelWithClass(resource) {
     return `${resource.label} (in ${new URI(resource.domain).suffix})`;
 }
 
-export function buildRenamedFromMap(classes, getMappings) {
+export function buildRenamedFromMap(mappings) {
     const map = new Map();
     const seenMappingIds = new Set();
-    if (!classes) return map;
+    if (!mappings) return map;
 
-    for (const cls of classes) {
-        for (const mapping of getMappings(cls) ?? []) {
-            if ((mapping.newResources?.length ?? 0) === 0) continue;
-            if (seenMappingIds.has(mapping.id)) continue;
-            seenMappingIds.add(mapping.id);
+    for (const mapping of mappings) {
+        if ((mapping.newResources?.length ?? 0) === 0) continue;
+        if (seenMappingIds.has(mapping.id)) continue;
+        seenMappingIds.add(mapping.id);
 
-            const type = computeMappingType(
-                mapping.oldResources,
-                mapping.newResources,
-            );
-            const verb = RENAMED_FROM_VERBS[type] ?? RENAMED_FROM_VERBS.RENAME;
-            const text = `${verb} ${mapping.oldResources.map(oldLabelWithClass).join(", ")}`;
+        const type = computeMappingType(
+            mapping.oldResources,
+            mapping.newResources,
+        );
+        const verb = RENAMED_FROM_VERBS[type] ?? RENAMED_FROM_VERBS.RENAME;
+        const text = `${verb} ${mapping.oldResources.map(oldLabelWithClass).join(", ")}`;
 
-            for (const target of mapping.newResources) {
-                const existing = map.get(target.iri);
-                map.set(target.iri, existing ? `${existing}; ${text}` : text);
-            }
+        for (const target of mapping.newResources) {
+            const existing = map.get(target.iri);
+            map.set(target.iri, existing ? `${existing}; ${text}` : text);
         }
     }
     return map;
@@ -149,8 +147,13 @@ export function groupMappingsForSubmission(mappings) {
     const rows = (mappings ?? []).filter(
         m => (m.newResources?.length ?? 0) > 0,
     );
+
     if (rows.length === 0) {
-        return { mappings: [], invalidMappingIds: new Set() };
+        return {
+            mappings: [],
+            invalidMappingIds: new Set(),
+            mappingByRowId: new Map(),
+        };
     }
 
     const parent = new Map();

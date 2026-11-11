@@ -12,6 +12,8 @@ RDFArchitect ships a guided **Schema Migration** workflow — **View → Migrate
 
 Migration runs as a seven-step wizard. You can move back and forth between steps; the decisions of a step are submitted when you press **Continue**. Leaving the wizard discards the migration context, so a migration is one sitting — plan to finish it and download the artefacts before you navigate away.
 
+Because that context cannot be recovered, the wizard asks you to confirm before it lets you go while no artefact has been downloaded yet — whether you leave through the **Leave** button, the toolbar, or the browser's back button. Once any of the three downloads in step 7 has succeeded, it stops asking.
+
 ## Step 1 — Select Schemas
 
 Pick the source ("before") and the target ("after") schema. Four combinations are supported:
@@ -57,6 +59,8 @@ Where a deleted property and its successor aren't a clean 1:1 pairing, two furth
 - **Merge** — several deleted properties, from different classes, that all converge on the same added one (the reverse: several subclasses' attributes consolidated onto a shared superclass).
 
 A split or merge row lists every property on its many side and can be adjusted the same way a plain rename can: link a deleted property to more than one target to turn it into a split, or link two deleted properties to the same target to turn them into a merge. Rows that end up linking more than one property on *both* sides at once can't be represented and are flagged for you to resolve before continuing.
+
+The targets a row offers under **+ Link** are the added properties of the row's own class and of the *changed* classes above and below it in the hierarchy — a property can move along the inheritance chain, so that is where a successor is looked for. A row whose class has no such class with an addition therefore offers nothing to link, and says so when expanded; a property that moved to an unrelated class cannot be mapped here. Leaving the row unmapped keeps it a plain deletion.
 
 Two kinds of proposal are handled for you and never reach the table:
 
@@ -135,13 +139,15 @@ Class headings, and the property headings beneath them, carry the kind of change
 | `[Split]`                  | this deleted property was matched to more than one new target; each target gets its own entry |
 | `[Added via inheritance]`  | the property arrived through a changed superclass                              |
 | `[Deleted via inheritance]`| the property disappeared through a changed superclass                          |
+| `Moved from … to …`        | the property left this class through a move, merge or split. Both classes carry this heading — the receiving class to say where the property came from, the losing class to say where it went |
 | `[Inherits changes]`       | the class itself is unchanged; it is listed for the changes it inherits         |
 | `[Indirectly changed]`     | nothing in the class changed, but a change elsewhere affects it                 |
 
 Under the heading, your comment appears as a quoted note, followed by the field changes as full sentences — "Datatype set from `xsd:string` to `xsd:integer`.", "Was marked required.", "Comment was updated." — and then by sections for **Attributes**, **Associations**, and **Enum Entries**. IRIs are shortened with the configured namespace prefixes wherever a prefix is known.
 
-Two notes are worth looking out for:
+Three notes are worth looking out for:
 
+- *"The values are migrated by the change on the receiving class, so nothing is deleted here."* — a move, merge or split carried this property to another class. It is listed here so that the class it left does not look untouched, but no update in the script removes anything from it; the receiving class's entry does the one migration the data needs.
 - *"The datatypes were marked equivalent, so existing values are kept."* — the trace of an **Equivalent** tick in step 5. It documents that a datatype change was deliberately not migrated.
 - *"Potentially invalid targets due to superclass changes"* — a class lost a superclass that an association points to. Instances of the listed classes may no longer be valid targets of that association. The script cannot decide this for you; the report flags it so that you can check it against your data.
 

@@ -500,14 +500,6 @@ class CrossDomainPropertyPropagationHandlerTest {
     @Nested
     class SplitTest {
 
-        /**
-         * KeptSub derives from the split's old domain A (via B1, in both schema versions - the
-         * split moved the attribute down onto A's own subclasses rather than anywhere KeptSub's
-         * hierarchy changed) and continues to derive from split target B1 afterward, so it had the
-         * attribute before and keeps having an equivalent one after - it must get no entry here,
-         * the (fixed) domain-unscoped rename SPARQL already preserves its value under the new
-         * predicate.
-         */
         @Test
         void processCrossDomainPropertyMappings_subclassOfOldDomainAndOfOneTarget_getsNoEntry() {
             var oldA = declareClass(oldModel, "A");

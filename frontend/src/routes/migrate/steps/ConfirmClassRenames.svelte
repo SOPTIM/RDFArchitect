@@ -28,6 +28,7 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
     import {
+        buildRenamedFromMap,
         groupMappingsForSubmission,
         isPrefixOnlyRename,
     } from "$lib/utils/migrationUtils.js";
@@ -45,19 +46,9 @@
             .invalidMappingIds,
     );
 
-    let renamedFrom = $derived.by(() => {
-        const map = new Map();
-        for (const mapping of [...hiddenMappings, ...visibleMappings]) {
-            for (const newClass of mapping.newResources) {
-                const froms = mapping.oldResources.map(r => r.label);
-                map.set(newClass.iri, [
-                    ...(map.get(newClass.iri) ?? []),
-                    ...froms,
-                ]);
-            }
-        }
-        return map;
-    });
+    let renamedFrom = $derived(
+        buildRenamedFromMap([...hiddenMappings, ...visibleMappings]),
+    );
 
     onMount(() => {
         const storedState = get(migrationState);
@@ -105,7 +96,7 @@
         if (invalidMappingIds.size > 0) {
             toastStore.warning(
                 "Some mappings were skipped",
-                "A class can't be linked as both a merge target and a split source at once. Fix those rows before continuing.",
+                "A class can't be linked as both a merge target and a split source at once. Invalid rows have been skipped.",
             );
         }
 

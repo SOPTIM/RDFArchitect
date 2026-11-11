@@ -40,7 +40,7 @@
         MERGE: "Merged",
         ADDED_FROM_INHERITANCE: "Added (inherited)",
         DELETED_FROM_INHERITANCE: "Removed (inherited)",
-        DELETED_FROM_MAPPING: "Removed (moved or merged)",
+        REMOVED_VIA_MAPPING: "Removed (moved or merged)",
     };
 
     const FIELD_CHANGE_LABELS = {
@@ -102,7 +102,7 @@
                 return "bg-green-background text-green-text border-green-border";
             case "DELETE":
             case "DELETED_FROM_INHERITANCE":
-            case "DELETED_FROM_MAPPING":
+            case "REMOVED_VIA_MAPPING":
                 return "bg-red-background text-red-text border-red-border";
             case "RENAME":
                 if (ignorePrefixes && oldLabel === newLabel) {

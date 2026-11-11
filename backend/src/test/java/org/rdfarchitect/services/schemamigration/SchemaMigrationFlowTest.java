@@ -41,6 +41,9 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeTyp
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.services.compare.TripleChangeAnalyser;
+import org.rdfarchitect.services.schemamigration.defaults.DefaultValuesService;
+import org.rdfarchitect.services.schemamigration.renamings.ClassMappingService;
+import org.rdfarchitect.services.schemamigration.renamings.PropertyMappingService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -51,20 +54,24 @@ import java.util.stream.Collectors;
  * Covers how a renamed datatype class is reported to the default-values step: a rename is not a
  * datatype change and must not ask the user for a default value.
  */
-class SchemaMigrationServiceTest {
+class SchemaMigrationFlowTest {
 
     private static final String PREFIX = "http://example.org#";
     private static final String CIMS_PREFIX =
             "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#";
 
     private MigrationSessionStore migrationSessionStore;
-    private SchemaMigrationService service;
+    private ClassMappingService classMappingService;
+    private PropertyMappingService propertyMappingService;
+    private DefaultValuesService defaultValuesService;
 
     @BeforeEach
     void setUp() {
         migrationSessionStore = new MigrationSessionStore();
         migrationSessionStore.getContext().clear();
-        service = new SchemaMigrationService(migrationSessionStore, null, null, null, null, null);
+        classMappingService = new ClassMappingService(migrationSessionStore);
+        propertyMappingService = new PropertyMappingService(migrationSessionStore);
+        defaultValuesService = new DefaultValuesService(migrationSessionStore);
     }
 
     @Test
@@ -131,15 +138,15 @@ class SchemaMigrationServiceTest {
 
     private void confirmDetectedClassRenames() {
         var detected =
-                service.getClassMappings().getDeletedAndRemapped().stream()
+                classMappingService.getClassMappings().getDeletedAndRemapped().stream()
                         .filter(candidate -> !candidate.getNewResources().isEmpty())
                         .toList();
-        service.confirmClassRenamings(new ArrayList<>(detected));
+        classMappingService.confirmClassRenamings(new ArrayList<>(detected));
     }
 
     private void confirmDetectedPropertyRenames() {
         var confirmed = new ArrayList<ClassPropertyMappings>();
-        for (var overview : service.getPropertyMappings()) {
+        for (var overview : propertyMappingService.getPropertyMappings()) {
             var mappings = new ClassPropertyMappings();
             mappings.setClassLabel(overview.getClassLabel());
             mappings.setAttributeMappings(confirmedOf(overview.getAttributes()));
@@ -147,7 +154,7 @@ class SchemaMigrationServiceTest {
             mappings.setEnumEntryMappings(confirmedOf(overview.getEnumEntries()));
             confirmed.add(mappings);
         }
-        service.confirmPropertyMappings(confirmed);
+        propertyMappingService.confirmPropertyMappings(confirmed);
     }
 
     private static <T extends SemanticResourceChange> List<ResourceMapping<T>> confirmedOf(
@@ -159,7 +166,7 @@ class SchemaMigrationServiceTest {
 
     private void confirmAttributeRename(String classLabel, String oldLabel, String newLabel) {
         var confirmed = new ArrayList<ClassPropertyMappings>();
-        for (var overview : service.getPropertyMappings()) {
+        for (var overview : propertyMappingService.getPropertyMappings()) {
             var renamings = new ClassPropertyMappings();
             renamings.setClassLabel(overview.getClassLabel());
             renamings.setAssociationMappings(confirmedOf(overview.getAssociations()));
@@ -183,12 +190,12 @@ class SchemaMigrationServiceTest {
             }
             confirmed.add(renamings);
         }
-        service.confirmPropertyMappings(confirmed);
+        propertyMappingService.confirmPropertyMappings(confirmed);
     }
 
     private void confirmAttributeMove(
             String oldClassLabel, String newClassLabel, String attributeLabel) {
-        var overviews = service.getPropertyMappings();
+        var overviews = propertyMappingService.getPropertyMappings();
         var added =
                 overviews.stream()
                         .filter(o -> o.getClassLabel().equals(newClassLabel))
@@ -220,11 +227,11 @@ class SchemaMigrationServiceTest {
             }
             confirmed.add(mappings);
         }
-        service.confirmPropertyMappings(confirmed);
+        propertyMappingService.confirmPropertyMappings(confirmed);
     }
 
     private List<SemanticFieldChangeType> fieldChangeTypesOf(String attributeLabel) {
-        return service.getDefaultValueViews().stream()
+        return defaultValuesService.getDefaultValueViews().stream()
                 .flatMap(view -> view.getAttributes().stream())
                 .filter(attribute -> attribute.getLabel().equals(attributeLabel))
                 .flatMap(attribute -> attribute.getChanges().stream())
@@ -311,7 +318,7 @@ class SchemaMigrationServiceTest {
     }
 
     private List<Boolean> deletedAssociationsUsed() {
-        return service.getPropertyMappings().stream()
+        return propertyMappingService.getPropertyMappings().stream()
                 .flatMap(overview -> overview.getAssociations().getDeletedAndRemapped().stream())
                 .flatMap(candidate -> candidate.getOldResources().stream())
                 .map(SemanticAssociationChange::isAssociationUsed)
@@ -376,7 +383,7 @@ class SchemaMigrationServiceTest {
         confirmDetectedClassRenames();
 
         var subOverview =
-                service.getPropertyMappings().stream()
+                propertyMappingService.getPropertyMappings().stream()
                         .filter(o -> o.getClassLabel().equals("Sub"))
                         .findFirst()
                         .orElseThrow();
@@ -398,7 +405,7 @@ class SchemaMigrationServiceTest {
         baseMappings.setAssociationMappings(List.of());
         baseMappings.setEnumEntryMappings(List.of());
 
-        service.confirmPropertyMappings(List.of(subMappings, baseMappings));
+        propertyMappingService.confirmPropertyMappings(List.of(subMappings, baseMappings));
 
         var materializedVoltageCount =
                 migrationSessionStore.getContext().getDiffAfterPropertyConfirm().stream()
@@ -407,7 +414,7 @@ class SchemaMigrationServiceTest {
                         .filter(
                                 a ->
                                         a.getSemanticResourceChangeType()
-                                                != SemanticResourceChangeType.DELETED_FROM_MAPPING)
+                                                != SemanticResourceChangeType.REMOVED_VIA_MAPPING)
                         .count();
 
         assertThat(materializedVoltageCount).isEqualTo(1);
@@ -422,7 +429,7 @@ class SchemaMigrationServiceTest {
         confirmDetectedClassRenames();
         confirmAttributeMove("Base", "Target", "voltage");
 
-        var views = service.getDefaultValueViews();
+        var views = defaultValuesService.getDefaultValueViews();
 
         var gainedView =
                 views.stream()
@@ -461,7 +468,7 @@ class SchemaMigrationServiceTest {
         confirmDetectedClassRenames();
         confirmAttributeMove("Base", "Target", "voltage");
 
-        var views = service.getDefaultValueViews();
+        var views = defaultValuesService.getDefaultValueViews();
         for (var view : views) {
             for (var attribute : view.getAttributes()) {
                 if (attribute.getIri().equals(PREFIX + "Target.voltage")) {
@@ -470,7 +477,7 @@ class SchemaMigrationServiceTest {
             }
         }
 
-        service.submitDefaultValues(views);
+        defaultValuesService.submitDefaultValues(views);
 
         var gainedSubChange =
                 migrationSessionStore.getContext().getDiffAfterDefaultValueConfirm().stream()
@@ -544,7 +551,7 @@ class SchemaMigrationServiceTest {
                                                         a.getLabel().equals(attributeLabel)
                                                                 && a.getSemanticResourceChangeType()
                                                                         != SemanticResourceChangeType
-                                                                                .DELETED_FROM_MAPPING))
+                                                                                .REMOVED_VIA_MAPPING))
                 .map(SemanticClassChange::getLabel)
                 .findFirst()
                 .orElseThrow();
@@ -636,7 +643,7 @@ class SchemaMigrationServiceTest {
                 siblingSchema(List.of("Sub1", "Sub2"), Set.of("Base")));
         confirmDetectedClassRenames();
 
-        var overviews = service.getPropertyMappings();
+        var overviews = propertyMappingService.getPropertyMappings();
 
         var sub1Mappings = deletedAndRemappedAttributesFor(overviews, "Sub1");
         var sub2Mappings = deletedAndRemappedAttributesFor(overviews, "Sub2");
@@ -666,7 +673,7 @@ class SchemaMigrationServiceTest {
                 siblingSchema(List.of("Sub1", "Sub2"), Set.of("Sub1", "Sub2")));
         confirmDetectedClassRenames();
 
-        var overviews = service.getPropertyMappings();
+        var overviews = propertyMappingService.getPropertyMappings();
 
         var baseMappings = deletedAndRemappedAttributesFor(overviews, "Base");
         var sub1Mappings = deletedAndRemappedAttributesFor(overviews, "Sub1");
@@ -706,7 +713,7 @@ class SchemaMigrationServiceTest {
                     .as(sourceLabel + " keeps a marker that it lost voltage to the merge")
                     .hasSize(1);
             assertThat(voltageAttributes.getFirst().getSemanticResourceChangeType())
-                    .isEqualTo(SemanticResourceChangeType.DELETED_FROM_MAPPING);
+                    .isEqualTo(SemanticResourceChangeType.REMOVED_VIA_MAPPING);
         }
 
         var baseVoltage =
@@ -726,8 +733,8 @@ class SchemaMigrationServiceTest {
                 siblingSchema(List.of("Sub1", "Sub2"), Set.of("Base")));
         confirmDetectedClassRenames();
 
-        service.getPropertyMappings();
-        var overviews = service.getPropertyMappings();
+        propertyMappingService.getPropertyMappings();
+        var overviews = propertyMappingService.getPropertyMappings();
 
         var sub1Mappings = deletedAndRemappedAttributesFor(overviews, "Sub1");
         assertThat(sub1Mappings).hasSize(1);
@@ -742,7 +749,7 @@ class SchemaMigrationServiceTest {
                 siblingSchema(subs, Set.of("Base")));
         confirmDetectedClassRenames();
 
-        var overviews = service.getPropertyMappings();
+        var overviews = propertyMappingService.getPropertyMappings();
 
         var sub1Mappings = deletedAndRemappedAttributesFor(overviews, "Sub1");
         var sub2Mappings = deletedAndRemappedAttributesFor(overviews, "Sub2");
@@ -765,7 +772,7 @@ class SchemaMigrationServiceTest {
                 siblingSchema(subs, Set.of("Sub1", "Sub2", "Sub3")));
         confirmDetectedClassRenames();
 
-        var overviews = service.getPropertyMappings();
+        var overviews = propertyMappingService.getPropertyMappings();
 
         var baseMappings = deletedAndRemappedAttributesFor(overviews, "Base");
 
@@ -788,7 +795,9 @@ class SchemaMigrationServiceTest {
         initContext(original, updated);
         confirmDetectedClassRenames();
 
-        var sub1Mappings = deletedAndRemappedAttributesFor(service.getPropertyMappings(), "Sub1");
+        var sub1Mappings =
+                deletedAndRemappedAttributesFor(
+                        propertyMappingService.getPropertyMappings(), "Sub1");
 
         assertThat(sub1Mappings)
                 .hasSize(2)
@@ -846,7 +855,7 @@ class SchemaMigrationServiceTest {
                 siblingAssociationSchema(List.of("Sub1", "Sub2"), Set.of("Base")));
         confirmDetectedClassRenames();
 
-        var overviews = service.getPropertyMappings();
+        var overviews = propertyMappingService.getPropertyMappings();
         var sub1Mappings =
                 overviews.stream()
                         .filter(o -> o.getClassLabel().equals("Sub1"))
@@ -883,7 +892,7 @@ class SchemaMigrationServiceTest {
         initContext(unrelatedEnumEntrySchema(true), unrelatedEnumEntrySchema(false));
         confirmDetectedClassRenames();
 
-        var overviews = service.getPropertyMappings();
+        var overviews = propertyMappingService.getPropertyMappings();
         var stateKindAMappings =
                 overviews.stream()
                         .filter(o -> o.getClassLabel().equals("StateKindA"))

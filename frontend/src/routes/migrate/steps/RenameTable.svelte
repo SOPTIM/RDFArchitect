@@ -173,6 +173,13 @@
                                 <div
                                     class="border-border mt-2 max-h-48 space-y-1 overflow-y-auto rounded-md border p-2"
                                 >
+                                    {#if candidates.length === 0}
+                                        <p
+                                            class="text-text-subtle px-1 py-0.5 text-xs italic"
+                                        >
+                                            Nothing to map to
+                                        </p>
+                                    {/if}
                                     {#each candidates as candidate (candidate.iri)}
                                         {@const others = otherMappingsLinking(
                                             candidate,

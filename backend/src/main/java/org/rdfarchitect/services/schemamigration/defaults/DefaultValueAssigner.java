@@ -74,7 +74,7 @@ public class DefaultValueAssigner {
                     || attributeChange.getSemanticResourceChangeType()
                             == SemanticResourceChangeType.DELETED_FROM_INHERITANCE
                     || attributeChange.getSemanticResourceChangeType()
-                            == SemanticResourceChangeType.DELETED_FROM_MAPPING) {
+                            == SemanticResourceChangeType.REMOVED_VIA_MAPPING) {
                 continue;
             }
 
@@ -91,7 +91,7 @@ public class DefaultValueAssigner {
                     || associationChange.getSemanticResourceChangeType()
                             == SemanticResourceChangeType.DELETED_FROM_INHERITANCE
                     || associationChange.getSemanticResourceChangeType()
-                            == SemanticResourceChangeType.DELETED_FROM_MAPPING) {
+                            == SemanticResourceChangeType.REMOVED_VIA_MAPPING) {
                 continue;
             }
 

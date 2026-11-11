@@ -22,19 +22,22 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { migrationState } from "$lib/sharedState.svelte.js";
 
+    import LeaveMigrationDialog from "./LeaveMigrationDialog.svelte";
     import ConfirmClassRenames from "./steps/ConfirmClassRenames.svelte";
     import ConfirmDefaults from "./steps/ConfirmDefaults.svelte";
     import ConfirmPropertyMappings from "./steps/ConfirmPropertyMappings.svelte";
     import ConfirmAssociationDefaults from "./steps/defaults/ConfirmAssociationDefaults.svelte";
     import ConfirmAttributeDefaults from "./steps/defaults/ConfirmAttributeDefaults.svelte";
     import ConfirmEnumEntryReplacements from "./steps/defaults/ConfirmEnumEntryReplacements.svelte";
-    import Export from "./steps/Export.svelte";
+    import MigrationArtifacts from "./steps/MigrationArtifacts.svelte";
     import ConfirmAssociationRenames from "./steps/propertymappings/ConfirmAssociationRenames.svelte";
     import ConfirmAttributeRenames from "./steps/propertymappings/ConfirmAttributeRenames.svelte";
     import ConfirmEnumEntryRenames from "./steps/propertymappings/ConfirmEnumEntryRenames.svelte";
     import ReviewChanges from "./steps/ReviewChanges.svelte";
     import SelectSchemas from "./steps/SelectSchemas.svelte";
     import ValidateSchemas from "./steps/ValidateSchemas.svelte";
+
+    import { beforeNavigate, goto } from "$app/navigation";
 
     const steps = [
         { title: "Step 1: Select Schemas", component: SelectSchemas },
@@ -47,7 +50,7 @@
             component: ConfirmClassRenames,
         },
         {
-            title: "Step 4: Review Property Renames",
+            title: "Step 4: Review Property Mappings",
             component: ConfirmPropertyMappings,
             substeps: [
                 { title: "Attributes", component: ConfirmAttributeRenames },
@@ -74,13 +77,18 @@
             ],
         },
         { title: "Step 6: Review Changes", component: ReviewChanges },
-        { title: "Step 7: Generate Artifacts", component: Export },
+        { title: "Step 7: Generate Artifacts", component: MigrationArtifacts },
     ];
 
     let disableNext = $state(false);
     let currentStepIndex = $state(0);
     let currentSubstepIndex = $state(0);
+    let downloaded = $state(false);
+    let showLeaveDialog = $state(false);
     let stepInstance;
+
+    let leaveConfirmed = false;
+    let pendingLeaveUrl = null;
     let currentStep = $derived(steps[currentStepIndex]);
 
     onDestroy(() => {
@@ -109,8 +117,22 @@
         }
 
         await stepInstance.onNext();
+
+        if (currentStepIndex === steps.length - 1) {
+            return;
+        }
+
         disableNext = false;
         currentStepIndex++;
+    }
+
+    async function leaveMigration() {
+        leaveConfirmed = true;
+        try {
+            await goto(pendingLeaveUrl ?? "/mainpage");
+        } finally {
+            leaveConfirmed = false;
+        }
     }
 
     function handleBackButton() {
@@ -125,6 +147,24 @@
             disableNext = false;
         }
     }
+
+    beforeNavigate(navigation => {
+        if (downloaded || leaveConfirmed || currentStepIndex === 0) {
+            return;
+        }
+        if (!navigation.willUnload && navigation.to?.route.id === "/migrate") {
+            return;
+        }
+
+        navigation.cancel();
+
+        if (navigation.willUnload) {
+            return;
+        }
+
+        pendingLeaveUrl = navigation.to?.url ?? null;
+        showLeaveDialog = true;
+    });
 </script>
 
 <div class="flex h-full flex-col overflow-auto">
@@ -147,6 +187,7 @@
                 substeps={currentStep.substeps}
                 {currentSubstepIndex}
                 bind:disableNext
+                bind:downloaded
             />
         </div>
 
@@ -172,3 +213,8 @@
         </div>
     </div>
 </div>
+
+<LeaveMigrationDialog
+    bind:showDialog={showLeaveDialog}
+    onLeave={leaveMigration}
+/>

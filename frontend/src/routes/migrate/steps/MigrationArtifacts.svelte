@@ -29,6 +29,8 @@
 
     import { goto } from "$app/navigation";
 
+    let { downloaded = $bindable() } = $props();
+
     export async function onNext() {
         await goto("/mainpage");
     }
@@ -40,6 +42,7 @@
                 "content-disposition",
             );
             saveFile(data, suggestedFilename, sparqlMediaType);
+            downloaded = true;
         } catch (e) {
             console.error("Failed to generate script:", e);
         }
@@ -59,6 +62,7 @@
                 "content-disposition",
             );
             saveFile(data, suggestedFilename, sparqlMediaType);
+            downloaded = true;
         } catch (e) {
             console.error("Failed to generate report:", e);
         }

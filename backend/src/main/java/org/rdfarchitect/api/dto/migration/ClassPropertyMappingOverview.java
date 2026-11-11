@@ -20,11 +20,11 @@ package org.rdfarchitect.api.dto.migration;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import org.rdfarchitect.models.changes.PotentialPropertyData;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
-import org.rdfarchitect.services.schemamigration.SchemaMigrationService;
 
 @Data
 @AllArgsConstructor
@@ -40,7 +40,7 @@ public class ClassPropertyMappingOverview {
 
     public ClassPropertyMappingOverview(
             SemanticClassChange classChange,
-            SchemaMigrationService.PotentialPropertyData propertyData) {
+            PotentialPropertyData propertyData) {
         this.classLabel = classChange.getLabel();
         this.attributes =
                 new PropertyMappingOverview<>(

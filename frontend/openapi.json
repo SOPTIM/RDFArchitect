@@ -2069,6 +2069,12 @@
           "label" : {
             "type" : "string"
           },
+          "mappedToIRIs" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "oldIRI" : {
             "type" : "string"
           },
@@ -2083,7 +2089,7 @@
               "MOVE",
               "SPLIT",
               "MERGE",
-              "DELETED_FROM_MAPPING",
+              "REMOVED_VIA_MAPPING",
               "INHERITS_CHANGE",
               "INDIRECT_CHANGE"
             ],
@@ -2185,6 +2191,12 @@
           "label" : {
             "type" : "string"
           },
+          "mappedToIRIs" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "oldIRI" : {
             "type" : "string"
           },
@@ -2199,7 +2211,7 @@
               "MOVE",
               "SPLIT",
               "MERGE",
-              "DELETED_FROM_MAPPING",
+              "REMOVED_VIA_MAPPING",
               "INHERITS_CHANGE",
               "INDIRECT_CHANGE"
             ],

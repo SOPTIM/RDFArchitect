@@ -65,6 +65,11 @@ public sealed class SemanticResourceChange
     // into a single new resource
     @Builder.Default protected List<String> additionalOldIRIs = new ArrayList<>();
 
+    // the resources this one's data is migrated onto once a move, merge or split carries it off
+    // to another class - only set on REMOVED_VIA_MAPPING markers, which exist to show the
+    // losing class where its property went
+    @Builder.Default protected List<String> mappedToIRIs = new ArrayList<>();
+
     protected String iri;
 
     @Builder.Default protected List<SemanticFieldChange> changes = new ArrayList<>();
@@ -84,6 +89,7 @@ public sealed class SemanticResourceChange
         this.label = other.getLabel();
         this.oldIRI = other.getOldIRI();
         this.additionalOldIRIs = other.getAdditionalOldIRIs();
+        this.mappedToIRIs = other.getMappedToIRIs();
         this.iri = other.getIri();
         this.semanticResourceChangeType = other.getSemanticResourceChangeType();
         this.changes = other.getChanges();

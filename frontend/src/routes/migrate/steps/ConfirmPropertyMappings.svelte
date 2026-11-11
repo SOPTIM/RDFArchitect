@@ -94,16 +94,16 @@
     });
 
     export async function onNext() {
-        const { body, anyInvalid } = buildPropertyMappingsBody();
-
-        if (anyInvalid) {
-            toastStore.warning(
-                "Some mappings were skipped",
-                "A property can't be linked as both a merge target and a split source at once. Fix those rows before continuing.",
-            );
-        }
-
         try {
+            const { body, anyInvalid } = buildPropertyMappingsBody();
+
+            if (anyInvalid) {
+                toastStore.warning(
+                    "Some mappings were skipped",
+                    "A property can't be linked as both a merge target and a split source at once. Invalid rows have been skipped.",
+                );
+            }
+
             const { error } = await confirmPropertyMappings({
                 body: body,
             });

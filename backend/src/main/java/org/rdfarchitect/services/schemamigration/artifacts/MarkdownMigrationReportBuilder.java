@@ -321,7 +321,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                                                                             .DELETED_FROM_INHERITANCE
                                                             && p.getSemanticResourceChangeType()
                                                                     != SemanticResourceChangeType
-                                                                            .DELETED_FROM_MAPPING)
+                                                                            .REMOVED_VIA_MAPPING)
                                     .forEach(ancestorChangedAttributes::add);
                             superclass.getAssociations().stream()
                                     .filter(
@@ -334,7 +334,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                                                                             .DELETED_FROM_INHERITANCE
                                                             && p.getSemanticResourceChangeType()
                                                                     != SemanticResourceChangeType
-                                                                            .DELETED_FROM_MAPPING
+                                                                            .REMOVED_VIA_MAPPING
                                                             && p.getSemanticResourceChangeType()
                                                                     != SemanticResourceChangeType
                                                                             .INDIRECT_CHANGE)
@@ -476,6 +476,9 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                         .append("\n\n");
             } else if (type == SemanticResourceChangeType.MOVE && prop.getOldIRI() != null) {
                 appendMovedHeader(sb, prop);
+            } else if (type == SemanticResourceChangeType.REMOVED_VIA_MAPPING
+                    && !prop.getMappedToIRIs().isEmpty()) {
+                appendRemovedViaMappingHeader(sb, prop);
             } else {
                 sb.append("#### ")
                         .append(formatChangeType(type))
@@ -488,11 +491,17 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                 sb.append("> ").append(prop.getComment()).append("\n\n");
             }
 
+            if (type == SemanticResourceChangeType.REMOVED_VIA_MAPPING
+                    && !prop.getMappedToIRIs().isEmpty()) {
+                sb.append("The values are migrated by the change on the receiving class, so ")
+                        .append("nothing is deleted here.\n\n");
+            }
+
             if (prop.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE
                     && prop.getSemanticResourceChangeType()
                             != SemanticResourceChangeType.DELETED_FROM_INHERITANCE
                     && prop.getSemanticResourceChangeType()
-                            != SemanticResourceChangeType.DELETED_FROM_MAPPING) {
+                            != SemanticResourceChangeType.REMOVED_VIA_MAPPING) {
                 var regularChanges =
                         prop.getChanges().stream()
                                 .filter(
@@ -532,6 +541,18 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                 .append(oldLabel)
                 .append(" to ")
                 .append(newLabel)
+                .append("\n\n");
+    }
+
+    private void appendRemovedViaMappingHeader(StringBuilder sb, SemanticResourceChange prop) {
+        var targetLabels =
+                prop.getMappedToIRIs().stream()
+                        .map(iri -> new URI(iri).getSuffix())
+                        .collect(Collectors.joining(", "));
+        sb.append("#### Moved from ")
+                .append(new URI(prop.getIri()).getSuffix())
+                .append(" to ")
+                .append(targetLabels)
                 .append("\n\n");
     }
 
@@ -613,7 +634,8 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
     private String formatChangeType(SemanticResourceChangeType type) {
         return switch (type) {
             case ADD -> "[Added]";
-            case DELETE, DELETED_FROM_MAPPING -> "[Deleted]";
+            case DELETE -> "[Deleted]";
+            case REMOVED_VIA_MAPPING -> "[Removed via mapping]";
             case CHANGE -> "[Changed]";
             case RENAME -> "[Renamed]";
             case MOVE -> "[Moved]";

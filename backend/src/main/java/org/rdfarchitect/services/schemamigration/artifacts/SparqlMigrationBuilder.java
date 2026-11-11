@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -68,8 +69,8 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         }
 
         return new SplitGroups(
-                SplitSiblingGrouping.groupSplitSiblings(allAttributes),
-                SplitSiblingGrouping.groupSplitSiblings(allAssociations),
+                groupSplitSiblings(allAttributes),
+                groupSplitSiblings(allAssociations),
                 new HashSet<>(),
                 new HashSet<>());
     }
@@ -309,5 +310,11 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                 sb.append("# ").append(line).append("\n");
             }
         }
+    }
+
+    <T extends SemanticResourceChange> Map<String, List<T>> groupSplitSiblings(List<T> properties) {
+        return properties.stream()
+                .filter(p -> p.getSemanticResourceChangeType() == SemanticResourceChangeType.SPLIT)
+                .collect(Collectors.groupingBy(SemanticResourceChange::getOldIRI));
     }
 }

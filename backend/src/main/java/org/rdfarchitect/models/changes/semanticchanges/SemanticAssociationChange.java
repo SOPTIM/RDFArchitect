@@ -46,8 +46,11 @@ public final class SemanticAssociationChange extends SemanticPropertyChange {
         super(tripleChange);
     }
 
-    public SemanticAssociationChange(SemanticAttributeChange other) {
+    public SemanticAssociationChange(SemanticAssociationChange other) {
         super(other);
+        range = other.getRange();
+        mapping = other.getMapping();
+        associationUsed = other.isAssociationUsed();
     }
 
     public SemanticAssociationChange(SemanticResourceChange resourceChange) {
