@@ -1061,9 +1061,21 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "notices" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "prefixComparison" : {
             "items" : {
               "$ref" : "#/components/schemas/PrefixComparison"
+            },
+            "type" : "array"
+          },
+          "problems" : {
+            "items" : {
+              "type" : "string"
             },
             "type" : "array"
           },
@@ -3432,6 +3444,45 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/export" : {
+      "get" : {
+        "description" : "Exports the whole workspace as a workspace file: every graph with its custom SHACL, layout and custom diagrams, and the workspace's prefixes, diagrams, layout and cross-profile colours.",
+        "operationId" : "exportWorkspace",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/zip" : { }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "export workspace",
+        "tags" : [
+          "dataset"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/graphs" : {
       "get" : {
         "description" : "Lists all graphs in a specified datasets",
@@ -3480,7 +3531,7 @@
     },
     "/api/datasets/{datasetName}/graphs/content/imports" : {
       "post" : {
-        "description" : "Starts a background import of one or more rdf graphs into the dataset. Accepts multiple files and/or zip archives containing several graph files, and returns the id of the job to poll for progress.",
+        "description" : "Starts a background import of one or more rdf graphs into the dataset. Accepts multiple files and/or zip archives containing several graph files, and returns the id of the job to poll for progress at /api/datasets/{datasetName}/imports/{jobId}.",
         "operationId" : "startImport",
         "parameters" : [
           {
@@ -3567,8 +3618,9 @@
     },
     "/api/datasets/{datasetName}/graphs/content/imports/{jobId}" : {
       "delete" : {
-        "description" : "Asks a running import to stop after the file it is currently importing. The graphs imported up to that point are kept.",
-        "operationId" : "cancelImport",
+        "deprecated" : true,
+        "description" : "Deprecated, use the same request below /api/datasets/{datasetName}/imports instead. Asks a running import to stop after the file it is currently importing. The graphs imported up to that point are kept.",
+        "operationId" : "cancelGraphImport",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -3614,8 +3666,9 @@
         ]
       },
       "get" : {
-        "description" : "Returns the progress of a running import and the result of a finished one, including the graphs that were imported, the files that failed and any warnings.",
-        "operationId" : "getImportStatus",
+        "deprecated" : true,
+        "description" : "Deprecated, use the same request below /api/datasets/{datasetName}/imports instead. Returns the progress of a running import and the result of a finished one, including the graphs that were imported, the files that failed and any warnings.",
+        "operationId" : "getImportStatusOfGraphImport",
         "parameters" : [
           {
             "description" : "The literal name of the dataset.",
@@ -3667,8 +3720,9 @@
     },
     "/api/datasets/{datasetName}/graphs/content/imports/{jobId}/prefix-resolutions" : {
       "put" : {
-        "description" : "Hands an import that is waiting for namespace prefix decisions the decisions it asked for and lets it go on. A contested namespace left out of the request is imported without a prefix, leaving the prefixes of the dataset as they are.",
-        "operationId" : "resolvePrefixConflicts",
+        "deprecated" : true,
+        "description" : "Deprecated, use the same request below /api/datasets/{datasetName}/imports instead. Hands an import that is waiting for namespace prefix decisions the decisions it asked for and lets it go on. A contested namespace left out of the request is imported without a prefix, leaving the prefixes of the dataset as they are.",
+        "operationId" : "resolvePrefixConflictsOfGraphImport",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -8077,6 +8131,247 @@
         "summary" : "Write to database",
         "tags" : [
           "graph"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/import" : {
+      "post" : {
+        "description" : "Starts restoring a workspace file, as written by the workspace export, as a new workspace of the given name. Returns the id of the job to poll for progress at /api/datasets/{datasetName}/imports/{jobId}. The file is checked completely first: if anything in it is invalid, nothing is imported and the job's status lists every problem.",
+        "operationId" : "startWorkspaceImport",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The name of the workspace to create.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "properties" : {
+                  "file" : {
+                    "description" : "The workspace file",
+                    "format" : "binary",
+                    "type" : "string"
+                  }
+                },
+                "required" : [
+                  "file"
+                ],
+                "type" : "object"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "202" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobCreatedResponse"
+                }
+              }
+            },
+            "description" : "Import started"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobCreatedResponse"
+                }
+              }
+            },
+            "description" : "An import is already running for this session"
+          }
+        },
+        "summary" : "Start importing a workspace file",
+        "tags" : [
+          "dataset"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/imports/{jobId}" : {
+      "delete" : {
+        "description" : "Asks a running import to stop after the file it is currently importing. The graphs imported up to that point are kept.",
+        "operationId" : "cancelImport",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the import job.",
+            "in" : "path",
+            "name" : "jobId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "204" : {
+            "description" : "Cancellation requested"
+          },
+          "404" : {
+            "description" : "No such import job"
+          }
+        },
+        "summary" : "Cancel an import",
+        "tags" : [
+          "dataset"
+        ]
+      },
+      "get" : {
+        "description" : "Returns the progress of a running import and the result of a finished one, including the graphs that were imported, the files that failed and any warnings.",
+        "operationId" : "getImportStatus",
+        "parameters" : [
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the import job.",
+            "in" : "path",
+            "name" : "jobId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobStatus"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobStatus"
+                }
+              }
+            },
+            "description" : "No such import job"
+          }
+        },
+        "summary" : "Get the progress of an import",
+        "tags" : [
+          "dataset"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/imports/{jobId}/prefix-resolutions" : {
+      "put" : {
+        "description" : "Hands an import that is waiting for namespace prefix decisions the decisions it asked for and lets it go on. A contested namespace left out of the request is imported without a prefix, leaving the prefixes of the dataset as they are.",
+        "operationId" : "resolvePrefixConflicts",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the import job.",
+            "in" : "path",
+            "name" : "jobId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "description" : "What to do with each contested namespace binding.",
+                "items" : {
+                  "$ref" : "#/components/schemas/PrefixResolutionDTO"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Import continues"
+          },
+          "400" : {
+            "description" : "Invalid namespace prefix"
+          },
+          "404" : {
+            "description" : "No such import job"
+          },
+          "409" : {
+            "description" : "The import is not waiting for decisions"
+          }
+        },
+        "summary" : "Resolve the namespace prefix conflicts of an import",
+        "tags" : [
+          "dataset"
         ]
       }
     },

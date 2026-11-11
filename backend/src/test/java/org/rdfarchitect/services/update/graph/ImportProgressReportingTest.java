@@ -26,13 +26,13 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.services.archive.ArchiveFiles;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -42,8 +42,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 /** Covers what the import reports about its progress, and how it reacts to being cancelled. */
 class ImportProgressReportingTest {
@@ -232,17 +230,9 @@ class ImportProgressReportingTest {
         };
     }
 
-    private MultipartFile zip(Map<String, String> entries) throws IOException {
-        var bytes = new ByteArrayOutputStream();
-        try (var zipOutputStream = new ZipOutputStream(bytes)) {
-            for (var entry : entries.entrySet()) {
-                zipOutputStream.putNextEntry(new ZipEntry(entry.getKey()));
-                zipOutputStream.write(entry.getValue().getBytes(StandardCharsets.UTF_8));
-                zipOutputStream.closeEntry();
-            }
-        }
+    private MultipartFile zip(Map<String, String> entries) {
         return new MockMultipartFile(
-                "files", "archive.zip", "application/zip", bytes.toByteArray());
+                "files", "archive.zip", "application/zip", ArchiveFiles.zip(entries));
     }
 
     /** Collects everything the import reports, and can cancel it once a file has been picked up. */

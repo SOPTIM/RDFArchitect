@@ -342,4 +342,32 @@ describe("ImportProgress", () => {
         expect(progress.jobState).toBe(JobState.FAILED);
         expect(progress.errorMessage).toBe("Another import is still running.");
     });
+
+    test("takes over the problems and notices of a workspace import", () => {
+        const progress = new ImportProgress();
+
+        progress.apply(
+            running({
+                state: JobState.FAILED,
+                errorMessage: "The workspace file cannot be imported.",
+                problems: ["manifest.json is missing."],
+                notices: ["Written by a newer version."],
+            }),
+        );
+
+        expect(progress.problems).toEqual(["manifest.json is missing."]);
+        expect(progress.notices).toEqual(["Written by a newer version."]);
+        expect(progress.errorMessage).toBe(
+            "The workspace file cannot be imported.",
+        );
+    });
+
+    test("has neither problems nor notices for a schema import", () => {
+        const progress = new ImportProgress();
+
+        progress.apply(running({ state: JobState.COMPLETED }));
+
+        expect(progress.problems).toEqual([]);
+        expect(progress.notices).toEqual([]);
+    });
 });

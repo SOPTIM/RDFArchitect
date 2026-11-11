@@ -35,12 +35,16 @@ import java.util.concurrent.ConcurrentMap;
 public class CrossProfileDiagramInfo extends SnapshotParticipant<Map<String, String>>
         implements CrossProfileColors {
 
-    @Getter private final UUID crossProfileDiagramUUID = UUID.randomUUID();
+    @Getter private volatile UUID crossProfileDiagramUUID = UUID.randomUUID();
 
     private final ConcurrentMap<String, String> colors = new ConcurrentHashMap<>();
 
     public CrossProfileDiagramInfo(WorkspaceTransactionContext txnContext) {
         super(txnContext);
+    }
+
+    public void restoreCrossProfileDiagramUUID(UUID crossProfileDiagramUUID) {
+        this.crossProfileDiagramUUID = crossProfileDiagramUUID;
     }
 
     /**
