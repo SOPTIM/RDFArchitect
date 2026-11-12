@@ -21,7 +21,7 @@ import lombok.Data;
 
 import org.apache.jena.graph.Graph;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
-import org.rdfarchitect.models.changes.RenameCandidate;
+import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.triplechanges.TripleClassChange;
 
@@ -50,7 +50,7 @@ public class SchemaMigrationContext {
     private List<SemanticClassChange> semanticDiff;
 
     // list of detected/confirmed class renames
-    private List<RenameCandidate<SemanticClassChange>> renameCandidates;
+    private List<ResourceMapping<SemanticClassChange>> resourceMappings;
 
     // list of semantic class changes after the class renames are confirmed and the change objects
     // are merged
@@ -69,7 +69,7 @@ public class SchemaMigrationContext {
         this.updatedCGMESVersion = null;
         this.tripleDiff = null;
         this.semanticDiff = null;
-        this.renameCandidates = null;
+        this.resourceMappings = null;
         this.diffAfterClassConfirm = null;
         this.diffAfterPropertyConfirm = null;
         this.diffAfterDefaultValueConfirm = null;

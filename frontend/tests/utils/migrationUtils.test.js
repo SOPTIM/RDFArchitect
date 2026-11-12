@@ -20,8 +20,10 @@ import { describe, expect, it } from "vitest";
 import {
     allowsDefaultValueInput,
     canKeepExistingValues,
+    computeMappingType,
     describeAttributeChange,
     filterRenameCandidates,
+    groupMappingsForSubmission,
     hasDataTypeChange,
     hasDefaultValue,
     isDefaultValueMissing,
@@ -139,6 +141,17 @@ describe("a changed data type", () => {
         expect(keepsExistingValues(madeRequired)).toBe(false);
         expect(requiresDefaultValue(madeRequired)).toBe(true);
     });
+
+    it.each(["MOVE", "SPLIT", "MERGE"])(
+        "also asks for a default value when a %s result has a data type change",
+        type => {
+            expect(
+                requiresDefaultValue(
+                    dataTypeChanged({ semanticResourceChangeType: type }),
+                ),
+            ).toBe(true);
+        },
+    );
 });
 
 describe("requiresDefaultValue", () => {
@@ -283,12 +296,14 @@ describe("waiving the default value", () => {
 
 describe("isNonInstantiableAssociationRename", () => {
     const candidate = (associationUsed, newResource = null) => ({
-        oldResource: {
-            iri: `${PREFIX}Switch.Terminals`,
-            label: "Terminals",
-            associationUsed,
-        },
-        newResource,
+        oldResources: [
+            {
+                iri: `${PREFIX}Switch.Terminals`,
+                label: "Terminals",
+                associationUsed,
+            },
+        ],
+        newResources: newResource ? [newResource] : [],
         confidenceScore: 0.9,
     });
 
@@ -332,15 +347,15 @@ describe("filterRenameCandidates", () => {
                 association("ConnectedTerminals", false),
                 association("Ends", true),
             ],
-            deletedAndRenamed: [
+            deletedAndRemapped: [
                 {
-                    oldResource: association("Terminals", false),
-                    newResource: association("ConnectedTerminals", false),
+                    oldResources: [association("Terminals", false)],
+                    newResources: [association("ConnectedTerminals", false)],
                     confidenceScore: 0.9,
                 },
                 {
-                    oldResource: association("Windings", true),
-                    newResource: null,
+                    oldResources: [association("Windings", true)],
+                    newResources: [],
                     confidenceScore: 0,
                 },
             ],
@@ -353,7 +368,7 @@ describe("filterRenameCandidates", () => {
         });
 
         expect(
-            filtered.deletedAndRenamed.map(c => c.oldResource.label),
+            filtered.deletedAndRemapped.map(c => c.oldResources[0].label),
         ).toEqual(["Windings"]);
         // the target is linked, just not shown, so it must not resurface as unlinked
         expect(filtered.added.map(a => a.label)).toEqual(["Ends"]);
@@ -366,32 +381,212 @@ describe("filterRenameCandidates", () => {
             alsoHide: isNonInstantiableAssociationRename,
         });
 
-        expect(source.deletedAndRenamed).toHaveLength(2);
+        expect(source.deletedAndRemapped).toHaveLength(2);
         expect(source.added).toHaveLength(2);
     });
 
     it("applies the prefix-only rule only when asked to", () => {
         const properties = {
             added: [{ iri: "http://other#Switch.Terminals" }],
-            deletedAndRenamed: [
+            deletedAndRemapped: [
                 {
-                    oldResource: { iri: `${PREFIX}Switch.Terminals` },
-                    newResource: { iri: "http://other#Switch.Terminals" },
+                    oldResources: [{ iri: `${PREFIX}Switch.Terminals` }],
+                    newResources: [{ iri: "http://other#Switch.Terminals" }],
                 },
             ],
         };
 
         expect(
             filterRenameCandidates(properties, { ignorePrefixes: true })
-                .deletedAndRenamed,
+                .deletedAndRemapped,
         ).toHaveLength(0);
         expect(
             filterRenameCandidates(properties, { ignorePrefixes: false })
-                .deletedAndRenamed,
+                .deletedAndRemapped,
         ).toHaveLength(1);
+    });
+
+    it("also filters the chain-wide allAdded pool, falling back to addedInClass", () => {
+        const properties = {
+            addedInClass: [association("ConnectedTerminals", false)],
+            allAdded: [
+                association("ConnectedTerminals", false),
+                association("Ends", true),
+            ],
+            deletedAndRemapped: [
+                {
+                    oldResources: [association("Terminals", false)],
+                    newResources: [association("ConnectedTerminals", false)],
+                    confidenceScore: 0.9,
+                },
+            ],
+        };
+
+        const filtered = filterRenameCandidates(properties, {
+            alsoHide: isNonInstantiableAssociationRename,
+        });
+
+        expect(filtered.addedInClass).toEqual([]);
+        expect(filtered.allAdded.map(a => a.label)).toEqual(["Ends"]);
     });
 
     it("passes an absent overview through", () => {
         expect(filterRenameCandidates(undefined)).toBeUndefined();
+    });
+});
+
+describe("computeMappingType", () => {
+    const property = (label, domain) => ({
+        iri: `${PREFIX}${domain}.${label}`,
+        label,
+        domain: `${PREFIX}${domain}`,
+    });
+
+    it("is RENAME for a 1:1 link within the same class", () => {
+        expect(
+            computeMappingType(
+                [property("state", "Switch")],
+                [property("status", "Switch")],
+            ),
+        ).toBe("RENAME");
+    });
+
+    it("is MOVE for a 1:1 link across classes", () => {
+        expect(
+            computeMappingType(
+                [property("state", "Switch")],
+                [property("state", "Breaker")],
+            ),
+        ).toBe("MOVE");
+    });
+
+    it("is RENAME for a class-to-class link, which has no domain", () => {
+        expect(
+            computeMappingType(
+                [{ iri: `${PREFIX}Switch`, label: "Switch" }],
+                [{ iri: `${PREFIX}Breaker`, label: "Breaker" }],
+            ),
+        ).toBe("RENAME");
+    });
+
+    it("is MERGE for more than one old resource", () => {
+        expect(
+            computeMappingType(
+                [property("state", "Switch"), property("mode", "Breaker")],
+                [property("status", "Switch")],
+            ),
+        ).toBe("MERGE");
+    });
+
+    it("is SPLIT for more than one new resource", () => {
+        expect(
+            computeMappingType(
+                [property("state", "Switch")],
+                [property("status", "Switch"), property("mode", "Breaker")],
+            ),
+        ).toBe("SPLIT");
+    });
+
+    it("is UNMAPPED when there is no linked target", () => {
+        expect(computeMappingType([property("state", "Switch")], [])).toBe(
+            "UNMAPPED",
+        );
+    });
+});
+
+describe("groupMappingsForSubmission", () => {
+    const property = (label, domain) => ({
+        iri: `${PREFIX}${domain}.${label}`,
+        label,
+        domain: `${PREFIX}${domain}`,
+    });
+
+    it("drops rows with no linked target", () => {
+        const { mappings } = groupMappingsForSubmission([
+            { id: "a", oldResources: [property("x", "A")], newResources: [] },
+        ]);
+
+        expect(mappings).toEqual([]);
+    });
+
+    it("keeps an untouched 1:1 candidate as-is, with its type recomputed", () => {
+        const row = {
+            id: "a",
+            oldResources: [property("state", "Switch")],
+            newResources: [property("state", "Breaker")],
+            confidenceScore: 0.87,
+        };
+
+        const { mappings } = groupMappingsForSubmission([row]);
+
+        expect(mappings).toHaveLength(1);
+        expect(mappings[0].id).toBe("a");
+        expect(mappings[0].type).toBe("MOVE");
+    });
+
+    it("groups two rows linked to the same target into one MERGE mapping", () => {
+        const target = property("status", "Common");
+        const rows = [
+            {
+                id: "a",
+                oldResources: [property("state", "Switch")],
+                newResources: [target],
+            },
+            {
+                id: "b",
+                oldResources: [property("mode", "Breaker")],
+                newResources: [target],
+            },
+        ];
+
+        const { mappings, mappingByRowId } = groupMappingsForSubmission(rows);
+
+        expect(mappings).toHaveLength(1);
+        expect(mappings[0].type).toBe("MERGE");
+        expect(mappings[0].oldResources.map(r => r.label).sort()).toEqual([
+            "mode",
+            "state",
+        ]);
+        expect(mappingByRowId.get("a")).toBe(mappings[0]);
+        expect(mappingByRowId.get("b")).toBe(mappings[0]);
+    });
+
+    it("groups one row linked to two targets into one SPLIT mapping", () => {
+        const row = {
+            id: "a",
+            oldResources: [property("state", "Switch")],
+            newResources: [
+                property("open", "Switch"),
+                property("closed", "Switch"),
+            ],
+        };
+
+        const { mappings } = groupMappingsForSubmission([row]);
+
+        expect(mappings).toHaveLength(1);
+        expect(mappings[0].type).toBe("SPLIT");
+        expect(mappings[0].newResources).toHaveLength(2);
+    });
+
+    it("rejects a group that ends up with more than one old and new resource", () => {
+        const shared = property("shared", "Common");
+        const rows = [
+            {
+                id: "a",
+                oldResources: [property("state", "Switch")],
+                newResources: [shared, property("extra", "Switch")],
+            },
+            {
+                id: "b",
+                oldResources: [property("mode", "Breaker")],
+                newResources: [shared],
+            },
+        ];
+
+        const { mappings, invalidMappingIds } =
+            groupMappingsForSubmission(rows);
+
+        expect(mappings).toEqual([]);
+        expect(invalidMappingIds).toEqual(new Set(["a", "b"]));
     });
 });

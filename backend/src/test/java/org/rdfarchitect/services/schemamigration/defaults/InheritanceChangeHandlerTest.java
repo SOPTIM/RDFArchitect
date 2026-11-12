@@ -27,7 +27,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.models.changes.RenameCandidate;
+import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
@@ -38,6 +38,7 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 class InheritanceChangeHandlerTest {
 
@@ -47,7 +48,7 @@ class InheritanceChangeHandlerTest {
     private Model oldModel;
     private Model newModel;
     private List<SemanticClassChange> allClassChanges;
-    private List<RenameCandidate<SemanticClassChange>> classRenames;
+    private List<ResourceMapping<SemanticClassChange>> classRenames;
 
     @BeforeEach
     void setUp() {
@@ -107,7 +108,13 @@ class InheritanceChangeHandlerTest {
                                             SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
+                    classChange,
+                    allClassChanges,
+                    classChangeMap,
+                    newModel,
+                    oldModel,
+                    classRenames,
+                    Set.of());
 
             assertThat(classChange.getAttributes()).isNotEmpty();
             assertThat(classChange.getAttributes())
@@ -117,6 +124,69 @@ class InheritanceChangeHandlerTest {
                                             && attr.getSemanticResourceChangeType()
                                                     == SemanticResourceChangeType
                                                             .ADDED_FROM_INHERITANCE);
+        }
+
+        /**
+         * Same setup as the superclass-added case above, but the newly-visible property is also
+         * covered by a confirmed MOVE - it must not additionally be synthesized as an inherited
+         * add, since the move's own merged entry already represents it.
+         */
+        @Test
+        void
+                addPropertyChangesFromInheritance_superclassAddedButPropertyAlreadyMoved_doesNotAddInheritedProperty() {
+            var oldEquipment = oldModel.createResource(PREFIX + "Equipment");
+            oldEquipment.addProperty(RDF.type, RDFS.Class);
+            oldEquipment.addProperty(RDFS.label, oldModel.createLiteral("Equipment"));
+            oldEquipment.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+
+            var newIdentifiedObject = newModel.createResource(PREFIX + "IdentifiedObject");
+            newIdentifiedObject.addProperty(RDF.type, RDFS.Class);
+            newIdentifiedObject.addProperty(RDFS.label, newModel.createLiteral("IdentifiedObject"));
+            newIdentifiedObject.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+
+            var nameAttr = newModel.createResource(PREFIX + "IdentifiedObject.name");
+            nameAttr.addProperty(RDF.type, RDF.Property);
+            nameAttr.addProperty(RDFS.label, newModel.createLiteral("name"));
+            nameAttr.addProperty(RDFS.domain, newIdentifiedObject);
+            nameAttr.addProperty(
+                    CIMS.datatype,
+                    newModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            nameAttr.addProperty(
+                    CIMS.multiplicity, newModel.createResource(CIMS_PREFIX + "M:1..1"));
+            nameAttr.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
+
+            var newEquipment = newModel.createResource(PREFIX + "Equipment");
+            newEquipment.addProperty(RDF.type, RDFS.Class);
+            newEquipment.addProperty(RDFS.label, newModel.createLiteral("Equipment"));
+            newEquipment.addProperty(RDFS.subClassOf, newIdentifiedObject);
+            newEquipment.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+
+            var classChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "Equipment")
+                            .label("Equipment")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .build();
+
+            allClassChanges.add(classChange);
+
+            var classChangeMap =
+                    allClassChanges.stream()
+                            .collect(
+                                    java.util.stream.Collectors.toMap(
+                                            SemanticClassChange::getIri, c -> c));
+
+            InheritanceChangeHandler.addPropertyChangesFromInheritance(
+                    classChange,
+                    allClassChanges,
+                    classChangeMap,
+                    newModel,
+                    oldModel,
+                    classRenames,
+                    Set.of(PREFIX + "IdentifiedObject.name"));
+
+            assertThat(classChange.getAttributes())
+                    .noneMatch(attr -> attr.getLabel().equals("IdentifiedObject.name"));
         }
 
         @Test
@@ -170,7 +240,13 @@ class InheritanceChangeHandlerTest {
                                             SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
+                    classChange,
+                    allClassChanges,
+                    classChangeMap,
+                    newModel,
+                    oldModel,
+                    classRenames,
+                    Set.of());
 
             assertThat(classChange.getAttributes()).isNotEmpty();
             assertThat(classChange.getAttributes())
@@ -247,7 +323,13 @@ class InheritanceChangeHandlerTest {
                                             SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
+                    classChange,
+                    allClassChanges,
+                    classChangeMap,
+                    newModel,
+                    oldModel,
+                    classRenames,
+                    Set.of());
 
             assertThat(classChange.getAttributes()).hasSize(2);
             assertThat(classChange.getAttributes())
@@ -326,7 +408,7 @@ class InheritanceChangeHandlerTest {
                             .semanticResourceChangeType(SemanticResourceChangeType.ADD)
                             .build();
 
-            classRenames.add(new RenameCandidate<>(deletedBase, addedBase, 0.9));
+            classRenames.add(new ResourceMapping<>(deletedBase, addedBase, 0.9));
 
             var classChange =
                     SemanticClassChange.builder()
@@ -347,7 +429,13 @@ class InheritanceChangeHandlerTest {
                                             SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
+                    classChange,
+                    allClassChanges,
+                    classChangeMap,
+                    newModel,
+                    oldModel,
+                    classRenames,
+                    Set.of());
 
             // Should not add or remove properties since it's just a rename
             assertThat(classChange.getAttributes()).isEmpty();
@@ -397,7 +485,13 @@ class InheritanceChangeHandlerTest {
                                             SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
+                    classChange,
+                    allClassChanges,
+                    classChangeMap,
+                    newModel,
+                    oldModel,
+                    classRenames,
+                    Set.of());
 
             assertThat(classChange.getAttributes()).isEmpty();
         }
@@ -466,7 +560,7 @@ class InheritanceChangeHandlerTest {
             allClassChanges.add(equipmentChange);
 
             InheritanceChangeHandler.processInheritanceChanges(
-                    allClassChanges, newModel, oldModel, classRenames);
+                    allClassChanges, newModel, oldModel, classRenames, Set.of());
 
             // Check that Transformer was added to allClassChanges and has the property
             var transformerChange =
@@ -530,7 +624,13 @@ class InheritanceChangeHandlerTest {
                                             SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
+                    classChange,
+                    allClassChanges,
+                    classChangeMap,
+                    newModel,
+                    oldModel,
+                    classRenames,
+                    Set.of());
 
             // Abstract classes themselves don't get instance-level property changes
             assertThat(classChange.getAttributes()).isEmpty();
@@ -588,7 +688,13 @@ class InheritanceChangeHandlerTest {
                                             SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
+                    classChange,
+                    allClassChanges,
+                    classChangeMap,
+                    newModel,
+                    oldModel,
+                    classRenames,
+                    Set.of());
 
             assertThat(classChange.getAssociations()).isNotEmpty();
             assertThat(classChange.getAssociations())
@@ -644,7 +750,8 @@ class InheritanceChangeHandlerTest {
                                             classChangeMap,
                                             newModel,
                                             oldModel,
-                                            classRenames))
+                                            classRenames,
+                                            Set.of()))
                     .doesNotThrowAnyException();
         }
 
@@ -726,7 +833,8 @@ class InheritanceChangeHandlerTest {
                     classChangeMap,
                     newModel,
                     oldModel,
-                    classRenames);
+                    classRenames,
+                    Set.of());
 
             // The new property should not be added to derived class since it's new in the base
             assertThat(derivedChange.getAttributes()).isEmpty();
@@ -791,7 +899,13 @@ class InheritanceChangeHandlerTest {
                                             SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    baseChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
+                    baseChange,
+                    allClassChanges,
+                    classChangeMap,
+                    newModel,
+                    oldModel,
+                    classRenames,
+                    Set.of());
 
             // New derived classes should not get properties added
             assertThat(newDerivedChange.getAttributes()).isEmpty();
@@ -820,7 +934,7 @@ class InheritanceChangeHandlerTest {
             allClassChanges.add(superclassChange("Middle", "Base"));
 
             InheritanceChangeHandler.processInheritanceChanges(
-                    allClassChanges, newModel, oldModel, classRenames);
+                    allClassChanges, newModel, oldModel, classRenames, Set.of());
 
             assertThat(inheritedAttributes(PREFIX + "Derived", PREFIX + "Base.baseProperty"))
                     .singleElement()
@@ -848,7 +962,7 @@ class InheritanceChangeHandlerTest {
             allClassChanges.add(superclassChange("Middle", "Base"));
 
             InheritanceChangeHandler.processInheritanceChanges(
-                    allClassChanges, newModel, oldModel, classRenames);
+                    allClassChanges, newModel, oldModel, classRenames, Set.of());
 
             assertThat(inheritedAttributes(PREFIX + "Derived", PREFIX + "Base.baseProperty"))
                     .singleElement()
@@ -876,7 +990,7 @@ class InheritanceChangeHandlerTest {
             allClassChanges.add(superclassChange("Middle", "Base"));
 
             InheritanceChangeHandler.processInheritanceChanges(
-                    allClassChanges, newModel, oldModel, classRenames);
+                    allClassChanges, newModel, oldModel, classRenames, Set.of());
 
             assertThat(
                             classChange(PREFIX + "Derived").getAssociations().stream()

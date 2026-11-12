@@ -17,11 +17,11 @@
 
 package org.rdfarchitect.services.schemamigration.renamings;
 
-import org.rdfarchitect.models.changes.RenameCandidate;
+import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 
 import java.util.List;
 
 public interface ClassRenamingsUseCase {
-    void confirmClassRenamings(List<RenameCandidate<SemanticClassChange>> renames);
+    void confirmClassRenamings(List<ResourceMapping<SemanticClassChange>> renames);
 }

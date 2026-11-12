@@ -22,6 +22,7 @@ import lombok.experimental.UtilityClass;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticPropertyChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 
@@ -31,6 +32,32 @@ public class ChangeObjectTestBuilder {
         return SemanticResourceChange.builder()
                 .label(label)
                 .semanticResourceChangeType(type)
+                .build();
+    }
+
+    public SemanticPropertyChange propertyChange(String label, SemanticResourceChangeType type) {
+        return SemanticPropertyChange.builder()
+                .label(label)
+                .semanticResourceChangeType(type)
+                .build();
+    }
+
+    public SemanticPropertyChange propertyChange(
+            String label, SemanticResourceChangeType type, String domain) {
+        return SemanticPropertyChange.builder()
+                .label(label)
+                .semanticResourceChangeType(type)
+                .domain(domain)
+                .build();
+    }
+
+    public SemanticPropertyChange propertyChange(
+            String label, SemanticResourceChangeType type, String domain, String iri) {
+        return SemanticPropertyChange.builder()
+                .label(label)
+                .semanticResourceChangeType(type)
+                .domain(domain)
+                .iri(iri)
                 .build();
     }
 

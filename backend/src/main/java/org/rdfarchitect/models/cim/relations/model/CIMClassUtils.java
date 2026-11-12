@@ -46,7 +46,7 @@ public class CIMClassUtils {
         queue.add(classResource);
         while (!queue.isEmpty()) {
             var current = queue.pop();
-            var directlyDerivingClassUris = findDirectlyDerivingClasses(current);
+            var directlyDerivingClassUris = listDirectlyDerivingClasses(current);
             for (var derivingClassUri : directlyDerivingClassUris) {
                 if (uniqueClassUriSet.add(derivingClassUri)) {
                     queue.add(derivingClassUri);
@@ -54,19 +54,6 @@ public class CIMClassUtils {
             }
         }
         return uniqueClassUriSet;
-    }
-
-    /**
-     * Finds all directly deriving classes of a given class URI.
-     *
-     * @param classResource class resource to find deriving classes for
-     * @return a set of directly deriving classes
-     */
-    public Set<Resource> findDirectlyDerivingClasses(Resource classResource) {
-        var ontology = classResource.getModel();
-        return ontology.listResourcesWithProperty(RDFS.subClassOf, classResource)
-                .mapWith(RDFNode::asResource)
-                .toSet();
     }
 
     /**

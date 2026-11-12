@@ -36,7 +36,7 @@ import java.util.List;
 @SuperBuilder
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public final class SemanticEnumEntryChange extends SemanticResourceChange {
+public final class SemanticEnumEntryChange extends SemanticPropertyChange {
 
     private String replacementValue;
 

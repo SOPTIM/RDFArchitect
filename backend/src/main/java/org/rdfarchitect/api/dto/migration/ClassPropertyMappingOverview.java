@@ -20,6 +20,7 @@ package org.rdfarchitect.api.dto.migration;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import org.rdfarchitect.models.changes.PotentialPropertyData;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
@@ -27,24 +28,33 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
 
 @Data
 @AllArgsConstructor
-public class PropertyOverview {
+public class ClassPropertyMappingOverview {
 
-    private String label;
-    private ResourceRenameOverview<SemanticAttributeChange> attributes;
-    private ResourceRenameOverview<SemanticAssociationChange> associations;
-    private ResourceRenameOverview<SemanticEnumEntryChange> enumEntries;
+    private String classLabel;
 
-    public PropertyOverview(SemanticClassChange classChange) {
-        this.label = classChange.getLabel();
+    private PropertyMappingOverview<SemanticAttributeChange> attributes;
+
+    private PropertyMappingOverview<SemanticAssociationChange> associations;
+
+    private PropertyMappingOverview<SemanticEnumEntryChange> enumEntries;
+
+    public ClassPropertyMappingOverview(
+            SemanticClassChange classChange, PotentialPropertyData propertyData) {
+        this.classLabel = classChange.getLabel();
         this.attributes =
-                new ResourceRenameOverview<>(
-                        classChange.getAttributes(), classChange.getAttributeRenameCandidates());
+                new PropertyMappingOverview<>(
+                        classChange.getAttributes(),
+                        propertyData.attributes(),
+                        classChange.getAttributeResourceMappings());
         this.associations =
-                new ResourceRenameOverview<>(
+                new PropertyMappingOverview<>(
                         classChange.getAssociations(),
-                        classChange.getAssociationRenameCandidates());
+                        propertyData.associations(),
+                        classChange.getAssociationResourceMappings());
         this.enumEntries =
-                new ResourceRenameOverview<>(
-                        classChange.getEnumEntries(), classChange.getEnumEntryRenameCandidates());
+                new PropertyMappingOverview<>(
+                        classChange.getEnumEntries(),
+                        propertyData.enumEntries(),
+                        classChange.getEnumEntryResourceMappings());
     }
 }

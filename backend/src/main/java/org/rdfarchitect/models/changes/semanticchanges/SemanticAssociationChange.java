@@ -33,7 +33,7 @@ import org.rdfarchitect.models.changes.triplechanges.TripleResourceChange;
 @SuperBuilder
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public final class SemanticAssociationChange extends SemanticResourceChange {
+public final class SemanticAssociationChange extends SemanticPropertyChange {
 
     private String range;
 
@@ -46,8 +46,11 @@ public final class SemanticAssociationChange extends SemanticResourceChange {
         super(tripleChange);
     }
 
-    public SemanticAssociationChange(SemanticAttributeChange other) {
+    public SemanticAssociationChange(SemanticAssociationChange other) {
         super(other);
+        range = other.getRange();
+        mapping = other.getMapping();
+        associationUsed = other.isAssociationUsed();
     }
 
     public SemanticAssociationChange(SemanticResourceChange resourceChange) {
