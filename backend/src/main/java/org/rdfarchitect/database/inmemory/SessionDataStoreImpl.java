@@ -32,6 +32,8 @@ import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.WorkspaceTransaction;
+import org.rdfarchitect.database.snapshots.ShapesDocumentGraphs;
+import org.rdfarchitect.database.snapshots.ShapesGraphNaming;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
@@ -217,6 +219,28 @@ public class SessionDataStoreImpl implements SessionDataStore {
                             .setGraphName(graphUri)
                             .build();
             databaseConnection.insertGraph(graphSource, datasetName);
+            writeShapesDocuments(databaseConnection, datasetName, transaction);
+        }
+    }
+
+    /**
+     * Makes the database hold the workspace's shapes documents as they stand, in the layout {@link
+     * ShapesDocumentGraphs} defines.
+     *
+     * <p>All in one request, because an insert appends and so what is stored has to go first, and a
+     * failure between the two would lose it.
+     */
+    private void writeShapesDocuments(
+            DatabaseConnection databaseConnection,
+            String datasetName,
+            WorkspaceTransaction transaction) {
+        var stored =
+                listGraphNames(databaseConnection, datasetName).stream()
+                        .filter(ShapesGraphNaming::isReserved)
+                        .toList();
+        var current = ShapesDocumentGraphs.of(transaction.shapesDocuments().values());
+        if (!stored.isEmpty() || !current.isEmpty()) {
+            databaseConnection.replaceGraphs(stored, current, datasetName);
         }
     }
 
@@ -268,17 +292,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
      * @return fetched {@link Graph}
      */
     private Dataset fetchDataset(DatabaseConnection databaseConnection, String datasetName) {
-        // build query
-        var graphVar = "?graph";
-        var graphQuery =
-                new SelectBuilder()
-                        .addVar(graphVar)
-                        .setDistinct(true)
-                        .addGraph(graphVar, "?s", "?p", "?o")
-                        .build();
-
         // fetch data
-        var queryResultSet = databaseConnection.sendSelect(graphQuery, datasetName).asResultSet();
+        var graphNames = listGraphNames(databaseConnection, datasetName);
         var prefixMapping = databaseConnection.getPrefixMapping(datasetName);
 
         // insert prefixes
@@ -290,12 +305,29 @@ public class SessionDataStoreImpl implements SessionDataStore {
         var graph = fetchGraph(databaseConnection, datasetName, "default");
         dataset.setDefaultModel(ModelFactory.createModelForGraph(graph));
         // named
-        while (queryResultSet.hasNext()) {
-            var graphURI = queryResultSet.next().get(graphVar).asNode();
-            graph = fetchGraph(databaseConnection, datasetName, graphURI.getURI());
-            dataset.addNamedModel(graphURI.getURI(), ModelFactory.createModelForGraph(graph));
+        for (var graphUri : graphNames) {
+            graph = fetchGraph(databaseConnection, datasetName, graphUri);
+            dataset.addNamedModel(graphUri, ModelFactory.createModelForGraph(graph));
         }
         return dataset;
+    }
+
+    /** Returns the names of the dataset's non-empty named graphs. */
+    private static List<String> listGraphNames(
+            DatabaseConnection databaseConnection, String datasetName) {
+        var graphVar = "?graph";
+        var graphQuery =
+                new SelectBuilder()
+                        .addVar(graphVar)
+                        .setDistinct(true)
+                        .addGraph(graphVar, "?s", "?p", "?o")
+                        .build();
+        var resultSet = databaseConnection.sendSelect(graphQuery, datasetName).asResultSet();
+        var names = new ArrayList<String>();
+        while (resultSet.hasNext()) {
+            names.add(resultSet.next().get(graphVar).asNode().getURI());
+        }
+        return names;
     }
 
     /**

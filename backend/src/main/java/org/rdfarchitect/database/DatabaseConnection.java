@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.database;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.Query;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
@@ -25,7 +26,9 @@ import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.rdf.formatter.ResultFormatter;
 import org.rdfarchitect.rdf.graph.source.GraphSource;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /** Defines how this application communicates with a database. */
 public interface DatabaseConnection {
@@ -61,6 +64,17 @@ public interface DatabaseConnection {
      * @param datasetName Name of the dataset
      */
     void insertGraph(GraphSource graphSource, String datasetName) throws DataAccessException;
+
+    /**
+     * Removes some graphs of a specific dataset and writes others, in one request, which the store
+     * applies as one transaction: if it fails, nothing changes.
+     *
+     * @param removed Names of the graphs to remove
+     * @param written The graphs to write by name, each replacing a graph of that name
+     * @param datasetName Name of the dataset
+     */
+    void replaceGraphs(Collection<String> removed, Map<String, Graph> written, String datasetName)
+            throws DataAccessException;
 
     // delete
 

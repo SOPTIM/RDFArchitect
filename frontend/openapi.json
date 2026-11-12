@@ -2295,6 +2295,58 @@
         },
         "type" : "object"
       },
+      "ShapesDocumentInfo" : {
+        "properties" : {
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "nodeShapeCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "order" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "origin" : {
+            "enum" : [
+              "IMPORTED",
+              "AUTHORED"
+            ],
+            "type" : "string"
+          },
+          "propertyShapeCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "schemas" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array",
+            "uniqueItems" : true
+          },
+          "sourceFileName" : {
+            "type" : "string"
+          },
+          "sparqlConstraintCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "tripleCount" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "SuperClassDTO" : {
         "properties" : {
           "label" : {
@@ -9017,6 +9069,732 @@
         "summary" : "restore a version",
         "tags" : [
           "workspace"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/shacl/documents" : {
+      "get" : {
+        "description" : "Lists the sets of SHACL shapes in the workspace, in order, without their content.",
+        "operationId" : "listShapesDocuments",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "list constraints documents",
+        "tags" : [
+          "shacl"
+        ]
+      },
+      "post" : {
+        "description" : "Creates a set of SHACL shapes from a Turtle string.",
+        "operationId" : "createShapesDocument",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "Display name of the new document.",
+            "in" : "query",
+            "name" : "name",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "URIs of the schemas it applies to.",
+            "in" : "query",
+            "name" : "schema",
+            "required" : false,
+            "schema" : {
+              "items" : {
+                "type" : "string"
+              },
+              "type" : "array"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "text/plain" : {
+              "schema" : {
+                "description" : "The SHACL shapes in Turtle syntax.",
+                "type" : "string"
+              }
+            },
+            "text/turtle" : {
+              "schema" : {
+                "description" : "The SHACL shapes in Turtle syntax.",
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "The content is not valid Turtle."
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "A named schema does not exist."
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "Another document in this workspace already has that name, or the workspace is read-only."
+          }
+        },
+        "summary" : "add a constraints document from Turtle",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/shacl/documents/file" : {
+      "post" : {
+        "description" : "Uploads a set of SHACL shapes. TTL, RDF/XML and N-Triples are accepted; anything other than Turtle is converted to Turtle on import.",
+        "operationId" : "createShapesDocumentFromFile",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "URIs of the schemas it applies to.",
+            "in" : "query",
+            "name" : "schema",
+            "required" : false,
+            "schema" : {
+              "items" : {
+                "type" : "string"
+              },
+              "type" : "array"
+            }
+          },
+          {
+            "description" : "Display name; defaults to the file name.",
+            "in" : "query",
+            "name" : "name",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "properties" : {
+                  "file" : {
+                    "description" : "The file containing the SHACL shapes.",
+                    "format" : "binary",
+                    "type" : "string"
+                  }
+                },
+                "required" : [
+                  "file"
+                ],
+                "type" : "object"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "The content is not valid Turtle."
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "A named schema does not exist."
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "Another document in this workspace already has that name, or the workspace is read-only."
+          },
+          "415" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "The file is not Turtle, RDF/XML or N-Triples."
+          }
+        },
+        "summary" : "add a constraints document from a file",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/shacl/documents/{documentId}" : {
+      "delete" : {
+        "description" : "Deletes a set of SHACL shapes.",
+        "operationId" : "deleteShapesDocument",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the constraints document.",
+            "in" : "path",
+            "name" : "documentId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "No constraints document with this id in the workspace."
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The workspace is read-only."
+          }
+        },
+        "summary" : "delete a constraints document",
+        "tags" : [
+          "shacl"
+        ]
+      },
+      "get" : {
+        "description" : "Returns the document's Turtle source, as the user last saved it where that text is known.",
+        "operationId" : "getShapesDocumentText",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the constraints document.",
+            "in" : "path",
+            "name" : "documentId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "404" : {
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "No constraints document with this id in the workspace."
+          }
+        },
+        "summary" : "get constraints document content",
+        "tags" : [
+          "shacl"
+        ]
+      },
+      "patch" : {
+        "description" : "Renames a document, switches it on or off, moves it in the list, or changes the schemas it applies to. Omitted parameters are left unchanged. Order affects list position and serialisation order only — SHACL has no precedence between documents.",
+        "operationId" : "updateShapesDocument",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the constraints document.",
+            "in" : "path",
+            "name" : "documentId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "New display name.",
+            "in" : "query",
+            "name" : "name",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "Whether the shapes take part in validation and combined export.",
+            "in" : "query",
+            "name" : "enabled",
+            "required" : false,
+            "schema" : {
+              "type" : "boolean"
+            }
+          },
+          {
+            "description" : "New position in the document list.",
+            "in" : "query",
+            "name" : "order",
+            "required" : false,
+            "schema" : {
+              "format" : "int32",
+              "type" : "integer"
+            }
+          },
+          {
+            "description" : "URIs of the schemas it applies to, replacing the ones it has. Given empty, it applies to none.",
+            "in" : "query",
+            "name" : "schema",
+            "required" : false,
+            "schema" : {
+              "items" : {
+                "type" : "string"
+              },
+              "type" : "array"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "No constraints document with this id in the workspace."
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShapesDocumentInfo"
+                }
+              }
+            },
+            "description" : "Another document in this workspace already has that name, or the workspace is read-only."
+          }
+        },
+        "summary" : "update constraints document metadata",
+        "tags" : [
+          "shacl"
+        ]
+      },
+      "put" : {
+        "description" : "Replaces the document's shapes with the given Turtle.",
+        "operationId" : "replaceShapesDocumentText",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The id of the constraints document.",
+            "in" : "path",
+            "name" : "documentId",
+            "required" : true,
+            "schema" : {
+              "format" : "uuid",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "Lowercase hex SHA-256 of the UTF-8 text the edit was made to, as read from this document. When given, the write is refused if the document has changed since.",
+            "in" : "query",
+            "name" : "expectedRevision",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "text/plain" : {
+              "schema" : {
+                "description" : "The SHACL shapes in Turtle syntax.",
+                "type" : "string"
+              }
+            },
+            "text/turtle" : {
+              "schema" : {
+                "description" : "The SHACL shapes in Turtle syntax.",
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The content is not valid Turtle."
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "No constraints document with this id in the workspace."
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The workspace is read-only."
+          },
+          "412" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The document no longer holds the text expectedRevision names."
+          }
+        },
+        "summary" : "replace constraints document content",
+        "tags" : [
+          "shacl"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/shacl/export/file" : {
+      "get" : {
+        "description" : "Exports the named constraints documents as one file, optionally merged with the shapes generated from schemas. A document is included because it was asked for, whether or not it is enabled for validation. A single document exported as Turtle on its own is returned as its stored text.",
+        "operationId" : "exportSelection",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The constraints documents to include.",
+            "in" : "query",
+            "name" : "documentId",
+            "required" : false,
+            "schema" : {
+              "items" : {
+                "format" : "uuid",
+                "type" : "string"
+              },
+              "type" : "array"
+            }
+          },
+          {
+            "description" : "URIs of the schemas whose generated shapes to merge in.",
+            "in" : "query",
+            "name" : "generatedFor",
+            "required" : false,
+            "schema" : {
+              "items" : {
+                "type" : "string"
+              },
+              "type" : "array"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "text/turtle" : { }
+            },
+            "description" : "OK"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "A requested document or schema does not exist in this workspace."
+          },
+          "406" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "format" : "byte",
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The Accept header names no supported RDF syntax."
+          }
+        },
+        "summary" : "export chosen constraints",
+        "tags" : [
+          "shacl"
         ]
       }
     },
