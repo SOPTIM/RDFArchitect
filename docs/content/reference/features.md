@@ -84,7 +84,7 @@ A seven-step wizard that turns the difference between two schema versions into a
 1. Select source and target schemas, with the CGMES version of each side and an optional *ignore prefixes* mode for namespace bumps.
 2. Validate both schemas side by side.
 3. Confirm class renames.
-4. Confirm attribute / association / enum entry renames.
+4. Confirm attribute / association / enum entry mappings — renames, moves between classes, and splits and merges along an inheritance chain.
 5. Choose default values — literals for attributes, SPARQL target mappings for associations, replacement entries for deleted enum values. Datatype changes can be declared value-preserving, and a required default can be knowingly waived.
 6. Review all changes and comment them.
 7. Generate and download the artefacts.
