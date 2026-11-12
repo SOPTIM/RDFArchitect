@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-12
+
+### Added
+
+- RDFA-516: Multi-segment edges with bend and docking points ([d01b90b0](https://github.com/SOPTIM/RDFArchitect/commit/d01b90b0), [#202](https://github.com/SOPTIM/RDFArchitect/pull/202))
+- RDFA-672: Changelog ([bf033b61](https://github.com/SOPTIM/RDFArchitect/commit/bf033b61), [#282](https://github.com/SOPTIM/RDFArchitect/pull/282))
+- RDFA-670: Workspace transactions/undo-redo refactoring ([6d4e78d8](https://github.com/SOPTIM/RDFArchitect/commit/6d4e78d8), [#281](https://github.com/SOPTIM/RDFArchitect/pull/281))
+
+### Fixed
+
+- RDFA-747: Migration bugfixes ([4021c7ff](https://github.com/SOPTIM/RDFArchitect/commit/4021c7ff), [#280](https://github.com/SOPTIM/RDFArchitect/pull/280))
+
 ## [1.7.0] - 2026-10-29
 
 ### Added
