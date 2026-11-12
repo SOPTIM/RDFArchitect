@@ -20,7 +20,7 @@
         faCaretDown,
         faDiagramProject,
     } from "@fortawesome/free-solid-svg-icons";
-    import { onMount, onDestroy } from "svelte";
+    import { onMount, onDestroy, untrack } from "svelte";
     import { Fa } from "svelte-fa";
 
     import {
@@ -42,6 +42,7 @@
     import { askForExtendSource } from "$lib/extendSourceRequest.svelte.js";
     import { graphColors } from "$lib/graphColors.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
+    import { superClassFocusRequest } from "$lib/propertyEditorRequest.svelte.js";
     import {
         ClassType,
         editorState,
@@ -59,6 +60,12 @@
     let loadingSchemas = $state(false);
     let creating = $state(false);
     let isWorkspaceReadOnly = $state(false);
+
+    /**
+     * The last merged class that resolved, and the stable uuid of the class behind it. Bookkeeping
+     * rather than state: it is only read to find a class again whose merged id changed.
+     */
+    let lastResolved = null;
 
     let sourceGraphUri = $state(null);
     let sourceClassUuid = $state(null);
@@ -128,6 +135,22 @@
                             c.sources?.some(s => s.classUUID === classUuid),
                         ) ?? null;
                 }
+                if (
+                    !found &&
+                    lastResolved?.sourceUuid &&
+                    lastResolved.mergedUuid === classUuid
+                ) {
+                    // The merged id is derived from the class uri, so renaming
+                    // a class — or undoing that rename — changes it underneath
+                    // the selection. The class itself keeps its uuid, which is
+                    // how it is found again.
+                    found =
+                        classes.find(c =>
+                            c.sources?.some(
+                                s => s.classUUID === lastResolved.sourceUuid,
+                            ),
+                        ) ?? null;
+                }
 
                 mergedClass = found;
                 if (!found) {
@@ -139,6 +162,10 @@
                 const source = preferredSource(found);
                 sourceGraphUri = graphUriOfSource(source);
                 sourceClassUuid = source?.classUUID ?? null;
+                lastResolved = {
+                    mergedUuid: found.uuid,
+                    sourceUuid: sourceClassUuid,
+                };
 
                 if (found.uuid !== classUuid && !graphUri) {
                     editorState.selectedClass.updateValue({
@@ -204,6 +231,23 @@
                 classUUID: occurrence.classUUID,
             })),
         });
+    });
+
+    /**
+     * A diagram asks to focus the super class of a class by the UUID it shows the class under. In a
+     * merged diagram that is the merged UUID, while the editor knows the class by its UUID in the
+     * schema it is opened in, so the request is passed on under that UUID.
+     */
+    $effect(() => {
+        const request = superClassFocusRequest.current;
+        const schemaClassUuid = activeOccurrence?.classUUID;
+        if (
+            request?.classUuid === classUuid &&
+            schemaClassUuid &&
+            schemaClassUuid !== classUuid
+        ) {
+            untrack(() => superClassFocusRequest.open(schemaClassUuid));
+        }
     });
 
     onMount(() =>

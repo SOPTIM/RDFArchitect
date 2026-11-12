@@ -24,7 +24,8 @@
     } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
-    import { migrationState } from "$lib/sharedState.svelte.js";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+   import { migrationState } from "$lib/sharedState.svelte.js";
     import { saveFile, sparqlMediaType } from "$lib/utils/fileUtils.js";
 
     import { goto } from "$app/navigation";
@@ -35,37 +36,40 @@
         await goto("/mainpage");
     }
 
-    async function downloadMigrationScript() {
+    async function downloadFile(label, request) {
         try {
-            const { data, response } = await generateMigrationScript();
+            const { data, error, response } = await request();
+            if (error) throw error;
+
             const suggestedFilename = response.headers.get(
                 "content-disposition",
             );
             saveFile(data, suggestedFilename, sparqlMediaType);
             downloaded = true;
         } catch (e) {
-            console.error("Failed to generate script:", e);
+            console.error(`Failed to generate ${label}:`, e);
+            toastStore.error(
+                "Export failed",
+                `Could not generate the migration ${label}.`,
+            );
         }
     }
 
-    async function downloadMigrationReport(reportType) {
+    function downloadMigrationScript() {
+        return downloadFile("script", () => generateMigrationScript());
+    }
+
+    function downloadMigrationReport(reportType) {
         const state = get(migrationState);
-        try {
-            const { data, response } = await generateMigrationReport({
+        return downloadFile("report", () =>
+            generateMigrationReport({
                 query: {
-                    reportType: reportType,
+                    reportType,
                     originalCGMESVersion: state.cgmesVersionA,
                     updatedCGMESVersion: state.cgmesVersionB,
                 },
-            });
-            const suggestedFilename = response.headers.get(
-                "content-disposition",
-            );
-            saveFile(data, suggestedFilename, sparqlMediaType);
-            downloaded = true;
-        } catch (e) {
-            console.error("Failed to generate report:", e);
-        }
+            }),
+        );
     }
 </script>
 

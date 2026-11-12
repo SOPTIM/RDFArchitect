@@ -1,0 +1,493 @@
+<!--
+  -    Copyright (c) 2024-2026 SOPTIM AG
+  -
+  -    Licensed under the Apache License, Version 2.0 (the "License");
+  -    you may not use this file except in compliance with the License.
+  -    You may obtain a copy of the License at
+  -
+  -        http://www.apache.org/licenses/LICENSE-2.0
+  -
+  -    Unless required by applicable law or agreed to in writing, software
+  -    distributed under the License is distributed on an "AS IS" BASIS,
+  -    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  -    See the License for the specific language governing permissions and
+  -    limitations under the License.
+  -
+  -->
+
+<script>
+    import {
+        faAngleDown,
+        faAnglesDown,
+        faAnglesUp,
+        faAngleUp,
+        faLayerGroup,
+        faCopy,
+        faMinus,
+        faObjectGroup,
+        faTrash,
+        faDiagramProject,
+        faEye,
+        faGear,
+    } from "@fortawesome/free-solid-svg-icons";
+
+    import ContextMenuSeparator from "$lib/components/bitsui/contextmenu/ContextMenuSeparator.svelte";
+    import { ContextMenu } from "$lib/components/bitsui/contextmenu/index.js";
+    import SliderEditControl from "$lib/components/SliderEditControl.svelte";
+    import {
+        copyState,
+        editorState,
+        isCustomDiagramType,
+        isMergedDiagramType,
+        multiSelectState,
+    } from "$lib/sharedState.svelte.js";
+
+    import {
+        getContextMenuTriggerStyle,
+        handleContextMenuOpenChange,
+        syncContextMenuTrigger,
+    } from "./contextMenuUtils.js";
+    import DeleteDependenciesDialog from "../../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
+    import AddToGraphDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import AddToWorkspaceDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
+    import RemoveFromDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
+    import ExtendSchemaSubMenu from "../../../../../routes/mainpage/packageNavigation/ExtendSchemaSubMenu.svelte";
+    import SHACLClassSpecificPopUp from "../../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
+
+    let {
+        request = null,
+        disabled = false,
+        readOnly = false,
+        contextMenuClass = null,
+        workspaceName = "",
+        graphUri = "",
+        nodeOrder = [],
+        nodeCount = 0,
+        onClose = () => {},
+        onOpenClass = () => {},
+        onSetLayer = () => {},
+        onPersistLayer = () => {},
+    } = $props();
+
+    let triggerRef = $state(null);
+    let open = $state(false);
+    let showDeleteDependenciesDialog = $state(false);
+    let showSHACLDialog = $state(false);
+    let showRemoveFromDiagramDialog = $state(false);
+    let showAddToGraphDiagramDialog = $state(false);
+    let showAddToWorkspaceDiagramDialog = $state(false);
+
+    let dialogClassIds = $state([]);
+    let dialogClassLabels = $state([]);
+    let dialogGraphUri = $state(null);
+    let dialogClasses = $state([]);
+
+    let layerChangedClassUuid = null;
+
+    /** The classes of the selection, addressed by uuid alone. */
+    const extendClassUuids = $derived(selectionUuids);
+
+    /** The schema of the diagram the class was right-clicked in, if any. */
+    const currentGraphUri = $derived(
+        isMergedDiagram
+            ? null
+            : (contextMenuClass?.graphUri ?? graphUri) || null,
+    );
+
+    let triggerStyle = $derived(getContextMenuTriggerStyle(request));
+
+    const multiActive = $derived(multiSelectState.isMultiSelect);
+    const selectionUuids = $derived(
+        multiActive
+            ? multiSelectState.getSelected().map(e => e.classUuid)
+            : contextMenuClass
+              ? [contextMenuClass.uuid]
+              : [],
+    );
+    const selectionLabels = $derived(
+        multiActive
+            ? multiSelectState.getSelected().map(e => e.classLabel)
+            : contextMenuClass
+              ? [contextMenuClass.label]
+              : [],
+    );
+
+    const selectionClasses = $derived(
+        multiActive
+            ? multiSelectState.getSelected().map(entry => ({
+                  id: entry.classUuid,
+                  graphUri: entry.graphUri ?? graphUri,
+              }))
+            : contextMenuClass
+              ? [
+                    {
+                        id: contextMenuClass.uuid,
+                        graphUri: contextMenuClass.graphUri ?? graphUri,
+                    },
+                ]
+              : [],
+    );
+
+    const crossGraphDisabled = $derived(
+        multiActive && !multiSelectState.isSingleGraph,
+    );
+
+    const diagramType = $derived(
+        editorState.selectedDiagram.getProperty("type"),
+    );
+    const isMergedDiagram = $derived(isMergedDiagramType(diagramType));
+    const isCustomDiagram = $derived(isCustomDiagramType(diagramType));
+
+    let classZIndex = $derived(
+        contextMenuClass ? nodeOrder.indexOf(contextMenuClass.uuid) : -1,
+    );
+    let isAtFront = $derived(classZIndex >= nodeCount - 1);
+    let isAtBack = $derived(classZIndex <= 0);
+    let classActionsDisabled = $derived(disabled || readOnly);
+
+    const shaclClass = $derived({
+        uuid: { value: contextMenuClass?.uuid },
+        label: { value: contextMenuClass?.label ?? "" },
+    });
+
+    $effect(() => {
+        syncContextMenuTrigger({
+            disabled,
+            request,
+            triggerRef,
+            setOpen: nextOpen => (open = nextOpen),
+        });
+    });
+
+    $effect(() => {
+        if (!open) {
+            persistChangedLayer();
+        }
+    });
+
+    function handleOpenChange(nextOpen) {
+        handleContextMenuOpenChange(nextOpen, value => (open = value), onClose);
+    }
+
+    function openDeleteClassDialog() {
+        if (classActionsDisabled || crossGraphDisabled || !contextMenuClass) {
+            return;
+        }
+        dialogClassIds = selectionUuids;
+        dialogGraphUri = multiActive
+            ? (multiSelectState.getSelected()[0]?.graphUri ?? graphUri)
+            : (contextMenuClass.graphUri ?? graphUri);
+        showDeleteDependenciesDialog = true;
+        onClose();
+    }
+
+    function openRemoveFromDiagramDialog() {
+        if (!contextMenuClass) {
+            return;
+        }
+        dialogClassIds = selectionUuids;
+        dialogClassLabels = selectionLabels;
+        showRemoveFromDiagramDialog = true;
+        onClose();
+    }
+
+    function openAddToGraphDiagramDialog() {
+        dialogClasses = selectionClasses;
+        showAddToGraphDiagramDialog = true;
+        onClose();
+    }
+
+    function openAddToWorkspaceDiagramDialog() {
+        dialogClasses = selectionClasses;
+        showAddToWorkspaceDiagramDialog = true;
+        onClose();
+    }
+
+    function handleMoveUp() {
+        slideLayer(classZIndex + 1);
+    }
+
+    function handleMoveDown() {
+        slideLayer(classZIndex - 1);
+    }
+
+    function handleMoveToTop() {
+        slideLayer(nodeCount - 1);
+    }
+
+    function handleMoveToBottom() {
+        slideLayer(0);
+    }
+
+    function handleLayerChange(newLayer) {
+        if (classActionsDisabled || !contextMenuClass) return;
+        const clamped = Math.max(0, Math.min(nodeCount - 1, newLayer));
+        // Immediate local update
+        onSetLayer({ classUuid: contextMenuClass.uuid, layer: clamped });
+    }
+
+    /**
+     * Applies a layer picked with the slider or the move entries at once, so its effect can be
+     * watched in the diagram. It is saved when the menu closes. Typed text that is no number yet
+     * is ignored.
+     */
+    function slideLayer(newLayer) {
+        if (
+            typeof newLayer !== "number" ||
+            classActionsDisabled ||
+            !contextMenuClass
+        ) {
+            return;
+        }
+        handleLayerChange(newLayer);
+        layerChangedClassUuid = contextMenuClass.uuid;
+    }
+
+    /**
+     * Saves the layer changed with the slider or the move entries, once the menu is closed.
+     */
+    function persistChangedLayer() {
+        if (layerChangedClassUuid === null) {
+            return;
+        }
+        onPersistLayer({ classUuid: layerChangedClassUuid });
+        layerChangedClassUuid = null;
+    }
+
+    /**
+     * Keeps the keys pressed in the layer slider away from the menu, so typing and the arrow
+     * keys do not move the focus to other entries. Escape and Tab still reach the menu.
+     */
+    function keepKeysInLayerSlider(event) {
+        if (event.key !== "Escape" && event.key !== "Tab") {
+            event.stopPropagation();
+        }
+    }
+
+    function openClass() {
+        onOpenClass(contextMenuClass.uuid);
+        onClose();
+    }
+
+    function copyClass() {
+        copyState.set(
+            multiSelectState.copyEntriesOr({
+                classUUID: contextMenuClass.uuid,
+                graphURI:
+                    contextMenuClass.graphUri ??
+                    editorState.selectedGraph.getValue(),
+                workspaceName: editorState.selectedWorkspace.getValue(),
+            }),
+        );
+    }
+</script>
+
+<ContextMenu.Root bind:open onOpenChange={handleOpenChange}>
+    <ContextMenu.TriggerArea
+        bind:ref={triggerRef}
+        class="fixed h-px w-px opacity-0"
+        style={triggerStyle}
+        {disabled}
+    />
+    <ContextMenu.Content>
+        {#if !multiActive && contextMenuClass}
+            <ContextMenu.Item.Button
+                onSelect={openClass}
+                faIcon={readOnly ? faEye : faGear}
+            >
+                {readOnly ? "View Class" : "Edit Class"}
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+        {/if}
+        {#if !isMergedDiagram}
+            <ContextMenu.Item.Button
+                onSelect={copyClass}
+                faIcon={faCopy}
+                altText="Ctrl+C"
+            >
+                {multiActive
+                    ? `Copy ${selectionUuids.length} Classes`
+                    : "Copy Class"}
+            </ContextMenu.Item.Button>
+        {/if}
+        <ExtendSchemaSubMenu
+            label="Extend with Inheritance"
+            withInheritance
+            {workspaceName}
+            classUuids={extendClassUuids}
+            {currentGraphUri}
+            selectedClassUuid={multiActive ? null : contextMenuClass?.uuid}
+            {readOnly}
+            onDone={onClose}
+        />
+        <ExtendSchemaSubMenu
+            label="Extend in Schema"
+            {workspaceName}
+            classUuids={extendClassUuids}
+            {currentGraphUri}
+            selectedClassUuid={multiActive ? null : contextMenuClass?.uuid}
+            {readOnly}
+            onDone={onClose}
+        />
+        {#if !isMergedDiagram}
+            <ContextMenu.Separator />
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showSHACLDialog = true;
+                }}
+                faIcon={faDiagramProject}
+                disabled={multiActive}
+            >
+                View Constraints (SHACL)
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+            {#if graphUri}
+                <ContextMenu.Item.Button
+                    onSelect={openAddToGraphDiagramDialog}
+                    disabled={crossGraphDisabled}
+                    faIcon={faObjectGroup}
+                >
+                    Add to Schema Diagram
+                </ContextMenu.Item.Button>
+            {/if}
+            <ContextMenu.Item.Button
+                onSelect={openAddToWorkspaceDiagramDialog}
+                faIcon={faObjectGroup}
+            >
+                Add to Workspace Diagram
+            </ContextMenu.Item.Button>
+        {/if}
+        <ContextMenu.SubMenu.Root>
+            <ContextMenu.SubMenu.Trigger
+                faIcon={faLayerGroup}
+                disabled={classActionsDisabled || multiActive}
+            >
+                Move
+            </ContextMenu.SubMenu.Trigger>
+            <ContextMenu.SubMenu.Content>
+                <ContextMenu.Item.Button
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveToTop();
+                    }}
+                    faIcon={faAnglesUp}
+                    disabled={classActionsDisabled || isAtFront}
+                >
+                    Move to Front
+                </ContextMenu.Item.Button>
+                <ContextMenu.Item.Button
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveUp();
+                    }}
+                    faIcon={faAngleUp}
+                    disabled={classActionsDisabled || isAtFront}
+                >
+                    Move Up
+                </ContextMenu.Item.Button>
+                <div
+                    class="w-64 px-2 py-1"
+                    role="none"
+                    onkeydown={keepKeysInLayerSlider}
+                >
+                    <SliderEditControl
+                        label="Layer"
+                        bind:value={() => classZIndex, slideLayer}
+                        min={0}
+                        max={nodeCount - 1}
+                        step={1}
+                        decimals={0}
+                        disabled={classActionsDisabled || nodeCount < 2}
+                    />
+                </div>
+                <ContextMenu.Item.Button
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveDown();
+                    }}
+                    faIcon={faAngleDown}
+                    disabled={classActionsDisabled || isAtBack}
+                >
+                    Move Down
+                </ContextMenu.Item.Button>
+                <ContextMenu.Item.Button
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveToBottom();
+                    }}
+                    faIcon={faAnglesDown}
+                    disabled={classActionsDisabled || isAtBack}
+                >
+                    Move to Bottom
+                </ContextMenu.Item.Button>
+            </ContextMenu.SubMenu.Content>
+        </ContextMenu.SubMenu.Root>
+        {#if isCustomDiagram || !isMergedDiagram}
+            <ContextMenuSeparator />
+            {#if isCustomDiagram}
+                <ContextMenu.Item.Button
+                    onSelect={openRemoveFromDiagramDialog}
+                    faIcon={faMinus}
+                    variant="danger"
+                >
+                    {multiActive
+                        ? `Remove ${selectionUuids.length} from Diagram`
+                        : "Remove from Diagram"}
+                </ContextMenu.Item.Button>
+            {/if}
+            {#if !isMergedDiagram}
+                <ContextMenu.Item.Button
+                    onSelect={openDeleteClassDialog}
+                    disabled={classActionsDisabled || crossGraphDisabled}
+                    faIcon={faTrash}
+                    variant="danger"
+                    altText="Del"
+                >
+                    {multiActive
+                        ? `Delete ${selectionUuids.length} Classes`
+                        : "Delete Class"}
+                </ContextMenu.Item.Button>
+            {/if}
+        {/if}
+    </ContextMenu.Content>
+</ContextMenu.Root>
+
+<DeleteDependenciesDialog
+    bind:showDialog={showDeleteDependenciesDialog}
+    {workspaceName}
+    graphUri={dialogGraphUri ?? graphUri}
+    resourceUuids={dialogClassIds}
+/>
+<SHACLClassSpecificPopUp
+    workspaceName={editorState.selectedWorkspace.getValue()}
+    graphUri={editorState.selectedGraph.getValue()}
+    reactiveClass={shaclClass}
+    bind:showDialog={showSHACLDialog}
+/>
+
+<RemoveFromDiagramDialog
+    bind:showDialog={showRemoveFromDiagramDialog}
+    lockedWorkspaceName={workspaceName}
+    {graphUri}
+    diagramId={editorState.selectedDiagram.getProperty("id")}
+    classIds={dialogClassIds}
+    classLabels={dialogClassLabels}
+/>
+
+{#if showAddToGraphDiagramDialog}
+    <AddToGraphDiagramDialog
+        bind:showDialog={showAddToGraphDiagramDialog}
+        lockedWorkspaceName={workspaceName}
+        lockedGraphUri={graphUri}
+        classes={dialogClasses}
+    />
+{/if}
+
+{#if showAddToWorkspaceDiagramDialog}
+    <AddToWorkspaceDiagramDialog
+        bind:showDialog={showAddToWorkspaceDiagramDialog}
+        lockedWorkspaceName={workspaceName}
+        lockedGraphUri={graphUri}
+        classes={dialogClasses}
+    />
+{/if}

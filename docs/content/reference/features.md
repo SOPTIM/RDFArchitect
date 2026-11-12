@@ -39,9 +39,11 @@ Edit the ontology metadata block (title, version, conformsTo, keyword, license, 
 
 ### UML-style diagrams
 
-Diagrams render classes with full attribute and association detail, inheritance arrows, stereotypes, and cardinalities. SvelteFlow is the default renderer (pan/zoom/auto-layout); Mermaid is available as an alternative, for example for embedding in Markdown-based documentation.
+Diagrams render classes with full attribute and association detail, inheritance arrows, stereotypes, and cardinalities. Diagrams are rendered with SvelteFlow (pan/zoom/auto-layout). The Mermaid renderer is deprecated: it can still be switched on in the configuration, but it is no longer developed and lacks the newer diagram features, such as arranging edges.
 
-In the SvelteFlow diagram, classes, attributes, associations, enum entries, and the multiplicities and role names on association edges open their editors directly, without a detour through the class editor.
+In the SvelteFlow diagram, classes, attributes, associations, enum entries, the multiplicities and role names on association edges, and the edges themselves open their editors directly, without a detour through the class editor.
+
+Edges can be routed by hand with bend points, and their ends can be pinned to a place on the class border with docking points. Class positions, edge courses, and label positions are stored together with the schema in the Diagram Layout profile of CGMES (IEC 61970-453), so a diagram keeps its layout. Diagrams that have not been arranged yet are laid out automatically with ELK Layered from the Eclipse Layout Kernel.
 
 ### Visualise SHACL constraints on the class you are looking at
 
@@ -59,15 +61,15 @@ Per-workspace namespace table with validation for unique prefixes. Prefixes can 
 
 ### Undo, redo, and version history
 
-Graph edits are journaled. Up to 256 versions per graph by default; older states are compressed as history grows. Undo and redo are global per graph and available via menu and keyboard shortcut.
+Edits are journaled per workspace: one linear history across all of its schemas, including the changes that span several of them. Up to 256 changes per workspace by default; older states are folded into the state they started from as history grows. Schema import, deletion and renaming, the namespace table, custom SHACL, diagrams and diagram layout take part in the same history. Undo and redo are available via menu and keyboard shortcut, say what they took back and where, and ask before a step that would make a schema or diagram disappear.
 
 ### Changelog view
 
-A dedicated page that lists the change history of a graph: additions, updates, deletions, grouped by class, with full triple-level diff (green for additions, red for deletions) for each change.
+A dedicated page that lists the change history of a workspace: additions, updates, deletions, grouped by class, with full triple-level diff (green for additions, red for deletions) for each change, labelled with the schema it belongs to.
 
 ### Restore previous versions
 
-Roll a graph back to any earlier tracked state from the changelog.
+Roll a workspace back to any earlier tracked state from the changelog, in all of its schemas at once.
 
 ### Workspace validation
 

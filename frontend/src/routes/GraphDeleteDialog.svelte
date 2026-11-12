@@ -52,7 +52,9 @@
         const { error } = await graphStore.remove(workspaceName, graphURI);
         if (error) return;
 
-        editorState.selectedWorkspace.updateValue(null);
+        // The workspace stays selected: Ctrl+Z undoes in the selected workspace, and the dialog
+        // promises that it brings the schema back.
+        editorState.selectWorkspace(workspaceName);
         editorState.selectedGraph.updateValue(null);
         editorState.selectedDiagram.updateValue({
             type: null,
@@ -90,7 +92,7 @@
                 ? `The schema will be removed from workspace "${workspaceName}".`
                 : "Select a workspace and schema to delete."}
             <br />
-            This action is not reversible.
+            This can be undone with Ctrl+Z, until the workspace is reloaded.
         </p>
     </div>
 </ActionDialog>

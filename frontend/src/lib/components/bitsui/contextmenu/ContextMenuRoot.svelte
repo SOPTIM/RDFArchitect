@@ -17,6 +17,8 @@
 <script>
     import { ContextMenu as BitsUiContextMenu } from "bits-ui";
 
+    import { fileDragState } from "$lib/fileDragState.svelte.js";
+
     let {
         children,
         open = $bindable(false),
@@ -24,6 +26,13 @@
         onOpenChange = () => {},
         onOpenChangeComplete = () => {},
     } = $props();
+
+    // A menu left open would cover the drop zones the files are headed for.
+    $effect(() => {
+        if (fileDragState.active) {
+            open = false;
+        }
+    });
 </script>
 
 <BitsUiContextMenu.Root bind:open {dir} {onOpenChange} {onOpenChangeComplete}>

@@ -264,6 +264,33 @@ class RenameDetectorTest {
         }
 
         @Test
+        void detectPropertyMappings_identicalLabels_matchesRegardlessOfComputedSimilarity() {
+            // A property that kept its label but moved to a different namespace (e.g. carried
+            // along by a class-level prefix change) is deliberately left unmerged upstream in
+            // RenameObjectBuilder.mergePropertyList, so it has to be picked up here instead. The
+            // exact-label shortcut must match it even if the computed similarity would say no.
+            var deletedA =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "high", SemanticResourceChangeType.DELETE);
+            var addedA =
+                    ChangeObjectTestBuilder.propertyChange("high", SemanticResourceChangeType.ADD);
+
+            try (MockedStatic<SimilarityCalculator> mock = mockStatic(SimilarityCalculator.class)) {
+                mock.when(() -> SimilarityCalculator.calculateSimilarity(addedA, deletedA))
+                        .thenReturn(0.1);
+
+                var result =
+                        RenameDetector.detectPropertyMappings(
+                                List.of(deletedA), List.of(deletedA, addedA));
+
+                assertThat(result).hasSize(1);
+                assertThat(result.getFirst().getOldResources()).containsExactly(deletedA);
+                assertThat(result.getFirst().getNewResources()).containsExactly(addedA);
+                assertThat(result.getFirst().getConfidenceScore()).isEqualTo(1.0);
+            }
+        }
+
+        @Test
         void detectPropertyRenames_noAddedChanges_returnsEmpty() {
             var deletedA =
                     ChangeObjectTestBuilder.propertyChange(

@@ -35,6 +35,7 @@ import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUti
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils.CimResourceType;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
+import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -52,6 +53,7 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
     private static final Logger logger = LoggerFactory.getLogger(DeleteResourcesService.class);
 
     private final DatabasePort databasePort;
+    private final SyncDiagramLayoutUseCase syncDiagramLayoutUseCase;
 
     /**
      * Internal record that holds the pre-resolved resource, its CIM type, and the requested action.
@@ -64,14 +66,17 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
     @Override
     public void executeDeleteRequests(
             GraphIdentifier graphIdentifier, List<ResourceDeleteRequest> deleteRequests) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var deleteCount =
                     deleteRequests.stream()
                             .filter(r -> r.getAction() == DeleteAction.DELETE)
                             .count();
 
             deleteResources(ModelFactory.createModelForGraph(ctx.getRdfGraph()), deleteRequests);
-            ctx.commit(
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
+            transaction.commit(
                     "Deleted " + deleteCount + " " + (deleteCount == 1 ? "resource" : "resources"));
         }
     }

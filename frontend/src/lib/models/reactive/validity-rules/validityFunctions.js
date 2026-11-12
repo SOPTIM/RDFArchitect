@@ -444,3 +444,38 @@ export function hasNoSpaces(text) {
     }
     return violations;
 }
+
+/**
+ * Validates the corner rounding factor entered as free text.
+ * The value is a percentage in [0, 100]. Two kinds of violations are possible:
+ *  - the input is not a number at all (invalid format)
+ *  - the number lies outside the allowed [0, 100] range (out of boundaries)
+ * @param {string|number} value - the raw input value
+ * @returns {string[]} the violations
+ */
+export function isInvalidCornerRoundingFactor(value) {
+    return isInvalidRangeValue(value, 0, 100);
+}
+
+/**
+ * Checks a value typed into a slider or another input for a number within bounds.
+ *
+ * @param value the typed value, a number or its text
+ * @param {number} min the lower bound
+ * @param {number} max the upper bound
+ * @returns {string[]} the violations, empty if the value is valid
+ */
+export function isInvalidRangeValue(value, min, max) {
+    const raw = typeof value === "number" ? String(value) : (value ?? "");
+    if (raw.trim() === "") {
+        return ["must not be empty"];
+    }
+    const parsed = Number(raw);
+    if (Number.isNaN(parsed)) {
+        return ["must be a number"];
+    }
+    if (parsed < min || parsed > max) {
+        return [`must be between ${min} and ${max}`];
+    }
+    return [];
+}

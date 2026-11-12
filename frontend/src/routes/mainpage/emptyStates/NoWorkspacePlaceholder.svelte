@@ -22,11 +22,13 @@
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
 
     import NewWorkspaceDialog from "../../NewWorkspaceDialog.svelte";
+    import SchemaDropZone from "../SchemaDropZone.svelte";
 
     let showNewWorkspaceDialog = $state(false);
 </script>
 
-<div
+<SchemaDropZone
+    hideContentOnDrag
     class="bg-window-background flex min-h-0 flex-1 items-center justify-center"
 >
     <EmptyStateCard
@@ -43,6 +45,6 @@
             </ButtonControl>
         </div>
     </EmptyStateCard>
-</div>
+</SchemaDropZone>
 
 <NewWorkspaceDialog bind:showDialog={showNewWorkspaceDialog} />

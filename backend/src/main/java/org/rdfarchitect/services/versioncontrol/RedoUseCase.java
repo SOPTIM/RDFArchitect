@@ -17,17 +17,15 @@
 
 package org.rdfarchitect.services.versioncontrol;
 
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.api.dto.HistoryStepDTO;
 
 public interface RedoUseCase {
 
     /**
-     * Reapplies the most recently undone named commit for the given graph, restoring all associated
-     * graph participants to the state before the undo.
+     * Reapplies the most recently undone change of the workspace, across every graph it touched.
      *
-     * @param graphIdentifier the identifier of the graph to operate on
-     * @return the changelog entry that was redone, or {@code null} if no redo was available
+     * @param workspaceName the workspace to operate on
+     * @return the change that was redone
      */
-    ChangeLogEntry redo(GraphIdentifier graphIdentifier);
+    HistoryStepDTO redo(String workspaceName);
 }

@@ -18,10 +18,28 @@
 <script>
     import { Pane, Splitpanes } from "svelte-splitpanes";
 
+    import { editorState } from "$lib/sharedState.svelte.js";
+
     import Changes from "./Changes.svelte";
     import Navigation from "./Navigation.svelte";
 
+    import { page } from "$app/state";
+
     let expandedStateMap = $state({});
+
+    /**
+     * The graph the changelog is held to, or `null` for the whole workspace.
+     *
+     * Kept here rather than in the editor's selection: which workspace is open decides what is
+     * loaded, but holding the log to one of its graphs is a view setting, and reading a changelog
+     * should not move the editor on to another graph behind the user's back. It starts at the graph
+     * they were last in, unless whoever opened the page asked for the workspace as a whole.
+     */
+    let graphUri = $state(
+        page.url.searchParams.get("scope") === "workspace"
+            ? null
+            : (editorState.selectedGraph.getValue() ?? null),
+    );
 
     function getExpanded(key) {
         return !!expandedStateMap[key];
@@ -32,20 +50,18 @@
     }
 
     /**
-     * Cleans the expandedStateMap by removing keys that a new changelog does not contain.
+     * Forgets what was expanded in changes a new changelog no longer holds.
+     *
+     * Every key starts with the id of its change — the row, and each table of
+     * each context inside it — so the change decides whether a key survives,
+     * whatever the row builds after it.
      * @param {Array} changelog - The new changelog array.
      */
     function cleanExpandedStateMap(changelog) {
-        const validKeys = new Set();
-
-        for (const change of changelog) {
-            validKeys.add(`${change.changeId}::row`);
-            validKeys.add(`${change.changeId}::additions`);
-            validKeys.add(`${change.changeId}::deletions`);
-        }
+        const changeIds = new Set(changelog.map(change => change.changeId));
 
         for (const key in expandedStateMap) {
-            if (!validKeys.has(key)) {
+            if (!changeIds.has(key.split("::")[0])) {
                 delete expandedStateMap[key];
             }
         }
@@ -54,9 +70,14 @@
 
 <Splitpanes theme="opencgmes-theme" class="flex h-full">
     <Pane size={18} maxSize={30} class="bg-window-background">
-        <Navigation />
+        <Navigation {graphUri} onSelectGraph={uri => (graphUri = uri)} />
     </Pane>
     <Pane size={82} class="bg-window-background h-full">
-        <Changes {getExpanded} {setExpanded} {cleanExpandedStateMap} />
+        <Changes
+            {getExpanded}
+            {setExpanded}
+            {cleanExpandedStateMap}
+            {graphUri}
+        />
     </Pane>
 </Splitpanes>

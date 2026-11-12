@@ -20,19 +20,26 @@ package org.rdfarchitect.services.diagrams;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.api.dto.CustomDiagramDTO;
+import org.rdfarchitect.api.dto.GraphDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.ClassSourceDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramColorDataDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.MergedClassDTO;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.DiagramLayout;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
+import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
+import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutSync;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeResolver;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
 import org.rdfarchitect.services.rendering.CIMProfileModels;
 import org.rdfarchitect.services.select.ListGraphsUseCase;
@@ -58,10 +65,13 @@ public class CustomDiagramService
 
     private final DatabasePort databasePort;
     private final ListGraphsUseCase listGraphsUseCase;
+    private final SyncDiagramLayoutUseCase syncDiagramLayoutUseCase;
 
     @Override
     public List<CustomDiagramDTO> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             return ctx.getCustomDiagrams().values().stream()
                     .map(
                             diagram ->
@@ -75,14 +85,23 @@ public class CustomDiagramService
 
     @Override
     public List<CustomDiagramDTO> getCustomDiagramsForDataset(String datasetName) {
-        return databasePort.getDatasetDiagrams(datasetName).values().stream()
-                .map(
-                        diagram ->
-                                new CustomDiagramDTO(
-                                        diagram.getDiagramId(),
-                                        diagram.getName(),
-                                        diagram.getClasses()))
-                .toList();
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            return transaction.diagrams().values().stream()
+                    .map(
+                            diagram ->
+                                    new CustomDiagramDTO(
+                                            diagram.getDiagramId(),
+                                            diagram.getName(),
+                                            diagram.getClasses()))
+                    .toList();
+        }
+    }
+
+    @Override
+    public UUID getCrossProfileDiagramId(String datasetName) {
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            return transaction.crossProfileDiagramId();
+        }
     }
 
     @Override
@@ -104,10 +123,28 @@ public class CustomDiagramService
         var graphDTOsMap =
                 listGraphsUseCase.listGraphs(datasetName).stream()
                         .collect(Collectors.toMap(g -> g.getUri().toString(), g -> g));
-        var crossProfileDiagramInfo = databasePort.getCrossProfileDiagramInfo(datasetName);
-        var crossProfileDiagramUUID = crossProfileDiagramInfo.getCrossProfileDiagramUUID();
-        var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
+        // Merging the profiles is the expensive part and only reads, so it runs under a read
+        // lock; the layout is inserted afterwards under a write lock. Inserting is idempotent, so
+        // the gap between the two does no harm.
+        UUID crossProfileDiagramUUID;
+        Map<String, MergedClassDTO> mergeMap;
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            crossProfileDiagramUUID = transaction.crossProfileDiagramId();
+            mergeMap = mergeProfiles(profiles, graphDTOsMap);
+        }
+        if (doLayout) {
+            try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+                doDiagramLayout(transaction.layout(), crossProfileDiagramUUID, mergeMap, profiles);
+                // Looking at the diagram is not a change the user's next undo should take back.
+                transaction.commitWithoutHistory();
+            }
+        }
+        return new CrossProfileDiagramDTO(
+                crossProfileDiagramUUID, new ArrayList<>(mergeMap.values()));
+    }
 
+    private Map<String, MergedClassDTO> mergeProfiles(
+            List<CIMProfileModel> profiles, Map<String, GraphDTO> graphDTOsMap) {
         Map<String, MergedClassDTO> mergeMap = new LinkedHashMap<>();
 
         for (var profile : profiles) {
@@ -131,19 +168,24 @@ public class CustomDiagramService
                         .add(new ClassSourceDTO(cimClass.getUuid(), graphDTOsMap.get(graphUri)));
             }
         }
-        if (doLayout) {
-            doDiagramLayout(diagramLayout, crossProfileDiagramUUID, mergeMap);
-        }
-        return new CrossProfileDiagramDTO(
-                crossProfileDiagramUUID, new ArrayList<>(mergeMap.values()));
+        return mergeMap;
     }
 
     private static void doDiagramLayout(
             DiagramLayout diagramLayout,
             UUID crossProfileDiagramUUID,
-            Map<String, MergedClassDTO> mergeMap) {
+            Map<String, MergedClassDTO> mergeMap,
+            List<CIMProfileModel> profiles) {
 
-        var model = diagramLayout.getDiagramLayoutModel();
+        insertCrossProfileClassLayoutData(
+                diagramLayout.getDiagramLayoutModel(), crossProfileDiagramUUID, mergeMap, profiles);
+    }
+
+    private static void insertCrossProfileClassLayoutData(
+            Model model,
+            UUID crossProfileDiagramUUID,
+            Map<String, MergedClassDTO> mergeMap,
+            List<CIMProfileModel> profiles) {
         DiagramLayoutServiceUtils.insertAllDiagramObjectStyles(model);
         if (DLObjectFetcher.fetchDiagram(model, crossProfileDiagramUUID) == null) {
             DiagramLayoutServiceUtils.insertDiagram(
@@ -157,24 +199,34 @@ public class CustomDiagramService
                         .map(MRID::getUuid)
                         .collect(Collectors.toSet());
 
+        var createdClassLayoutData = false;
         for (var merged : mergeMap.values()) {
             if (!existingClassUUIDs.contains(merged.getUuid())) {
-                var doMRID =
-                        DiagramLayoutServiceUtils.insertDiagramObject(
-                                model,
-                                crossProfileDiagramUUID,
-                                merged.getClassUri(),
-                                merged.getUuid());
-                DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                        model, crossProfileDiagramUUID, doMRID);
+                DiagramLayoutServiceUtils.insertClassLayoutData(
+                        model,
+                        crossProfileDiagramUUID,
+                        merged.getClassUri(),
+                        merged.getUuid(),
+                        0,
+                        0);
+                createdClassLayoutData = true;
             }
+        }
+        if (createdClassLayoutData) {
+            EdgeLayoutSync.syncEdges(
+                    model, crossProfileDiagramUUID, EdgeResolver.forMergedProfiles(profiles));
         }
     }
 
     @Override
     public void deleteCustomDatasetDiagram(String datasetName, String diagramId) {
-        var diagrams = databasePort.getDatasetDiagrams(datasetName);
-        diagrams.remove(UUID.fromString(diagramId));
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            var removed = transaction.diagrams().remove(UUID.fromString(diagramId));
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(datasetName);
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Deleted", "diagram", ChangeDescriptions.diagramName(removed)));
+        }
     }
 
     @Override
@@ -193,26 +245,71 @@ public class CustomDiagramService
         var diagram =
                 new CustomDiagram(
                         diagramDTO.getDiagramId(), diagramDTO.getName(), diagramDTO.getClasses());
-        var diagrams = databasePort.getDatasetDiagrams(datasetName);
-        diagrams.put(UUID.fromString(diagramId), diagram);
-    }
-
-    @Override
-    public void removeFromCustomDatasetDiagram(String datasetName, String diagramId, UUID classId) {
-        var diagrams = databasePort.getDatasetDiagrams(datasetName);
-        var diagram = diagrams.get(UUID.fromString(diagramId));
-        if (diagram != null) {
-            var classes = diagram.getClasses();
-            classes.removeIf(c -> c.getUuid().equals(classId));
-            diagram.setClasses(classes);
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            transaction.diagrams().put(UUID.fromString(diagramId), diagram);
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(datasetName);
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Updated", "diagram", ChangeDescriptions.diagramName(diagram)));
         }
     }
 
     @Override
+    public void removeFromCustomDatasetDiagram(String datasetName, String diagramId, UUID classId) {
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            var diagram = transaction.diagrams().get(UUID.fromString(diagramId));
+            var className = classNameIn(transaction, diagram, classId);
+            if (diagram != null) {
+                var classes = diagram.getClasses();
+                classes.removeIf(c -> c.getUuid().equals(classId));
+                diagram.setClasses(classes);
+            }
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(datasetName);
+            // Reading the diagrams enrolled them, so the transaction has to be committed either
+            // way; a commit that changed nothing records nothing.
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            ChangeDescriptions.actionOn("Removed", "class", className) + " from",
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagram)));
+        }
+    }
+
+    /**
+     * The label of a class on a workspace diagram. Such a diagram draws from several graphs, so the
+     * entry that is about to go says which graph to ask; one that is already gone leaves the change
+     * unnamed rather than identified.
+     */
+    private static String classNameIn(
+            WorkspaceTransaction transaction, CustomDiagram diagram, UUID classId) {
+        if (diagram == null) {
+            return "";
+        }
+        return diagram.getClasses().stream()
+                .filter(cls -> cls.getUuid().equals(classId) && cls.getGraphUri() != null)
+                .findFirst()
+                .map(cls -> classNameInGraph(transaction, cls.getGraphUri().toString(), classId))
+                .orElse("");
+    }
+
+    private static String classNameInGraph(
+            WorkspaceTransaction transaction, String graphUri, UUID classId) {
+        if (!transaction.graphUris().contains(graphUri)) {
+            return "";
+        }
+        return ChangeDescriptions.className(transaction.graph(graphUri).getRdfGraph(), classId);
+    }
+
+    @Override
     public void deleteCustomGraphDiagram(GraphIdentifier graphIdentifier, String diagramId) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
-            ctx.commit("deleted diagram %s".formatted(diagramId));
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var removed = ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Deleted", "diagram", ChangeDescriptions.diagramName(removed)));
         }
     }
 
@@ -227,7 +324,9 @@ public class CustomDiagramService
                             + diagramDTO.getDiagramId()
                             + "'");
         }
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             // dto is necessary for swagger to infer the correct type, but we need to create a new
             // CustomDiagram object to store in the database
             var diagram =
@@ -236,63 +335,78 @@ public class CustomDiagramService
                             diagramDTO.getName(),
                             diagramDTO.getClasses());
             ctx.getCustomDiagrams().put(UUID.fromString(diagramId), diagram);
-            ctx.commit("replaced diagram %s".formatted(diagramId));
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            "Updated", "diagram", ChangeDescriptions.diagramName(diagram)));
         }
     }
 
     @Override
     public void removeFromCustomGraphDiagram(
             GraphIdentifier graphIdentifier, String diagramId, UUID classId) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             var diagram = ctx.getCustomDiagrams().get(UUID.fromString(diagramId));
+            var className = ChangeDescriptions.className(ctx.getRdfGraph(), classId);
             if (diagram != null) {
                 var classes = diagram.getClasses();
                 classes.removeIf(c -> c.getUuid().equals(classId));
                 diagram.setClasses(classes);
             }
-            ctx.commit("removed class %s from diagram %s".formatted(classId, diagramId));
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
+            transaction.commit(
+                    ChangeDescriptions.actionOn(
+                            ChangeDescriptions.actionOn("Removed", "class", className) + " from",
+                            "diagram",
+                            ChangeDescriptions.diagramName(diagram)));
         }
     }
 
     @Override
     public void removeFromAllDiagrams(GraphIdentifier graphIdentifier, UUID classId) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+        try (var transaction =
+                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.graphUri());
             for (var diagram : ctx.getCustomDiagrams().values()) {
                 var classes = diagram.getClasses();
                 classes.removeIf(c -> c.getUuid().equals(classId));
                 diagram.setClasses(classes);
             }
-            for (var diagram :
-                    databasePort.getDatasetDiagrams(graphIdentifier.datasetName()).values()) {
+            for (var diagram : transaction.diagrams().values()) {
                 var classes = diagram.getClasses();
                 classes.removeIf(c -> c.getUuid().equals(classId));
                 diagram.setClasses(classes);
             }
-            ctx.commit("removed class %s from all diagrams".formatted(classId));
+            transaction.commit("Removed a class from all diagrams");
         }
     }
 
     @Override
     public CrossProfileDiagramColorDataDTO getCrossProfileColors(String datasetName) {
-        var graphUris = databasePort.listGraphUris(datasetName);
         var colorsDTO = new CrossProfileDiagramColorDataDTO(new HashMap<>());
-        for (var graphUri : graphUris) {
-            var graphColor =
-                    databasePort.getCrossProfileDiagramInfo(datasetName).getColor(graphUri);
-            colorsDTO.getGraphColors().put(graphUri, graphColor);
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+            for (var graphUri : transaction.graphUris()) {
+                colorsDTO
+                        .getGraphColors()
+                        .put(graphUri, transaction.crossProfileColors().getColor(graphUri));
+            }
         }
         return colorsDTO;
     }
 
     @Override
     public void replaceCrossProfileColors(String datasetName, CrossProfileDiagramColorDataDTO dto) {
-        var graphUris = databasePort.listGraphUris(datasetName);
-        for (var graphUri : graphUris) {
-            if (dto.getGraphColors().containsKey(graphUri)) {
-                databasePort
-                        .getCrossProfileDiagramInfo(datasetName)
-                        .setColor(graphUri, dto.getGraphColors().get(graphUri));
+        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            for (var graphUri : transaction.graphUris()) {
+                if (dto.getGraphColors().containsKey(graphUri)) {
+                    transaction
+                            .crossProfileColors()
+                            .setColor(graphUri, dto.getGraphColors().get(graphUri));
+                }
             }
+            transaction.commit("Changed the cross profile colours");
         }
     }
 }
