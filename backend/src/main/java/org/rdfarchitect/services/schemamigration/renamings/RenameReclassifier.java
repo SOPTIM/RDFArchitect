@@ -38,8 +38,8 @@ import java.util.Map;
 public class RenameReclassifier {
 
     /**
-     * Reclassifies e.g. DATATYPE_CHANGE to DATATYPE_RENAME where the change is simply a
-     * consequence of a class rename confirmed in the class step.
+     * Reclassifies e.g. DATATYPE_CHANGE to DATATYPE_RENAME where the change is simply a consequence
+     * of a class rename confirmed in the class step.
      *
      * @param classChanges the class changes to reclassify in place
      * @param classRenames the confirmed class renames, may be {@code null} if none were confirmed
@@ -90,7 +90,7 @@ public class RenameReclassifier {
                     rename.getNewResources().stream().map(SemanticClassChange::getIri).toList();
             for (var oldResource : rename.getOldResources()) {
                 renamedIris
-                        .computeIfAbsent(oldResource.getIri(), iri -> new ArrayList<>())
+                        .computeIfAbsent(oldResource.getIri(), _ -> new ArrayList<>())
                         .addAll(newIris);
             }
         }

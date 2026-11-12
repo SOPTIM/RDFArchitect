@@ -17,13 +17,13 @@
 
 package org.rdfarchitect.models.changes;
 
-import java.util.List;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
 
+import java.util.List;
+
 public record PotentialPropertyData(
         List<SemanticAttributeChange> attributes,
         List<SemanticAssociationChange> associations,
-        List<SemanticEnumEntryChange> enumEntries) {
-}
+        List<SemanticEnumEntryChange> enumEntries) {}

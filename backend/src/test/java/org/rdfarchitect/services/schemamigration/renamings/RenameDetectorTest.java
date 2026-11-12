@@ -567,6 +567,112 @@ class RenameDetectorTest {
             assertThat(split.getNewResources()).containsExactlyInAnyOrder(added1, added2);
         }
 
+        /**
+         * A superclass and a subclass can each carry a property of the same name, and each can lose
+         * and regain its own. Seen from either class the chain then holds two candidates of that
+         * name, which used to be read as a split - from both classes at once, leaving the two
+         * mappings claiming the same targets and the wizard reporting nothing but a conflict.
+         */
+        @Test
+        void detectPropertyMappings_chainDeletesOneOfThatNamePerCandidate_isNoSplit() {
+            var deletedInSuper =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "open",
+                            SemanticResourceChangeType.DELETE,
+                            "urn:Switch",
+                            "urn:old.Switch.open");
+            var deletedInSub =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "open",
+                            SemanticResourceChangeType.DELETE,
+                            "urn:Breaker",
+                            "urn:old.Breaker.open");
+            var addedInSuper =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "open",
+                            SemanticResourceChangeType.ADD,
+                            "urn:Switch",
+                            "urn:new.Switch.open");
+            var addedInSub =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "open",
+                            SemanticResourceChangeType.ADD,
+                            "urn:Breaker",
+                            "urn:new.Breaker.open");
+            var chain = List.of(deletedInSuper, deletedInSub, addedInSuper, addedInSub);
+
+            var fromSuper = RenameDetector.detectPropertyMappings(List.of(deletedInSuper), chain);
+            var fromSub = RenameDetector.detectPropertyMappings(List.of(deletedInSub), chain);
+
+            assertThat(fromSuper).noneMatch(m -> m.getType() == MappingType.SPLIT);
+            assertThat(fromSub).noneMatch(m -> m.getType() == MappingType.SPLIT);
+            // each class keeps its own, rather than the two swapping or sharing targets
+            assertThat(fromSuper).hasSize(1);
+            assertThat(fromSuper.getFirst().getNewResources()).containsExactly(addedInSuper);
+            assertThat(fromSub).hasSize(1);
+            assertThat(fromSub.getFirst().getNewResources()).containsExactly(addedInSub);
+        }
+
+        /** The split itself has to survive that guard: only the source class loses the name. */
+        @Test
+        void detectPropertyMappings_chainDeletesOnlyTheSplitSource_stillSplits() {
+            var deleted =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "open",
+                            SemanticResourceChangeType.DELETE,
+                            "urn:Switch",
+                            "urn:Switch.open");
+            var addedInSubA =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "open",
+                            SemanticResourceChangeType.ADD,
+                            "urn:Breaker",
+                            "urn:Breaker.open");
+            var addedInSubB =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "open",
+                            SemanticResourceChangeType.ADD,
+                            "urn:Disconnector",
+                            "urn:Disconnector.open");
+
+            var result =
+                    RenameDetector.detectPropertyMappings(
+                            List.of(deleted), List.of(deleted, addedInSubA, addedInSubB));
+
+            assertThat(result).hasSize(1);
+            assertThat(result.getFirst().getType()).isEqualTo(MappingType.SPLIT);
+            assertThat(result.getFirst().getNewResources())
+                    .containsExactlyInAnyOrder(addedInSubA, addedInSubB);
+        }
+
+        /**
+         * Preferring the class a property was deleted from only settles a tie. A property whose one
+         * candidate of that name sits on another class is still matched, and still a move.
+         */
+        @Test
+        void detectPropertyMappings_onlyCandidateIsOnAnotherClass_isStillAMove() {
+            var deleted =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "open",
+                            SemanticResourceChangeType.DELETE,
+                            "urn:Switch",
+                            "urn:Switch.open");
+            var addedElsewhere =
+                    ChangeObjectTestBuilder.propertyChange(
+                            "open",
+                            SemanticResourceChangeType.ADD,
+                            "urn:Breaker",
+                            "urn:Breaker.open");
+
+            var result =
+                    RenameDetector.detectPropertyMappings(
+                            List.of(deleted), List.of(deleted, addedElsewhere));
+
+            assertThat(result).hasSize(1);
+            assertThat(result.getFirst().getType()).isEqualTo(MappingType.MOVE);
+            assertThat(result.getFirst().getNewResources()).containsExactly(addedElsewhere);
+        }
+
         @Test
         void detectPropertyMappings_threeExactLabelMatches_returnsSplitWithThreeTargets() {
             var deleted =

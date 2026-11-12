@@ -77,8 +77,15 @@ public class RenameDetector {
                                                 change.getSemanticResourceChangeType()
                                                         .equals(SemanticResourceChangeType.ADD))
                                 .toList());
+        var deletedInChain =
+                changesInChain.stream()
+                        .filter(
+                                change ->
+                                        change.getSemanticResourceChangeType()
+                                                .equals(SemanticResourceChangeType.DELETE))
+                        .toList();
 
-        var mappings = detectSplits(deletedResources, addedResources);
+        var mappings = detectSplits(deletedResources, addedResources, deletedInChain);
         var fuzzyMappings = matchBySimilarity(addedResources, deletedResources);
         for (var mapping : fuzzyMappings) {
             if (!Objects.equals(
@@ -94,20 +101,32 @@ public class RenameDetector {
     }
 
     private <T extends SemanticPropertyChange> List<ResourceMapping<T>> detectSplits(
-            List<T> deletedResources, List<T> addedResources) {
+            List<T> deletedResources, List<T> addedResources, List<T> deletedInChain) {
         var splits = new ArrayList<ResourceMapping<T>>();
         for (var deletedItem : List.copyOf(deletedResources)) {
             var exactMatches =
                     addedResources.stream()
                             .filter(added -> added.getLabel().equals(deletedItem.getLabel()))
                             .toList();
-            if (exactMatches.size() >= 2) {
+            if (exactMatches.size() >= 2
+                    && !isIndependentPerClass(deletedItem, exactMatches, deletedInChain)) {
                 splits.add(new ResourceMapping<>(deletedItem, exactMatches, 1.0));
                 addedResources.removeAll(exactMatches);
                 deletedResources.remove(deletedItem);
             }
         }
         return splits;
+    }
+
+    private <T extends SemanticPropertyChange> boolean isIndependentPerClass(
+            T deletedItem, List<T> exactMatches, List<T> deletedInChain) {
+        var sameNameDeletions =
+                deletedInChain.stream()
+                        .filter(deleted -> deleted.getLabel().equals(deletedItem.getLabel()))
+                        .count();
+        // the chain always holds the class's own properties, but callers may pass only the
+        // candidates - deletedItem itself is a deletion of that name either way
+        return Math.max(sameNameDeletions, 1) >= exactMatches.size();
     }
 
     private <T extends SemanticResourceChange> List<ResourceMapping<T>> matchBySimilarity(
@@ -127,7 +146,10 @@ public class RenameDetector {
                     score = SimilarityCalculator.calculateSimilarity(newItem, deletedItem);
                 }
 
-                if (score > bestScore) {
+                if (score > bestScore
+                        || (score == bestScore
+                                && score > 0
+                                && staysInSameClass(newItem, bestMatch, deletedItem))) {
                     bestScore = score;
                     bestMatch = newItem;
                 }
@@ -139,5 +161,22 @@ public class RenameDetector {
             }
         }
         return renames;
+    }
+
+    /**
+     * Breaks a tie between equally named candidates: one that stayed on the class the property was
+     * deleted from beats one of the same name elsewhere in the chain.
+     */
+    private <T extends SemanticResourceChange> boolean staysInSameClass(
+            T candidate, T currentBest, T deletedItem) {
+        return isOnSameClass(candidate, deletedItem) && !isOnSameClass(currentBest, deletedItem);
+    }
+
+    private boolean isOnSameClass(
+            SemanticResourceChange candidate, SemanticResourceChange deleted) {
+        return candidate instanceof SemanticPropertyChange property
+                && deleted instanceof SemanticPropertyChange deletedProperty
+                && property.getDomain() != null
+                && property.getDomain().equals(deletedProperty.getDomain());
     }
 }

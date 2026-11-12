@@ -39,8 +39,7 @@ public class ClassPropertyMappingOverview {
     private PropertyMappingOverview<SemanticEnumEntryChange> enumEntries;
 
     public ClassPropertyMappingOverview(
-            SemanticClassChange classChange,
-            PotentialPropertyData propertyData) {
+            SemanticClassChange classChange, PotentialPropertyData propertyData) {
         this.classLabel = classChange.getLabel();
         this.attributes =
                 new PropertyMappingOverview<>(
