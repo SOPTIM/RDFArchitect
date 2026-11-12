@@ -2081,6 +2081,9 @@
               },
               "range" : {
                 "type" : "string"
+              },
+              "targetInstancesNeedValue" : {
+                "type" : "boolean"
               }
             },
             "type" : "object"
@@ -2123,6 +2126,9 @@
               },
               "primitiveDataType" : {
                 "type" : "string"
+              },
+              "targetInstancesNeedValue" : {
+                "type" : "boolean"
               }
             },
             "type" : "object"
@@ -2241,6 +2247,9 @@
               },
               "replacementValue" : {
                 "type" : "string"
+              },
+              "targetInstancesNeedValue" : {
+                "type" : "boolean"
               }
             },
             "type" : "object"

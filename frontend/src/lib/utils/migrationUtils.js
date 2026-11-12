@@ -91,6 +91,26 @@ export function filterRenameCandidates(
     return filtered;
 }
 
+export function shareMappingsAcrossClasses(classes, overviewKeys) {
+    const canonical = new Map();
+
+    for (const cls of classes ?? []) {
+        for (const key of overviewKeys) {
+            const rows = cls?.[key]?.deletedAndRemapped;
+            if (!rows) continue;
+
+            cls[key].deletedAndRemapped = rows.map(row => {
+                if (!canonical.has(row.id)) {
+                    canonical.set(row.id, row);
+                }
+                return canonical.get(row.id);
+            });
+        }
+    }
+
+    return classes;
+}
+
 export function computeMappingType(oldResources, newResources) {
     if (!newResources || newResources.length === 0) return "UNMAPPED";
     if (oldResources.length > 1) return "MERGE";
@@ -284,6 +304,9 @@ export function describeAttributeChange(attribute) {
     if (attribute.semanticResourceChangeType === "ADDED_FROM_INHERITANCE") {
         return "Attribute newly inherited";
     }
+    if (initializesTargetInstances(attribute)) {
+        return "Moved here - existing instances need a value";
+    }
     if (hasDataTypeChange(attribute)) {
         return keepsExistingValues(attribute)
             ? "Data type equivalent"
@@ -295,10 +318,20 @@ export function describeAttributeChange(attribute) {
     return "other";
 }
 
+/**
+ * A move or merge only carries values that already exist, so the class it landed on can be left
+ * with instances that never had the property. The backend marks those, and they are given a
+ * default value exactly like a newly added property is.
+ */
+export function initializesTargetInstances(attribute) {
+    return attribute.targetInstancesNeedValue === true;
+}
+
 export function allowsDefaultValueInput(attribute) {
     return (
         attribute.semanticResourceChangeType === "ADD" ||
         attribute.semanticResourceChangeType === "ADDED_FROM_INHERITANCE" ||
+        initializesTargetInstances(attribute) ||
         (attribute.semanticResourceChangeType !== "DELETE" &&
             (hasChange(attribute, "MADE_REQUIRED") ||
                 hasDataTypeChange(attribute)))
@@ -310,6 +343,9 @@ export function requiresDefaultValue(attribute) {
         attribute.semanticResourceChangeType === "ADD" ||
         attribute.semanticResourceChangeType === "ADDED_FROM_INHERITANCE"
     ) {
+        return !attribute.optional;
+    }
+    if (initializesTargetInstances(attribute)) {
         return !attribute.optional;
     }
     if (

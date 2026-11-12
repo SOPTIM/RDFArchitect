@@ -27,6 +27,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.models.changes.MappingType;
 import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
@@ -163,6 +164,103 @@ class CrossDomainPropertyPropagationHandlerTest {
                                             && a.getSemanticResourceChangeType()
                                                     == SemanticResourceChangeType
                                                             .DELETED_FROM_INHERITANCE);
+        }
+
+        /**
+         * The class a property moves onto keeps the instances it already had, and no value is
+         * carried onto them. They are the ones the default value step has to ask about.
+         */
+        @Test
+        void processCrossDomainPropertyMappings_movedOntoConcreteTarget_asksTargetForADefault() {
+            var oldBase = declareClass(oldModel, "Base");
+            var oldChild = declareClass(oldModel, "Child");
+            declareSubclassOf(oldChild, oldBase);
+            declareAttribute(oldModel, oldChild, "Child.voltage");
+
+            var newBase = declareClass(newModel, "Base");
+            var newChild = declareClass(newModel, "Child");
+            declareSubclassOf(newChild, newBase);
+            declareAttribute(newModel, newBase, "Base.voltage");
+
+            var moved =
+                    attributeChange(
+                            PREFIX + "Base.voltage",
+                            PREFIX + "Base",
+                            SemanticResourceChangeType.MOVE);
+            classes.add(
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "Base")
+                            .label("Base")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .attributes(new ArrayList<>(List.of(moved)))
+                            .associations(new ArrayList<>())
+                            .enumEntries(new ArrayList<>())
+                            .build());
+
+            var mapping =
+                    new ResourceMapping<>(
+                            attributeChange(
+                                    PREFIX + "Child.voltage",
+                                    PREFIX + "Child",
+                                    SemanticResourceChangeType.DELETE),
+                            attributeChange(
+                                    PREFIX + "Base.voltage",
+                                    PREFIX + "Base",
+                                    SemanticResourceChangeType.ADD),
+                            1.0);
+            mapping.setType(MappingType.MOVE);
+
+            CrossDomainPropertyPropagationHandler.processPropertyMoveInheritanceChanges(
+                    classes, oldModel, newModel, List.of(mapping), List.of());
+
+            assertThat(moved.isTargetInstancesNeedValue()).isTrue();
+        }
+
+        /** Moving down the hierarchy reaches no instance that did not already carry it. */
+        @Test
+        void processCrossDomainPropertyMappings_movedOntoSubclass_asksForNoDefault() {
+            var oldBase = declareClass(oldModel, "Base");
+            var oldChild = declareClass(oldModel, "Child");
+            declareSubclassOf(oldChild, oldBase);
+            declareAttribute(oldModel, oldBase, "Base.voltage");
+
+            var newBase = declareClass(newModel, "Base");
+            var newChild = declareClass(newModel, "Child");
+            declareSubclassOf(newChild, newBase);
+            declareAttribute(newModel, newChild, "Child.voltage");
+
+            var moved =
+                    attributeChange(
+                            PREFIX + "Child.voltage",
+                            PREFIX + "Child",
+                            SemanticResourceChangeType.MOVE);
+            classes.add(
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "Child")
+                            .label("Child")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .attributes(new ArrayList<>(List.of(moved)))
+                            .associations(new ArrayList<>())
+                            .enumEntries(new ArrayList<>())
+                            .build());
+
+            var mapping =
+                    new ResourceMapping<>(
+                            attributeChange(
+                                    PREFIX + "Base.voltage",
+                                    PREFIX + "Base",
+                                    SemanticResourceChangeType.DELETE),
+                            attributeChange(
+                                    PREFIX + "Child.voltage",
+                                    PREFIX + "Child",
+                                    SemanticResourceChangeType.ADD),
+                            1.0);
+            mapping.setType(MappingType.MOVE);
+
+            CrossDomainPropertyPropagationHandler.processPropertyMoveInheritanceChanges(
+                    classes, oldModel, newModel, List.of(mapping), List.of());
+
+            assertThat(moved.isTargetInstancesNeedValue()).isFalse();
         }
 
         @Test

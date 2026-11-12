@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.datatypes.TypeMapper;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.context.MigrationSessionStore;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
@@ -33,6 +34,8 @@ import org.rdfarchitect.models.cim.queries.templates.SparqlTemplateLoader;
 import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 
 @Component
@@ -123,18 +126,86 @@ public class SparqlUpdateGenerator {
         return result.toString();
     }
 
-    public <T extends SemanticPropertyChange> String generateSplitPropertyUpdate(List<T> siblings) {
-        var oldAttribute = siblings.getFirst().getOldIRI();
+    /**
+     * Rewrites the predicate on every instance carrying it, whatever class it belongs to. Correct
+     * only while the property stays on the class it was on: everything that had the old name is
+     * then supposed to end up with the new one.
+     */
+    private String generateRenamePropertyUpdate(SemanticPropertyChange propertyChange) {
+        return propertyChange instanceof SemanticAssociationChange associationChange
+                ? generateRenameAssociationUpdate(associationChange)
+                : generateRenameAttributeUpdate((SemanticAttributeChange) propertyChange);
+    }
+
+    /**
+     * Takes the property away from the classes that do not keep it, so that whoever still carries
+     * the old predicate afterwards is supposed to end up with the new one and the rewrite itself
+     * can stay the plain one.
+     *
+     * <p>Deliberately not the other way round. Rewriting only where the property belongs and
+     * dropping whatever is left would delete the values of any class this cannot see - one that
+     * derives from the target only in the schema being left behind, say. Named this way round such
+     * a class keeps its values under the new name, which the target schema's constraints report and
+     * a value that is gone does not.
+     */
+    private String deleteFromClassesLosingProperty(
+            String oldPropertyIri, Collection<String> keepingClasses) {
         var result = new StringBuilder();
+        for (var classIri : classesCarrying(oldPropertyIri)) {
+            if (!keepingClasses.contains(classIri)) {
+                var pss = SparqlTemplateLoader.loadTemplate("migration/property-deleted");
+                pss.setIri("property", oldPropertyIri);
+                pss.setIri("domain", classIri);
+                append(result, pss.toString());
+            }
+        }
+        return result.toString();
+    }
+
+    /**
+     * The classes whose instances could carry the property, as the schema was before. Nothing is
+     * named when that cannot be worked out, which leaves the plain rewrite on its own - the same
+     * script as before this was scoped, rather than one that deletes on a guess.
+     */
+    private List<String> classesCarrying(String propertyIri) {
+        var originalSchema = migrationSessionStore.getContext().getOriginalSchema();
+        if (originalSchema == null) {
+            return List.of();
+        }
+
+        var model = ModelFactory.createModelForGraph(originalSchema);
+        var domain = model.getResource(propertyIri).getPropertyResourceValue(RDFS.domain);
+        return domain == null ? List.of() : hierarchyOf(domain);
+    }
+
+    public String generateMovePropertyUpdate(SemanticPropertyChange propertyChange) {
+        var keepingClasses = getClassHierarchy(propertyChange.getDomain());
+
+        var result = new StringBuilder();
+        for (var oldIri : propertyChange.getAllOldIRIs()) {
+            append(result, deleteFromClassesLosingProperty(oldIri, keepingClasses));
+        }
+        append(result, generateRenamePropertyUpdate(propertyChange));
+        return result.toString();
+    }
+
+    public <T extends SemanticPropertyChange> String generateSplitPropertyUpdate(List<T> siblings) {
+        var oldProperty = siblings.getFirst().getOldIRI();
+        var result = new StringBuilder();
+        var keepingClasses = new HashSet<String>();
         for (var sibling : siblings) {
-            for (var classIri : getClassHierarchy(sibling.getDomain())) {
+            var targetHierarchy = getClassHierarchy(sibling.getDomain());
+            keepingClasses.addAll(targetHierarchy);
+            for (var classIri : targetHierarchy) {
                 var pss = SparqlTemplateLoader.loadTemplate("migration/property-split");
-                pss.setIri("oldProperty", oldAttribute);
+                pss.setIri("oldProperty", oldProperty);
                 pss.setIri("newProperty", sibling.getIri());
                 pss.setIri("domain", classIri);
                 append(result, pss.toString());
             }
         }
+        // a split rewrites per target, so there is no plain rewrite left to carry the rest
+        append(result, deleteFromClassesLosingProperty(oldProperty, keepingClasses));
         return result.toString();
     }
 
@@ -261,8 +332,11 @@ public class SparqlUpdateGenerator {
     private List<String> getClassHierarchy(String classIri) {
         var graph = migrationSessionStore.getContext().getUpdatedSchema();
         var model = ModelFactory.createModelForGraph(graph);
-        var classResource = model.getResource(classIri);
+        return hierarchyOf(model.getResource(classIri));
+    }
 
+    /** The class itself, if it can have instances at all, together with everything deriving. */
+    private List<String> hierarchyOf(Resource classResource) {
         var classHierarchy = CIMClassUtils.findDerivingClasses(classResource);
         if (CIMClassUtils.isInstantiableClass(classResource)) {
             classHierarchy.add(classResource);

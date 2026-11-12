@@ -29,6 +29,7 @@
         filterRenameCandidates,
         groupMappingsForSubmission,
         isNonInstantiableAssociationRename,
+        shareMappingsAcrossClasses,
     } from "$lib/utils/migrationUtils.js";
 
     let { substeps = [], currentSubstepIndex = 0 } = $props();
@@ -87,7 +88,10 @@
         if (error) {
             console.log("Failed to fetch property overview:", error);
         } else {
-            classes = data;
+            classes = shareMappingsAcrossClasses(
+                data,
+                PROPERTY_KINDS.map(kind => kind.overviewKey),
+            );
         }
 
         isLoading = false;

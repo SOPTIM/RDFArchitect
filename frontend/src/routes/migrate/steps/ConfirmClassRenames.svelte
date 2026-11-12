@@ -145,6 +145,7 @@
             resourceType="Class"
             {renamedFrom}
             {invalidMappingIds}
+            singleTarget
         />
     {/if}
 </div>

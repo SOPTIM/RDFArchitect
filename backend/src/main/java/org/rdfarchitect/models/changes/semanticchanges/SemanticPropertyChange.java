@@ -34,6 +34,8 @@ public sealed class SemanticPropertyChange extends SemanticResourceChange
 
     private String domain;
 
+    private boolean targetInstancesNeedValue;
+
     public SemanticPropertyChange(TripleResourceChange tripleChange) {
         super(tripleChange);
     }
@@ -41,6 +43,7 @@ public sealed class SemanticPropertyChange extends SemanticResourceChange
     public SemanticPropertyChange(SemanticPropertyChange other) {
         super(other);
         this.domain = other.domain;
+        this.targetInstancesNeedValue = other.targetInstancesNeedValue;
     }
 
     public SemanticPropertyChange(SemanticResourceChange resourceChange) {

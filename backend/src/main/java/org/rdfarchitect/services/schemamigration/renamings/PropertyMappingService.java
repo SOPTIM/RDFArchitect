@@ -55,6 +55,7 @@ public class PropertyMappingService
                 context.getDiffAfterClassConfirm().stream()
                         .collect(Collectors.toMap(SemanticClassChange::getIri, c -> c));
         var potentialPropertiesByIri = new HashMap<String, PotentialPropertyData>();
+        var alreadyConfirmed = context.isPropertyMappingsConfirmed();
 
         var originalModel = ModelFactory.createModelForGraph(context.getOriginalSchema());
         var updatedModel = ModelFactory.createModelForGraph(context.getUpdatedSchema());
@@ -66,6 +67,10 @@ public class PropertyMappingService
                     PropertyMappingUtilities.findPotentialProperties(
                             cls, classChanges, updatedModel);
             potentialPropertiesByIri.put(cls.getIri(), potentialProperties);
+
+            if (alreadyConfirmed) {
+                continue;
+            }
 
             if (cls.getAttributeResourceMappings().isEmpty()) {
                 cls.setAttributeResourceMappings(
@@ -84,12 +89,16 @@ public class PropertyMappingService
             }
         }
 
-        PropertyMappingUtilities.collapseMovesIntoMerges(
-                classChanges, SemanticClassChange::getAttributeResourceMappings);
-        PropertyMappingUtilities.collapseMovesIntoMerges(
-                classChanges, SemanticClassChange::getAssociationResourceMappings);
-        PropertyMappingUtilities.collapseMovesIntoMerges(
-                classChanges, SemanticClassChange::getEnumEntryResourceMappings);
+        // collapsing is part of proposing, so it must not run over confirmed mappings - it would
+        // put a merge back together that the user took apart into separate moves
+        if (!alreadyConfirmed) {
+            PropertyMappingUtilities.collapseMovesIntoMerges(
+                    classChanges, SemanticClassChange::getAttributeResourceMappings);
+            PropertyMappingUtilities.collapseMovesIntoMerges(
+                    classChanges, SemanticClassChange::getAssociationResourceMappings);
+            PropertyMappingUtilities.collapseMovesIntoMerges(
+                    classChanges, SemanticClassChange::getEnumEntryResourceMappings);
+        }
 
         var mappings = new ArrayList<ClassPropertyMappingOverview>();
         for (var cls : classChanges.values()) {
@@ -121,6 +130,15 @@ public class PropertyMappingService
         var allAssociationMappings = new ArrayList<ResourceMapping<SemanticAssociationChange>>();
         var allEnumEntryMappings = new ArrayList<ResourceMapping<SemanticEnumEntryChange>>();
 
+        // the request carries the confirmed state as a whole, and a class the user emptied is
+        // left out of it - so everything is dropped first, or that class would keep the mappings
+        // detected for it and offer them again on the way back
+        for (var cls : oldClassChanges) {
+            cls.setAttributeResourceMappings(new ArrayList<>());
+            cls.setAssociationResourceMappings(new ArrayList<>());
+            cls.setEnumEntryResourceMappings(new ArrayList<>());
+        }
+
         for (var propertyRename : classPropertyMappings) {
             // update rename candidates in the version after the class confirm, so that the
             // suggested renames reflect the input, when going back to that step
@@ -148,6 +166,7 @@ public class PropertyMappingService
         RenameReclassifier.reclassifyChangesDueToRenames(
                 newClassChanges, context.getResourceMappings());
 
+        context.setPropertyMappingsConfirmed(true);
         context.setDiffAfterPropertyConfirm(newClassChanges);
     }
 }

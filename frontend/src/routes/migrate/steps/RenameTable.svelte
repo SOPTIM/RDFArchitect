@@ -29,6 +29,7 @@
         getCandidateSubtitle = () => null,
         resourceType = "Item",
         currentClassLabel = null,
+        singleTarget = false,
     } = $props();
 
     const BADGE_LABELS = {
@@ -65,9 +66,19 @@
             mapping.newResources = mapping.newResources.filter(
                 r => r.iri !== candidate.iri,
             );
+        } else if (singleTarget) {
+            // one target at a time, so picking another replaces the current one
+            mapping.newResources = [candidate];
         } else {
             mapping.newResources = [...mapping.newResources, candidate];
         }
+    }
+
+    /** Linking what another row already claims would make the two a merge. */
+    function isClaimedElsewhere(candidate, mapping) {
+        return (
+            singleTarget && otherMappingsLinking(candidate, mapping).length > 0
+        );
     }
 
     function unlink(mapping, candidate) {
@@ -185,14 +196,21 @@
                                             candidate,
                                             mapping,
                                         )}
+                                        {@const claimed = isClaimedElsewhere(
+                                            candidate,
+                                            mapping,
+                                        )}
                                         <label
-                                            class="hover:bg-lightgray flex items-center gap-2 rounded px-1 py-0.5 text-xs"
+                                            class="flex items-center gap-2 rounded px-1 py-0.5 text-xs {claimed
+                                                ? 'opacity-50'
+                                                : 'hover:bg-lightgray'}"
                                         >
                                             <Checkbox
                                                 checked={isLinked(
                                                     mapping,
                                                     candidate,
                                                 )}
+                                                disabled={claimed}
                                                 onCheckedChange={() =>
                                                     toggleLink(
                                                         mapping,
@@ -214,7 +232,10 @@
                                                     <span
                                                         class="text-text-subtle italic"
                                                     >
-                                                        - also linked from {others
+                                                        - {claimed
+                                                            ? "already taken by"
+                                                            : "also linked from"}
+                                                        {others
                                                             .map(oldLabel)
                                                             .join(", ")}
                                                     </span>

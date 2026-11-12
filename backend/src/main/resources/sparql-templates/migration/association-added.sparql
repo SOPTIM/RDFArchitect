@@ -3,6 +3,7 @@ INSERT {
 }
 WHERE {
     ?instance a ?domain .
+    FILTER NOT EXISTS { ?instance ?association ?any . }
 
     <mapping>
 };

@@ -33,6 +33,7 @@ import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -104,6 +105,11 @@ public class CrossDomainPropertyPropagationHandler {
         var oldDeriving = derivingUris(oldModel, oldResource.getDomain());
         var newDeriving = derivingUris(newModel, newResource.getDomain());
 
+        var carriedItBefore = new HashSet<>(oldDeriving);
+        carriedItBefore.add(oldResource.getDomain());
+        flagTargetInstancesNeedingValue(
+                classChangeMap, newModel, mapping, carriedItBefore, propertyAccess);
+
         emitDifference(
                 classChangeMap,
                 oldModel,
@@ -138,6 +144,14 @@ public class CrossDomainPropertyPropagationHandler {
         for (var oldResource : mapping.getOldResources()) {
             excluded.add(oldResource.getDomain());
         }
+
+        var carriedItBefore = new HashSet<String>();
+        for (var oldResource : mapping.getOldResources()) {
+            carriedItBefore.add(oldResource.getDomain());
+            carriedItBefore.addAll(derivingUris(oldModel, oldResource.getDomain()));
+        }
+        flagTargetInstancesNeedingValue(
+                classChangeMap, newModel, mapping, carriedItBefore, propertyAccess);
 
         var unionOldDeriving = new HashSet<String>();
         for (var oldResource : mapping.getOldResources()) {
@@ -205,6 +219,39 @@ public class CrossDomainPropertyPropagationHandler {
                 oldResource.getIri(),
                 SemanticResourceChangeType.DELETED_FROM_INHERITANCE,
                 propertyAccess);
+    }
+
+    /**
+     * Marks the moved or merged property when the class it lands on can have instances of its own
+     * and did not carry the property before. Those instances are the ones no value moves onto, so
+     * the default value step has to ask for one.
+     *
+     * <p>Classes that only inherit the property from the target are left alone: they are already
+     * reported as added through inheritance, which asks for their default separately.
+     */
+    private <T extends SemanticPropertyChange> void flagTargetInstancesNeedingValue(
+            Map<String, SemanticClassChange> classChangeMap,
+            Model newModel,
+            ResourceMapping<T> mapping,
+            Set<String> classesThatCarriedItBefore,
+            PropertyAccess<T> propertyAccess) {
+        var newResource = mapping.getNewResources().getFirst();
+        var targetDomain = newResource.getDomain();
+        if (targetDomain == null || classesThatCarriedItBefore.contains(targetDomain)) {
+            return;
+        }
+        if (!CIMClassUtils.isInstantiableClass(newModel.getResource(targetDomain))) {
+            return;
+        }
+
+        var targetClass = classChangeMap.get(targetDomain);
+        if (targetClass == null) {
+            return;
+        }
+
+        propertyAccess.existing().apply(targetClass).stream()
+                .filter(property -> Objects.equals(property.getIri(), newResource.getIri()))
+                .forEach(property -> property.setTargetInstancesNeedValue(true));
     }
 
     private <T extends SemanticPropertyChange> void emitDifference(

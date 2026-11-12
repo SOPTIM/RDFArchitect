@@ -77,12 +77,16 @@ public sealed class SemanticResourceChange
     public SemanticResourceChange(String label) {
         this.label = label;
         this.changes = new ArrayList<>();
+        this.additionalOldIRIs = new ArrayList<>();
+        this.mappedToIRIs = new ArrayList<>();
     }
 
     public SemanticResourceChange(TripleResourceChange tripleChange) {
         this.label = tripleChange.getLabel();
         this.iri = tripleChange.getUri();
         this.changes = new ArrayList<>();
+        this.additionalOldIRIs = new ArrayList<>();
+        this.mappedToIRIs = new ArrayList<>();
     }
 
     public SemanticResourceChange(SemanticResourceChange other) {
@@ -111,6 +115,8 @@ public sealed class SemanticResourceChange
         this.label = resource.getProperty(RDFS.label).getString();
         this.iri = resource.getURI();
         this.changes = new ArrayList<>();
+        this.additionalOldIRIs = new ArrayList<>();
+        this.mappedToIRIs = new ArrayList<>();
     }
 
     public SemanticResourceChange copy() {

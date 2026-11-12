@@ -24,6 +24,7 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticPropertyChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 import org.springframework.stereotype.Service;
@@ -145,8 +146,10 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         var update =
                 switch (attributeChange.getSemanticResourceChangeType()) {
                     case DELETE -> updateGenerator.generateDeletePropertyUpdate(attributeChange);
-                    case RENAME, MOVE, MERGE ->
-                            updateGenerator.generateRenameAttributeUpdate(attributeChange);
+                    case RENAME -> updateGenerator.generateRenameAttributeUpdate(attributeChange);
+                    case MOVE, MERGE ->
+                            updateGenerator.generateMovePropertyUpdate(attributeChange)
+                                    + initializeTargetInstances(attributeChange, classIri);
                     case SPLIT -> generateSplitAttributeUpdate(attributeChange, splitGroups);
                     case ADD ->
                             updateGenerator.generateAddAttributeUpdate(attributeChange, classIri);
@@ -227,6 +230,21 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         }
     }
 
+    private String initializeTargetInstances(
+            SemanticPropertyChange propertyChange, String classIri) {
+        if (!propertyChange.isTargetInstancesNeedValue()) {
+            return "";
+        }
+        return switch (propertyChange) {
+            case SemanticAttributeChange attribute ->
+                    updateGenerator.generateAddAttributeToSingleClassUpdate(attribute, classIri);
+            case SemanticAssociationChange association ->
+                    updateGenerator.generateAddAssociationToSingleClassUpdate(
+                            association, classIri);
+            default -> "";
+        };
+    }
+
     private String generateUpdateForEnumEntry(SemanticEnumEntryChange enumEntryChange) {
         var sb = new StringBuilder();
         appendComment(sb, enumEntryChange);
@@ -277,8 +295,11 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                     case DELETED_FROM_INHERITANCE ->
                             updateGenerator.generateDeletePropertyFromSingleClassUpdate(
                                     associationChange, classIri);
-                    case RENAME, MOVE, MERGE ->
+                    case RENAME ->
                             updateGenerator.generateRenameAssociationUpdate(associationChange);
+                    case MOVE, MERGE ->
+                            updateGenerator.generateMovePropertyUpdate(associationChange)
+                                    + initializeTargetInstances(associationChange, classIri);
                     case SPLIT -> generateSplitAssociationUpdate(associationChange, splitGroups);
                     default -> null;
                 };

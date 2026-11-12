@@ -56,6 +56,14 @@ public class SchemaMigrationContext {
     // are merged
     private List<SemanticClassChange> diffAfterClassConfirm;
 
+    /**
+     * Whether the property step has been through a confirmation, so that returning to it shows what
+     * was confirmed instead of detecting over again. The class step tells the two apart by leaving
+     * its mappings null until confirmed; the per-class lists here cannot, since a class the user
+     * emptied and a class nothing was ever detected for both hold an empty list.
+     */
+    private boolean propertyMappingsConfirmed;
+
     // list of the semantic class changes after class properties etc. are confirmed and merged
     private List<SemanticClassChange> diffAfterPropertyConfirm;
 
@@ -71,6 +79,7 @@ public class SchemaMigrationContext {
         this.semanticDiff = null;
         this.resourceMappings = null;
         this.diffAfterClassConfirm = null;
+        this.propertyMappingsConfirmed = false;
         this.diffAfterPropertyConfirm = null;
         this.diffAfterDefaultValueConfirm = null;
     }

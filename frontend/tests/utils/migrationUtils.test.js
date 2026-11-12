@@ -29,10 +29,11 @@ import {
     isDefaultValueMissing,
     isNonInstantiableAssociationRename,
     isPrefixOnlyRename,
+    shareMappingsAcrossClasses,
     keepsExistingValues,
     requiresDefaultValue,
     skipsInitialization,
-} from "../../src/lib/utils/migrationUtils.js";
+} from "$lib/utils/migrationUtils.js";
 
 const PREFIX = "http://example.org#";
 
@@ -588,5 +589,85 @@ describe("groupMappingsForSubmission", () => {
 
         expect(mappings).toEqual([]);
         expect(invalidMappingIds).toEqual(new Set(["a", "b"]));
+    });
+});
+
+describe("shareMappingsAcrossClasses", () => {
+    const KINDS = ["attributes", "associations", "enumEntries"];
+
+    /** The shape the backend returns a cross-class merge in: once under each source class. */
+    function twoClassesShowingOneMerge() {
+        const merge = () => ({
+            id: "merge-1",
+            oldResources: [
+                { iri: `${PREFIX}Switch.state`, domain: `${PREFIX}Switch` },
+                { iri: `${PREFIX}Breaker.state`, domain: `${PREFIX}Breaker` },
+            ],
+            newResources: [{ iri: `${PREFIX}Common.status` }],
+        });
+        return [
+            {
+                classLabel: "Switch",
+                attributes: { deletedAndRemapped: [merge()] },
+            },
+            {
+                classLabel: "Breaker",
+                attributes: { deletedAndRemapped: [merge()] },
+            },
+        ];
+    }
+
+    it("hands every class the same object for one mapping", () => {
+        const classes = shareMappingsAcrossClasses(
+            twoClassesShowingOneMerge(),
+            KINDS,
+        );
+
+        expect(classes[0].attributes.deletedAndRemapped[0]).toBe(
+            classes[1].attributes.deletedAndRemapped[0],
+        );
+    });
+
+    /**
+     * Without this, unlinking under one class leaves the other copy linked and the mapping is
+     * submitted whole again - the edit silently undone.
+     */
+    it("lets an edit in one class reach the other, so unlinking submits nothing", () => {
+        const classes = shareMappingsAcrossClasses(
+            twoClassesShowingOneMerge(),
+            KINDS,
+        );
+
+        classes[0].attributes.deletedAndRemapped[0].newResources = [];
+
+        expect(
+            classes[1].attributes.deletedAndRemapped[0].newResources,
+        ).toEqual([]);
+        const rows = classes.flatMap(cls => cls.attributes.deletedAndRemapped);
+        expect(groupMappingsForSubmission(rows).mappings).toEqual([]);
+    });
+
+    it("leaves mappings that only one class shows alone", () => {
+        const classes = [
+            {
+                classLabel: "Switch",
+                attributes: {
+                    deletedAndRemapped: [
+                        { id: "a", oldResources: [], newResources: [] },
+                    ],
+                },
+            },
+        ];
+        const row = classes[0].attributes.deletedAndRemapped[0];
+
+        shareMappingsAcrossClasses(classes, KINDS);
+
+        expect(classes[0].attributes.deletedAndRemapped[0]).toBe(row);
+    });
+
+    it("copes with a class that has no rows of a kind", () => {
+        expect(() =>
+            shareMappingsAcrossClasses([{ classLabel: "Switch" }], KINDS),
+        ).not.toThrow();
     });
 });
