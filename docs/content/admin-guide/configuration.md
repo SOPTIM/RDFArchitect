@@ -17,7 +17,7 @@ The authoritative configuration is `backend/src/main/resources/application.yml`.
 | API base path                      | `frontend.accessRoute`                  | `/api`                       |
 | Max uploaded schema size           | `spring.servlet.multipart.max-file-size`| `50MB`                       |
 | History depth per graph            | `graph.maxVersions`                     | `256`                        |
-| Diagram renderer                   | `rendering.renderer`                    | `svelteflow` (or `mermaid`)  |
+| Diagram renderer                   | `rendering.renderer`                    | `svelteflow` (`mermaid` is deprecated) |
 | Session cookie name                | `server.servlet.session.cookie.name`    | `RDFA_SESSION_ID`            |
 | Session cookie `secure` flag       | `server.servlet.session.cookie.secure`  | `false` (set to `true` in production) |
 | Session cookie `SameSite` policy   | `server.servlet.session.cookie.same-site` | `lax`                      |

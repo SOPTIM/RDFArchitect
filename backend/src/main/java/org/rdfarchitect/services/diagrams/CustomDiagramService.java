@@ -20,6 +20,7 @@ package org.rdfarchitect.services.diagrams;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.api.dto.GraphDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.ClassSourceDTO;
@@ -36,6 +37,9 @@ import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
+import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeLayoutSync;
+import org.rdfarchitect.services.dl.update.edgelayout.EdgeResolver;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
 import org.rdfarchitect.services.rendering.CIMProfileModels;
 import org.rdfarchitect.services.select.ListGraphsUseCase;
@@ -61,6 +65,7 @@ public class CustomDiagramService
 
     private final DatabasePort databasePort;
     private final ListGraphsUseCase listGraphsUseCase;
+    private final SyncDiagramLayoutUseCase syncDiagramLayoutUseCase;
 
     @Override
     public List<CustomDiagramDTO> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
@@ -129,7 +134,7 @@ public class CustomDiagramService
         }
         if (doLayout) {
             try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
-                doDiagramLayout(transaction.layout(), crossProfileDiagramUUID, mergeMap);
+                doDiagramLayout(transaction.layout(), crossProfileDiagramUUID, mergeMap, profiles);
                 // Looking at the diagram is not a change the user's next undo should take back.
                 transaction.commitWithoutHistory();
             }
@@ -169,9 +174,18 @@ public class CustomDiagramService
     private static void doDiagramLayout(
             DiagramLayout diagramLayout,
             UUID crossProfileDiagramUUID,
-            Map<String, MergedClassDTO> mergeMap) {
+            Map<String, MergedClassDTO> mergeMap,
+            List<CIMProfileModel> profiles) {
 
-        var model = diagramLayout.getDiagramLayoutModel();
+        insertCrossProfileClassLayoutData(
+                diagramLayout.getDiagramLayoutModel(), crossProfileDiagramUUID, mergeMap, profiles);
+    }
+
+    private static void insertCrossProfileClassLayoutData(
+            Model model,
+            UUID crossProfileDiagramUUID,
+            Map<String, MergedClassDTO> mergeMap,
+            List<CIMProfileModel> profiles) {
         DiagramLayoutServiceUtils.insertAllDiagramObjectStyles(model);
         if (DLObjectFetcher.fetchDiagram(model, crossProfileDiagramUUID) == null) {
             DiagramLayoutServiceUtils.insertDiagram(
@@ -185,17 +199,22 @@ public class CustomDiagramService
                         .map(MRID::getUuid)
                         .collect(Collectors.toSet());
 
+        var createdClassLayoutData = false;
         for (var merged : mergeMap.values()) {
             if (!existingClassUUIDs.contains(merged.getUuid())) {
-                var doMRID =
-                        DiagramLayoutServiceUtils.insertDiagramObject(
-                                model,
-                                crossProfileDiagramUUID,
-                                merged.getClassUri(),
-                                merged.getUuid());
-                DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                        model, crossProfileDiagramUUID, doMRID);
+                DiagramLayoutServiceUtils.insertClassLayoutData(
+                        model,
+                        crossProfileDiagramUUID,
+                        merged.getClassUri(),
+                        merged.getUuid(),
+                        0,
+                        0);
+                createdClassLayoutData = true;
             }
+        }
+        if (createdClassLayoutData) {
+            EdgeLayoutSync.syncEdges(
+                    model, crossProfileDiagramUUID, EdgeResolver.forMergedProfiles(profiles));
         }
     }
 
@@ -203,6 +222,7 @@ public class CustomDiagramService
     public void deleteCustomDatasetDiagram(String datasetName, String diagramId) {
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
             var removed = transaction.diagrams().remove(UUID.fromString(diagramId));
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(datasetName);
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Deleted", "diagram", ChangeDescriptions.diagramName(removed)));
@@ -227,6 +247,7 @@ public class CustomDiagramService
                         diagramDTO.getDiagramId(), diagramDTO.getName(), diagramDTO.getClasses());
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
             transaction.diagrams().put(UUID.fromString(diagramId), diagram);
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(datasetName);
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Updated", "diagram", ChangeDescriptions.diagramName(diagram)));
@@ -243,6 +264,7 @@ public class CustomDiagramService
                 classes.removeIf(c -> c.getUuid().equals(classId));
                 diagram.setClasses(classes);
             }
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(datasetName);
             // Reading the diagrams enrolled them, so the transaction has to be committed either
             // way; a commit that changed nothing records nothing.
             transaction.commit(
@@ -284,6 +306,7 @@ public class CustomDiagramService
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphUri());
             var removed = ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Deleted", "diagram", ChangeDescriptions.diagramName(removed)));
@@ -312,6 +335,7 @@ public class CustomDiagramService
                             diagramDTO.getName(),
                             diagramDTO.getClasses());
             ctx.getCustomDiagrams().put(UUID.fromString(diagramId), diagram);
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Updated", "diagram", ChangeDescriptions.diagramName(diagram)));
@@ -331,6 +355,7 @@ public class CustomDiagramService
                 classes.removeIf(c -> c.getUuid().equals(classId));
                 diagram.setClasses(classes);
             }
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             ChangeDescriptions.actionOn("Removed", "class", className) + " from",

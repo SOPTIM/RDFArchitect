@@ -17,7 +17,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { getEdgeParams } from "$lib/rendering/svelteflow/components/edgeUtils.ts";
+import { getEdgeParams } from "$lib/rendering/svelteflow/components/edge/edgeUtils.ts";
 import {
     buildLabelNodes,
     labelNodesChanged,
@@ -30,9 +30,14 @@ function classNode(
     size = { width: 180, height: 88 },
     position = { x: 0, y: 0 },
 ) {
-    return { id, type: "class", position, measured: size };
+    return {
+        id,
+        type: "class",
+        position,
+        measured: size,
+        internals: { positionAbsolute: position },
+    };
 }
-
 function associationEdge(source, target) {
     return {
         id: `${source}->${target}`,
