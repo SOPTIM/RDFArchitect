@@ -164,15 +164,21 @@
             </ContextMenu.Item.Button>
         {:else}
             <ContextMenu.Item.Button
+                onSelect={removeAllEdgePoints}
+                faIcon={faEraser}
+                variant="danger"
+                disabled={readOnly || !(hasBendPoints || hasDockingPoints)}
+            >
+                Remove all edge points
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
                 onSelect={removeBendPoints}
                 faIcon={faEraser}
                 variant="danger"
                 disabled={readOnly || !hasBendPoints}
             >
-                Remove all bend points
+                Remove bend points
             </ContextMenu.Item.Button>
-        {/if}
-        {#if !selfLoop}
             <ContextMenu.Item.Button
                 onSelect={removeDockingPoints}
                 faIcon={faEraser}
@@ -180,14 +186,6 @@
                 disabled={readOnly || !hasDockingPoints}
             >
                 Remove docking points
-            </ContextMenu.Item.Button>
-            <ContextMenu.Item.Button
-                onSelect={removeAllEdgePoints}
-                faIcon={faEraser}
-                variant="danger"
-                disabled={readOnly || !(hasBendPoints || hasDockingPoints)}
-            >
-                Remove all edge points
             </ContextMenu.Item.Button>
         {/if}
         {#if canEdit}
