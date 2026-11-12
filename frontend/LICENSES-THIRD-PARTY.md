@@ -173,7 +173,7 @@
 
 ### jsdom
 - **Package:** jsdom
-- **Version:** 30.1.3
+- **Version:** 31.0.0
 - **License:** MIT
 - **URL:** [https://github.com/jsdom/jsdom](https://github.com/jsdom/jsdom)
 
