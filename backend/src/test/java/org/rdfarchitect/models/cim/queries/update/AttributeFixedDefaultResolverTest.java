@@ -32,6 +32,7 @@ import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSIsDefault;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSIsFixed;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
@@ -72,6 +73,26 @@ class AttributeFixedDefaultResolverTest {
         assertThat(attribute.getFixedValue().getDataType())
                 .isEqualTo(new URI(XSD.xstring.getURI()));
         assertThat(attribute.getDefaultValue().getDataType())
+                .isEqualTo(new URI(XSD.xstring.getURI()));
+    }
+
+    @Test
+    @DisplayName("a value on a language-tagged primitive is a plain string, having no language")
+    void resolve_valueOnLangString_staysAString() {
+        var attribute =
+                baseAttribute()
+                        .dataType(
+                                new CIMSDataType(
+                                        new URI(
+                                                "http://www.w3.org/1999/02/22-rdf-syntax-ns#LangString"),
+                                        new RDFSLabel("LangString"),
+                                        CIMSDataType.Type.PRIMITIVE))
+                        .fixedValue(new CIMSIsFixed("fixed"))
+                        .build();
+
+        resolveInTxn(emptyGraph(), attribute, false);
+
+        assertThat(attribute.getFixedValue().getDataType())
                 .isEqualTo(new URI(XSD.xstring.getURI()));
     }
 

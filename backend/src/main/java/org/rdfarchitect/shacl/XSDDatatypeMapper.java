@@ -22,13 +22,42 @@ import lombok.experimental.UtilityClass;
 import org.apache.jena.datatypes.BaseDatatype;
 import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.datatypes.TypeMapper;
+import org.apache.jena.datatypes.xsd.XSDDatatype;
+import org.apache.jena.datatypes.xsd.impl.RDFLangString;
 import org.apache.jena.vocabulary.XSD;
+
+import java.util.Map;
 
 @UtilityClass
 public class XSDDatatypeMapper {
 
+    /**
+     * CIM primitives whose name is not the local name of the XSD datatype they stand for. Without
+     * these, composing {@code xsd:<label>} invents datatypes such as {@code xsd:MonthDay} that no
+     * validator knows and that contradict every official ENTSO-E constraint on the same attribute.
+     * {@code LangString} is the one primitive outside XSD, so it is handled apart from these.
+     */
+    private static final Map<String, String> CIM_PRIMITIVE_ALIASES =
+            Map.of(
+                    "MonthDay", "gMonthDay",
+                    "URI", "anyURI",
+                    "IRI", "anyURI",
+                    "StringIRI", "anyURI",
+                    "URL", "anyURI",
+                    "StringFixedLanguage", "string",
+                    "UUID", "string",
+                    "Version", "string");
+
+    private static final String LANG_STRING = "LangString";
+
     public RDFDatatype classLabelToDatatype(String primitiveDatatypeClassLabel) {
-        var xsdUri = XSD.getURI() + primitiveDatatypeClassLabel;
+        if (LANG_STRING.equals(primitiveDatatypeClassLabel)) {
+            return RDFLangString.rdfLangString;
+        }
+        var localName =
+                CIM_PRIMITIVE_ALIASES.getOrDefault(
+                        primitiveDatatypeClassLabel, primitiveDatatypeClassLabel);
+        var xsdUri = XSD.getURI() + localName;
         var typeListIterator = TypeMapper.getInstance().listTypes();
         while (typeListIterator.hasNext()) {
             var dt = typeListIterator.next();
@@ -37,5 +66,22 @@ public class XSDDatatypeMapper {
             }
         }
         return new BaseDatatype(xsdUri);
+    }
+
+    /**
+     * The datatype to write a value of {@code datatype} with when that value is only text, as a
+     * migration's default is: {@code rdf:langString} needs a language tag, so it is a plain string.
+     */
+    public RDFDatatype forPlainValue(RDFDatatype datatype) {
+        return datatype == RDFLangString.rdfLangString ? XSDDatatype.XSDstring : datatype;
+    }
+
+    /**
+     * Whether a value that is only text, as a fixed or default value is, can be typed with {@code
+     * datatype}: it has to exist, and {@code rdf:langString} needs a language tag on top.
+     */
+    public boolean canTypeAPlainValue(RDFDatatype datatype) {
+        return datatype != RDFLangString.rdfLangString
+                && TypeMapper.getInstance().getTypeByName(datatype.getURI()) != null;
     }
 }

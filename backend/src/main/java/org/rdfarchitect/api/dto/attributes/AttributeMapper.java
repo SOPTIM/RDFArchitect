@@ -17,7 +17,6 @@
 
 package org.rdfarchitect.api.dto.attributes;
 
-import org.apache.jena.datatypes.TypeMapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
@@ -140,7 +139,7 @@ public interface AttributeMapper {
             return null;
         }
         var datatype = XSDDatatypeMapper.classLabelToDatatype(dto.getDataType().getLabel());
-        if (TypeMapper.getInstance().getTypeByName(datatype.getURI()) == null) {
+        if (!XSDDatatypeMapper.canTypeAPlainValue(datatype)) {
             return null;
         }
         return new URI(datatype.getURI());
