@@ -25,7 +25,7 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-   import { migrationState } from "$lib/sharedState.svelte.js";
+    import { migrationState } from "$lib/sharedState.svelte.js";
     import { saveFile, sparqlMediaType } from "$lib/utils/fileUtils.js";
 
     import { goto } from "$app/navigation";
