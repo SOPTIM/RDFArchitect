@@ -56,7 +56,7 @@
 
 ### @sveltejs/adapter-static
 - **Package:** @sveltejs/adapter-static
-- **Version:** 3.0.10
+- **Version:** 3.0.11
 - **License:** MIT
 - **URL:** [https://svelte.dev/docs/kit/adapter-static](https://svelte.dev/docs/kit/adapter-static)
 
