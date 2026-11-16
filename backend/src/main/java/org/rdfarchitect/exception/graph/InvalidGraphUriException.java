@@ -19,13 +19,14 @@ package org.rdfarchitect.exception.graph;
 
 import org.springframework.http.HttpStatus;
 
+/** Exception is thrown when a graph URI requested for an import cannot be stored. */
 public class InvalidGraphUriException extends GraphException {
 
     private InvalidGraphUriException(String message) {
         super(HttpStatus.BAD_REQUEST, message);
     }
 
-    /** The graph cannot be stored under this uri. */
+    /** The graph cannot be stored under this URI. */
     public static InvalidGraphUriException notUsable(String graphUri) {
         return new InvalidGraphUriException("'" + graphUri + "' is not a usable graph URI.");
     }

@@ -116,7 +116,8 @@ public class ImportXmiService implements ImportXmiUseCase {
     }
 
     /**
-     * Reads one export and reports the packages it holds.
+     * Reads one export and reports the packages it holds. An export without Enterprise Architect's
+     * extension is reported as failed: it lacks the associations, fixed values and documentation.
      *
      * <p>The whole export is read, not only enough of it to find the profiles: what a package costs
      * to import is the closure over its attribute types and superclasses, and that cannot be worked

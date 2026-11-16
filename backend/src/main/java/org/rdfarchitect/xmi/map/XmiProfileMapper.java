@@ -128,7 +128,7 @@ public final class XmiProfileMapper {
 
     /**
      * A member of a written class that could not be written itself, which happens for one reason:
-     * it, or for an association half its association, is stereotyped as an extension while the
+     * it is stereotyped as an extension (for an association half: its association is) while the
      * export states no extension namespace. Its class is not, or {@link #refuseIfUnnameable} would
      * have stopped the import, so what is lost is the member alone.
      *
@@ -147,8 +147,8 @@ public final class XmiProfileMapper {
     public record UnnameableMember(String memberName) {}
 
     /**
-     * A class, package or association of the profile that is left out, or written without its
-     * package, for a reason the export decides.
+     * A class, package, member or association of the profile that is left out, or written without
+     * or into another package, for a reason the export decides.
      *
      * @param name the element as the export names it
      * @param reason why, worded for whoever imports
@@ -172,6 +172,8 @@ public final class XmiProfileMapper {
      * @param droppedMembers the members of written classes that could not be written themselves
      * @param unnameableMembers the members of written classes whose name no URI can hold
      * @param unmappedOntologyFields the header fields that were not carried
+     * @param omittedElements the elements left out, or written without their own package, for a
+     *     reason the export decides
      */
     public record WrittenProfile(
             Map<String, WrittenClass> classes,
@@ -306,7 +308,8 @@ public final class XmiProfileMapper {
      * <p>The nesting is written too, which is more than the editing path can keep — see {@link
      * ICIMModelWriter}.
      *
-     * @return the category per package, without the packages no URI can be built from
+     * @return the category per package, without the packages no URI can be built from; a package
+     *     named like another maps to that one's category
      */
     private Map<String, CIMSBelongsToCategory> writePackages(
             ICIMModelWriter writer, Set<String> slice) {
@@ -415,10 +418,10 @@ public final class XmiProfileMapper {
     }
 
     /**
-     * Writes every class of the slice together with its members, and reports which of them made it.
-     * A class the export names in a way no URI can hold has already been dropped by the reader, and
-     * one the export cannot name at all stops the import in {@link #refuseIfUnnameable}, so every
-     * class reaching this point is one that can be written.
+     * Writes every class of the slice, without its members (see {@link #writeMembers}), and reports
+     * which of them made it. A class the export names in a way no URI can hold has already been
+     * dropped by the reader, and one the export cannot name at all stops the import in {@link
+     * #refuseIfUnnameable}, so every class reaching this point is one that can be written.
      *
      * <p>Not so a second class under a name one already written shares. An export may declare the
      * same datatype in two packages — CGMES 3.0 declares {@code String} and {@code Date} both in
@@ -727,16 +730,8 @@ public final class XmiProfileMapper {
     }
 
     /**
-     * Whether a half can be written. Both halves of a pair have to be, so one that cannot takes the
-     * other with it: a single half names an inverse role that is not there.
-     *
-     * <p>A multiplicity is required rather than defaulted. Every released half states one, and a
-     * connector that states none — the CGMES 3.0 extensions hold such — says nothing that a default
-     * would not be inventing.
-     */
-    /**
-     * Reports an association both of whose classes are written. One that reaches a class outside
-     * the schema is left out by design and not reported.
+     * Reports an association left out although both its classes are written. One that reaches a
+     * class outside the schema is left out by design and not reported.
      */
     private void reportUnwritable(
             XmiAssociationEnd end, XmiAssociationEnd opposite, Set<String> written) {
@@ -751,10 +746,18 @@ public final class XmiProfileMapper {
                         end.getMultiplicity() == null || opposite.getMultiplicity() == null
                                 ? "The export states no multiplicity; the association is not"
                                         + " imported."
-                                : "A role name cannot be part of a URI; the association is not"
-                                        + " imported."));
+                                : "A role name is missing or cannot be part of a URI; the"
+                                        + " association is not imported."));
     }
 
+    /**
+     * Whether a half can be written. Both halves of a pair have to be, so one that cannot takes the
+     * other with it: a single half names an inverse role that is not there.
+     *
+     * <p>A multiplicity is required rather than defaulted. Every released half states one, and a
+     * connector that states none — the CGMES 3.0 extensions hold such — says nothing that a default
+     * would not be inventing.
+     */
     private boolean isWritable(XmiAssociationEnd end, Set<String> written) {
         return end.getRoleName() != null
                 && end.getOppositeRoleName() != null

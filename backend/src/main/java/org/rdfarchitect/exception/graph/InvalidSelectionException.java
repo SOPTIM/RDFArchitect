@@ -19,13 +19,14 @@ package org.rdfarchitect.exception.graph;
 
 import org.springframework.http.HttpStatus;
 
+/** Exception is thrown when the packages or diagrams chosen for an import are malformed. */
 public class InvalidSelectionException extends GraphException {
 
     private InvalidSelectionException(String message) {
         super(HttpStatus.BAD_REQUEST, message);
     }
 
-    /** A package or diagram of the selection is missing where an entry stands for it. */
+    /** The selection holds a {@code null} where a package or diagram id belongs. */
     public static InvalidSelectionException emptyEntry() {
         return new InvalidSelectionException("The selection holds an empty entry.");
     }

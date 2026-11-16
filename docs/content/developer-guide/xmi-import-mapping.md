@@ -137,7 +137,7 @@ underlying `owl:Ontology` node or `<Profile>Version` class and they follow. It m
 | extension `properties/@stereotype` | `cims:stereotype` |
 | owning package | `cims:belongsToCategory` |
 | `uml:Enumeration` | class with stereotype `enumeration`, as a URI; see [what the importer writes](#output-shape) |
-| `ownedLiteral` | `CIMEnumEntry` with stereotype `enum`; documentation from the matching extension `<attribute>`, joined by id |
+| `ownedLiteral` | `CIMEnumEntry`, no stereotype; documentation from the matching extension `<attribute>`, joined by id |
 
 **Package nesting needs backend work, though not where it looks.** The read path has it already:
 `listInternalPackages` queries `cims:belongsToCategory` on the package itself and `PackageMapper`
@@ -235,9 +235,7 @@ stay there, as the released RDFS does. A profile without a metadata class simply
 | Everything else | any string without spaces | stored, rendered as `«value»`, exported, round-tripped, editable |
 
 **Every stereotype of a class, attribute or association is imported unchanged, with two
-caveats.** Those of enum literals are not read at all: an edit writes an entry's stereotype as
-`enum` whatever it was, so RDFArchitect cannot hold others yet (CGMES 3.0 has `European` on
-`LimitKind`'s literals, for one). First a locator problem:
+caveats.** First a locator problem:
 `properties/@stereotype` and `stereotype/@stereotype` hold exactly one value, while the releases do
 emit co-occurring stereotypes (`European` + `deprecated`, `Operation` + `ShortCircuit`), which
 those two attributes lose. The **stereotype-application section** at the root of the file carries
@@ -245,9 +243,14 @@ the complete set per element without string parsing, so that is the carrier to r
 `GUIDBasedOn` and `IsBasedOn`, which are UML bookkeeping.
 
 Second, three values must not be passed through: `abstract`, which neither release emits and
-RDFArchitect expresses through the inverted `concrete` flag, and `attribute` and `enum`, which
-`CIMUpdates` writes automatically, so supplying them duplicates the first and has the second
-silently replaced.
+RDFArchitect expresses through the inverted `concrete` flag; `attribute`, which `CIMUpdates` writes
+automatically, so supplying it duplicates it; and `enum`, which is not written at all, since the
+CGMES 3.0 releases put it on the literals of some vocabularies and not of others, by no rule the
+export shows.
+
+The stereotypes of enum literals are not read at all: an edit writes an entry's stereotype as
+`enum` whatever it was, so RDFArchitect cannot hold others yet (CGMES 3.0 has `European` on
+`LimitKind`'s literals, for one).
 
 Tier 4 is a supported state, not a fallback: the releases keep values like `NC`, `profcim`,
 `European` and `deprecated` too, and CGMES 3.0 uses a few dozen names RDFArchitect does not model.
@@ -313,7 +316,7 @@ export's content, and omitting them produces a graph that is stored and partly o
 | attribute | `rdf:type rdf:Property`, `rdfa:uuid`, `rdfs:domain`, **`cims:stereotype <...UML#attribute>`**, `cims:multiplicity`. URI `<model ns><Class>.<name>` |
 | association half | `rdf:type rdf:Property`, `rdfa:uuid`, `rdfs:domain`, `rdfs:range`, `cims:multiplicity`, `cims:inverseRoleName`, `cims:AssociationUsed`. URI `<model ns><Domain>.<role>` |
 | enumeration | like a class, plus `cims:stereotype <...UML#enumeration>` |
-| enum entry | `rdf:type <the enumeration class>`, `rdfa:uuid`, `cims:stereotype "enum"`. URI `<model ns><Enum>.<literal>` |
+| enum entry | `rdf:type <the enumeration class>`, `rdfa:uuid`. URI `<model ns><Enum>.<literal>` |
 | ontology (3.0 only) | `rdf:type owl:Ontology`; the IRI is fixed as `<namespace>Ontology` and cannot be chosen |
 
 * **`rdf:type` gates everything.** `GraphUtils.enhanceWithUUIDs` assigns `rdfa:uuid` only to typed

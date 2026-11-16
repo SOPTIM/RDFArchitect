@@ -56,14 +56,16 @@ class XmiImportWarnings {
         add(warnings, profileName, graphUri, omittedElements(profileName, written));
     }
 
-    /** The classes, packages and associations the export names in a way that leaves them out. */
+    /**
+     * The classes, packages, members and associations the export leaves no way to write as stated.
+     */
     private List<UncarriedItem> omittedElements(String profileName, WrittenProfile written) {
         if (written.omittedElements().isEmpty()) {
             return List.of();
         }
         logger.warn(
-                "Profile '{}': {} class(es), package(s) or association(s) are left out or written"
-                        + " without their package.",
+                "Profile '{}': {} class(es), package(s), member(s) or association(s) are left out"
+                        + " or written without their own package.",
                 profileName,
                 written.omittedElements().size());
         return written.omittedElements().stream()
@@ -82,8 +84,8 @@ class XmiImportWarnings {
     }
 
     /**
-     * The attributes that were written without a datatype, naming what the export points at where
-     * it says so at all.
+     * The attributes whose type the export does not declare: kept pointing at the missing type
+     * where the export names it, left out where it does not.
      *
      * <p>This is what a partial export costs. Enterprise Architect writes an {@code EAStub} for
      * every element it leaves out, which is enough to name the missing type and not enough to
@@ -139,15 +141,16 @@ class XmiImportWarnings {
 
     /**
      * The members of written classes that could not be written themselves, which is an extension
-     * attribute on a class that is none while the export states no extension namespace. The class
-     * is in the schema and the attribute is not, so the loss is invisible without this.
+     * attribute or association on a class that is none while the export states no extension
+     * namespace. The class is in the schema and the member is not, so the loss is invisible without
+     * this.
      */
     private List<UncarriedItem> droppedMembers(String profileName, WrittenProfile written) {
         if (written.droppedMembers().isEmpty()) {
             return List.of();
         }
         logger.warn(
-                "Profile '{}': {} attribute(s) or association half(s) stereotyped as an extension"
+                "Profile '{}': {} attribute(s) or association halves stereotyped as an extension"
                         + " could not be named,"
                         + " the export stating no extension namespace. They are not imported.",
                 profileName,
@@ -158,9 +161,9 @@ class XmiImportWarnings {
     }
 
     /**
-     * The attributes and enum literals of written classes whose name holds whitespace in the
-     * middle, which a URI cannot. The class is in the schema and the member is not, so, as with a
-     * dropped member, the loss is invisible without this.
+     * The attributes and enum literals of written classes whose name no URI can hold, such as
+     * whitespace in the middle or {@code A<B>}. The class is in the schema and the member is not,
+     * so, as with a dropped member, the loss is invisible without this.
      */
     private List<UncarriedItem> unnameableMembers(String profileName, WrittenProfile written) {
         if (written.unnameableMembers().isEmpty()) {

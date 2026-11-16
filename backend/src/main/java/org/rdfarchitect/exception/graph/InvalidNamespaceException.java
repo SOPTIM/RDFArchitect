@@ -19,6 +19,7 @@ package org.rdfarchitect.exception.graph;
 
 import org.springframework.http.HttpStatus;
 
+/** Exception is thrown when a namespace supplied for an import cannot name a resource. */
 public class InvalidNamespaceException extends GraphException {
 
     private InvalidNamespaceException(String message) {

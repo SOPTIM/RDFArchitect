@@ -52,8 +52,7 @@ import org.rdfarchitect.models.cim.data.dto.CIMPackage;
  * A package's parent and an association's stereotypes. The editor supports neither yet: {@code
  * CIMUpdates} writes association stereotypes only where the DTO carries them, which an edit never
  * does, and no package parent at all. A graph written here therefore loses both on the first save.
- * That is deliberate: the import lays the ground for supporting them, the editor does not have it
- * yet.
+ * That is deliberate: the import lays the groundwork the editor does not support yet.
  */
 public interface ICIMModelWriter {
 

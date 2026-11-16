@@ -117,7 +117,10 @@ function fileProgress(file) {
  * to stop the job.
  */
 export class ImportProgress {
-    /** What one entry of {@link files} is called: a file, or a step of an import of packages. */
+    /**
+     * What one entry of `files` is called: a file for an import of RDF files, a step for reading
+     * exports or importing packages.
+     */
     unit;
     phase = $state(ImportPhase.UPLOADING);
     uploadPercent = $state(0);
