@@ -30,6 +30,7 @@ import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.graph.InvalidGraphUriException;
 import org.rdfarchitect.exception.graph.InvalidNamespaceException;
+import org.rdfarchitect.exception.graph.InvalidSelectionException;
 import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.services.update.graph.ImportOutcome.GraphsImported;
 import org.rdfarchitect.services.update.graph.ImportOutcome.PackagesScanned;
@@ -44,6 +45,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -99,6 +101,11 @@ public class ImportJobService implements ImportJobUseCase {
             return Optional.empty();
         }
         // Before the exports are taken over, so that a refused choice leaves the read to try again.
+        // Not List.contains: an immutable list refuses to be asked about null.
+        if (selection.stream().anyMatch(Objects::isNull)
+                || diagramIds.stream().anyMatch(Objects::isNull)) {
+            throw InvalidSelectionException.emptyEntry();
+        }
         selection.forEach(
                 selected -> {
                     assertUsableNamespace(selected.modelNamespace());
