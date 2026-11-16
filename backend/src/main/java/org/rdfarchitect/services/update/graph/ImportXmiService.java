@@ -255,10 +255,7 @@ public class ImportXmiService implements ImportXmiUseCase {
             importFrom(export, reservedGraphUris, chosenDiagrams, listener, result, built);
         }
         if (listener.isCancelled()) {
-            built.diagrams()
-                    .forEach(
-                            diagrams -> listener.finished(diagrams.index(), Outcome.SKIPPED, null));
-            takeBack(result);
+            takeBack(result, built, listener);
             return result;
         }
         store(datasetName, built, listener, result);
@@ -308,17 +305,29 @@ public class ImportXmiService implements ImportXmiUseCase {
             built.diagrams().forEach(diagrams -> listener.failed(diagrams.index(), NOT_STORED));
         }
         if (!committed) {
-            takeBack(result);
+            takeBack(result, built, listener);
             if (!workspaceExisted) {
                 deleteWorkspace(datasetName);
             }
         }
     }
 
-    private void takeBack(ImportResult result) {
+    /**
+     * Undoes the report of what was built and not stored. A cancelled import marks its steps
+     * skipped, so that none of them still claims a schema; a failed one has marked them already.
+     */
+    private void takeBack(ImportResult result, BuiltImport built, ImportProgressListener listener) {
         logger.info(
                 "Import not stored: took back {} schema(s).", result.importedGraphUris().size());
         result.importedGraphUris().clear();
+        result.warnings().clear();
+        if (listener.isCancelled()) {
+            built.schemas()
+                    .forEach(schema -> listener.finished(schema.index(), Outcome.SKIPPED, null));
+            built.diagrams()
+                    .forEach(
+                            diagrams -> listener.finished(diagrams.index(), Outcome.SKIPPED, null));
+        }
     }
 
     private void deleteWorkspace(String datasetName) {
