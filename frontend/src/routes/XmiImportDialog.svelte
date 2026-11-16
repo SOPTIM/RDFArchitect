@@ -146,7 +146,7 @@
 
     /** What the workspaces are called, which is what keeps an export out of an existing one. */
     async function loadTakenNames() {
-        takenNames = ((await workspaceStore.getWorkspaces()) ?? []).map(
+        takenNames = ((await workspaceStore.getWorkspaces(true)) ?? []).map(
             workspace => workspace.label,
         );
     }
