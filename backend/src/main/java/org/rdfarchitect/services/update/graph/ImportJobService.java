@@ -21,11 +21,14 @@ import jakarta.annotation.PreDestroy;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.irix.IRIException;
+import org.apache.jena.irix.IRIx;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.context.UserSettings;
 import org.rdfarchitect.context.UserSettingsContext;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.exception.graph.InvalidNamespaceException;
 import org.rdfarchitect.services.update.graph.ImportOutcome.GraphsImported;
 import org.rdfarchitect.services.update.graph.ImportOutcome.PackagesScanned;
 import org.slf4j.Logger;
@@ -93,6 +96,12 @@ public class ImportJobService implements ImportJobUseCase {
         if (readJob == null) {
             return Optional.empty();
         }
+        // Before the exports are taken over, so that a refused choice leaves the read to try again.
+        selection.forEach(
+                selected -> {
+                    assertUsableNamespace(selected.modelNamespace());
+                    assertUsableNamespace(selected.extensionNamespace());
+                });
         var exports = readJob.takeRetainedFiles();
         if (exports.isEmpty()) {
             throw new ResourceConflictException(
@@ -374,5 +383,31 @@ public class ImportJobService implements ImportJobUseCase {
     void shutdown() {
         executor.shutdownNow();
         jobs.values().forEach(job -> SpooledMultipartFile.discard(job.takeRetainedFiles()));
+    }
+
+    /**
+     * Refuses a supplied namespace no resource can be named with. {@code null} or blank leaves the
+     * export its own and is fine.
+     */
+    private static void assertUsableNamespace(String namespace) {
+        if (namespace == null || namespace.isBlank()) {
+            return;
+        }
+        var stripped = namespace.strip();
+        if (!isNamespace(stripped)) {
+            throw InvalidNamespaceException.notUsable(stripped);
+        }
+    }
+
+    private static boolean isNamespace(String value) {
+        if (value.chars().anyMatch(Character::isWhitespace)
+                || !(value.endsWith("#") || value.endsWith("/"))) {
+            return false;
+        }
+        try {
+            return IRIx.create(value).isReference();
+        } catch (IRIException _) {
+            return false;
+        }
     }
 }
