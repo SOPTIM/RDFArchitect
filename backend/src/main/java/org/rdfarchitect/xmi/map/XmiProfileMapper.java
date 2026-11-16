@@ -48,6 +48,8 @@ import org.rdfarchitect.xmi.read.XmiProfileSlice;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -88,6 +90,12 @@ public final class XmiProfileMapper {
     private final List<UnnameableMember> unnameableMembers = new ArrayList<>();
     private final List<UnmappedOntologyField> unmappedOntologyFields = new ArrayList<>();
     private final List<OmittedElement> omittedElements = new ArrayList<>();
+
+    private static final String MEMBER_NAMED_TWICE =
+            "Named like another member of its class; only the first is imported.";
+
+    /** The URIs of the attributes, enum entries and association halves written so far. */
+    private final Set<String> memberUris = new HashSet<>();
 
     /**
      * A class as it was written.
@@ -303,6 +311,7 @@ public final class XmiProfileMapper {
     private Map<String, CIMSBelongsToCategory> writePackages(
             ICIMModelWriter writer, Set<String> slice) {
         var categories = new LinkedHashMap<String, CIMSBelongsToCategory>();
+        var byUri = new HashMap<String, CIMSBelongsToCategory>();
         for (var packageId : packagesOf(slice)) {
             var cimPackage = index.getPackages().get(packageId);
             if (!uris.canName(cimPackage)) {
@@ -316,15 +325,31 @@ public final class XmiProfileMapper {
                                         + " without a package."));
                 continue;
             }
-            categories.put(
-                    packageId,
+            var uri = uris.of(cimPackage);
+            var namesake = byUri.get(uri);
+            if (namesake != null) {
+                // One resource per URI: a second package of the name joins the first.
+                categories.put(packageId, namesake);
+                omittedElements.add(
+                        new OmittedElement(
+                                cimPackage.getName(),
+                                "Named like another package; its classes are put in that one."));
+                continue;
+            }
+            var category =
                     new CIMSBelongsToCategory(
-                            new URI(uris.of(cimPackage)),
+                            new URI(uri),
                             new RDFSLabel(cimPackage.getName(), "en"),
-                            UUID.randomUUID()));
+                            UUID.randomUUID());
+            byUri.put(uri, category);
+            categories.put(packageId, category);
         }
+        var written = new HashSet<CIMSBelongsToCategory>();
         categories.forEach(
                 (packageId, category) -> {
+                    if (!written.add(category)) {
+                        return;
+                    }
                     if (!index.isWithin(packageId, profile.id())) {
                         // A package the closure reached into rather than one the profile owns. A
                         // release references it from the classes it depends on and declares it no
@@ -332,13 +357,14 @@ public final class XmiProfileMapper {
                         return;
                     }
                     var cimPackage = index.getPackages().get(packageId);
+                    var parent = categories.get(cimPackage.getParentId());
                     writer.writePackage(
                             CIMPackage.builder()
                                     .uuid(category.getUuid())
                                     .uri(category.getUri())
                                     .label(category.getLabel())
                                     .comment(commentOf(cimPackage.getDocumentation()))
-                                    .belongsToCategory(categories.get(cimPackage.getParentId()))
+                                    .belongsToCategory(parent == category ? null : parent)
                                     .build());
                 });
         return categories;
@@ -527,7 +553,9 @@ public final class XmiProfileMapper {
                         new UnresolvedType(
                                 attributeUri, typing.undeclared(), attribute.getTypeId() != null));
             }
-            if (typing.type() == null) {
+            if (typing.type() == null
+                    || !claimMemberUri(
+                            attributeUri, cimClass.getName() + "." + attribute.getName())) {
                 continue;
             }
             writer.writeAttribute(
@@ -564,10 +592,14 @@ public final class XmiProfileMapper {
             if (literal.getName() == null || literal.getName().isBlank()) {
                 continue;
             }
+            var entryUri = uris.of(cimClass, literal.getName(), Set.of());
+            if (!claimMemberUri(entryUri, cimClass.getName() + "." + literal.getName())) {
+                continue;
+            }
             writer.writeEnumEntry(
                     CIMEnumEntry.builder()
                             .uuid(UUID.randomUUID())
-                            .uri(new URI(uris.of(cimClass, literal.getName(), Set.of())))
+                            .uri(new URI(entryUri))
                             .type(
                                     new RDFType(
                                             new URI(uris.of(cimClass)),
@@ -598,9 +630,41 @@ public final class XmiProfileMapper {
                 reportUnwritable(end, opposite, written);
                 continue;
             }
-            writer.writeAssociationPair(
-                    new CIMAssociationPair(halfOf(end, opposite), halfOf(opposite, end)));
+            var from = halfOf(end, opposite);
+            var to = halfOf(opposite, end);
+            var fromUri = from.getUri().toString();
+            var toUri = to.getUri().toString();
+            if (memberUris.contains(fromUri)
+                    || memberUris.contains(toUri)
+                    || fromUri.equals(toUri)) {
+                // Both halves or neither: one alone names an inverse that is not there.
+                omittedElements.add(
+                        new OmittedElement(
+                                from.getDomain().getLabel().getValue()
+                                        + "."
+                                        + from.getLabel().getValue()
+                                        + " / "
+                                        + to.getDomain().getLabel().getValue()
+                                        + "."
+                                        + to.getLabel().getValue(),
+                                MEMBER_NAMED_TWICE));
+                continue;
+            }
+            memberUris.add(fromUri);
+            memberUris.add(toUri);
+            writer.writeAssociationPair(new CIMAssociationPair(from, to));
         }
+    }
+
+    /**
+     * Claims a member's URI, reporting the member where another one of its class has it already.
+     */
+    private boolean claimMemberUri(String uri, String name) {
+        if (memberUris.add(uri)) {
+            return true;
+        }
+        omittedElements.add(new OmittedElement(name, MEMBER_NAMED_TWICE));
+        return false;
     }
 
     /**
