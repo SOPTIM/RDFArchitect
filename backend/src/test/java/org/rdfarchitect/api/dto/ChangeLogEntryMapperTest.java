@@ -20,6 +20,7 @@ package org.rdfarchitect.api.dto;
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -35,6 +36,7 @@ import org.rdfarchitect.models.changelog.ValueChange;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
+import java.lang.ref.Reference;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -155,6 +157,60 @@ class ChangeLogEntryMapperTest {
                 () -> assertThat(dto.getAffectedKinds()).containsExactly("rdf"),
                 () -> assertThat(dto.getAffectedGraphUris()).containsExactly(GRAPH_URI),
                 () -> assertThat(dto.getRestorableGraphUris()).containsExactly(GRAPH_URI));
+    }
+
+    @Test
+    void toDTO_theDeltasOfOneParticipantAreShownAsOneContext() {
+        var layout = ParticipantId.ofGraph(ParticipantId.Kind.DL, GRAPH_URI);
+        var owner = new UnsteppableParticipant();
+        var movedThere = triple("there");
+        var movedOn = triple("on");
+        var firstAdditions = graphOf(movedThere);
+        var firstDeletions = graphOf(triple("before"));
+        var secondAdditions = graphOf(movedOn);
+        var secondDeletions = graphOf(movedThere);
+        var entry =
+                new WorkspaceChangeLogEntry(
+                        UUID.randomUUID(),
+                        TIMESTAMP,
+                        "renamed a class",
+                        List.of(ParticipantVersion.of(layout, owner, UUID.randomUUID())),
+                        List.of(
+                                ContextDelta.ofTriples(
+                                        layout, owner, firstAdditions, firstDeletions),
+                                ContextDelta.ofTriples(
+                                        layout, owner, secondAdditions, secondDeletions)),
+                        false);
+
+        var dto = changeLogEntryMapper.toDTO(entry);
+
+        assertThat(dto.getContextDeltas()).hasSize(1);
+        var contextDelta = dto.getContextDeltas().getFirst();
+        assertAll(
+                () -> assertThat(contextDelta.getContextName()).isEqualTo("dl"),
+                () ->
+                        assertThat(contextDelta.getAdditions())
+                                .extracting(TripleDTO::getObject)
+                                .containsExactly("on"),
+                () ->
+                        assertThat(contextDelta.getDeletions())
+                                .extracting(TripleDTO::getObject)
+                                .containsExactly("before"));
+        Reference.reachabilityFence(
+                List.of(firstAdditions, firstDeletions, secondAdditions, secondDeletions));
+    }
+
+    private static Triple triple(String object) {
+        return Triple.create(
+                NodeFactory.createURI(SUB),
+                NodeFactory.createURI(PRED),
+                NodeFactory.createURI(object));
+    }
+
+    private static Graph graphOf(Triple triple) {
+        var graph = GraphFactory.createDefaultGraph();
+        graph.add(triple);
+        return graph;
     }
 
     @Test

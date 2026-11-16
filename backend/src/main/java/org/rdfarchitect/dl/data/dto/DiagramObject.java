@@ -37,4 +37,10 @@ public class DiagramObject {
     private MRID belongsToDiagram;
 
     private MRID belongsToIdentifiedObject;
+
+    /**
+     * The second identified object an edge connects, see {@code DL.otherClass}. Only set on edge
+     * diagram objects.
+     */
+    private MRID otherClass;
 }

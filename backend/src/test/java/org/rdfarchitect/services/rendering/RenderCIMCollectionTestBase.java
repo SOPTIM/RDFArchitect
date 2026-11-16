@@ -17,9 +17,6 @@
 
 package org.rdfarchitect.services.rendering;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
-
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,9 +38,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSPrimitiveData
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.RDFSRange;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
-import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
 import org.rdfarchitect.services.rendering.mermaid.RenderCIMCollectionMermaidService;
-import org.rdfarchitect.services.rendering.svelteflow.RenderCIMCollectionSvelteFlowService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,25 +49,15 @@ class RenderCIMCollectionTestBase {
     protected static final String URI_PREFIX = "http://example.com#";
     protected static CIMCollection cimCollection;
     protected static RenderCIMCollectionMermaidService mermaidRenderer;
-    protected static RenderCIMCollectionSvelteFlowService svelteFlowRenderer;
-
-    protected static DiagramToCIMCollectionConverterUseCase diagramConverter;
-    protected static FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase;
 
     @BeforeAll
     static void setUpEnvironment() {
-        fetchRenderingLayoutDataUseCase = mock(FetchRenderingLayoutDataUseCase.class);
-        diagramConverter = mock(DiagramToCIMCollectionConverterUseCase.class);
         mermaidRenderer = new RenderCIMCollectionMermaidService();
-        svelteFlowRenderer =
-                new RenderCIMCollectionSvelteFlowService(
-                        fetchRenderingLayoutDataUseCase, diagramConverter);
     }
 
     @BeforeEach
     void resetEnvironment() {
         cimCollection = new CIMCollection();
-        reset(diagramConverter, fetchRenderingLayoutDataUseCase);
     }
 
     protected void addPackage(String packageLabel) {

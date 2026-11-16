@@ -21,6 +21,7 @@ import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
@@ -135,14 +136,24 @@ class XmiDiagramStore {
         DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, diagram.id(), diagram.name());
         var z = 1;
         for (var placed : diagram.classes()) {
+            // What insertClassLayoutData writes for a class, with the z known rather than derived.
+            var gluePoint =
+                    DiagramLayoutServiceUtils.insertDiagramObjectGluePoint(diagramLayoutModel);
             var diagramObject =
                     DiagramLayoutServiceUtils.insertDiagramObject(
                             diagramLayoutModel,
                             diagram.id(),
                             placed.name(),
-                            identityOf.apply(placed));
+                            identityOf.apply(placed),
+                            DiagramObjectStyle.CLASS);
             DiagramLayoutServiceUtils.insertDiagramObjectPointAt(
-                    diagramLayoutModel, diagramObject, placed.x(), placed.y(), z++);
+                    diagramLayoutModel,
+                    diagramObject,
+                    placed.x(),
+                    placed.y(),
+                    z++,
+                    null,
+                    gluePoint);
         }
     }
 

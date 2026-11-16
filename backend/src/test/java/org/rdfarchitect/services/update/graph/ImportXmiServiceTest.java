@@ -291,7 +291,7 @@ class ImportXmiServiceTest {
             // in, a class of ours needing more room than the editor gave it.
             assertThat(positions.values())
                     .extracting(point -> point.getPosition().getX())
-                    .containsExactlyInAnyOrder(150f, 450f);
+                    .containsExactlyInAnyOrder(150.0, 450.0);
         }
     }
 

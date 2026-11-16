@@ -24,7 +24,7 @@ export const shortcutStore = {
     /**
      * @param {string} id - unique identifier
      * @param {string[] | string[][]} keys - e.g. ["ctrl", "s"] or [["ctrl", "s"], ["ctrl", "shift", "s"]]
-     * @param {() => void} handler
+     * @param {(event: KeyboardEvent) => void} handler - receives the keydown event, e.g. to tell a held key by event.repeat
      * @param closeDialogs define if the shortcut should close open dialogs (default: false). If true, all open dialogs will be closed before executing the handler.
      */
     register(id, keys, handler, closeDialogs = false) {
@@ -59,7 +59,7 @@ export const shortcutStore = {
                     if (closeDialogs) {
                         eventStack.closeAllExcept([EventType.CLASS_EDITOR]);
                     }
-                    handler();
+                    handler(event);
                 });
                 return true;
             }

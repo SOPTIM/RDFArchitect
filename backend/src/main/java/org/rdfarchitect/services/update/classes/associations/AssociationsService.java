@@ -34,6 +34,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.services.ChangeDescriptions;
+import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -45,6 +46,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
 
     private final DatabasePort databasePort;
     private final AssociationPairMapper associationPairMapper;
+    private final SyncDiagramLayoutUseCase syncDiagramLayoutUseCase;
 
     public record AssociationUUIDs(UUID fromUUID, UUID toUUID) {}
 
@@ -70,6 +72,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphUri());
             executeOnGraph(ctx, graphIdentifier, update);
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(
                     buildAssociationMessage("Created", ctx, associationPair, cimAssociationPair));
         }
@@ -90,6 +93,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphUri());
             executeOnGraph(ctx, graphIdentifier, update);
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(
                     buildAssociationMessage("Replaced", ctx, associationPair, cimAssociationPair));
         }
@@ -118,6 +122,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
 
             executeOnGraph(ctx, graphIdentifier, update);
 
+            syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Replaced all associations of",
