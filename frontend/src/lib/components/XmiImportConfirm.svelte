@@ -66,7 +66,7 @@
 <div class="mx-2 flex h-full min-h-0 flex-col gap-4">
     <p class="text-sm">
         <span class="font-semibold">Importing:</span>
-        {counted(choice.schemas.length, "profile")},
+        {counted(choice.schemas.length, "schema")},
         {counted(choice.classes, "class definition")},
         {counted(choice.diagramIds.length, "diagram")}
     </p>
