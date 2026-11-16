@@ -175,8 +175,7 @@ class XmiImportWarnings {
                         unnameable ->
                                 new UncarriedItem(
                                         unnameable.memberName(),
-                                        "The name contains whitespace, which a URI cannot hold;"
-                                                + " not imported"))
+                                        "The name cannot be part of a URI; not imported"))
                 .toList();
     }
 

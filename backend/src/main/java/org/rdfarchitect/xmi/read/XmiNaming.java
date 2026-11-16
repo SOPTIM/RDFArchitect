@@ -19,6 +19,9 @@ package org.rdfarchitect.xmi.read;
 
 import lombok.experimental.UtilityClass;
 
+import org.apache.jena.irix.IRIException;
+import org.apache.jena.irix.IRIx;
+
 /**
  * What an export may call something, given that the name goes into a URI verbatim.
  *
@@ -29,6 +32,9 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class XmiNaming {
 
+    /** Any namespace does: only whether the name may follow one is asked. */
+    private final String SAMPLE_NAMESPACE = "http://example.org/ns#";
+
     /**
      * A name as a URI can hold it, or {@code null} when it cannot hold it at all.
      *
@@ -36,15 +42,27 @@ public class XmiNaming {
      * CGMES 3.0 model are named {@code "lossPercentage "} and mean the name without it. Whitespace
      * in the middle cannot be normalised away — fourteen enum literals are named things like {@code
      * "TB 170"} and one package {@code "GeoSPARQL - Profile"} — so such a name is refused rather
-     * than mangled into one that no longer says what the export says.
+     * than mangled into one that no longer says what the export says. So is any other name an IRI
+     * cannot end in, such as {@code A<B>} or {@code 50%}.
      */
     public String usableOrNull(String name) {
         if (name == null) {
             return null;
         }
         var trimmed = name.strip();
-        return trimmed.isEmpty() || trimmed.chars().anyMatch(Character::isWhitespace)
+        return trimmed.isEmpty()
+                        || trimmed.chars().anyMatch(Character::isWhitespace)
+                        || !endsAnIri(trimmed)
                 ? null
                 : trimmed;
+    }
+
+    private boolean endsAnIri(String name) {
+        try {
+            IRIx.create(SAMPLE_NAMESPACE + name);
+            return true;
+        } catch (IRIException _) {
+            return false;
+        }
     }
 }
