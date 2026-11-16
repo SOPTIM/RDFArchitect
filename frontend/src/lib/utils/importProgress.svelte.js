@@ -142,6 +142,8 @@ export class ImportProgress {
      * @type {{fileIndex: number, fileName: string, id: string, parentId: string|null, name: string, profile: boolean, namespaceCandidates: string[], declaredClasses: number, dependencyClasses: number, ownClasses: number[], ownDependencies: number[], modelNamespace: string|null, extensionNamespace: string|null, hasExtensionElements: boolean}[]}
      */
     packages = $state([]);
+    /** Whether the job read exports rather than importing anything. */
+    scanned = $state(false);
     /**
      * Every class the exports hold, by the position the packages refer to it under. Pooled rather
      * than repeated per package, which would name the same class many times over.
@@ -303,6 +305,7 @@ export class ImportProgress {
                 ? (outcome.warnings ?? [])
                 : [];
         const read = outcome?.kind === OutcomeKind.PACKAGES_SCANNED;
+        this.scanned = read;
         this.packages = read ? (outcome.packages ?? []) : [];
         this.diagrams = read ? (outcome.diagrams ?? []) : [];
         this.supplierGroups = read ? (outcome.supplierGroups ?? []) : [];
@@ -370,6 +373,9 @@ export class ImportProgress {
         if (this.packages.length > 0) {
             const found = this.packages.length;
             return `Found ${found} package${found === 1 ? "" : "s"}`;
+        }
+        if (this.scanned) {
+            return "No packages found";
         }
         const imported = this.importedGraphUris.length;
         const schemas = `${imported} schema${imported === 1 ? "" : "s"}`;

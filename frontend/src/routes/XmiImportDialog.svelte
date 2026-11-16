@@ -245,7 +245,9 @@
         );
         if (error || !data) {
             current.fail(
-                error?.message ?? "The packages could not be imported.",
+                error?.detail ??
+                    error?.message ??
+                    "The packages could not be imported.",
             );
             return;
         }
