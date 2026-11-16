@@ -72,7 +72,10 @@ public final class XmiReader {
                 model.start(reader);
                 diagrams.startInModel(reader);
             }
-            case EXTENSION -> extension.start(reader);
+            case EXTENSION -> {
+                context.getIndex().setExtensionRead(true);
+                extension.start(reader);
+            }
             case DIAGRAMS -> diagrams.startInDiagrams(reader);
             case ROOT -> stereotypes.start(reader);
         }

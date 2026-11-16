@@ -65,6 +65,10 @@ public class ImportXmiService implements ImportXmiUseCase {
     // the log only: it names what the code expected, not what the file lacks.
     private static final String NOT_AN_EXPORT = "This is not an Enterprise Architect XMI export.";
     private static final String UNREADABLE = "The export could not be read.";
+    private static final String NO_EXTENSION =
+            "The export holds no Enterprise Architect extension, so its associations, fixed values"
+                    + " and documentation cannot be read. Export it again with the extensions"
+                    + " included.";
     private static final String NOT_IMPORTED = "The package could not be imported.";
     private static final String NOT_STORED = "The import could not be stored.";
 
@@ -142,6 +146,11 @@ public class ImportXmiService implements ImportXmiUseCase {
                         done -> listener.progressed(index, done, file.getSize()),
                         listener::isCancelled)) {
             var read = XmiReader.read(xmi);
+            if (!read.isExtensionRead()) {
+                logger.warn("'{}' holds no Enterprise Architect extension.", fileName);
+                listener.failed(index, NO_EXTENSION);
+                return;
+            }
             var found = XmiPackageTree.of(read);
             var modelNamespace = XmiNamespaces.modelNamespaceOf(read);
             var extensionNamespace = XmiNamespaces.extensionNamespaceOf(read);

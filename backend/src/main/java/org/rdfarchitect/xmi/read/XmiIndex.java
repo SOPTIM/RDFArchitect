@@ -18,6 +18,7 @@
 package org.rdfarchitect.xmi.read;
 
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -44,6 +45,12 @@ public class XmiIndex {
     public record UnnameableClass(String name, String packageId) {}
 
     private final List<UnnameableClass> unnameableClasses = new ArrayList<>();
+
+    /**
+     * Whether the export carries Enterprise Architect's extension. Without it the associations, the
+     * fixed values and the documentation of classes and packages are not in the file.
+     */
+    @Setter private boolean extensionRead;
 
     private final Map<String, XmiClass> classes = new LinkedHashMap<>();
 
