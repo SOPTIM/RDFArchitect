@@ -87,6 +87,9 @@ public final class XmiNamespaces {
     /** What the prefix table calls the namespace the European extensions get. */
     static final String EXTENSION_PREFIX = "eu";
 
+    /** What the prefix table calls the namespace of the elements stereotyped {@code NC}. */
+    private static final String NC_PREFIX = "nc";
+
     private static final String MODEL_ATTRIBUTE = "namespaceUML";
     private static final String EXTENSION_ATTRIBUTE = "namespaceURI";
 
@@ -96,10 +99,17 @@ public final class XmiNamespaces {
     private final String extension;
     private final String profile;
 
-    private XmiNamespaces(String model, String extension, String profile) {
+    /**
+     * Where the elements stereotyped {@code NC} go, {@code null} when the prefix table states none.
+     * Only the network code exports have one, and nothing else says it.
+     */
+    private final String nc;
+
+    private XmiNamespaces(String model, String extension, String profile, String nc) {
         this.model = model;
         this.extension = extension;
         this.profile = profile;
+        this.nc = nc;
     }
 
     /**
@@ -133,7 +143,8 @@ public final class XmiNamespaces {
                 isUsable(supplied.extension())
                         ? supplied.extension().strip()
                         : extensionNamespace(index),
-                profileNamespace(index, profile));
+                profileNamespace(index, profile),
+                index.getPrefixes().get(NC_PREFIX));
     }
 
     /**

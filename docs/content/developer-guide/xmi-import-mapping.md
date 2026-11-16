@@ -95,6 +95,7 @@ extension namespace, and only two (the package and the ontology) in the profile 
 | --- | --- | --- |
 | model | classes, attributes, associations, enum entries | `namespaceUML` default (2.4.15); the prefix table's `nsuri:cim` (3.0), **not** the bare `nsuri` tag on the CIM package, which reads `.../CIM100.1.1.1#` and matches nothing |
 | extension | elements stereotyped `Entsoe` or `European` | `ExtensionVersion.namespaceURI` (2.4.15 full model; **absent** from a profiles-only export -> asked for); `nsuri` on `EuropeanCIMExtensions` (3.0) |
+| network codes | elements stereotyped `NC`, and the members of an `NC` class; ahead of the extension namespace | the prefix table's `nc`; without one they stay in the model namespace |
 | profile | the package resource and the ontology header | the profile URI above |
 
 CGMES 3.0 carries a prefix table of `nsuri:*` / `nsprefix:*` pairs. It is a good starting set but

@@ -30,7 +30,8 @@ import java.util.Set;
  *
  * <p>Which namespace a resource lands in is decided by its stereotypes, not by where it sits: a
  * class stereotyped {@code Entsoe} or {@code European} belongs to the extension namespace even
- * though it is declared in the same package as its neighbours. Everything else takes the model
+ * though it is declared in the same package as its neighbours, and one stereotyped {@code NC} to
+ * the network codes' namespace where the prefix table states one. Everything else takes the model
  * namespace, and only the package itself takes the profile's own — {@code <profile
  * ns>Package_<Name>}, which is the shape a release writes.
  *
@@ -41,6 +42,8 @@ import java.util.Set;
 class XmiUris {
 
     private static final String PACKAGE_PREFIX = "Package_";
+
+    private static final String NC_STEREOTYPE = "NC";
 
     private final XmiNamespaces namespaces;
 
@@ -110,6 +113,9 @@ class XmiUris {
     }
 
     private String namespaceFor(Set<String> stereotypes) {
+        if (isNc(stereotypes)) {
+            return namespaces.getNc();
+        }
         return XmiStereotypes.isExtension(stereotypes) && namespaces.hasExtension()
                 ? namespaces.getExtension()
                 : namespaces.getModel();
@@ -122,11 +128,22 @@ class XmiUris {
 
     /** A member is an extension when either it or the class owning it is one. */
     private String memberNamespace(XmiClass owner, Set<String> memberStereotypes) {
+        if (isNc(memberStereotypes) || isNc(owner.getStereotypes())) {
+            return namespaces.getNc();
+        }
         var isExtension =
                 XmiStereotypes.isExtension(memberStereotypes)
                         || XmiStereotypes.isExtension(owner.getStereotypes());
         return isExtension && namespaces.hasExtension()
                 ? namespaces.getExtension()
                 : namespaces.getModel();
+    }
+
+    /**
+     * Whether a resource goes in the namespace of the network codes, which takes precedence over
+     * the extension namespace. Without one in the prefix table it stays in the model namespace.
+     */
+    private boolean isNc(Set<String> stereotypes) {
+        return stereotypes.contains(NC_STEREOTYPE) && namespaces.getNc() != null;
     }
 }
