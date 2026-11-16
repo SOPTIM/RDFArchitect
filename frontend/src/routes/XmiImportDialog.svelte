@@ -99,9 +99,18 @@
                 ? closeAfterRead
                 : readExport,
     );
+    /** A namespace the import needs that neither the export states nor anyone entered. */
+    const namespaceMissing = $derived.by(() => {
+        const read = progress?.packages?.[0];
+        return (
+            !(modelNamespace.trim() || read?.modelNamespace) ||
+            (!!read?.hasExtensionElements &&
+                !(extensionNamespace.trim() || read?.extensionNamespace))
+        );
+    });
     const primaryDisabled = $derived(
         picking
-            ? choice.schemas.length === 0
+            ? choice.schemas.length === 0 || (onLastStep && namespaceMissing)
             : !progress?.finished && !enableSubmit,
     );
     /** Going back a step while choosing, and cancelling a job while one runs. */
