@@ -28,7 +28,9 @@ import org.rdfarchitect.context.UserSettings;
 import org.rdfarchitect.context.UserSettingsContext;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.exception.graph.InvalidGraphUriException;
 import org.rdfarchitect.exception.graph.InvalidNamespaceException;
+import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.services.update.graph.ImportOutcome.GraphsImported;
 import org.rdfarchitect.services.update.graph.ImportOutcome.PackagesScanned;
 import org.slf4j.Logger;
@@ -101,6 +103,7 @@ public class ImportJobService implements ImportJobUseCase {
                 selected -> {
                     assertUsableNamespace(selected.modelNamespace());
                     assertUsableNamespace(selected.extensionNamespace());
+                    assertUsableGraphUri(selected.graphUri());
                 });
         var exports = readJob.takeRetainedFiles();
         if (exports.isEmpty()) {
@@ -396,6 +399,17 @@ public class ImportJobService implements ImportJobUseCase {
         var stripped = namespace.strip();
         if (!isNamespace(stripped)) {
             throw InvalidNamespaceException.notUsable(stripped);
+        }
+    }
+
+    /** Refuses a requested graph uri the store would not take, by the rule the store applies. */
+    private static void assertUsableGraphUri(String graphUri) {
+        if (graphUri == null || graphUri.isBlank()) {
+            return;
+        }
+        var normalized = GraphUris.normalize(graphUri, null);
+        if (!RDFUtils.isURL(normalized)) {
+            throw InvalidGraphUriException.notUsable(graphUri.strip());
         }
     }
 
