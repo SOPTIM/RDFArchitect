@@ -128,9 +128,9 @@ public final class XmiProfileMapper {
 
     /**
      * A member of a written class that could not be written itself, which happens for one reason:
-     * it is stereotyped as an extension while the export states no extension namespace. Its class
-     * is not, or {@link #refuseIfUnnameable} would have stopped the import, so what is lost is the
-     * member alone.
+     * it, or for an association half its association, is stereotyped as an extension while the
+     * export states no extension namespace. Its class is not, or {@link #refuseIfUnnameable} would
+     * have stopped the import, so what is lost is the member alone.
      *
      * @param memberName the member as the export names it, qualified by its class
      * @param stereotypes what it carries, which is why it could not be named
@@ -630,6 +630,12 @@ public final class XmiProfileMapper {
                 reportUnwritable(end, opposite, written);
                 continue;
             }
+            if (!uris.canName(end.getStereotypes()) || !uris.canName(opposite.getStereotypes())) {
+                // As for an extension attribute: no namespace to name it in, so left out and said.
+                dropHalf(end);
+                dropHalf(opposite);
+                continue;
+            }
             var from = halfOf(end, opposite);
             var to = halfOf(opposite, end);
             var fromUri = from.getUri().toString();
@@ -654,6 +660,15 @@ public final class XmiProfileMapper {
             memberUris.add(toUri);
             writer.writeAssociationPair(new CIMAssociationPair(from, to));
         }
+    }
+
+    private void dropHalf(XmiAssociationEnd end) {
+        droppedMembers.add(
+                new DroppedMember(
+                        index.getClasses().get(end.getOppositeClassId()).getName()
+                                + "."
+                                + end.getRoleName(),
+                        List.copyOf(end.getStereotypes())));
     }
 
     /**

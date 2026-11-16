@@ -147,7 +147,8 @@ class XmiImportWarnings {
             return List.of();
         }
         logger.warn(
-                "Profile '{}': {} attribute(s) stereotyped as an extension could not be named,"
+                "Profile '{}': {} attribute(s) or association half(s) stereotyped as an extension"
+                        + " could not be named,"
                         + " the export stating no extension namespace. They are not imported.",
                 profileName,
                 written.droppedMembers().size());
