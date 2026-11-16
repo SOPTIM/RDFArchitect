@@ -126,28 +126,19 @@ public class SparqlUpdateGenerator {
         return result.toString();
     }
 
-    /**
-     * Rewrites the predicate on every instance carrying it, whatever class it belongs to. Correct
-     * only while the property stays on the class it was on: everything that had the old name is
-     * then supposed to end up with the new one.
-     */
     private String generateRenamePropertyUpdate(SemanticPropertyChange propertyChange) {
-        return propertyChange instanceof SemanticAssociationChange associationChange
-                ? generateRenameAssociationUpdate(associationChange)
-                : generateRenameAttributeUpdate((SemanticAttributeChange) propertyChange);
+        return switch (propertyChange) {
+            case SemanticAttributeChange attribute -> generateRenameAttributeUpdate(attribute);
+            case SemanticAssociationChange association ->
+                    generateRenameAssociationUpdate(association);
+            case SemanticEnumEntryChange enumEntry -> generateRenameEnumEntryUpdate(enumEntry);
+            default ->
+                    throw new IllegalStateException(
+                            "Cannot rewrite a property of unknown kind: "
+                                    + propertyChange.getIri());
+        };
     }
 
-    /**
-     * Takes the property away from the classes that do not keep it, so that whoever still carries
-     * the old predicate afterwards is supposed to end up with the new one and the rewrite itself
-     * can stay the plain one.
-     *
-     * <p>Deliberately not the other way round. Rewriting only where the property belongs and
-     * dropping whatever is left would delete the values of any class this cannot see - one that
-     * derives from the target only in the schema being left behind, say. Named this way round such
-     * a class keeps its values under the new name, which the target schema's constraints report and
-     * a value that is gone does not.
-     */
     private String deleteFromClassesLosingProperty(
             String oldPropertyIri, Collection<String> keepingClasses) {
         var result = new StringBuilder();
@@ -162,11 +153,6 @@ public class SparqlUpdateGenerator {
         return result.toString();
     }
 
-    /**
-     * The classes whose instances could carry the property, as the schema was before. Nothing is
-     * named when that cannot be worked out, which leaves the plain rewrite on its own - the same
-     * script as before this was scoped, rather than one that deletes on a guess.
-     */
     private List<String> classesCarrying(String propertyIri) {
         var originalSchema = migrationSessionStore.getContext().getOriginalSchema();
         if (originalSchema == null) {
