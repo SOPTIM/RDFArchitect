@@ -93,7 +93,7 @@
                     <button
                         type="button"
                         class="-m-1 shrink-0 cursor-pointer p-1"
-                        aria-label={open ? "Collapse" : "Expand"}
+                        aria-label={`${open ? "Collapse" : "Expand"} ${node.name}`}
                         aria-expanded={open}
                         onclick={() => toggleExpanded(node)}
                     >

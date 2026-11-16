@@ -117,6 +117,8 @@ function fileProgress(file) {
  * to stop the job.
  */
 export class ImportProgress {
+    /** What one entry of {@link files} is called: a file, or a step of an import of packages. */
+    unit;
     phase = $state(ImportPhase.UPLOADING);
     uploadPercent = $state(0);
     /** @type {{index: number, fileName: string, sizeBytes: number, state: string, graphUri: string|null, done: number, total: number, reason: string|null}[]} */
@@ -183,6 +185,10 @@ export class ImportProgress {
     cancelling = $state(false);
 
     #controller = new AbortController();
+
+    constructor(unit = "file") {
+        this.unit = unit;
+    }
 
     /** Signal for the upload of this import, aborted by {@link cancel}. */
     get signal() {
@@ -390,7 +396,7 @@ export class ImportProgress {
                 : `Import cancelled after ${schemas}`;
         }
         if (this.failedImports.length > 0) {
-            return `Imported ${schemas}, ${this.failedImports.length} file(s) failed`;
+            return `Imported ${schemas}, ${this.failedImports.length} ${this.unit}(s) failed`;
         }
         return `Imported ${schemas}`;
     }

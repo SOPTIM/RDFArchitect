@@ -74,7 +74,7 @@
         <p class="text-text-subtle mt-1 flex items-baseline gap-2 text-xs">
             {#if total}
                 <span class="tabular-nums">
-                    {progress.finishedCount} of {total} files
+                    {`${progress.finishedCount} of ${total} ${progress.unit}s`}
                 </span>
             {/if}
             {#if warnings.length > 0}

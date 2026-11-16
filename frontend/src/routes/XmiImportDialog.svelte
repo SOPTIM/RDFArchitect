@@ -209,7 +209,7 @@
         if (!enableSubmit) {
             return;
         }
-        const current = new ImportProgress();
+        const current = new ImportProgress("step");
         progress = current;
         const workspace = trimmedName;
         scanWorkspaceName = workspace;
@@ -261,7 +261,7 @@
             return;
         }
         poller.stop();
-        const current = new ImportProgress();
+        const current = new ImportProgress("step");
         current.uploaded();
         importing = true;
         progress = current;

@@ -56,16 +56,19 @@
                 ))}
         />
         <span class="truncate text-sm">{diagram.name}</span>
-        <span
-            class="border-border text-text-subtle shrink-0 rounded border px-1 text-[10px]"
-            title={home === WORKSPACE
-                ? "Drawn across several schemas, so it is stored in the workspace rather than in one of them"
-                : "Stored in the schema that holds every class it draws"}
-        >
-            {home === WORKSPACE ? "workspace-diagram" : "schema-diagram"}
-        </span>
+        {#if available}
+            <span
+                class="border-border text-text-subtle shrink-0 rounded border px-1 text-[10px]"
+                title={home === WORKSPACE
+                    ? "Drawn across several schemas, so it is stored in the workspace rather than in one of them"
+                    : "Stored in the schema that holds every class it draws"}
+            >
+                {home === WORKSPACE ? "workspace-diagram" : "schema-diagram"}
+            </span>
+        {/if}
         <span class="text-text-subtle shrink-0 text-xs">
-            {diagram.classes} classes
+            {diagram.classes}
+            {diagram.classes === 1 ? "class" : "classes"}
         </span>
     </label>
 </div>
