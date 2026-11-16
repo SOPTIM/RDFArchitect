@@ -37,8 +37,9 @@ import java.util.Set;
  *
  * <p>Three are dropped and one is translated. {@code abstract} is not a stereotype RDFArchitect has
  * — it states the opposite, {@code concrete}, derived from the same flag — while {@code attribute}
- * and {@code enum} are written by the writer itself, so passing them through would duplicate the
- * first and silently replace the second. {@code enumeration} is stated as a bare word and stored as
+ * is written by the writer itself, so passing it through would duplicate it. {@code enum} is not
+ * written at all: the CGMES 3.0 releases put it on the literals of some vocabularies and not of
+ * others, by no rule the export shows. {@code enumeration} is stated as a bare word and stored as
  * an IRI.
  *
  * <p>Whether a value becomes an IRI or a plain literal is otherwise not decided here. It is decided
