@@ -197,10 +197,11 @@
         }
         const current = new ImportProgress();
         progress = current;
-        scanWorkspaceName = trimmedName;
+        const workspace = trimmedName;
+        scanWorkspaceName = workspace;
 
         const { data, error } = await graphStore.startXmiScan(
-            trimmedName,
+            workspace,
             selectedFile,
             {
                 onUploadProgress: percent => current.uploadProgress(percent),
@@ -209,6 +210,11 @@
         );
         if (error || !data) {
             current.fail(error?.message ?? "The export could not be read.");
+            return;
+        }
+        if (current.cancelling) {
+            // Cancelled after the upload, before the job had an id to cancel it by.
+            void cancelJob(workspace, data.jobId);
             return;
         }
         current.uploaded();
@@ -245,9 +251,10 @@
         current.uploaded();
         importing = true;
         progress = current;
+        const workspace = scanWorkspaceName;
 
         const { data, error } = await graphStore.importSelectedPackages(
-            scanWorkspaceName,
+            workspace,
             readJobId,
             selection,
             chosen.diagramIds,
@@ -258,6 +265,10 @@
                     error?.message ??
                     "The packages could not be imported.",
             );
+            return;
+        }
+        if (current.cancelling) {
+            void cancelJob(workspace, data.jobId);
             return;
         }
         jobId = data.jobId;
