@@ -48,7 +48,7 @@ export function graphUriFrom(fileName) {
 
 /**
  * What the caller typed, as a full graph URI. A name is put in the graph namespace; something
- * that already names a scheme is left as it is, so a schema can be imported under any URI.
+ * that already holds `://` is left as it is, so a schema can be imported under any URL.
  */
 export function asGraphUri(graphUri, fallbackName) {
     const trimmed = graphUri?.trim();
