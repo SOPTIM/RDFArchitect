@@ -34,7 +34,7 @@
 </script>
 
 <div
-    class="border-border flex items-start space-x-2 rounded-lg border {dense
+    class="text-dark flex items-start space-x-2 rounded-lg border {dense
         ? 'px-3 py-2'
         : 'p-4'}"
 >
