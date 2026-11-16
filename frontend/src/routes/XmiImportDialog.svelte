@@ -16,6 +16,8 @@
   -->
 
 <script>
+    import { onDestroy } from "svelte";
+
     import ImportProgressPanel from "$lib/components/ImportProgressPanel.svelte";
     import XmiExportPicker from "$lib/components/XmiExportPicker.svelte";
     import XmiImportConfirm from "$lib/components/XmiImportConfirm.svelte";
@@ -125,6 +127,10 @@
     const secondaryLabel = $derived(
         onLastStep ? "Back" : running ? "Cancel" : undefined,
     );
+
+    // A host taken off screen closes nothing, and a read kept alive would be polled on for the
+    // rest of the session.
+    onDestroy(teardown);
 
     /**
      * Opens on nothing, whatever was left of a previous run. The dialog is mounted once and
