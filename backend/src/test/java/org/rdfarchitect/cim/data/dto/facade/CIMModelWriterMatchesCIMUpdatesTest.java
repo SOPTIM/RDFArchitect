@@ -222,8 +222,10 @@ class CIMModelWriterMatchesCIMUpdatesTest extends CIMUpdatesTestBase {
                                                         false)
                                                 .build()));
 
+        // Fresh: insertAttribute types the values of the DTO it is given.
         assertSameTriples(
-                writtenByWriter(writer -> writer.writeAttribute(attribute)), currentTestGraph());
+                writtenByWriter(writer -> writer.writeAttribute(attributeFixture())),
+                currentTestGraph());
     }
 
     @Test
@@ -335,6 +337,7 @@ class CIMModelWriterMatchesCIMUpdatesTest extends CIMUpdatesTestBase {
                                 .CIMSPrimitiveDataType(
                                 new URI(URI_PREFIX + "Float"), new RDFSLabel("Float", "en")))
                 .comment(new RDFSComment(COMMENT, new URI(COMMENT_FORMAT)))
+                .fixedValue(new org.rdfarchitect.models.cim.data.dto.relations.CIMSIsFixed("1.5"))
                 .stereotypes(List.of(new CIMSStereotype("Operation")))
                 .build();
     }

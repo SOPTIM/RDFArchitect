@@ -38,6 +38,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.ontology.OntologyFacade;
+import org.rdfarchitect.models.cim.queries.update.AttributeFixedDefaultResolver;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
@@ -129,6 +130,7 @@ public class CIMModelWriter implements ICIMModelWriter {
         writeStereotypes(resource, attribute.getStereotypes());
         writeDataType(resource, attribute.getDataType());
         writeComment(resource, attribute.getComment());
+        AttributeFixedDefaultResolver.resolve(model.getGraph(), attribute, false);
         writeValueNode(resource, CIMS.isFixed, attribute.getFixedValue());
         writeValueNode(resource, CIMS.isDefault, attribute.getDefaultValue());
     }

@@ -47,6 +47,7 @@ import org.rdfarchitect.xmi.read.XmiProfile;
 import org.rdfarchitect.xmi.read.XmiProfileSlice;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -225,6 +226,7 @@ public final class XmiProfileMapper {
         refuseIfUnnameable(slice);
         var categories = writePackages(writer, slice);
         var written = writeClasses(writer, slice, categories);
+        writeMembers(writer, written.keySet());
         writeAssociations(writer, written.keySet());
         writeOntology(writer);
         return new WrittenProfile(
@@ -399,6 +401,25 @@ public final class XmiProfileMapper {
                                             XmiStereotypes.isDatatype(cimClass.getStereotypes())))
                             .build());
             written.put(classId, new WrittenClass(uuid, uri));
+        }
+        return written;
+    }
+
+    /**
+     * Writes the members once every class is written, the datatypes' first: the writer types a
+     * fixed or default value by looking the attribute's datatype up in what it has written.
+     */
+    private void writeMembers(ICIMModelWriter writer, Set<String> written) {
+        var classes =
+                written.stream()
+                        .map(index.getClasses()::get)
+                        .sorted(
+                                Comparator.comparing(
+                                        cimClass ->
+                                                !XmiStereotypes.isDatatype(
+                                                        cimClass.getStereotypes())))
+                        .toList();
+        for (var cimClass : classes) {
             writeAttributes(writer, cimClass);
             writeEnumEntries(writer, cimClass);
             cimClass.getUnnameableMembers()
@@ -408,7 +429,6 @@ public final class XmiProfileMapper {
                                             new UnnameableMember(
                                                     cimClass.getName() + "." + member)));
         }
-        return written;
     }
 
     /**
