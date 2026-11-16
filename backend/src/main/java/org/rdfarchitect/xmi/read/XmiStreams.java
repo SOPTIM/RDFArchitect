@@ -134,7 +134,9 @@ final class XmiStreams {
      * know these properties also does not impose their limits.
      */
     static XMLInputFactory inputFactory() {
-        var factory = XMLInputFactory.newInstance();
+        // The JDK's own rather than whichever the classpath offers first, Jena bringing Aalto and
+        // Woodstox along: the limits below are the JDK's.
+        var factory = XMLInputFactory.newDefaultFactory();
         factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
         factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
         factory.setProperty(XMLInputFactory.IS_COALESCING, false);
