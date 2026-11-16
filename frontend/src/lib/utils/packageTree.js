@@ -85,15 +85,16 @@ export function nest(packages) {
  * profiles-only one, `Model` with three in CGMES 2.4.15.
  *
  * @param {object[]} packages as the read reported them
- * @returns {{title: string|null, nodes: object[]}} what to call the tree and what to show in it
+ * @returns {{title: string|null, wrapperId: string|null, nodes: object[]}} what to call the tree,
+ *     the package that became its title, and what to show in it
  */
 export function withoutWrapper(packages) {
     const roots = nest(packages);
     const only = roots.length === 1 ? roots[0] : null;
     if (only && !isSchema(only) && !hasOwnRow(only)) {
-        return { title: only.name, nodes: only.children };
+        return { title: only.name, wrapperId: only.id, nodes: only.children };
     }
-    return { title: null, nodes: roots };
+    return { title: null, wrapperId: null, nodes: roots };
 }
 
 /** Whether this row becomes a schema of its own, as opposed to grouping others. */

@@ -18,6 +18,7 @@
 <script>
     import InfoTooltip from "$lib/components/InfoTooltip.svelte";
     import PackageTreeSelect from "$lib/components/PackageTreeSelect.svelte";
+    import XmiDiagramRow from "$lib/components/XmiDiagramRow.svelte";
     import XmiSchemaSummary from "$lib/components/XmiSchemaSummary.svelte";
     import { withoutWrapper } from "$lib/utils/packageTree.js";
 
@@ -48,6 +49,10 @@
         "with the same content and layout.";
     /** The tree as it is shown: the export's outermost package becomes its title. */
     const tree = $derived(withoutWrapper(read?.packages ?? []));
+    /** The diagrams of the package that became the title, which has no row to show them under. */
+    const wrapperDiagrams = $derived(
+        choice.diagramsByOwner.get(tree.wrapperId) ?? [],
+    );
 </script>
 
 <div class="mx-2 flex h-full min-h-0 flex-col">
@@ -62,6 +67,14 @@
                 <InfoTooltip text={TERMS_EXPLAINED} side="bottom" />
             </p>
             <div class="min-h-0 flex-1 overflow-y-auto p-2">
+                {#each wrapperDiagrams as diagram (diagram.id)}
+                    <XmiDiagramRow
+                        {diagram}
+                        diagramGroups={choice.groups}
+                        orderedRowIds={choice.orderedRowIds}
+                        bind:deselectedDiagramIds
+                    />
+                {/each}
                 <PackageTreeSelect
                     packages={read.packages}
                     nodes={tree.nodes}

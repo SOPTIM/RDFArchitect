@@ -129,6 +129,7 @@ describe("withoutWrapper", () => {
 
         expect(withoutWrapper(alone)).toEqual({
             title: null,
+            wrapperId: null,
             nodes: nest(alone),
         });
     });
@@ -152,7 +153,11 @@ describe("withoutWrapper", () => {
     });
 
     it("reports nothing for an export that was never read", () => {
-        expect(withoutWrapper([])).toEqual({ title: null, nodes: [] });
+        expect(withoutWrapper([])).toEqual({
+            title: null,
+            wrapperId: null,
+            nodes: [],
+        });
     });
 });
 

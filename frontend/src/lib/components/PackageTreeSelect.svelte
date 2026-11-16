@@ -17,7 +17,7 @@
 
 <script>
     import TreeChevron from "$lib/components/TreeChevron.svelte";
-    import { homeOf, toggled, WORKSPACE } from "$lib/utils/diagramSelection.js";
+    import XmiDiagramRow from "$lib/components/XmiDiagramRow.svelte";
     import {
         describeSize,
         groupState,
@@ -179,53 +179,13 @@
                 {/if}
 
                 {#each diagrams as diagram (diagram.id)}
-                    {@const home = homeOf(
-                        diagram,
-                        diagramGroups,
-                        orderedRowIds,
-                    )}
-                    {@const available = home !== null}
-                    <div
-                        class="hover:bg-background-subtle flex items-center gap-1 rounded py-0.5 select-none"
-                        class:opacity-50={!available}
-                        style="padding-left: {(depth + 1) * 14}px"
-                        title={available
-                            ? undefined
-                            : "Draws classes outside the selected packages"}
-                    >
-                        <TreeChevron placeholder />
-                        <label
-                            class="flex min-w-0 flex-1 items-center gap-2"
-                            class:cursor-pointer={available}
-                        >
-                            <input
-                                type="checkbox"
-                                class="shrink-0"
-                                disabled={!available}
-                                checked={available &&
-                                    !deselectedDiagramIds.has(diagram.id)}
-                                onchange={() =>
-                                    (deselectedDiagramIds = toggled(
-                                        diagram.id,
-                                        deselectedDiagramIds,
-                                    ))}
-                            />
-                            <span class="truncate text-sm">{diagram.name}</span>
-                            <span
-                                class="border-border text-text-subtle shrink-0 rounded border px-1 text-[10px]"
-                                title={home === WORKSPACE
-                                    ? "Drawn across several schemas, so it is stored in the workspace rather than in one of them"
-                                    : "Stored in the schema that holds every class it draws"}
-                            >
-                                {home === WORKSPACE
-                                    ? "workspace-diagram"
-                                    : "schema-diagram"}
-                            </span>
-                            <span class="text-text-subtle shrink-0 text-xs">
-                                {diagram.classes} classes
-                            </span>
-                        </label>
-                    </div>
+                    <XmiDiagramRow
+                        {diagram}
+                        {diagramGroups}
+                        {orderedRowIds}
+                        bind:deselectedDiagramIds
+                        depth={depth + 1}
+                    />
                 {/each}
 
                 {#if !schema}
