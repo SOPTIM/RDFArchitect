@@ -62,8 +62,8 @@
             }))
             .sort((a, b) =>
                 compareGraphs(
-                    { label: a.name, uri: a.graphName },
-                    { label: b.name, uri: b.graphName },
+                    { label: a.name, name: a.graphName },
+                    { label: b.name, name: b.graphName },
                 ),
             );
         snapshotOriginal();

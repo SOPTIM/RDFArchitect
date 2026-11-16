@@ -76,8 +76,8 @@
             .map(graph => ({ graph, name: nameOf(graph) }))
             .sort((a, b) =>
                 compareGraphs(
-                    { label: a.name, uri: getUri(a.graph) },
-                    { label: b.name, uri: getUri(b.graph) },
+                    { label: a.name, name: getUri(a.graph) },
+                    { label: b.name, name: getUri(b.graph) },
                 ),
             );
     }

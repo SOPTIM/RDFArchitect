@@ -55,8 +55,8 @@ export function sortSchemaOccurrences(occurrences) {
         }))
         .sort((a, b) =>
             compareGraphs(
-                { label: schemaLabel(a), uri: a.graphName },
-                { label: schemaLabel(b), uri: b.graphName },
+                { label: schemaLabel(a), name: a.graphName },
+                { label: schemaLabel(b), name: b.graphName },
             ),
         );
 }

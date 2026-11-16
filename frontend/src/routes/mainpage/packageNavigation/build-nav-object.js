@@ -92,7 +92,7 @@ async function populateWorkspace(workspaceNavEntry) {
     const freshEntries = graphs
         .map(graph => ({
             label: nameOf(graph),
-            fullUri: graphName(graph),
+            name: graphName(graph),
             tooltip: graphTooltip(graph),
             // The badge adds the keyword to the name. With no title of its own the name already
             // is the keyword, and the entry would read "EQ EQ".
@@ -100,15 +100,15 @@ async function populateWorkspace(workspaceNavEntry) {
         }))
         .sort((a, b) =>
             compareGraphs(
-                { label: a.label, uri: a.fullUri },
-                { label: b.label, uri: b.fullUri },
+                { label: a.label, name: a.name },
+                { label: b.label, name: b.name },
             ),
         )
-        .map(({ label, fullUri, tooltip, data }) =>
+        .map(({ label, name, tooltip, data }) =>
             reuseOrCreate(existingGraphNavList, {
                 label,
                 tooltip,
-                id: fullUri,
+                id: name,
                 data,
             }),
         );
