@@ -35,6 +35,8 @@
  *   like that, 39 in `Environmental` alone.
  */
 
+import { isInvalidNamespaceIri } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+
 /** The scopes the backend knows, mirrored. */
 export const PackageScope = {
     WITH_SUB_PACKAGES: "WITH_SUB_PACKAGES",
@@ -303,4 +305,16 @@ export function selectionOf(packages, selectedIds, namespaces = {}) {
         modelNamespace: supplied("model"),
         extensionNamespace: supplied("extension"),
     }));
+}
+
+/**
+ * What is wrong with a namespace entered for the import. An empty one leaves the export its own,
+ * so nothing is.
+ *
+ * @param {string} value as entered
+ * @returns {string[]}
+ */
+export function namespaceViolations(value) {
+    const trimmed = value?.trim() ?? "";
+    return trimmed ? isInvalidNamespaceIri(trimmed) : [];
 }

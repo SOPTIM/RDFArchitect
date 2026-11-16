@@ -27,7 +27,10 @@
     import { ImportProgress } from "$lib/utils/importProgress.svelte.js";
     import { applyImportResult } from "$lib/utils/importResult.js";
     import { ImportStatusPoller } from "$lib/utils/importStatusPoller.js";
-    import { selectionOf } from "$lib/utils/packageTree.js";
+    import {
+        namespaceViolations,
+        selectionOf,
+    } from "$lib/utils/packageTree.js";
     import { hasInvalidCharacters } from "$lib/utils/workspaceName.js";
 
     let {
@@ -99,13 +102,18 @@
                 ? closeAfterRead
                 : readExport,
     );
-    /** A namespace the import needs that neither the export states nor anyone entered. */
+    /**
+     * A namespace the import needs that neither the export states nor anyone entered, or one
+     * entered that no resource can be named with.
+     */
     const namespaceMissing = $derived.by(() => {
         const read = progress?.packages?.[0];
         return (
             !(modelNamespace.trim() || read?.modelNamespace) ||
             (!!read?.hasExtensionElements &&
-                !(extensionNamespace.trim() || read?.extensionNamespace))
+                !(extensionNamespace.trim() || read?.extensionNamespace)) ||
+            namespaceViolations(modelNamespace).length > 0 ||
+            namespaceViolations(extensionNamespace).length > 0
         );
     });
     const primaryDisabled = $derived(

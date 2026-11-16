@@ -20,6 +20,7 @@
 
     import ComboBoxEditControl from "$lib/components/ComboBoxEditControl.svelte";
     import InfoTooltip from "$lib/components/InfoTooltip.svelte";
+    import { namespaceViolations } from "$lib/utils/packageTree.js";
 
     let {
         /** What the export states, which is what the fields start at. */
@@ -146,6 +147,9 @@
     <div class="mt-2 flex flex-col gap-2">
         {#each shown as row (row.what)}
             {@const id = `${row.what}-namespace-${uniqueId}`}
+            {@const violations = namespaceViolations(
+                row.what === "model" ? model : extension,
+            )}
             <div class="flex items-center gap-3">
                 <div class="flex w-28 shrink-0 items-center gap-2">
                     <label class="font-medium" for={id}>{row.label}</label>
@@ -168,8 +172,14 @@
                         )}
                         placeholder={stated[row.what] ||
                             "This export states none, one is needed"}
+                        warn={violations.length > 0}
                         {item}
                     />
+                    {#if violations.length > 0}
+                        <p class="text-red-text mt-0.5">
+                            {violations.join(", ")}
+                        </p>
+                    {/if}
                 </div>
             </div>
         {/each}
