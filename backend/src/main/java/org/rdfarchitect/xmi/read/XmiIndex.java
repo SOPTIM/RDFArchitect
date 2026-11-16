@@ -99,13 +99,12 @@ public class XmiIndex {
      * @return an empty list when the package is unknown, which a partial export makes possible
      */
     public List<XmiPackage> ancestryOf(String packageId) {
-        var ancestry = new ArrayList<XmiPackage>();
+        var ancestry = new LinkedHashSet<XmiPackage>();
         var current = packages.get(packageId);
-        while (current != null && !ancestry.contains(current)) {
-            ancestry.add(current);
+        while (current != null && ancestry.add(current)) {
             current = packages.get(current.getParentId());
         }
-        return ancestry;
+        return List.copyOf(ancestry);
     }
 
     /**
