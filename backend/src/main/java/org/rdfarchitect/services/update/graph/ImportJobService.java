@@ -86,7 +86,14 @@ public class ImportJobService implements ImportJobUseCase {
 
     @Override
     public UUID startXmiScan(String datasetName, List<MultipartFile> files) {
-        return start(datasetName, files, true, ImportKind.EXPORT_SCAN, this::readExports);
+        var jobId = start(datasetName, files, true, ImportKind.EXPORT_SCAN, this::readExports);
+        // Only the newest read of a session is chosen from, so the exports an earlier one kept are
+        // of no more use.
+        var sessionId = SessionContext.getSessionId();
+        jobs.values().stream()
+                .filter(job -> job.getSessionId().equals(sessionId) && !job.getId().equals(jobId))
+                .forEach(job -> SpooledMultipartFile.discard(job.takeRetainedFiles()));
+        return jobId;
     }
 
     @Override
@@ -251,7 +258,10 @@ public class ImportJobService implements ImportJobUseCase {
             var outcome = work.apply(job, files);
             // A read is only half of an import: the exports have to survive it, or choosing a
             // profile from them would mean uploading them a second time.
-            keepFiles = outcome instanceof PackagesScanned && !job.isCancelled();
+            keepFiles =
+                    outcome instanceof PackagesScanned scanned
+                            && !scanned.packages().isEmpty()
+                            && !job.isCancelled();
             if (keepFiles) {
                 job.retain(files);
             }
