@@ -49,7 +49,10 @@ public interface ImportJobUseCase {
          */
         AWAITING_PREFIX_RESOLUTION,
         COMPLETED,
-        /** Stopped on request; the graphs imported up to that point are kept. */
+        /**
+         * Stopped on request. An import of files keeps the graphs it stored up to that point; an
+         * import of packages stores nothing.
+         */
         CANCELLED,
         /** Ended unexpectedly, leaving the remaining files unimported. */
         FAILED

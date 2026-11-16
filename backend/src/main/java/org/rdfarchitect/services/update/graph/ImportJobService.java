@@ -119,6 +119,9 @@ public class ImportJobService implements ImportJobUseCase {
                     assertUsableNamespace(selected.extensionNamespace());
                     assertUsableGraphUri(selected.graphUri());
                 });
+        if (!readJob.isFinished()) {
+            throw new ResourceConflictException("The read has not finished yet.");
+        }
         var exports = readJob.takeRetainedFiles();
         if (exports.isEmpty()) {
             throw new ResourceConflictException(

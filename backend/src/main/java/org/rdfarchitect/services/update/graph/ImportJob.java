@@ -223,6 +223,10 @@ class ImportJob implements GraphImportListener {
         return isAwaitingPrefixResolution() && lastPolledAt.isBefore(abandonedBefore);
     }
 
+    synchronized boolean isFinished() {
+        return finishedAt != null;
+    }
+
     /** Whether the job is waiting for decisions, and has therefore imported nothing so far. */
     synchronized boolean isAwaitingPrefixResolution() {
         return state == JobState.AWAITING_PREFIX_RESOLUTION;

@@ -144,8 +144,7 @@ public interface ImportXmiUseCase {
      * @param selection the packages to build, in the order they are to be built
      * @param diagramIds the diagrams to keep, by {@code xmi:id}; one whose classes did not all make
      *     it is left out whether or not it is named here
-     * @param listener receives the progress of the import, answers which diagrams to keep and can
-     *     cancel it
+     * @param listener receives the progress of the import and can cancel it
      * @return the graphs that were written and, as failed file names, the packages that could not
      *     be built
      */
