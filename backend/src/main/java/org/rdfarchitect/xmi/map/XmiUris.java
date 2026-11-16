@@ -43,8 +43,6 @@ class XmiUris {
 
     private static final String PACKAGE_PREFIX = "Package_";
 
-    private static final String NC_STEREOTYPE = "NC";
-
     private final XmiNamespaces namespaces;
 
     /** The URI of a class or an enumeration. */
@@ -102,10 +100,13 @@ class XmiUris {
 
     /**
      * Whether this class can be given a URI at all. One stereotyped as an extension cannot when the
-     * export states no extension namespace, which a CGMES 2.4.15 profiles-only export does not.
+     * export states no extension namespace, which a CGMES 2.4.15 profiles-only export does not —
+     * unless it is an {@code NC} one, which the network codes' namespace names first.
      */
     boolean canName(XmiClass cimClass) {
-        return !XmiStereotypes.isExtension(cimClass.getStereotypes()) || namespaces.hasExtension();
+        return isNc(cimClass.getStereotypes())
+                || !XmiStereotypes.isExtension(cimClass.getStereotypes())
+                || namespaces.hasExtension();
     }
 
     private String namespaceFor(XmiClass cimClass) {
@@ -121,9 +122,12 @@ class XmiUris {
                 : namespaces.getModel();
     }
 
-    /** Whether a member stereotyped like this can be given a URI; see {@link #canName}. */
-    boolean canName(Set<String> stereotypes) {
-        return !XmiStereotypes.isExtension(stereotypes) || namespaces.hasExtension();
+    /** Whether a member of {@code owner} stereotyped like this can be given a URI. */
+    boolean canName(XmiClass owner, Set<String> memberStereotypes) {
+        return isNc(memberStereotypes)
+                || isNc(owner.getStereotypes())
+                || !XmiStereotypes.isExtension(memberStereotypes)
+                || namespaces.hasExtension();
     }
 
     /** A member is an extension when either it or the class owning it is one. */
@@ -144,6 +148,6 @@ class XmiUris {
      * the extension namespace. Without one in the prefix table it stays in the model namespace.
      */
     private boolean isNc(Set<String> stereotypes) {
-        return stereotypes.contains(NC_STEREOTYPE) && namespaces.getNc() != null;
+        return XmiStereotypes.isNc(stereotypes) && namespaces.getNc() != null;
     }
 }

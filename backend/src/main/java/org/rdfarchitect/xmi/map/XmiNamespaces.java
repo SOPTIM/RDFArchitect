@@ -25,6 +25,8 @@ import org.rdfarchitect.xmi.read.XmiProfile;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * The namespaces the resources of one profile get.
@@ -156,18 +158,29 @@ public final class XmiNamespaces {
      * — the enum literals carry no stereotype of their own and follow their class.
      */
     public static boolean hasExtensionElements(XmiIndex index) {
+        // An NC element goes in the network codes' namespace where the table states one, and needs
+        // no extension namespace then, whatever else it is stereotyped.
+        var ncStated = index.getPrefixes().get(NC_PREFIX) != null;
+        Predicate<Set<String>> needsOne =
+                stereotypes ->
+                        XmiStereotypes.isExtension(stereotypes)
+                                && !(ncStated && XmiStereotypes.isNc(stereotypes));
         for (var end : index.getAssociationEnds()) {
-            if (XmiStereotypes.isExtension(end.getStereotypes())) {
+            var domain = index.getClasses().get(end.getOppositeClassId());
+            if (needsOne.test(end.getStereotypes())
+                    && !(ncStated
+                            && domain != null
+                            && XmiStereotypes.isNc(domain.getStereotypes()))) {
                 return true;
             }
         }
         for (var cimClass : index.getClasses().values()) {
-            if (XmiStereotypes.isExtension(cimClass.getStereotypes())
+            if (ncStated && XmiStereotypes.isNc(cimClass.getStereotypes())) {
+                continue;
+            }
+            if (needsOne.test(cimClass.getStereotypes())
                     || cimClass.getAttributes().stream()
-                            .anyMatch(
-                                    attribute ->
-                                            XmiStereotypes.isExtension(
-                                                    attribute.getStereotypes()))) {
+                            .anyMatch(attribute -> needsOne.test(attribute.getStereotypes()))) {
                 return true;
             }
         }

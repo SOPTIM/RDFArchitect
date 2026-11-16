@@ -338,10 +338,7 @@ async function importSelectedPackages(
             `${LOG_PREFIX} Failed to import the chosen packages of read job "${readJobId}"`,
             await describeError(error),
         );
-        toastStore.error(
-            "Import failed",
-            "The chosen packages could not be imported.",
-        );
+        // Not toasted here: the dialog says why, which only the error it is handed knows.
         return { error: error ?? new Error("The import did not start.") };
     }
 

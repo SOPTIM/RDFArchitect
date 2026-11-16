@@ -23,6 +23,7 @@
     import XmiImportConfirm from "$lib/components/XmiImportConfirm.svelte";
     import XmiSchemaChoice from "$lib/components/XmiSchemaChoice.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { graphStore } from "$lib/stores/graphStore";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { importChoiceOf } from "$lib/utils/importChoice.js";
@@ -266,23 +267,39 @@
         importing = true;
         progress = current;
         const workspace = scanWorkspaceName;
+        const readId = readJobId;
+        // Until the import has an id of its own, a cancel has nothing to address; the read's id
+        // would make it cancel the read instead.
+        jobId = null;
 
         const { data, error } = await graphStore.importSelectedPackages(
             workspace,
-            readJobId,
+            readId,
             selection,
             chosen.diagramIds,
         );
+        if (current.cancelling) {
+            // Cancelled before the id arrived. A refused import left the read holding the export.
+            void cancelJob(workspace, data?.jobId ?? readId);
+            return;
+        }
         if (error || !data) {
-            current.fail(
+            // Refused before the read gave up its export, so it can be chosen from again.
+            toastStore.error(
+                "Import refused",
                 error?.detail ??
                     error?.message ??
                     "The packages could not be imported.",
             );
-            return;
-        }
-        if (current.cancelling) {
-            void cancelJob(workspace, data.jobId);
+            importing = false;
+            progress = read;
+            jobId = readId;
+            poller.follow(
+                () => graphStore.getImportStatus(workspace, readId),
+                read,
+                undefined,
+                { keepAlive: true },
+            );
             return;
         }
         jobId = data.jobId;

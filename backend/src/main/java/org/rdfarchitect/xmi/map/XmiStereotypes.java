@@ -48,6 +48,8 @@ import java.util.Set;
 @UtilityClass
 class XmiStereotypes {
 
+    private final String NC = "NC";
+
     /** What an export may state and the writer must not be given. */
     private final Set<String> NOT_PASSED_THROUGH = Set.of("abstract", "attribute", "enum");
 
@@ -111,5 +113,13 @@ class XmiStereotypes {
      */
     boolean isExtension(Set<String> applied) {
         return XmiExtensions.isExtension(applied);
+    }
+
+    /**
+     * Whether these stereotypes put a resource in the network codes' namespace, where one is
+     * stated.
+     */
+    boolean isNc(Set<String> applied) {
+        return applied.contains(NC);
     }
 }

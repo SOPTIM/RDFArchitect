@@ -315,7 +315,17 @@ public final class XmiProfileMapper {
             ICIMModelWriter writer, Set<String> slice) {
         var categories = new LinkedHashMap<String, CIMSBelongsToCategory>();
         var byUri = new HashMap<String, CIMSBelongsToCategory>();
-        for (var packageId : packagesOf(slice)) {
+        // Of packages sharing a name the one that keeps it comes from the chosen package and is the
+        // outermost: a parent is then always nearer the top than its child, so none ends up its own
+        // ancestor, and the shared package is one that gets written.
+        var ordered =
+                packagesOf(slice).stream()
+                        .sorted(
+                                Comparator.comparing(
+                                                (String id) -> !index.isWithin(id, profile.id()))
+                                        .thenComparingInt(id -> index.ancestryOf(id).size()))
+                        .toList();
+        for (var packageId : ordered) {
             var cimPackage = index.getPackages().get(packageId);
             if (!uris.canName(cimPackage)) {
                 // A package no URI can be built from, such as the CGMES 3.0 "GeoSPARQL - Profile".
@@ -539,7 +549,7 @@ public final class XmiProfileMapper {
             if (attribute.getName() == null || attribute.getName().isBlank()) {
                 continue;
             }
-            if (!uris.canName(attribute.getStereotypes())) {
+            if (!uris.canName(cimClass, attribute.getStereotypes())) {
                 // An extension attribute on a class that is none, with no extension namespace
                 // stated. The class is written and the attribute cannot be, so the schema comes
                 // out holding less than the export does; saying so is the least that is owed.
@@ -633,7 +643,11 @@ public final class XmiProfileMapper {
                 reportUnwritable(end, opposite, written);
                 continue;
             }
-            if (!uris.canName(end.getStereotypes()) || !uris.canName(opposite.getStereotypes())) {
+            if (!uris.canName(
+                            index.getClasses().get(end.getOppositeClassId()), end.getStereotypes())
+                    || !uris.canName(
+                            index.getClasses().get(opposite.getOppositeClassId()),
+                            opposite.getStereotypes())) {
                 // As for an extension attribute: no namespace to name it in, so left out and said.
                 dropHalf(end);
                 dropHalf(opposite);
