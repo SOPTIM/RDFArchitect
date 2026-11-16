@@ -87,6 +87,7 @@ public final class XmiProfileMapper {
     private final List<DroppedMember> droppedMembers = new ArrayList<>();
     private final List<UnnameableMember> unnameableMembers = new ArrayList<>();
     private final List<UnmappedOntologyField> unmappedOntologyFields = new ArrayList<>();
+    private final List<OmittedElement> omittedElements = new ArrayList<>();
 
     /**
      * A class as it was written.
@@ -137,6 +138,15 @@ public final class XmiProfileMapper {
      */
     public record UnnameableMember(String memberName) {}
 
+    /**
+     * A class, package or association of the profile that is left out, or written without its
+     * package, for a reason the export decides.
+     *
+     * @param name the element as the export names it
+     * @param reason why, worded for whoever imports
+     */
+    public record OmittedElement(String name, String reason) {}
+
     /** An ontology header field the export states under a name no known field matches. */
     public record UnmappedOntologyField(String name) {}
 
@@ -162,7 +172,8 @@ public final class XmiProfileMapper {
             List<DuplicateClass> duplicateClasses,
             List<DroppedMember> droppedMembers,
             List<UnnameableMember> unnameableMembers,
-            List<UnmappedOntologyField> unmappedOntologyFields) {}
+            List<UnmappedOntologyField> unmappedOntologyFields,
+            List<OmittedElement> omittedElements) {}
 
     private XmiProfileMapper(
             XmiIndex index,
@@ -225,6 +236,7 @@ public final class XmiProfileMapper {
                 XmiProfileSlice.classIdsOf(
                         index, profile.id(), scope, index.headerClassIdsOf(profile));
         refuseIfUnnameable(slice);
+        reportUnnameableClasses();
         var categories = writePackages(writer, slice);
         var written = writeClasses(writer, slice, categories);
         writeMembers(writer, written.keySet());
@@ -237,7 +249,25 @@ public final class XmiProfileMapper {
                 List.copyOf(duplicateClasses),
                 List.copyOf(droppedMembers),
                 List.copyOf(unnameableMembers),
-                List.copyOf(unmappedOntologyFields));
+                List.copyOf(unmappedOntologyFields),
+                List.copyOf(omittedElements));
+    }
+
+    /** The classes of the profile the reader left out, since no URI can hold their name. */
+    private void reportUnnameableClasses() {
+        for (var unnameable : index.getUnnameableClasses()) {
+            var inScope =
+                    scope == XmiPackageScope.PACKAGE_ONLY
+                            ? profile.id().equals(unnameable.packageId())
+                            : index.isWithin(unnameable.packageId(), profile.id());
+            if (inScope) {
+                omittedElements.add(
+                        new OmittedElement(
+                                unnameable.name(),
+                                "The name cannot be part of a URI; the class is not imported,"
+                                        + " nor are its associations."));
+            }
+        }
     }
 
     /**
@@ -279,6 +309,11 @@ public final class XmiProfileMapper {
                 // A package no URI can be built from, such as the CGMES 3.0 "GeoSPARQL - Profile".
                 // The classes in it are written all the same, without a category: a class without
                 // one is a smaller loss than a schema without the class.
+                omittedElements.add(
+                        new OmittedElement(
+                                cimPackage.getName(),
+                                "The name cannot be part of a URI; its classes are imported"
+                                        + " without a package."));
                 continue;
             }
             categories.put(
@@ -555,11 +590,12 @@ public final class XmiProfileMapper {
         var ends = index.getAssociationEnds();
         for (var i = 0; i < ends.size(); i++) {
             var end = ends.get(i);
-            if (!isWritable(end, written)) {
-                continue;
-            }
             var opposite = oppositeOf(ends, end);
             if (opposite == null || ends.indexOf(opposite) < i) {
+                continue;
+            }
+            if (!isWritable(end, written) || !isWritable(opposite, written)) {
+                reportUnwritable(end, opposite, written);
                 continue;
             }
             writer.writeAssociationPair(
@@ -619,6 +655,27 @@ public final class XmiProfileMapper {
      * connector that states none — the CGMES 3.0 extensions hold such — says nothing that a default
      * would not be inventing.
      */
+    /**
+     * Reports an association both of whose classes are written. One that reaches a class outside
+     * the schema is left out by design and not reported.
+     */
+    private void reportUnwritable(
+            XmiAssociationEnd end, XmiAssociationEnd opposite, Set<String> written) {
+        if (!written.contains(end.getClassId()) || !written.contains(end.getOppositeClassId())) {
+            return;
+        }
+        omittedElements.add(
+                new OmittedElement(
+                        index.getClasses().get(end.getOppositeClassId()).getName()
+                                + " – "
+                                + index.getClasses().get(end.getClassId()).getName(),
+                        end.getMultiplicity() == null || opposite.getMultiplicity() == null
+                                ? "The export states no multiplicity; the association is not"
+                                        + " imported."
+                                : "A role name cannot be part of a URI; the association is not"
+                                        + " imported."));
+    }
+
     private boolean isWritable(XmiAssociationEnd end, Set<String> written) {
         return end.getRoleName() != null
                 && end.getOppositeRoleName() != null

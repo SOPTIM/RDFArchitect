@@ -35,6 +35,16 @@ public class XmiIndex {
 
     private final Map<String, XmiPackage> packages = new LinkedHashMap<>();
 
+    /**
+     * A class left out because no URI can hold its name, so that the loss can be reported.
+     *
+     * @param name the name as the export states it
+     * @param packageId the package it is declared in
+     */
+    public record UnnameableClass(String name, String packageId) {}
+
+    private final List<UnnameableClass> unnameableClasses = new ArrayList<>();
+
     private final Map<String, XmiClass> classes = new LinkedHashMap<>();
 
     private final List<XmiAssociationEnd> associationEnds = new ArrayList<>();

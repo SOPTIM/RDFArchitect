@@ -107,8 +107,20 @@ public final class XmiReader {
                 .removeIf(
                         cimClass -> {
                             var type = extension.getTypesById().get(cimClass.getId());
-                            return (type != null && !CLASSIFIER_TYPES.contains(type))
-                                    || isUnusableName(cimClass.getName());
+                            if (type != null && !CLASSIFIER_TYPES.contains(type)) {
+                                return true;
+                            }
+                            if (isUnusableName(cimClass.getName())) {
+                                var stated = context.getUnusableClassNames().get(cimClass.getId());
+                                if (stated != null) {
+                                    index.getUnnameableClasses()
+                                            .add(
+                                                    new XmiIndex.UnnameableClass(
+                                                            stated, cimClass.getPackageId()));
+                                }
+                                return true;
+                            }
+                            return false;
                         });
         index.getProfiles().addAll(XmiProfiles.of(index));
         index.getPrefixes().putAll(context.getPrefixTable().paired());

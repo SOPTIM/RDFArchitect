@@ -53,6 +53,22 @@ class XmiImportWarnings {
         add(warnings, profileName, graphUri, droppedMembers(profileName, written));
         add(warnings, profileName, graphUri, unnameableMembers(profileName, written));
         add(warnings, profileName, graphUri, unmappedOntologyFields(written));
+        add(warnings, profileName, graphUri, omittedElements(profileName, written));
+    }
+
+    /** The classes, packages and associations the export names in a way that leaves them out. */
+    private List<UncarriedItem> omittedElements(String profileName, WrittenProfile written) {
+        if (written.omittedElements().isEmpty()) {
+            return List.of();
+        }
+        logger.warn(
+                "Profile '{}': {} class(es), package(s) or association(s) are left out or written"
+                        + " without their package.",
+                profileName,
+                written.omittedElements().size());
+        return written.omittedElements().stream()
+                .map(omitted -> new UncarriedItem(omitted.name(), omitted.reason()))
+                .toList();
     }
 
     private void add(

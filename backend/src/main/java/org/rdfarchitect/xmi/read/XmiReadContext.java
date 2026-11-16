@@ -49,6 +49,9 @@ final class XmiReadContext {
      */
     private final Map<String, List<XmiAssociationEnd>> endsByConnectorId = new HashMap<>();
 
+    /** The names of the classes no URI can hold, as the export states them, by id. */
+    private final Map<String, String> unusableClassNames = new HashMap<>();
+
     /** The prefix table while it is being read; its halves are paired once the file is done. */
     private final XmiPrefixTable prefixTable = new XmiPrefixTable();
 

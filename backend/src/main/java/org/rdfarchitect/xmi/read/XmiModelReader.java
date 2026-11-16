@@ -122,11 +122,11 @@ final class XmiModelReader {
                 // Normalised here rather than only judged later: a name the rule trims and the
                 // index keeps raw passes every check and still reaches the URI with the whitespace
                 // in it.
-                currentClass =
-                        new XmiClass(
-                                id,
-                                XmiNaming.usableOrNull(name),
-                                owner == null ? null : owner.getId());
+                var usableName = XmiNaming.usableOrNull(name);
+                if (usableName == null && name != null && !name.isBlank()) {
+                    context.getUnusableClassNames().put(id, name);
+                }
+                currentClass = new XmiClass(id, usableName, owner == null ? null : owner.getId());
                 currentClass.setEnumeration(XmiNames.UML_ENUMERATION.equals(type));
                 context.getIndex().getClasses().put(id, currentClass);
             }
