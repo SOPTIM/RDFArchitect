@@ -238,6 +238,7 @@ public class QueryGraphService
         var query =
                 new CIMQueryBuilder(baseQuery)
                         .appendLabelQuery(OPTIONAL)
+                        .appendUUIDQuery(OPTIONAL)
                         .appendPackageQuery(OPTIONAL)
                         .appendCommentQuery(OPTIONAL)
                         .build();
@@ -364,6 +365,7 @@ public class QueryGraphService
         var query =
                 new CIMQueryBuilder(baseQuery)
                         .appendLabelQuery(REQUIRED)
+                        .appendUUIDQuery(OPTIONAL)
                         .appendPackageQuery(OPTIONAL)
                         .appendCommentQuery(OPTIONAL)
                         .build();
