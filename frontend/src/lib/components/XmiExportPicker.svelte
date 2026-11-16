@@ -145,7 +145,8 @@
                     <br />
                     Supported:
                     <b>{allowedFileExtensions}</b>
-                    (Enterprise Architect XMI 2.5.1; other versions may work).
+                    (Enterprise Architect XMI 2.5.1 or 2.1; a 2.1 export carries no
+                    diagrams).
                     <br />
                     Multiple inheritance may be lost.
                 </p>

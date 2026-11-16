@@ -40,6 +40,9 @@ public class XmiFiles {
 
     private final String XMI_NAMESPACE = "http://www.omg.org/spec/XMI";
 
+    /** Where XMI 2.1 lived. An export in it carries no diagrams, but reads all the same. */
+    private final String XMI_21_NAMESPACE = "http://schema.omg.org/spec/XMI";
+
     /**
      * Whether the file opens like an export. The content decides rather than the extension, because
      * an export is named {@code .xml} like an RDF/XML file, which must keep importing as one.
@@ -49,7 +52,8 @@ public class XmiFiles {
             var probe = content.readNBytes(PROBE_BYTES);
             // The marker is ASCII and sits in the root element, so reading the probe as
             // ISO-8859-1 finds it whatever the file declares as its encoding.
-            return new String(probe, StandardCharsets.ISO_8859_1).contains(XMI_NAMESPACE);
+            var opening = new String(probe, StandardCharsets.ISO_8859_1);
+            return opening.contains(XMI_NAMESPACE) || opening.contains(XMI_21_NAMESPACE);
         } catch (IOException exception) {
             logger.warn(
                     "Unable to look into '{}': {}",
