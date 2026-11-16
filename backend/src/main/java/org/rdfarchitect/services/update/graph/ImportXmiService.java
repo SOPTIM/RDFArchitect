@@ -139,7 +139,8 @@ public class ImportXmiService implements ImportXmiUseCase {
                 ReportingInputStream.of(
                         file.getInputStream(),
                         file.getSize(),
-                        done -> listener.progressed(index, done, file.getSize()))) {
+                        done -> listener.progressed(index, done, file.getSize()),
+                        listener::isCancelled)) {
             var read = XmiReader.read(xmi);
             var found = XmiPackageTree.of(read);
             var modelNamespace = XmiNamespaces.modelNamespaceOf(read);
@@ -193,6 +194,11 @@ public class ImportXmiService implements ImportXmiUseCase {
                     found.stream().filter(XmiPackageNode::profile).count());
             listener.finished(index, Outcome.SCANNED, null);
         } catch (IOException | RuntimeException exception) {
+            // A cancelled read is stopped by the stream, which surfaces as a failure to read.
+            if (listener.isCancelled()) {
+                listener.finished(index, Outcome.SKIPPED, null);
+                return;
+            }
             logger.warn("Unable to read the export '{}': {}", fileName, exception.getMessage());
             listener.failed(index, UNREADABLE);
         }
@@ -363,9 +369,18 @@ public class ImportXmiService implements ImportXmiUseCase {
                 ReportingInputStream.of(
                         export.file().getInputStream(),
                         export.file().getSize(),
-                        done -> listener.progressed(readStep, done, export.file().getSize()))) {
+                        done -> listener.progressed(readStep, done, export.file().getSize()),
+                        listener::isCancelled)) {
             index = XmiReader.read(xmi);
         } catch (IOException | RuntimeException exception) {
+            if (listener.isCancelled()) {
+                export.packages()
+                        .forEach(
+                                planned ->
+                                        listener.finished(planned.index(), Outcome.SKIPPED, null));
+                listener.finished(export.diagramIndex(), Outcome.SKIPPED, null);
+                return;
+            }
             logger.warn(
                     "Unable to read the export '{}': {}",
                     export.file().getOriginalFilename(),

@@ -20,6 +20,8 @@ package org.rdfarchitect.services.update.graph;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.util.function.BooleanSupplier;
 import java.util.function.LongConsumer;
 
 /**
@@ -32,18 +34,23 @@ import java.util.function.LongConsumer;
  * <p>The report is throttled to whole percents of the expected total. Reading happens in buffers of
  * a few kilobytes, and a listener behind a synchronized job would otherwise be called tens of
  * thousands of times to say the same thing.
+ *
+ * <p>It also stops a read that was cancelled, which would otherwise run to the end of the file.
  */
 final class ReportingInputStream extends FilterInputStream {
 
     private final long total;
     private final LongConsumer report;
+    private final BooleanSupplier cancelled;
     private long done;
     private long reportedAt;
 
-    private ReportingInputStream(InputStream in, long total, LongConsumer report) {
+    private ReportingInputStream(
+            InputStream in, long total, LongConsumer report, BooleanSupplier cancelled) {
         super(in);
         this.total = total;
         this.report = report;
+        this.cancelled = cancelled;
     }
 
     /**
@@ -51,13 +58,16 @@ final class ReportingInputStream extends FilterInputStream {
      *
      * @param total how many bytes are expected, {@code -1} when that is not known
      * @param report receives the bytes read so far
+     * @param cancelled whether to stop reading, which a read then fails with
      */
-    static InputStream of(InputStream in, long total, LongConsumer report) {
-        return total > 0 ? new ReportingInputStream(in, total, report) : in;
+    static InputStream of(
+            InputStream in, long total, LongConsumer report, BooleanSupplier cancelled) {
+        return total > 0 ? new ReportingInputStream(in, total, report, cancelled) : in;
     }
 
     @Override
     public int read() throws IOException {
+        stopIfCancelled();
         var value = in.read();
         if (value >= 0) {
             advance(1);
@@ -67,6 +77,7 @@ final class ReportingInputStream extends FilterInputStream {
 
     @Override
     public int read(byte[] buffer, int offset, int length) throws IOException {
+        stopIfCancelled();
         var count = in.read(buffer, offset, length);
         if (count > 0) {
             advance(count);
@@ -76,9 +87,16 @@ final class ReportingInputStream extends FilterInputStream {
 
     @Override
     public long skip(long count) throws IOException {
+        stopIfCancelled();
         var skipped = in.skip(count);
         advance(skipped);
         return skipped;
+    }
+
+    private void stopIfCancelled() throws InterruptedIOException {
+        if (cancelled.getAsBoolean()) {
+            throw new InterruptedIOException("The read was cancelled.");
+        }
     }
 
     private void advance(long count) {
