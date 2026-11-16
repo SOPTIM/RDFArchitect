@@ -234,7 +234,10 @@ stay there, as the released RDFS does. A profile without a metadata class simply
 | Documentation | `ShortCircuit`, `Description`, `Operation`, `European`, `Entsoe` | one section each in the AsciiDoc and HTML profile export |
 | Everything else | any string without spaces | stored, rendered as `«value»`, exported, round-tripped, editable |
 
-**Every stereotype is imported unchanged, with two caveats.** First a locator problem:
+**Every stereotype of a class, attribute or association is imported unchanged, with two
+caveats.** Those of enum literals are not read at all: an edit writes an entry's stereotype as
+`enum` whatever it was, so RDFArchitect cannot hold others yet (CGMES 3.0 has `European` on
+`LimitKind`'s literals, for one). First a locator problem:
 `properties/@stereotype` and `stereotype/@stereotype` hold exactly one value, while the releases do
 emit co-occurring stereotypes (`European` + `deprecated`, `Operation` + `ShortCircuit`), which
 those two attributes lose. The **stereotype-application section** at the root of the file carries
