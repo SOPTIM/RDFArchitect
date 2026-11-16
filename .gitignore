@@ -1,3 +1,4 @@
 # WebStorm
 .idea
 logs
+node_modules/
