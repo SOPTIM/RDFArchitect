@@ -80,6 +80,9 @@ final class XmiExtensionReader {
     /** Whether an {@code <attribute>} is open, however little the model part made of its id. */
     private boolean insideAttribute;
 
+    /** Whether an {@code <operation>} is open, whose properties are not its element's. */
+    private boolean insideOperation;
+
     private ConnectorEnd source;
     private ConnectorEnd target;
     private ConnectorEnd currentEnd;
@@ -90,6 +93,7 @@ final class XmiExtensionReader {
         switch (reader.getLocalName()) {
             case XmiNames.ELEMENT -> startElement(reader);
             case XmiNames.ATTRIBUTE -> startAttribute(reader);
+            case XmiNames.OPERATION -> insideOperation = true;
             case XmiNames.DOCUMENTATION ->
                     setDocumentation(XmiStreams.attribute(reader, XmiNames.VALUE));
             case XmiNames.PROPERTIES -> applyProperties(reader);
@@ -121,6 +125,7 @@ final class XmiExtensionReader {
                 currentAttribute = null;
                 currentLiteral = null;
             }
+            case XmiNames.OPERATION -> insideOperation = false;
             case XmiNames.SOURCE, XmiNames.TARGET -> currentEnd = null;
             case XmiNames.CONNECTOR -> endConnector();
             default -> {
@@ -259,6 +264,7 @@ final class XmiExtensionReader {
      * literal sit in an element, and the element is the outermost of them. An attribute the model
      * part never declared is nothing rather than the class around it — read as that class, its
      * {@code <properties>} would reset the class's abstract flag and overwrite its documentation.
+     * So is an operation, for the same reason.
      */
     private Open openNow() {
         if (currentEnd != null) {
@@ -273,7 +279,7 @@ final class XmiExtensionReader {
         if (currentLiteral != null) {
             return Open.LITERAL;
         }
-        if (insideAttribute) {
+        if (insideAttribute || insideOperation) {
             return Open.NOTHING;
         }
         if (currentClass != null) {

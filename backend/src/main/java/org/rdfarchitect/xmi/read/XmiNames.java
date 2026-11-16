@@ -104,6 +104,9 @@ final class XmiNames {
      */
     static final String ATTRIBUTE = "attribute";
 
+    /** An operation of an element in the extension, which carries properties of its own. */
+    static final String OPERATION = "operation";
+
     /** The {@code <model>} of a connector end, which is not the model section. */
     static final String END_MODEL = "model";
 
