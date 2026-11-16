@@ -11,6 +11,7 @@ const sidebars = {
       items: [
         'reference/features',
         'reference/cim-mapping',
+        'reference/diagram-layout',
         'reference/faq',
         'reference/bachelor-theses',
         'reference/changelog',
