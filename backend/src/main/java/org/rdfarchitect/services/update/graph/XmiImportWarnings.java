@@ -194,13 +194,19 @@ class XmiImportWarnings {
     private UncarriedItem untyped(UnresolvedType unresolved) {
         var name = unresolved.attributeUri();
         var local = name.substring(name.indexOf('#') + 1);
+        if (unresolved.missingType() != null) {
+            return new UncarriedItem(
+                    local,
+                    unresolved.missingType()
+                            + " is used as a type here, but the export holds no definition of"
+                            + " it. The attribute is kept, with a dangling reference.");
+        }
         return new UncarriedItem(
                 local,
-                unresolved.missingType() == null
-                        ? "The export states no type for this attribute. The attribute is kept"
-                                + " without one."
-                        : unresolved.missingType()
-                                + " is used as a type here, but the export holds no definition of"
-                                + " it. The attribute is kept, with a dangling reference.");
+                unresolved.typeStated()
+                        ? "The type this attribute names is not in the export. The attribute is"
+                                + " not imported."
+                        : "The export states no type for this attribute. The attribute is not"
+                                + " imported.");
     }
 }

@@ -98,14 +98,15 @@ public final class XmiProfileMapper {
 
     /**
      * An attribute the export gives a type the file does not contain. It is written pointing at
-     * that type all the same, where the export names it; where it does not, the attribute goes in
-     * without a type at all.
+     * that type all the same, where the export names it; where it does not, the attribute is left
+     * out, since the editor cannot show an attribute without a type.
      *
-     * @param attributeUri the attribute as it was written
+     * @param attributeUri the attribute as it was or would have been written
      * @param missingType what the export calls the type it points at, or {@code null} when the
      *     export does not even say that
+     * @param typeStated whether the export gives the attribute a type at all
      */
-    public record UnresolvedType(String attributeUri, String missingType) {}
+    public record UnresolvedType(String attributeUri, String missingType, boolean typeStated) {}
 
     /**
      * A class the export declares twice under one name, so that both would be written as the same
@@ -487,7 +488,12 @@ public final class XmiProfileMapper {
             var attributeUri = uris.of(cimClass, attribute.getName(), attribute.getStereotypes());
             var typing = dataTypes.of(attribute);
             if (typing.type() == null || typing.undeclared() != null) {
-                unresolvedTypes.add(new UnresolvedType(attributeUri, typing.undeclared()));
+                unresolvedTypes.add(
+                        new UnresolvedType(
+                                attributeUri, typing.undeclared(), attribute.getTypeId() != null));
+            }
+            if (typing.type() == null) {
+                continue;
             }
             writer.writeAttribute(
                     CIMAttribute.builder()

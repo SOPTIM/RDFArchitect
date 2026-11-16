@@ -108,6 +108,7 @@
 			<packagedElement xmi:type="uml:Package" xmi:id="EAPK_MESSWERTE" name="Meßwerte">
 				<packagedElement xmi:type="uml:Class" xmi:id="EAID_MESSWERTEVERSION" name="MesswerteVersion" isAbstract="true">
 					<ownedAttribute xmi:type="uml:Property" xmi:id="EAID_A09" name="entsoeURI" isStatic="true" isReadOnly="true">
+						<type xmi:idref="EAJava_String"/>
 						<defaultValue xmi:type="uml:LiteralString" xmi:id="EAID_V09" value="http://example.com/ns/Messwerte/1"/>
 					</ownedAttribute>
 				</packagedElement>
@@ -312,6 +313,7 @@
 		<primitivetypes>
 			<packagedElement xmi:type="uml:Package" xmi:id="EAPrimitiveTypesPackage" name="EA_PrimitiveTypes_Package">
 				<packagedElement xmi:type="uml:PrimitiveType" xmi:id="EAJava_DateTime" name="DateTime"/>
+				<packagedElement xmi:type="uml:PrimitiveType" xmi:id="EAJava_String" name="String"/>
 			</packagedElement>
 		</primitivetypes>
 	</xmi:Extension>
