@@ -49,9 +49,11 @@ import org.rdfarchitect.models.cim.data.dto.CIMPackage;
  *
  * <h2>What it writes beyond what an edit writes</h2>
  *
- * A package's parent and an association's stereotypes. {@code CIMUpdates} writes neither, so a
- * graph written here carries two things the editing path drops on the first save. That is
- * deliberate and recorded as a defect, not an accident of this interface.
+ * A package's parent and an association's stereotypes. The editor supports neither yet: {@code
+ * CIMUpdates} writes association stereotypes only where the DTO carries them, which an edit never
+ * does, and no package parent at all. A graph written here therefore loses both on the first save.
+ * That is deliberate: the import lays the ground for supporting them, the editor does not have it
+ * yet.
  */
 public interface ICIMModelWriter {
 
