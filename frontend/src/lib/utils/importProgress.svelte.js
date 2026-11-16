@@ -119,7 +119,7 @@ function fileProgress(file) {
 export class ImportProgress {
     phase = $state(ImportPhase.UPLOADING);
     uploadPercent = $state(0);
-    /** @type {{index: number, fileName: string, sizeBytes: number, state: string, graphUri: string|null, done: number, total: number}[]} */
+    /** @type {{index: number, fileName: string, sizeBytes: number, state: string, graphUri: string|null, done: number, total: number, reason: string|null}[]} */
     files = $state([]);
     jobState = $state(JobState.RUNNING);
     importedGraphUris = $state([]);
@@ -265,6 +265,7 @@ export class ImportProgress {
             graphUri: file.graphUri ?? null,
             done: file.done ?? 0,
             total: file.total ?? 0,
+            reason: file.reason ?? null,
         }));
         this.jobState = status.state ?? JobState.RUNNING;
         this.#applyOutcome(status.outcome);

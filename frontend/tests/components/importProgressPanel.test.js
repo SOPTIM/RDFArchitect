@@ -154,6 +154,27 @@ describe("ImportProgressPanel", () => {
         expect(panel.textContent).toContain("could not be imported");
     });
 
+    test("says why a file could not be imported, where the import says", () => {
+        const progress = new ImportProgress();
+        progress.uploaded();
+        progress.apply(
+            statusOf(
+                [
+                    fileOf(0, "schema.xml", FileState.FAILED, {
+                        reason: "This is not an Enterprise Architect XMI export.",
+                    }),
+                ],
+                JobState.COMPLETED,
+            ),
+        );
+
+        const panel = render(progress);
+
+        expect(textOf(panel)).toContain(
+            "This is not an Enterprise Architect XMI export.",
+        );
+    });
+
     test("lists what could not be carried over, with the reason each line gives", () => {
         const progress = new ImportProgress();
         progress.uploaded();

@@ -34,6 +34,7 @@ import org.rdfarchitect.xmi.map.XmiDiagramAvailability;
 import org.rdfarchitect.xmi.map.XmiDiagrams;
 import org.rdfarchitect.xmi.map.XmiDiagrams.ClassLocation;
 import org.rdfarchitect.xmi.map.XmiDiagrams.ImportedDiagram;
+import org.rdfarchitect.xmi.map.XmiImportRefusal;
 import org.rdfarchitect.xmi.map.XmiNamespaces;
 import org.rdfarchitect.xmi.map.XmiProfileMapper;
 import org.rdfarchitect.xmi.read.XmiIndex;
@@ -59,6 +60,13 @@ import java.util.Set;
 public class ImportXmiService implements ImportXmiUseCase {
 
     private static final Logger logger = LoggerFactory.getLogger(ImportXmiService.class);
+
+    // Why a step failed, as whoever started the import is told. The exception behind it goes to
+    // the log only: it names what the code expected, not what the file lacks.
+    private static final String NOT_AN_EXPORT = "This is not an Enterprise Architect XMI export.";
+    private static final String UNREADABLE = "The export could not be read.";
+    private static final String NOT_IMPORTED = "The package could not be imported.";
+    private static final String NOT_STORED = "The import could not be stored.";
 
     private final DatabasePort databasePort;
     private final XmiDiagramStore diagramStore;
@@ -124,7 +132,7 @@ public class ImportXmiService implements ImportXmiUseCase {
         var fileName = file.getOriginalFilename();
         if (!XmiFiles.isXmiFile(file)) {
             logger.warn("'{}' is not an Enterprise Architect export.", fileName);
-            listener.finished(index, Outcome.FAILED, null);
+            listener.failed(index, NOT_AN_EXPORT);
             return;
         }
         try (var xmi =
@@ -186,7 +194,7 @@ public class ImportXmiService implements ImportXmiUseCase {
             listener.finished(index, Outcome.SCANNED, null);
         } catch (IOException | RuntimeException exception) {
             logger.warn("Unable to read the export '{}': {}", fileName, exception.getMessage());
-            listener.finished(index, Outcome.FAILED, null);
+            listener.failed(index, UNREADABLE);
         }
     }
 
@@ -289,10 +297,9 @@ public class ImportXmiService implements ImportXmiUseCase {
             logger.warn("Unable to store the imported schemas: {}", exception.getMessage());
             for (var schema : built.schemas()) {
                 result.failedFileNames().add(schema.profileName());
-                listener.finished(schema.index(), Outcome.FAILED, null);
+                listener.failed(schema.index(), NOT_STORED);
             }
-            built.diagrams()
-                    .forEach(diagrams -> listener.finished(diagrams.index(), Outcome.FAILED, null));
+            built.diagrams().forEach(diagrams -> listener.failed(diagrams.index(), NOT_STORED));
         }
         if (!committed) {
             takeBack(result);
@@ -363,7 +370,7 @@ public class ImportXmiService implements ImportXmiUseCase {
                     "Unable to read the export '{}': {}",
                     export.file().getOriginalFilename(),
                     exception.getMessage());
-            failAll(export.packages(), listener, result);
+            failAll(export.packages(), UNREADABLE, listener, result);
             listener.finished(export.diagramIndex(), Outcome.SKIPPED, null);
             return;
         }
@@ -454,7 +461,11 @@ public class ImportXmiService implements ImportXmiUseCase {
                     plannedProfile.profileName(),
                     exception.getMessage());
             result.failedFileNames().add(plannedProfile.profileName());
-            listener.finished(plannedProfile.index(), Outcome.FAILED, null);
+            listener.failed(
+                    plannedProfile.index(),
+                    exception instanceof XmiImportRefusal refusal
+                            ? refusal.getMessage()
+                            : NOT_IMPORTED);
         }
     }
 
@@ -515,10 +526,13 @@ public class ImportXmiService implements ImportXmiUseCase {
 
     /** Reports the packages of an export nothing else will, or the import waits on them forever. */
     private void failAll(
-            List<PlannedProfile> chosen, ImportProgressListener listener, ImportResult result) {
+            List<PlannedProfile> chosen,
+            String reason,
+            ImportProgressListener listener,
+            ImportResult result) {
         for (var plannedProfile : chosen) {
             result.failedFileNames().add(plannedProfile.profileName());
-            listener.finished(plannedProfile.index(), Outcome.FAILED, null);
+            listener.failed(plannedProfile.index(), reason);
         }
     }
 

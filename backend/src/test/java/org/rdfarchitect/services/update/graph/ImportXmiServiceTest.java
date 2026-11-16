@@ -113,7 +113,8 @@ class ImportXmiServiceTest {
     @Test
     void importPackages_reportsAProfileTheExportDoesNotHoldEnoughOf() throws IOException {
         // Without the extension namespace the profile refuses, and refusing is an answer rather
-        // than a crash: the progress says which profile and nothing was stored.
+        // than a crash: the progress says which profile and why, and nothing was stored.
+        var listener = new RecordingListener();
         var result =
                 service.importPackages(
                         DATASET,
@@ -122,12 +123,26 @@ class ImportXmiServiceTest {
                                 new SelectedPackageDTO(
                                         0, TOPOLOGY, "Topology", null, null, null, null)),
                         ALL_DIAGRAMS,
-                        ImportProgressListener.NOOP);
+                        listener);
 
         assertThat(result.importedGraphUris()).isEmpty();
         assertThat(result.failedFileNames()).containsExactly("Topology");
+        assertThat(listener.reasons).singleElement().asString().contains("extension namespace");
         // Not even the workspace: it is created at the first write, and there was none.
         assertThat(databasePort.listDatasets()).doesNotContain(DATASET);
+    }
+
+    @Test
+    void scanPackages_saysWhyAFileIsRefused() {
+        var listener = new RecordingListener();
+        service.scanPackages(
+                List.of(
+                        new MockMultipartFile(
+                                "files", "schema.xml", "text/xml", "<rdf:RDF/>".getBytes())),
+                listener);
+
+        assertThat(listener.reasons)
+                .containsExactly("This is not an Enterprise Architect XMI export.");
     }
 
     @Test
@@ -395,6 +410,7 @@ class ImportXmiServiceTest {
 
         private final List<String> planned = new java.util.ArrayList<>();
         private final List<String> finished = new java.util.ArrayList<>();
+        private final List<String> reasons = new java.util.ArrayList<>();
 
         @Override
         public void planned(List<PlannedImport> plannedImports) {
@@ -404,6 +420,12 @@ class ImportXmiServiceTest {
         @Override
         public void finished(int index, Outcome outcome, String graphUri) {
             finished.add(planned.get(index) + "=" + outcome);
+        }
+
+        @Override
+        public void failed(int index, String reason) {
+            ImportProgressListener.super.failed(index, reason);
+            reasons.add(reason);
         }
     }
 }

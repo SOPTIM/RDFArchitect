@@ -132,6 +132,13 @@ class ImportJob implements GraphImportListener {
                     case SKIPPED -> FileState.SKIPPED;
                 };
         file.graphUri = graphUri;
+        file.reason = null;
+    }
+
+    @Override
+    public synchronized void failed(int index, String reason) {
+        finished(index, Outcome.FAILED, null);
+        fileAt(index).reason = reason;
     }
 
     @Override
@@ -306,6 +313,7 @@ class ImportJob implements GraphImportListener {
         private final PlannedImport plannedImport;
         private FileState state = FileState.PENDING;
         private String graphUri;
+        private String reason;
         private long done;
         private long total;
 
@@ -321,7 +329,8 @@ class ImportJob implements GraphImportListener {
                     state,
                     graphUri,
                     done,
-                    total);
+                    total,
+                    reason);
         }
     }
 }

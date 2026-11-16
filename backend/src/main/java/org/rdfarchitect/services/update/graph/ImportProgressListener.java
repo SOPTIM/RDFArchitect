@@ -74,6 +74,15 @@ public interface ImportProgressListener {
     default void finished(int index, Outcome outcome, String graphUri) {}
 
     /**
+     * The step failed, for a reason that can be shown to whoever started the import.
+     *
+     * @param reason what went wrong, worded for the user rather than taken from an exception
+     */
+    default void failed(int index, String reason) {
+        finished(index, Outcome.FAILED, null);
+    }
+
+    /**
      * Whether the import should stop. Checked before each file, so cancelling never leaves a
      * half-imported graph behind.
      */

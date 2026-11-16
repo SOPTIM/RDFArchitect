@@ -74,6 +74,8 @@ public interface ImportJobUseCase {
      * @param done how much of this step is behind it, {@code 0} for a step that cannot say
      * @param total how much there is in all, {@code 0} for a step that cannot say. Only one long
      *     pass over a file can; everything else is known by being finished or not
+     * @param reason why the step failed, for whoever started the import. {@code null} unless the
+     *     state is {@code FAILED}, and also then where the import does not say
      */
     record ImportFileStatus(
             int index,
@@ -82,7 +84,8 @@ public interface ImportJobUseCase {
             FileState state,
             String graphUri,
             long done,
-            long total) {}
+            long total,
+            String reason) {}
 
     /**
      * Progress of an import job.

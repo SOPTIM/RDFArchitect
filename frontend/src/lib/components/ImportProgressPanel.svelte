@@ -127,6 +127,11 @@
                         </span>
                     {/if}
                 </div>
+                {#if file.reason}
+                    <p class="text-red-text px-2 pb-1 pl-8 text-xs">
+                        {file.reason}
+                    </p>
+                {/if}
             {/each}
         </div>
     {/if}

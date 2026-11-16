@@ -133,6 +133,18 @@ class ImportJobTest {
     }
 
     @Test
+    void failed_reportsTheReasonWithTheFile() {
+        var job = job();
+        job.planned(List.of(new PlannedImport(0, "model.xmi", 10)));
+        job.started(0);
+        job.failed(0, "The export could not be read.");
+
+        var file = job.status().files().getFirst();
+        assertThat(file.state()).isEqualTo(ImportJobUseCase.FileState.FAILED);
+        assertThat(file.reason()).isEqualTo("The export could not be read.");
+    }
+
+    @Test
     void fail_graphImport_recoversWhatWasWrittenBeforeItDied() {
         var job = job();
         job.planned(List.of(new PlannedImport(0, "first.ttl", 10), PLANNED_SECOND));

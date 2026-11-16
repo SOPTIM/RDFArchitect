@@ -1042,6 +1042,9 @@
             "format" : "int32",
             "type" : "integer"
           },
+          "reason" : {
+            "type" : "string"
+          },
           "sizeBytes" : {
             "format" : "int64",
             "type" : "integer"
