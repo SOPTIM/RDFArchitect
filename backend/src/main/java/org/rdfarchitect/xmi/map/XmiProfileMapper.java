@@ -215,6 +215,7 @@ public final class XmiProfileMapper {
      */
     private WrittenProfile writeTo(ICIMModelWriter writer) {
         index.getPrefixes().forEach(writer::bindPrefix);
+        bindWrittenNamespaces(writer);
 
         // The header class is left out of the closure too: its attribute types and its superclass
         // describe the header, not the profile.
@@ -234,6 +235,22 @@ public final class XmiProfileMapper {
                 List.copyOf(droppedMembers),
                 List.copyOf(unnameableMembers),
                 List.copyOf(unmappedOntologyFields));
+    }
+
+    /**
+     * Binds {@code cim}, and the extension prefix, to the namespaces the resources are actually
+     * written in. The prefix table is not enough: a CGMES 2.4.15 export has none, and a supplied
+     * namespace overrules it. A graph without its own {@code cim} binding gets the workspace's, and
+     * is then not read as a profile.
+     *
+     * <p>An extension namespace the table already names under some other prefix keeps that name.
+     */
+    private void bindWrittenNamespaces(ICIMModelWriter writer) {
+        writer.bindPrefix(XmiNamespaces.MODEL_PREFIX, namespaces.getModel());
+        if (namespaces.hasExtension()
+                && !index.getPrefixes().containsValue(namespaces.getExtension())) {
+            writer.bindPrefix(XmiNamespaces.EXTENSION_PREFIX, namespaces.getExtension());
+        }
     }
 
     /**

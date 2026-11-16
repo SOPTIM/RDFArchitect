@@ -303,6 +303,25 @@ class XmiProfileMapperTest {
         assertThat(written("Topology").getNsPrefixURI("cim")).isEqualTo(MODEL_NS);
     }
 
+    @Test
+    void write_bindsCimToASuppliedModelNamespace() {
+        // The resources are renamed, so the export's cim would name a namespace nothing is in.
+        var model = ModelFactory.createDefaultModel();
+        XmiProfileMapper.write(
+                index,
+                profileNamed("Topology"),
+                XmiPackageScope.WITH_SUB_PACKAGES,
+                new CIMModelWriter("g", model),
+                new XmiNamespaces.Supplied("http://example.com/ns/Other#", EXTENSION_NS));
+
+        assertThat(model.getNsPrefixURI("cim")).isEqualTo("http://example.com/ns/Other#");
+    }
+
+    @Test
+    void write_bindsTheExtensionNamespaceTheTableDoesNotName() {
+        assertThat(written("Topology").getNsPrefixURI("eu")).isEqualTo(EXTENSION_NS);
+    }
+
     // -------------------------------------------------------------------------
 
     @Test

@@ -82,10 +82,10 @@ public final class XmiNamespaces {
     }
 
     /** What the prefix table calls the namespace nearly every resource of a profile gets. */
-    private static final String MODEL_PREFIX = "cim";
+    static final String MODEL_PREFIX = "cim";
 
     /** What the prefix table calls the namespace the European extensions get. */
-    private static final String EXTENSION_PREFIX = "eu";
+    static final String EXTENSION_PREFIX = "eu";
 
     private static final String MODEL_ATTRIBUTE = "namespaceUML";
     private static final String EXTENSION_ATTRIBUTE = "namespaceURI";
