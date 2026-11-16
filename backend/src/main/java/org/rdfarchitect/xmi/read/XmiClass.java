@@ -49,11 +49,7 @@ public class XmiClass {
 
     private String documentation;
 
-    /**
-     * Every {@code generalization} the class declares. A class may declare several while
-     * RDFArchitect holds one superclass, so which one wins is the mapping's problem, not this
-     * reader's.
-     */
+    /** Every {@code generalization} the class declares; the mapping writes them all. */
     private final List<String> superClassIds = new ArrayList<>();
 
     private final List<XmiAttribute> attributes = new ArrayList<>();
