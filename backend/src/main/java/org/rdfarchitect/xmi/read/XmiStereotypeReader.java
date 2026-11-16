@@ -55,11 +55,16 @@ final class XmiStereotypeReader {
      */
     private static final Set<String> BOOKKEEPING = Set.of(XmiNames.IS_BASED_ON);
 
+    /** Enterprise Architect's profile for diagram decorations such as callouts, never a model's. */
+    private static final String WHITEBOARD = "Whiteboard";
+
     private final XmiReadContext context;
 
     void start(XMLStreamReader reader) {
         var stereotype = reader.getLocalName();
-        if (BOOKKEEPING.contains(stereotype) || statesAValue(reader, stereotype)) {
+        if (WHITEBOARD.equals(reader.getPrefix())
+                || BOOKKEEPING.contains(stereotype)
+                || statesAValue(reader, stereotype)) {
             return;
         }
         var classes = context.getIndex().getClasses();
@@ -88,11 +93,11 @@ final class XmiStereotypeReader {
      * <p>The two look alike and are told apart by their shape: a stereotype says only what it
      * applies to, while a recorded value carries an attribute named after the element holding it —
      * {@code <thecustomprofile:date_created base_Class="…" date_created="2008-05-08 14:13:18"/>}.
-     * Measured across a released full model the rule separates them exactly: all nine of {@code
-     * GUIDBasedOn}, {@code CIM_IsRdfAbout}, {@code Profile}, {@code tagged}, {@code style}, {@code
-     * package_name}, {@code date_created}, {@code tpos} and {@code date_modified} carry one, and
-     * none of the eleven stereotypes a release does emit does. Only {@code IsBasedOn} hides, which
-     * is why it is named instead.
+     * Measured across a released full model: all nine of {@code GUIDBasedOn}, {@code
+     * CIM_IsRdfAbout}, {@code Profile}, {@code tagged}, {@code style}, {@code package_name}, {@code
+     * date_created}, {@code tpos} and {@code date_modified} carry one, and none of the eleven
+     * stereotypes a release does emit does. {@code IsBasedOn} hides, which is why it is named
+     * instead, and so do the Whiteboard profile's decorations, which are left out by profile.
      */
     private boolean statesAValue(XMLStreamReader reader, String stereotype) {
         return XmiStreams.attribute(reader, stereotype) != null;
