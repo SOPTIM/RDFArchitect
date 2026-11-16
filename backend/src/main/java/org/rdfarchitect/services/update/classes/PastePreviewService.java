@@ -60,7 +60,7 @@ public class PastePreviewService implements PastePreviewUseCase {
             return PastePreviewResponseDTO.empty();
         }
 
-        var references = referenceResolver.resolve(resolvedSources);
+        var references = referenceResolver.resolve(resolvedSources, targetGraphIdentifier);
         var pastedUris =
                 resolvedSources.stream()
                         .map(resolvedSource -> resolvedSource.cimClass().getUri())
