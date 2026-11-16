@@ -248,11 +248,16 @@ class ImportJob implements GraphImportListener {
                 file.state = FileState.FAILED;
             } else if (file.state == FileState.PENDING) {
                 file.state = FileState.SKIPPED;
+            } else if (kind == ImportKind.PACKAGE_IMPORT && file.state == FileState.IMPORTED) {
+                // Built, not stored: a package import stores everything in one transaction at the
+                // end, so a job that fails has stored nothing.
+                file.state = FileState.FAILED;
+                file.graphUri = null;
             }
         }
         // The outcome died with the exception, but every file that made it through reported how it
-        // ended, so what the job did manage to do is still recoverable from the progress. A scan
-        // recovers nothing, having stored nothing in the first place.
+        // ended, so what a graph import did manage to do is still recoverable from the progress. A
+        // package import or a scan recovers nothing, having stored nothing.
         outcome =
                 switch (kind) {
                     case GRAPH_IMPORT ->
