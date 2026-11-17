@@ -189,12 +189,12 @@ public class SessionDataStoreImpl implements SessionDataStore {
     public boolean containsGraph(GraphIdentifier graphIdentifier) {
         var workspace = findWorkspace(graphIdentifier.workspaceName());
         return workspace != null
-                && workspace.listGraphNames().contains(graphIdentifier.graphName());
+                && workspace.listSchemaNames().contains(graphIdentifier.schemaName());
     }
 
     @Override
-    public List<String> listGraphNames(String workspaceName) {
-        return workspace(workspaceName).listGraphNames();
+    public List<String> listSchemaNames(String workspaceName) {
+        return workspace(workspaceName).listSchemaNames();
     }
 
     @Override
@@ -209,13 +209,13 @@ public class SessionDataStoreImpl implements SessionDataStore {
     public void writeToDatabase(
             DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier) {
         final String workspaceName = graphIdentifier.workspaceName();
-        final String graphName = graphIdentifier.graphName();
+        final String schemaName = graphIdentifier.schemaName();
         assertThatGraphExists(graphIdentifier);
         try (var transaction = beginTransaction(workspaceName, ReadWrite.READ)) {
             var graphSource =
                     new GraphSourceBuilderImpl()
-                            .setGraph(transaction.graph(graphName).getRdfGraph())
-                            .setGraphName(graphName)
+                            .setGraph(transaction.graph(schemaName).getRdfGraph())
+                            .setGraphName(schemaName)
                             .build();
             databaseConnection.insertGraph(graphSource, workspaceName);
         }
@@ -292,9 +292,9 @@ public class SessionDataStoreImpl implements SessionDataStore {
         dataset.setDefaultModel(ModelFactory.createModelForGraph(graph));
         // named
         while (queryResultSet.hasNext()) {
-            var graphName = queryResultSet.next().get(graphVar).asNode();
-            graph = fetchGraph(databaseConnection, workspaceName, graphName.getURI());
-            dataset.addNamedModel(graphName.getURI(), ModelFactory.createModelForGraph(graph));
+            var schemaName = queryResultSet.next().get(graphVar).asNode();
+            graph = fetchGraph(databaseConnection, workspaceName, schemaName.getURI());
+            dataset.addNamedModel(schemaName.getURI(), ModelFactory.createModelForGraph(graph));
         }
         return dataset;
     }
@@ -304,14 +304,14 @@ public class SessionDataStoreImpl implements SessionDataStore {
      *
      * @param databaseConnection The connection to the external Database.
      * @param workspaceName The name of the dataset.
-     * @param graphName The graphName.
+     * @param schemaName The schemaName.
      * @return fetched {@link Graph}
      */
     private Graph fetchGraph(
-            DatabaseConnection databaseConnection, String workspaceName, String graphName) {
+            DatabaseConnection databaseConnection, String workspaceName, String schemaName) {
         var query =
                 new CIMBaseQueryBuilder()
-                        .setGraph(graphName)
+                        .setGraph(schemaName)
                         .build()
                         .addVar("?sub")
                         .addVar("?pre")
@@ -366,10 +366,10 @@ public class SessionDataStoreImpl implements SessionDataStore {
      */
     private void assertThatGraphExists(GraphIdentifier graphIdentifier) {
         final String workspaceName = graphIdentifier.workspaceName();
-        final String graphName = graphIdentifier.graphName();
-        if (!workspace(workspaceName).listGraphNames().contains(graphName)) {
+        final String schemaName = graphIdentifier.schemaName();
+        if (!workspace(workspaceName).listSchemaNames().contains(schemaName)) {
             throw new ResourceNotFoundException(
-                    "Graph " + graphName + " does not exist in workspace " + workspaceName);
+                    "Graph " + schemaName + " does not exist in workspace " + workspaceName);
         }
     }
 }

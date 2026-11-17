@@ -29,19 +29,20 @@ import java.util.UUID;
 
 public class CIMClassCategory extends CIMResource implements ICIMClassCategory {
 
-    public CIMClassCategory(String graphName, Model model, UUID uuid) {
-        super(graphName, model, uuid);
+    public CIMClassCategory(String schemaName, Model model, UUID uuid) {
+        super(schemaName, model, uuid);
     }
 
-    public CIMClassCategory(String graphName, Model model, Resource resource) {
-        super(graphName, model, resource);
+    public CIMClassCategory(String schemaName, Model model, Resource resource) {
+        super(schemaName, model, resource);
     }
 
-    public static ICIMClassCategory fromResource(String graphName, Model model, Resource resource) {
+    public static ICIMClassCategory fromResource(
+            String schemaName, Model model, Resource resource) {
         if (resource == null) {
-            return new DefaultCIMClassCategory(graphName, model);
+            return new DefaultCIMClassCategory(schemaName, model);
         }
-        return new CIMClassCategory(graphName, model, resource);
+        return new CIMClassCategory(schemaName, model, resource);
     }
 
     @Override
@@ -60,7 +61,7 @@ public class CIMClassCategory extends CIMResource implements ICIMClassCategory {
                         .toList();
         var classes = new ArrayList<ICIMClass>();
         for (var resource : resourcesInPackage) {
-            classes.add(CIMClass.fromResource(getGraphName(), getModel(), resource));
+            classes.add(CIMClass.fromResource(getSchemaName(), getModel(), resource));
         }
         return classes;
     }

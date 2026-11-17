@@ -399,7 +399,7 @@ class ExportAsciiDocServiceTest {
     }
 
     @Test
-    void exportGraphAsAsciiDoc_graphNameStartingWithDigit_producesValidIdentifier() {
+    void exportGraphAsAsciiDoc_schemaNameStartingWithDigit_producesValidIdentifier() {
         var graphIdentifier = new GraphIdentifier("dataset", "http://example.com/ns/3.0");
         var clazz =
                 classBuilder("MyClass").stereotypes(List.of(CIMStereotypes.concreteString)).build();

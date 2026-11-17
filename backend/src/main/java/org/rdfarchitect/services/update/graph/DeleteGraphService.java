@@ -40,13 +40,13 @@ public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCa
     public void deleteGraph(GraphIdentifier graphIdentifier) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            transaction.deleteGraph(graphIdentifier.graphName());
+            transaction.deleteGraph(graphIdentifier.schemaName());
             syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.workspaceName());
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Deleted",
                             "schema",
-                            ChangeDescriptions.localName(graphIdentifier.graphName())));
+                            ChangeDescriptions.localName(graphIdentifier.schemaName())));
         }
     }
 
@@ -58,19 +58,19 @@ public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCa
                         ? GraphFactory.createDefaultGraph()
                         : new GraphFileSourceBuilderImpl()
                                 .setFile(file)
-                                .setGraphName(graphIdentifier.graphName())
+                                .setGraphName(graphIdentifier.schemaName())
                                 .build()
                                 .graph();
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            transaction.deleteGraph(graphIdentifier.graphName());
-            transaction.createGraph(graphIdentifier.graphName(), graph);
+            transaction.deleteGraph(graphIdentifier.schemaName());
+            transaction.createGraph(graphIdentifier.schemaName(), graph);
             syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.workspaceName());
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Replaced",
                             "schema",
-                            ChangeDescriptions.localName(graphIdentifier.graphName())));
+                            ChangeDescriptions.localName(graphIdentifier.schemaName())));
         }
     }
 }

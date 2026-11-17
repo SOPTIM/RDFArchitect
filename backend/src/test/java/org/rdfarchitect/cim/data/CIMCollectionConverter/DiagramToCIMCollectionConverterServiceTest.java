@@ -114,10 +114,10 @@ class DiagramToCIMCollectionConverterServiceTest {
 
     @Test
     void convert_datasetDiagramSingleGraph_returnsCIMCollection() {
-        var graphName = new URI("http://example.org#graph");
+        var schemaName = new URI("http://example.org#graph");
 
-        var class1 = new ClassInDiagram(UUID.randomUUID(), graphName);
-        var class2 = new ClassInDiagram(UUID.randomUUID(), graphName);
+        var class1 = new ClassInDiagram(UUID.randomUUID(), schemaName);
+        var class2 = new ClassInDiagram(UUID.randomUUID(), schemaName);
 
         var diagramId = UUID.randomUUID();
         var diagram = new CustomDiagram(diagramId);
@@ -215,7 +215,7 @@ class DiagramToCIMCollectionConverterServiceTest {
 
         var identifiers = captor.getAllValues();
         assertThat(identifiers)
-                .extracting(GraphIdentifier::graphName)
+                .extracting(GraphIdentifier::schemaName)
                 .containsExactlyInAnyOrder(
                         "http://example.org#graph1", "http://example.org#graph2");
     }

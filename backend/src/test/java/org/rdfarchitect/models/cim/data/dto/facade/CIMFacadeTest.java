@@ -153,7 +153,7 @@ class CIMFacadeTest {
         var breaker = breaker();
 
         assertThat(breaker.getUuid()).isEqualTo(BREAKER_UUID);
-        assertThat(breaker.getGraphName()).isEqualTo(GRAPH_URI);
+        assertThat(breaker.getSchemaName()).isEqualTo(GRAPH_URI);
         assertThat(breaker.getUri().toString()).isEqualTo(NS + "Breaker");
         assertThat(breaker.getLabel().getValue()).isEqualTo("Breaker");
         assertThat(breaker.getLabel().getLang()).isEqualTo("en");

@@ -104,7 +104,7 @@ public class SchemaMigrationService
         Graph updatedGraph;
         try (var transaction =
                 databasePort.beginTransaction(updatedSchema.workspaceName(), ReadWrite.READ)) {
-            var updatedCtx = transaction.graph(updatedSchema.graphName());
+            var updatedCtx = transaction.graph(updatedSchema.schemaName());
             updatedGraph = GraphUtils.deepCopy(updatedCtx.getRdfGraph());
         }
 
@@ -117,14 +117,14 @@ public class SchemaMigrationService
         Graph originalGraph;
         try (var transaction =
                 databasePort.beginTransaction(originalSchema.workspaceName(), ReadWrite.READ)) {
-            var originalCtx = transaction.graph(originalSchema.graphName());
+            var originalCtx = transaction.graph(originalSchema.schemaName());
             originalGraph = GraphUtils.deepCopy(originalCtx.getRdfGraph());
         }
 
         Graph updatedGraph;
         try (var transaction =
                 databasePort.beginTransaction(updatedSchema.workspaceName(), ReadWrite.READ)) {
-            var updatedCtx = transaction.graph(updatedSchema.graphName());
+            var updatedCtx = transaction.graph(updatedSchema.schemaName());
             updatedGraph = GraphUtils.deepCopy(updatedCtx.getRdfGraph());
         }
 
@@ -137,7 +137,7 @@ public class SchemaMigrationService
         Graph originalGraph;
         try (var transaction =
                 databasePort.beginTransaction(originalSchema.workspaceName(), ReadWrite.READ)) {
-            var originalCtx = transaction.graph(originalSchema.graphName());
+            var originalCtx = transaction.graph(originalSchema.schemaName());
             originalGraph = GraphUtils.deepCopy(originalCtx.getRdfGraph());
         }
 

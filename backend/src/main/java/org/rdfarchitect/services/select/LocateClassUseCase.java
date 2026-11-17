@@ -22,7 +22,7 @@ import java.util.UUID;
 public interface LocateClassUseCase {
 
     /** A class of one graph of the dataset. */
-    record LocatedClass(String graphName, String classUri, UUID classUUID) {}
+    record LocatedClass(String schemaName, String classUri, UUID classUUID) {}
 
     /**
      * Finds the class a uuid stands for. The uuid is either the one a class carries in one of the

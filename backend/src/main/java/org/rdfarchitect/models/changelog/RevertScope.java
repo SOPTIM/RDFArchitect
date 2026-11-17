@@ -30,12 +30,12 @@ import java.util.stream.Collectors;
  * layout and the shapes where they are would leave both describing classes that no longer exist,
  * and nothing cleans that up.
  *
- * @param graphNames the graphs to put back, or empty for the whole workspace
+ * @param schemaNames the graphs to put back, or empty for the whole workspace
  */
-public record RevertScope(Set<String> graphNames) {
+public record RevertScope(Set<String> schemaNames) {
 
     public RevertScope {
-        graphNames = Set.copyOf(graphNames);
+        schemaNames = Set.copyOf(schemaNames);
     }
 
     /** Returns the scope that holds nothing back. */
@@ -46,11 +46,11 @@ public record RevertScope(Set<String> graphNames) {
     /**
      * Returns the scope covering only the given graphs.
      *
-     * @param graphNames the graphs to put back
+     * @param schemaNames the graphs to put back
      * @return the scope
      */
-    public static RevertScope ofGraphs(String... graphNames) {
-        return new RevertScope(Set.of(graphNames));
+    public static RevertScope ofGraphs(String... schemaNames) {
+        return new RevertScope(Set.of(schemaNames));
     }
 
     /**
@@ -67,12 +67,12 @@ public record RevertScope(Set<String> graphNames) {
      * @return whether it is covered
      */
     public boolean covers(ParticipantId id) {
-        return graphNames.isEmpty() || (id.isGraphScoped() && graphNames.contains(id.scope()));
+        return schemaNames.isEmpty() || (id.isGraphScoped() && schemaNames.contains(id.scope()));
     }
 
     /** Returns whether this scope holds nothing back. */
     public boolean isEverything() {
-        return graphNames.isEmpty();
+        return schemaNames.isEmpty();
     }
 
     /**
@@ -86,12 +86,12 @@ public record RevertScope(Set<String> graphNames) {
             return "the workspace";
         }
         var names =
-                graphNames.stream()
+                schemaNames.stream()
                         .map(RevertScope::localName)
                         .sorted()
                         .map("\"%s\""::formatted)
                         .collect(Collectors.joining(", "));
-        return (graphNames.size() == 1 ? "schema " : "schemas ") + names;
+        return (schemaNames.size() == 1 ? "schema " : "schemas ") + names;
     }
 
     /** The part of a graph URI after its last {@code #} or {@code /}, as the import names it. */

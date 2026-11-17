@@ -103,7 +103,7 @@ class LazyDiagramLayoutTest {
                 new ImportGraphsService(databasePort)
                         .importGraphs("ds", List.of(file), null, ImportProgressListener.NOOP);
         assertThat(result.failedFileNames()).isEmpty();
-        graphIdentifier = new GraphIdentifier("ds", result.importedGraphNames().getFirst());
+        graphIdentifier = new GraphIdentifier("ds", result.importedSchemaNames().getFirst());
     }
 
     @Test
@@ -229,7 +229,7 @@ class LazyDiagramLayoutTest {
             return ModelFactory.createDefaultModel()
                     .add(
                             transaction
-                                    .graph(identifier.graphName())
+                                    .graph(identifier.schemaName())
                                     .getDiagramLayout()
                                     .getDiagramLayoutModel());
         }

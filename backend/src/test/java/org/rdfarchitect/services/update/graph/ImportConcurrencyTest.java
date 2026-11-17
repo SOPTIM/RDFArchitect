@@ -96,7 +96,7 @@ class ImportConcurrencyTest {
                                     try (var transaction =
                                             databasePort.beginTransaction(
                                                     WORKSPACE, ReadWrite.READ)) {
-                                        transaction.graphNames();
+                                        transaction.schemaNames();
                                         readSucceeded.set(true);
                                     }
                                 } catch (Throwable t) {
@@ -117,7 +117,7 @@ class ImportConcurrencyTest {
                     .as("a read transaction while the import was parsing")
                     .isTrue();
             assertThat(result.failedFileNames()).isEmpty();
-            assertThat(databasePort.listGraphNames(WORKSPACE)).hasSize(1);
+            assertThat(databasePort.listSchemaNames(WORKSPACE)).hasSize(1);
         } finally {
             new GraphCompressionConfig().setLockTimeoutSeconds(originalTimeout);
         }
@@ -173,13 +173,13 @@ class ImportConcurrencyTest {
                         List.of("http://example.org/one", "http://example.org/two"),
                         ImportProgressListener.NOOP);
 
-        assertThat(result.importedGraphNames()).hasSize(2);
+        assertThat(result.importedSchemaNames()).hasSize(2);
         assertThat(databasePort.listChanges(WORKSPACE))
                 .first()
                 .satisfies(
                         entry -> {
                             assertThat(entry.message()).isEqualTo("Imported 2 schemas");
-                            assertThat(entry.affectedGraphNames()).hasSize(2);
+                            assertThat(entry.affectedSchemaNames()).hasSize(2);
                         });
     }
 
@@ -196,7 +196,7 @@ class ImportConcurrencyTest {
 
         databasePort.undo(WORKSPACE);
 
-        assertThat(databasePort.listGraphNames(WORKSPACE)).isEmpty();
+        assertThat(databasePort.listSchemaNames(WORKSPACE)).isEmpty();
     }
 
     /**

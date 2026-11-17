@@ -65,8 +65,8 @@ public class InMemorySnapshotAdapter implements SnapshotPort {
         var graphsByUri = new LinkedHashMap<String, Graph>();
         PrefixMapping prefixMapping;
         try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
-            for (var graphName : transaction.graphNames()) {
-                graphsByUri.put(graphName, copyGraph(transaction.graph(graphName).getRdfGraph()));
+            for (var schemaName : transaction.schemaNames()) {
+                graphsByUri.put(schemaName, copyGraph(transaction.graph(schemaName).getRdfGraph()));
             }
             prefixMapping = new PrefixMappingImpl().setNsPrefixes(transaction.prefixes());
         }

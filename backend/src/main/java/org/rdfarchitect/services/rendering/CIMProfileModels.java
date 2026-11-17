@@ -38,32 +38,32 @@ public final class CIMProfileModels {
     /**
      * Loads every graph of the dataset as a {@link CIMProfileModel}, optionally skipping one graph.
      *
-     * @param excludedGraphName graph to leave out, or null to load all of them
+     * @param excludedSchemaName graph to leave out, or null to load all of them
      */
     public static List<CIMProfileModel> loadAll(
             DatabasePort databasePort,
-            Map<String, String> keywordsByGraphName,
+            Map<String, String> keywordsBySchemaName,
             String workspaceName,
-            String excludedGraphName) {
+            String excludedSchemaName) {
         var profiles = new ArrayList<CIMProfileModel>();
         try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
-            for (var graphName : transaction.graphNames()) {
-                if (graphName.equals(excludedGraphName)) {
+            for (var schemaName : transaction.schemaNames()) {
+                if (schemaName.equals(excludedSchemaName)) {
                     continue;
                 }
                 profiles.add(
                         load(
                                 databasePort,
                                 workspaceName,
-                                graphName,
-                                keywordsByGraphName.get(graphName)));
+                                schemaName,
+                                keywordsBySchemaName.get(schemaName)));
             }
         }
         return profiles;
     }
 
     /** Maps each graph of the dataset to its {@code dcat:keyword} short name. */
-    public static Map<String, String> keywordsByGraphName(
+    public static Map<String, String> keywordsBySchemaName(
             ListGraphsUseCase listGraphsUseCase, String workspaceName) {
         var keywords = new HashMap<String, String>();
         for (var graph : listGraphsUseCase.listGraphs(workspaceName)) {
@@ -79,17 +79,17 @@ public final class CIMProfileModels {
      * and tagging it with its cross-profile color and short name.
      */
     private static CIMProfileModel load(
-            DatabasePort databasePort, String workspaceName, String graphName, String keyword) {
-        var graphIdentifier = new GraphIdentifier(workspaceName, graphName);
+            DatabasePort databasePort, String workspaceName, String schemaName, String keyword) {
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
         Graph graphCopy;
         String color;
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            graphCopy = GraphUtils.deepCopy(transaction.graph(graphName).getRdfGraph());
-            color = transaction.crossProfileColors().getColor(graphName);
+            graphCopy = GraphUtils.deepCopy(transaction.graph(schemaName).getRdfGraph());
+            color = transaction.crossProfileColors().getColor(schemaName);
         }
 
-        var model = new CIMModelFacade(graphName, ModelFactory.createModelForGraph(graphCopy));
-        return new CIMProfileModel(graphName, color, keyword, model);
+        var model = new CIMModelFacade(schemaName, ModelFactory.createModelForGraph(graphCopy));
+        return new CIMProfileModel(schemaName, color, keyword, model);
     }
 }

@@ -92,7 +92,7 @@ public interface ImportJobUseCase {
      *
      * @return the id of the started job, to be passed to {@link #getStatus(UUID)}
      */
-    UUID startImport(String workspaceName, List<MultipartFile> files, List<String> graphNames);
+    UUID startImport(String workspaceName, List<MultipartFile> files, List<String> schemaNames);
 
     /** The current progress of the job, or empty if the session has no such job for the dataset. */
     Optional<ImportJobStatus> getStatus(String workspaceName, UUID jobId);

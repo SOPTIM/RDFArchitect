@@ -37,18 +37,18 @@ public class InMemorySparqlExecutor {
      * @param databasePort the database to read from
      * @param graphIdentifier identifies workspace and graph
      * @param query the query to run
-     * @param graphName the name to expose the graph under, or {@code null} for the default graph
+     * @param schemaName the name to expose the graph under, or {@code null} for the default graph
      * @return the query result
      */
     public ResultSet executeSingleQuery(
             DatabasePort databasePort,
             GraphIdentifier graphIdentifier,
             Query query,
-            String graphName) {
+            String schemaName) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var graph = transaction.graph(graphIdentifier.graphName()).getRdfGraph();
-            var dataset = SessionDataStore.wrapGraphInDataset(graph, graphName);
+            var graph = transaction.graph(graphIdentifier.schemaName()).getRdfGraph();
+            var dataset = SessionDataStore.wrapGraphInDataset(graph, schemaName);
             try (var queryExecution = QueryExecutionFactory.create(query, dataset)) {
                 var resultSet = queryExecution.execSelect();
                 return ResultSetFactory.copyResults(resultSet);

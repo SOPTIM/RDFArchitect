@@ -65,7 +65,7 @@ public class ImportJobService implements ImportJobUseCase {
 
     @Override
     public UUID startImport(
-            String workspaceName, List<MultipartFile> files, List<String> graphNames) {
+            String workspaceName, List<MultipartFile> files, List<String> schemaNames) {
         dropExpiredJobs();
 
         var sessionId = SessionContext.getSessionId();
@@ -90,7 +90,7 @@ public class ImportJobService implements ImportJobUseCase {
             // The servlet container deletes the temporary files of the request once its response
             // is sent, so the job has to take over the uploaded content before that happens.
             var ownedFiles = copyOf(files);
-            executor.execute(() -> runImport(job, ownedFiles, graphNames, userSettings));
+            executor.execute(() -> runImport(job, ownedFiles, schemaNames, userSettings));
             started = true;
         } finally {
             if (!started) {
@@ -151,7 +151,7 @@ public class ImportJobService implements ImportJobUseCase {
     private void runImport(
             ImportJob job,
             List<MultipartFile> files,
-            List<String> graphNames,
+            List<String> schemaNames,
             UserSettings userSettings) {
         // Both contexts live in thread locals that the request thread filled in, and the database
         // is looked up per session, so they have to be re-established on this thread.
@@ -160,12 +160,12 @@ public class ImportJobService implements ImportJobUseCase {
         try {
             var result =
                     importGraphsUseCase.importGraphs(
-                            job.getWorkspaceName(), files, graphNames, job);
+                            job.getWorkspaceName(), files, schemaNames, job);
             job.complete(result);
             logger.info(
                     "Import job {} finished: {} graph(s) imported, {} file(s) failed.",
                     job.getId(),
-                    result.importedGraphNames().size(),
+                    result.importedSchemaNames().size(),
                     result.failedFileNames().size());
         } catch (Throwable throwable) {
             logger.error("Import job {} failed.", job.getId(), throwable);

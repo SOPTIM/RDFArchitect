@@ -48,7 +48,7 @@ public class SchemaValidationService implements SchemaValidationUseCase {
         ValidationReportDTO report;
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
 

@@ -281,7 +281,7 @@ class EdgeLayoutConsistencyTest {
                 new ImportGraphsService(databasePort)
                         .importGraphs(DATASET, List.of(file), null, ImportProgressListener.NOOP);
         assertThat(result.failedFileNames()).isEmpty();
-        return new GraphIdentifier(DATASET, result.importedGraphNames().getFirst());
+        return new GraphIdentifier(DATASET, result.importedSchemaNames().getFirst());
     }
 
     private void layoutAllPackages() {
@@ -381,10 +381,10 @@ class EdgeLayoutConsistencyTest {
     private Map<UUID, Set<UUID>> associationEndpointsOfEquipment() {
         try (var transaction =
                 databasePort.beginTransaction(equipment.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(equipment.graphName());
+            var ctx = transaction.graph(equipment.schemaName());
             var model =
                     new CIMModelFacade(
-                            equipment.graphName(),
+                            equipment.schemaName(),
                             ModelFactory.createModelForGraph(ctx.getRdfGraph()));
             var endpoints = new HashMap<UUID, Set<UUID>>();
             for (var cimClass : model.getCIMClasses()) {
@@ -471,7 +471,7 @@ class EdgeLayoutConsistencyTest {
             return ModelFactory.createDefaultModel()
                     .add(
                             transaction
-                                    .graph(equipment.graphName())
+                                    .graph(equipment.schemaName())
                                     .getDiagramLayout()
                                     .getDiagramLayoutModel());
         }
@@ -496,10 +496,10 @@ class EdgeLayoutConsistencyTest {
     private SchemaClass classOf(String label) {
         try (var transaction =
                 databasePort.beginTransaction(equipment.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(equipment.graphName());
+            var ctx = transaction.graph(equipment.schemaName());
             var model =
                     new CIMModelFacade(
-                            equipment.graphName(),
+                            equipment.schemaName(),
                             ModelFactory.createModelForGraph(ctx.getRdfGraph()));
             var cimClass =
                     model.getCIMClasses().stream()
@@ -525,7 +525,7 @@ class EdgeLayoutConsistencyTest {
     private void editSchema(Consumer<Model> edit) {
         try (var transaction =
                 databasePort.beginTransaction(equipment.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(equipment.graphName());
+            var ctx = transaction.graph(equipment.schemaName());
             edit.accept(ModelFactory.createModelForGraph(ctx.getRdfGraph()));
             transaction.commit("edit schema");
         }

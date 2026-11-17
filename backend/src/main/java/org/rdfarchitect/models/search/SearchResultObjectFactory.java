@@ -42,7 +42,7 @@ public class SearchResultObjectFactory {
     /**
      * Creates a List of {@link SearchResult SearchResults} .
      *
-     * @param graphIdentifier {@link GraphIdentifier} with workspaceName and graphName of the graph
+     * @param graphIdentifier {@link GraphIdentifier} with workspaceName and schemaName of the graph
      *     to be searched.
      * @param queryResultSet {@link ResultSet} with results bound to variables from {@link
      *     CIMQueryVars CIMQueryVars}.
@@ -60,7 +60,7 @@ public class SearchResultObjectFactory {
     /**
      * Creates a {@link SearchResult} from a given graph, prefixMapping, and querySolution.
      *
-     * @param graphIdentifier {@link GraphIdentifier} with workspaceName and graphName of the graph
+     * @param graphIdentifier {@link GraphIdentifier} with workspaceName and schemaName of the graph
      *     to be searched.
      * @param querySolution {@link QuerySolution} with results bound to variables from {@link
      *     CIMQueryVars CIMQueryVars}.
@@ -132,7 +132,7 @@ public class SearchResultObjectFactory {
 
         return SearchResult.builder()
                 .workspaceName(graphIdentifier.workspaceName())
-                .schemaName(graphIdentifier.graphName())
+                .schemaName(graphIdentifier.schemaName())
                 .uri(parser.getURI(CIMQueryVars.URI))
                 .uuid(parser.getUUID(CIMQueryVars.UUID))
                 .label(parser.getLabel(CIMQueryVars.LABEL))

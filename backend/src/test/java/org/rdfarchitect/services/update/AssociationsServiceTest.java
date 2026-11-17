@@ -143,7 +143,7 @@ class AssociationsServiceTest {
     private void assertBothDirectionsArePresent() {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             assertThat(graph.contains(ASSOCIATION, RDF.type.asNode(), RDF.Property.asNode()))
                     .isTrue();

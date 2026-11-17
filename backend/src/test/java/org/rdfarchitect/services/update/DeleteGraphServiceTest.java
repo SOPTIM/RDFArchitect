@@ -53,7 +53,7 @@ class DeleteGraphServiceTest {
     void deleteGraph_callsDeleteGraph() {
         var graphIdentifier = new GraphIdentifier("default", "http://example.com/graph");
         deleteGraphService.deleteGraph(graphIdentifier);
-        verify(transaction).deleteGraph(graphIdentifier.graphName());
+        verify(transaction).deleteGraph(graphIdentifier.schemaName());
         verify(transaction).commit(anyString());
     }
 
@@ -70,8 +70,8 @@ class DeleteGraphServiceTest {
 
         deleteGraphService.replaceGraph(graphIdentifier, mockFile);
 
-        verify(transaction).deleteGraph(graphIdentifier.graphName());
-        verify(transaction).createGraph(eq(graphIdentifier.graphName()), any(Graph.class));
+        verify(transaction).deleteGraph(graphIdentifier.schemaName());
+        verify(transaction).createGraph(eq(graphIdentifier.schemaName()), any(Graph.class));
     }
 
     @Test
@@ -80,8 +80,8 @@ class DeleteGraphServiceTest {
 
         deleteGraphService.replaceGraph(graphIdentifier, null);
 
-        verify(transaction).deleteGraph(graphIdentifier.graphName());
+        verify(transaction).deleteGraph(graphIdentifier.schemaName());
         verify(transaction)
-                .createGraph(eq(graphIdentifier.graphName()), argThat(graph -> graph.isEmpty()));
+                .createGraph(eq(graphIdentifier.schemaName()), argThat(graph -> graph.isEmpty()));
     }
 }

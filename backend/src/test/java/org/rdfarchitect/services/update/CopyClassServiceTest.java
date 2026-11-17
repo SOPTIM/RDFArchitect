@@ -102,7 +102,7 @@ class CopyClassServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.graphName())
+                        .setGraphName(graphIdentifier.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }
@@ -112,7 +112,7 @@ class CopyClassServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(referenceSourceGraphIdentifier.graphName())
+                        .setGraphName(referenceSourceGraphIdentifier.schemaName())
                         .build();
         TestWorkspaces.createGraph(
                 databasePort, referenceSourceGraphIdentifier, graphSource.graph());
@@ -147,7 +147,7 @@ class CopyClassServiceTest {
     private PasteSourceClassDTO referenceSource(String classUUID) {
         var source = new PasteSourceClassDTO();
         source.setSourceWorkspaceName(referenceSourceGraphIdentifier.workspaceName());
-        source.setSourceSchemaName(referenceSourceGraphIdentifier.graphName());
+        source.setSourceSchemaName(referenceSourceGraphIdentifier.schemaName());
         source.setClassUUID(classUUID);
         return source;
     }
@@ -155,7 +155,7 @@ class CopyClassServiceTest {
     private PasteSourceClassDTO defaultGraphSource(String classUUID) {
         var source = new PasteSourceClassDTO();
         source.setSourceWorkspaceName(graphIdentifier.workspaceName());
-        source.setSourceSchemaName(graphIdentifier.graphName());
+        source.setSourceSchemaName(graphIdentifier.schemaName());
         source.setClassUUID(classUUID);
         return source;
     }
@@ -178,7 +178,7 @@ class CopyClassServiceTest {
 
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             assertThat(
                             ctx.getRdfGraph()
                                     .contains(
@@ -211,7 +211,7 @@ class CopyClassServiceTest {
 
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             assertThat(
                             ctx.getRdfGraph()
                                     .contains(
@@ -242,7 +242,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             var copyUri = NodeFactory.createURI(PREFIX + "oldLabel");
             assertThat(
                             ctx.getRdfGraph()
@@ -273,7 +273,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             var copyUri = NodeFactory.createURI(PREFIX + "oldLabel");
             assertThat(ctx.getRdfGraph().contains(copyUri, RDFS.subClassOf.asNode(), Node.ANY))
                     .isFalse();
@@ -292,7 +292,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             assertThat(containsClass(graph, PREFIX + "BaseClass")).isTrue();
             assertThat(
@@ -334,11 +334,11 @@ class CopyClassServiceTest {
 
         var source = new PasteSourceClassDTO();
         source.setSourceWorkspaceName(graphIdentifier.workspaceName());
-        source.setSourceSchemaName(graphIdentifier.graphName());
+        source.setSourceSchemaName(graphIdentifier.schemaName());
         source.setClassUUID(CLASS_UUID);
         var duplicateSource = new PasteSourceClassDTO();
         duplicateSource.setSourceWorkspaceName(graphIdentifier.workspaceName());
-        duplicateSource.setSourceSchemaName(graphIdentifier.graphName());
+        duplicateSource.setSourceSchemaName(graphIdentifier.schemaName());
         duplicateSource.setClassUUID(CLASS_UUID);
         request.setSources(List.of(source, duplicateSource));
 
@@ -351,7 +351,7 @@ class CopyClassServiceTest {
 
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             assertThat(
                             ctx.getRdfGraph()
                                     .contains(
@@ -387,7 +387,7 @@ class CopyClassServiceTest {
 
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             assertThat(
                             ctx.getRdfGraph()
                                     .contains(
@@ -419,7 +419,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             assertThat(containsClass(ctx.getRdfGraph(), PREFIX + "MyDataType")).isFalse();
             assertThat(containsClass(ctx.getRdfGraph(), PREFIX + "associatedClass")).isFalse();
         }
@@ -434,7 +434,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             assertThat(containsClass(graph, PREFIX + "MyDataType")).isTrue();
             assertThat(
@@ -463,7 +463,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             assertThat(containsClass(graph, PREFIX + "associatedClass")).isTrue();
             assertThat(
@@ -497,7 +497,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             assertThat(containsClass(graph, PREFIX + "MyDataType-Copy")).isFalse();
             assertThat(
@@ -532,7 +532,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             assertThat(containsClass(graph, PREFIX + "associatedClass")).isTrue();
             assertThat(
@@ -556,7 +556,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             assertThat(
                             graph.find(
@@ -583,7 +583,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             assertThat(containsClass(ctx.getRdfGraph(), DATA_TYPE_URI)).isTrue();
             assertThat(containsClass(ctx.getRdfGraph(), OTHER_DATA_TYPE_URI)).isFalse();
         }
@@ -598,7 +598,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             assertThat(containsClass(graph, DATA_TYPE_URI)).isTrue();
             assertThat(containsClass(graph, VALUE_TYPE_URI)).isTrue();
@@ -621,7 +621,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             assertThat(containsClass(ctx.getRdfGraph(), VALUE_TYPE_URI)).isFalse();
         }
     }
@@ -638,7 +638,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             assertThat(containsClass(graph, PREFIX + "MyDataType-Copy")).isFalse();
             assertThat(containsClass(graph, PREFIX + "associatedClass-Copy")).isFalse();
@@ -666,7 +666,7 @@ class CopyClassServiceTest {
 
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             assertThat(
                             ctx.getRdfGraph()
                                     .contains(
@@ -693,7 +693,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             assertThat(containsClass(ctx.getRdfGraph(), PREFIX + "oldLabel")).isFalse();
         }
     }
@@ -713,7 +713,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             assertThat(containsClass(ctx.getRdfGraph(), PREFIX + "oldLabel")).isFalse();
         }
     }
@@ -731,7 +731,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             assertThat(containsClass(ctx.getRdfGraph(), PREFIX + "oldLabel")).isFalse();
         }
     }
@@ -750,7 +750,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             assertThat(containsClass(graph, PREFIX + "oldLabel")).isTrue();
             assertThat(
@@ -780,7 +780,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             assertThat(containsClass(ctx.getRdfGraph(), PREFIX + "oldLabel")).isFalse();
         }
     }
@@ -800,7 +800,7 @@ class CopyClassServiceTest {
         assertThat(responses.get(0).getUuid()).isNotEqualTo(NUMERIC_CLASS_UUID);
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             assertThat(containsClass(ctx.getRdfGraph(), PREFIX + "123-Copy")).isTrue();
         }
     }
@@ -819,7 +819,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             assertThat(
                             graph.contains(
@@ -852,7 +852,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphName());
+            var ctx = transaction.graph(targetGraphIdentifier.schemaName());
             assertThat(
                             ctx.getRdfGraph()
                                     .contains(
@@ -867,7 +867,7 @@ class CopyClassServiceTest {
             GraphIdentifier graph, String classUri, String label, String classUUID) {
         try (var transaction =
                 databasePort.beginTransaction(graph.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graph.graphName());
+            var ctx = transaction.graph(graph.schemaName());
             var classNode = NodeFactory.createURI(classUri);
             ctx.getRdfGraph().add(classNode, RDF.type.asNode(), RDFS.Class.asNode());
             ctx.getRdfGraph()
@@ -890,7 +890,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         referenceSourceGraphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(referenceSourceGraphIdentifier.graphName());
+            var ctx = transaction.graph(referenceSourceGraphIdentifier.schemaName());
             var subject = NodeFactory.createURI(subjectUri);
             ctx.getRdfGraph()
                     .find(subject, Node.ANY, Node.ANY)
@@ -909,7 +909,7 @@ class CopyClassServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         referenceSourceGraphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(referenceSourceGraphIdentifier.graphName());
+            var ctx = transaction.graph(referenceSourceGraphIdentifier.schemaName());
             ctx.getRdfGraph().remove(NodeFactory.createURI(subjectUri), predicate, object);
             transaction.commit("Removed a triple for the test.");
         }

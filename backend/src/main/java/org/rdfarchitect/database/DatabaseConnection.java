@@ -82,17 +82,17 @@ public interface DatabaseConnection {
     /**
      * Deletes a specific graph from the default dataset of the database.
      *
-     * @param graphName Name of the graph to be deleted
+     * @param schemaName Name of the graph to be deleted
      */
-    void deleteGraph(String graphName) throws DataAccessException;
+    void deleteGraph(String schemaName) throws DataAccessException;
 
     /**
      * Deletes a specific graph from a specific dataset of the database.
      *
-     * @param graphName Name of the graph to be deleted
+     * @param schemaName Name of the graph to be deleted
      * @param workspaceName Name of the dataset
      */
-    void deleteGraph(String workspaceName, String graphName) throws DataAccessException;
+    void deleteGraph(String workspaceName, String schemaName) throws DataAccessException;
 
     /** Deletes the default graph from the default dataset of the database. */
     void deleteDefaultGraph() throws DataAccessException;

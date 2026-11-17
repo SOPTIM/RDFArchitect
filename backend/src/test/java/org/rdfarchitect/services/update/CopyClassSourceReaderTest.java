@@ -67,7 +67,7 @@ class CopyClassSourceReaderTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.graphName())
+                        .setGraphName(graphIdentifier.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }

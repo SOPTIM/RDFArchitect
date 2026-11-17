@@ -45,12 +45,12 @@ class GraphCollection extends SnapshotParticipant<Map<String, GraphWithContext>>
         super(txnContext);
     }
 
-    GraphWithContext get(String graphName) {
-        return graphs.get(graphName);
+    GraphWithContext get(String schemaName) {
+        return graphs.get(schemaName);
     }
 
-    boolean contains(String graphName) {
-        return graphs.containsKey(graphName);
+    boolean contains(String schemaName) {
+        return graphs.containsKey(schemaName);
     }
 
     List<String> uris() {
@@ -85,19 +85,19 @@ class GraphCollection extends SnapshotParticipant<Map<String, GraphWithContext>>
         return Collections.unmodifiableMap(versionsBack == 0 ? graphs : stateAt(versionsBack));
     }
 
-    void put(String graphName, GraphWithContext graph) {
+    void put(String schemaName, GraphWithContext graph) {
         beginChange();
-        graphs.put(graphName, graph);
+        graphs.put(schemaName, graph);
     }
 
-    void remove(String graphName) {
+    void remove(String schemaName) {
         beginChange();
-        graphs.remove(graphName);
+        graphs.remove(schemaName);
     }
 
-    void rename(String oldGraphName, String newGraphName) {
+    void rename(String oldSchemaName, String newSchemaName) {
         beginChange();
-        graphs.put(newGraphName, graphs.remove(oldGraphName));
+        graphs.put(newSchemaName, graphs.remove(oldSchemaName));
     }
 
     @Override
@@ -135,7 +135,7 @@ class GraphCollection extends SnapshotParticipant<Map<String, GraphWithContext>>
             Map<String, GraphWithContext> before, Map<String, GraphWithContext> after) {
         return Stream.concat(before.keySet().stream(), after.keySet().stream())
                 .distinct()
-                .filter(graphName -> before.get(graphName) != after.get(graphName))
+                .filter(schemaName -> before.get(schemaName) != after.get(schemaName))
                 .toList();
     }
 }

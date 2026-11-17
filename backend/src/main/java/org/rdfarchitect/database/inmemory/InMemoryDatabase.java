@@ -173,10 +173,10 @@ public interface InMemoryDatabase {
      * List all graphs contained in a specified Dataset
      *
      * @param workspaceName The name of the dataset.
-     * @return A list of GraphNames
+     * @return A list of SchemaNames
      * @throws DataAccessException if the dataset does not exist.
      */
-    List<String> listGraphNames(String workspaceName);
+    List<String> listSchemaNames(String workspaceName);
 
     /**
      * Lists the prefixes belonging to a specified dataset.

@@ -68,7 +68,7 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
             GraphIdentifier graphIdentifier, List<ResourceDeleteRequest> deleteRequests) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var deleteCount =
                     deleteRequests.stream()
                             .filter(r -> r.getAction() == DeleteAction.DELETE)

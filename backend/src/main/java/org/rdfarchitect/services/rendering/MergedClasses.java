@@ -44,7 +44,7 @@ public final class MergedClasses {
     public static Set<String> renderedClassUris(
             List<CIMProfileModel> profiles, List<ClassInDiagram> classesInDiagram) {
         return new LinkedHashSet<>(
-                classUriByUuid(classesInDiagram, modelsByGraphName(profiles)).values());
+                classUriByUuid(classesInDiagram, modelsBySchemaName(profiles)).values());
     }
 
     /**
@@ -52,13 +52,14 @@ public final class MergedClasses {
      * their graph. Only the classes of the diagram are read, not those of the whole graph.
      */
     public static Map<UUID, String> classUriByUuid(
-            List<ClassInDiagram> classesInDiagram, Map<String, ICIMModelFacade> modelsByGraphName) {
+            List<ClassInDiagram> classesInDiagram,
+            Map<String, ICIMModelFacade> modelsBySchemaName) {
         var classUriByUuid = new LinkedHashMap<UUID, String>();
         for (var classInDiagram : classesInDiagram) {
             if (classInDiagram.getSchemaName() == null || classInDiagram.getUuid() == null) {
                 continue;
             }
-            var model = modelsByGraphName.get(classInDiagram.getSchemaName().toString());
+            var model = modelsBySchemaName.get(classInDiagram.getSchemaName().toString());
             if (model == null) {
                 continue;
             }
@@ -70,11 +71,11 @@ public final class MergedClasses {
         return classUriByUuid;
     }
 
-    private static Map<String, ICIMModelFacade> modelsByGraphName(List<CIMProfileModel> profiles) {
-        var modelsByGraphName = new HashMap<String, ICIMModelFacade>();
+    private static Map<String, ICIMModelFacade> modelsBySchemaName(List<CIMProfileModel> profiles) {
+        var modelsBySchemaName = new HashMap<String, ICIMModelFacade>();
         for (var profile : profiles) {
-            modelsByGraphName.putIfAbsent(profile.graphName(), profile.model());
+            modelsBySchemaName.putIfAbsent(profile.schemaName(), profile.model());
         }
-        return modelsByGraphName;
+        return modelsBySchemaName;
     }
 }

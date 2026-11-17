@@ -31,17 +31,17 @@ import java.util.UUID;
 
 public class ExternalCIMClass implements ICIMClass {
 
-    private final String graphName;
+    private final String schemaName;
 
     private final Model model;
 
     private final Resource resource;
 
-    public ExternalCIMClass(String graphName, Model model, Resource resource) {
+    public ExternalCIMClass(String schemaName, Model model, Resource resource) {
         if (!resource.isURIResource()) {
             throw new IllegalStateException("External class resource is not an URI resource.");
         }
-        this.graphName = graphName;
+        this.schemaName = schemaName;
         this.model = model;
         this.resource = resource;
     }
@@ -60,8 +60,8 @@ public class ExternalCIMClass implements ICIMClass {
     }
 
     @Override
-    public String getGraphName() {
-        return graphName;
+    public String getSchemaName() {
+        return schemaName;
     }
 
     @Override
@@ -103,7 +103,7 @@ public class ExternalCIMClass implements ICIMClass {
 
     @Override
     public List<ICIMClass> getSubClasses() {
-        return CIMClass.subClassesOf(graphName, model, resource);
+        return CIMClass.subClassesOf(schemaName, model, resource);
     }
 
     @Override

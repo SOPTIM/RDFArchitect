@@ -48,7 +48,7 @@ public class UpdateOntologyService
         expandOntologyIris(graphIdentifier.workspaceName(), ontologyDTO);
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
 
@@ -84,7 +84,7 @@ public class UpdateOntologyService
         expandOntologyIris(graphIdentifier.workspaceName(), ontologyDTO);
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
 
@@ -106,7 +106,7 @@ public class UpdateOntologyService
     public void deleteOntology(GraphIdentifier graphIdentifier) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
             new OntologyFacade(model).deleteOntology();

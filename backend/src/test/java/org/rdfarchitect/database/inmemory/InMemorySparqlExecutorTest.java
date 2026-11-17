@@ -88,20 +88,20 @@ class InMemorySparqlExecutorTest {
     }
 
     private ResultSet executeSingleQuery(
-            GraphIdentifier identifier, Query query, String graphName) {
+            GraphIdentifier identifier, Query query, String schemaName) {
         DatabasePort port = mock(DatabasePort.class);
         when(port.beginTransaction(anyString(), any(ReadWrite.class)))
                 .thenAnswer(
                         invocation ->
                                 inMemoryDatabase.beginTransaction(
                                         invocation.getArgument(0), invocation.getArgument(1)));
-        return InMemorySparqlExecutor.executeSingleQuery(port, identifier, query, graphName);
+        return InMemorySparqlExecutor.executeSingleQuery(port, identifier, query, schemaName);
     }
 
     @Test
     void executeSingleQuery_onDefaultWithValidAllQuery_shouldReturnAllResults() {
         // Arrange
-        String graphName = "default";
+        String schemaName = "default";
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
@@ -109,7 +109,7 @@ class InMemorySparqlExecutorTest {
         var query = QueryFactory.create(queryString);
 
         // Act
-        var resultSet = executeSingleQuery(identifier, query, graphName);
+        var resultSet = executeSingleQuery(identifier, query, schemaName);
 
         // Assert
         assertNotNull(resultSet);
@@ -125,16 +125,16 @@ class InMemorySparqlExecutorTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"http://anyUri", "http://example.org/graph"})
-    void executeSingleQuery_onNamedWithValidAllQuery_shouldReturnAllResults(String graphName) {
+    void executeSingleQuery_onNamedWithValidAllQuery_shouldReturnAllResults(String schemaName) {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
-        String queryString = "SELECT * FROM <" + graphName + "> WHERE { ?s ?p ?o }";
+        String queryString = "SELECT * FROM <" + schemaName + "> WHERE { ?s ?p ?o }";
         var query = QueryFactory.create(queryString);
 
         // Act
-        var resultSet = executeSingleQuery(identifier, query, graphName);
+        var resultSet = executeSingleQuery(identifier, query, schemaName);
 
         // Assert
         assertNotNull(resultSet);
@@ -151,7 +151,7 @@ class InMemorySparqlExecutorTest {
     @Test
     void executeSingleQuery_onDefaultWithValidNoResultQuery_shouldReturnEmptyResultSet() {
         // Arrange
-        String graphName = "default";
+        String schemaName = "default";
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
@@ -159,7 +159,7 @@ class InMemorySparqlExecutorTest {
         var query = QueryFactory.create(queryString);
 
         // Act
-        var resultSet = executeSingleQuery(identifier, query, graphName);
+        var resultSet = executeSingleQuery(identifier, query, schemaName);
 
         // Assert
         assertNotNull(resultSet);
@@ -171,18 +171,18 @@ class InMemorySparqlExecutorTest {
     @Test
     void executeSingleQuery_onNamedWithValidNoResultQuery_shouldReturnEmptyResultSet() {
         // Arrange
-        String graphName = "http://example.org/graph";
+        String schemaName = "http://example.org/graph";
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
         String queryString =
                 "SELECT * FROM <"
-                        + graphName
+                        + schemaName
                         + "> WHERE { ?s ?p ?o . FILTER(?p = <http://nonexisting>) }";
         var query = QueryFactory.create(queryString);
 
         // Act
-        var resultSet = executeSingleQuery(identifier, query, graphName);
+        var resultSet = executeSingleQuery(identifier, query, schemaName);
 
         // Assert
         assertNotNull(resultSet);
@@ -194,7 +194,7 @@ class InMemorySparqlExecutorTest {
     @Test
     void executeSingleQuery_queryNotSelectedExistentGraph_emptyResult() {
         // Arrange
-        String graphName = "default";
+        String schemaName = "default";
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
@@ -202,7 +202,7 @@ class InMemorySparqlExecutorTest {
         var query = QueryFactory.create(queryString);
 
         // Act
-        var resultSet = executeSingleQuery(identifier, query, graphName);
+        var resultSet = executeSingleQuery(identifier, query, schemaName);
 
         // Assert
         assertNotNull(resultSet);
@@ -214,9 +214,9 @@ class InMemorySparqlExecutorTest {
     @Test
     void executeSingleUpdate_onDefaultWithValidUpdate_shouldUpdateGraph() {
         // Arrange
-        String graphName = "default";
+        String schemaName = "default";
         exampleGraphs = List.of(createExampleGraph(), GraphFactory.createDefaultGraph());
-        var identifier = new GraphIdentifier(WORKSPACE, graphName);
+        var identifier = new GraphIdentifier(WORKSPACE, schemaName);
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.get(1));
 
         // Act
@@ -229,7 +229,7 @@ class InMemorySparqlExecutorTest {
             try (var transaction = inMemoryDatabase.beginTransaction(WORKSPACE, ReadWrite.WRITE)) {
                 var dataset =
                         SessionDataStore.wrapGraphInDataset(
-                                transaction.graph(graphName).getRdfGraph(), graphName);
+                                transaction.graph(schemaName).getRdfGraph(), schemaName);
                 UpdateExecutionFactory.create(update, dataset).execute();
                 transaction.commit("inserted a triple");
             }
@@ -239,7 +239,7 @@ class InMemorySparqlExecutorTest {
         try (var transaction = inMemoryDatabase.beginTransaction(WORKSPACE, ReadWrite.READ)) {
             assertThat(
                             transaction
-                                    .graph(graphName)
+                                    .graph(schemaName)
                                     .getRdfGraph()
                                     .isIsomorphicWith(exampleGraphs.getFirst()))
                     .isTrue();

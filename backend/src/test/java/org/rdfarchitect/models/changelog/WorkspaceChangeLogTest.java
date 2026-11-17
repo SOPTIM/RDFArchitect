@@ -177,7 +177,7 @@ class WorkspaceChangeLogTest {
                         rdfOf(graphB, "urn:b"),
                         dlOf(layout));
 
-        assertThat(entry.affectedGraphNames()).containsExactlyInAnyOrder("urn:a", "urn:b");
+        assertThat(entry.affectedSchemaNames()).containsExactlyInAnyOrder("urn:a", "urn:b");
     }
 
     // -------------------------------------------------------------------------
@@ -302,9 +302,9 @@ class WorkspaceChangeLogTest {
         return WorkspaceChangeLogEntry.of(message, List.of(versions));
     }
 
-    private static ParticipantVersion rdfOf(RecordingParticipant participant, String graphName) {
+    private static ParticipantVersion rdfOf(RecordingParticipant participant, String schemaName) {
         return ParticipantVersion.of(
-                ParticipantId.ofGraph(ParticipantId.Kind.RDF, graphName),
+                ParticipantId.ofGraph(ParticipantId.Kind.RDF, schemaName),
                 participant,
                 participant.cutVersion());
     }

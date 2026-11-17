@@ -42,7 +42,7 @@ public class ReadOntologyService implements ReadOntologyUseCase, GetKnownOntolog
     public OntologyDTO getCurrentOntology(GraphIdentifier graphIdentifier) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
             return new OntologyFacade(model).getOntology();

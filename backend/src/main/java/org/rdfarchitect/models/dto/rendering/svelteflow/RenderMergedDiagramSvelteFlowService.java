@@ -95,7 +95,7 @@ public class RenderMergedDiagramSvelteFlowService implements RenderMergedDiagram
     private List<CIMProfileModel> buildProfiles(String workspaceName) {
         return CIMProfileModels.loadAll(
                 databasePort,
-                CIMProfileModels.keywordsByGraphName(listGraphsUseCase, workspaceName),
+                CIMProfileModels.keywordsBySchemaName(listGraphsUseCase, workspaceName),
                 workspaceName,
                 null);
     }

@@ -94,24 +94,25 @@ class WorkspacePrefixTest {
         }
     }
 
-    private static void createGraph(Workspace workspace, String graphName, Graph graph) {
+    private static void createGraph(Workspace workspace, String schemaName, Graph graph) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.createGraph(graphName, graph);
-            transaction.commit("created graph %s".formatted(graphName));
+            transaction.createGraph(schemaName, graph);
+            transaction.commit("created graph %s".formatted(schemaName));
         }
     }
 
-    private static void renameGraph(Workspace workspace, String oldGraphName, String newGraphName) {
+    private static void renameGraph(
+            Workspace workspace, String oldSchemaName, String newSchemaName) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.renameGraph(oldGraphName, newGraphName);
-            transaction.commit("renamed graph %s".formatted(oldGraphName));
+            transaction.renameGraph(oldSchemaName, newSchemaName);
+            transaction.commit("renamed graph %s".formatted(oldSchemaName));
         }
     }
 
-    private static void deleteGraph(Workspace workspace, String graphName) {
+    private static void deleteGraph(Workspace workspace, String schemaName) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.deleteGraph(graphName);
-            transaction.commit("deleted graph %s".formatted(graphName));
+            transaction.deleteGraph(schemaName);
+            transaction.commit("deleted graph %s".formatted(schemaName));
         }
     }
 

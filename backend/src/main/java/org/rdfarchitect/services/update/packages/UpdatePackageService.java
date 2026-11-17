@@ -67,7 +67,7 @@ public class UpdatePackageService
         packageDTO.setUuid(newPackageUUID);
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             var newPackage = packageMapper.toCIMObject(packageDTO);
             assertNoClassWithSameIri(graph, newPackage);
@@ -89,7 +89,7 @@ public class UpdatePackageService
     public void replacePackage(GraphIdentifier graphIdentifier, PackageDTO packageDTO) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             var newPackage = packageMapper.toCIMObject(packageDTO);
             assertNoClassWithSameIri(graph, newPackage);
@@ -107,7 +107,7 @@ public class UpdatePackageService
     public void deletePackage(GraphIdentifier graphIdentifier, UUID packageUUID) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             // Read before deleting: afterwards there is no label left to name the change with.
             var packageLabel = packageLabel(ctx.getRdfGraph(), packageUUID);
             CIMUpdates.deletePackage(
@@ -151,7 +151,7 @@ public class UpdatePackageService
                 new CIMBaseQueryBuilder()
                         .setDistinct()
                         .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()))
-                        .setGraph(graphIdentifier.graphName())
+                        .setGraph(graphIdentifier.schemaName())
                         .setType(CIMS.classCategory)
                         .addWhereThis(RDFA.uuid, packageUUID.toString())
                         .build();
@@ -163,7 +163,7 @@ public class UpdatePackageService
                         .build();
         var resultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort, graphIdentifier, query, graphIdentifier.graphName());
+                        databasePort, graphIdentifier, query, graphIdentifier.schemaName());
 
         if (!resultSet.hasNext()) {
             throw new DataAccessException("Package not found: " + packageUUID);

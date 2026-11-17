@@ -43,7 +43,7 @@ public class GenerateOntologyEntriesService implements GenerateOntologyEntriesUs
     public List<OntologyEntry> generateOntologyEntries(GraphIdentifier graphIdentifier) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
             return new OntologyGeneratableEntriesBuilder(model)
@@ -57,7 +57,7 @@ public class GenerateOntologyEntriesService implements GenerateOntologyEntriesUs
     /** The changes that reached this graph, newest first. */
     private List<WorkspaceChangeLogEntry> changesAffecting(GraphIdentifier graphIdentifier) {
         return databasePort.listChanges(graphIdentifier.workspaceName()).stream()
-                .filter(entry -> entry.affectsGraph(graphIdentifier.graphName()))
+                .filter(entry -> entry.affectsGraph(graphIdentifier.schemaName()))
                 .toList();
     }
 }

@@ -254,7 +254,7 @@ class WorkspaceTransactionTest {
                 .first()
                 .satisfies(
                         entry ->
-                                assertThat(entry.affectedGraphNames())
+                                assertThat(entry.affectedSchemaNames())
                                         .containsExactlyInAnyOrder(GRAPH_A, GRAPH_B));
     }
 
@@ -290,7 +290,7 @@ class WorkspaceTransactionTest {
         assertThat(workspace.getChangeHistory())
                 .first()
                 .satisfies(
-                        entry -> assertThat(entry.affectedGraphNames()).containsExactly(GRAPH_A));
+                        entry -> assertThat(entry.affectedSchemaNames()).containsExactly(GRAPH_A));
     }
 
     @Test
@@ -307,7 +307,7 @@ class WorkspaceTransactionTest {
         assertThat(workspace.getChangeHistory())
                 .first()
                 .satisfies(
-                        entry -> assertThat(entry.affectedGraphNames()).containsExactly(GRAPH_A));
+                        entry -> assertThat(entry.affectedSchemaNames()).containsExactly(GRAPH_A));
     }
 
     @Test
@@ -571,11 +571,11 @@ class WorkspaceTransactionTest {
         }
     }
 
-    private void commitTriple(String graphName, Triple value, String message) {
-        WorkspaceFixtures.commitTriple(workspace, graphName, value, message);
+    private void commitTriple(String schemaName, Triple value, String message) {
+        WorkspaceFixtures.commitTriple(workspace, schemaName, value, message);
     }
 
-    private java.util.List<Triple> triplesIn(String graphName) {
-        return WorkspaceFixtures.triplesIn(workspace, graphName);
+    private java.util.List<Triple> triplesIn(String schemaName) {
+        return WorkspaceFixtures.triplesIn(workspace, schemaName);
     }
 }

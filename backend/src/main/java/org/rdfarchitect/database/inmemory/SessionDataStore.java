@@ -37,12 +37,12 @@ import java.util.UUID;
 
 public interface SessionDataStore {
 
-    static Dataset wrapGraphInDataset(Graph graph, String graphName) {
-        if (graphName == null || graphName.equals("default")) {
+    static Dataset wrapGraphInDataset(Graph graph, String schemaName) {
+        if (schemaName == null || schemaName.equals("default")) {
             return DatasetFactory.wrap(ModelFactory.createModelForGraph(graph));
         }
         return DatasetFactory.createGeneral()
-                .addNamedModel(graphName, ModelFactory.createModelForGraph(graph));
+                .addNamedModel(schemaName, ModelFactory.createModelForGraph(graph));
     }
 
     /**
@@ -185,10 +185,10 @@ public interface SessionDataStore {
      * List all graphs contained in a specified Dataset
      *
      * @param workspaceName The name of the dataset.
-     * @return A list of GraphNames
+     * @return A list of SchemaNames
      * @throws DataAccessException if the dataset does not exist.
      */
-    List<String> listGraphNames(String workspaceName);
+    List<String> listSchemaNames(String workspaceName);
 
     /**
      * Lists the prefixes belonging to a specified dataset.

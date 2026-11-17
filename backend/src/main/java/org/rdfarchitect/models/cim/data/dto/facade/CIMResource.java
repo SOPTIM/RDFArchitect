@@ -35,20 +35,20 @@ import java.util.UUID;
 
 abstract class CIMResource implements ICIMResource {
 
-    private final String graphName;
+    private final String schemaName;
 
     private final Model model;
 
     private final UUID uuid;
 
-    protected CIMResource(String graphName, Model model, UUID uuid) {
-        this.graphName = graphName;
+    protected CIMResource(String schemaName, Model model, UUID uuid) {
+        this.schemaName = schemaName;
         this.model = model;
         this.uuid = uuid;
     }
 
-    protected CIMResource(String graphName, Model model, Resource resource) {
-        this.graphName = graphName;
+    protected CIMResource(String schemaName, Model model, Resource resource) {
+        this.schemaName = schemaName;
         this.model = model;
         var uuidObjects = this.model.listObjectsOfProperty(resource, RDFA.uuid).toList();
         if (uuidObjects.isEmpty()) {
@@ -74,8 +74,8 @@ abstract class CIMResource implements ICIMResource {
     }
 
     @Override
-    public String getGraphName() {
-        return this.graphName;
+    public String getSchemaName() {
+        return this.schemaName;
     }
 
     @Override

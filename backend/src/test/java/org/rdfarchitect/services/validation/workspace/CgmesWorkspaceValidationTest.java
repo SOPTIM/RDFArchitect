@@ -165,7 +165,7 @@ class CgmesWorkspaceValidationTest extends WorkspaceValidationTestBase {
                 List.of(
                         load(CGMES_2_PATH.resolve(CGMES_2_FILES.get(6))),
                         cgmes3Profiles().stream()
-                                .filter(profile -> profile.graphName().contains("Equipment-AP"))
+                                .filter(profile -> profile.schemaName().contains("Equipment-AP"))
                                 .findFirst()
                                 .orElseThrow());
 

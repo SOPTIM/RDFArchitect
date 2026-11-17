@@ -114,7 +114,7 @@ public class DiagramToCIMCollectionConverterService
             WorkspaceTransaction transaction, List<GraphEntry> graphEntries) {
         var copiedGraphs = new ArrayList<CopiedGraph>(graphEntries.size());
         for (var entry : graphEntries) {
-            var graph = transaction.graph(entry.graphIdentifier().graphName()).getRdfGraph();
+            var graph = transaction.graph(entry.graphIdentifier().schemaName()).getRdfGraph();
             copiedGraphs.add(new CopiedGraph(entry, GraphUtils.deepCopy(graph)));
         }
         return copiedGraphs;

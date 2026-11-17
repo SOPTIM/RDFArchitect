@@ -17,4 +17,4 @@
 
 package org.rdfarchitect.database;
 
-public record GraphIdentifier(String workspaceName, String graphName) {}
+public record GraphIdentifier(String workspaceName, String schemaName) {}

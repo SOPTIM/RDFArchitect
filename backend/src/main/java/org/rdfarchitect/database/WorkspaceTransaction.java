@@ -40,19 +40,19 @@ import java.util.UUID;
 public interface WorkspaceTransaction extends AutoCloseable {
 
     /**
-     * Returns the graph identified by {@code graphName} for the duration of this transaction.
+     * Returns the graph identified by {@code schemaName} for the duration of this transaction.
      *
-     * @param graphName the graph URI
+     * @param schemaName the graph URI
      * @return the graph's contents
      */
-    GraphContext graph(String graphName);
+    GraphContext graph(String schemaName);
 
     /**
      * Returns the URIs of the graphs the workspace currently holds.
      *
      * @return the graph URIs
      */
-    List<String> graphNames();
+    List<String> schemaNames();
 
     /**
      * Returns the custom diagrams defined on the workspace itself, as opposed to those defined on
@@ -92,28 +92,28 @@ public interface WorkspaceTransaction extends AutoCloseable {
     PrefixMapping prefixes();
 
     /**
-     * Creates or replaces the graph registered under {@code graphName}.
+     * Creates or replaces the graph registered under {@code schemaName}.
      *
-     * @param graphName the graph URI
+     * @param schemaName the graph URI
      * @param graph the graph's initial contents
      */
-    void createGraph(String graphName, Graph graph);
+    void createGraph(String schemaName, Graph graph);
 
     /**
-     * Removes the graph identified by {@code graphName}. Does nothing if it does not exist.
+     * Removes the graph identified by {@code schemaName}. Does nothing if it does not exist.
      *
-     * @param graphName the graph URI
+     * @param schemaName the graph URI
      */
-    void deleteGraph(String graphName);
+    void deleteGraph(String schemaName);
 
     /**
-     * Registers the graph known as {@code oldGraphName} under {@code newGraphName} and rewrites
+     * Registers the graph known as {@code oldSchemaName} under {@code newSchemaName} and rewrites
      * every reference to it in the workspace. The graph keeps its contents and its history.
      *
-     * @param oldGraphName the graph URI to rename
-     * @param newGraphName the graph URI to rename to
+     * @param oldSchemaName the graph URI to rename
+     * @param newSchemaName the graph URI to rename to
      */
-    void renameGraph(String oldGraphName, String newGraphName);
+    void renameGraph(String oldSchemaName, String newSchemaName);
 
     /**
      * Replaces the namespace prefixes shared by all graphs of the workspace.

@@ -51,11 +51,11 @@ public record ParticipantId(Kind kind, String scope) {
      * Creates an identifier for a participant that belongs to a single graph.
      *
      * @param kind the kind of data the participant holds
-     * @param graphName the URI of the graph the participant belongs to
+     * @param schemaName the URI of the graph the participant belongs to
      * @return the identifier
      */
-    public static ParticipantId ofGraph(Kind kind, String graphName) {
-        return new ParticipantId(kind, graphName);
+    public static ParticipantId ofGraph(Kind kind, String schemaName) {
+        return new ParticipantId(kind, schemaName);
     }
 
     /**

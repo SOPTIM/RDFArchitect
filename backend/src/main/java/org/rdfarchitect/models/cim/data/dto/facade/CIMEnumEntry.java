@@ -26,18 +26,18 @@ import java.util.UUID;
 
 public class CIMEnumEntry extends CIMResource implements ICIMEnumEntry {
 
-    public CIMEnumEntry(String graphName, Model model, UUID uuid) {
-        super(graphName, model, uuid);
+    public CIMEnumEntry(String schemaName, Model model, UUID uuid) {
+        super(schemaName, model, uuid);
     }
 
-    public CIMEnumEntry(String graphName, Model model, Resource resource) {
-        super(graphName, model, resource);
+    public CIMEnumEntry(String schemaName, Model model, Resource resource) {
+        super(schemaName, model, resource);
     }
 
     @Override
     public ICIMClass getDomain() {
         var domain = getRequiredUniqueJenaProperty(RDF.type);
-        return CIMClass.fromResource(getGraphName(), getModel(), domain);
+        return CIMClass.fromResource(getSchemaName(), getModel(), domain);
     }
 
     @Override

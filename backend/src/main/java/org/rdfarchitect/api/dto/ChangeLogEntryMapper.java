@@ -41,14 +41,14 @@ public interface ChangeLogEntryMapper {
     @Mapping(target = "removedOnUndo", expression = "java(entry.removedOnUndo())")
     @Mapping(
             target = "affectedSchemaNames",
-            expression = "java(java.util.List.copyOf(entry.affectedGraphNames()))")
+            expression = "java(java.util.List.copyOf(entry.affectedSchemaNames()))")
     @Mapping(
             target = "restorableSchemaNames",
-            expression = "java(java.util.List.copyOf(entry.restorableGraphNames()))")
+            expression = "java(java.util.List.copyOf(entry.restorableSchemaNames()))")
     @Mapping(target = "affectedKinds", expression = "java(entry.affectedKinds())")
     @Mapping(
             target = "restoreTargetSchemaNames",
-            expression = "java(java.util.List.copyOf(entry.restoreTargetGraphNames()))")
+            expression = "java(java.util.List.copyOf(entry.restoreTargetSchemaNames()))")
     ChangeLogEntryDTO toDTO(WorkspaceChangeLogEntry entry);
 
     List<ChangeLogEntryDTO> toDTOList(List<WorkspaceChangeLogEntry> entries);
@@ -89,7 +89,7 @@ public interface ChangeLogEntryMapper {
     private ContextDeltaDTO toMergedContextDeltaDTO(List<ContextDelta> deltas) {
         var dto = new ContextDeltaDTO();
         dto.setContextName(deltas.getFirst().contextName());
-        dto.setSchemaName(deltas.getFirst().graphName());
+        dto.setSchemaName(deltas.getFirst().schemaName());
         var netTriples = netTriples(deltas);
         if (netTriples != null) {
             dto.setAdditions(mapTriples(netTriples.additions()));
@@ -161,7 +161,7 @@ public interface ChangeLogEntryMapper {
     default ContextDeltaDTO toContextDeltaDTO(ContextDelta contextDelta) {
         var dto = new ContextDeltaDTO();
         dto.setContextName(contextDelta.contextName());
-        dto.setSchemaName(contextDelta.graphName());
+        dto.setSchemaName(contextDelta.schemaName());
         dto.setAdditions(mapTriples(contextDelta.additions()));
         dto.setDeletions(mapTriples(contextDelta.deletions()));
         dto.setValues(contextDelta.values().stream().map(this::mapValueChange).toList());

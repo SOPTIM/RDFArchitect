@@ -93,8 +93,8 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
-    public List<String> listGraphNames(String workspaceName) {
-        return database.listGraphNames(workspaceName);
+    public List<String> listSchemaNames(String workspaceName) {
+        return database.listSchemaNames(workspaceName);
     }
 
     @Override

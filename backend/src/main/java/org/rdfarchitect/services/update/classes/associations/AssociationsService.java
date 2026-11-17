@@ -65,12 +65,12 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         var update =
                 CIMUpdates.insertAssociation(
                         databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
-                        graphIdentifier.graphName(),
+                        graphIdentifier.schemaName(),
                         cimAssociationPair);
 
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             executeOnGraph(ctx, graphIdentifier, update);
             syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(
@@ -86,12 +86,12 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         var update =
                 CIMUpdates.replaceAssociation(
                         databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
-                        graphIdentifier.graphName(),
+                        graphIdentifier.schemaName(),
                         cimAssociationPair);
 
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             executeOnGraph(ctx, graphIdentifier, update);
             syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(
@@ -110,13 +110,13 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         var update =
                 CIMUpdates.replaceAssociations(
                         databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
-                        graphIdentifier.graphName(),
+                        graphIdentifier.schemaName(),
                         classUUID,
                         cimAssociationPairs);
 
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var classResource = CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), classUUID);
             var classLabel = CIMResourceUtils.findLabelForResource(classResource);
 
@@ -133,14 +133,15 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
 
     /**
      * Executes an update built for {@code graphIdentifier} on that graph. The builders in {@link
-     * CIMUpdates} scope their operations with {@code WITH <graphName>}, so the update has to run
+     * CIMUpdates} scope their operations with {@code WITH <schemaName>}, so the update has to run
      * against a dataset that knows the graph under that name — targeting the graph directly would
      * write into a named graph nobody holds and silently drop the change.
      */
     private void executeOnGraph(
             GraphContext ctx, GraphIdentifier graphIdentifier, UpdateBuilder update) {
         var dataset =
-                SessionDataStore.wrapGraphInDataset(ctx.getRdfGraph(), graphIdentifier.graphName());
+                SessionDataStore.wrapGraphInDataset(
+                        ctx.getRdfGraph(), graphIdentifier.schemaName());
         UpdateExecutionFactory.create(update.buildRequest(), dataset).execute();
     }
 

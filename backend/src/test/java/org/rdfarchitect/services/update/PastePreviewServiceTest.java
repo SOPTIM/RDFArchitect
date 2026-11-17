@@ -86,7 +86,7 @@ class PastePreviewServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(sourceGraphIdentifier.graphName())
+                        .setGraphName(sourceGraphIdentifier.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, sourceGraphIdentifier, graphSource.graph());
         TestWorkspaces.createGraph(
@@ -96,7 +96,7 @@ class PastePreviewServiceTest {
     private PasteSourceClassDTO source(String classUUID) {
         var source = new PasteSourceClassDTO();
         source.setSourceWorkspaceName(sourceGraphIdentifier.workspaceName());
-        source.setSourceSchemaName(sourceGraphIdentifier.graphName());
+        source.setSourceSchemaName(sourceGraphIdentifier.schemaName());
         source.setClassUUID(classUUID);
         return source;
     }
@@ -269,7 +269,7 @@ class PastePreviewServiceTest {
         try (var transaction =
                 databasePort.beginTransaction(
                         sourceGraphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(sourceGraphIdentifier.graphName());
+            var ctx = transaction.graph(sourceGraphIdentifier.schemaName());
             ctx.getRdfGraph()
                     .remove(
                             NodeFactory.createURI("http://example.org#class.associatedClass"),

@@ -125,7 +125,7 @@ class ImportJobServiceTest {
         var observedSettings = new AtomicReference<UserSettings>();
         service =
                 new ImportJobService(
-                        (workspaceName, files, graphNames, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             observedSession.set(SessionContext.getSessionId());
                             observedSettings.set(UserSettingsContext.get());
                             return new ImportResult();
@@ -143,7 +143,7 @@ class ImportJobServiceTest {
         var received = new AtomicReference<MultipartFile>();
         service =
                 new ImportJobService(
-                        (workspaceName, files, graphNames, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             received.set(files.getFirst());
                             return new ImportResult();
                         });
@@ -219,7 +219,7 @@ class ImportJobServiceTest {
         var release = new CountDownLatch(1);
         service =
                 new ImportJobService(
-                        (workspaceName, files, graphNames, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             listener.planned(List.of(new PlannedImport(0, "first.ttl", 1)));
                             listener.started(0);
                             running.countDown();
@@ -245,7 +245,7 @@ class ImportJobServiceTest {
     void startImport_importDyingOnAnError_settlesTheJobAndFreesTheSession() {
         service =
                 new ImportJobService(
-                        (workspaceName, files, graphNames, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             throw new StackOverflowError("nesting too deep");
                         });
 
@@ -301,7 +301,7 @@ class ImportJobServiceTest {
     void startImport_importDiesHalfWay_stillReportsWhatItWrote() {
         service =
                 new ImportJobService(
-                        (workspaceName, files, graphNames, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             listener.planned(
                                     List.of(
                                             new PlannedImport(0, "first.ttl", 1),
@@ -326,7 +326,7 @@ class ImportJobServiceTest {
     void startImport_importDiesHalfWay_settlesTheFilesItNeverFinished() {
         service =
                 new ImportJobService(
-                        (workspaceName, files, graphNames, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             listener.planned(
                                     List.of(
                                             new PlannedImport(0, "first.ttl", 1),
@@ -380,7 +380,7 @@ class ImportJobServiceTest {
     void cancel_runningImport_stopsItAndReportsTheJobAsCancelled() {
         service =
                 new ImportJobService(
-                        (workspaceName, files, graphNames, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             listener.planned(List.of(new PlannedImport(0, "first.ttl", 1)));
                             await().pollInSameThread().atMost(TIMEOUT).until(listener::isCancelled);
                             listener.finished(0, ImportProgressListener.Outcome.SKIPPED, null);
@@ -405,7 +405,7 @@ class ImportJobServiceTest {
     void startImport_importThrowing_reportsTheJobAsFailed() {
         service =
                 new ImportJobService(
-                        (workspaceName, files, graphNames, listener) -> {
+                        (workspaceName, files, schemaNames, listener) -> {
                             throw new IllegalStateException("import blew up");
                         });
 
@@ -564,7 +564,7 @@ class ImportJobServiceTest {
 
     private ImportGraphsUseCase prefixAskingImportService(
             AtomicReference<ResolvedPrefixes> received, List<PrefixComparison> comparison) {
-        return (workspaceName, files, graphNames, listener) -> {
+        return (workspaceName, files, schemaNames, listener) -> {
             listener.planned(List.of(new PlannedImport(0, "first.ttl", 1)));
             listener.scanningPrefixes();
             received.set(listener.awaitResolvedPrefixes(comparison));
@@ -575,7 +575,7 @@ class ImportJobServiceTest {
             }
             listener.started(0);
             listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
-            result.importedGraphNames().add(RDFA.GRAPH_URI + "first");
+            result.importedSchemaNames().add(RDFA.GRAPH_URI + "first");
             return result;
         };
     }
@@ -587,7 +587,7 @@ class ImportJobServiceTest {
 
     private ImportGraphsUseCase blockingImportService(
             CountDownLatch running, CountDownLatch release) {
-        return (workspaceName, files, graphNames, listener) -> {
+        return (workspaceName, files, schemaNames, listener) -> {
             running.countDown();
             awaitLatch(release);
             return new ImportResult();

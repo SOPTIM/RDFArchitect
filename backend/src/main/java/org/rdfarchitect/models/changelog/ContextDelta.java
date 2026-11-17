@@ -94,7 +94,7 @@ public record ContextDelta(
     }
 
     /** Returns the graph this delta belongs to, or {@code null} for workspace-wide data. */
-    public String graphName() {
+    public String schemaName() {
         return participant.scope();
     }
 

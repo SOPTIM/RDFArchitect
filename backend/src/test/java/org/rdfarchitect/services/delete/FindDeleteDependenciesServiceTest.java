@@ -90,7 +90,7 @@ class FindDeleteDependenciesServiceTest {
 
         workspace = new Workspace(GRAPH_IDENTIFIER.workspaceName());
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.createGraph(GRAPH_IDENTIFIER.graphName(), graph);
+            transaction.createGraph(GRAPH_IDENTIFIER.schemaName(), graph);
             transaction.commit("created the test graph");
         }
         when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))

@@ -59,7 +59,7 @@ class CustomDiagramsServiceTest {
                         databasePort, listGraphsUseCase, mock(SyncDiagramLayoutUseCase.class));
 
         graphIdentifier = mock(GraphIdentifier.class);
-        when(graphIdentifier.graphName()).thenReturn("http://example.org#graph");
+        when(graphIdentifier.schemaName()).thenReturn("http://example.org#graph");
         when(graphIdentifier.workspaceName()).thenReturn("dataset");
     }
 

@@ -55,7 +55,7 @@ public class IssueCollector {
 
     private final IssueOccurrences occurrences;
 
-    private final String scopeGraphName;
+    private final String scopeSchemaName;
 
     private final List<ValidationIssueDTO> issues = new ArrayList<>();
 
@@ -63,11 +63,11 @@ public class IssueCollector {
 
     /**
      * @param occurrences builds the occurrences of a finding
-     * @param scopeGraphName the schema the report is about, or null for the whole workspace
+     * @param scopeSchemaName the schema the report is about, or null for the whole workspace
      */
-    public IssueCollector(IssueOccurrences occurrences, String scopeGraphName) {
+    public IssueCollector(IssueOccurrences occurrences, String scopeSchemaName) {
         this.occurrences = occurrences;
-        this.scopeGraphName = scopeGraphName;
+        this.scopeSchemaName = scopeSchemaName;
     }
 
     /**
@@ -103,7 +103,7 @@ public class IssueCollector {
             String resourceUri,
             Occurrence<?> occurrence,
             RuntimeException e) {
-        var key = rule.id() + "|" + resourceUri + "|" + occurrence.profile().graphName();
+        var key = rule.id() + "|" + resourceUri + "|" + occurrence.profile().schemaName();
         if (reportedUnreadable.add(key)) {
             add(
                     IssueKind.INFRASTRUCTURE,
@@ -172,10 +172,10 @@ public class IssueCollector {
     }
 
     private boolean isInScope(ValidationIssueDTO issue) {
-        if (scopeGraphName == null || issue.getOccurrences().isEmpty()) {
+        if (scopeSchemaName == null || issue.getOccurrences().isEmpty()) {
             return true;
         }
         return issue.getOccurrences().stream()
-                .anyMatch(occurrence -> scopeGraphName.equals(occurrence.getSchemaName()));
+                .anyMatch(occurrence -> scopeSchemaName.equals(occurrence.getSchemaName()));
     }
 }

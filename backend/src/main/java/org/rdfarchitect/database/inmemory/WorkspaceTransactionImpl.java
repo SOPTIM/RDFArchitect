@@ -73,12 +73,12 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     }
 
     @Override
-    public GraphContext graph(String graphName) {
-        return workspace.getGraphWithContext(graphName);
+    public GraphContext graph(String schemaName) {
+        return workspace.getGraphWithContext(schemaName);
     }
 
     @Override
-    public List<String> graphNames() {
+    public List<String> schemaNames() {
         return graphs.uris();
     }
 
@@ -108,27 +108,27 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     }
 
     @Override
-    public void createGraph(String graphName, Graph newGraph) {
-        var expanded = prefixes.expandPrefix(graphName);
-        Workspace.assertValidGraphName(expanded);
+    public void createGraph(String schemaName, Graph newGraph) {
+        var expanded = prefixes.expandPrefix(schemaName);
+        Workspace.assertValidSchemaName(expanded);
         graphs.put(expanded, new GraphWithContext(newGraph, txnContext));
         prefixes.addAll(newGraph.getPrefixMapping());
         crossProfileDiagramInfo.setColor(expanded, CrossProfileUtils.generateRandomDarkColor());
     }
 
     @Override
-    public void deleteGraph(String graphName) {
-        var expanded = prefixes.expandPrefix(graphName);
+    public void deleteGraph(String schemaName) {
+        var expanded = prefixes.expandPrefix(schemaName);
         graphs.remove(expanded);
         crossProfileDiagramInfo.removeColor(expanded);
     }
 
     @Override
-    public void renameGraph(String oldGraphName, String newGraphName) {
-        var oldUri = prefixes.expandPrefix(oldGraphName);
-        var newUri = prefixes.expandPrefix(newGraphName);
-        Workspace.assertValidGraphName(oldUri);
-        Workspace.assertValidGraphName(newUri);
+    public void renameGraph(String oldSchemaName, String newSchemaName) {
+        var oldUri = prefixes.expandPrefix(oldSchemaName);
+        var newUri = prefixes.expandPrefix(newSchemaName);
+        Workspace.assertValidSchemaName(oldUri);
+        Workspace.assertValidSchemaName(newUri);
         if (oldUri.equals(newUri)) {
             return;
         }
@@ -177,18 +177,18 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
         end();
     }
 
-    private void renameGraphInDiagrams(String oldGraphName, String newGraphName) {
-        var oldUri = new URI(oldGraphName);
-        var newUri = new URI(newGraphName);
-        rewriteGraphName(customDiagrams.get().values(), oldUri, newUri);
+    private void renameGraphInDiagrams(String oldSchemaName, String newSchemaName) {
+        var oldUri = new URI(oldSchemaName);
+        var newUri = new URI(newSchemaName);
+        rewriteSchemaName(customDiagrams.get().values(), oldUri, newUri);
         for (var graph : graphs.view().values()) {
-            rewriteGraphName(graph.getCustomDiagrams().values(), oldUri, newUri);
+            rewriteSchemaName(graph.getCustomDiagrams().values(), oldUri, newUri);
         }
     }
 
-    private static void rewriteGraphName(
+    private static void rewriteSchemaName(
             Collection<CustomDiagram> diagrams, URI oldUri, URI newUri) {
-        rewriteGraphNames(diagrams, Map.of(oldUri, newUri));
+        rewriteSchemaNames(diagrams, Map.of(oldUri, newUri));
     }
 
     /**
@@ -200,7 +200,7 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
      * @param diagrams the diagrams to rewrite
      * @param renamed the URI each renamed graph has now, by the URI it had
      */
-    static void rewriteGraphNames(Collection<CustomDiagram> diagrams, Map<URI, URI> renamed) {
+    static void rewriteSchemaNames(Collection<CustomDiagram> diagrams, Map<URI, URI> renamed) {
         for (var diagram : diagrams) {
             var classes = diagram.getClasses();
             if (classes.stream().noneMatch(entry -> renamed.containsKey(entry.getSchemaName()))) {

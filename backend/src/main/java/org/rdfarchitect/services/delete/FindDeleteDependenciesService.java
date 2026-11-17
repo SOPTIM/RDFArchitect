@@ -314,7 +314,7 @@ public class FindDeleteDependenciesService implements FindDeleteDependenciesUseC
     private Graph getCopyOfDatabaseGraph(GraphIdentifier graphIdentifier) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             return GraphUtils.deepCopy(ctx.getRdfGraph());
         }
     }

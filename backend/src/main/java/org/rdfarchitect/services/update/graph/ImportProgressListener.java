@@ -74,7 +74,7 @@ public interface ImportProgressListener {
 
     default void started(int index) {}
 
-    default void finished(int index, Outcome outcome, String graphName) {}
+    default void finished(int index, Outcome outcome, String schemaName) {}
 
     /**
      * Whether the import should stop. Checked before each file, so cancelling never leaves a

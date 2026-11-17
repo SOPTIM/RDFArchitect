@@ -87,10 +87,10 @@ public class DiagramLayoutServicesTestBase {
     }
 
     public static void addGraphFromFile(String fileName) {
-        addGraphFromFile(fileName, graphIdentifier.graphName());
+        addGraphFromFile(fileName, graphIdentifier.schemaName());
     }
 
-    public static void addGraphFromFile(String fileName, String graphName) {
+    public static void addGraphFromFile(String fileName, String schemaName) {
         byte[] content;
         try {
             content = Files.readAllBytes(Path.of(TTL_FILES_PATH + fileName));
@@ -101,10 +101,10 @@ public class DiagramLayoutServicesTestBase {
         var graph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphName)
+                        .setGraphName(schemaName)
                         .build()
                         .graph();
-        var identifier = new GraphIdentifier(graphIdentifier.workspaceName(), graphName);
+        var identifier = new GraphIdentifier(graphIdentifier.workspaceName(), schemaName);
         createGraph(databasePort, identifier, graph);
         diagramLayout = layoutOf(identifier);
     }
@@ -313,7 +313,7 @@ public class DiagramLayoutServicesTestBase {
     protected static DiagramLayout layoutOf(GraphIdentifier identifier) {
         try (var transaction =
                 databasePort.beginTransaction(identifier.workspaceName(), ReadWrite.READ)) {
-            return transaction.graph(identifier.graphName()).getDiagramLayout();
+            return transaction.graph(identifier.schemaName()).getDiagramLayout();
         }
     }
 
@@ -324,7 +324,7 @@ public class DiagramLayoutServicesTestBase {
             return ModelFactory.createDefaultModel()
                     .add(
                             transaction
-                                    .graph(identifier.graphName())
+                                    .graph(identifier.schemaName())
                                     .getDiagramLayout()
                                     .getDiagramLayoutModel());
         }
@@ -373,7 +373,7 @@ public class DiagramLayoutServicesTestBase {
                 databasePort.beginTransaction(identifier.workspaceName(), ReadWrite.WRITE)) {
             action.accept(
                     transaction
-                            .graph(identifier.graphName())
+                            .graph(identifier.schemaName())
                             .getDiagramLayout()
                             .getDiagramLayoutModel());
             transaction.commit("test change");
@@ -384,16 +384,16 @@ public class DiagramLayoutServicesTestBase {
     protected static void createGraph(DatabasePort port, GraphIdentifier identifier, Graph graph) {
         port.createWorkspaceIfAbsent(identifier.workspaceName());
         try (var transaction = port.beginTransaction(identifier.workspaceName(), ReadWrite.WRITE)) {
-            transaction.createGraph(identifier.graphName(), graph);
-            transaction.commit("created graph %s".formatted(identifier.graphName()));
+            transaction.createGraph(identifier.schemaName(), graph);
+            transaction.commit("created graph %s".formatted(identifier.schemaName()));
         }
     }
 
     /** Deletes a graph from its workspace. */
     protected static void deleteGraph(DatabasePort port, GraphIdentifier identifier) {
         try (var transaction = port.beginTransaction(identifier.workspaceName(), ReadWrite.WRITE)) {
-            transaction.deleteGraph(identifier.graphName());
-            transaction.commit("deleted graph %s".formatted(identifier.graphName()));
+            transaction.deleteGraph(identifier.schemaName());
+            transaction.commit("deleted graph %s".formatted(identifier.schemaName()));
         }
     }
 }

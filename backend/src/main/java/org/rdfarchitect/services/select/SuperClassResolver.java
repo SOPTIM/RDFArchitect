@@ -45,19 +45,19 @@ public class SuperClassResolver {
     private final ClassUMLAdaptedMapper umlAdaptedClassMapper;
 
     public ClassUMLAdaptedDTO resolveSuperClass(
-            Graph graph, String graphName, PrefixMapping prefixMapping, String rootClassUUID) {
+            Graph graph, String schemaName, PrefixMapping prefixMapping, String rootClassUUID) {
         var rootUuid = UUID.fromString(rootClassUUID);
         var model = ModelFactory.createModelForGraph(graph);
-        var rootClass = new CIMClass(graphName, model, rootUuid);
+        var rootClass = new CIMClass(schemaName, model, rootUuid);
 
         var visited = new HashSet<UUID>();
         visited.add(rootUuid);
-        return buildChain(graph, graphName, prefixMapping, firstSuperClass(rootClass), visited);
+        return buildChain(graph, schemaName, prefixMapping, firstSuperClass(rootClass), visited);
     }
 
     private ClassUMLAdaptedDTO buildChain(
             Graph graph,
-            String graphName,
+            String schemaName,
             PrefixMapping prefixMapping,
             ICIMClass superClass,
             Set<UUID> visited) {
@@ -70,13 +70,13 @@ public class SuperClassResolver {
         }
         var superClassCim =
                 CIMUMLObjectFactory.createCIMClassUMLAdapted(
-                        graph, graphName, prefixMapping, uuid.toString());
+                        graph, schemaName, prefixMapping, uuid.toString());
         if (superClassCim == null) {
             return null;
         }
         var dto = umlAdaptedClassMapper.toDTO(superClassCim);
         var parentChain =
-                buildChain(graph, graphName, prefixMapping, firstSuperClass(superClass), visited);
+                buildChain(graph, schemaName, prefixMapping, firstSuperClass(superClass), visited);
         if (parentChain != null) {
             dto.setSuperClass(parentChain);
         }

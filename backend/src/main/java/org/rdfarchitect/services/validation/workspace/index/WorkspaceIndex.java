@@ -43,22 +43,22 @@ public class WorkspaceIndex {
 
     private final List<ReadFailure> readFailures = new ArrayList<>();
 
-    private final String scopeGraphName;
+    private final String scopeSchemaName;
 
-    private WorkspaceIndex(String scopeGraphName) {
-        this.scopeGraphName = scopeGraphName;
+    private WorkspaceIndex(String scopeSchemaName) {
+        this.scopeSchemaName = scopeSchemaName;
     }
 
     /**
      * Reads every schema once and indexes its classes, attributes, associations and enum entries by
      * URI. What cannot be read ends up in {@link #readFailures()} instead of failing the run.
      *
-     * @param scopeGraphName the schema the run is about, which narrows the shared views to the URIs
-     *     that schema takes part in, or null for the whole workspace
+     * @param scopeSchemaName the schema the run is about, which narrows the shared views to the
+     *     URIs that schema takes part in, or null for the whole workspace
      * @return the index over all schemas
      */
-    public static WorkspaceIndex of(List<CIMProfileModel> profiles, String scopeGraphName) {
-        var index = new WorkspaceIndex(scopeGraphName);
+    public static WorkspaceIndex of(List<CIMProfileModel> profiles, String scopeSchemaName) {
+        var index = new WorkspaceIndex(scopeSchemaName);
         profiles.forEach(index::addProfile);
         return index;
     }
@@ -180,17 +180,17 @@ public class WorkspaceIndex {
      */
     private static boolean isInSeveralSchemas(List<? extends Occurrence<?>> occurrences) {
         return occurrences.stream()
-                        .map(occurrence -> occurrence.profile().graphName())
+                        .map(occurrence -> occurrence.profile().schemaName())
                         .distinct()
                         .count()
                 > 1;
     }
 
     private boolean isInScope(List<? extends Occurrence<?>> occurrences) {
-        return scopeGraphName == null
+        return scopeSchemaName == null
                 || occurrences.stream()
                         .anyMatch(
                                 occurrence ->
-                                        scopeGraphName.equals(occurrence.profile().graphName()));
+                                        scopeSchemaName.equals(occurrence.profile().schemaName()));
     }
 }

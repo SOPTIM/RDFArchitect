@@ -44,31 +44,31 @@ final class WorkspaceFixtures {
     private WorkspaceFixtures() {}
 
     /** Creates an empty graph, as its own commit. */
-    static void createGraph(Workspace workspace, String graphName) {
-        createGraph(workspace, graphName, GraphFactory.createDefaultGraph());
+    static void createGraph(Workspace workspace, String schemaName) {
+        createGraph(workspace, schemaName, GraphFactory.createDefaultGraph());
     }
 
     /** Creates a graph holding the given triples, as its own commit. */
-    static void createGraph(Workspace workspace, String graphName, Graph graph) {
+    static void createGraph(Workspace workspace, String schemaName, Graph graph) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.createGraph(graphName, graph);
-            transaction.commit("created graph %s".formatted(graphName));
+            transaction.createGraph(schemaName, graph);
+            transaction.commit("created graph %s".formatted(schemaName));
         }
     }
 
     /** Renames a graph, as its own commit. */
-    static void renameGraph(Workspace workspace, String oldGraphName, String newGraphName) {
+    static void renameGraph(Workspace workspace, String oldSchemaName, String newSchemaName) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.renameGraph(oldGraphName, newGraphName);
-            transaction.commit("renamed graph %s".formatted(oldGraphName));
+            transaction.renameGraph(oldSchemaName, newSchemaName);
+            transaction.commit("renamed graph %s".formatted(oldSchemaName));
         }
     }
 
     /** Deletes a graph, as its own commit. */
-    static void deleteGraph(Workspace workspace, String graphName) {
+    static void deleteGraph(Workspace workspace, String schemaName) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.deleteGraph(graphName);
-            transaction.commit("deleted graph %s".formatted(graphName));
+            transaction.deleteGraph(schemaName);
+            transaction.commit("deleted graph %s".formatted(schemaName));
         }
     }
 
@@ -81,25 +81,27 @@ final class WorkspaceFixtures {
     }
 
     /** Adds a triple to a graph's schema, as its own commit under the given message. */
-    static void commitTriple(Workspace workspace, String graphName, Triple triple, String message) {
+    static void commitTriple(
+            Workspace workspace, String schemaName, Triple triple, String message) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.graph(graphName).getRdfGraph().add(triple);
+            transaction.graph(schemaName).getRdfGraph().add(triple);
             transaction.commit(message);
         }
     }
 
     /** Removes a triple from a graph's schema, as its own commit under the given message. */
-    static void deleteTriple(Workspace workspace, String graphName, Triple triple, String message) {
+    static void deleteTriple(
+            Workspace workspace, String schemaName, Triple triple, String message) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.graph(graphName).getRdfGraph().delete(triple);
+            transaction.graph(schemaName).getRdfGraph().delete(triple);
             transaction.commit(message);
         }
     }
 
     /** Returns what a graph's schema holds. */
-    static List<Triple> triplesIn(Workspace workspace, String graphName) {
+    static List<Triple> triplesIn(Workspace workspace, String schemaName) {
         try (var transaction = workspace.begin(ReadWrite.READ)) {
-            return transaction.graph(graphName).getRdfGraph().find().toList();
+            return transaction.graph(schemaName).getRdfGraph().find().toList();
         }
     }
 

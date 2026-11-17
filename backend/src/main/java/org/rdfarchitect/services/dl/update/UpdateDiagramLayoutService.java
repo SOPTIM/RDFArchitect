@@ -50,7 +50,7 @@ public class UpdateDiagramLayoutService implements UpdateDiagramLayoutUseCase {
             GraphIdentifier graphIdentifier, UUID diagramUUID, DiagramLayoutDTO diagramLayout) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var layout = ctx.getDiagramLayout();
             var diagramLayoutModel = layout.getDiagramLayoutModel();
             var resolvedDiagramUUID =
@@ -64,7 +64,7 @@ public class UpdateDiagramLayoutService implements UpdateDiagramLayoutUseCase {
                     EdgeResolver.lazily(
                             () ->
                                     EdgeResolver.forGraph(
-                                            graphIdentifier.graphName(), ctx.getRdfGraph())));
+                                            graphIdentifier.schemaName(), ctx.getRdfGraph())));
             DiagramLayoutServiceUtils.commitLayout(
                     transaction,
                     firstLayout || diagramLayout.isAutomatic(),

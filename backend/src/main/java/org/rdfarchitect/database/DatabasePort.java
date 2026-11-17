@@ -133,7 +133,7 @@ public interface DatabasePort {
      * @param workspaceName literal dataset name
      * @return graph URIs within the dataset
      */
-    List<String> listGraphNames(String workspaceName);
+    List<String> listSchemaNames(String workspaceName);
 
     /**
      * Persists pending changes of the graph to the backing database.

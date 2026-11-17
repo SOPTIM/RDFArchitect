@@ -68,12 +68,12 @@ public class QueryDatasetService
 
         // fetch graphs and insert into resultDataset
         try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
-            for (String graphName : transaction.graphNames()) {
-                if (graphName.equals("default")) {
+            for (String schemaName : transaction.schemaNames()) {
+                if (schemaName.equals("default")) {
                     resultDataset.setDefaultModel(getGraphAsModel(workspaceName, "default"));
                 } else {
                     resultDataset.addNamedModel(
-                            graphName, getGraphAsModel(workspaceName, graphName));
+                            schemaName, getGraphAsModel(workspaceName, schemaName));
                 }
             }
         }
@@ -90,9 +90,9 @@ public class QueryDatasetService
         return outStream;
     }
 
-    private Model getGraphAsModel(String workspaceName, String graphName) {
+    private Model getGraphAsModel(String workspaceName, String schemaName) {
         try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
-            var ctx = transaction.graph(graphName);
+            var ctx = transaction.graph(schemaName);
             return ModelFactory.createModelForGraph(GraphUtils.deepCopy(ctx.getRdfGraph()));
         }
     }
@@ -105,8 +105,8 @@ public class QueryDatasetService
         // store per graph takes its lock once per profile of the workspace.
         var datasetPrefixes = databasePort.getPrefixMapping(workspaceName);
         try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
-            for (var graphName : transaction.graphNames()) {
-                result.add(readGraph(transaction, graphName, datasetPrefixes));
+            for (var schemaName : transaction.schemaNames()) {
+                result.add(readGraph(transaction, schemaName, datasetPrefixes));
             }
         }
 
@@ -126,10 +126,10 @@ public class QueryDatasetService
      * graph does not declare itself.
      */
     private GraphDTO readGraph(
-            WorkspaceTransaction transaction, String graphName, PrefixMapping datasetPrefixes) {
-        var dto = GraphDTO.builder().uri(new URI(graphName)).build();
+            WorkspaceTransaction transaction, String schemaName, PrefixMapping datasetPrefixes) {
+        var dto = GraphDTO.builder().uri(new URI(schemaName)).build();
         try {
-            var stored = transaction.graph(graphName).getRdfGraph();
+            var stored = transaction.graph(schemaName).getRdfGraph();
             var graph = GraphUtils.deepCopy(stored);
             var prefixes = graph.getPrefixMapping().setNsPrefixes(stored.getPrefixMapping());
             fillInMissingPrefixes(prefixes, datasetPrefixes);

@@ -62,10 +62,10 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
             cimAttribute.setUuid(UUID.randomUUID());
         }
         var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.workspaceName());
-        var graphName = graphIdentifier.graphName();
+        var schemaName = graphIdentifier.schemaName();
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             assertAttributeUriIsFree(graph, cimAttribute.getUri().toNode());
             var update =
@@ -74,12 +74,12 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
                                     CIMUpdates.insertAttribute(
                                                     graph,
                                                     prefixMapping,
-                                                    graphName,
+                                                    schemaName,
                                                     cimAttribute,
                                                     newValuesAsBlankNode)
                                             .build());
             UpdateExecutionFactory.create(
-                            update, SessionDataStore.wrapGraphInDataset(graph, graphName))
+                            update, SessionDataStore.wrapGraphInDataset(graph, schemaName))
                     .execute();
             var classLabel = findClassLabel(graph, attributeDTO.getDomain());
             transaction.commit(
@@ -95,16 +95,16 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
     public UUID replaceAttribute(GraphIdentifier graphIdentifier, AttributeDTO attributeDTO) {
         var cimAttribute = attributeMapper.toCIMObject(attributeDTO);
         var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.workspaceName());
-        var graphName = graphIdentifier.graphName();
+        var schemaName = graphIdentifier.schemaName();
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             var update =
                     CIMUpdates.replaceAttribute(
-                            graph, prefixMapping, graphName, cimAttribute, newValuesAsBlankNode);
+                            graph, prefixMapping, schemaName, cimAttribute, newValuesAsBlankNode);
             UpdateExecutionFactory.create(
-                            update, SessionDataStore.wrapGraphInDataset(graph, graphName))
+                            update, SessionDataStore.wrapGraphInDataset(graph, schemaName))
                     .execute();
             var classLabel = findClassLabel(graph, attributeDTO.getDomain());
             transaction.commit(
@@ -121,21 +121,21 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
             GraphIdentifier graphIdentifier, UUID classUUID, List<AttributeDTO> attributeList) {
         var attributeCIMObjects = attributeMapper.toCIMObjectList(attributeList);
         var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.workspaceName());
-        var graphName = graphIdentifier.graphName();
+        var schemaName = graphIdentifier.schemaName();
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
             var update =
                     CIMUpdates.replaceAttributes(
                             graph,
                             prefixMapping,
-                            graphName,
+                            schemaName,
                             classUUID,
                             attributeCIMObjects,
                             newValuesAsBlankNode);
             UpdateExecutionFactory.create(
-                            update, SessionDataStore.wrapGraphInDataset(graph, graphName))
+                            update, SessionDataStore.wrapGraphInDataset(graph, schemaName))
                     .execute();
             var classResource = CIMResourceUtils.findResourceForUuid(graph, classUUID);
             var classLabel = CIMResourceUtils.findLabelForResource(classResource);

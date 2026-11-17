@@ -43,8 +43,8 @@ public class ClassLocatorService implements LocateClassUseCase {
 
     @Override
     public LocatedClass locate(String workspaceName, String classUUID) {
-        for (var graphName : graphsInListingOrder(workspaceName)) {
-            var located = locateInGraph(workspaceName, graphName, classUUID);
+        for (var schemaName : graphsInListingOrder(workspaceName)) {
+            var located = locateInGraph(workspaceName, schemaName, classUUID);
             if (located != null) {
                 return located;
             }
@@ -61,27 +61,27 @@ public class ClassLocatorService implements LocateClassUseCase {
      * The graphs in the order they are listed in, so that the result does not depend on storage.
      */
     private List<String> graphsInListingOrder(String workspaceName) {
-        var keywords = CIMProfileModels.keywordsByGraphName(listGraphsUseCase, workspaceName);
-        return databasePort.listGraphNames(workspaceName).stream()
+        var keywords = CIMProfileModels.keywordsBySchemaName(listGraphsUseCase, workspaceName);
+        return databasePort.listSchemaNames(workspaceName).stream()
                 .sorted(
                         Comparator.comparing(
-                                        (String graphName) -> shortName(keywords, graphName),
+                                        (String schemaName) -> shortName(keywords, schemaName),
                                         String.CASE_INSENSITIVE_ORDER)
                                 .thenComparing(Comparator.naturalOrder()))
                 .toList();
     }
 
     /** The short name a schema is listed with, falling back to its uri. */
-    private static String shortName(Map<String, String> keywords, String graphName) {
-        var keyword = keywords.get(graphName);
-        return keyword != null ? keyword : graphName;
+    private static String shortName(Map<String, String> keywords, String schemaName) {
+        var keyword = keywords.get(schemaName);
+        return keyword != null ? keyword : schemaName;
     }
 
-    private LocatedClass locateInGraph(String workspaceName, String graphName, String classUUID) {
-        var graphIdentifier = new GraphIdentifier(workspaceName, graphName);
+    private LocatedClass locateInGraph(String workspaceName, String schemaName, String classUUID) {
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             return model.listSubjectsWithProperty(RDFA.uuid, classUUID).toList().stream()
                     .filter(subject -> subject.isURIResource())
@@ -89,7 +89,7 @@ public class ClassLocatorService implements LocateClassUseCase {
                     .map(
                             subject ->
                                     new LocatedClass(
-                                            graphName,
+                                            schemaName,
                                             subject.getURI(),
                                             UUID.fromString(classUUID)))
                     .orElse(null);
@@ -97,17 +97,17 @@ public class ClassLocatorService implements LocateClassUseCase {
     }
 
     private LocatedClass locateMergedClass(String workspaceName, String classUUID) {
-        for (var graphName : graphsInListingOrder(workspaceName)) {
-            var graphIdentifier = new GraphIdentifier(workspaceName, graphName);
+        for (var schemaName : graphsInListingOrder(workspaceName)) {
+            var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
             try (var transaction =
                     databasePort.beginTransaction(
                             graphIdentifier.workspaceName(), ReadWrite.READ)) {
-                var ctx = transaction.graph(graphIdentifier.graphName());
+                var ctx = transaction.graph(graphIdentifier.schemaName());
                 var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
-                for (var cimClass : new CIMModelFacade(graphName, model).getCIMClasses()) {
+                for (var cimClass : new CIMModelFacade(schemaName, model).getCIMClasses()) {
                     var classUri = cimClass.getUri().toString();
                     if (CrossProfileUtils.mergedUuid(classUri).toString().equals(classUUID)) {
-                        return new LocatedClass(graphName, classUri, cimClass.getUuid());
+                        return new LocatedClass(schemaName, classUri, cimClass.getUuid());
                     }
                 }
             }

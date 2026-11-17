@@ -154,8 +154,8 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
-    public List<String> listGraphNames(String workspaceName) {
-        return getOrCreateSessionDataStore().listGraphNames(workspaceName);
+    public List<String> listSchemaNames(String workspaceName) {
+        return getOrCreateSessionDataStore().listSchemaNames(workspaceName);
     }
 
     @Override

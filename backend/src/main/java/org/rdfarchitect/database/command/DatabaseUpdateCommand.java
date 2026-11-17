@@ -62,9 +62,9 @@ public interface DatabaseUpdateCommand {
     /**
      * Deletes a graph from the specified dataset of the database.
      *
-     * @param graphName name of the graph to be deleted
+     * @param schemaName name of the graph to be deleted
      */
-    void deleteGraph(String graphName);
+    void deleteGraph(String schemaName);
 
     /** Deletes the specified dataset from the database. */
     void deleteDataset();

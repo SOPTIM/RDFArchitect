@@ -97,13 +97,14 @@ class SessionDataStoreImplTest {
     void wrapGraph_NamedGraph_datasetWithNamedGraphInDataset() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
-        var graphName = "http://example.com/graph";
+        var schemaName = "http://example.com/graph";
 
         // Act
-        var dataset = SessionDataStore.wrapGraphInDataset(exampleGraphs.getFirst(), graphName);
+        var dataset = SessionDataStore.wrapGraphInDataset(exampleGraphs.getFirst(), schemaName);
 
         // Assert
-        assertThat(dataset.getNamedModel(graphName).getGraph()).isEqualTo(exampleGraphs.getFirst());
+        assertThat(dataset.getNamedModel(schemaName).getGraph())
+                .isEqualTo(exampleGraphs.getFirst());
     }
 
     @ParameterizedTest
@@ -155,9 +156,9 @@ class SessionDataStoreImplTest {
     void renameDataset_existingName_keepsGraphsUnderNewName() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
-        var graphName = "http://example.org/graph1";
+        var schemaName = "http://example.org/graph1";
         TestWorkspaces.createGraph(
-                inMemoryDatabase, new GraphIdentifier(NAME, graphName), exampleGraphs.getFirst());
+                inMemoryDatabase, new GraphIdentifier(NAME, schemaName), exampleGraphs.getFirst());
         inMemoryDatabase.disableEditing(NAME);
 
         // Act
@@ -165,7 +166,7 @@ class SessionDataStoreImplTest {
 
         // Assert
         assertThat(inMemoryDatabase.listDatasets()).containsExactly("b");
-        assertThat(inMemoryDatabase.listGraphNames("b")).containsExactly(graphName);
+        assertThat(inMemoryDatabase.listSchemaNames("b")).containsExactly(schemaName);
         assertThat(inMemoryDatabase.isReadOnly("b")).isTrue();
     }
 
@@ -198,7 +199,7 @@ class SessionDataStoreImplTest {
         renameGraph(graphIdentifier, "http://example.org/graph2");
 
         // Assert
-        assertThat(inMemoryDatabase.listGraphNames(NAME))
+        assertThat(inMemoryDatabase.listSchemaNames(NAME))
                 .containsExactly("http://example.org/graph2");
     }
 
@@ -252,7 +253,7 @@ class SessionDataStoreImplTest {
         try (var transaction =
                 inMemoryDatabase.beginTransaction(
                         GRAPH_IDENTIFIER.workspaceName(), ReadWrite.READ)) {
-            assertThat(transaction.graph(GRAPH_IDENTIFIER.graphName())).isNotNull();
+            assertThat(transaction.graph(GRAPH_IDENTIFIER.schemaName())).isNotNull();
         }
     }
 
@@ -274,7 +275,7 @@ class SessionDataStoreImplTest {
 
         assertThat(inMemoryDatabase.listDatasets())
                 .containsExactly(GRAPH_IDENTIFIER.workspaceName());
-        assertThat(inMemoryDatabase.listGraphNames(GRAPH_IDENTIFIER.workspaceName())).isEmpty();
+        assertThat(inMemoryDatabase.listSchemaNames(GRAPH_IDENTIFIER.workspaceName())).isEmpty();
     }
 
     @Test
@@ -282,7 +283,7 @@ class SessionDataStoreImplTest {
         inMemoryDatabase.createDataset("empty");
 
         assertThat(inMemoryDatabase.listDatasets()).contains("empty");
-        assertThat(inMemoryDatabase.listGraphNames("empty")).isEmpty();
+        assertThat(inMemoryDatabase.listSchemaNames("empty")).isEmpty();
     }
 
     @Test
@@ -331,7 +332,7 @@ class SessionDataStoreImplTest {
 
         // Assert
         assertThat(inMemoryDatabase.listDatasets()).containsExactly(NAME);
-        assertThat(inMemoryDatabase.listGraphNames(NAME)).isEmpty();
+        assertThat(inMemoryDatabase.listSchemaNames(NAME)).isEmpty();
     }
 
     @Test
@@ -343,7 +344,7 @@ class SessionDataStoreImplTest {
 
         // Assert
         assertThat(inMemoryDatabase.listDatasets()).containsExactly(NAME);
-        assertThat(inMemoryDatabase.listGraphNames(NAME)).isEmpty();
+        assertThat(inMemoryDatabase.listSchemaNames(NAME)).isEmpty();
     }
 
     @Test
@@ -373,7 +374,7 @@ class SessionDataStoreImplTest {
     }
 
     @Test
-    void listGraphNames_nonEmptyDataset_returnsAllGraphNames() {
+    void listSchemaNames_nonEmptyDataset_returnsAllSchemaNames() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
 
@@ -384,18 +385,18 @@ class SessionDataStoreImplTest {
                 exampleGraphs.get(1));
 
         // Act
-        var graphNames = inMemoryDatabase.listGraphNames(NAME);
+        var schemaNames = inMemoryDatabase.listSchemaNames(NAME);
 
         // Assert
-        assertThat(graphNames).contains(DEFAULT_GRAPH_NAME, "http://example.com/graph");
+        assertThat(schemaNames).contains(DEFAULT_GRAPH_NAME, "http://example.com/graph");
     }
 
     @Test
-    void listGraphNames_nonExistingDataset_throwsException() {
+    void listSchemaNames_nonExistingDataset_throwsException() {
         // Arrange
 
         // Act
-        assertThatThrownBy(() -> inMemoryDatabase.listGraphNames("a"))
+        assertThatThrownBy(() -> inMemoryDatabase.listSchemaNames("a"))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
@@ -547,16 +548,16 @@ class SessionDataStoreImplTest {
     private void deleteGraph(GraphIdentifier id) {
         try (var transaction =
                 inMemoryDatabase.beginTransaction(id.workspaceName(), ReadWrite.WRITE)) {
-            transaction.deleteGraph(id.graphName());
-            transaction.commit("deleted graph %s".formatted(id.graphName()));
+            transaction.deleteGraph(id.schemaName());
+            transaction.commit("deleted graph %s".formatted(id.schemaName()));
         }
     }
 
-    private void renameGraph(GraphIdentifier id, String newGraphName) {
+    private void renameGraph(GraphIdentifier id, String newSchemaName) {
         try (var transaction =
                 inMemoryDatabase.beginTransaction(id.workspaceName(), ReadWrite.WRITE)) {
-            transaction.renameGraph(id.graphName(), newGraphName);
-            transaction.commit("renamed graph %s".formatted(id.graphName()));
+            transaction.renameGraph(id.schemaName(), newSchemaName);
+            transaction.commit("renamed graph %s".formatted(id.schemaName()));
         }
     }
 }

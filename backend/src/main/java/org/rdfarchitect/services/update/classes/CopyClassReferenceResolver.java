@@ -166,7 +166,7 @@ public class CopyClassReferenceResolver {
         }
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             urisByKind.forEach(
                     (kind, uris) -> readReferences(resolved, model, graphIdentifier, uris, kind));
@@ -200,7 +200,7 @@ public class CopyClassReferenceResolver {
         if (!resource.hasProperty(RDF.type, RDFS.Class) || !resource.hasProperty(RDFA.uuid)) {
             return null;
         }
-        var referencedClass = new CIMClass(graphIdentifier.graphName(), model, resource);
+        var referencedClass = new CIMClass(graphIdentifier.schemaName(), model, resource);
         return new CopyClassReference(
                 graphIdentifier,
                 referencedClass.getUuid(),

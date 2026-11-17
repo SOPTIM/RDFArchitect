@@ -34,7 +34,7 @@ public class WorkspaceValidationContext {
 
     @Getter private final IssueOccurrences occurrences = new IssueOccurrences(this);
 
-    private final String scopeGraphName;
+    private final String scopeSchemaName;
 
     private final Map<String, ICIMProfileHeader> headers = new HashMap<>();
 
@@ -42,11 +42,11 @@ public class WorkspaceValidationContext {
 
     /**
      * @param profiles the schemas of the workspace, in the order they are stored
-     * @param scopeGraphName the schema the run is about, or null for the whole workspace
+     * @param scopeSchemaName the schema the run is about, or null for the whole workspace
      */
-    public WorkspaceValidationContext(List<CIMProfileModel> profiles, String scopeGraphName) {
+    public WorkspaceValidationContext(List<CIMProfileModel> profiles, String scopeSchemaName) {
         this.profiles = List.copyOf(profiles);
-        this.scopeGraphName = scopeGraphName;
+        this.scopeSchemaName = scopeSchemaName;
     }
 
     /**
@@ -56,7 +56,7 @@ public class WorkspaceValidationContext {
      */
     public WorkspaceIndex getIndex() {
         if (index == null) {
-            index = WorkspaceIndex.of(profiles, scopeGraphName);
+            index = WorkspaceIndex.of(profiles, scopeSchemaName);
         }
         return index;
     }
@@ -67,7 +67,7 @@ public class WorkspaceValidationContext {
      * @return the header, never null, see {@link ICIMProfileHeader#isPresent()}
      */
     public ICIMProfileHeader getHeader(CIMProfileModel profile) {
-        return headers.computeIfAbsent(profile.graphName(), _ -> profile.model().getHeader());
+        return headers.computeIfAbsent(profile.schemaName(), _ -> profile.model().getHeader());
     }
 
     /**

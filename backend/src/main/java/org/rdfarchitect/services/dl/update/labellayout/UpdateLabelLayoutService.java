@@ -57,7 +57,7 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
             List<LabelPositionDTO> labelPositionDTOList) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var diagramLayout = ctx.getDiagramLayout();
             var resolvedDiagramUUID =
                     diagramUUID != null

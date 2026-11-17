@@ -68,7 +68,7 @@ public class SyncDiagramLayoutService implements SyncDiagramLayoutUseCase {
     public void syncDiagramLayout(GraphIdentifier graphIdentifier) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            syncGraphDiagramLayout(transaction, graphIdentifier.graphName());
+            syncGraphDiagramLayout(transaction, graphIdentifier.schemaName());
             syncDatasetDiagramLayout(transaction, graphIdentifier.workspaceName());
             transaction.commit(SYNC_MESSAGE);
         }
@@ -113,12 +113,13 @@ public class SyncDiagramLayoutService implements SyncDiagramLayoutUseCase {
      * Syncs the package diagrams and the custom diagrams of a graph, see {@link #syncDiagram(Model,
      * MRID, Optional, EdgeResolver)}.
      */
-    private static void syncGraphDiagramLayout(WorkspaceTransaction transaction, String graphName) {
-        var ctx = transaction.graph(graphName);
+    private static void syncGraphDiagramLayout(
+            WorkspaceTransaction transaction, String schemaName) {
+        var ctx = transaction.graph(schemaName);
         var diagramLayout = ctx.getDiagramLayout();
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
         var cimModel =
-                new CIMModelFacade(graphName, ModelFactory.createModelForGraph(ctx.getRdfGraph()));
+                new CIMModelFacade(schemaName, ModelFactory.createModelForGraph(ctx.getRdfGraph()));
         var edgeResolver = EdgeResolver.forGraph(cimModel);
         var defaultPackageUUID = diagramLayout.getDefaultPackageMRID().getUuid();
         for (var diagramMRID : DLObjectFetcher.fetchDiagramMRIDs(diagramLayoutModel)) {

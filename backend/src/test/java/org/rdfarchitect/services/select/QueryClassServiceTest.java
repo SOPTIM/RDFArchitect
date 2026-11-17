@@ -71,7 +71,7 @@ class QueryClassServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.graphName())
+                        .setGraphName(graphIdentifier.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }
@@ -117,7 +117,7 @@ class QueryClassServiceTest {
     private UUID addReferencedOnlyResource(String label) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             ctx.getRdfGraph()
                     .add(
                             NodeFactory.createURI(PREFIX + "class.associatedClass"),
@@ -127,7 +127,7 @@ class QueryClassServiceTest {
         }
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphName());
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             return UUID.fromString(
                     model.getResource(PREFIX + label).getProperty(RDFA.uuid).getString());
