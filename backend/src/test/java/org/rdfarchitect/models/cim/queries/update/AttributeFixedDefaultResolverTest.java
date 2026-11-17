@@ -77,7 +77,7 @@ class AttributeFixedDefaultResolverTest {
     }
 
     @Test
-    @DisplayName("a value on a language-tagged primitive is a plain string, having no language")
+    @DisplayName("a value on a language-tagged primitive is an xsd:string, having no language tag")
     void resolve_valueOnLangString_staysAString() {
         var attribute =
                 baseAttribute()

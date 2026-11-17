@@ -139,7 +139,7 @@ public interface AttributeMapper {
             return null;
         }
         var datatype = XSDDatatypeMapper.classLabelToDatatype(dto.getDataType().getLabel());
-        if (!XSDDatatypeMapper.canTypeAPlainValue(datatype)) {
+        if (!XSDDatatypeMapper.canTypeUntaggedValue(datatype)) {
             return null;
         }
         return new URI(datatype.getURI());

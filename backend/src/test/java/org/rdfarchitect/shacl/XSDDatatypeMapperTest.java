@@ -75,15 +75,16 @@ class XSDDatatypeMapperTest {
     }
 
     @Test
-    void aPlainValueCanBeTypedOnlyWithADatatypeThatExistsAndNeedsNoLanguage() {
-        assertThat(canTypeAPlainValue("String")).isTrue();
-        assertThat(canTypeAPlainValue("MonthDay")).isTrue();
-        // It would need a language tag, and a fixed or default value has only its text.
-        assertThat(canTypeAPlainValue("LangString")).isFalse();
-        assertThat(canTypeAPlainValue("SomethingNobodyDefined")).isFalse();
+    void anUntaggedValueCanBeTypedOnlyWithADatatypeThatExistsAndNeedsNoLanguage() {
+        assertThat(canTypeUntaggedValue("String")).isTrue();
+        assertThat(canTypeUntaggedValue("MonthDay")).isTrue();
+        // It would need a language tag, and a fixed or default value has none.
+        assertThat(canTypeUntaggedValue("LangString")).isFalse();
+        assertThat(canTypeUntaggedValue("SomethingNobodyDefined")).isFalse();
     }
 
-    private static boolean canTypeAPlainValue(String label) {
-        return XSDDatatypeMapper.canTypeAPlainValue(XSDDatatypeMapper.classLabelToDatatype(label));
+    private static boolean canTypeUntaggedValue(String label) {
+        return XSDDatatypeMapper.canTypeUntaggedValue(
+                XSDDatatypeMapper.classLabelToDatatype(label));
     }
 }

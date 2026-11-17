@@ -222,7 +222,7 @@ class AttributeFixedDefaultResolver {
             return defaultXsdString();
         }
         var rdfDatatype = XSDDatatypeMapper.classLabelToDatatype(label);
-        if (!XSDDatatypeMapper.canTypeAPlainValue(rdfDatatype)) {
+        if (!XSDDatatypeMapper.canTypeUntaggedValue(rdfDatatype)) {
             return defaultXsdString();
         }
         return new URI(rdfDatatype.getURI());

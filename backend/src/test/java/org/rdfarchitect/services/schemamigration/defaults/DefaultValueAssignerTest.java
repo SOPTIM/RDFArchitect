@@ -155,8 +155,8 @@ class DefaultValueAssignerTest {
         }
 
         @Test
-        void populateDefaultsForAttributes_langString_migratesAPlainValueAsAString() {
-            // A default is only text, and a language-tagged string needs a tag on top of that.
+        void populateDefaultsForAttributes_langString_migratesAnUntaggedValueAsAString() {
+            // A default has no language tag, and a language-tagged string needs one.
             var attr = model.createResource(PREFIX + "Attribute1");
             attr.addProperty(RDF.type, RDF.Property);
             attr.addProperty(CIMS.stereotype, CIMStereotypes.attribute);

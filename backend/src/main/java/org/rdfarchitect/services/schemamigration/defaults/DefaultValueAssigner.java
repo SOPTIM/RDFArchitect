@@ -129,7 +129,7 @@ public class DefaultValueAssigner {
                 || CIMAttributeUtils.hasCIMDatatype(attributeResource)
                 || CIMAttributeUtils.hasXSDDatatype(attributeResource)) {
             attributeChange.setPrimitiveDataType(
-                    XSDDatatypeMapper.forPlainValue(
+                    XSDDatatypeMapper.datatypeForUntaggedValue(
                                     CIMAttributeUtils.getPrimitiveDatatype(attributeResource))
                             .getURI());
             attributeChange.setDataType(
