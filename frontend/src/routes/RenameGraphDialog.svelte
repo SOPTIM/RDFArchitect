@@ -18,7 +18,9 @@
 <script>
     import { v4 as uuidv4 } from "uuid";
 
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { isInvalidSchemaName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -53,11 +55,11 @@
     let headerTarget = $state(null);
 
     const resolvedSchemaName = $derived(nameUserInput.trim());
-    const graphExists = $derived(
-        !!resolvedSchemaName && otherSchemaNames.includes(resolvedSchemaName),
+    const nameViolations = $derived(
+        isInvalidSchemaName(nameUserInput, otherSchemaNames),
     );
     const disableSubmit = $derived(
-        !resolvedSchemaName || graphExists || resolvedSchemaName === schemaName,
+        nameViolations.length > 0 || resolvedSchemaName === schemaName,
     );
 
     async function onOpen() {
@@ -140,9 +142,7 @@
             bind:value={nameUserInput}
         />
 
-        {#if graphExists}
-            <div class="mt-1 mb-1 h-6 text-sm">Schema already exists</div>
-        {/if}
+        <ViolationMessages violations={nameViolations} />
 
         {#if profileName}
             <!--

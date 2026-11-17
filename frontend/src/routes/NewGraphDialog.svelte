@@ -18,7 +18,9 @@
 <script>
     import { v4 as uuidv4 } from "uuid";
 
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { isInvalidSchemaName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { schemaName } from "$lib/utils/graph-label.js";
@@ -49,17 +51,16 @@
     );
 
     const resolvedSchemaName = $derived(schemaNameUserInput.trim());
-    const graphExists = $derived(
-        !!resolvedSchemaName &&
-            existingGraphs.some(
-                graph => schemaName(graph) === resolvedSchemaName,
-            ),
+    const schemaNameViolations = $derived(
+        isInvalidSchemaName(
+            schemaNameUserInput,
+            existingGraphs.map(graph => schemaName(graph)),
+        ),
     );
     const disableSubmit = $derived(
         !workspaceNameUserInput ||
-            !resolvedSchemaName ||
             workspaceIsReadOnly ||
-            graphExists,
+            schemaNameViolations.length > 0,
     );
 
     async function onOpen() {
@@ -171,8 +172,8 @@
             bind:value={schemaNameUserInput}
         />
 
-        {#if graphExists}
-            <div class="mt-1 mb-1 h-6 text-sm">Schema already exists</div>
+        {#if schemaNameUserInput}
+            <ViolationMessages violations={schemaNameViolations} />
         {/if}
     </div>
 </ActionDialog>

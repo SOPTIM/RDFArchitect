@@ -24,7 +24,9 @@
     import FileDropZone from "$lib/components/FileDropZone.svelte";
     import ImportProgressPanel from "$lib/components/ImportProgressPanel.svelte";
     import NamespacePrefixComparison from "$lib/components/NamespacePrefixComparison.svelte";
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { isInvalidSchemaName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
@@ -117,10 +119,14 @@
         }
         return "";
     });
+    let fileNameViolations = $derived(
+        files.map((_, index) => schemaNameViolations(index)),
+    );
     let enableSubmit = $derived(
         files.length > 0 &&
             !isWorkspaceReadOnly(workspaceNameUserInput) &&
             !newWorkspaceNameError &&
+            fileNameViolations.every(violations => violations.length === 0) &&
             progress === null,
     );
 
@@ -179,6 +185,22 @@
                 ? normalized
                 : normalized.substring(0, lastDotIndex);
         return baseName.trim() ? baseName : DEFAULT_GRAPH_NAME;
+    }
+
+    /**
+     * What is wrong with the name a file is to be imported under. Two files of the upload may not
+     * share a name, but one may take the name of an existing schema: the backend then imports it
+     * under that name with a number appended.
+     */
+    function schemaNameViolations(index) {
+        const entry = files[index];
+        if (entry.isZip) {
+            return [];
+        }
+        const otherNames = files
+            .filter((other, idx) => idx !== index && !other.isZip)
+            .map(other => other.schemaName.trim());
+        return isInvalidSchemaName(entry.schemaName, otherNames);
     }
 
     function addFiles(newFiles, directoryNames = []) {
@@ -567,6 +589,10 @@
                                                 index,
                                                 event.target.value,
                                             )}
+                                    />
+                                    <ViolationMessages
+                                        violations={fileNameViolations[index] ??
+                                            []}
                                     />
                                 </div>
                                 <div

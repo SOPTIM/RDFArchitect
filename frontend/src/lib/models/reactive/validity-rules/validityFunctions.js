@@ -16,6 +16,7 @@
  */
 import { untrack } from "svelte";
 import { validate as uuidValidate } from "uuid";
+import isValidFilename from "valid-filename";
 import { IriValidationStrategy, validateIri } from "validate-iri";
 
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -89,6 +90,31 @@ export function isValidDiagramName(diagramName, compareDiagrams) {
     }
 
     return violations;
+}
+
+/**
+ * What is wrong with a schema name, after leading and trailing whitespace is cut off. A schema is
+ * exported to a file named after it and travels in every API path, so its name has to be a file
+ * name on every system and must not hold a `;`. The backend checks the same.
+ *
+ * @param {string} name the name as typed
+ * @param {string[]} otherNames the names of the other schemas of the workspace
+ * @returns {string[]} the violations, empty for a valid name
+ */
+export function isInvalidSchemaName(name, otherNames) {
+    const trimmed = (name ?? "").trim();
+    if (!trimmed) {
+        return ["must not be empty"];
+    }
+    if (trimmed.includes(";") || !isValidFilename(trimmed)) {
+        return [
+            'A schema name must not contain any of \\ / : * ? " < > | ; and must not be a name reserved by the file system',
+        ];
+    }
+    if (otherNames?.includes(trimmed)) {
+        return ["A schema with this name already exists"];
+    }
+    return [];
 }
 
 export function isInvalidAssociationLabel(association, associations) {

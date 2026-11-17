@@ -97,7 +97,9 @@ describe("NewGraphDialog", () => {
 
         await type(nameInput(), "Equipment");
 
-        expect(document.body.textContent).toContain("Schema already exists");
+        expect(document.body.textContent).toContain(
+            "A schema with this name already exists",
+        );
         expect(button("Create Schema").disabled).toBe(true);
     });
 
@@ -107,9 +109,20 @@ describe("NewGraphDialog", () => {
         await type(nameInput(), "Topology");
 
         expect(document.body.textContent).not.toContain(
-            "Schema already exists",
+            "A schema with this name already exists",
         );
         expect(button("Create Schema").disabled).toBe(false);
+    });
+
+    test("refuses a name a file cannot carry and says which characters are forbidden", async () => {
+        await open();
+
+        await type(nameInput(), "a:b");
+
+        expect(document.body.textContent).toContain(
+            "A schema name must not contain any of",
+        );
+        expect(button("Create Schema").disabled).toBe(true);
     });
 
     test("creates the schema under the trimmed name", async () => {

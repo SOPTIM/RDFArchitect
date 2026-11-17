@@ -251,7 +251,9 @@ describe("RenameGraphDialog", () => {
         await type(nameInput(), "Equipment");
 
         expect(button("Rename Schema").disabled).toBe(true);
-        expect(document.body.textContent).toContain("Schema already exists");
+        expect(document.body.textContent).toContain(
+            "A schema with this name already exists",
+        );
     });
 
     test("stays disabled until the name changes", async () => {
@@ -271,9 +273,29 @@ describe("RenameGraphDialog", () => {
 
         expect(button("Rename Schema").disabled).toBe(true);
         expect(document.body.textContent).not.toContain(
-            "Schema already exists",
+            "A schema with this name already exists",
         );
         expect(graphStore.renameGraph).not.toHaveBeenCalled();
+    });
+
+    test("refuses a name a file cannot carry and says which characters are forbidden", async () => {
+        await open("MyNotes");
+
+        await type(nameInput(), "a:b");
+
+        expect(button("Rename Schema").disabled).toBe(true);
+        expect(document.body.textContent).toContain(
+            "A schema name must not contain any of",
+        );
+    });
+
+    test("refuses an empty name", async () => {
+        await open("MyNotes");
+
+        await type(nameInput(), "   ");
+
+        expect(button("Rename Schema").disabled).toBe(true);
+        expect(document.body.textContent).toContain("must not be empty");
     });
 
     test("sends the trimmed name, characters an IRI could not carry included", async () => {
