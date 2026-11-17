@@ -87,10 +87,10 @@ public class DiagramLayoutServicesTestBase {
     }
 
     public static void addGraphFromFile(String fileName) {
-        addGraphFromFile(fileName, graphIdentifier.graphUri());
+        addGraphFromFile(fileName, graphIdentifier.schemaName());
     }
 
-    public static void addGraphFromFile(String fileName, String graphUri) {
+    public static void addGraphFromFile(String fileName, String schemaName) {
         byte[] content;
         try {
             content = Files.readAllBytes(Path.of(TTL_FILES_PATH + fileName));
@@ -101,10 +101,10 @@ public class DiagramLayoutServicesTestBase {
         var graph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphUri)
+                        .setGraphName(schemaName)
                         .build()
                         .graph();
-        var identifier = new GraphIdentifier(graphIdentifier.datasetName(), graphUri);
+        var identifier = new GraphIdentifier(graphIdentifier.workspaceName(), schemaName);
         createGraph(databasePort, identifier, graph);
         diagramLayout = layoutOf(identifier);
     }
@@ -312,19 +312,19 @@ public class DiagramLayoutServicesTestBase {
     /** The diagram layout of a graph, read inside a transaction as production code does. */
     protected static DiagramLayout layoutOf(GraphIdentifier identifier) {
         try (var transaction =
-                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
-            return transaction.graph(identifier.graphUri()).getDiagramLayout();
+                databasePort.beginTransaction(identifier.workspaceName(), ReadWrite.READ)) {
+            return transaction.graph(identifier.schemaName()).getDiagramLayout();
         }
     }
 
     /** A detached copy of a graph's layout model, for assertions outside a transaction. */
     protected static Model layoutModelOf(GraphIdentifier identifier) {
         try (var transaction =
-                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(identifier.workspaceName(), ReadWrite.READ)) {
             return ModelFactory.createDefaultModel()
                     .add(
                             transaction
-                                    .graph(identifier.graphUri())
+                                    .graph(identifier.schemaName())
                                     .getDiagramLayout()
                                     .getDiagramLayoutModel());
         }
@@ -333,7 +333,7 @@ public class DiagramLayoutServicesTestBase {
     /** A detached copy of the workspace's custom diagrams, for assertions outside a transaction. */
     protected static Map<UUID, CustomDiagram> workspaceDiagrams() {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var copy = new HashMap<UUID, CustomDiagram>();
             transaction.diagrams().forEach((id, diagram) -> copy.put(id, diagram.copy()));
             return copy;
@@ -343,7 +343,7 @@ public class DiagramLayoutServicesTestBase {
     /** A detached copy of the workspace's layout model, for assertions outside a transaction. */
     protected static Model workspaceLayoutModel() {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             return ModelFactory.createDefaultModel()
                     .add(transaction.layout().getDiagramLayoutModel());
         }
@@ -352,7 +352,7 @@ public class DiagramLayoutServicesTestBase {
     /** Runs {@code action} against the workspace's live custom diagrams, inside a transaction. */
     protected static void withWorkspaceDiagrams(Consumer<Map<UUID, CustomDiagram>> action) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             action.accept(transaction.diagrams());
             transaction.commit("test change");
         }
@@ -361,7 +361,7 @@ public class DiagramLayoutServicesTestBase {
     /** Runs {@code action} against the workspace's live layout model, inside a transaction. */
     protected static void withWorkspaceLayoutModel(Consumer<Model> action) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             action.accept(transaction.layout().getDiagramLayoutModel());
             transaction.commit("test change");
         }
@@ -370,10 +370,10 @@ public class DiagramLayoutServicesTestBase {
     /** Runs {@code action} against the live layout model of a graph, inside a write transaction. */
     protected static void withLayoutModel(GraphIdentifier identifier, Consumer<Model> action) {
         try (var transaction =
-                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(identifier.workspaceName(), ReadWrite.WRITE)) {
             action.accept(
                     transaction
-                            .graph(identifier.graphUri())
+                            .graph(identifier.schemaName())
                             .getDiagramLayout()
                             .getDiagramLayoutModel());
             transaction.commit("test change");
@@ -382,18 +382,18 @@ public class DiagramLayoutServicesTestBase {
 
     /** Creates a workspace and a graph in it, the way an upload does. */
     protected static void createGraph(DatabasePort port, GraphIdentifier identifier, Graph graph) {
-        port.createWorkspaceIfAbsent(identifier.datasetName());
-        try (var transaction = port.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(identifier.graphUri(), graph);
-            transaction.commit("created graph %s".formatted(identifier.graphUri()));
+        port.createWorkspaceIfAbsent(identifier.workspaceName());
+        try (var transaction = port.beginTransaction(identifier.workspaceName(), ReadWrite.WRITE)) {
+            transaction.createGraph(identifier.schemaName(), graph);
+            transaction.commit("created graph %s".formatted(identifier.schemaName()));
         }
     }
 
     /** Deletes a graph from its workspace. */
     protected static void deleteGraph(DatabasePort port, GraphIdentifier identifier) {
-        try (var transaction = port.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.deleteGraph(identifier.graphUri());
-            transaction.commit("deleted graph %s".formatted(identifier.graphUri()));
+        try (var transaction = port.beginTransaction(identifier.workspaceName(), ReadWrite.WRITE)) {
+            transaction.deleteGraph(identifier.schemaName());
+            transaction.commit("deleted graph %s".formatted(identifier.schemaName()));
         }
     }
 }

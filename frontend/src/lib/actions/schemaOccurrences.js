@@ -28,7 +28,7 @@ function asGraph(occurrence) {
     return {
         label: occurrence?.label,
         keyword: occurrence?.keyword,
-        uri: occurrence?.graphUri,
+        uri: occurrence?.schemaName,
     };
 }
 
@@ -55,8 +55,8 @@ export function sortSchemaOccurrences(occurrences) {
         }))
         .sort((a, b) =>
             compareGraphs(
-                { label: schemaLabel(a), uri: a.graphUri },
-                { label: schemaLabel(b), uri: b.graphUri },
+                { label: schemaLabel(a), name: a.schemaName },
+                { label: schemaLabel(b), name: b.schemaName },
             ),
         );
 }
@@ -75,9 +75,9 @@ export function mergeSchemaOccurrences(lists) {
     const merged = new Map();
     for (const occurrences of lists ?? []) {
         for (const occurrence of occurrences) {
-            const known = merged.get(occurrence.graphUri);
+            const known = merged.get(occurrence.schemaName);
             if (!known) {
-                merged.set(occurrence.graphUri, { ...occurrence });
+                merged.set(occurrence.schemaName, { ...occurrence });
                 continue;
             }
             known.present = known.present && occurrence.present;
@@ -90,11 +90,11 @@ export function mergeSchemaOccurrences(lists) {
  * The schemas a stub can be copied from: every schema that defines the class,
  * except the one it is about to be created in.
  */
-export function sourceCandidates(occurrences, targetGraphUri) {
+export function sourceCandidates(occurrences, targetSchemaName) {
     return (occurrences ?? []).filter(
         occurrence =>
             occurrence.present &&
-            occurrence.graphUri !== String(targetGraphUri),
+            occurrence.schemaName !== String(targetSchemaName),
     );
 }
 
@@ -125,7 +125,7 @@ export function groupCandidatesByStub(candidates) {
             continue;
         }
         groups.set(signature, {
-            key: candidate.graphUri,
+            key: candidate.schemaName,
             occurrences: [candidate],
         });
     }

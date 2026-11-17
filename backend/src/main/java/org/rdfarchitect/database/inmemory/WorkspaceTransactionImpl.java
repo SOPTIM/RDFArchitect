@@ -73,12 +73,12 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     }
 
     @Override
-    public GraphContext graph(String graphUri) {
-        return workspace.getGraphWithContext(graphUri);
+    public GraphContext graph(String schemaName) {
+        return workspace.getGraphWithContext(schemaName);
     }
 
     @Override
-    public List<String> graphUris() {
+    public List<String> schemaNames() {
         return graphs.uris();
     }
 
@@ -108,39 +108,35 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     }
 
     @Override
-    public void createGraph(String graphUri, Graph newGraph) {
-        var expanded = prefixes.expandPrefix(graphUri);
-        Workspace.assertValidGraphName(expanded);
-        graphs.put(expanded, new GraphWithContext(newGraph, txnContext));
+    public void createGraph(String schemaName, Graph newGraph) {
+        Workspace.assertValidSchemaName(schemaName);
+        graphs.put(schemaName, new GraphWithContext(newGraph, txnContext));
         prefixes.addAll(newGraph.getPrefixMapping());
-        crossProfileDiagramInfo.setColor(expanded, CrossProfileUtils.generateRandomDarkColor());
+        crossProfileDiagramInfo.setColor(schemaName, CrossProfileUtils.generateRandomDarkColor());
     }
 
     @Override
-    public void deleteGraph(String graphUri) {
-        var expanded = prefixes.expandPrefix(graphUri);
-        graphs.remove(expanded);
-        crossProfileDiagramInfo.removeColor(expanded);
+    public void deleteGraph(String schemaName) {
+        graphs.remove(schemaName);
+        crossProfileDiagramInfo.removeColor(schemaName);
     }
 
     @Override
-    public void renameGraph(String oldGraphUri, String newGraphUri) {
-        var oldUri = prefixes.expandPrefix(oldGraphUri);
-        var newUri = prefixes.expandPrefix(newGraphUri);
-        Workspace.assertValidGraphName(oldUri);
-        Workspace.assertValidGraphName(newUri);
-        if (oldUri.equals(newUri)) {
+    public void renameGraph(String oldSchemaName, String newSchemaName) {
+        Workspace.assertValidSchemaName(oldSchemaName);
+        Workspace.assertValidSchemaName(newSchemaName);
+        if (oldSchemaName.equals(newSchemaName)) {
             return;
         }
-        if (!graphs.contains(oldUri)) {
-            throw new ResourceNotFoundException("Graph URI " + oldUri + " does not exist.");
+        if (!graphs.contains(oldSchemaName)) {
+            throw new ResourceNotFoundException("Graph URI " + oldSchemaName + " does not exist.");
         }
-        if (graphs.contains(newUri)) {
-            throw new ResourceConflictException("Graph URI " + newUri + " already exists.");
+        if (graphs.contains(newSchemaName)) {
+            throw new ResourceConflictException("Graph URI " + newSchemaName + " already exists.");
         }
-        graphs.rename(oldUri, newUri);
-        renameGraphInDiagrams(oldUri, newUri);
-        crossProfileDiagramInfo.renameGraph(oldUri, newUri);
+        graphs.rename(oldSchemaName, newSchemaName);
+        renameGraphInDiagrams(oldSchemaName, newSchemaName);
+        crossProfileDiagramInfo.renameGraph(oldSchemaName, newSchemaName);
     }
 
     @Override
@@ -177,18 +173,18 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
         end();
     }
 
-    private void renameGraphInDiagrams(String oldGraphUri, String newGraphUri) {
-        var oldUri = new URI(oldGraphUri);
-        var newUri = new URI(newGraphUri);
-        rewriteGraphUri(customDiagrams.get().values(), oldUri, newUri);
+    private void renameGraphInDiagrams(String oldSchemaName, String newSchemaName) {
+        var oldUri = new URI(oldSchemaName);
+        var newUri = new URI(newSchemaName);
+        rewriteSchemaName(customDiagrams.get().values(), oldUri, newUri);
         for (var graph : graphs.view().values()) {
-            rewriteGraphUri(graph.getCustomDiagrams().values(), oldUri, newUri);
+            rewriteSchemaName(graph.getCustomDiagrams().values(), oldUri, newUri);
         }
     }
 
-    private static void rewriteGraphUri(
+    private static void rewriteSchemaName(
             Collection<CustomDiagram> diagrams, URI oldUri, URI newUri) {
-        rewriteGraphUris(diagrams, Map.of(oldUri, newUri));
+        rewriteSchemaNames(diagrams, Map.of(oldUri, newUri));
     }
 
     /**
@@ -200,20 +196,20 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
      * @param diagrams the diagrams to rewrite
      * @param renamed the URI each renamed graph has now, by the URI it had
      */
-    static void rewriteGraphUris(Collection<CustomDiagram> diagrams, Map<URI, URI> renamed) {
+    static void rewriteSchemaNames(Collection<CustomDiagram> diagrams, Map<URI, URI> renamed) {
         for (var diagram : diagrams) {
             var classes = diagram.getClasses();
-            if (classes.stream().noneMatch(entry -> renamed.containsKey(entry.getGraphUri()))) {
+            if (classes.stream().noneMatch(entry -> renamed.containsKey(entry.getSchemaName()))) {
                 continue;
             }
             diagram.setClasses(
                     classes.stream()
                             .map(
                                     entry ->
-                                            renamed.containsKey(entry.getGraphUri())
+                                            renamed.containsKey(entry.getSchemaName())
                                                     ? new ClassInDiagram(
                                                             entry.getUuid(),
-                                                            renamed.get(entry.getGraphUri()))
+                                                            renamed.get(entry.getSchemaName()))
                                                     : entry)
                             .toList());
         }

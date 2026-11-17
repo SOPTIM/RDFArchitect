@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassPositionsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,14 +41,13 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}/classes")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/layout/{diagramUUID}/classes")
 @RequiredArgsConstructor
 public class ClassLayoutDataRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ClassLayoutDataRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final UpdateClassPositionsUseCase updateClassPositionsUseCase;
 
     @Operation(
@@ -63,12 +61,12 @@ public class ClassLayoutDataRESTController {
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @Parameter(description = "The UUID of the package or custom diagram being updated.")
                     @PathVariable
                     String diagramUUID,
@@ -88,25 +86,24 @@ public class ClassLayoutDataRESTController {
                     List<ClassPositionDTO> classPositionDTOList) {
 
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/classes\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/layout/{{}}/classes\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 diagramUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var resolvedPackageUUID =
                 !diagramUUID.equals("default") ? UUID.fromString(diagramUUID) : null;
 
         updateClassPositionsUseCase.updateClassPositions(
-                new GraphIdentifier(datasetName, extendedGraphURI),
+                new GraphIdentifier(workspaceName, schemaName),
                 resolvedPackageUUID,
                 classPositionDTOList);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/classes\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/layout/{{}}/classes\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 diagramUUID,
                 originURL);
         return "success";

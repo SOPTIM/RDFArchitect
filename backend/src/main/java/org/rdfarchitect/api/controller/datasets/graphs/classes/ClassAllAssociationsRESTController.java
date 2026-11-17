@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.associations.AssociationsService;
 import org.rdfarchitect.services.update.classes.associations.CreateAssociationUseCase;
 import org.rdfarchitect.services.update.classes.associations.UpdateAssociationsUseCase;
@@ -47,14 +46,14 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/associations")
+@RequestMapping(
+        "api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/associations")
 @RequiredArgsConstructor
 public class ClassAllAssociationsRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ClassAllAssociationsRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final CreateAssociationUseCase createAssociationUseCase;
     private final UpdateAssociationsUseCase updateAssociationsUseCase;
 
@@ -71,12 +70,12 @@ public class ClassAllAssociationsRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
@@ -93,22 +92,21 @@ public class ClassAllAssociationsRESTController {
                     @RequestBody
                     List<AssociationPairDTO> associationPairList) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/associations\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         updateAssociationsUseCase.replaceAllAssociations(
                 graphIdentifier, UUID.fromString(classUUID), associationPairList);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/associations\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 originURL);
         return Response.SUCCESS;
@@ -127,12 +125,12 @@ public class ClassAllAssociationsRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
@@ -146,22 +144,21 @@ public class ClassAllAssociationsRESTController {
                     @RequestBody
                     AssociationPairDTO associationPair) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/associations/\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var newAssociationUUIDs =
                 createAssociationUseCase.createAssociation(graphIdentifier, associationPair);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/associations/\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 originURL);
         return newAssociationUUIDs;

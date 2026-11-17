@@ -66,7 +66,7 @@ class SchemaComparisonServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(GRAPH_IDENTIFIER.graphUri())
+                        .setGraphName(GRAPH_IDENTIFIER.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, GRAPH_IDENTIFIER, graphSource.graph());
     }
@@ -429,7 +429,7 @@ class SchemaComparisonServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(otherGraphFile)
-                        .setGraphName(OTHER_GRAPH_IDENTIFIER.graphUri())
+                        .setGraphName(OTHER_GRAPH_IDENTIFIER.schemaName())
                         .build();
         TestWorkspaces.createGraph(databasePort, OTHER_GRAPH_IDENTIFIER, graphSource.graph());
 

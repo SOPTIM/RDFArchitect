@@ -50,7 +50,7 @@ The **in-memory** path (`database/inmemory`) is used heavily in tests and as the
 Its contents (graphs, custom diagrams, layout, namespaces) are reachable only through a workspace transaction, so that a change touching several of them commits or rolls back as a whole and becomes one entry in the workspace changelog:
 
 ```java
-try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
     var ctx = transaction.graph(graphUri);
     // … edit ctx.getRdfGraph(), transaction.diagrams(), transaction.layout() …
     transaction.commit("Deleted class \"Breaker\"");
@@ -65,7 +65,7 @@ Controllers are thin and follow a strict skeleton:
 
 ```java
 @RestController
-@RequestMapping("api/datasets")
+@RequestMapping("api/workspaces")
 @RequiredArgsConstructor
 public class DatasetRESTController {
 
@@ -87,7 +87,7 @@ public class DatasetRESTController {
 
 Conventions worth knowing:
 
-- **One controller per resource path tier.** `api/datasets`, `api/datasets/{name}/graphs`, `api/datasets/{name}/graphs/{uri}/classes`, etc. Controllers do not span tiers.
+- **One controller per resource path tier.** `api/workspaces`, `api/workspaces/{name}/schemas`, `api/workspaces/{name}/schemas/{uri}/classes`, etc. Controllers do not span tiers.
 - **Always `@Operation` annotated** — Swagger UI is part of the public deliverable.
 - **Always log on receive and on respond**, with the originating URL, dataset, and graph names where applicable. Audit log style.
 - **Use cases are constructor-injected via `@RequiredArgsConstructor` (Lombok).** No field injection.

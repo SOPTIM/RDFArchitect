@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.dto.delete.ResourceDeleteRequest;
 import org.rdfarchitect.api.dto.delete.relations.AffectedResource;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.delete.DeleteResourcesUseCase;
 import org.rdfarchitect.services.delete.FindDeleteDependenciesUseCase;
 import org.slf4j.Logger;
@@ -44,13 +43,12 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}")
 @RequiredArgsConstructor
 public class DeleteRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(DeleteRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final FindDeleteDependenciesUseCase findDeleteDependenciesUseCase;
     private final DeleteResourcesUseCase deleteResourcesUseCase;
 
@@ -69,30 +67,29 @@ public class DeleteRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @Parameter(description = "The uuids of the cim resources to analyse.") @RequestBody
                     List<UUID> uuids) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/deletion-impact\" for {} resource(s) from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/deletion-impact\" for {} resource(s) from \"{}\".",
+                workspaceName,
+                schemaName,
                 uuids.size(),
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var result = findDeleteDependenciesUseCase.getDeleteDependencies(graphIdentifier, uuids);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/deletion-impact\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/deletion-impact\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return result;
     }
@@ -112,32 +109,30 @@ public class DeleteRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @Parameter(
                             description =
                                     "A list of resource delete requests, each containing the uuid of the resource to delete and the type of deletion")
                     @RequestBody
                     List<ResourceDeleteRequest> deleteRequests) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/delete-requests\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/delete-requests\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-
         deleteResourcesUseCase.executeDeleteRequests(
-                new GraphIdentifier(datasetName, extendedGraphURI), deleteRequests);
+                new GraphIdentifier(workspaceName, schemaName), deleteRequests);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/delete-requests\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/delete-requests\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return "success";
     }

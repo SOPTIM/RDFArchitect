@@ -42,10 +42,10 @@ const JOB_ID = "11111111-2222-3333-4444-555555555555";
 
 const MOCK_JOB_STATUS: api.ImportJobStatus = {
     jobId: JOB_ID,
-    datasetName: WORKSPACE_A,
+    workspaceName: WORKSPACE_A,
     state: "COMPLETED",
     files: [],
-    importedGraphUris: [GRAPH_URI],
+    importedSchemaNames: [GRAPH_URI],
     failedImports: [],
     warnings: [],
 };
@@ -168,7 +168,7 @@ describe("graphStore", () => {
             expect(result).toEqual(MOCK_GRAPHS);
             expect(api.listGraphs).toHaveBeenCalledTimes(1);
             expect(api.listGraphs).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A },
+                path: { workspaceName: WORKSPACE_A },
             });
         });
 
@@ -228,7 +228,7 @@ describe("graphStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.replaceGraph).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, graphURI: GRAPH_URI },
+                path: { workspaceName: WORKSPACE_A, schemaName: GRAPH_URI },
             });
 
             const state = get(store);
@@ -288,8 +288,8 @@ describe("graphStore", () => {
 
             expect(request.method).toBe("POST");
             expect(request.url).toBe(
-                `/api/datasets/${WORKSPACE_A}/graphs/content/imports` +
-                    `?graphUris=${encodeURIComponent(GRAPH_URI)}`,
+                `/api/workspaces/${WORKSPACE_A}/schemas/content/imports` +
+                    `?schemaNames=${encodeURIComponent(GRAPH_URI)}`,
             );
             expect(request.withCredentials).toBe(true);
             expect(request.body.getAll("files")).toEqual([MOCK_FILE]);
@@ -351,7 +351,7 @@ describe("graphStore", () => {
             const result = await store.getImportStatus(WORKSPACE_A, JOB_ID);
 
             expect(api.getImportStatus).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, jobId: JOB_ID },
+                path: { workspaceName: WORKSPACE_A, jobId: JOB_ID },
             });
             expect(result.data).toBe(MOCK_JOB_STATUS);
         });
@@ -392,7 +392,7 @@ describe("graphStore", () => {
             );
 
             expect(api.resolvePrefixConflicts).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, jobId: JOB_ID },
+                path: { workspaceName: WORKSPACE_A, jobId: JOB_ID },
                 body: RESOLUTIONS,
             });
             expect(result.error).toBeNull();
@@ -427,7 +427,7 @@ describe("graphStore", () => {
             const result = await store.cancelImport(WORKSPACE_A, JOB_ID);
 
             expect(api.cancelImport).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, jobId: JOB_ID },
+                path: { workspaceName: WORKSPACE_A, jobId: JOB_ID },
             });
             expect(result.error).toBeNull();
         });
@@ -450,7 +450,7 @@ describe("graphStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.deleteGraph).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, graphURI: GRAPH_URI },
+                path: { workspaceName: WORKSPACE_A, schemaName: GRAPH_URI },
             });
         });
 

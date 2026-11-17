@@ -30,7 +30,6 @@ import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.GetClassListUseCase;
 import org.rdfarchitect.services.update.classes.AddClassUseCase;
 import org.slf4j.Logger;
@@ -48,13 +47,12 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/classes")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/classes")
 @RequiredArgsConstructor
 public class AllClassesRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(AllClassesRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final GetClassListUseCase getClassListUseCase;
     private final AddClassUseCase addClassUseCase;
 
@@ -89,12 +87,12 @@ public class AllClassesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description =
@@ -102,28 +100,25 @@ public class AllClassesRESTController {
                     @RequestBody
                     AddNewClassRequest addNewClassRequest) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/classes\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var extendedClassURIPrefix =
-                expandURIUseCase.expandUri(datasetName, addNewClassRequest.classURIPrefix);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var classUUID =
                 addClassUseCase.addClass(
                         graphIdentifier,
                         addNewClassRequest.packageDTO,
-                        extendedClassURIPrefix,
+                        addNewClassRequest.classURIPrefix,
                         addNewClassRequest.className,
                         addNewClassRequest.classLayoutPosition);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/classes\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
         return classUUID.toString();
@@ -157,31 +152,29 @@ public class AllClassesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @Parameter(description = "Whether to include external classes.")
                     @RequestParam(required = false, defaultValue = "false")
                     boolean includeExternalClasses) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/classes\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
-
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
         var cimClassList =
                 getClassListUseCase.getClassList(
-                        new GraphIdentifier(datasetName, extendedGraphURI), includeExternalClasses);
+                        new GraphIdentifier(workspaceName, schemaName), includeExternalClasses);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/classes\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return cimClassList;
     }

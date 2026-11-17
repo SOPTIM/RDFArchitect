@@ -32,8 +32,8 @@ public interface CustomDiagramLayoutUseCase {
             GraphIdentifier graphIdentifier, UUID diagramUUID, List<UUID> classUUIDs);
 
     void addClassesToCustomDatasetDiagram(
-            String datasetName, UUID diagramUUID, List<ClassInDiagram> classes);
+            String workspaceName, UUID diagramUUID, List<ClassInDiagram> classes);
 
     void removeClassesFromCustomDatasetDiagram(
-            String datasetName, UUID diagramUUID, List<UUID> classUUIDs);
+            String workspaceName, UUID diagramUUID, List<UUID> classUUIDs);
 }

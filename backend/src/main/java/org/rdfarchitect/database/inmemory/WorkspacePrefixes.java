@@ -42,10 +42,6 @@ class WorkspacePrefixes extends SnapshotParticipant<Map<String, String>> {
         return new PrefixMappingReadOnly(prefixes);
     }
 
-    String expandPrefix(String prefixed) {
-        return prefixes.expandPrefix(prefixed);
-    }
-
     /** Replaces all prefixes. */
     void setAll(PrefixMapping newPrefixes) {
         beginChange();

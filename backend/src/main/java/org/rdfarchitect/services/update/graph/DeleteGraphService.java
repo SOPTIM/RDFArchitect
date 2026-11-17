@@ -39,38 +39,38 @@ public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCa
     @Override
     public void deleteGraph(GraphIdentifier graphIdentifier) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.deleteGraph(graphIdentifier.graphUri());
-            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.datasetName());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            transaction.deleteGraph(graphIdentifier.schemaName());
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.workspaceName());
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Deleted",
                             "schema",
-                            ChangeDescriptions.localName(graphIdentifier.graphUri())));
+                            ChangeDescriptions.localName(graphIdentifier.schemaName())));
         }
     }
 
     @Override
     public void replaceGraph(GraphIdentifier graphIdentifier, MultipartFile file) {
-        databasePort.createWorkspaceIfAbsent(graphIdentifier.datasetName());
+        databasePort.createWorkspaceIfAbsent(graphIdentifier.workspaceName());
         var graph =
                 file == null || file.isEmpty()
                         ? GraphFactory.createDefaultGraph()
                         : new GraphFileSourceBuilderImpl()
                                 .setFile(file)
-                                .setGraphName(graphIdentifier.graphUri())
+                                .setGraphName(graphIdentifier.schemaName())
                                 .build()
                                 .graph();
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.deleteGraph(graphIdentifier.graphUri());
-            transaction.createGraph(graphIdentifier.graphUri(), graph);
-            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.datasetName());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            transaction.deleteGraph(graphIdentifier.schemaName());
+            transaction.createGraph(graphIdentifier.schemaName(), graph);
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.workspaceName());
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Replaced",
                             "schema",
-                            ChangeDescriptions.localName(graphIdentifier.graphUri())));
+                            ChangeDescriptions.localName(graphIdentifier.schemaName())));
         }
     }
 }

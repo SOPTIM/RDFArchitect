@@ -26,7 +26,6 @@ import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.controller.datasets.graphs.packages.PackageRESTController;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.packages.DeletePackageUseCase;
 import org.rdfarchitect.services.update.packages.GetPackageUseCase;
 import org.rdfarchitect.services.update.packages.ReplacePackageUseCase;
@@ -36,7 +35,6 @@ import java.util.UUID;
 
 class PackageRESTControllerTest {
 
-    private ExpandURIUseCase expandURIUseCase;
     private ReplacePackageUseCase replacePackageUseCase;
     private DeletePackageUseCase deletePackageUseCase;
     private GetPackageUseCase getPackageUseCase;
@@ -44,21 +42,16 @@ class PackageRESTControllerTest {
 
     @BeforeEach
     void setUp() {
-        expandURIUseCase = mock(ExpandURIUseCase.class);
         replacePackageUseCase = mock(ReplacePackageUseCase.class);
         deletePackageUseCase = mock(DeletePackageUseCase.class);
         getPackageUseCase = mock(GetPackageUseCase.class);
         controller =
                 new PackageRESTController(
-                        expandURIUseCase,
-                        replacePackageUseCase,
-                        deletePackageUseCase,
-                        getPackageUseCase);
+                        replacePackageUseCase, deletePackageUseCase, getPackageUseCase);
     }
 
     @Test
-    void deletePackage_invokesUseCaseWithExpandedGraphIdentifier() {
-        when(expandURIUseCase.expandUri("dataset", "graph")).thenReturn("expanded-graph");
+    void deletePackage_invokesUseCaseWithGraphIdentifier() {
         UUID packageUuid = UUID.randomUUID();
 
         var response =
@@ -66,12 +59,11 @@ class PackageRESTControllerTest {
 
         assertThat(response).isEqualTo(Response.SUCCESS);
         verify(deletePackageUseCase)
-                .deletePackage(new GraphIdentifier("dataset", "expanded-graph"), packageUuid);
+                .deletePackage(new GraphIdentifier("dataset", "graph"), packageUuid);
     }
 
     @Test
     void replacePackage_passesPayloadToUseCase() {
-        when(expandURIUseCase.expandUri("dataset", "graph")).thenReturn("expanded-graph");
         var packageUUID = UUID.randomUUID();
         var dto = PackageDTO.builder().label("pkg").build();
 
@@ -80,13 +72,11 @@ class PackageRESTControllerTest {
                         HttpHeaders.ORIGIN, "dataset", "graph", packageUUID.toString(), dto);
 
         assertThat(response).isEqualTo(Response.SUCCESS);
-        verify(replacePackageUseCase)
-                .replacePackage(new GraphIdentifier("dataset", "expanded-graph"), dto);
+        verify(replacePackageUseCase).replacePackage(new GraphIdentifier("dataset", "graph"), dto);
     }
 
     @Test
     void getPackage_returnsPackageDTOFromUseCase() {
-        when(expandURIUseCase.expandUri("dataset", "graph")).thenReturn("expanded-graph");
         var packageUUID = UUID.randomUUID();
         var expectedDTO =
                 PackageDTO.builder()
@@ -94,14 +84,12 @@ class PackageRESTControllerTest {
                         .label("myPackage")
                         .prefix("http://example.org#")
                         .build();
-        when(getPackageUseCase.getPackage(
-                        new GraphIdentifier("dataset", "expanded-graph"), packageUUID))
+        when(getPackageUseCase.getPackage(new GraphIdentifier("dataset", "graph"), packageUUID))
                 .thenReturn(expectedDTO);
 
         var result = controller.getPackage(HttpHeaders.ORIGIN, "dataset", "graph", packageUUID);
 
         assertThat(result).isEqualTo(expectedDTO);
-        verify(getPackageUseCase)
-                .getPackage(new GraphIdentifier("dataset", "expanded-graph"), packageUUID);
+        verify(getPackageUseCase).getPackage(new GraphIdentifier("dataset", "graph"), packageUUID);
     }
 }

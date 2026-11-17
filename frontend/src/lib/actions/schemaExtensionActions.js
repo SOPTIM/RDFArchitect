@@ -66,7 +66,7 @@ export async function getClassSchemas(workspaceName, classUuid) {
     }
     try {
         const { data, error } = await listSchemas({
-            path: { datasetName: workspaceName, classUUID: classUuid },
+            path: { workspaceName: workspaceName, classUUID: classUuid },
         });
         if (error) {
             console.error("failed to load the schemas of a class:", error);
@@ -104,14 +104,14 @@ export async function loadClassSchemas(workspaceName, classUuids) {
 export async function extendClassesToSchema(
     workspaceName,
     classUuids,
-    targetGraphUri,
+    targetSchemaName,
     withInheritance = false,
 ) {
     try {
         const { data, error } = await extendToSchema({
-            path: { datasetName: workspaceName },
+            path: { workspaceName: workspaceName },
             body: {
-                graphUri: String(targetGraphUri),
+                schemaName: String(targetSchemaName),
                 classUUIDs: classUuids,
                 withInheritance,
             },
@@ -129,8 +129,11 @@ export async function extendClassesToSchema(
         }
         const results = data ?? [];
         if (results.length > 0) {
-            classStore.invalidateGraph(workspaceName, String(targetGraphUri));
-            packageStore.invalidateGraph(workspaceName, String(targetGraphUri));
+            classStore.invalidateGraph(workspaceName, String(targetSchemaName));
+            packageStore.invalidateGraph(
+                workspaceName,
+                String(targetSchemaName),
+            );
             crossProfileStore.invalidateWorkspace(workspaceName);
         }
         return results;
@@ -152,7 +155,7 @@ export async function extendClassesToSchema(
 export async function extendToSchemaAndReveal({
     workspaceName,
     classUuids,
-    targetGraphUri,
+    targetSchemaName,
     targetLabel,
     selectedClassUuid = null,
     withInheritance = false,
@@ -160,7 +163,7 @@ export async function extendToSchemaAndReveal({
     const results = await extendClassesToSchema(
         workspaceName,
         classUuids,
-        targetGraphUri,
+        targetSchemaName,
         withInheritance,
     );
     if (!results) {
@@ -175,10 +178,10 @@ export async function extendToSchemaAndReveal({
         revealInCrossProfileDiagram(
             workspaceName,
             selectedClassUuid,
-            targetGraphUri,
+            targetSchemaName,
         );
     } else {
-        revealInSchemaDiagram(workspaceName, targetGraphUri, results);
+        revealInSchemaDiagram(workspaceName, targetSchemaName, results);
     }
     forceReloadTrigger.trigger();
     return results;
@@ -207,14 +210,14 @@ function reportExtensionResults(results, targetLabel) {
 function revealInCrossProfileDiagram(
     workspaceName,
     selectedClassUuid,
-    targetGraphUri,
+    targetSchemaName,
 ) {
     if (!selectedClassUuid) {
         return;
     }
     editorState.classEditorSchema.updateValue({
         classUuid: selectedClassUuid,
-        graphUri: String(targetGraphUri),
+        schemaName: String(targetSchemaName),
     });
     editorState.selectedClassWorkspace.updateValue(workspaceName);
     editorState.selectedClassGraph.updateValue(null);
@@ -225,12 +228,12 @@ function revealInCrossProfileDiagram(
     editorState.focusedClassUUID.updateValue(selectedClassUuid);
 }
 
-function revealInSchemaDiagram(workspaceName, targetGraphUri, results) {
+function revealInSchemaDiagram(workspaceName, targetSchemaName, results) {
     const target = results[0];
     multiSelectState.clear();
     editorState.selectPackage(
         workspaceName,
-        String(targetGraphUri),
+        String(targetSchemaName),
         target?.packageUUID ?? "default",
     );
     if (results.length > 1 || !target?.classUUID) {
@@ -239,7 +242,7 @@ function revealInSchemaDiagram(workspaceName, targetGraphUri, results) {
         return;
     }
     editorState.selectedClassWorkspace.updateValue(workspaceName);
-    editorState.selectedClassGraph.updateValue(String(targetGraphUri));
+    editorState.selectedClassGraph.updateValue(String(targetSchemaName));
     editorState.selectedClass.updateValue({
         type: ClassType.SINGLE_CLASS,
         id: target.classUUID,

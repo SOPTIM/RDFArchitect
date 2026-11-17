@@ -69,12 +69,12 @@ public class CIMBaseQueryBuilder {
     /**
      * Sets the graph the query should be executed on.
      *
-     * @param graphURI the GraphUri or "default"/null
+     * @param schemaName the SchemaName or "default"/null
      * @return {@link CIMBaseQueryBuilder this}
      */
-    public CIMBaseQueryBuilder setGraph(String graphURI) {
-        if (graphURI != null && !graphURI.equals("default")) {
-            baseQuery.from(graphURI);
+    public CIMBaseQueryBuilder setGraph(String schemaName) {
+        if (schemaName != null && !schemaName.equals("default")) {
+            baseQuery.from(schemaName);
         }
         return this;
     }

@@ -24,15 +24,15 @@ public interface CrossProfileColorUseCase {
     /**
      * Returns the colors of the graphs used in the cross profile diagram.
      *
-     * @param datasetName The dataset of the diagram.
+     * @param workspaceName The dataset of the diagram.
      * @return The colors of the graphs.
      */
-    CrossProfileDiagramColorDataDTO getCrossProfileColors(String datasetName);
+    CrossProfileDiagramColorDataDTO getCrossProfileColors(String workspaceName);
 
     /**
      * Replaces the colors of the graphs used in the cross profile diagram.
      *
-     * @param datasetName The dataset of the diagram.
+     * @param workspaceName The dataset of the diagram.
      */
-    void replaceCrossProfileColors(String datasetName, CrossProfileDiagramColorDataDTO dto);
+    void replaceCrossProfileColors(String workspaceName, CrossProfileDiagramColorDataDTO dto);
 }

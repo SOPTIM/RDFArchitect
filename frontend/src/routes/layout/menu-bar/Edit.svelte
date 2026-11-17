@@ -132,7 +132,7 @@
         if (selected.length > 0) {
             return {
                 workspaceName: selected[0].workspaceName,
-                graphUri: selected[0].graphUri,
+                schemaName: selected[0].schemaName,
                 uuids: selected.map(e => e.classUuid),
                 singleGraph: multiSelectState.isSingleGraph,
             };
@@ -141,7 +141,7 @@
         if (uuid) {
             return {
                 workspaceName: editorState.selectedClassWorkspace.getValue(),
-                graphUri: editorState.selectedClassGraph.getValue(),
+                schemaName: editorState.selectedClassGraph.getValue(),
                 uuids: [uuid],
                 singleGraph: true,
             };
@@ -372,10 +372,10 @@
 
     async function refreshSelectedPackageDetails(packages) {
         const workspaceName = editorState.selectedWorkspace.getValue();
-        const graphURI = editorState.selectedGraph.getValue();
+        const schemaName = editorState.selectedGraph.getValue();
         const packageId = editorState.selectedDiagram.getProperty("id");
 
-        if (!workspaceName || !graphURI || !packageId) {
+        if (!workspaceName || !schemaName || !packageId) {
             selectedPackageDetails = null;
             return;
         }
@@ -422,7 +422,7 @@
         copyState.set(
             multiSelectState.copyEntriesOr({
                 classUUID: editorState.selectedClass.getProperty("id"),
-                graphURI: editorState.selectedClassGraph.getValue(),
+                schemaName: editorState.selectedClassGraph.getValue(),
                 workspaceName: editorState.selectedClassWorkspace.getValue(),
             }),
         );
@@ -679,7 +679,7 @@
     <PackageEditorDialog
         bind:showDialog={showPackageEditorDialog}
         workspaceName={packageDialogWorkspace}
-        graphUri={packageDialogGraph}
+        schemaName={packageDialogGraph}
         {packages}
         pack={packageDialogTarget}
         readonly={isWorkspaceReadOnly}
@@ -689,7 +689,7 @@
     <DeleteDependenciesDialog
         bind:showDialog={ShowPackageDeleteDependenciesDialog}
         workspaceName={packageDialogWorkspace}
-        graphUri={packageDialogGraph}
+        schemaName={packageDialogGraph}
         resourceUuid={packageDialogTarget.uuid}
     />
 {/if}
@@ -697,7 +697,7 @@
     <DeleteDependenciesDialog
         bind:showDialog={showClassDeleteDependenciesDialog}
         workspaceName={deleteClassSelection.workspaceName}
-        graphUri={deleteClassSelection.graphUri}
+        schemaName={deleteClassSelection.schemaName}
         resourceUuids={deleteClassSelection.uuids}
     />
 {/if}
@@ -713,7 +713,7 @@
 <RenameGraphDialog
     bind:showDialog={showGraphRenameDialog}
     workspaceName={selectedWorkspace}
-    graphUri={selectedGraph}
+    schemaName={selectedGraph}
     onEditHeader={editProfileHeader}
 />
 <NamespacesDialog bind:showDialog={showNamespaceDialog} />
@@ -722,7 +722,7 @@
         bind:showDialog={showOntologyDeleteDependenciesDialog}
         onClose={reload}
         workspaceName={editorState.selectedWorkspace.getValue()}
-        graphUri={editorState.selectedGraph.getValue()}
+        schemaName={editorState.selectedGraph.getValue()}
         resourceUuid={ontology.uuid}
     />
 {/if}
@@ -730,7 +730,7 @@
 {#if showEditOntologyDialog}
     <OntologyDialog
         bind:showDialog={showEditOntologyDialog}
-        graphUri={selectedGraph}
+        schemaName={selectedGraph}
         workspace={selectedWorkspace}
         bind:ontology
         readonly={isWorkspaceReadOnly}

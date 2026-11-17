@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,14 +41,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/diagrams")
+@RequestMapping("/api/workspaces/{workspaceName}/schemas/{schemaName}/diagrams")
 @RequiredArgsConstructor
 public class AllCustomDiagramsRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(AllCustomDiagramsRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
 
     @Operation(
@@ -79,28 +77,26 @@ public class AllCustomDiagramsRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams\" from \"{}\"",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams\" from \"{}\"",
+                workspaceName,
+                schemaName,
                 originURL);
-
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
         var result =
                 getCustomDiagramsUseCase.getCustomDiagramsForGraph(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+                        new GraphIdentifier(workspaceName, schemaName));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams\" from \"{}\"",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams\" from \"{}\"",
+                workspaceName,
+                schemaName,
                 originURL);
         return result;
     }

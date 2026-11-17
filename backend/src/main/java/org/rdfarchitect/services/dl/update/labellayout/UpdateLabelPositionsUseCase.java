@@ -42,11 +42,11 @@ public interface UpdateLabelPositionsUseCase {
      * Updates the offsets of movable labels within the diagram associated with the given custom
      * diagram.
      *
-     * @param datasetName the literal name of the dataset
+     * @param workspaceName the literal name of the dataset
      * @param diagramUUID the UUID of the custom diagram identifying the diagram
      * @param labelPositionDTOList the labels to reposition; entries without an offset are reset to
      *     their default placement
      */
     void updateLabelPositions(
-            String datasetName, UUID diagramUUID, List<LabelPositionDTO> labelPositionDTOList);
+            String workspaceName, UUID diagramUUID, List<LabelPositionDTO> labelPositionDTOList);
 }

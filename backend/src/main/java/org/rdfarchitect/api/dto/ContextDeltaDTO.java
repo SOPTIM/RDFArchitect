@@ -26,7 +26,7 @@ import java.util.List;
 @NoArgsConstructor
 public class ContextDeltaDTO {
     private String contextName;
-    private String graphUri;
+    private String schemaName;
 
     /** The triples the change added and removed; {@code null} for data that is not held as RDF. */
     private List<TripleDTO> additions;

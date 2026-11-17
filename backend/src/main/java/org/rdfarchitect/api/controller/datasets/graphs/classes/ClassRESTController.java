@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.GetClassInformationUseCase;
 import org.rdfarchitect.services.update.classes.DeleteClassUseCase;
 import org.rdfarchitect.services.update.classes.ReplaceClassUseCase;
@@ -48,13 +47,12 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}")
+@RequestMapping("/api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}")
 @RequiredArgsConstructor
 public class ClassRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(ClassRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final GetClassInformationUseCase getClassInformationUseCase;
     private final ReplaceClassUseCase replaceClassUseCase;
     private final DeleteClassUseCase deleteClassUseCase;
@@ -81,12 +79,12 @@ public class ClassRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @Parameter(
                             description =
@@ -95,23 +93,22 @@ public class ClassRESTController {
                     @RequestParam(defaultValue = "false")
                     boolean includeSuperClasses) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var classObject =
                 getClassInformationUseCase.getClassInformation(
                         graphIdentifier, classUUID, includeSuperClasses);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 originURL);
         return classObject;
@@ -131,12 +128,12 @@ public class ClassRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
@@ -150,21 +147,20 @@ public class ClassRESTController {
                     @RequestBody
                     ClassUMLAdaptedDTO newClass) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         replaceClassUseCase.replaceClass(graphIdentifier, newClass);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 originURL);
         return Response.SUCCESS;
@@ -184,28 +180,28 @@ public class ClassRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 originURL);
 
-        var graphIdentifier = new GraphIdentifier(datasetName, graphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         deleteClassUseCase.deleteClass(graphIdentifier, UUID.fromString(classUUID));
 
         logger.info(
-                "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 originURL);
         return Response.SUCCESS;

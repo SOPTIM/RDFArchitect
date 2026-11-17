@@ -24,7 +24,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ResolveIdentifierUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,14 +35,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/resolve")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/resolve")
 @RequiredArgsConstructor
 public class ResolveIdentifierRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ResolveIdentifierRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final ResolveIdentifierUseCase resolveIdentifierUseCase;
 
     @Operation(
@@ -60,33 +58,30 @@ public class ResolveIdentifierRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @Parameter(description = "The url encoded iri identifier of the cim resource.")
                     @PathVariable
                     String iriIdentifier) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/resolve/iri/{{}}\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/resolve/iri/{{}}\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 iriIdentifier,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var extendedResourceIRI = expandURIUseCase.expandUri(datasetName, iriIdentifier);
-
         var uuid =
                 resolveIdentifierUseCase.resolveIRI(
-                        new GraphIdentifier(datasetName, extendedGraphURI), extendedResourceIRI);
+                        new GraphIdentifier(workspaceName, schemaName), iriIdentifier);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/resolve/iri/{{}}\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/resolve/iri/{{}}\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 iriIdentifier,
                 originURL);
         return uuid.toString();

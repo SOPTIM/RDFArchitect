@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.ontology.OntologyDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ontology.ReadOntologyUseCase;
 import org.rdfarchitect.services.update.ontology.CreateOntologyUseCase;
 import org.rdfarchitect.services.update.ontology.DeleteOntologyUseCase;
@@ -47,13 +46,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/ontology")
+@RequestMapping("/api/workspaces/{workspaceName}/schemas/{schemaName}/ontology")
 @RequiredArgsConstructor
 public class OntologyRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(OntologyRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final CreateOntologyUseCase createOntologyUseCase;
     private final ReadOntologyUseCase readOntologyUseCase;
     private final UpdateOntologyUseCase updateOntologyUseCase;
@@ -80,27 +78,26 @@ public class OntologyRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var classObject = readOntologyUseCase.getCurrentOntology(graphIdentifier);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return classObject;
     }
@@ -119,12 +116,12 @@ public class OntologyRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description = "The new ontology",
@@ -133,20 +130,19 @@ public class OntologyRESTController {
                     @RequestBody
                     OntologyDTO newOntology) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         createOntologyUseCase.createOntology(graphIdentifier, newOntology);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return Response.SUCCESS;
     }
@@ -165,12 +161,12 @@ public class OntologyRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description = "The new ontology",
@@ -179,20 +175,19 @@ public class OntologyRESTController {
                     @RequestBody
                     OntologyDTO newOntology) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         updateOntologyUseCase.replaceOntology(graphIdentifier, newOntology);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return Response.SUCCESS;
     }
@@ -211,27 +206,26 @@ public class OntologyRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String schemaName) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         deleteOntologyUseCase.deleteOntology(graphIdentifier);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return Response.SUCCESS;
     }

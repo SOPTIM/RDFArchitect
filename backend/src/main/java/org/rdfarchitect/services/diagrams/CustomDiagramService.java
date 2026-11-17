@@ -70,8 +70,8 @@ public class CustomDiagramService
     @Override
     public List<CustomDiagramDTO> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             return ctx.getCustomDiagrams().values().stream()
                     .map(
                             diagram ->
@@ -84,8 +84,8 @@ public class CustomDiagramService
     }
 
     @Override
-    public List<CustomDiagramDTO> getCustomDiagramsForDataset(String datasetName) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+    public List<CustomDiagramDTO> getCustomDiagramsForDataset(String workspaceName) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             return transaction.diagrams().values().stream()
                     .map(
                             diagram ->
@@ -98,42 +98,42 @@ public class CustomDiagramService
     }
 
     @Override
-    public UUID getCrossProfileDiagramId(String datasetName) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+    public UUID getCrossProfileDiagramId(String workspaceName) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             return transaction.crossProfileDiagramId();
         }
     }
 
     @Override
-    public CrossProfileDiagramDTO getCrossProfileDiagram(String datasetName, boolean doLayout) {
-        return getCrossProfileDiagram(datasetName, doLayout, loadProfiles(datasetName));
+    public CrossProfileDiagramDTO getCrossProfileDiagram(String workspaceName, boolean doLayout) {
+        return getCrossProfileDiagram(workspaceName, doLayout, loadProfiles(workspaceName));
     }
 
-    private List<CIMProfileModel> loadProfiles(String datasetName) {
+    private List<CIMProfileModel> loadProfiles(String workspaceName) {
         return CIMProfileModels.loadAll(
                 databasePort,
-                CIMProfileModels.keywordsByGraphUri(listGraphsUseCase, datasetName),
-                datasetName,
+                CIMProfileModels.keywordsBySchemaName(listGraphsUseCase, workspaceName),
+                workspaceName,
                 null);
     }
 
     @Override
     public CrossProfileDiagramDTO getCrossProfileDiagram(
-            String datasetName, boolean doLayout, List<CIMProfileModel> profiles) {
+            String workspaceName, boolean doLayout, List<CIMProfileModel> profiles) {
         var graphDTOsMap =
-                listGraphsUseCase.listGraphs(datasetName).stream()
+                listGraphsUseCase.listGraphs(workspaceName).stream()
                         .collect(Collectors.toMap(g -> g.getUri().toString(), g -> g));
         // Merging the profiles is the expensive part and only reads, so it runs under a read
         // lock; the layout is inserted afterwards under a write lock. Inserting is idempotent, so
         // the gap between the two does no harm.
         UUID crossProfileDiagramUUID;
         Map<String, MergedClassDTO> mergeMap;
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             crossProfileDiagramUUID = transaction.crossProfileDiagramId();
             mergeMap = mergeProfiles(profiles, graphDTOsMap);
         }
         if (doLayout) {
-            try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
                 doDiagramLayout(transaction.layout(), crossProfileDiagramUUID, mergeMap, profiles);
                 // Looking at the diagram is not a change the user's next undo should take back.
                 transaction.commitWithoutHistory();
@@ -148,7 +148,7 @@ public class CustomDiagramService
         Map<String, MergedClassDTO> mergeMap = new LinkedHashMap<>();
 
         for (var profile : profiles) {
-            var graphUri = profile.graphUri();
+            var schemaName = profile.schemaName();
 
             for (var cimClass : profile.model().getCIMClasses()) {
                 var classUri = cimClass.getUri().toString();
@@ -165,7 +165,7 @@ public class CustomDiagramService
                                                 .build());
 
                 merged.getSources()
-                        .add(new ClassSourceDTO(cimClass.getUuid(), graphDTOsMap.get(graphUri)));
+                        .add(new ClassSourceDTO(cimClass.getUuid(), graphDTOsMap.get(schemaName)));
             }
         }
         return mergeMap;
@@ -219,10 +219,10 @@ public class CustomDiagramService
     }
 
     @Override
-    public void deleteCustomDatasetDiagram(String datasetName, String diagramId) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+    public void deleteCustomDatasetDiagram(String workspaceName, String diagramId) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             var removed = transaction.diagrams().remove(UUID.fromString(diagramId));
-            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(datasetName);
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(workspaceName);
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Deleted", "diagram", ChangeDescriptions.diagramName(removed)));
@@ -231,7 +231,7 @@ public class CustomDiagramService
 
     @Override
     public void replaceCustomDatasetDiagram(
-            String datasetName, String diagramId, CustomDiagramDTO diagramDTO) {
+            String workspaceName, String diagramId, CustomDiagramDTO diagramDTO) {
         if (!Objects.equals(diagramId, diagramDTO.getDiagramId().toString())) {
             throw new IllegalArgumentException(
                     "Diagram ID mismatch: URL parameter '"
@@ -245,9 +245,9 @@ public class CustomDiagramService
         var diagram =
                 new CustomDiagram(
                         diagramDTO.getDiagramId(), diagramDTO.getName(), diagramDTO.getClasses());
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             transaction.diagrams().put(UUID.fromString(diagramId), diagram);
-            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(datasetName);
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(workspaceName);
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Updated", "diagram", ChangeDescriptions.diagramName(diagram)));
@@ -255,8 +255,9 @@ public class CustomDiagramService
     }
 
     @Override
-    public void removeFromCustomDatasetDiagram(String datasetName, String diagramId, UUID classId) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+    public void removeFromCustomDatasetDiagram(
+            String workspaceName, String diagramId, UUID classId) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             var diagram = transaction.diagrams().get(UUID.fromString(diagramId));
             var className = classNameIn(transaction, diagram, classId);
             if (diagram != null) {
@@ -264,7 +265,7 @@ public class CustomDiagramService
                 classes.removeIf(c -> c.getUuid().equals(classId));
                 diagram.setClasses(classes);
             }
-            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(datasetName);
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(workspaceName);
             // Reading the diagrams enrolled them, so the transaction has to be committed either
             // way; a commit that changed nothing records nothing.
             transaction.commit(
@@ -286,25 +287,25 @@ public class CustomDiagramService
             return "";
         }
         return diagram.getClasses().stream()
-                .filter(cls -> cls.getUuid().equals(classId) && cls.getGraphUri() != null)
+                .filter(cls -> cls.getUuid().equals(classId) && cls.getSchemaName() != null)
                 .findFirst()
-                .map(cls -> classNameInGraph(transaction, cls.getGraphUri().toString(), classId))
+                .map(cls -> classNameInGraph(transaction, cls.getSchemaName().toString(), classId))
                 .orElse("");
     }
 
     private static String classNameInGraph(
-            WorkspaceTransaction transaction, String graphUri, UUID classId) {
-        if (!transaction.graphUris().contains(graphUri)) {
+            WorkspaceTransaction transaction, String schemaName, UUID classId) {
+        if (!transaction.schemaNames().contains(schemaName)) {
             return "";
         }
-        return ChangeDescriptions.className(transaction.graph(graphUri).getRdfGraph(), classId);
+        return ChangeDescriptions.className(transaction.graph(schemaName).getRdfGraph(), classId);
     }
 
     @Override
     public void deleteCustomGraphDiagram(GraphIdentifier graphIdentifier, String diagramId) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var removed = ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
             syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(
@@ -325,8 +326,8 @@ public class CustomDiagramService
                             + "'");
         }
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             // dto is necessary for swagger to infer the correct type, but we need to create a new
             // CustomDiagram object to store in the database
             var diagram =
@@ -346,8 +347,8 @@ public class CustomDiagramService
     public void removeFromCustomGraphDiagram(
             GraphIdentifier graphIdentifier, String diagramId, UUID classId) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var diagram = ctx.getCustomDiagrams().get(UUID.fromString(diagramId));
             var className = ChangeDescriptions.className(ctx.getRdfGraph(), classId);
             if (diagram != null) {
@@ -367,8 +368,8 @@ public class CustomDiagramService
     @Override
     public void removeFromAllDiagrams(GraphIdentifier graphIdentifier, UUID classId) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             for (var diagram : ctx.getCustomDiagrams().values()) {
                 var classes = diagram.getClasses();
                 classes.removeIf(c -> c.getUuid().equals(classId));
@@ -384,26 +385,27 @@ public class CustomDiagramService
     }
 
     @Override
-    public CrossProfileDiagramColorDataDTO getCrossProfileColors(String datasetName) {
+    public CrossProfileDiagramColorDataDTO getCrossProfileColors(String workspaceName) {
         var colorsDTO = new CrossProfileDiagramColorDataDTO(new HashMap<>());
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
-            for (var graphUri : transaction.graphUris()) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
+            for (var schemaName : transaction.schemaNames()) {
                 colorsDTO
-                        .getGraphColors()
-                        .put(graphUri, transaction.crossProfileColors().getColor(graphUri));
+                        .getSchemaColors()
+                        .put(schemaName, transaction.crossProfileColors().getColor(schemaName));
             }
         }
         return colorsDTO;
     }
 
     @Override
-    public void replaceCrossProfileColors(String datasetName, CrossProfileDiagramColorDataDTO dto) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
-            for (var graphUri : transaction.graphUris()) {
-                if (dto.getGraphColors().containsKey(graphUri)) {
+    public void replaceCrossProfileColors(
+            String workspaceName, CrossProfileDiagramColorDataDTO dto) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
+            for (var schemaName : transaction.schemaNames()) {
+                if (dto.getSchemaColors().containsKey(schemaName)) {
                     transaction
                             .crossProfileColors()
-                            .setColor(graphUri, dto.getGraphColors().get(graphUri));
+                            .setColor(schemaName, dto.getSchemaColors().get(schemaName));
                 }
             }
             transaction.commit("Changed the cross profile colours");

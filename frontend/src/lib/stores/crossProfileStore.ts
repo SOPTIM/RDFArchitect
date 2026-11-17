@@ -101,7 +101,7 @@ function createCrossProfileStore() {
             (s, patch) => setIdSlot(s, workspaceName, patch),
             () =>
                 getCrossProfileDiagramId({
-                    path: { datasetName: workspaceName },
+                    path: { workspaceName: workspaceName },
                 }),
             LOG_PREFIX,
             `cross-profile ID for workspace="${workspaceName}"`,
@@ -120,7 +120,7 @@ function createCrossProfileStore() {
             (s, patch) => setDiagramSlot(s, workspaceName, patch),
             () =>
                 getCrossProfileDiagram({
-                    path: { datasetName: workspaceName },
+                    path: { workspaceName: workspaceName },
                 }),
             LOG_PREFIX,
             `cross-profile diagram for workspace="${workspaceName}"`,
@@ -174,7 +174,7 @@ async function fetchRenderingData(
     );
 
     const { data, error } = await getCrossProfileRenderingData({
-        path: { datasetName: workspaceName },
+        path: { workspaceName: workspaceName },
     });
 
     if (error) {

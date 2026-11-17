@@ -47,24 +47,24 @@ public class FallbackSnapshotAdapter implements SnapshotPort {
     }
 
     @Override
-    public String createSnapshot(String datasetName) {
+    public String createSnapshot(String workspaceName) {
         if (primary.isAvailable()) {
             try {
-                return primary.createSnapshot(datasetName);
+                return primary.createSnapshot(workspaceName);
             } catch (DatabaseException e) {
                 logger.warn(
                         "Primary snapshot store reported itself available but rejected the snapshot"
                                 + " for dataset '{}' - falling back to in-memory storage.",
-                        datasetName,
+                        workspaceName,
                         e);
             }
         } else {
             logger.warn(
                     "Primary snapshot store is unavailable - storing snapshot for dataset '{}' in"
                             + " memory. It will not survive a backend restart.",
-                    datasetName);
+                    workspaceName);
         }
-        return fallback.createSnapshot(datasetName);
+        return fallback.createSnapshot(workspaceName);
     }
 
     @Override

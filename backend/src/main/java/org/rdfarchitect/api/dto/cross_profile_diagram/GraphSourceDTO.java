@@ -23,7 +23,7 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class GraphSourceDTO<T> {
-    private String graphUri;
-    private String graphColor;
+    private String schemaName;
+    private String schemaColor;
     private T value;
 }

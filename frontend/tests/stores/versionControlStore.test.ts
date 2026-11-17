@@ -182,7 +182,7 @@ describe("versionControlStore", () => {
             expect(await store.canUndo(WORKSPACE)).toBe(true);
             expect(await store.canRedo(WORKSPACE)).toBe(false);
             expect(api.canUndo).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE },
+                path: { workspaceName: WORKSPACE },
             });
         });
 
@@ -273,7 +273,7 @@ describe("versionControlStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.undo).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE },
+                path: { workspaceName: WORKSPACE },
             });
         });
     });
@@ -320,7 +320,7 @@ describe("versionControlStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.undo).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE },
+                path: { workspaceName: WORKSPACE },
             });
 
             // An undone change can sit in any graph, so every graph-keyed cache
@@ -458,7 +458,7 @@ describe("versionControlStore", () => {
                 data: {
                     change: {
                         message: 'Renamed class "Terminal" to "Node"',
-                        affectedGraphUris: [OTHER],
+                        affectedSchemaNames: [OTHER],
                     },
                     canUndo: false,
                     canRedo: true,
@@ -479,7 +479,7 @@ describe("versionControlStore", () => {
                 data: {
                     change: {
                         message: "a change",
-                        affectedGraphUris: [GRAPH],
+                        affectedSchemaNames: [GRAPH],
                     },
                     canUndo: false,
                     canRedo: true,
@@ -512,7 +512,7 @@ describe("versionControlStore", () => {
                 data: {
                     change: {
                         message: "copied a class",
-                        affectedGraphUris: [
+                        affectedSchemaNames: [
                             OTHER,
                             "http://example.org/schemas/Third",
                         ],
@@ -765,7 +765,7 @@ describe("versionControlStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.redo).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE },
+                path: { workspaceName: WORKSPACE },
             });
 
             expect(classStore.invalidateWorkspace).toHaveBeenCalledWith(
@@ -829,7 +829,7 @@ describe("versionControlStore", () => {
                     change: {
                         changeId: CHANGE_ID,
                         message: "added a class",
-                        affectedGraphUris: [],
+                        affectedSchemaNames: [],
                     },
                     canUndo: true,
                     canRedo: false,
@@ -841,8 +841,8 @@ describe("versionControlStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.restoreVersion).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE },
-                body: { versionId: CHANGE_ID, graphUris: [] },
+                path: { workspaceName: WORKSPACE },
+                body: { versionId: CHANGE_ID, schemaNames: [] },
             });
             // The workspace steps back to the version and answers with it:
             // where it went, not something it did.
@@ -858,7 +858,7 @@ describe("versionControlStore", () => {
                     change: {
                         changeId: "22222222-2222-2222-2222-222222222222",
                         message: 'Restored schema "EQ" to the state after: x',
-                        affectedGraphUris: [],
+                        affectedSchemaNames: [],
                     },
                     canUndo: true,
                     canRedo: false,
@@ -887,10 +887,10 @@ describe("versionControlStore", () => {
             await store.restore(CHANGE_ID, ["http://example.org/a"], WORKSPACE);
 
             expect(api.restoreVersion).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE },
+                path: { workspaceName: WORKSPACE },
                 body: {
                     versionId: CHANGE_ID,
-                    graphUris: ["http://example.org/a"],
+                    schemaNames: ["http://example.org/a"],
                 },
             });
         });
@@ -1032,10 +1032,10 @@ describe("versionControlStore", () => {
             });
 
             expect(api.restoreVersion).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE },
+                path: { workspaceName: WORKSPACE },
                 body: {
                     versionId: CHANGE_ID,
-                    graphUris: [],
+                    schemaNames: [],
                     expectedCurrentChangeId: "current-change",
                     expectedNewestChangeId: "newest-change",
                 },
@@ -1099,7 +1099,7 @@ describe("versionControlStore", () => {
 
             expect(api.restoreVersion).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    path: { datasetName: WORKSPACE },
+                    path: { workspaceName: WORKSPACE },
                 }),
             );
         });

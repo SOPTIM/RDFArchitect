@@ -76,14 +76,14 @@
         editorState.selectedDiagram.subscribe();
 
         const workspaceName = editorState.selectedWorkspace.getValue();
-        const graphUri = editorState.selectedGraph.getValue();
+        const schemaName = editorState.selectedGraph.getValue();
         const diagramId = editorState.selectedDiagram.getProperty("id");
         const diagramType = editorState.selectedDiagram.getProperty("type");
         const filter = renderOptions.graphFilter();
 
         const nextDiagramRequestKey = getDiagramRequestKey(
             workspaceName,
-            graphUri,
+            schemaName,
             diagramId,
             filter,
         );
@@ -106,7 +106,7 @@
             } else {
                 await fetchPackageRenderingData(
                     workspaceName,
-                    graphUri,
+                    schemaName,
                     diagramId,
                     filter,
                 );
@@ -121,7 +121,7 @@
 
     async function fetchPackageRenderingData(
         workspaceName,
-        graphUri,
+        schemaName,
         packageUUID,
         filter,
     ) {
@@ -139,7 +139,7 @@
 
         try {
             const { data, error } = await getRenderingDataParameterized({
-                path: { datasetName: workspaceName, graphURI: graphUri },
+                path: { workspaceName: workspaceName, schemaName: schemaName },
                 body: graphFilter,
             });
 
@@ -167,7 +167,7 @@
         try {
             const { data, error } = await getCustomDatasetViewRenderingData({
                 path: {
-                    datasetName: editorState.selectedWorkspace.getValue(),
+                    workspaceName: editorState.selectedWorkspace.getValue(),
                     diagramId: diagramId,
                 },
             });
@@ -192,8 +192,8 @@
         try {
             const { data, error } = await getCustomProfileViewRenderingData({
                 path: {
-                    datasetName: editorState.selectedWorkspace.getValue(),
-                    graphURI: editorState.selectedGraph.getValue(),
+                    workspaceName: editorState.selectedWorkspace.getValue(),
+                    schemaName: editorState.selectedGraph.getValue(),
                     diagramId: diagramId,
                 },
                 body: {
@@ -242,13 +242,13 @@
 
     function getDiagramRequestKey(
         workspaceName,
-        graphUri,
+        schemaName,
         packageUUID,
         filter,
     ) {
         return JSON.stringify({
             workspaceName,
-            graphUri,
+            schemaName,
             packageUUID,
             filter,
         });

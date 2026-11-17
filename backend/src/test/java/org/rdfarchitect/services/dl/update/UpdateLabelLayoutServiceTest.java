@@ -261,8 +261,8 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
         var inverseAssociation = NodeFactory.createURI(INVERSE_ASSOCIATION_URI);
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphIdentifier.schemaName());
             var graph = ctx.getRdfGraph();
 
             graph.add(classA, RDF.type.asNode(), RDFS.Class.asNode());

@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ExportGraphAsciiDocUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/asciidocexport/{fileEnding}")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/asciidocexport/{fileEnding}")
 @RequiredArgsConstructor
 public class AsciiDocExportRESTController {
 
@@ -53,7 +52,6 @@ public class AsciiDocExportRESTController {
 
     private static final MediaType ASCIIDOC = new MediaType("text", "asciidoc");
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final ExportGraphAsciiDocUseCase exportGraphAsciiDocUseCase;
 
     @Operation(
@@ -76,12 +74,12 @@ public class AsciiDocExportRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @Parameter(description = "The file ending of the diagram files.") @PathVariable
                     String fileEnding,
             @Parameter(
@@ -90,22 +88,18 @@ public class AsciiDocExportRESTController {
                     @RequestParam(defaultValue = "false")
                     boolean embedDiagrams) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/asciidocexport\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/asciidocexport\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
-
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
         var output =
                 exportGraphAsciiDocUseCase.exportGraphAsAsciiDoc(
-                        new GraphIdentifier(datasetName, extendedGraphURI),
-                        fileEnding,
-                        embedDiagrams);
+                        new GraphIdentifier(workspaceName, schemaName), fileEnding, embedDiagrams);
 
         var fileName = "default";
-        if (!extendedGraphURI.equals("default")) {
-            fileName = new URI(extendedGraphURI).getSuffix();
+        if (!schemaName.equals("default")) {
+            fileName = new URI(schemaName).getSuffix();
         }
         fileName += ".adoc";
 
@@ -119,9 +113,9 @@ public class AsciiDocExportRESTController {
         var body = ResponseEntity.ok().headers(headers).body(output);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/asciidocexport\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/asciidocexport\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return body;
     }

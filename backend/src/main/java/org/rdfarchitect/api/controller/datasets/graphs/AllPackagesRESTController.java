@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ListExternalPackagesUseCase;
 import org.rdfarchitect.services.select.ListInternalPackagesUseCase;
 import org.rdfarchitect.services.update.packages.AddPackageUseCase;
@@ -46,13 +45,12 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/packages")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/packages")
 @RequiredArgsConstructor
 public class AllPackagesRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(AllPackagesRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final AddPackageUseCase addPackageUseCase;
     private final ListInternalPackagesUseCase listInternalPackagesUseCase;
     private final ListExternalPackagesUseCase listExternalPackagesUseCase;
@@ -85,32 +83,30 @@ public class AllPackagesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/packages\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
-
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
         var internalPackageList =
                 listInternalPackagesUseCase.listInternalPackages(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+                        new GraphIdentifier(workspaceName, schemaName));
 
         var externalPackageList =
                 listExternalPackagesUseCase.listExternalPackages(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+                        new GraphIdentifier(workspaceName, schemaName));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/packages\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return new ListPackagesResponse(internalPackageList, externalPackageList);
     }
@@ -129,35 +125,32 @@ public class AllPackagesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             description = "DTO for the package to be created")
                     @RequestBody
                     PackageDTO packageDTO) {
 
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/packages\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var extendedPackageURIPrefix =
-                expandURIUseCase.expandUri(datasetName, packageDTO.getPrefix());
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
-        packageDTO.setPrefix(extendedPackageURIPrefix);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
+        packageDTO.setPrefix(packageDTO.getPrefix());
 
         var newPackageUUID = addPackageUseCase.addPackage(graphIdentifier, packageDTO);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/packages\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/packages\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return newPackageUUID;
     }

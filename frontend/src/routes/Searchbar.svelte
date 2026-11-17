@@ -64,8 +64,8 @@
 
     function selectSubject(searchResult) {
         const target = {
-            datasetName: searchResult.datasetName,
-            graphUri: searchResult.graphUri,
+            workspaceName: searchResult.workspaceName,
+            schemaName: searchResult.schemaName,
             packageUUID: searchResult.packageUUID,
         };
         if (searchResult.type === "PACKAGE") {
@@ -92,11 +92,11 @@
         }
 
         const body = {
-            datasetName:
+            workspaceName:
                 selectedFilter.value !== "all"
                     ? editorState.selectedWorkspace.getValue()
                     : null,
-            graphUri:
+            schemaName:
                 selectedFilter.value !== "workspace" &&
                 selectedFilter.value !== "all"
                     ? editorState.selectedGraph.getValue()
@@ -156,7 +156,7 @@
     }
 
     function formatSearchResult(result) {
-        let path = `${result.datasetName}/${new URI(result.graphUri).suffix}/`;
+        let path = `${result.workspaceName}/${new URI(result.schemaName).suffix}/`;
         if (result.type !== "PACKAGE") {
             if (result.packageLabel) {
                 path += `${getPackageDisplayLabel(result.packageLabel.value)}/`;

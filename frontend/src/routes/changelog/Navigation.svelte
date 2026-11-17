@@ -33,7 +33,7 @@
 
     import { getUri } from "../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
 
-    const { graphUri = null, onSelectGraph } = $props();
+    const { schemaName = null, onSelectGraph } = $props();
 
     let workspaceList = $state([]);
 
@@ -76,8 +76,8 @@
             .map(graph => ({ graph, name: nameOf(graph) }))
             .sort((a, b) =>
                 compareGraphs(
-                    { label: a.name, uri: getUri(a.graph) },
-                    { label: b.name, uri: getUri(b.graph) },
+                    { label: a.name, name: getUri(a.graph) },
+                    { label: b.name, name: getUri(b.graph) },
                 ),
             );
     }
@@ -96,7 +96,7 @@
                             hasChildren={workspace.graphs.length > 0}
                             expanded={workspace.showContents}
                             isSelected={workspace.label ===
-                                selectedWorkspaceName && !graphUri}
+                                selectedWorkspaceName && !schemaName}
                             title="{workspace.label} — every change in the workspace"
                             onclick={() => {
                                 workspaceState.activate(workspace.label);
@@ -117,7 +117,7 @@
                                     icon={faDiagramProject}
                                     isSelected={selectedWorkspaceName ===
                                         workspace.label &&
-                                        getUri(graph) === graphUri}
+                                        getUri(graph) === schemaName}
                                     title={getUri(graph)}
                                     onclick={() => {
                                         workspaceState.activate(

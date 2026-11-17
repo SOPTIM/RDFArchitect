@@ -26,7 +26,6 @@ import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.GetRenderingDataUseCase;
 import org.rdfarchitect.services.diagrams.DeleteCustomDiagramUseCase;
 import org.rdfarchitect.services.diagrams.ReplaceCustomDiagramUseCase;
@@ -45,7 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/diagrams/{diagramId}")
+@RequestMapping("/api/workspaces/{workspaceName}/schemas/{schemaName}/diagrams/{diagramId}")
 @RequiredArgsConstructor
 public class CustomDiagramsRESTController {
 
@@ -58,8 +57,6 @@ public class CustomDiagramsRESTController {
 
     private final ReplaceCustomDiagramUseCase replaceCustomDiagramUseCase;
 
-    private final ExpandURIUseCase expandURIUseCase;
-
     @PostMapping
     public RenderingDataDTO getCustomProfileViewRenderingData(
             @Parameter(description = "The name/url of the inquirer.")
@@ -69,33 +66,31 @@ public class CustomDiagramsRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
             @RequestBody GraphFilter filter) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
-                datasetName,
-                graphURI,
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}\" from \"{}\"",
+                workspaceName,
+                schemaName,
                 diagramId,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-
         var result =
                 getRenderingDataUseCase.getCustomDiagramRenderingData(
-                        new GraphIdentifier(datasetName, extendedGraphURI),
+                        new GraphIdentifier(workspaceName, schemaName),
                         filter,
                         UUID.fromString(diagramId));
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
-                datasetName,
-                graphURI,
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}\" from \"{}\"",
+                workspaceName,
+                schemaName,
                 diagramId,
                 originURL);
         return result;
@@ -110,30 +105,29 @@ public class CustomDiagramsRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
             @Parameter(description = "DTO for the diagram to be replaced.") @RequestBody
                     CustomDiagramDTO diagram) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
-                datasetName,
-                graphURI,
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}\" from \"{}\"",
+                workspaceName,
+                schemaName,
                 diagramId,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         replaceCustomDiagramUseCase.replaceCustomGraphDiagram(
-                new GraphIdentifier(datasetName, extendedGraphURI), diagramId, diagram);
+                new GraphIdentifier(workspaceName, schemaName), diagramId, diagram);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
-                datasetName,
-                graphURI,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}\" from \"{}\"",
+                workspaceName,
+                schemaName,
                 diagramId,
                 originURL);
         return Response.SUCCESS;
@@ -148,28 +142,27 @@ public class CustomDiagramsRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
-                datasetName,
-                graphURI,
+                "Received DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}\" from \"{}\"",
+                workspaceName,
+                schemaName,
                 diagramId,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         deleteCustomDiagramUseCase.deleteCustomGraphDiagram(
-                new GraphIdentifier(datasetName, extendedGraphURI), diagramId);
+                new GraphIdentifier(workspaceName, schemaName), diagramId);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
-                datasetName,
-                graphURI,
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}\" from \"{}\"",
+                workspaceName,
+                schemaName,
                 diagramId,
                 originURL);
         return Response.SUCCESS;

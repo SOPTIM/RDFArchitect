@@ -149,11 +149,11 @@ public class Workspace {
                         new GraphWithContext(dataset.getDefaultModel().getGraph(), txnContext));
             }
             for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
-                var graphURI = it.next().getURI();
+                var schemaName = it.next().getURI();
                 graphs.put(
-                        graphURI,
+                        schemaName,
                         new GraphWithContext(
-                                dataset.getNamedModel(graphURI).getGraph(), txnContext));
+                                dataset.getNamedModel(schemaName).getGraph(), txnContext));
             }
             transaction.commit(INITIAL_CHANGE_MESSAGE);
         }
@@ -565,7 +565,7 @@ public class Workspace {
                 .map(CustomDiagramCollection.class::cast)
                 .forEach(
                         diagrams ->
-                                WorkspaceTransactionImpl.rewriteGraphUris(
+                                WorkspaceTransactionImpl.rewriteSchemaNames(
                                         diagrams.get().values(), renamed));
     }
 
@@ -669,7 +669,7 @@ public class Workspace {
         versionsGained.keySet().forEach(participant -> requireHeldThen(participant, graphsThen));
         // A graph created since may have no changes of its own to take back, yet the URI held
         // something else at the version, or nothing at all.
-        scope.graphUris().stream()
+        scope.schemaNames().stream()
                 .map(graphs.view()::get)
                 .filter(Objects::nonNull)
                 .forEach(graph -> requireHeldThen(graph.getRdfGraph(), graphsThen));
@@ -692,15 +692,15 @@ public class Workspace {
      * otherwise be reported as already standing at that version.
      */
     private void requireStillHeld(RevertScope scope) {
-        scope.graphUris().stream()
-                .filter(graphUri -> !graphs.contains(graphUri))
+        scope.schemaNames().stream()
+                .filter(schemaName -> !graphs.contains(schemaName))
                 .findFirst()
                 .ifPresent(
-                        graphUri -> {
+                        schemaName -> {
                             throw new RestoreRefusedException(
                                     ("Cannot restore %s to that version: the workspace holds no "
                                                     + "schema under that URI.")
-                                            .formatted(graphUri));
+                                            .formatted(schemaName));
                         });
     }
 
@@ -775,7 +775,8 @@ public class Workspace {
             for (int i = 0; i < behind.size(); i++) {
                 reached.add(
                         asCurrentlyIdentified(behind.get(i))
-                                .withRestoreTargetGraphUris(graphsHeldAfter(behind.subList(0, i))));
+                                .withRestoreTargetSchemaNames(
+                                        graphsHeldAfter(behind.subList(0, i))));
             }
             return Stream.concat(
                             // Furthest ahead first: the redo stack hands out the next one to
@@ -795,24 +796,23 @@ public class Workspace {
     // -------------------------------------------------------------------------
 
     /**
-     * Returns the graph identified by {@code graphUri}, creating the default graph if it is asked
+     * Returns the graph identified by {@code schemaName}, creating the default graph if it is asked
      * for and does not exist yet.
      *
      * <p>A reader gets an empty graph that is not kept: a read transaction enrols nothing, so the
      * insertion could neither be rolled back nor seen by a concurrent reader doing the same.
      *
-     * @param graphUri the graph URI
+     * @param schemaName the graph URI
      * @return the graph's contents
      */
-    GraphWithContext getGraphWithContext(String graphUri) {
-        var expanded = prefixes.expandPrefix(graphUri);
-        var existing = graphs.get(expanded);
+    GraphWithContext getGraphWithContext(String schemaName) {
+        var existing = graphs.get(schemaName);
         if (existing != null) {
             return existing;
         }
-        assertValidGraphName(expanded);
-        if (!expanded.equals(DEFAULT_GRAPH_NAME)) {
-            throw new ResourceNotFoundException("Graph URI " + expanded + " does not exist.");
+        assertValidSchemaName(schemaName);
+        if (!schemaName.equals(DEFAULT_GRAPH_NAME)) {
+            throw new ResourceNotFoundException("Graph URI " + schemaName + " does not exist.");
         }
         var defaultGraph = new GraphWithContext(GraphFactory.createDefaultGraph(), txnContext);
         if (txnContext.transactionMode() == ReadWrite.WRITE) {
@@ -822,7 +822,7 @@ public class Workspace {
     }
 
     /** Returns a snapshot of the current graph URIs. */
-    public List<String> listGraphUris() {
+    public List<String> listSchemaNames() {
         try (var _ = begin(ReadWrite.READ)) {
             return graphs.uris();
         }
@@ -839,9 +839,9 @@ public class Workspace {
         }
     }
 
-    static void assertValidGraphName(String graphUri) {
-        if (!graphUri.equals(DEFAULT_GRAPH_NAME) && !RDFUtils.isURL(graphUri)) {
-            throw new IllegalArgumentException("Graph Uri " + graphUri + " is not a valid URI");
+    static void assertValidSchemaName(String schemaName) {
+        if (!schemaName.equals(DEFAULT_GRAPH_NAME) && !RDFUtils.isURL(schemaName)) {
+            throw new IllegalArgumentException("Graph Uri " + schemaName + " is not a valid URI");
         }
     }
 }

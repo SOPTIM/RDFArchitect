@@ -36,9 +36,9 @@ public interface InMemoryDatabase {
     /**
      * Creates an empty Dataset without any graphs. If the dataset already exists, nothing happens.
      *
-     * @param datasetName The name of the Dataset to be created.
+     * @param workspaceName The name of the Dataset to be created.
      */
-    void createDataset(String datasetName);
+    void createDataset(String workspaceName);
 
     /**
      * Creates the workspace unless it already exists, readying a new one for editing just like
@@ -52,18 +52,18 @@ public interface InMemoryDatabase {
      * Deletes a complete Dataset with all containing graphs. Waits for ongoing transactions on
      * individual graphs before deleting.
      *
-     * @param datasetName The name of the Dataset to be deleted.
+     * @param workspaceName The name of the Dataset to be deleted.
      */
-    void deleteDataset(String datasetName);
+    void deleteDataset(String workspaceName);
 
     /**
      * Renames a Dataset, keeping all of its graphs, diagrams and namespaces.
      *
-     * @param oldDatasetName The current name of the Dataset.
-     * @param newDatasetName The name to rename the Dataset to.
+     * @param oldWorkspaceName The current name of the Dataset.
+     * @param newWorkspaceName The name to rename the Dataset to.
      * @throws DataAccessException if the Dataset does not exist or the new name is already taken.
      */
-    void renameDataset(String oldDatasetName, String newDatasetName);
+    void renameDataset(String oldWorkspaceName, String newWorkspaceName);
 
     /**
      * Returns a list of all datasets in the database
@@ -172,20 +172,20 @@ public interface InMemoryDatabase {
     /**
      * List all graphs contained in a specified Dataset
      *
-     * @param datasetName The name of the dataset.
-     * @return A list of GraphUris
+     * @param workspaceName The name of the dataset.
+     * @return A list of SchemaNames
      * @throws DataAccessException if the dataset does not exist.
      */
-    List<String> listGraphUris(String datasetName);
+    List<String> listSchemaNames(String workspaceName);
 
     /**
      * Lists the prefixes belonging to a specified dataset.
      *
-     * @param datasetName The name of the dataset.
+     * @param workspaceName The name of the dataset.
      * @return {@link PrefixMappingReadOnly}
      * @throws DataAccessException if the dataset does not exist.
      */
-    PrefixMappingReadOnly getPrefixMapping(String datasetName);
+    PrefixMappingReadOnly getPrefixMapping(String workspaceName);
 
     /**
      * Writes a specified graph to a database.
@@ -219,25 +219,25 @@ public interface InMemoryDatabase {
     /**
      * Checks if a dataset is currently set to read-only.
      *
-     * @param datasetName The name of the dataset.
+     * @param workspaceName The name of the dataset.
      * @return true if the dataset is set to read-only, otherwise false
      * @throws DataAccessException if the dataset does not exist.
      */
-    boolean isReadOnly(String datasetName);
+    boolean isReadOnly(String workspaceName);
 
     /**
      * Enables editing for a read-only dataset
      *
-     * @param datasetName The name of the dataset.
+     * @param workspaceName The name of the dataset.
      * @throws DataAccessException if the dataset does not exist.
      */
-    void enableEditing(String datasetName);
+    void enableEditing(String workspaceName);
 
     /**
      * Disables editing for a dataset and switches it back to read-only.
      *
-     * @param datasetName The name of the dataset.
+     * @param workspaceName The name of the dataset.
      * @throws DataAccessException if the dataset does not exist.
      */
-    void disableEditing(String datasetName);
+    void disableEditing(String workspaceName);
 }

@@ -44,7 +44,7 @@
         request = null,
         disabled = false,
         lockedWorkspaceName = "",
-        lockedGraphUri = "",
+        lockedSchemaName = "",
         lockedPackage = "",
         classes = [],
         onClassCreated = () => {},
@@ -147,7 +147,7 @@
                 </ContextMenu.SubMenu.Root>
                 <ContextMenu.Separator />
             {/if}
-            {#if lockedGraphUri}
+            {#if lockedSchemaName}
                 <ContextMenu.Item.Button
                     onSelect={openAddAllToGraphDiagramDialog}
                     disabled={addAllDisabled}
@@ -170,7 +170,7 @@
 <NewClassDialog
     bind:showDialog={showNewClassDialog}
     {lockedWorkspaceName}
-    {lockedGraphUri}
+    {lockedSchemaName}
     {lockedPackage}
     {classLayoutPosition}
     {onClassCreated}
@@ -180,7 +180,7 @@
     <AddToGraphDiagramDialog
         bind:showDialog={showAddAllToGraphDiagramDialog}
         {lockedWorkspaceName}
-        {lockedGraphUri}
+        {lockedSchemaName}
         {classes}
     />
 {/if}
@@ -189,7 +189,7 @@
     <AddToWorkspaceDiagramDialog
         bind:showDialog={showAddAllToWorkspaceDiagramDialog}
         {lockedWorkspaceName}
-        {lockedGraphUri}
+        {lockedSchemaName}
         {classes}
     />
 {/if}

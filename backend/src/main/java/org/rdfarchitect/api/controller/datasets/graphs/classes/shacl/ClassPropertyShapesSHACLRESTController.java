@@ -24,7 +24,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLGetClassRelationsUseCase;
 import org.rdfarchitect.shacl.dto.PropertyShapesWrapper;
 import org.slf4j.Logger;
@@ -41,14 +40,12 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/shacl/propertyShapes")
+        "/api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/shacl/propertyShapes")
 @RequiredArgsConstructor
 public class ClassPropertyShapesSHACLRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ClassPropertyShapesSHACLRESTController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final SHACLGetClassRelationsUseCase shaclGetClassRelationsUseCase;
 
@@ -66,30 +63,29 @@ public class ClassPropertyShapesSHACLRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl/propertyShapes\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/shacl/propertyShapes\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
         var res =
                 shaclGetClassRelationsUseCase.getPropertyShapes(
                         graphIdentifier, UUID.fromString(classUUID));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl/propertyShapes\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/shacl/propertyShapes\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 classUUID,
                 originURL);
         return res;

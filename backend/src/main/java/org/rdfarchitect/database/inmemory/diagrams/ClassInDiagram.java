@@ -29,5 +29,5 @@ import java.util.UUID;
 public class ClassInDiagram {
 
     private UUID uuid;
-    private URI graphUri;
+    private URI schemaName;
 }

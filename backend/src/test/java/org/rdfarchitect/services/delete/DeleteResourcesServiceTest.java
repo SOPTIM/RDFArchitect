@@ -102,9 +102,9 @@ class DeleteResourcesServiceTest {
         RDFDataMgr.read(graph, in, Lang.TTL);
         in.close();
 
-        workspace = new Workspace(GRAPH_IDENTIFIER.datasetName());
+        workspace = new Workspace(GRAPH_IDENTIFIER.workspaceName());
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.createGraph(GRAPH_IDENTIFIER.graphUri(), graph);
+            transaction.createGraph(GRAPH_IDENTIFIER.schemaName(), graph);
             transaction.commit("created the test graph");
         }
         when(databasePort.beginTransaction(anyString(), any(ReadWrite.class)))
@@ -116,7 +116,9 @@ class DeleteResourcesServiceTest {
             return ModelFactory.createDefaultModel()
                     .add(
                             ModelFactory.createModelForGraph(
-                                    transaction.graph(GRAPH_IDENTIFIER.graphUri()).getRdfGraph()));
+                                    transaction
+                                            .graph(GRAPH_IDENTIFIER.schemaName())
+                                            .getRdfGraph()));
         }
     }
 

@@ -18,7 +18,7 @@
 import { mount, unmount } from "svelte";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { graphColors } from "$lib/graphColors.svelte.js";
+import { schemaColors } from "$lib/graphColors.svelte.js";
 import { graphStore } from "$lib/stores/graphStore.ts";
 
 import SchemaColorsDialog from "../../src/routes/mainpage/packageNavigation/SchemaColorsDialog.svelte";
@@ -64,7 +64,7 @@ function names() {
 vi.mock("$lib/config/runtime", () => ({ PUBLIC_BACKEND_URL: "" }));
 
 vi.mock("$lib/graphColors.svelte.js", () => ({
-    graphColors: { reload: vi.fn(), replaceAll: vi.fn() },
+    schemaColors: { reload: vi.fn(), replaceAll: vi.fn() },
 }));
 
 vi.mock("$lib/stores/graphStore.ts", () => ({
@@ -72,7 +72,7 @@ vi.mock("$lib/stores/graphStore.ts", () => ({
 }));
 
 beforeEach(() => {
-    graphColors.reload.mockResolvedValue({
+    schemaColors.reload.mockResolvedValue({
         "http://graph#EquipmentOperation": "#112233",
         "http://graph#Equipment": "#445566",
         "http://graph#EquipmentCore": "#778899",

@@ -27,7 +27,6 @@ import org.rdfarchitect.api.dto.PasteClassesRequestDTO;
 import org.rdfarchitect.api.dto.PastePreviewRequestDTO;
 import org.rdfarchitect.api.dto.PastePreviewResponseDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.CopyClassUseCase;
 import org.rdfarchitect.services.update.classes.PastePreviewUseCase;
 import org.slf4j.Logger;
@@ -43,13 +42,12 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{targetDatasetName}/graphs/{targetGraphURI}/paste")
+@RequestMapping("api/workspaces/{targetWorkspaceName}/schemas/{targetSchemaName}/paste")
 @RequiredArgsConstructor
 public class PasteRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(PasteRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final CopyClassUseCase copyClassUseCase;
     private final PastePreviewUseCase pastePreviewUseCase;
 
@@ -68,12 +66,12 @@ public class PasteRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the target dataset.") @PathVariable
-                    String targetDatasetName,
+                    String targetWorkspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the target graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String targetGraphURI,
+                    String targetSchemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description =
@@ -81,21 +79,20 @@ public class PasteRESTController {
                     @RequestBody
                     PasteClassesRequestDTO pasteRequest) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/paste\" for {} class(es) from \"{}\".",
-                targetDatasetName,
-                targetGraphURI,
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/paste\" for {} class(es) from \"{}\".",
+                targetWorkspaceName,
+                targetSchemaName,
                 pasteRequest.getSources() == null ? 0 : pasteRequest.getSources().size(),
                 originURL);
 
-        var targetExtendedGraphURI = expandURIUseCase.expandUri(targetDatasetName, targetGraphURI);
-        var targetGraphIdentifier = new GraphIdentifier(targetDatasetName, targetExtendedGraphURI);
+        var targetGraphIdentifier = new GraphIdentifier(targetWorkspaceName, targetSchemaName);
 
         var responses = copyClassUseCase.copyClasses(pasteRequest, targetGraphIdentifier);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/paste\" to \"{}\".",
-                targetDatasetName,
-                targetGraphURI,
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/paste\" to \"{}\".",
+                targetWorkspaceName,
+                targetSchemaName,
                 originURL);
         return responses;
     }
@@ -114,26 +111,25 @@ public class PasteRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the target dataset.") @PathVariable
-                    String targetDatasetName,
+                    String targetWorkspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the target graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String targetGraphURI,
+                    String targetSchemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description = "The list of source classes that would be pasted.")
                     @RequestBody
                     PastePreviewRequestDTO previewRequest) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/paste/preview\" for {} class(es) from \"{}\".",
-                targetDatasetName,
-                targetGraphURI,
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/paste/preview\" for {} class(es) from \"{}\".",
+                targetWorkspaceName,
+                targetSchemaName,
                 previewRequest.getSources() == null ? 0 : previewRequest.getSources().size(),
                 originURL);
 
-        var targetExtendedGraphURI = expandURIUseCase.expandUri(targetDatasetName, targetGraphURI);
-        var targetGraphIdentifier = new GraphIdentifier(targetDatasetName, targetExtendedGraphURI);
+        var targetGraphIdentifier = new GraphIdentifier(targetWorkspaceName, targetSchemaName);
 
         return pastePreviewUseCase.previewPaste(previewRequest, targetGraphIdentifier);
     }

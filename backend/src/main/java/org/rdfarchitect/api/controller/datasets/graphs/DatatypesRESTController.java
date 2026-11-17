@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ListDatatypesUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,13 +41,12 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/datatypes")
+@RequestMapping("/api/workspaces/{workspaceName}/schemas/{schemaName}/datatypes")
 @RequiredArgsConstructor
 public class DatatypesRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(DatatypesRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final ListDatatypesUseCase listDatatypesUseCase;
 
     @Operation(
@@ -79,28 +77,25 @@ public class DatatypesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/datatypes\" from \"{}\".",
-                datasetName,
-                graphURI,
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/datatypes\" from \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-
         var cimClassList =
-                listDatatypesUseCase.listDatatypes(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+                listDatatypesUseCase.listDatatypes(new GraphIdentifier(workspaceName, schemaName));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/datatypes\" to \"{}\".",
-                datasetName,
-                graphURI,
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/datatypes\" to \"{}\".",
+                workspaceName,
+                schemaName,
                 originURL);
         return cimClassList;
     }

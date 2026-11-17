@@ -52,13 +52,13 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
             new ConcurrentHashMap<>();
 
     @Override
-    public void createDataset(String datasetName) {
+    public void createDataset(String workspaceName) {
         var store = getOrCreateSessionDataStore();
-        if (store.listDatasets().contains(datasetName)) {
-            throw new ResourceConflictException("Dataset " + datasetName + " already exists");
+        if (store.listDatasets().contains(workspaceName)) {
+            throw new ResourceConflictException("Dataset " + workspaceName + " already exists");
         }
-        store.createDataset(datasetName);
-        initializeNewDataset(store, datasetName);
+        store.createDataset(workspaceName);
+        initializeNewDataset(store, workspaceName);
     }
 
     @Override
@@ -71,13 +71,13 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
-    public void deleteDataset(String datasetName) {
-        getOrCreateSessionDataStore().deleteDataset(datasetName);
+    public void deleteDataset(String workspaceName) {
+        getOrCreateSessionDataStore().deleteDataset(workspaceName);
     }
 
     @Override
-    public void renameDataset(String oldDatasetName, String newDatasetName) {
-        getOrCreateSessionDataStore().renameDataset(oldDatasetName, newDatasetName);
+    public void renameDataset(String oldWorkspaceName, String newWorkspaceName) {
+        getOrCreateSessionDataStore().renameDataset(oldWorkspaceName, newWorkspaceName);
     }
 
     @Override
@@ -135,13 +135,13 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
         return getOrCreateSessionDataStore().listChanges(workspaceName);
     }
 
-    private void initializeNewDataset(SessionDataStore store, String datasetName) {
-        store.enableEditing(datasetName);
+    private void initializeNewDataset(SessionDataStore store, String workspaceName) {
+        store.enableEditing(workspaceName);
         var prefixMapping = new PrefixMappingImpl().setNsPrefixes(PrefixMapping.Standard);
         for (var entry : schemaConfig.getNamespaces().entrySet()) {
             prefixMapping.setNsPrefix(entry.getKey(), entry.getValue());
         }
-        try (var transaction = store.beginTransaction(datasetName, ReadWrite.WRITE)) {
+        try (var transaction = store.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             transaction.setPrefixes(prefixMapping);
             // The prefixes it starts with are not a change the user made and cannot be undone.
             transaction.commitWithoutHistory();
@@ -154,13 +154,13 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
-    public List<String> listGraphUris(String datasetName) {
-        return getOrCreateSessionDataStore().listGraphUris(datasetName);
+    public List<String> listSchemaNames(String workspaceName) {
+        return getOrCreateSessionDataStore().listSchemaNames(workspaceName);
     }
 
     @Override
-    public PrefixMappingReadOnly getPrefixMapping(String datasetName) {
-        return getOrCreateSessionDataStore().getPrefixMapping(datasetName);
+    public PrefixMappingReadOnly getPrefixMapping(String workspaceName) {
+        return getOrCreateSessionDataStore().getPrefixMapping(workspaceName);
     }
 
     @Override
@@ -180,18 +180,18 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
-    public boolean isReadOnly(String datasetName) {
-        return getOrCreateSessionDataStore().isReadOnly(datasetName);
+    public boolean isReadOnly(String workspaceName) {
+        return getOrCreateSessionDataStore().isReadOnly(workspaceName);
     }
 
     @Override
-    public void enableEditing(String datasetName) {
-        getOrCreateSessionDataStore().enableEditing(datasetName);
+    public void enableEditing(String workspaceName) {
+        getOrCreateSessionDataStore().enableEditing(workspaceName);
     }
 
     @Override
-    public void disableEditing(String datasetName) {
-        getOrCreateSessionDataStore().disableEditing(datasetName);
+    public void disableEditing(String workspaceName) {
+        getOrCreateSessionDataStore().disableEditing(workspaceName);
     }
 
     /** Returns the SessionDataStore for the current session, creating one if necessary. */

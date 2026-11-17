@@ -721,8 +721,8 @@ class EdgeLayoutTest {
     void deletingAnAssociation_dropsItsEdgeTogetherWithItsLabels() {
         layoutClasses(SUB, SUPER, OTHER_SUPER, TARGET);
         try (var transaction =
-                databasePort.beginTransaction(graphOne.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphOne.graphUri());
+                databasePort.beginTransaction(graphOne.workspaceName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphOne.schemaName());
             DiagramLayoutServiceUtils.insertLabel(
                     ctx.getDiagramLayout().getDiagramLayoutModel(),
                     PACKAGE,
@@ -771,7 +771,7 @@ class EdgeLayoutTest {
     void replacingACustomDiagramWithoutAClass_dropsItsLayoutData() {
         var customDiagramService =
                 new CustomDiagramService(
-                        databasePort, datasetName -> List.of(), syncDiagramLayoutService);
+                        databasePort, workspaceName -> List.of(), syncDiagramLayoutService);
         var diagramUUID = UUID.randomUUID();
         customDiagramService.replaceCustomGraphDiagram(
                 graphOne, diagramUUID.toString(), customDiagram(diagramUUID, SUB, SUPER, TARGET));
@@ -790,7 +790,7 @@ class EdgeLayoutTest {
     void deletingACustomDiagram_deletesItsLayoutData() {
         var customDiagramService =
                 new CustomDiagramService(
-                        databasePort, datasetName -> List.of(), syncDiagramLayoutService);
+                        databasePort, workspaceName -> List.of(), syncDiagramLayoutService);
         var diagramUUID = UUID.randomUUID();
         customDiagramService.replaceCustomGraphDiagram(
                 graphOne, diagramUUID.toString(), customDiagram(diagramUUID, SUB, SUPER));
@@ -841,7 +841,7 @@ class EdgeLayoutTest {
     void crossProfileDiagram_gluesItsClassesAndCreatesTheirEdges() {
         var customDiagramService =
                 new CustomDiagramService(
-                        databasePort, datasetName -> List.of(), syncDiagramLayoutService);
+                        databasePort, workspaceName -> List.of(), syncDiagramLayoutService);
 
         var crossProfileDiagram =
                 customDiagramService.getCrossProfileDiagram(
@@ -899,7 +899,7 @@ class EdgeLayoutTest {
     void crossProfileDiagram_rendersTheStoredPointsUnderTheMergedUuids() {
         var customDiagramService =
                 new CustomDiagramService(
-                        databasePort, datasetName -> List.of(), syncDiagramLayoutService);
+                        databasePort, workspaceName -> List.of(), syncDiagramLayoutService);
         var diagramUUID =
                 customDiagramService
                         .getCrossProfileDiagram(
@@ -929,7 +929,7 @@ class EdgeLayoutTest {
                                         customDiagramService,
                                         new QueryDiagramLayoutService(databasePort),
                                         new RenderCIMFacadeCollectionSvelteFlowService(),
-                                        datasetName -> List.of())
+                                        workspaceName -> List.of())
                                 .renderCrossProfileDiagram(DATASET);
 
         var edgePoints =
@@ -946,14 +946,14 @@ class EdgeLayoutTest {
     void concurrentSavesOfAWorkspaceDiagram_keepOneDiagramObjectPerClass() throws Exception {
         var customDiagramService =
                 new CustomDiagramService(
-                        databasePort, datasetName -> List.of(), syncDiagramLayoutService);
+                        databasePort, workspaceName -> List.of(), syncDiagramLayoutService);
         var renderer =
                 new RenderMergedDiagramSvelteFlowService(
                         databasePort,
                         customDiagramService,
                         new QueryDiagramLayoutService(databasePort),
                         new RenderCIMFacadeCollectionSvelteFlowService(),
-                        datasetName -> List.of());
+                        workspaceName -> List.of());
         var sessionId = SessionContext.getSessionId();
         var errors = new CopyOnWriteArrayList<Throwable>();
         var layout = new DiagramLayoutDTO();
@@ -1032,7 +1032,7 @@ class EdgeLayoutTest {
         }
     }
 
-    private GraphIdentifier addGraph(String graphUri, String schema) {
+    private GraphIdentifier addGraph(String schemaName, String schema) {
         var file =
                 new MockMultipartFile(
                         "file",
@@ -1042,22 +1042,22 @@ class EdgeLayoutTest {
         var graph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphUri)
+                        .setGraphName(schemaName)
                         .build()
                         .graph();
-        var identifier = new GraphIdentifier(DATASET, graphUri);
+        var identifier = new GraphIdentifier(DATASET, schemaName);
         databasePort.createWorkspaceIfAbsent(DATASET);
         try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.WRITE)) {
-            transaction.createGraph(graphUri, graph);
-            transaction.commit("created graph %s".formatted(graphUri));
+            transaction.createGraph(schemaName, graph);
+            transaction.commit("created graph %s".formatted(schemaName));
         }
         return identifier;
     }
 
     private void editSchema(Consumer<Model> edit) {
         try (var transaction =
-                databasePort.beginTransaction(graphOne.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphOne.graphUri());
+                databasePort.beginTransaction(graphOne.workspaceName(), ReadWrite.WRITE)) {
+            var ctx = transaction.graph(graphOne.schemaName());
             edit.accept(ModelFactory.createModelForGraph(ctx.getRdfGraph()));
             transaction.commit("edit schema");
         }
@@ -1125,7 +1125,7 @@ class EdgeLayoutTest {
                         new GetRenderingDataService(
                                         databasePort,
                                         new RenderCIMFacadeCollectionSvelteFlowService(),
-                                        datasetName -> List.of(),
+                                        workspaceName -> List.of(),
                                         new QueryDiagramLayoutService(databasePort))
                                 .getRenderingData(graphOne, filter, PACKAGE);
         return edgeIn(rendering, key);
@@ -1231,7 +1231,7 @@ class EdgeLayoutTest {
             return ModelFactory.createDefaultModel()
                     .add(
                             transaction
-                                    .graph(graphOne.graphUri())
+                                    .graph(graphOne.schemaName())
                                     .getDiagramLayout()
                                     .getDiagramLayoutModel());
         }
