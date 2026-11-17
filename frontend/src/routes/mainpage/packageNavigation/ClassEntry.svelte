@@ -60,7 +60,7 @@
         graphNavEntry,
         classNavEntry,
         diagramId,
-        diagramGraphName,
+        diagramSchemaName,
         rangeSiblings = null,
         namespaces = [],
         level = 3,
@@ -135,11 +135,11 @@
 
     function buildSelectionEntry(
         navEntry = classNavEntry,
-        graphName = graphNavEntry?.id,
+        schemaName = graphNavEntry?.id,
     ) {
         return {
             workspaceName: workspaceNavEntry.id,
-            graphName,
+            schemaName,
             classUuid: navEntry.id,
             classLabel: navEntry.label,
             packageId: navEntry.parent?.id ?? null,
@@ -167,7 +167,7 @@
                 isOpenPackageClass(anchor) &&
                 !(
                     anchor.workspaceName === entry.workspaceName &&
-                    anchor.graphName === entry.graphName &&
+                    anchor.schemaName === entry.schemaName &&
                     anchor.classUuid === entry.classUuid
                 )
             ) {
@@ -225,7 +225,7 @@
             uuid === entry.classUuid &&
             editorState.selectedClassWorkspace.getValue() ===
                 entry.workspaceName &&
-            editorState.selectedClassGraph.getValue() === entry.graphName
+            editorState.selectedClassGraph.getValue() === entry.schemaName
         );
     }
 
@@ -233,13 +233,13 @@
         if (rangeSiblings) {
             return rangeSiblings.map(s => ({
                 navEntry: s.classNavEntry,
-                graphName: s.graphNavEntry?.id,
+                schemaName: s.graphNavEntry?.id,
             }));
         }
         const siblings = classNavEntry.parent?.children ?? [];
         return siblings.map(c => ({
             navEntry: c,
-            graphName: graphNavEntry?.id,
+            schemaName: graphNavEntry?.id,
         }));
     }
 
@@ -250,14 +250,14 @@
             ? units.findIndex(
                   u =>
                       u.navEntry.id === anchor.classUuid &&
-                      u.graphName === anchor.graphName &&
+                      u.schemaName === anchor.schemaName &&
                       anchor.workspaceName === workspaceNavEntry.id,
               )
             : -1;
         const targetIdx = units.findIndex(
             u =>
                 u.navEntry.id === classNavEntry.id &&
-                u.graphName === graphNavEntry?.id,
+                u.schemaName === graphNavEntry?.id,
         );
         if (anchorIdx === -1 || targetIdx === -1) {
             multiSelectState.toggle(buildSelectionEntry());
@@ -269,7 +269,7 @@
                 : [targetIdx, anchorIdx];
         const range = units
             .slice(start, end + 1)
-            .map(u => buildSelectionEntry(u.navEntry, u.graphName));
+            .map(u => buildSelectionEntry(u.navEntry, u.schemaName));
         if (additive) {
             multiSelectState.setSelection(
                 mergeSelections(multiSelectState.getSelected(), range),
@@ -316,7 +316,7 @@
         //The event executed to open the discard confirm delete dialog
         eventStack.executeNewestEvent({
             workspaceName: workspaceNavEntry.id,
-            graphName: graphNavEntry?.id ?? null,
+            schemaName: graphNavEntry?.id ?? null,
             classUuid: classNavEntry.id,
             classType: classType,
         });
@@ -333,7 +333,7 @@
     function showClassInPackage() {
         editorState.selectedWorkspace.updateValue(workspaceNavEntry.id);
         editorState.selectedGraph.updateValue(
-            diagramGraphName ?? graphNavEntry.id,
+            diagramSchemaName ?? graphNavEntry.id,
         );
         editorState.selectedDiagram.updateValue({
             type: diagramType,
@@ -347,7 +347,7 @@
         copyState.set(
             multiSelectState.copyEntriesOr({
                 classUUID: classNavEntry.id,
-                graphName: graphNavEntry.id,
+                schemaName: graphNavEntry.id,
                 workspaceName: workspaceNavEntry.id,
             }),
         );
@@ -422,7 +422,7 @@
                 withInheritance
                 workspaceName={workspaceNavEntry.id}
                 classUuids={extendClassUuids}
-                currentGraphName={graphNavEntry.id}
+                currentSchemaName={graphNavEntry.id}
                 selectedClassUuid={multiActive ? null : classNavEntry.id}
                 readOnly={readonly}
             />
@@ -430,7 +430,7 @@
                 label="Extend in Schema"
                 workspaceName={workspaceNavEntry.id}
                 classUuids={extendClassUuids}
-                currentGraphName={graphNavEntry.id}
+                currentSchemaName={graphNavEntry.id}
                 selectedClassUuid={multiActive ? null : classNavEntry.id}
                 readOnly={readonly}
             />
@@ -464,7 +464,7 @@
                 onSelect={() => {
                     showRemoveFromDiagramDialog = true;
                 }}
-                disabled={!!diagramGraphName && crossGraphDisabled}
+                disabled={!!diagramSchemaName && crossGraphDisabled}
                 faIcon={faMinus}
                 variant="danger"
             >
@@ -496,7 +496,7 @@
     <DeleteDependenciesDialog
         bind:showDialog={showDeleteDependenciesDialog}
         workspaceName={workspaceNavEntry.id}
-        graphName={graphNavEntry.id}
+        schemaName={graphNavEntry.id}
         resourceUuids={selectedClassIds}
     />
 {/if}
@@ -504,7 +504,7 @@
 {#if showSHACLDialog}
     <SHACLClassSpecificPopUp
         workspaceName={workspaceNavEntry.id}
-        graphName={graphNavEntry.id}
+        schemaName={graphNavEntry.id}
         reactiveClass={shaclClass}
         bind:showDialog={showSHACLDialog}
     />
@@ -514,7 +514,7 @@
     <AddToGraphDiagramDialog
         bind:showDialog={showAddToGraphDiagramDialog}
         lockedWorkspaceName={workspaceNavEntry.id}
-        lockedGraphName={graphNavEntry.id}
+        lockedSchemaName={graphNavEntry.id}
         classes={selectedClassNavEntries}
     />
 {/if}
@@ -523,7 +523,7 @@
     <AddToWorkspaceDiagramDialog
         bind:showDialog={showAddToWorkspaceDiagramDialog}
         lockedWorkspaceName={workspaceNavEntry.id}
-        lockedGraphName={graphNavEntry.id}
+        lockedSchemaName={graphNavEntry.id}
         classes={selectedClassNavEntries}
     />
 {/if}
@@ -532,7 +532,7 @@
     <RemoveFromDiagramDialog
         bind:showDialog={showRemoveFromDiagramDialog}
         lockedWorkspaceName={workspaceNavEntry.id}
-        graphName={diagramGraphName}
+        schemaName={diagramSchemaName}
         {diagramId}
         classIds={selectedClassIds}
         classLabels={selectedClassLabels}

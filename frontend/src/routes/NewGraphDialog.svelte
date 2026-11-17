@@ -21,7 +21,7 @@
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
-    import { graphName } from "$lib/utils/graph-label.js";
+    import { schemaName } from "$lib/utils/graph-label.js";
 
     import {
         DiagramType,
@@ -32,14 +32,14 @@
     let { showDialog = $bindable(), lockedWorkspaceName } = $props();
 
     const uniqueId = uuidv4();
-    const defaultGraphNamePrefix = "http://graph#";
+    const defaultSchemaNamePrefix = "http://graph#";
     const uriSchemePattern = /^[a-zA-Z][a-zA-Z\d+.-]*:/;
     const workspaceInputId = `workspaceNameNewGraph-${uniqueId}`;
     const workspaceListId = `workspaceNamesNewGraph-${uniqueId}`;
-    const graphInputId = `graphNameNewGraph-${uniqueId}`;
+    const graphInputId = `schemaNameNewGraph-${uniqueId}`;
 
     let workspaceNameUserInput = $state("");
-    let graphNameUserInput = $state("");
+    let schemaNameUserInput = $state("");
     let readOnlyWorkspaces = $state([]);
     let modifiableWorkspaces = $state([]);
     let existingGraphs = $state([]);
@@ -50,21 +50,21 @@
             readOnlyWorkspaces.includes(workspaceNameUserInput),
     );
 
-    const resolvedGraphName = $derived(resolveGraphName(graphNameUserInput));
+    const resolvedSchemaName = $derived(resolveSchemaName(schemaNameUserInput));
     const graphExists = $derived(
-        !!resolvedGraphName &&
+        !!resolvedSchemaName &&
             existingGraphs.some(
-                graph => graphName(graph) === resolvedGraphName,
+                graph => schemaName(graph) === resolvedSchemaName,
             ),
     );
     const disableSubmit = $derived(
         !workspaceNameUserInput ||
-            !resolvedGraphName ||
+            !resolvedSchemaName ||
             workspaceIsReadOnly ||
             graphExists,
     );
 
-    function resolveGraphName(graphInput) {
+    function resolveSchemaName(graphInput) {
         const trimmedInput = graphInput.trim();
         if (!trimmedInput) {
             return "";
@@ -72,7 +72,7 @@
         if (uriSchemePattern.test(trimmedInput)) {
             return trimmedInput;
         }
-        return defaultGraphNamePrefix + trimmedInput;
+        return defaultSchemaNamePrefix + trimmedInput;
     }
 
     async function onOpen() {
@@ -80,7 +80,7 @@
             lockedWorkspaceName ??
             editorState.selectedWorkspace.getValue() ??
             "";
-        graphNameUserInput = "";
+        schemaNameUserInput = "";
 
         const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
         readOnlyWorkspaces = [];
@@ -97,7 +97,7 @@
 
     function onClose() {
         workspaceNameUserInput = "";
-        graphNameUserInput = "";
+        schemaNameUserInput = "";
         existingGraphs = [];
     }
 
@@ -118,16 +118,16 @@
 
     async function addGraph() {
         const workspaceNameLocal = workspaceNameUserInput;
-        const graphNameLocal = resolvedGraphName;
+        const schemaNameLocal = resolvedSchemaName;
 
         const { error } = await graphStore.addEmptyGraph(
             workspaceNameLocal,
-            graphNameLocal,
+            schemaNameLocal,
         );
         if (error) return;
 
         editorState.selectedWorkspace.updateValue(workspaceNameLocal);
-        editorState.selectedGraph.updateValue(graphNameLocal);
+        editorState.selectedGraph.updateValue(schemaNameLocal);
         editorState.selectedDiagram.updateValue({
             type: DiagramType.PACKAGE,
             id: "default",
@@ -179,9 +179,9 @@
             class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
             type="text"
             id={graphInputId}
-            placeholder={defaultGraphNamePrefix}
+            placeholder={defaultSchemaNamePrefix}
             autocomplete="off"
-            bind:value={graphNameUserInput}
+            bind:value={schemaNameUserInput}
         />
 
         {#if graphExists}

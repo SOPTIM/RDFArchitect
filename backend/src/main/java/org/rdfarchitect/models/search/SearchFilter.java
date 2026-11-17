@@ -23,6 +23,6 @@ import lombok.Data;
 public class SearchFilter {
 
     private String workspaceName;
-    private String graphName;
+    private String schemaName;
     private String packageUUID;
 }

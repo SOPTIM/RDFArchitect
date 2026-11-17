@@ -30,7 +30,7 @@ function file(overrides) {
         fileName: "graph.ttl",
         sizeBytes: 100,
         state: FileState.PENDING,
-        graphName: null,
+        schemaName: null,
         ...overrides,
     };
 }
@@ -41,7 +41,7 @@ function running(status) {
         workspaceName: "ds",
         state: JobState.RUNNING,
         files: [],
-        importedGraphNames: [],
+        importedSchemaNames: [],
         failedImports: [],
         warnings: [],
         ...status,
@@ -135,7 +135,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.COMPLETED,
                 files: [file({ state: FileState.IMPORTED })],
-                importedGraphNames: ["http://graph#first"],
+                importedSchemaNames: ["http://graph#first"],
             }),
         );
 
@@ -150,7 +150,7 @@ describe("ImportProgress", () => {
         progress.apply(
             running({
                 state: JobState.COMPLETED,
-                importedGraphNames: ["http://graph#first"],
+                importedSchemaNames: ["http://graph#first"],
                 failedImports: ["broken.ttl"],
             }),
         );
@@ -164,7 +164,7 @@ describe("ImportProgress", () => {
         progress.apply(
             running({
                 state: JobState.CANCELLED,
-                importedGraphNames: [
+                importedSchemaNames: [
                     "http://graph#first",
                     "http://graph#second",
                 ],
@@ -181,7 +181,7 @@ describe("ImportProgress", () => {
             running({
                 state: JobState.FAILED,
                 errorMessage: "out of memory",
-                importedGraphNames: ["http://graph#first"],
+                importedSchemaNames: ["http://graph#first"],
             }),
         );
 

@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/layout/{diagramUUID}/classes")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/layout/{diagramUUID}/classes")
 @RequiredArgsConstructor
 public class ClassLayoutDataRESTController {
 
@@ -68,7 +68,7 @@ public class ClassLayoutDataRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The UUID of the package or custom diagram being updated.")
                     @PathVariable
                     String diagramUUID,
@@ -88,25 +88,25 @@ public class ClassLayoutDataRESTController {
                     List<ClassPositionDTO> classPositionDTOList) {
 
         logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/layout/{{}}/classes\" from \"{}\".",
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/layout/{{}}/classes\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 diagramUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var resolvedPackageUUID =
                 !diagramUUID.equals("default") ? UUID.fromString(diagramUUID) : null;
 
         updateClassPositionsUseCase.updateClassPositions(
-                new GraphIdentifier(workspaceName, extendedGraphName),
+                new GraphIdentifier(workspaceName, extendedSchemaName),
                 resolvedPackageUUID,
                 classPositionDTOList);
 
         logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/layout/{{}}/classes\" from \"{}\".",
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/layout/{{}}/classes\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 diagramUUID,
                 originURL);
         return "success";

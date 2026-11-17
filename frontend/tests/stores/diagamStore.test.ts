@@ -157,13 +157,13 @@ describe("customDiagramStore", () => {
             expect(api.getCustomGraphDiagramList).not.toHaveBeenCalled();
         });
 
-        test("returns null if graphName is empty", async () => {
+        test("returns null if schemaName is empty", async () => {
             const result = await store.getGraphDiagrams(WORKSPACE_A, "");
             expect(result).toBeNull();
             expect(api.getCustomGraphDiagramList).not.toHaveBeenCalled();
         });
 
-        test("returns null if both workspaceName and graphName are empty", async () => {
+        test("returns null if both workspaceName and schemaName are empty", async () => {
             const result = await store.getGraphDiagrams("", "");
             expect(result).toBeNull();
             expect(api.getCustomGraphDiagramList).not.toHaveBeenCalled();
@@ -185,7 +185,7 @@ describe("customDiagramStore", () => {
             expect(api.getCustomGraphDiagramList).toHaveBeenCalledTimes(1);
         });
 
-        test("treats different graphNames under the same workspace as separate cache entries", async () => {
+        test("treats different schemaNames under the same workspace as separate cache entries", async () => {
             vi.mocked(api.getCustomGraphDiagramList)
                 .mockResolvedValueOnce({
                     data: MOCK_GRAPH_DIAGRAMS,
@@ -210,7 +210,7 @@ describe("customDiagramStore", () => {
             expect(api.getCustomGraphDiagramList).toHaveBeenCalledTimes(2);
         });
 
-        test("treats same graphName under different workspaces as separate cache entries", async () => {
+        test("treats same schemaName under different workspaces as separate cache entries", async () => {
             vi.mocked(api.getCustomGraphDiagramList)
                 .mockResolvedValueOnce({
                     data: MOCK_GRAPH_DIAGRAMS,
@@ -344,7 +344,7 @@ describe("customDiagramStore", () => {
             expect(api.replaceCustomGraphDiagram).toHaveBeenCalledWith({
                 path: {
                     workspaceName: WORKSPACE_A,
-                    graphName: GRAPH_URI_1,
+                    schemaName: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },
                 body: MOCK_DIAGRAM_BODY,
@@ -471,7 +471,7 @@ describe("customDiagramStore", () => {
             expect(api.deleteCustomGraphDiagram).toHaveBeenCalledWith({
                 path: {
                     workspaceName: WORKSPACE_A,
-                    graphName: GRAPH_URI_1,
+                    schemaName: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },
             });
@@ -619,7 +619,7 @@ describe("customDiagramStore", () => {
             expect(api.addToCustomGraphDiagram).toHaveBeenCalledWith({
                 path: {
                     workspaceName: WORKSPACE_A,
-                    graphName: GRAPH_URI_1,
+                    schemaName: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },
                 body: CLASSES,
@@ -761,7 +761,7 @@ describe("customDiagramStore", () => {
             expect(api.removeFromDiagram).toHaveBeenCalledWith({
                 path: {
                     workspaceName: WORKSPACE_A,
-                    graphName: GRAPH_URI_1,
+                    schemaName: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },
                 body: CLASSES,

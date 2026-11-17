@@ -29,31 +29,31 @@
     let {
         showDialog = $bindable(),
         lockedWorkspaceName,
-        lockedGraphName,
+        lockedSchemaName,
     } = $props();
     const fileInputId = `actual-file-input-shacl-upload-${crypto.randomUUID()}`;
     let workspaceName = $state("");
-    let graphName = $state("");
+    let schemaName = $state("");
     let file = $state(null);
 
     const lockedWorkspaceNameValue = $derived(lockedWorkspaceName);
-    const lockedGraphNameValue = $derived(lockedGraphName);
-    let disableSubmit = $derived(!file || !workspaceName || !graphName);
+    const lockedSchemaNameValue = $derived(lockedSchemaName);
+    let disableSubmit = $derived(!file || !workspaceName || !schemaName);
 
     async function onOpen() {
         if (showDialog) {
             workspaceName =
                 lockedWorkspaceNameValue ??
                 editorState.selectedWorkspace.getValue();
-            graphName =
-                lockedGraphNameValue ?? editorState.selectedGraph.getValue();
+            schemaName =
+                lockedSchemaNameValue ?? editorState.selectedGraph.getValue();
             file = null;
         }
     }
 
     async function importGraph() {
         replaceGraphWithFile({
-            path: { workspaceName: workspaceName, graphName: graphName },
+            path: { workspaceName: workspaceName, schemaName: schemaName },
             body: { file },
         })
             .then(res => {
@@ -61,7 +61,7 @@
                     console.log("successfully inserted data");
                     toastStore.success(
                         "Constraints imported",
-                        `"${file.name}" was applied to "${graphName}".`,
+                        `"${file.name}" was applied to "${schemaName}".`,
                     );
                 } else {
                     console.log("failed to insert SHACL file");
@@ -96,9 +96,9 @@
     <div class="mx-2 flex h-full flex-col">
         <WorkspaceAndGraphSelection
             bind:workspace={workspaceName}
-            bind:graph={graphName}
+            bind:graph={schemaName}
             {lockedWorkspaceName}
-            {lockedGraphName}
+            {lockedSchemaName}
             displayAsCard={false}
         />
         <input

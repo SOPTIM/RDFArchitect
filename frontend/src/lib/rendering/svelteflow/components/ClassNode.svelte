@@ -48,20 +48,20 @@
     const isMergedDiagram = $derived(
         isMergedDiagramType(editorState.selectedDiagram.getProperty("type")),
     );
-    const selectionGraphName = $derived(
-        isMergedDiagram ? null : data.graphName,
+    const selectionSchemaName = $derived(
+        isMergedDiagram ? null : data.schemaName,
     );
 
     const isInSelection = $derived(
         multiSelectState.isSelected(
             editorState.selectedWorkspace.getValue(),
-            selectionGraphName,
+            selectionSchemaName,
             id,
         ),
     );
     const isOpenClass = $derived(
         editorState.selectedClass.getProperty("id") === id &&
-            editorState.selectedClassGraph.getValue() === selectionGraphName,
+            editorState.selectedClassGraph.getValue() === selectionSchemaName,
     );
     const isActiveLevel = $derived(
         editorState.activeSelectionKind.getValue() === SelectionLevel.CLASS,
@@ -95,7 +95,7 @@
     );
 
     const hasProfileInfo = $derived(
-        collectGraphNames().some(graph => graph.graphName),
+        collectSchemaNames().some(graph => graph.schemaName),
     );
 
     const useProfileSections = $derived(
@@ -108,8 +108,8 @@
         useProfileSections
             ? buildProfileSections(
                   isMergedDiagram
-                      ? collectGraphNames()
-                      : ownGraphNameFirst(collectGraphNames()),
+                      ? collectSchemaNames()
+                      : ownSchemaNameFirst(collectSchemaNames()),
               )
             : [],
     );
@@ -147,8 +147,8 @@
     const isExternal = $derived(data.external === true);
     const isOutsidePackage = $derived(data.outsidePackage === true);
 
-    function graphNameOf(prop) {
-        return prop.graphName ?? "";
+    function schemaNameOf(prop) {
+        return prop.schemaName ?? "";
     }
 
     function propertyText(property) {
@@ -170,11 +170,11 @@
             : "";
     }
 
-    function propsForGraph(props, graphName) {
-        return (props ?? []).filter(prop => graphNameOf(prop) === graphName);
+    function propsForGraph(props, schemaName) {
+        return (props ?? []).filter(prop => schemaNameOf(prop) === schemaName);
     }
 
-    function collectGraphNames() {
+    function collectSchemaNames() {
         const inheritedProps = inheritedGroups.flatMap(superClass => [
             ...(superClass.attributes ?? []),
             ...(superClass.associations ?? []),
@@ -187,27 +187,30 @@
             ...inheritedProps,
         ];
 
-        const graphNameMap = new Map();
+        const schemaNameMap = new Map();
         for (const prop of allProps) {
-            const graphName = graphNameOf(prop);
-            if (!graphNameMap.has(graphName)) {
-                graphNameMap.set(graphName, prop.graphKeyword);
+            const schemaName = schemaNameOf(prop);
+            if (!schemaNameMap.has(schemaName)) {
+                schemaNameMap.set(schemaName, prop.graphKeyword);
             }
         }
 
-        return [...graphNameMap.entries()]
-            .map(([graphName, keyword]) => ({ graphName, keyword }))
-            .sort((a, b) => a.graphName.localeCompare(b.graphName));
+        return [...schemaNameMap.entries()]
+            .map(([schemaName, keyword]) => ({ schemaName, keyword }))
+            .sort((a, b) => a.schemaName.localeCompare(b.schemaName));
     }
 
-    function superGroupsForGraph(graphName) {
+    function superGroupsForGraph(schemaName) {
         return inheritedGroups
             .map(superClass => ({
                 label: superClass.label,
                 uuid: superClass.uuid,
-                attributes: propsForGraph(superClass.attributes, graphName),
-                associations: propsForGraph(superClass.associations, graphName),
-                enumEntries: propsForGraph(superClass.enumEntries, graphName),
+                attributes: propsForGraph(superClass.attributes, schemaName),
+                associations: propsForGraph(
+                    superClass.associations,
+                    schemaName,
+                ),
+                enumEntries: propsForGraph(superClass.enumEntries, schemaName),
             }))
             .filter(
                 group =>
@@ -217,14 +220,14 @@
             );
     }
 
-    function ownGraphNameFirst(graphs) {
-        const own = data.graphName;
-        if (!graphs.some(graph => graph.graphName === own)) {
+    function ownSchemaNameFirst(graphs) {
+        const own = data.schemaName;
+        if (!graphs.some(graph => graph.schemaName === own)) {
             return graphs;
         }
         return [
-            ...graphs.filter(graph => graph.graphName === own),
-            ...graphs.filter(graph => graph.graphName !== own),
+            ...graphs.filter(graph => graph.schemaName === own),
+            ...graphs.filter(graph => graph.schemaName !== own),
         ];
     }
 
@@ -232,13 +235,13 @@
         const showInherited = renderOptions.get("showInheritedProperties");
 
         return orderedGraphs
-            .map(({ graphName, keyword }) => ({
-                graphName,
-                graphLabel: getGraphLabel(graphName, keyword),
-                superGroups: superGroupsForGraph(graphName),
-                ownAttributes: propsForGraph(attributes, graphName),
-                ownAssociations: propsForGraph(associations, graphName),
-                ownEnumEntries: propsForGraph(enumEntries, graphName),
+            .map(({ schemaName, keyword }) => ({
+                schemaName,
+                graphLabel: getGraphLabel(schemaName, keyword),
+                superGroups: superGroupsForGraph(schemaName),
+                ownAttributes: propsForGraph(attributes, schemaName),
+                ownAssociations: propsForGraph(associations, schemaName),
+                ownEnumEntries: propsForGraph(enumEntries, schemaName),
             }))
             .filter(
                 section =>
@@ -304,7 +307,7 @@
         }
         return {
             classUuid: item.ownerClassUuid,
-            graphName: property.graphName || data.graphName || null,
+            schemaName: property.schemaName || data.schemaName || null,
             kind: item.propertyKind,
             propertyUuid: property.uuid,
         };
@@ -348,14 +351,14 @@
         openPropertyEditor(event, target);
     }
 
-    function getGraphLabel(graphName, keyword) {
+    function getGraphLabel(schemaName, keyword) {
         if (keyword) {
             return keyword;
         }
         try {
-            return new URI(graphName).suffix;
+            return new URI(schemaName).suffix;
         } catch {
-            return graphName;
+            return schemaName;
         }
     }
 </script>
@@ -484,7 +487,7 @@
                 not defined in this schema
             </div>
         {:else if useProfileSections}
-            {#each profileSections as section (section.graphName)}
+            {#each profileSections as section (section.schemaName)}
                 <div
                     class="text-default-text text-center text-xs italic opacity-70"
                 >

@@ -43,7 +43,7 @@
     import { validateWorkspaceAndShowResult } from "$lib/actions/validationActions.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { graphColors } from "$lib/graphColors.svelte.js";
+    import { schemaColors } from "$lib/graphColors.svelte.js";
     import { editorState, SelectionLevel } from "$lib/sharedState.svelte.js";
     import { ontologyStore } from "$lib/stores/ontologyStore.ts";
 
@@ -97,8 +97,8 @@
 
     let wasGraphSelected = false;
 
-    const graphColor = $derived(
-        graphColors.get(workspaceNavEntry.id, graphNavEntry.id),
+    const schemaColor = $derived(
+        schemaColors.get(workspaceNavEntry.id, graphNavEntry.id),
     );
 
     const isGraphSelected = $derived(
@@ -178,7 +178,7 @@
                 label={graphNavEntry.label}
                 badgeText={graphNavEntry.data?.keyword ?? ""}
                 icon={faDiagramProject}
-                iconColor={graphColor}
+                iconColor={schemaColor}
                 hasChildren={graphNavEntry.children.length > 0}
                 expanded={graphNavEntry.isOpen}
                 isSelected={graphSelectionState === "active"}
@@ -435,39 +435,39 @@
 <ExportDialog
     bind:showDialog={showExportDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphName={graphNavEntry.id}
+    lockedSchemaName={graphNavEntry.id}
 />
 <GraphDeleteDialog bind:showDialog={showDeleteDialog} />
 <RenameGraphDialog
     bind:showDialog={showRenameDialog}
     workspaceName={workspaceNavEntry.id}
-    graphName={graphNavEntry.id}
+    schemaName={graphNavEntry.id}
     onEditHeader={editProfileHeader}
 />
 <NewPackageDialog
     bind:showDialog={showNewPackageDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphName={graphNavEntry.id}
+    lockedSchemaName={graphNavEntry.id}
 />
 <CustomGraphDiagramDialog
     bind:showDialog={showNewDiagramDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphName={graphNavEntry.id}
+    lockedSchemaName={graphNavEntry.id}
 />
 <CompareDialog
     bind:showDialog={showCompareDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphName={graphNavEntry.id}
+    lockedSchemaName={graphNavEntry.id}
 />
 <SHACLUploadDialog
     bind:showDialog={showSHACLUploadDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphName={graphNavEntry.id}
+    lockedSchemaName={graphNavEntry.id}
 />
 <SHACLExportDialog
     bind:showDialog={showSHACLExportDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphName={graphNavEntry.id}
+    lockedSchemaName={graphNavEntry.id}
 />
 <SHACLFullViewDialog bind:showDialog={showSHACLFullViewDialog} />
 <SchemaColorsDialog
@@ -477,12 +477,12 @@
 <PickSchemaColorDialog
     bind:showDialog={showPickColorDialog}
     workspaceName={workspaceNavEntry.id}
-    graphName={graphNavEntry.id}
+    schemaName={graphNavEntry.id}
     graphLabel={graphNavEntry.label}
 />
 <OntologyDialog
     bind:showDialog={showEditOntologyDialog}
-    graphName={graphNavEntry.id}
+    schemaName={graphNavEntry.id}
     workspace={workspaceNavEntry.id}
     {namespaces}
     bind:ontology
@@ -494,16 +494,16 @@
     bind:showDialog={showDeleteDependenciesDialog}
     onClose={initialize}
     workspaceName={workspaceNavEntry.id}
-    graphName={graphNavEntry.id}
+    schemaName={graphNavEntry.id}
     resourceUuid={ontology.uuid}
 />
 <ValidationDialog
     bind:showDialog={showValidationDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphName={graphNavEntry.id}
+    lockedSchemaName={graphNavEntry.id}
 />
 <DocumentationExportDialog
     bind:showDialog={showDocumentationExportDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphName={graphNavEntry.id}
+    lockedSchemaName={graphNavEntry.id}
 />

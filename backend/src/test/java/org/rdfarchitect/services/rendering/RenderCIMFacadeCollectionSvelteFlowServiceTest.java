@@ -799,7 +799,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         assertThat(nodeByLabel(result, "Child").getData().getAssociations())
                 .extracting(
                         AssociationDTO::getLabel,
-                        AssociationDTO::getGraphName,
+                        AssociationDTO::getSchemaName,
                         AssociationDTO::getColor)
                 .containsExactly(
                         tuple("Terminals", GRAPH_URI, null),
@@ -833,7 +833,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                 .singleElement()
                 .satisfies(
                         attribute -> {
-                            assertThat(attribute.getGraphName()).isEqualTo(GRAPH_URI);
+                            assertThat(attribute.getSchemaName()).isEqualTo(GRAPH_URI);
                             assertThat(attribute.getColor()).isNull();
                         });
         assertThat(childAttributes)
@@ -841,7 +841,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                 .singleElement()
                 .satisfies(
                         attribute -> {
-                            assertThat(attribute.getGraphName()).isEqualTo(OTHER_GRAPH_URI);
+                            assertThat(attribute.getSchemaName()).isEqualTo(OTHER_GRAPH_URI);
                             assertThat(attribute.getColor()).isEqualTo(OTHER_COLOR);
                         });
 
@@ -849,13 +849,13 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         assertThat(enumEntries)
                 .filteredOn(entry -> entry.getLabel().equals("A"))
                 .singleElement()
-                .satisfies(entry -> assertThat(entry.getGraphName()).isEqualTo(GRAPH_URI));
+                .satisfies(entry -> assertThat(entry.getSchemaName()).isEqualTo(GRAPH_URI));
         assertThat(enumEntries)
                 .filteredOn(entry -> entry.getLabel().equals("B"))
                 .singleElement()
                 .satisfies(
                         entry -> {
-                            assertThat(entry.getGraphName()).isEqualTo(OTHER_GRAPH_URI);
+                            assertThat(entry.getSchemaName()).isEqualTo(OTHER_GRAPH_URI);
                             assertThat(entry.getColor()).isEqualTo(OTHER_COLOR);
                         });
     }
@@ -886,7 +886,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                 .singleElement()
                 .satisfies(
                         attribute -> {
-                            assertThat(attribute.getGraphName()).isEqualTo(GRAPH_URI);
+                            assertThat(attribute.getSchemaName()).isEqualTo(GRAPH_URI);
                             assertThat(attribute.getColor()).isEqualTo("#123456");
                         });
     }
@@ -912,7 +912,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         var childAttributes = nodeByLabel(result, "Child").getData().getAttributes();
         assertThat(childAttributes).extracting(AttributeDTO::getLabel).containsExactly("childAttr");
         assertThat(childAttributes)
-                .allSatisfy(attribute -> assertThat(attribute.getGraphName()).isNull());
+                .allSatisfy(attribute -> assertThat(attribute.getSchemaName()).isNull());
     }
 
     private static UUID mergedUuid(String label) {
@@ -998,7 +998,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                 .singleElement()
                 .satisfies(
                         attribute -> {
-                            assertThat(attribute.getGraphName()).isEqualTo(OTHER_GRAPH_URI);
+                            assertThat(attribute.getSchemaName()).isEqualTo(OTHER_GRAPH_URI);
                             assertThat(attribute.getColor()).isEqualTo(OTHER_COLOR);
                         });
 
@@ -1552,7 +1552,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         assertThat(nodeByLabel(result, "Child").getData().getAssociations())
                 .extracting(
                         AssociationDTO::getLabel,
-                        AssociationDTO::getGraphName,
+                        AssociationDTO::getSchemaName,
                         AssociationDTO::getUuid)
                 .containsExactlyInAnyOrder(
                         tuple("Terminals", GRAPH_URI, uuidIn(model, "Child.Terminals")),

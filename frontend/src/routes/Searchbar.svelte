@@ -65,7 +65,7 @@
     function selectSubject(searchResult) {
         const target = {
             workspaceName: searchResult.workspaceName,
-            graphName: searchResult.graphName,
+            schemaName: searchResult.schemaName,
             packageUUID: searchResult.packageUUID,
         };
         if (searchResult.type === "PACKAGE") {
@@ -96,7 +96,7 @@
                 selectedFilter.value !== "all"
                     ? editorState.selectedWorkspace.getValue()
                     : null,
-            graphName:
+            schemaName:
                 selectedFilter.value !== "workspace" &&
                 selectedFilter.value !== "all"
                     ? editorState.selectedGraph.getValue()
@@ -156,7 +156,7 @@
     }
 
     function formatSearchResult(result) {
-        let path = `${result.workspaceName}/${new URI(result.graphName).suffix}/`;
+        let path = `${result.workspaceName}/${new URI(result.schemaName).suffix}/`;
         if (result.type !== "PACKAGE") {
             if (result.packageLabel) {
                 path += `${getPackageDisplayLabel(result.packageLabel.value)}/`;

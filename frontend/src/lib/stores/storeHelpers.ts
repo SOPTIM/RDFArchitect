@@ -28,9 +28,9 @@ export type GraphKey = `${string}::${string}`;
 
 export function makeGraphKey(
     workspaceName: string,
-    graphName: string,
+    schemaName: string,
 ): GraphKey {
-    return `${workspaceName}::${graphName}`;
+    return `${workspaceName}::${schemaName}`;
 }
 
 // =============================================================================

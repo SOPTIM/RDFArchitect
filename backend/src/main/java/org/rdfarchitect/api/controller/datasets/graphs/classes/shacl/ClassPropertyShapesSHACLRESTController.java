@@ -41,7 +41,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "/api/workspaces/{workspaceName}/graphs/{graphName}/classes/{classUUID}/shacl/propertyShapes")
+        "/api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/shacl/propertyShapes")
 @RequiredArgsConstructor
 public class ClassPropertyShapesSHACLRESTController {
 
@@ -71,25 +71,25 @@ public class ClassPropertyShapesSHACLRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/shacl/propertyShapes\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/shacl/propertyShapes\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
         var res =
                 shaclGetClassRelationsUseCase.getPropertyShapes(
                         graphIdentifier, UUID.fromString(classUUID));
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/shacl/propertyShapes\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/shacl/propertyShapes\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 originURL);
         return res;

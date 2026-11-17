@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/writeToDatabase")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/writeToDatabase")
 @RequiredArgsConstructor
 public class PersistRESTController {
 
@@ -65,21 +65,21 @@ public class PersistRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName) {
+                    String schemaName) {
         logger.info(
-                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/redo\" from \"{}\".",
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/redo\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
 
-        persistUseCase.persist(new GraphIdentifier(workspaceName, extendedGraphName));
+        persistUseCase.persist(new GraphIdentifier(workspaceName, extendedSchemaName));
 
         logger.info(
-                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/redo\" to \"{}\".",
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/redo\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return Response.SUCCESS;
     }

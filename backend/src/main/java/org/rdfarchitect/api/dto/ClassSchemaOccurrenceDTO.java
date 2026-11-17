@@ -27,7 +27,7 @@ import java.util.UUID;
  * navigation tree shows it under.
  */
 public record ClassSchemaOccurrenceDTO(
-        String graphName,
+        String schemaName,
         String keyword,
         String label,
         boolean present,

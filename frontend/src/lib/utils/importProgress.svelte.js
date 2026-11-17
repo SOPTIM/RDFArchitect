@@ -88,10 +88,10 @@ function fileProgress(file) {
 export class ImportProgress {
     phase = $state(ImportPhase.UPLOADING);
     uploadPercent = $state(0);
-    /** @type {{index: number, fileName: string, sizeBytes: number, state: string, graphName: string|null}[]} */
+    /** @type {{index: number, fileName: string, sizeBytes: number, state: string, schemaName: string|null}[]} */
     files = $state([]);
     jobState = $state(JobState.RUNNING);
-    importedGraphNames = $state([]);
+    importedSchemaNames = $state([]);
     failedImports = $state([]);
     /** @type {{fileName: string, undisplayableProperties: string[]}[]} */
     warnings = $state([]);
@@ -183,10 +183,10 @@ export class ImportProgress {
             fileName: file.fileName ?? "",
             sizeBytes: file.sizeBytes ?? -1,
             state: file.state ?? FileState.PENDING,
-            graphName: file.graphName ?? null,
+            schemaName: file.schemaName ?? null,
         }));
         this.jobState = status.state ?? JobState.RUNNING;
-        this.importedGraphNames = status.importedGraphNames ?? [];
+        this.importedSchemaNames = status.importedSchemaNames ?? [];
         this.failedImports = status.failedImports ?? [];
         this.warnings = status.warnings ?? [];
         const reportedComparison = status.prefixComparison ?? [];
@@ -259,7 +259,7 @@ export class ImportProgress {
     }
 
     #finishedText() {
-        const imported = this.importedGraphNames.length;
+        const imported = this.importedSchemaNames.length;
         const schemas = `${imported} schema${imported === 1 ? "" : "s"}`;
         if (this.jobState === JobState.FAILED) {
             return imported === 0

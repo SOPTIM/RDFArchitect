@@ -152,9 +152,9 @@
             let { error } = await computeMigrationContext({
                 query: {
                     workspaceA: workspaceA,
-                    graphA: graphA,
+                    schemaA: graphA,
                     workspaceB: workspaceB,
-                    graphB: graphB,
+                    schemaB: graphB,
                     ignorePrefixes: ignorePrefixes,
                 },
                 body: { fileA: fileA, fileB: fileB },

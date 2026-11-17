@@ -104,14 +104,14 @@ export async function loadClassSchemas(workspaceName, classUuids) {
 export async function extendClassesToSchema(
     workspaceName,
     classUuids,
-    targetGraphName,
+    targetSchemaName,
     withInheritance = false,
 ) {
     try {
         const { data, error } = await extendToSchema({
             path: { workspaceName: workspaceName },
             body: {
-                graphName: String(targetGraphName),
+                schemaName: String(targetSchemaName),
                 classUUIDs: classUuids,
                 withInheritance,
             },
@@ -129,10 +129,10 @@ export async function extendClassesToSchema(
         }
         const results = data ?? [];
         if (results.length > 0) {
-            classStore.invalidateGraph(workspaceName, String(targetGraphName));
+            classStore.invalidateGraph(workspaceName, String(targetSchemaName));
             packageStore.invalidateGraph(
                 workspaceName,
-                String(targetGraphName),
+                String(targetSchemaName),
             );
             crossProfileStore.invalidateWorkspace(workspaceName);
         }
@@ -155,7 +155,7 @@ export async function extendClassesToSchema(
 export async function extendToSchemaAndReveal({
     workspaceName,
     classUuids,
-    targetGraphName,
+    targetSchemaName,
     targetLabel,
     selectedClassUuid = null,
     withInheritance = false,
@@ -163,7 +163,7 @@ export async function extendToSchemaAndReveal({
     const results = await extendClassesToSchema(
         workspaceName,
         classUuids,
-        targetGraphName,
+        targetSchemaName,
         withInheritance,
     );
     if (!results) {
@@ -178,10 +178,10 @@ export async function extendToSchemaAndReveal({
         revealInCrossProfileDiagram(
             workspaceName,
             selectedClassUuid,
-            targetGraphName,
+            targetSchemaName,
         );
     } else {
-        revealInSchemaDiagram(workspaceName, targetGraphName, results);
+        revealInSchemaDiagram(workspaceName, targetSchemaName, results);
     }
     forceReloadTrigger.trigger();
     return results;
@@ -210,14 +210,14 @@ function reportExtensionResults(results, targetLabel) {
 function revealInCrossProfileDiagram(
     workspaceName,
     selectedClassUuid,
-    targetGraphName,
+    targetSchemaName,
 ) {
     if (!selectedClassUuid) {
         return;
     }
     editorState.classEditorSchema.updateValue({
         classUuid: selectedClassUuid,
-        graphName: String(targetGraphName),
+        schemaName: String(targetSchemaName),
     });
     editorState.selectedClassWorkspace.updateValue(workspaceName);
     editorState.selectedClassGraph.updateValue(null);
@@ -228,12 +228,12 @@ function revealInCrossProfileDiagram(
     editorState.focusedClassUUID.updateValue(selectedClassUuid);
 }
 
-function revealInSchemaDiagram(workspaceName, targetGraphName, results) {
+function revealInSchemaDiagram(workspaceName, targetSchemaName, results) {
     const target = results[0];
     multiSelectState.clear();
     editorState.selectPackage(
         workspaceName,
-        String(targetGraphName),
+        String(targetSchemaName),
         target?.packageUUID ?? "default",
     );
     if (results.length > 1 || !target?.classUUID) {
@@ -242,7 +242,7 @@ function revealInSchemaDiagram(workspaceName, targetGraphName, results) {
         return;
     }
     editorState.selectedClassWorkspace.updateValue(workspaceName);
-    editorState.selectedClassGraph.updateValue(String(targetGraphName));
+    editorState.selectedClassGraph.updateValue(String(targetSchemaName));
     editorState.selectedClass.updateValue({
         type: ClassType.SINGLE_CLASS,
         id: target.classUUID,

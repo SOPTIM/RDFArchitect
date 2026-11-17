@@ -44,7 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/packages/{packageUUID}")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/packages/{packageUUID}")
 @RequiredArgsConstructor
 public class PackageRESTController {
 
@@ -73,7 +73,7 @@ public class PackageRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The UUID of the package to be replaced.") @PathVariable
                     String packageUUID,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -82,21 +82,21 @@ public class PackageRESTController {
                     PackageDTO packageDTO) {
 
         logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/packages/{{}}\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL,
                 packageUUID);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         replacePackageUseCase.replacePackage(graphIdentifier, packageDTO);
 
         logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/packages/{{}}\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL,
                 packageUUID);
         return Response.SUCCESS;
@@ -120,26 +120,26 @@ public class PackageRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The UUID of the package to be deleted.") @PathVariable
                     UUID packageUUID) {
 
         logger.info(
-                "Received DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                "Received DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/packages/{{}}\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 packageUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         deletePackageUseCase.deletePackage(graphIdentifier, packageUUID);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/packages/{{}}\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 packageUUID,
                 originURL);
         return Response.SUCCESS;
@@ -163,26 +163,26 @@ public class PackageRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The UUID of the package to retrieve.") @PathVariable
                     UUID packageUUID) {
 
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/packages/{{}}\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 packageUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         var result = getPackageUseCase.getPackage(graphIdentifier, packageUUID);
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/packages/{{}}\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 packageUUID,
                 originURL);
         return result;

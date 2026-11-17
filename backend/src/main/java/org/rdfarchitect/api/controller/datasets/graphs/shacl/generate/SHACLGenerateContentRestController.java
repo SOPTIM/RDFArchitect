@@ -48,7 +48,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/shacl/generate")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/shacl/generate")
 @RequiredArgsConstructor
 public class SHACLGenerateContentRestController {
 
@@ -79,24 +79,24 @@ public class SHACLGenerateContentRestController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/generate/string\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/generate/string\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
 
         var result =
                 shaclGenerateUseCase.exportGeneratedSHACLGraph(
-                        new GraphIdentifier(workspaceName, extendedGraphName),
+                        new GraphIdentifier(workspaceName, extendedSchemaName),
                         PrefixEntry.create(RDFA.NS_PREFIX_SHACL, RDFA.NS_URI_SHACL));
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/generate/string\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/generate/string\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return result;
     }
@@ -132,36 +132,36 @@ public class SHACLGenerateContentRestController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/generate/file\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/generate/file\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var format = getRdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 shaclExportUseCase.exportGeneratedSHACLGraph(
-                        new GraphIdentifier(workspaceName, extendedGraphName), format);
-        var body = buildResponseEntity(extendedGraphName, format, outStream);
+                        new GraphIdentifier(workspaceName, extendedSchemaName), format);
+        var body = buildResponseEntity(extendedSchemaName, format, outStream);
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/generate/file\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/generate/file\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return body;
     }
 
     private ResponseEntity<byte[]> buildResponseEntity(
-            String extendedGraphName, RDFFormat format, ByteArrayOutputStream outStream) {
+            String extendedSchemaName, RDFFormat format, ByteArrayOutputStream outStream) {
         // add suggested file name to response
         var fileName = "shacl";
-        if (!extendedGraphName.equals("default")) {
-            fileName = new URI(extendedGraphName + "-shacl").getSuffix();
+        if (!extendedSchemaName.equals("default")) {
+            fileName = new URI(extendedSchemaName + "-shacl").getSuffix();
         }
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 

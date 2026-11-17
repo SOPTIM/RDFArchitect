@@ -43,7 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/workspaces/{workspaceName}/graphs/{graphName}/rendering")
+@RequestMapping("/api/workspaces/{workspaceName}/schemas/{schemaName}/rendering")
 @RequiredArgsConstructor
 public class RenderingRESTController {
 
@@ -81,16 +81,16 @@ public class RenderingRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @RequestBody GraphFilter filter) {
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/rendering\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/rendering\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         var packageUUID =
                 !filter.getPackageUUID().equals("default")
@@ -101,9 +101,9 @@ public class RenderingRESTController {
                 getRenderingDataUseCase.getRenderingData(graphIdentifier, filter, packageUUID);
 
         logger.info(
-                "Sending response to GET request \"/api/workspaces/{{}}/graphs/{{}}/rendering\" to \"{}\".",
+                "Sending response to GET request \"/api/workspaces/{{}}/schemas/{{}}/rendering\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return renderingData;
     }

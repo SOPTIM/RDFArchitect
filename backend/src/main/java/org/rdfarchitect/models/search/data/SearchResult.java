@@ -30,7 +30,7 @@ import java.util.UUID;
 public class SearchResult {
 
     String workspaceName;
-    String graphName;
+    String schemaName;
     RDFSLabel packageLabel;
     UUID packageUUID;
     UUID uuid;

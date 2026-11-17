@@ -47,7 +47,8 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/classes/{classUUID}/attributes")
+@RequestMapping(
+        "api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/attributes")
 @RequiredArgsConstructor
 public class ClassAllAttributesRESTController {
 
@@ -76,7 +77,7 @@ public class ClassAllAttributesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
@@ -86,21 +87,21 @@ public class ClassAllAttributesRESTController {
                     @RequestBody
                     AttributeDTO attribute) {
         logger.info(
-                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/attributes\" from \"{}\".",
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/attributes\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         var newAttributeUUID = createAttributeUseCase.createAttribute(graphIdentifier, attribute);
 
         logger.info(
-                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/attributes\" to \"{}\".",
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/attributes\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 originURL);
         return newAttributeUUID;
@@ -124,7 +125,7 @@ public class ClassAllAttributesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
@@ -141,22 +142,22 @@ public class ClassAllAttributesRESTController {
                     @RequestBody
                     List<AttributeDTO> attributeList) {
         logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/attributes\" from \"{}\".",
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/attributes\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         updateAttributesUseCase.replaceAllAttributes(
                 graphIdentifier, UUID.fromString(classUUID), attributeList);
 
         logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/attributes\" to \"{}\".",
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/attributes\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 originURL);
         return Response.SUCCESS;

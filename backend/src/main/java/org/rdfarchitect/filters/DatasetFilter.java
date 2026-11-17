@@ -76,10 +76,10 @@ public class DatasetFilter implements Filter {
         // progress also stays readable when it failed before the workspace came into existence.
         if ("PUT".equals(method)
                 && (uri.matches(PREFIX + "[^/]+")
-                        || uri.matches(PREFIX + "[^/]+/graphs/[^/]+/content"))) {
+                        || uri.matches(PREFIX + "[^/]+/schemas/[^/]+/content"))) {
             return true;
         }
-        if (uri.matches(PREFIX + "[^/]+/graphs/content/imports(/.*)?")) {
+        if (uri.matches(PREFIX + "[^/]+/schemas/content/imports(/.*)?")) {
             return true;
         }
         var datasets = databasePort.listDatasets();

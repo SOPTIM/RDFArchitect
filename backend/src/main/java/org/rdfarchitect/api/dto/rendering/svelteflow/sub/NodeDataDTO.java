@@ -28,7 +28,7 @@ import java.util.List;
 public class NodeDataDTO {
 
     private String label;
-    private String graphName;
+    private String schemaName;
 
     /**
      * Whether the class is only referenced by other resources instead of being defined in this

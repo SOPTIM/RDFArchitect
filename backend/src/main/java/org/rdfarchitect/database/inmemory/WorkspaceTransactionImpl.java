@@ -203,17 +203,17 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     static void rewriteGraphNames(Collection<CustomDiagram> diagrams, Map<URI, URI> renamed) {
         for (var diagram : diagrams) {
             var classes = diagram.getClasses();
-            if (classes.stream().noneMatch(entry -> renamed.containsKey(entry.getGraphName()))) {
+            if (classes.stream().noneMatch(entry -> renamed.containsKey(entry.getSchemaName()))) {
                 continue;
             }
             diagram.setClasses(
                     classes.stream()
                             .map(
                                     entry ->
-                                            renamed.containsKey(entry.getGraphName())
+                                            renamed.containsKey(entry.getSchemaName())
                                                     ? new ClassInDiagram(
                                                             entry.getUuid(),
-                                                            renamed.get(entry.getGraphName()))
+                                                            renamed.get(entry.getSchemaName()))
                                                     : entry)
                             .toList());
         }

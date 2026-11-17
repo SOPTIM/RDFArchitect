@@ -34,7 +34,7 @@
     import ChangesRow from "./ChangesRow.svelte";
     import RestoreConfirmDialog from "./RestoreConfirmDialog.svelte";
 
-    const { getExpanded, setExpanded, cleanExpandedStateMap, graphName } =
+    const { getExpanded, setExpanded, cleanExpandedStateMap, schemaName } =
         $props();
 
     let changelog = $state();
@@ -57,7 +57,7 @@
 
     /** What the schema in view has, before the kinds the user hid are taken off it. */
     let changesInView = $derived(
-        (changelog ?? []).filter(change => showsChange(change, { graphName })),
+        (changelog ?? []).filter(change => showsChange(change, { schemaName })),
     );
 
     let filterKinds = $derived(filterableKinds(changelog));
@@ -128,12 +128,12 @@
         restoreRequest = restoreRequestFor(changelog, change);
     }
 
-    async function restore(graphNames) {
+    async function restore(schemaNames) {
         const { change, standingOn } = restoreRequest;
         restoreRequest = null;
         const { error, skipped } = await versionControlStore.restore(
             change.changeId,
-            graphNames,
+            schemaNames,
             undefined,
             standingOn,
         );
@@ -185,7 +185,7 @@
                                 {getExpanded}
                                 {setExpanded}
                                 {hiddenKinds}
-                                {graphName}
+                                {schemaName}
                                 current={change.changeId ===
                                     currentChange?.changeId}
                                 readonly={readonlyWorkspace}
@@ -211,7 +211,7 @@
 
 <RestoreConfirmDialog
     request={restoreRequest}
-    {graphName}
+    {schemaName}
     onConfirm={restore}
     onCancel={() => (restoreRequest = null)}
 />

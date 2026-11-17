@@ -39,7 +39,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "api/workspaces/{workspaceName}/graphs/{graphName}/classes/{classUUID}/referencedByClasses")
+        "api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/referencedByClasses")
 @RequiredArgsConstructor
 public class ClassReferencedByClassesRESTController {
 
@@ -68,26 +68,26 @@ public class ClassReferencedByClassesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/referencedByClasses\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/referencedByClasses\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         var classesReferencingThisClass =
                 getClassesReferencingThisClassUseCase.getClassesReferencingThisClass(
                         graphIdentifier, UUID.fromString(classUUID));
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/referencedByClasses\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/referencedByClasses\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 originURL);
         return classesReferencingThisClass;

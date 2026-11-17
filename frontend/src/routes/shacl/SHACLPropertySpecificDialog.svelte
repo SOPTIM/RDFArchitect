@@ -53,7 +53,7 @@
         editorState.selectedClassWorkspace.getValue() ??
             editorState.selectedWorkspace.getValue(),
     );
-    let classGraphName = $derived(
+    let classSchemaName = $derived(
         editorState.selectedClassGraph.getValue() ??
             editorState.selectedGraph.getValue(),
     );
@@ -99,7 +99,7 @@
                 res = await getAttributeShacl({
                     path: {
                         workspaceName: classWorkspaceName,
-                        graphName: classGraphName,
+                        schemaName: classSchemaName,
                         classUUID: newViewedClassUUID,
                         attributeUUID: viewedPropertyUUID,
                     },
@@ -108,7 +108,7 @@
                 res = await getAssociationShacl({
                     path: {
                         workspaceName: classWorkspaceName,
-                        graphName: classGraphName,
+                        schemaName: classSchemaName,
                         classUUID: newViewedClassUUID,
                         associationUUID: viewedPropertyUUID,
                     },
@@ -142,13 +142,13 @@
                 getGeneratedShaclNamespacesAsString({
                     path: {
                         workspaceName: classWorkspaceName,
-                        graphName: classGraphName,
+                        schemaName: classSchemaName,
                     },
                 }),
                 getCustomShaclNamespacesAsString({
                     path: {
                         workspaceName: classWorkspaceName,
-                        graphName: classGraphName,
+                        schemaName: classSchemaName,
                     },
                 }),
             ]);
@@ -186,7 +186,7 @@
                 res = await replaceAttributeShacl({
                     path: {
                         workspaceName: classWorkspaceName,
-                        graphName: classGraphName,
+                        schemaName: classSchemaName,
                         classUUID: getViewedClassUuid(),
                         attributeUUID: property.uuid.value,
                     },
@@ -196,7 +196,7 @@
                 res = await replaceAssociationShacl({
                     path: {
                         workspaceName: classWorkspaceName,
-                        graphName: classGraphName,
+                        schemaName: classSchemaName,
                         classUUID: getViewedClassUuid(),
                         associationUUID: property.uuid.value,
                     },

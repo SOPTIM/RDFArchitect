@@ -32,7 +32,7 @@ public class AttributeDTO {
     private String label;
     private String type;
     private String multiplicity;
-    private String graphName;
+    private String schemaName;
     private String graphKeyword;
     private String color;
 }

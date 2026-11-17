@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/workspaces/{workspaceName}/graphs/{graphName}/diagrams/{diagramId}/classes")
+@RequestMapping("/api/workspaces/{workspaceName}/schemas/{schemaName}/diagrams/{diagramId}/classes")
 @RequiredArgsConstructor
 public class CustomDiagramAllClassesRESTController {
 
@@ -66,28 +66,28 @@ public class CustomDiagramAllClassesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
             @Parameter(description = "The list of the classes to be added to the diagram")
                     @RequestBody
                     List<ClassInDiagram> classes) {
         logger.info(
-                "Received DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"",
+                "Received DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}/classes\" from \"{}\"",
                 workspaceName,
-                graphName,
+                schemaName,
                 diagramId,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         customDiagramLayoutUseCase.addClassesToCustomDiagram(
-                new GraphIdentifier(workspaceName, extendedGraphName),
+                new GraphIdentifier(workspaceName, extendedSchemaName),
                 UUID.fromString(diagramId),
                 classes);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"",
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}/classes\" from \"{}\"",
                 workspaceName,
-                graphName,
+                schemaName,
                 diagramId,
                 originURL);
         return Response.SUCCESS;
@@ -107,29 +107,29 @@ public class CustomDiagramAllClassesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
             @Parameter(description = "The list of class uuids to be removed from the diagram")
                     @RequestBody
                     List<UUID> classIds) {
         logger.info(
-                "Received DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/diagrams/{{}}/classes\" for {} class(es) from \"{}\"",
+                "Received DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}/classes\" for {} class(es) from \"{}\"",
                 workspaceName,
-                graphName,
+                schemaName,
                 diagramId,
                 classIds.size(),
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         customDiagramLayoutUseCase.removeClassesFromCustomDiagram(
-                new GraphIdentifier(workspaceName, extendedGraphName),
+                new GraphIdentifier(workspaceName, extendedSchemaName),
                 UUID.fromString(diagramId),
                 classIds);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"",
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}/classes\" from \"{}\"",
                 workspaceName,
-                graphName,
+                schemaName,
                 diagramId,
                 originURL);
         return Response.SUCCESS;

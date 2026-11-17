@@ -44,7 +44,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}")
 @RequiredArgsConstructor
 public class DeleteRESTController {
 
@@ -74,25 +74,25 @@ public class DeleteRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuids of the cim resources to analyse.") @RequestBody
                     List<UUID> uuids) {
         logger.info(
-                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/deletion-impact\" for {} resource(s) from \"{}\".",
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/deletion-impact\" for {} resource(s) from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 uuids.size(),
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         var result = findDeleteDependenciesUseCase.getDeleteDependencies(graphIdentifier, uuids);
 
         logger.info(
-                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/deletion-impact\" from \"{}\".",
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/deletion-impact\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return result;
     }
@@ -117,27 +117,27 @@ public class DeleteRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(
                             description =
                                     "A list of resource delete requests, each containing the uuid of the resource to delete and the type of deletion")
                     @RequestBody
                     List<ResourceDeleteRequest> deleteRequests) {
         logger.info(
-                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/delete-requests\" from \"{}\".",
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/delete-requests\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
 
         deleteResourcesUseCase.executeDeleteRequests(
-                new GraphIdentifier(workspaceName, extendedGraphName), deleteRequests);
+                new GraphIdentifier(workspaceName, extendedSchemaName), deleteRequests);
 
         logger.info(
-                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/delete-requests\" from \"{}\".",
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/delete-requests\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return "success";
     }

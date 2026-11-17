@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/resolve")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/resolve")
 @RequiredArgsConstructor
 public class ResolveIdentifierRESTController {
 
@@ -65,28 +65,29 @@ public class ResolveIdentifierRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The url encoded iri identifier of the cim resource.")
                     @PathVariable
                     String iriIdentifier) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/resolve/iri/{{}}\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/resolve/iri/{{}}\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 iriIdentifier,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var extendedResourceIRI = expandURIUseCase.expandUri(workspaceName, iriIdentifier);
 
         var uuid =
                 resolveIdentifierUseCase.resolveIRI(
-                        new GraphIdentifier(workspaceName, extendedGraphName), extendedResourceIRI);
+                        new GraphIdentifier(workspaceName, extendedSchemaName),
+                        extendedResourceIRI);
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/resolve/iri/{{}}\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/resolve/iri/{{}}\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 iriIdentifier,
                 originURL);
         return uuid.toString();

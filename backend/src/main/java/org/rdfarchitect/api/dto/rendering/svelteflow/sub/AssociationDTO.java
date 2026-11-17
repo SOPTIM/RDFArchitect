@@ -40,7 +40,7 @@ public class AssociationDTO {
     private String rangeLabel;
 
     private String multiplicity;
-    private String graphName;
+    private String schemaName;
     private String graphKeyword;
     private String color;
 }

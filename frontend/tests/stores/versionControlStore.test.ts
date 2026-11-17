@@ -458,7 +458,7 @@ describe("versionControlStore", () => {
                 data: {
                     change: {
                         message: 'Renamed class "Terminal" to "Node"',
-                        affectedGraphNames: [OTHER],
+                        affectedSchemaNames: [OTHER],
                     },
                     canUndo: false,
                     canRedo: true,
@@ -479,7 +479,7 @@ describe("versionControlStore", () => {
                 data: {
                     change: {
                         message: "a change",
-                        affectedGraphNames: [GRAPH],
+                        affectedSchemaNames: [GRAPH],
                     },
                     canUndo: false,
                     canRedo: true,
@@ -512,7 +512,7 @@ describe("versionControlStore", () => {
                 data: {
                     change: {
                         message: "copied a class",
-                        affectedGraphNames: [
+                        affectedSchemaNames: [
                             OTHER,
                             "http://example.org/schemas/Third",
                         ],
@@ -829,7 +829,7 @@ describe("versionControlStore", () => {
                     change: {
                         changeId: CHANGE_ID,
                         message: "added a class",
-                        affectedGraphNames: [],
+                        affectedSchemaNames: [],
                     },
                     canUndo: true,
                     canRedo: false,
@@ -842,7 +842,7 @@ describe("versionControlStore", () => {
             expect(result.error).toBeNull();
             expect(api.restoreVersion).toHaveBeenCalledWith({
                 path: { workspaceName: WORKSPACE },
-                body: { versionId: CHANGE_ID, graphNames: [] },
+                body: { versionId: CHANGE_ID, schemaNames: [] },
             });
             // The workspace steps back to the version and answers with it:
             // where it went, not something it did.
@@ -858,7 +858,7 @@ describe("versionControlStore", () => {
                     change: {
                         changeId: "22222222-2222-2222-2222-222222222222",
                         message: 'Restored schema "EQ" to the state after: x',
-                        affectedGraphNames: [],
+                        affectedSchemaNames: [],
                     },
                     canUndo: true,
                     canRedo: false,
@@ -890,7 +890,7 @@ describe("versionControlStore", () => {
                 path: { workspaceName: WORKSPACE },
                 body: {
                     versionId: CHANGE_ID,
-                    graphNames: ["http://example.org/a"],
+                    schemaNames: ["http://example.org/a"],
                 },
             });
         });
@@ -1035,7 +1035,7 @@ describe("versionControlStore", () => {
                 path: { workspaceName: WORKSPACE },
                 body: {
                     versionId: CHANGE_ID,
-                    graphNames: [],
+                    schemaNames: [],
                     expectedCurrentChangeId: "current-change",
                     expectedNewestChangeId: "newest-change",
                 },

@@ -98,18 +98,18 @@ export class DiagramSelectionController {
         this.reflectSelectionToNodes();
     }
 
-    #selectionGraphName(node) {
+    #selectionSchemaName(node) {
         return isMergedDiagramType(
             editorState.selectedDiagram.getProperty("type"),
         )
             ? null
-            : node.data?.graphName;
+            : node.data?.schemaName;
     }
 
     buildEntry(node) {
         return {
             workspaceName: editorState.selectedWorkspace.getValue(),
-            graphName: this.#selectionGraphName(node),
+            schemaName: this.#selectionSchemaName(node),
             classUuid: node.id,
             classLabel: node.data?.label ?? node.id,
             packageId: editorState.selectedDiagram.getProperty("id"),
@@ -226,10 +226,10 @@ export class DiagramSelectionController {
         );
     }
 
-    #routeClassEditor(graphName, classUuid, classType) {
+    #routeClassEditor(schemaName, classUuid, classType) {
         eventStack.executeNewestEvent({
             workspaceName: editorState.selectedWorkspace.getValue(),
-            graphName,
+            schemaName,
             classUuid,
             classType,
         });
@@ -276,7 +276,7 @@ export class DiagramSelectionController {
 
     openClass(node) {
         const id = node.id;
-        const graphName = this.#selectionGraphName(node);
+        const schemaName = this.#selectionSchemaName(node);
         const classType = this.#classTypeForDiagram();
 
         multiSelectState.setSelection([this.buildEntry(node)]);
@@ -289,13 +289,13 @@ export class DiagramSelectionController {
             editorState.selectedClassWorkspace.updateValue(
                 editorState.selectedWorkspace.getValue(),
             );
-            editorState.selectedClassGraph.updateValue(graphName);
+            editorState.selectedClassGraph.updateValue(schemaName);
             editorState.selectedClass.updateValue({
                 type: classType,
                 id: id,
             });
         } else {
-            this.#routeClassEditor(graphName, id, classType);
+            this.#routeClassEditor(schemaName, id, classType);
         }
     }
 

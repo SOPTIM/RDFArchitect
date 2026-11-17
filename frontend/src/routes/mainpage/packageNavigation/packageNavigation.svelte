@@ -20,7 +20,7 @@
 
     import { asyncValue } from "$lib/asyncValue.svelte.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
-    import { graphColors } from "$lib/graphColors.svelte.js";
+    import { schemaColors } from "$lib/graphColors.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -95,7 +95,7 @@
             (await workspaceStore.getNamespaces(workspaceName)) ?? [];
         const loadedCrossProfileID =
             await crossProfileStore.getId(workspaceName);
-        await graphColors.reload(workspaceName);
+        await schemaColors.reload(workspaceName);
         if (request !== latestLoadRequest) {
             return;
         }

@@ -58,7 +58,8 @@ public class CopyClassSourceReader {
                         dto -> {
                             var expandedGraphName =
                                     expandURIUseCase.expandUri(
-                                            dto.getSourceWorkspaceName(), dto.getSourceGraphName());
+                                            dto.getSourceWorkspaceName(),
+                                            dto.getSourceSchemaName());
                             var sourceGraphIdentifier =
                                     new GraphIdentifier(
                                             dto.getSourceWorkspaceName(), expandedGraphName);

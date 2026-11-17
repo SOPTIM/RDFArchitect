@@ -96,7 +96,7 @@ public class DiagramToCIMCollectionConverterService
 
     private List<GraphEntry> buildSortedGraphEntries(String workspaceName, CustomDiagram diagram) {
         return diagram.getClasses().stream()
-                .collect(Collectors.groupingBy(ClassInDiagram::getGraphName))
+                .collect(Collectors.groupingBy(ClassInDiagram::getSchemaName))
                 .entrySet()
                 .stream()
                 .sorted(Comparator.comparing(e -> e.getKey().toString()))

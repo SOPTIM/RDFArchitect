@@ -351,7 +351,7 @@ class RestoreVersionTest {
                                         .getCustomDiagrams()
                                         .get(diagramId)
                                         .getClasses())
-                        .extracting(entry -> entry.getGraphName().toString())
+                        .extracting(entry -> entry.getSchemaName().toString())
                         .containsExactly(GRAPH_B);
             }
         }

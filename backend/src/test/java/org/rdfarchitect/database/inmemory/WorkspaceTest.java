@@ -360,7 +360,7 @@ class WorkspaceTest {
         // Assert
         try (var transaction = workspace.begin(ReadWrite.READ)) {
             assertThat(transaction.diagrams().get(diagramId).getClasses())
-                    .extracting(entry -> entry.getGraphName().toString())
+                    .extracting(entry -> entry.getSchemaName().toString())
                     .containsExactly("http://example.org/graph2", "http://example.org/other");
         }
     }
@@ -408,7 +408,7 @@ class WorkspaceTest {
                                     .getCustomDiagrams()
                                     .get(ownDiagramId)
                                     .getClasses())
-                    .extracting(entry -> entry.getGraphName().toString())
+                    .extracting(entry -> entry.getSchemaName().toString())
                     .containsExactly("http://example.org/graph2");
             assertThat(
                             transaction
@@ -416,7 +416,7 @@ class WorkspaceTest {
                                     .getCustomDiagrams()
                                     .get(foreignDiagramId)
                                     .getClasses())
-                    .extracting(entry -> entry.getGraphName().toString())
+                    .extracting(entry -> entry.getSchemaName().toString())
                     .containsExactly("http://example.org/graph2");
         }
     }

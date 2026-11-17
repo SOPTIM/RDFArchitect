@@ -27,7 +27,7 @@ const CHANGE = {
     contextDeltas: [
         {
             contextName: "rdf",
-            graphName: "http://example.org/a",
+            schemaName: "http://example.org/a",
             additions: [{ subject: "s", predicate: "p", object: "o" }],
             deletions: [],
             values: [],

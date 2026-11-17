@@ -122,7 +122,7 @@
     function copyWorkspaceUrl() {
         const params = new URLSearchParams({
             workspace: workspaceNavEntry.id,
-            graph: graphNavEntry.id,
+            schema: graphNavEntry.id,
             package: packageNavEntry.id,
         });
         const url = `${window.location.origin}/mainpage?${params}`;
@@ -263,7 +263,7 @@
     <NewClassDialog
         bind:showDialog={showNewClassDialog}
         lockedWorkspaceName={workspaceNavEntry.id}
-        lockedGraphName={graphNavEntry.id}
+        lockedSchemaName={graphNavEntry.id}
         lockedPackage={packageNavEntry.data}
     />
 {/if}
@@ -272,7 +272,7 @@
     <AddToGraphDiagramDialog
         bind:showDialog={showAddToGraphDiagramDialog}
         lockedWorkspaceName={workspaceNavEntry.id}
-        lockedGraphName={graphNavEntry.id}
+        lockedSchemaName={graphNavEntry.id}
         classes={packageNavEntry.children}
     />
 {/if}
@@ -281,7 +281,7 @@
     <AddToWorkspaceDiagramDialog
         bind:showDialog={showAddToWorkspaceDiagramDialog}
         lockedWorkspaceName={workspaceNavEntry.id}
-        lockedGraphName={graphNavEntry.id}
+        lockedSchemaName={graphNavEntry.id}
         classes={packageNavEntry.children}
     />
 {/if}
@@ -290,7 +290,7 @@
     <PackageEditorDialog
         bind:showDialog={showPackageEditorDialog}
         workspaceName={workspaceNavEntry.id}
-        graphName={graphNavEntry.id}
+        schemaName={graphNavEntry.id}
         pack={packageNavEntry.data}
         {readonly}
     />
@@ -300,7 +300,7 @@
     <DeleteDependenciesDialog
         bind:showDialog={showDeleteDependenciesDialog}
         workspaceName={workspaceNavEntry.id}
-        graphName={graphNavEntry.id}
+        schemaName={graphNavEntry.id}
         resourceUuid={packageNavEntry.data.uuid}
     />
 {/if}

@@ -67,12 +67,12 @@ example the [CIMNotebook](https://opencgmes.soptim.de/cimnotebook/overview) IDE 
 link straight to a diagram or class:
 
 ```
-https://<host>/mainpage?workspace=<name>&graph=<uri>&package=<uuid|iri|default>&class=<iri|uuid>
+https://<host>/mainpage?workspace=<name>&schema=<uri>&package=<uuid|iri|default>&class=<iri|uuid>
 ```
 
-- `workspace`, `graph`, `package` — open the given package diagram. `package` accepts a package
+- `workspace`, `schema`, `package` — open the given package diagram. `package` accepts a package
   UUID, a package IRI, or `default` for the default package.
-- `class` — select a schema term and open the package diagram containing it. `workspace` and `graph`
+- `class` — select a schema term and open the package diagram containing it. `workspace` and `schema`
   narrow where it is looked for; either works on its own, and without both, every schema in the
   session is searched until the term is found.
 
@@ -89,8 +89,8 @@ not the class you happened to read it on. A term that no schema in the session c
 one whose class was deleted — reports "Not found".
 
 A CIM term is usually declared in **several profiles**, and an unqualified `class` link opens
-whichever graph the term is found in first. Add `graph` to say which profile you mean —
-`?class=<iri>&graph=<profile graph>` — which is what the CIMNotebook IDE extensions send when you
+whichever graph the term is found in first. Add `schema` to say which profile you mean —
+`?class=<iri>&schema=<profile graph>` — which is what the CIMNotebook IDE extensions send when you
 pick a profile there.
 
 All parameters refer to the browser session's own workspaces. They can be combined with a

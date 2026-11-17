@@ -48,7 +48,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/classes")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/classes")
 @RequiredArgsConstructor
 public class AllClassesRESTController {
 
@@ -94,7 +94,7 @@ public class AllClassesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description =
@@ -102,15 +102,15 @@ public class AllClassesRESTController {
                     @RequestBody
                     AddNewClassRequest addNewClassRequest) {
         logger.info(
-                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes\" from \"{}\".",
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/classes\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var extendedClassURIPrefix =
                 expandURIUseCase.expandUri(workspaceName, addNewClassRequest.classURIPrefix);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         var classUUID =
                 addClassUseCase.addClass(
@@ -121,9 +121,9 @@ public class AllClassesRESTController {
                         addNewClassRequest.classLayoutPosition);
 
         logger.info(
-                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes\" to \"{}\".",
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/classes\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
         return classUUID.toString();
@@ -162,27 +162,27 @@ public class AllClassesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "Whether to include external classes.")
                     @RequestParam(required = false, defaultValue = "false")
                     boolean includeExternalClasses) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/classes\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/classes\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
 
         var cimClassList =
                 getClassListUseCase.getClassList(
-                        new GraphIdentifier(workspaceName, extendedGraphName),
+                        new GraphIdentifier(workspaceName, extendedSchemaName),
                         includeExternalClasses);
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/classes\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/classes\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return cimClassList;
     }

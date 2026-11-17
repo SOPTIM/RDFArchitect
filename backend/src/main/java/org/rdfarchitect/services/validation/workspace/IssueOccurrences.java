@@ -74,7 +74,7 @@ public class IssueOccurrences {
     private IssueOccurrenceDTO.IssueOccurrenceDTOBuilder builder(
             CIMProfileModel profile, UUID uuid, Object value) {
         return IssueOccurrenceDTO.builder()
-                .graphName(profile.graphName())
+                .schemaName(profile.graphName())
                 .keyword(context.getKeyword(profile))
                 .uuid(uuid)
                 .value(format(value));

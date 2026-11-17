@@ -35,7 +35,7 @@
      * should not move the editor on to another graph behind the user's back. It starts at the graph
      * they were last in, unless whoever opened the page asked for the workspace as a whole.
      */
-    let graphName = $state(
+    let schemaName = $state(
         page.url.searchParams.get("scope") === "workspace"
             ? null
             : (editorState.selectedGraph.getValue() ?? null),
@@ -70,14 +70,14 @@
 
 <Splitpanes theme="opencgmes-theme" class="flex h-full">
     <Pane size={18} maxSize={30} class="bg-window-background">
-        <Navigation {graphName} onSelectGraph={uri => (graphName = uri)} />
+        <Navigation {schemaName} onSelectGraph={uri => (schemaName = uri)} />
     </Pane>
     <Pane size={82} class="bg-window-background h-full">
         <Changes
             {getExpanded}
             {setExpanded}
             {cleanExpandedStateMap}
-            {graphName}
+            {schemaName}
         />
     </Pane>
 </Splitpanes>

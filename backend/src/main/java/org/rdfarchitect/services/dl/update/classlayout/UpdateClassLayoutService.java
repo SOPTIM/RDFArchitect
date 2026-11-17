@@ -608,7 +608,7 @@ public class UpdateClassLayoutService
             return;
         }
         var graphNames =
-                classes.stream().map(c -> c.getGraphName().toString()).collect(Collectors.toSet());
+                classes.stream().map(c -> c.getSchemaName().toString()).collect(Collectors.toSet());
         var existingGraphNames = new HashSet<>(databasePort.listGraphNames(workspaceName));
         if (!existingGraphNames.containsAll(graphNames)) {
             throw new IllegalArgumentException(
@@ -643,9 +643,9 @@ public class UpdateClassLayoutService
         var existingGraphNames = new HashSet<>(databasePort.listGraphNames(workspaceName));
         var classesByGraphName =
                 classes.stream()
-                        .filter(cls -> cls.getGraphName() != null && cls.getUuid() != null)
-                        .filter(cls -> existingGraphNames.contains(cls.getGraphName().toString()))
-                        .collect(Collectors.groupingBy(cls -> cls.getGraphName().toString()));
+                        .filter(cls -> cls.getSchemaName() != null && cls.getUuid() != null)
+                        .filter(cls -> existingGraphNames.contains(cls.getSchemaName().toString()))
+                        .collect(Collectors.groupingBy(cls -> cls.getSchemaName().toString()));
 
         var classUriByUuid = new HashMap<UUID, String>();
         for (var entry : classesByGraphName.entrySet()) {

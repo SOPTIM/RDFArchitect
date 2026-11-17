@@ -55,7 +55,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/shacl/custom")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/shacl/custom")
 @RequiredArgsConstructor
 public class SHACLCustomContentRestController {
 
@@ -87,26 +87,26 @@ public class SHACLCustomContentRestController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The file containing the shacl graph to be inserted")
                     @RequestParam("file")
                     MultipartFile file) {
         logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/custom/file\" from \"{}\".",
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/custom/file\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
 
-        var graph = new GraphFileSourceImpl(file, extendedGraphName).graph();
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var graph = new GraphFileSourceImpl(file, extendedSchemaName).graph();
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
         shaclInsertUseCase.replaceCustomSHACLGraph(graphIdentifier, graph);
 
         logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/custom/file\" to \"{}\".",
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/custom/file\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return Response.SUCCESS;
     }
@@ -130,25 +130,25 @@ public class SHACLCustomContentRestController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The entire SHACL graph as a string") @RequestBody
                     String graphString) {
         logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/custom/string\" from \"{}\".",
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/custom/string\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
 
-        var graph = new GraphStringSourceImpl(graphString, extendedGraphName).graph();
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var graph = new GraphStringSourceImpl(graphString, extendedSchemaName).graph();
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
         shaclInsertUseCase.replaceCustomSHACLGraph(graphIdentifier, graph);
 
         logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/content/string\" to \"{}\".",
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/content/string\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return Response.SUCCESS;
     }
@@ -184,26 +184,26 @@ public class SHACLCustomContentRestController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/custom/file\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/custom/file\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var format = getRdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 shaclExportUseCase.exportCustomSHACLGraph(
-                        new GraphIdentifier(workspaceName, extendedGraphName), format);
-        var body = buildResponseEntity(extendedGraphName, format, outStream);
+                        new GraphIdentifier(workspaceName, extendedSchemaName), format);
+        var body = buildResponseEntity(extendedSchemaName, format, outStream);
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/custom/file\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/custom/file\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return body;
     }
@@ -231,37 +231,37 @@ public class SHACLCustomContentRestController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/custom/string\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/custom/string\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
 
         // fetch data
         var shaclString =
                 shaclExportUseCase
                         .exportCustomSHACLGraph(
-                                new GraphIdentifier(workspaceName, extendedGraphName),
+                                new GraphIdentifier(workspaceName, extendedSchemaName),
                                 RDFFormat.TURTLE)
                         .toString(StandardCharsets.UTF_8);
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/custom/string\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/custom/string\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return shaclString;
     }
 
     private ResponseEntity<byte[]> buildResponseEntity(
-            String extendedGraphName, RDFFormat format, ByteArrayOutputStream outStream) {
+            String extendedSchemaName, RDFFormat format, ByteArrayOutputStream outStream) {
         // add suggested file name to response
         var fileName = "shacl";
-        if (!extendedGraphName.equals("default")) {
-            fileName = new URI(extendedGraphName + "-shacl").getSuffix();
+        if (!extendedSchemaName.equals("default")) {
+            fileName = new URI(extendedSchemaName + "-shacl").getSuffix();
         }
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 

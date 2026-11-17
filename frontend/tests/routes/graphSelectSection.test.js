@@ -24,14 +24,14 @@ import GraphSelectSection from "../../src/routes/mainpage/packageNavigation/cust
 
 /** Two CGMES 2.4.15 profiles that name themselves alike, as the backend lists them. */
 const CORE = {
-    uri: { prefix: "http://example.org/graphs/", suffix: "EquipmentCore" },
+    uri: { prefix: "http://example.org/schemas/", suffix: "EquipmentCore" },
     keyword: "EQ",
     label: "EquipmentProfile",
 };
 
 const CORE_OPERATION = {
     uri: {
-        prefix: "http://example.org/graphs/",
+        prefix: "http://example.org/schemas/",
         suffix: "EquipmentCoreOperation",
     },
     keyword: "EQ",

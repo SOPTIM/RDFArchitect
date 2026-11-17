@@ -27,7 +27,7 @@ import OntologyDialog from "../../src/routes/mainpage/packageNavigation/ontology
 /** The namespace the header is written in, as the workspace knows it. */
 const NAMESPACES = [
     {
-        prefix: "http://example.org/graphs/Equipment#",
+        prefix: "http://example.org/schemas/Equipment#",
         substitutedPrefix: "eq:",
     },
 ];
@@ -35,7 +35,7 @@ const NAMESPACES = [
 /** A profile header as the backend hands it over. */
 const ONTOLOGY = {
     uuid: "3f2b1c44-8a1e-4f2b-9c77-2a5d6e7f8091",
-    namespace: "http://example.org/graphs/Equipment#",
+    namespace: "http://example.org/schemas/Equipment#",
     entries: [
         {
             iri: "http://purl.org/dc/terms/title",
@@ -58,7 +58,7 @@ async function open() {
         props: {
             showDialog: true,
             workspace: "cgmes",
-            graphName: "http://example.org/graphs/Equipment",
+            schemaName: "http://example.org/schemas/Equipment",
             namespaces: NAMESPACES,
             ontology: ONTOLOGY,
             readonly: false,

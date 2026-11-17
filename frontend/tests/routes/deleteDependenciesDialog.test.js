@@ -62,7 +62,7 @@ async function deleteHeader() {
         props: {
             showDialog: true,
             workspaceName: WORKSPACE,
-            graphName: GRAPH,
+            schemaName: GRAPH,
             resourceUuid: HEADER.resourceIdentifier.uuid,
         },
     });

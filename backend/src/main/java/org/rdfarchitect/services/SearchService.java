@@ -226,9 +226,9 @@ public class SearchService implements SearchUseCase {
             SearchFilter filter,
             List<SearchResult> searchResults,
             List<SearchResult> externalSearchResults) {
-        if (filter.getGraphName() != null) {
+        if (filter.getSchemaName() != null) {
             searchGraph(
-                    new GraphIdentifier(workspaceName, filter.getGraphName()),
+                    new GraphIdentifier(workspaceName, filter.getSchemaName()),
                     query,
                     filter,
                     searchResults,

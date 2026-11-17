@@ -32,7 +32,7 @@ import { uriSuffix } from "./iri.js";
  *
  * The navigation reaches this as `getUri`, which `packageNavigationUtils` re-exports.
  */
-export function graphName(graph) {
+export function schemaName(graph) {
     const uri = graph?.uri ?? graph;
     if (typeof uri === "string") {
         return uri;
@@ -42,7 +42,7 @@ export function graphName(graph) {
 
 /** A single graph's name, without regard to the other schemas of its workspace. */
 export function graphLabel(graph) {
-    return graph?.label || graph?.keyword || uriSuffix(graphName(graph));
+    return graph?.label || graph?.keyword || uriSuffix(schemaName(graph));
 }
 
 /**
@@ -67,7 +67,7 @@ export function graphLabeller(graphs) {
         if ((seen.get(name) ?? 0) < 2) {
             return name;
         }
-        const suffix = uriSuffix(graphName(graph));
+        const suffix = uriSuffix(schemaName(graph));
         return suffix && suffix !== name ? `${name} (${suffix})` : name;
     };
 }
@@ -84,7 +84,7 @@ export function graphTooltip(graph) {
     const versionIris = graph?.versionIris ?? [];
     const lines = [];
     if (!versionIris.length && !graph?.versionInfo && !graph?.description) {
-        lines.push(graphName(graph));
+        lines.push(schemaName(graph));
     }
     // The version a profile states in words, which CGMES 2.4.15 has nowhere to write.
     if (graph?.versionInfo) {

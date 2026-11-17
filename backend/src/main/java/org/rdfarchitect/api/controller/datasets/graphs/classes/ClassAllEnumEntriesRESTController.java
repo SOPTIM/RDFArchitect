@@ -43,7 +43,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "/api/workspaces/{workspaceName}/graphs/{graphName}/classes/{classUUID}/enumentries")
+        "/api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/enumentries")
 @RequiredArgsConstructor
 public class ClassAllEnumEntriesRESTController {
 
@@ -76,7 +76,7 @@ public class ClassAllEnumEntriesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuid of the enum.") @PathVariable String classUUID,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
@@ -84,23 +84,23 @@ public class ClassAllEnumEntriesRESTController {
                     @RequestBody
                     EnumEntryDTO enumEntry) {
         logger.info(
-                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/enumentries\" from \"{}\".",
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/enumentries\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         var newEnumEntryUUID =
                 replaceOrCreateEnumEntryUseCase.replaceOrCreateEnumEntry(
                         graphIdentifier, enumEntry);
 
         logger.info(
-                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/enumentries\" from \"{}\".",
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/enumentries\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 originURL);
         return newEnumEntryUUID;

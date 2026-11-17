@@ -132,7 +132,7 @@ public class SearchResultObjectFactory {
 
         return SearchResult.builder()
                 .workspaceName(graphIdentifier.workspaceName())
-                .graphName(graphIdentifier.graphName())
+                .schemaName(graphIdentifier.graphName())
                 .uri(parser.getURI(CIMQueryVars.URI))
                 .uuid(parser.getUUID(CIMQueryVars.UUID))
                 .label(parser.getLabel(CIMQueryVars.LABEL))

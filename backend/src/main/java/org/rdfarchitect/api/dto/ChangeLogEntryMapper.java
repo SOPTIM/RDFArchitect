@@ -40,14 +40,14 @@ public interface ChangeLogEntryMapper {
     @Mapping(target = "contextDeltas", source = "deltas")
     @Mapping(target = "removedOnUndo", expression = "java(entry.removedOnUndo())")
     @Mapping(
-            target = "affectedGraphNames",
+            target = "affectedSchemaNames",
             expression = "java(java.util.List.copyOf(entry.affectedGraphNames()))")
     @Mapping(
-            target = "restorableGraphNames",
+            target = "restorableSchemaNames",
             expression = "java(java.util.List.copyOf(entry.restorableGraphNames()))")
     @Mapping(target = "affectedKinds", expression = "java(entry.affectedKinds())")
     @Mapping(
-            target = "restoreTargetGraphNames",
+            target = "restoreTargetSchemaNames",
             expression = "java(java.util.List.copyOf(entry.restoreTargetGraphNames()))")
     ChangeLogEntryDTO toDTO(WorkspaceChangeLogEntry entry);
 
@@ -89,7 +89,7 @@ public interface ChangeLogEntryMapper {
     private ContextDeltaDTO toMergedContextDeltaDTO(List<ContextDelta> deltas) {
         var dto = new ContextDeltaDTO();
         dto.setContextName(deltas.getFirst().contextName());
-        dto.setGraphName(deltas.getFirst().graphName());
+        dto.setSchemaName(deltas.getFirst().graphName());
         var netTriples = netTriples(deltas);
         if (netTriples != null) {
             dto.setAdditions(mapTriples(netTriples.additions()));
@@ -161,7 +161,7 @@ public interface ChangeLogEntryMapper {
     default ContextDeltaDTO toContextDeltaDTO(ContextDelta contextDelta) {
         var dto = new ContextDeltaDTO();
         dto.setContextName(contextDelta.contextName());
-        dto.setGraphName(contextDelta.graphName());
+        dto.setSchemaName(contextDelta.graphName());
         dto.setAdditions(mapTriples(contextDelta.additions()));
         dto.setDeletions(mapTriples(contextDelta.deletions()));
         dto.setValues(contextDelta.values().stream().map(this::mapValueChange).toList());

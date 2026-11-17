@@ -21,14 +21,14 @@ import {
     multiSelectState,
     SelectionLevel,
 } from "$lib/sharedState.svelte.js";
-import { graphName as getUri } from "$lib/utils/graph-label.js";
+import { schemaName as getUri } from "$lib/utils/graph-label.js";
 
 const ANY_GRAPH = Symbol("anyGraph");
 
 function normContext(workspace, graph) {
     return {
         workspaceLabel: workspace?.label ?? workspace,
-        graphName: graph ? getUri(graph) : null,
+        schemaName: graph ? getUri(graph) : null,
     };
 }
 
@@ -67,11 +67,11 @@ export function isSelectedClass(workspace, graph, cls) {
     if (typeof cls === "string") {
         cls = { uuid: cls };
     }
-    const { workspaceLabel, graphName } = normContext(workspace, graph);
+    const { workspaceLabel, schemaName } = normContext(workspace, graph);
     return (
         editorState.selectedClass.getProperty("id") === cls.uuid &&
         editorState.selectedClassWorkspace.getValue() === workspaceLabel &&
-        editorState.selectedClassGraph.getValue() === graphName
+        editorState.selectedClassGraph.getValue() === schemaName
     );
 }
 
@@ -153,7 +153,7 @@ function getSelectedClasses() {
     return [
         {
             workspaceName: editorState.selectedClassWorkspace.getValue(),
-            graphName: editorState.selectedClassGraph.getValue(),
+            schemaName: editorState.selectedClassGraph.getValue(),
             classUuid: uuid,
             packageId: editorState.selectedDiagram.getProperty("id"),
         },
@@ -162,13 +162,13 @@ function getSelectedClasses() {
 
 function someOpenClass(
     workspaceLabel,
-    graphName = ANY_GRAPH,
+    schemaName = ANY_GRAPH,
     matchUuid = null,
 ) {
     return getSelectedClasses().some(
         c =>
             c.workspaceName === workspaceLabel &&
-            (graphName === ANY_GRAPH || c.graphName === graphName) &&
+            (schemaName === ANY_GRAPH || c.schemaName === schemaName) &&
             (!matchUuid || matchUuid(c.classUuid)),
     );
 }
@@ -182,28 +182,28 @@ function openClassOccurrences(workspaceLabel) {
     return openClass;
 }
 
-function isOpenClassOccurrence(workspaceLabel, graphName, uuid) {
+function isOpenClassOccurrence(workspaceLabel, schemaName, uuid) {
     return !!openClassOccurrences(workspaceLabel)?.occurrences?.some(
-        entry => entry.graphName === graphName && entry.classUUID === uuid,
+        entry => entry.schemaName === schemaName && entry.classUUID === uuid,
     );
 }
 
 /** True for the entry whose schema the class editor currently shows. */
 export function isClassEditorTarget(workspace, graph, classUuid) {
-    const { workspaceLabel, graphName } = normContext(workspace, graph);
+    const { workspaceLabel, schemaName } = normContext(workspace, graph);
     const uuid = classUuid?.uuid ?? classUuid;
     return (
-        openClassOccurrences(workspaceLabel)?.activeGraphName === graphName &&
-        isOpenClassOccurrence(workspaceLabel, graphName, uuid)
+        openClassOccurrences(workspaceLabel)?.activeSchemaName === schemaName &&
+        isOpenClassOccurrence(workspaceLabel, schemaName, uuid)
     );
 }
 
 export function classHighlight(workspace, graph, classUuid) {
-    const { workspaceLabel, graphName } = normContext(workspace, graph);
+    const { workspaceLabel, schemaName } = normContext(workspace, graph);
     const uuid = classUuid?.uuid ?? classUuid;
     const inSelection = someOpenClass(
         workspaceLabel,
-        graphName,
+        schemaName,
         u => u === uuid,
     );
     if (inSelection && deepestSelectedLevel() === SelectionLevel.CLASS) {
@@ -212,7 +212,7 @@ export function classHighlight(workspace, graph, classUuid) {
     if (
         inSelection ||
         isSelectedClass(workspace, graph, uuid) ||
-        isOpenClassOccurrence(workspaceLabel, graphName, uuid)
+        isOpenClassOccurrence(workspaceLabel, schemaName, uuid)
     ) {
         return "secondary";
     }
@@ -224,10 +224,10 @@ export function classHighlight(workspace, graph, classUuid) {
  * specific selection, "ancestor" when something inside it is.
  */
 export function graphHighlight(workspace, graph) {
-    const { workspaceLabel, graphName } = normContext(workspace, graph);
+    const { workspaceLabel, schemaName } = normContext(workspace, graph);
     const level = deepestSelectedLevel();
     if (level === SelectionLevel.CLASS) {
-        return someOpenClass(workspaceLabel, graphName) ? "ancestor" : null;
+        return someOpenClass(workspaceLabel, schemaName) ? "ancestor" : null;
     }
     if (!isSelectedGraph(workspaceLabel, graph)) {
         return null;
@@ -236,13 +236,13 @@ export function graphHighlight(workspace, graph) {
 }
 
 export function packageHighlight(workspace, graph, pack, classEntries = []) {
-    const { workspaceLabel, graphName } = normContext(workspace, graph);
+    const { workspaceLabel, schemaName } = normContext(workspace, graph);
     const level = deepestSelectedLevel();
     if (level === SelectionLevel.CLASS) {
         const childUuids = new Set(
             (classEntries ?? []).map(c => c?.id ?? c?.uuid ?? c),
         );
-        return someOpenClass(workspaceLabel, graphName, u => childUuids.has(u))
+        return someOpenClass(workspaceLabel, schemaName, u => childUuids.has(u))
             ? "ancestor"
             : null;
     }

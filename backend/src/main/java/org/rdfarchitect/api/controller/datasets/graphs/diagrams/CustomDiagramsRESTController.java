@@ -45,7 +45,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/workspaces/{workspaceName}/graphs/{graphName}/diagrams/{diagramId}")
+@RequestMapping("/api/workspaces/{workspaceName}/schemas/{schemaName}/diagrams/{diagramId}")
 @RequiredArgsConstructor
 public class CustomDiagramsRESTController {
 
@@ -74,28 +74,28 @@ public class CustomDiagramsRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
             @RequestBody GraphFilter filter) {
         logger.info(
-                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}\" from \"{}\"",
                 workspaceName,
-                graphName,
+                schemaName,
                 diagramId,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
 
         var result =
                 getRenderingDataUseCase.getCustomDiagramRenderingData(
-                        new GraphIdentifier(workspaceName, extendedGraphName),
+                        new GraphIdentifier(workspaceName, extendedSchemaName),
                         filter,
                         UUID.fromString(diagramId));
 
         logger.info(
-                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}\" from \"{}\"",
                 workspaceName,
-                graphName,
+                schemaName,
                 diagramId,
                 originURL);
         return result;
@@ -115,25 +115,25 @@ public class CustomDiagramsRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
             @Parameter(description = "DTO for the diagram to be replaced.") @RequestBody
                     CustomDiagramDTO diagram) {
         logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}\" from \"{}\"",
                 workspaceName,
-                graphName,
+                schemaName,
                 diagramId,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         replaceCustomDiagramUseCase.replaceCustomGraphDiagram(
-                new GraphIdentifier(workspaceName, extendedGraphName), diagramId, diagram);
+                new GraphIdentifier(workspaceName, extendedSchemaName), diagramId, diagram);
 
         logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}\" from \"{}\"",
                 workspaceName,
-                graphName,
+                schemaName,
                 diagramId,
                 originURL);
         return Response.SUCCESS;
@@ -153,23 +153,23 @@ public class CustomDiagramsRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId) {
         logger.info(
-                "Received DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
+                "Received DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}\" from \"{}\"",
                 workspaceName,
-                graphName,
+                schemaName,
                 diagramId,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         deleteCustomDiagramUseCase.deleteCustomGraphDiagram(
-                new GraphIdentifier(workspaceName, extendedGraphName), diagramId);
+                new GraphIdentifier(workspaceName, extendedSchemaName), diagramId);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}\" from \"{}\"",
                 workspaceName,
-                graphName,
+                schemaName,
                 diagramId,
                 originURL);
         return Response.SUCCESS;

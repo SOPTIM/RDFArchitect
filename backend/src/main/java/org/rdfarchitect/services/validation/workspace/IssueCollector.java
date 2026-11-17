@@ -176,6 +176,6 @@ public class IssueCollector {
             return true;
         }
         return issue.getOccurrences().stream()
-                .anyMatch(occurrence -> scopeGraphName.equals(occurrence.getGraphName()));
+                .anyMatch(occurrence -> scopeGraphName.equals(occurrence.getSchemaName()));
     }
 }

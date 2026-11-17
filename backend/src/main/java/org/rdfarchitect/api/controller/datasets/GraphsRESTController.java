@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs")
+@RequestMapping("api/workspaces/{workspaceName}/schemas")
 @RequiredArgsConstructor
 public class GraphsRESTController {
 
@@ -61,14 +61,14 @@ public class GraphsRESTController {
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas\" from \"{}\".",
                 workspaceName,
                 originURL);
 
         var result = listGraphsUseCase.listGraphs(workspaceName);
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas\" to \"{}\".",
                 workspaceName,
                 originURL);
         return result;

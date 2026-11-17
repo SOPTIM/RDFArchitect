@@ -46,7 +46,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/packages")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/packages")
 @RequiredArgsConstructor
 public class AllPackagesRESTController {
 
@@ -90,27 +90,27 @@ public class AllPackagesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/packages\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/packages\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
 
         var internalPackageList =
                 listInternalPackagesUseCase.listInternalPackages(
-                        new GraphIdentifier(workspaceName, extendedGraphName));
+                        new GraphIdentifier(workspaceName, extendedSchemaName));
 
         var externalPackageList =
                 listExternalPackagesUseCase.listExternalPackages(
-                        new GraphIdentifier(workspaceName, extendedGraphName));
+                        new GraphIdentifier(workspaceName, extendedSchemaName));
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/packages\" from \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/packages\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return new ListPackagesResponse(internalPackageList, externalPackageList);
     }
@@ -134,30 +134,30 @@ public class AllPackagesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             description = "DTO for the package to be created")
                     @RequestBody
                     PackageDTO packageDTO) {
 
         logger.info(
-                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/packages\" from \"{}\".",
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/packages\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var extendedPackageURIPrefix =
                 expandURIUseCase.expandUri(workspaceName, packageDTO.getPrefix());
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
         packageDTO.setPrefix(extendedPackageURIPrefix);
 
         var newPackageUUID = addPackageUseCase.addPackage(graphIdentifier, packageDTO);
 
         logger.info(
-                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/packages\" to \"{}\".",
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/packages\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return newPackageUUID;
     }

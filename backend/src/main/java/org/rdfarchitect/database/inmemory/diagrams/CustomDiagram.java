@@ -50,7 +50,7 @@ public class CustomDiagram {
         }
         var copy = new ArrayList<ClassInDiagram>(source.size());
         for (var c : source) {
-            copy.add(new ClassInDiagram(c.getUuid(), c.getGraphName()));
+            copy.add(new ClassInDiagram(c.getUuid(), c.getSchemaName()));
         }
         return copy;
     }

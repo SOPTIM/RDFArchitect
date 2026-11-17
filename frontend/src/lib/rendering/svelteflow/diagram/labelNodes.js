@@ -194,7 +194,7 @@ export function buildLabelNodes(
                     atSource ? placements.source : placements.target,
                     positionOverrides,
                     labelSizes,
-                    edge.data?.graphName ?? null,
+                    edge.data?.schemaName ?? null,
                 ),
             );
         }
@@ -240,7 +240,7 @@ function buildLabelNode(
     placement,
     positionOverrides,
     labelSizes,
-    graphName,
+    schemaName,
 ) {
     const id = labelNodeId(label);
     const delta = resolveDelta(label, placement, positionOverrides);
@@ -268,7 +268,7 @@ function buildLabelNode(
             anchorClassId: anchorClass.id,
             ownerClassId: ownerClass.id,
             anchorPoint: placement.anchor,
-            graphName,
+            schemaName,
         },
     };
 }

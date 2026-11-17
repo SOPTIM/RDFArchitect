@@ -56,8 +56,8 @@ function displayFilenameOf(packageUUID, label, fileEnding) {
     return `${slugifyLabel(label)}-${packageUUID}.${fileEnding}`;
 }
 
-async function getAllPackages(workspaceName, graphName) {
-    const res = (await packageStore.getPackages(workspaceName, graphName)) ?? {
+async function getAllPackages(workspaceName, schemaName) {
+    const res = (await packageStore.getPackages(workspaceName, schemaName)) ?? {
         internal: [],
         external: [],
     };
@@ -66,7 +66,7 @@ async function getAllPackages(workspaceName, graphName) {
 
 async function getPackageDiagram(
     workspaceName,
-    graphName,
+    schemaName,
     packageUUID,
     signal,
 ) {
@@ -79,7 +79,7 @@ async function getPackageDiagram(
         includeRelationsToExternalPackages: true,
     };
     const res = await getRenderingDataParameterized({
-        path: { workspaceName: workspaceName, graphName: graphName },
+        path: { workspaceName: workspaceName, schemaName: schemaName },
         body: filter,
         signal: signal,
     });
@@ -152,20 +152,20 @@ async function renderPackage(nodes, edges, fileType) {
  * Renders one diagram per package of the graph.
  *
  * @param workspaceName
- * @param graphName
+ * @param schemaName
  * @param fileType
  * @param progress optional {@link ExportProgress} that receives the packages and
  *     their outcome, and whose cancellation stops the loop at the next package
  */
 export async function generatePackageImages(
     workspaceName,
-    graphName,
+    schemaName,
     fileType,
     progress,
 ) {
     const images = [];
     const signal = progress?.signal;
-    const packages = await getAllPackages(workspaceName, graphName);
+    const packages = await getAllPackages(workspaceName, schemaName);
 
     progress?.startDiagrams(
         packages.map(pkg => ({
@@ -185,7 +185,7 @@ export async function generatePackageImages(
         try {
             const diagram = await getPackageDiagram(
                 workspaceName,
-                graphName,
+                schemaName,
                 packageUUID,
                 signal,
             );

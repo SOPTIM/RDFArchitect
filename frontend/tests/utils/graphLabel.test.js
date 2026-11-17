@@ -21,12 +21,12 @@ import {
     graphLabel,
     graphLabeller,
     graphTooltip,
-    graphName,
+    schemaName,
 } from "$lib/utils/graph-label.js";
 
 /** A CGMES 3.0 profile, which names and versions itself. */
 const CURRENT = {
-    uri: { prefix: "http://example.org/graphs/", suffix: "Equipment" },
+    uri: { prefix: "http://example.org/schemas/", suffix: "Equipment" },
     keyword: "EQ",
     label: "Core Equipment Vocabulary",
     description: "The core equipment profile.",
@@ -36,7 +36,7 @@ const CURRENT = {
 
 /** A CGMES 2.4.15 profile, which has a name but no version. */
 const LEGACY = {
-    uri: { prefix: "http://example.org/graphs/", suffix: "EquipmentCore" },
+    uri: { prefix: "http://example.org/schemas/", suffix: "EquipmentCore" },
     keyword: "EQ",
     label: "EquipmentProfile",
     versionIris: ["http://entsoe.eu/CIM/EquipmentCore/3/1"],
@@ -44,17 +44,19 @@ const LEGACY = {
 
 /** A graph that is no CIM profile at all. */
 const PLAIN = {
-    uri: { prefix: "http://example.org/graphs/", suffix: "Notes" },
+    uri: { prefix: "http://example.org/schemas/", suffix: "Notes" },
 };
 
-describe("graphName", () => {
+describe("schemaName", () => {
     test("joins the prefix and suffix the backend splits a URI into", () => {
-        expect(graphName(CURRENT)).toBe("http://example.org/graphs/Equipment");
+        expect(schemaName(CURRENT)).toBe(
+            "http://example.org/schemas/Equipment",
+        );
     });
 
     test("accepts a bare URI, so a locked graph can be passed in as is", () => {
-        expect(graphName("http://example.org/graphs/Equipment")).toBe(
-            "http://example.org/graphs/Equipment",
+        expect(schemaName("http://example.org/schemas/Equipment")).toBe(
+            "http://example.org/schemas/Equipment",
         );
     });
 });
@@ -86,7 +88,7 @@ describe("graphLabeller", () => {
         const coreOperation = {
             ...LEGACY,
             uri: {
-                prefix: "http://example.org/graphs/",
+                prefix: "http://example.org/schemas/",
                 suffix: "EquipmentCoreOperation",
             },
         };
@@ -126,11 +128,11 @@ describe("graphTooltip", () => {
 
     test("leaves out the graph URI, which the reader never chose", () => {
         expect(graphTooltip(CURRENT)).not.toContain(
-            "http://example.org/graphs/Equipment",
+            "http://example.org/schemas/Equipment",
         );
     });
 
     test("falls back to the graph for one that says nothing about itself", () => {
-        expect(graphTooltip(PLAIN)).toBe("http://example.org/graphs/Notes");
+        expect(graphTooltip(PLAIN)).toBe("http://example.org/schemas/Notes");
     });
 });

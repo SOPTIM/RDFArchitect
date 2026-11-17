@@ -31,14 +31,14 @@
     import Badge from "$lib/components/Badge.svelte";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import { askForExtendSource } from "$lib/extendSourceRequest.svelte.js";
-    import { graphColors } from "$lib/graphColors.svelte.js";
+    import { schemaColors } from "$lib/graphColors.svelte.js";
 
     let {
         label,
         withInheritance = false,
         workspaceName,
         classUuids = [],
-        currentGraphName = null,
+        currentSchemaName = null,
         selectedClassUuid = null,
         readOnly = false,
         disabled = false,
@@ -54,8 +54,8 @@
     const extendSchemas = $derived(
         schemaOccurrences.filter(
             occurrence =>
-                !currentGraphName ||
-                occurrence.graphName !== String(currentGraphName),
+                !currentSchemaName ||
+                occurrence.schemaName !== String(currentSchemaName),
         ),
     );
 
@@ -93,9 +93,9 @@
         }
         // Only a selection without a schema of its own, as in the cross-profile
         // diagram, leaves the schema to copy from open.
-        const candidates = currentGraphName
+        const candidates = currentSchemaName
             ? []
-            : sourceCandidates(schemaOccurrences, occurrence.graphName);
+            : sourceCandidates(schemaOccurrences, occurrence.schemaName);
         if (classUuids.length === 1 && stubsDiffer(candidates)) {
             askForExtendSource({
                 workspaceName,
@@ -119,7 +119,7 @@
             await extendToSchemaAndReveal({
                 workspaceName,
                 classUuids: uuids,
-                targetGraphName: occurrence.graphName,
+                targetSchemaName: occurrence.schemaName,
                 targetLabel: schemaLabel(occurrence),
                 selectedClassUuid,
                 withInheritance,
@@ -148,13 +148,13 @@
                 {loadingSchemas ? "Loading schemas" : "No other schema"}
             </ContextMenu.Item.Button>
         {:else}
-            {#each extendSchemas as occurrence (occurrence.graphName)}
+            {#each extendSchemas as occurrence (occurrence.schemaName)}
                 <ContextMenu.Item.Button
                     onSelect={() => extendInto(occurrence)}
                     faIcon={faDiagramProject}
-                    iconColor={graphColors.get(
+                    iconColor={schemaColors.get(
                         workspaceName,
-                        occurrence.graphName,
+                        occurrence.schemaName,
                     )}
                     disabled={!!blockedReason(occurrence)}
                 >

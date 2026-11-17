@@ -63,34 +63,34 @@ public class MigrationContextRESTController {
                     String originURL,
             @Parameter(
                             description =
-                                    "The file containing graph A. Mutually exclusive with workspace_a and graph_name_a.")
+                                    "The file containing graph A. Mutually exclusive with workspace_a and schema_name_a.")
                     @RequestPart(required = false)
                     MultipartFile fileA,
             @Parameter(
                             description =
-                                    "Dataset of graph A. Required together with graph_name_a when not uploading graph A as a file.")
+                                    "Dataset of graph A. Required together with schema_name_a when not uploading graph A as a file.")
                     @RequestParam(required = false)
                     String workspaceA,
             @Parameter(
                             description =
                                     "URI of graph A. Required together with workspace_a when not uploading graph A as a file.")
                     @RequestParam(required = false)
-                    String graphA,
+                    String schemaA,
             @Parameter(
                             description =
-                                    "The file containing graph B. Mutually exclusive with workspace_b and graph_name_b.")
+                                    "The file containing graph B. Mutually exclusive with workspace_b and schema_name_b.")
                     @RequestPart(required = false)
                     MultipartFile fileB,
             @Parameter(
                             description =
-                                    "Dataset of graph B. Required together with graph_name_b when not uploading graph B as a file.")
+                                    "Dataset of graph B. Required together with schema_name_b when not uploading graph B as a file.")
                     @RequestParam(required = false)
                     String workspaceB,
             @Parameter(
                             description =
                                     "URI of graph B. Required together with workspace_b when not uploading graph B as a file.")
                     @RequestParam(required = false)
-                    String graphB,
+                    String schemaB,
             @Parameter(
                             description =
                                     "Whether to ignore prefixes in the comparison and rename detection. Defaults to false.")
@@ -103,25 +103,25 @@ public class MigrationContextRESTController {
             setMigrationContextUseCase.setMigrationContext(fileA, fileB, ignorePrefixes);
         }
         // stored to stored
-        else if (workspaceA != null && workspaceB != null && graphA != null && graphB != null) {
-            var extendedGraphNameA = expandURIUseCase.expandUri(workspaceA, graphA);
-            var extendedGraphNameB = expandURIUseCase.expandUri(workspaceB, graphB);
+        else if (workspaceA != null && workspaceB != null && schemaA != null && schemaB != null) {
+            var extendedSchemaNameA = expandURIUseCase.expandUri(workspaceA, schemaA);
+            var extendedSchemaNameB = expandURIUseCase.expandUri(workspaceB, schemaB);
             setMigrationContextUseCase.setMigrationContext(
-                    new GraphIdentifier(workspaceA, extendedGraphNameA),
-                    new GraphIdentifier(workspaceB, extendedGraphNameB),
+                    new GraphIdentifier(workspaceA, extendedSchemaNameA),
+                    new GraphIdentifier(workspaceB, extendedSchemaNameB),
                     ignorePrefixes);
         }
         // file to stored
-        else if (fileA != null && workspaceB != null && graphB != null) {
-            var extendedGraphNameB = expandURIUseCase.expandUri(workspaceB, graphB);
+        else if (fileA != null && workspaceB != null && schemaB != null) {
+            var extendedSchemaNameB = expandURIUseCase.expandUri(workspaceB, schemaB);
             setMigrationContextUseCase.setMigrationContext(
-                    fileA, new GraphIdentifier(workspaceB, extendedGraphNameB), ignorePrefixes);
+                    fileA, new GraphIdentifier(workspaceB, extendedSchemaNameB), ignorePrefixes);
         }
         // stored to file
-        else if (workspaceA != null && graphA != null && fileA != null) {
-            var extendedGraphNameA = expandURIUseCase.expandUri(workspaceA, graphA);
+        else if (workspaceA != null && schemaA != null && fileA != null) {
+            var extendedSchemaNameA = expandURIUseCase.expandUri(workspaceA, schemaA);
             setMigrationContextUseCase.setMigrationContext(
-                    new GraphIdentifier(workspaceA, extendedGraphNameA), fileA, ignorePrefixes);
+                    new GraphIdentifier(workspaceA, extendedSchemaNameA), fileA, ignorePrefixes);
         } else {
             logger.warn(
                     "Invalid request to POST \"/api/migrations/context\" from \"{}\". Missing required parameters.",

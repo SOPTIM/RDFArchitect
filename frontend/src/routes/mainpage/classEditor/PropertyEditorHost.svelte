@@ -71,7 +71,7 @@
         const nextSource =
             openClassEditor.match(
                 workspaceName,
-                owner.graphName,
+                owner.schemaName,
                 owner.classUuid,
             ) ?? (await loadSource(workspaceName, owner));
         if (token !== requestToken) {
@@ -104,10 +104,10 @@
         const [classDto, contextData, readOnly] = await Promise.all([
             classStore.getClassInfo(
                 workspaceName,
-                owner.graphName,
+                owner.schemaName,
                 owner.classUuid,
             ),
-            loadClassEditorContextData(workspaceName, owner.graphName),
+            loadClassEditorContextData(workspaceName, owner.schemaName),
             workspaceStore.isReadOnly(workspaceName),
         ]);
         if (!classDto || classDto.external) {
@@ -117,7 +117,7 @@
         const data = { ...contextData, targetClassInfos: [], superClass: null };
         return {
             workspaceName,
-            graphName: owner.graphName,
+            schemaName: owner.schemaName,
             classUuid: owner.classUuid,
             readOnly,
             data,
@@ -128,14 +128,14 @@
     // Resolved before comparing with the open class editor, which holds the schema's own uuid
     // while a merged diagram carries the merged one.
     async function resolveOwner(workspaceName, request) {
-        const diagramGraphName = editorState.selectedGraph.getValue();
-        const graphName = request.graphName ?? diagramGraphName ?? null;
+        const diagramSchemaName = editorState.selectedGraph.getValue();
+        const schemaName = request.schemaName ?? diagramSchemaName ?? null;
         if (
-            graphName &&
-            diagramGraphName &&
-            String(graphName) === String(diagramGraphName)
+            schemaName &&
+            diagramSchemaName &&
+            String(schemaName) === String(diagramSchemaName)
         ) {
-            return { graphName, classUuid: request.classUuid };
+            return { schemaName, classUuid: request.classUuid };
         }
 
         const occurrences = await getClassSchemas(
@@ -143,19 +143,19 @@
             request.classUuid,
         );
         const present = occurrences.filter(occurrence => occurrence.present);
-        const match = graphName
+        const match = schemaName
             ? present.find(
                   occurrence =>
-                      String(occurrence.graphName) === String(graphName),
+                      String(occurrence.schemaName) === String(schemaName),
               )
             : present[0];
         if (!match) {
             return {
-                graphName,
-                classUuid: graphName ? null : request.classUuid,
+                schemaName,
+                classUuid: schemaName ? null : request.classUuid,
             };
         }
-        return { graphName: match.graphName, classUuid: match.classUUID };
+        return { schemaName: match.schemaName, classUuid: match.classUUID };
     }
 
     function findProperty(nextSource, request) {

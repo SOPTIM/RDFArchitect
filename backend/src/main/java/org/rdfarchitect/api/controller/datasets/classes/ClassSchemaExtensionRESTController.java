@@ -51,7 +51,7 @@ public class ClassSchemaExtensionRESTController {
     private final ClassExtensionUseCase classExtensionUseCase;
 
     public record ExtendToSchemaRequest(
-            String graphName, List<String> classUUIDs, boolean withInheritance) {}
+            String schemaName, List<String> classUUIDs, boolean withInheritance) {}
 
     @Operation(
             summary = "Extend classes into another schema",
@@ -77,7 +77,7 @@ public class ClassSchemaExtensionRESTController {
         var targetGraphIdentifier =
                 new GraphIdentifier(
                         workspaceName,
-                        expandURIUseCase.expandUri(workspaceName, request.graphName()));
+                        expandURIUseCase.expandUri(workspaceName, request.schemaName()));
 
         var results =
                 classExtensionUseCase.extendClasses(

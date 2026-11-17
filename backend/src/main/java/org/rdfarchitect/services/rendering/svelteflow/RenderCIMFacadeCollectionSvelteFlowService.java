@@ -77,13 +77,13 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
     private static final Comparator<AttributeDTO> MERGED_ATTRIBUTE_ORDER =
             Comparator.comparing(
-                            AttributeDTO::getGraphName,
+                            AttributeDTO::getSchemaName,
                             Comparator.nullsLast(Comparator.naturalOrder()))
                     .thenComparing(attribute -> attribute.getLabel().toLowerCase(Locale.ROOT));
 
     private static final Comparator<EnumEntryDTO> MERGED_ENUM_ENTRY_ORDER =
             Comparator.comparing(
-                            EnumEntryDTO::getGraphName,
+                            EnumEntryDTO::getSchemaName,
                             Comparator.nullsLast(Comparator.naturalOrder()))
                     .thenComparing(entry -> entry.getLabel().toLowerCase(Locale.ROOT));
 
@@ -214,7 +214,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
         var nodeDataDTO =
                 NodeDataDTO.builder()
-                        .graphName(merged.sources().getFirst().graphName())
+                        .schemaName(merged.sources().getFirst().graphName())
                         .label(merged.label())
                         .belongsToCategory(null)
                         .stereotypes(mergedStereotypes(merged))
@@ -411,7 +411,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                                     association.getAssociationUsed()))
                                     .useFromAssociation(
                                             getAssociationUsedValue(inverse.getAssociationUsed()))
-                                    .graphName(source.graphName())
+                                    .schemaName(source.graphName())
                                     .graphKeyword(source.keyword())
                                     .color(source.color())
                                     .edgePoints(
@@ -462,7 +462,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
         var nodeDataDTO =
                 NodeDataDTO.builder()
-                        .graphName(cimClass.getGraphName())
+                        .schemaName(cimClass.getGraphName())
                         .label(cimClass.getLabel().getValue())
                         .external(cimClass.isExternal())
                         .outsidePackage(
@@ -541,7 +541,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                             .label(cimAttribute.getLabel().getValue())
                             .type(cimAttribute.getDataType().getLabel().getValue())
                             .multiplicity(extractMultiplicityString(cimAttribute.getMultiplicity()))
-                            .graphName(graphName)
+                            .schemaName(graphName)
                             .graphKeyword(keyword)
                             .color(color)
                             .build());
@@ -576,7 +576,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                             .rangeLabel(cimAssociation.getRange().getLabel().getValue())
                             .multiplicity(
                                     extractMultiplicityString(cimAssociation.getMultiplicity()))
-                            .graphName(graphName)
+                            .schemaName(graphName)
                             .graphKeyword(keyword)
                             .color(color)
                             .build());
@@ -629,7 +629,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     EnumEntryDTO.builder()
                             .uuid(cimEnumEntry.getUuid())
                             .label(cimEnumEntry.getLabel().getValue())
-                            .graphName(graphName)
+                            .schemaName(graphName)
                             .graphKeyword(keyword)
                             .color(color)
                             .build());

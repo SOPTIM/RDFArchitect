@@ -41,7 +41,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping(
-        "api/workspaces/{workspaceName}/graphs/{graphName}/classes/{classUUID}/associations/{associationUUID}")
+        "api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/associations/{associationUUID}")
 @RequiredArgsConstructor
 public class ClassAssociationsRESTController {
 
@@ -69,7 +69,7 @@ public class ClassAssociationsRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @Parameter(description = "The old, to be replaced association.") @PathVariable
                     String associationUUID,
@@ -85,23 +85,23 @@ public class ClassAssociationsRESTController {
                     @RequestBody
                     AssociationPairDTO associationPairDTO) {
         logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/associations/{{}}\" from \"{}\".",
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/associations/{{}}\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 associationUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         var newAssociationUUIDs =
                 updateAssociationsUseCase.replaceAssociation(graphIdentifier, associationPairDTO);
 
         logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/associations/{{}}\" to \"{}\".",
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/associations/{{}}\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 associationUUID,
                 originURL);

@@ -30,7 +30,7 @@
     import { graphStore } from "$lib/stores/graphStore.ts";
     import {
         graphLabeller,
-        graphName as getUri,
+        schemaName as getUri,
     } from "$lib/utils/graph-label.js";
 
     import {
@@ -108,23 +108,23 @@
 
     async function createPackageMap() {
         for (const graph of graphs) {
-            const graphName = getUri(graph);
-            packagesByGraph[graphName] = await createPackageListForGraph(
+            const schemaName = getUri(graph);
+            packagesByGraph[schemaName] = await createPackageListForGraph(
                 lockedWorkspaceName,
-                graphName,
+                schemaName,
             );
         }
     }
 
     async function createClassMap() {
-        const graphNames = graphs.map(graph => getUri(graph));
+        const schemaNames = graphs.map(graph => getUri(graph));
         const result = {};
 
         await Promise.all(
-            graphNames.map(async graphName => {
-                result[graphName] = await createClassListForGraph(
+            schemaNames.map(async schemaName => {
+                result[schemaName] = await createClassListForGraph(
                     lockedWorkspaceName,
-                    graphName,
+                    schemaName,
                     selectedClasses,
                 );
             }),
@@ -137,8 +137,8 @@
         graphs.forEach(g => (g.selected = newState));
 
         Object.entries(classesByPackageAndGraph).forEach(
-            ([graphName, packages]) => {
-                const graphPackages = packagesByGraph[graphName] ?? [];
+            ([schemaName, packages]) => {
+                const graphPackages = packagesByGraph[schemaName] ?? [];
 
                 graphPackages.forEach(pack => (pack.selected = newState));
 
@@ -155,13 +155,13 @@
         }
 
         graphs.forEach(graph => {
-            const graphName = getUri(graph);
-            const packages = packagesByGraph[graphName];
+            const schemaName = getUri(graph);
+            const packages = packagesByGraph[schemaName];
             let classesSelectedInGraph = false;
             packages.forEach(pack => {
                 const packageId = pack.uuid;
                 const classesInPackage =
-                    classesByPackageAndGraph[graphName][packageId] ?? [];
+                    classesByPackageAndGraph[schemaName][packageId] ?? [];
 
                 if (classesInPackage.length > 0) {
                     const classesSelectedInPackage =
@@ -180,13 +180,13 @@
     async function submitDiagramClasses() {
         const selectedClassList = Object.entries(
             classesByPackageAndGraph,
-        ).flatMap(([graphName, packages]) =>
+        ).flatMap(([schemaName, packages]) =>
             Object.values(packages)
                 .flat()
                 .filter(cls => cls.selected === true)
                 .map(cls => ({
                     uuid: cls.uuid,
-                    graphName: graphName,
+                    schemaName: schemaName,
                 })),
         );
 

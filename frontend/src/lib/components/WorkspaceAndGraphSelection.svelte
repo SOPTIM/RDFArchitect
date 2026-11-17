@@ -21,13 +21,13 @@
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
-    import { graphLabeller, graphName } from "$lib/utils/graph-label.js";
+    import { graphLabeller, schemaName } from "$lib/utils/graph-label.js";
 
     let {
         workspace = $bindable(),
         graph = $bindable(),
         lockedWorkspaceName,
-        lockedGraphName,
+        lockedSchemaName,
         allowSelectionOfReadonlyWorkspaces = true,
         displayAsCard = true,
     } = $props();
@@ -42,20 +42,20 @@
     const schemaLabel = $derived(graphLabeller(graphs));
 
     const workspaceLocked = $derived(lockedWorkspaceName !== undefined);
-    const graphLocked = $derived(lockedGraphName !== undefined);
+    const graphLocked = $derived(lockedSchemaName !== undefined);
 
     const graphSelectDisabled = $derived(graphLocked || !workspace);
 
     $effect(async () => {
         if (workspaceLocked) return;
         if (!workspace) {
-            graph = graphLocked ? lockedGraphName : null;
+            graph = graphLocked ? lockedSchemaName : null;
             graphs = [];
             return;
         }
 
         graphs = (await graphStore.getGraphs(workspace)) ?? [];
-        const valid = graphs.some(option => graphName(option) === graph);
+        const valid = graphs.some(option => schemaName(option) === graph);
         if (!valid && !graphLocked) {
             graph = null;
         }
@@ -64,7 +64,7 @@
     onMount(async () => {
         workspaces = (await workspaceStore.getWorkspaces()) ?? [];
         if (workspaceLocked) workspace = lockedWorkspaceName;
-        if (graphLocked) graph = lockedGraphName;
+        if (graphLocked) graph = lockedSchemaName;
 
         if (
             !workspaceLocked &&
@@ -123,7 +123,7 @@
         options={graphs}
         disabled={graphSelectDisabled}
         placeholder={workspace ? "Select schema" : "Select a workspace first"}
-        getOptionValue={graphName}
+        getOptionValue={schemaName}
         getOptionLabel={schemaLabel}
     />
 </div>

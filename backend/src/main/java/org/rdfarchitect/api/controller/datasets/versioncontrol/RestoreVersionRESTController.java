@@ -117,7 +117,7 @@ public class RestoreVersionRESTController {
 
     /**
      * @param versionId the change to restore to
-     * @param graphNames the graphs to put back, or empty for the whole workspace
+     * @param schemaNames the graphs to put back, or empty for the whole workspace
      * @param expectedCurrentChangeId the change the workspace stood on when the restore was
      *     confirmed, or {@code null} to restore without checking
      * @param expectedNewestChangeId the newest change recorded when the restore was confirmed,
@@ -125,7 +125,7 @@ public class RestoreVersionRESTController {
      */
     public record RestoreVersionDTO(
             String versionId,
-            List<String> graphNames,
+            List<String> schemaNames,
             String expectedCurrentChangeId,
             String expectedNewestChangeId) {
 
@@ -143,7 +143,7 @@ public class RestoreVersionRESTController {
         }
 
         RevertScope scope() {
-            return new RevertScope(graphNames == null ? Set.of() : Set.copyOf(graphNames));
+            return new RevertScope(schemaNames == null ? Set.of() : Set.copyOf(schemaNames));
         }
     }
 }

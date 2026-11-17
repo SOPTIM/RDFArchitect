@@ -39,7 +39,7 @@ export const openClassEditor = {
         }
     },
 
-    match(workspaceName, graphName, classUuid) {
+    match(workspaceName, schemaName, classUuid) {
         const source = openEditorSource;
         if (!source || !classUuid || !source.reactiveClass) {
             return null;
@@ -51,9 +51,9 @@ export const openClassEditor = {
             return null;
         }
         if (
-            graphName &&
-            source.graphName &&
-            String(source.graphName) !== String(graphName)
+            schemaName &&
+            source.schemaName &&
+            String(source.schemaName) !== String(schemaName)
         ) {
             return null;
         }
@@ -65,13 +65,13 @@ export const openClassEditor = {
 // copies cannot overwrite each other's unsaved changes.
 let openEditorSource = null;
 
-export async function loadClassEditorContextData(workspaceName, graphName) {
+export async function loadClassEditorContextData(workspaceName, schemaName) {
     const [classes, packages, datatypes, stereotypes, namespaces] =
         await Promise.all([
-            getClasses(workspaceName, graphName),
-            getPackages(workspaceName, graphName),
-            getDataTypes(workspaceName, graphName),
-            datatypesStore.getStereotypes(workspaceName, graphName),
+            getClasses(workspaceName, schemaName),
+            getPackages(workspaceName, schemaName),
+            getDataTypes(workspaceName, schemaName),
+            datatypesStore.getStereotypes(workspaceName, schemaName),
             workspaceStore.getNamespaces(workspaceName),
         ]);
     return { classes, packages, datatypes, stereotypes, namespaces };
@@ -90,8 +90,8 @@ export function createClassEditorContextValue(getSource, openClass = () => {}) {
         get workspaceName() {
             return getSource().workspaceName;
         },
-        get graphName() {
-            return getSource().graphName;
+        get schemaName() {
+            return getSource().schemaName;
         },
         get readOnly() {
             return getSource().readOnly;

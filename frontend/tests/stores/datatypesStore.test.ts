@@ -111,7 +111,7 @@ describe("datatypesStore", () => {
             expect(api.listPrimitives).toHaveBeenCalledTimes(1);
         });
 
-        test("returns null if workspaceName or graphName is missing", async () => {
+        test("returns null if workspaceName or schemaName is missing", async () => {
             expect(await store.getPrimitives("", GRAPH)).toBeNull();
             expect(await store.getPrimitives(WORKSPACE, "")).toBeNull();
             expect(api.listPrimitives).not.toHaveBeenCalled();
@@ -174,7 +174,7 @@ describe("datatypesStore", () => {
 
             expect(result).toEqual(mockData);
             expect(api.listDatatypes).toHaveBeenCalledWith({
-                path: { workspaceName: WORKSPACE, graphName: GRAPH },
+                path: { workspaceName: WORKSPACE, schemaName: GRAPH },
             });
         });
 
@@ -189,7 +189,7 @@ describe("datatypesStore", () => {
 
             expect(result).toEqual(mockData);
             expect(api.listStereotypes).toHaveBeenCalledWith({
-                path: { workspaceName: WORKSPACE, graphName: GRAPH },
+                path: { workspaceName: WORKSPACE, schemaName: GRAPH },
             });
         });
     });

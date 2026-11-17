@@ -41,9 +41,9 @@ function statusOf(files, state) {
         workspaceName: "ds",
         state,
         files,
-        importedGraphNames: files
+        importedSchemaNames: files
             .filter(file => file.state === FileState.IMPORTED)
-            .map(file => file.graphName),
+            .map(file => file.schemaName),
         failedImports: files
             .filter(file => file.state === FileState.FAILED)
             .map(file => file.fileName),
@@ -57,7 +57,7 @@ function fileOf(index, fileName, state, extra = {}) {
         fileName,
         sizeBytes: 100,
         state,
-        graphName:
+        schemaName:
             state === FileState.IMPORTED ? `http://graph#${fileName}` : null,
         ...extra,
     };

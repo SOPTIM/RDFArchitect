@@ -44,7 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/asciidocexport/{fileEnding}")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/asciidocexport/{fileEnding}")
 @RequiredArgsConstructor
 public class AsciiDocExportRESTController {
 
@@ -81,7 +81,7 @@ public class AsciiDocExportRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The file ending of the diagram files.") @PathVariable
                     String fileEnding,
             @Parameter(
@@ -90,22 +90,22 @@ public class AsciiDocExportRESTController {
                     @RequestParam(defaultValue = "false")
                     boolean embedDiagrams) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/asciidocexport\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/asciidocexport\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
 
         var output =
                 exportGraphAsciiDocUseCase.exportGraphAsAsciiDoc(
-                        new GraphIdentifier(workspaceName, extendedGraphName),
+                        new GraphIdentifier(workspaceName, extendedSchemaName),
                         fileEnding,
                         embedDiagrams);
 
         var fileName = "default";
-        if (!extendedGraphName.equals("default")) {
-            fileName = new URI(extendedGraphName).getSuffix();
+        if (!extendedSchemaName.equals("default")) {
+            fileName = new URI(extendedSchemaName).getSuffix();
         }
         fileName += ".adoc";
 
@@ -119,9 +119,9 @@ public class AsciiDocExportRESTController {
         var body = ResponseEntity.ok().headers(headers).body(output);
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/asciidocexport\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/asciidocexport\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return body;
     }

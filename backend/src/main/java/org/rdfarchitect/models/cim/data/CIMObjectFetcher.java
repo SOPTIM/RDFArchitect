@@ -106,7 +106,7 @@ public class CIMObjectFetcher {
                 executeQueryForSingleObject(classQuery, CIMObjectFactory::createCIMClass);
         // fetch stereotypes
         if (classObject != null) {
-            classObject.setGraphName(graphName);
+            classObject.setSchemaName(graphName);
             var stereotypeQuery =
                     CIMQueries.getStereotypesQuery(prefixMapping, classUUID, graphName).build();
             classObject.setStereotypes(fetchCIMStereotypeList(stereotypeQuery));
@@ -127,7 +127,7 @@ public class CIMObjectFetcher {
             var classObjectList = new ArrayList<CIMClass>();
             while (classQueryResultSet.hasNext()) {
                 var classObject = CIMObjectFactory.createCIMClass(classQueryResultSet.next());
-                classObject.setGraphName(graphName);
+                classObject.setSchemaName(graphName);
                 classObjectList.add(classObject);
             }
 

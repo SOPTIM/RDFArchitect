@@ -43,7 +43,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "api/workspaces/{workspaceName}/graphs/{graphName}/classes/{classUUID}/attributes/{attributeUUID}")
+        "api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/attributes/{attributeUUID}")
 @RequiredArgsConstructor
 public class ClassAttributesRESTController {
 
@@ -76,7 +76,7 @@ public class ClassAttributesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @Parameter(description = "The uuid of the old, to be replaced attribute.") @PathVariable
                     String attributeUUID,
@@ -88,22 +88,22 @@ public class ClassAttributesRESTController {
                     @RequestBody
                     AttributeDTO attribute) {
         logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/attributes/{{}}\" from \"{}\".",
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/attributes/{{}}\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 attributeUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         var newAttributeUUID = updateAttributesUseCase.replaceAttribute(graphIdentifier, attribute);
 
         logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/attributes/{{}}\" to \"{}\".",
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/attributes/{{}}\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 attributeUUID,
                 originURL);

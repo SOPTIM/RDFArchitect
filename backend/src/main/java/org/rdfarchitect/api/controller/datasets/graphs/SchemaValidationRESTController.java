@@ -40,7 +40,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/validate/{cgmesVersion}")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/validate/{cgmesVersion}")
 @RequiredArgsConstructor
 public class SchemaValidationRESTController {
 
@@ -80,23 +80,23 @@ public class SchemaValidationRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @PathVariable CGMESVersion cgmesVersion) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/validation\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/validation\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var report =
                 schemaValidationUseCase.validateSchema(
-                        new GraphIdentifier(workspaceName, extendedGraphName), cgmesVersion);
+                        new GraphIdentifier(workspaceName, extendedSchemaName), cgmesVersion);
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/validation\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/validation\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return report;
     }

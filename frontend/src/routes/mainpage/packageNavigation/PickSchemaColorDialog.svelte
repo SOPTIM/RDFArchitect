@@ -17,13 +17,13 @@
 
 <script>
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
-    import { graphColors } from "$lib/graphColors.svelte.js";
+    import { schemaColors } from "$lib/graphColors.svelte.js";
     import { normalizeHex } from "$lib/utils/color.js";
 
     let {
         showDialog = $bindable(),
         workspaceName,
-        graphName,
+        schemaName,
         graphLabel,
     } = $props();
 
@@ -33,12 +33,12 @@
     const hasChanges = $derived(color !== originalColor);
 
     function onOpen() {
-        color = graphColors.get(workspaceName, graphName) ?? "#000000";
+        color = schemaColors.get(workspaceName, schemaName) ?? "#000000";
         originalColor = color;
     }
 
     async function saveColor() {
-        const saved = await graphColors.set(workspaceName, graphName, color);
+        const saved = await schemaColors.set(workspaceName, schemaName, color);
         if (saved) {
             originalColor = color;
         }
@@ -69,8 +69,8 @@
     isValid={true}
 >
     <div class="mx-2 flex flex-col gap-3 py-2">
-        <p class="text-muted-foreground truncate text-xs" title={graphName}>
-            {graphLabel ?? graphName}
+        <p class="text-muted-foreground truncate text-xs" title={schemaName}>
+            {graphLabel ?? schemaName}
         </p>
 
         <div class="flex items-center gap-3">

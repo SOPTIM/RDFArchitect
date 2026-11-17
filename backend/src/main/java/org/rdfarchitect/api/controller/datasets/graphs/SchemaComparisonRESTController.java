@@ -46,7 +46,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/compare")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/compare")
 public class SchemaComparisonRESTController {
 
     private static final Logger logger =
@@ -87,25 +87,25 @@ public class SchemaComparisonRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The file containing the graph to be compared.")
                     @RequestParam("file")
                     MultipartFile file) {
         logger.info(
-                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/compare\" from \"{}\".",
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/compare\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var changes =
                 schemaComparisonUseCase.compareSchemas(
-                        new GraphIdentifier(workspaceName, extendedGraphName), file);
+                        new GraphIdentifier(workspaceName, extendedSchemaName), file);
 
         logger.info(
-                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/compare\" from \"{}\".",
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/compare\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return changes;
     }
@@ -142,35 +142,35 @@ public class SchemaComparisonRESTController {
                             description =
                                     "The url encoded uri of the base graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The literal name of the dataset to compare against.")
                     @RequestParam("otherWorkspace")
                     String otherWorkspace,
             @Parameter(description = "The url encoded uri of the graph to compare against.")
-                    @RequestParam("otherGraph")
-                    String otherGraph) {
+                    @RequestParam("otherSchema")
+                    String otherSchema) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}/graphs/{{}/compare?otherWorkspace={{}}&otherGraph={{}}\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}/schemas/{{}/compare?otherWorkspace={{}}&otherSchema={{}}\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 otherWorkspace,
-                otherGraph,
+                otherSchema,
                 originURL);
 
-        var baseGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var otherGraphName = expandURIUseCase.expandUri(otherWorkspace, otherGraph);
+        var baseSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var otherSchemaName = expandURIUseCase.expandUri(otherWorkspace, otherSchema);
 
         var changes =
                 schemaComparisonUseCase.compareSchemas(
-                        new GraphIdentifier(workspaceName, baseGraphName),
-                        new GraphIdentifier(otherWorkspace, otherGraphName));
+                        new GraphIdentifier(workspaceName, baseSchemaName),
+                        new GraphIdentifier(otherWorkspace, otherSchemaName));
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}/graphs/{{}/compare?otherWorkspace={{}}&otherGraph={{}}\" from \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}/schemas/{{}/compare?otherWorkspace={{}}&otherSchema={{}}\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 otherWorkspace,
-                otherGraph,
+                otherSchema,
                 originURL);
         return changes;
     }

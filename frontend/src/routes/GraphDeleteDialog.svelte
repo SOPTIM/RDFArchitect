@@ -34,22 +34,22 @@
     let { showDialog = $bindable() } = $props();
 
     let workspaceName = $state();
-    let graphName = $state();
+    let schemaName = $state();
 
-    let disableSubmit = $derived(!workspaceName || !graphName);
+    let disableSubmit = $derived(!workspaceName || !schemaName);
 
     async function onOpen() {
         workspaceName = editorState.selectedWorkspace.getValue();
-        graphName = editorState.selectedGraph.getValue();
+        schemaName = editorState.selectedGraph.getValue();
     }
 
     function onClose() {
         workspaceName = null;
-        graphName = null;
+        schemaName = null;
     }
 
     async function deleteGraph() {
-        const { error } = await graphStore.remove(workspaceName, graphName);
+        const { error } = await graphStore.remove(workspaceName, schemaName);
         if (error) return;
 
         // The workspace stays selected: Ctrl+Z undoes in the selected workspace, and the dialog
@@ -64,11 +64,11 @@
         editorState.selectedClassGraph.updateValue(null);
         editorState.selectedClass.updateValue({ type: null, id: null });
 
-        classStore.invalidateGraph(workspaceName, graphName);
-        packageStore.invalidateGraph(workspaceName, graphName);
-        datatypesStore.invalidateGraph(workspaceName, graphName);
-        ontologyStore.invalidateGraph(workspaceName, graphName);
-        customDiagramStore.invalidateGraph(workspaceName, graphName);
+        classStore.invalidateGraph(workspaceName, schemaName);
+        packageStore.invalidateGraph(workspaceName, schemaName);
+        datatypesStore.invalidateGraph(workspaceName, schemaName);
+        ontologyStore.invalidateGraph(workspaceName, schemaName);
+        customDiagramStore.invalidateGraph(workspaceName, schemaName);
 
         forceReloadTrigger.trigger();
     }
@@ -82,7 +82,7 @@
     primaryLabel="Delete Schema"
     onPrimary={deleteGraph}
     disablePrimary={disableSubmit}
-    title={graphName ? `Delete Schema "${graphName}"?` : "Delete Schema?"}
+    title={schemaName ? `Delete Schema "${schemaName}"?` : "Delete Schema?"}
     titleIcon={faExclamation}
     titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"
 >

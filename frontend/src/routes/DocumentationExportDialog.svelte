@@ -33,7 +33,7 @@
     let {
         showDialog = $bindable(),
         lockedWorkspaceName,
-        lockedGraphName,
+        lockedSchemaName,
     } = $props();
 
     const zipMediaType = {
@@ -52,7 +52,7 @@
             name: "HTML",
             ending: "html",
             fetch: (workspace, graph, imageEnding, embedDiagrams, signal) => {
-                const url = `${PUBLIC_BACKEND_URL}/api/workspaces/${encodeURIComponent(workspace)}/graphs/${encodeURIComponent(graph)}/htmlexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
+                const url = `${PUBLIC_BACKEND_URL}/api/workspaces/${encodeURIComponent(workspace)}/schemas/${encodeURIComponent(graph)}/htmlexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
                 return fetch(url, {
                     method: "GET",
                     headers: new Headers({
@@ -68,7 +68,7 @@
             name: "AsciiDoc",
             ending: "adoc",
             fetch: (workspace, graph, imageEnding, embedDiagrams, signal) => {
-                const url = `${PUBLIC_BACKEND_URL}/api/workspaces/${encodeURIComponent(workspace)}/graphs/${encodeURIComponent(graph)}/asciidocexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
+                const url = `${PUBLIC_BACKEND_URL}/api/workspaces/${encodeURIComponent(workspace)}/schemas/${encodeURIComponent(graph)}/asciidocexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
                 return fetch(url, {
                     method: "GET",
                     headers: new Headers({
@@ -88,7 +88,7 @@
     ];
 
     let selectedWorkspaceName = $state(null);
-    let graphName = $state(null);
+    let schemaName = $state(null);
     let selectedDocumentEnding = $state(supportedDocumentFormats[0].ending);
     let selectedImageEnding = $state(supportedMediaTypes[0].ending);
     let selectedPlacementKey = $state(supportedDiagramPlacements[0].key);
@@ -111,13 +111,13 @@
     );
     let isExporting = $derived(progress !== null);
     let disablePrimary = $derived(
-        !selectedWorkspaceName || !graphName || isExporting,
+        !selectedWorkspaceName || !schemaName || isExporting,
     );
 
     function onOpen() {
         selectedWorkspaceName =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
-        graphName = lockedGraphName ?? editorState.selectedGraph.getValue();
+        schemaName = lockedSchemaName ?? editorState.selectedGraph.getValue();
     }
 
     function onClose() {
@@ -125,7 +125,7 @@
     }
 
     async function onPrimary() {
-        if (!selectedWorkspaceName || !graphName || isExporting) return;
+        if (!selectedWorkspaceName || !schemaName || isExporting) return;
         const documentFormat = selectedDocumentFormat;
         const mediaType = selectedMediaType;
         const currentProgress = new ExportProgress();
@@ -133,7 +133,7 @@
         try {
             const response = await documentFormat.fetch(
                 selectedWorkspaceName,
-                graphName,
+                schemaName,
                 mediaType.ending,
                 embedDiagrams,
                 currentProgress.signal,
@@ -141,7 +141,7 @@
             if (!response.ok) {
                 toastStore.error(
                     "Export failed",
-                    `Could not export "${graphName}" as ${documentFormat.name}.`,
+                    `Could not export "${schemaName}" as ${documentFormat.name}.`,
                 );
                 return;
             }
@@ -155,7 +155,7 @@
 
             const images = await generatePackageImages(
                 selectedWorkspaceName,
-                graphName,
+                schemaName,
                 mediaType,
                 currentProgress,
             );
@@ -196,13 +196,13 @@
 
             saveFile(
                 zipBlob,
-                `${getGraphLabel(graphName)}-${documentFormat.ending}-export.zip`,
+                `${getGraphLabel(schemaName)}-${documentFormat.ending}-export.zip`,
                 zipMediaType,
             );
 
             toastStore.success(
                 "Export ready",
-                `"${graphName}" downloaded as ${documentFormat.name} export (zip).`,
+                `"${schemaName}" downloaded as ${documentFormat.name} export (zip).`,
             );
             notifyFailedPackages(currentProgress);
             showDialog = false;
@@ -246,11 +246,11 @@
         return match?.[1] ?? `export.${documentFormat.ending}`;
     }
 
-    function getGraphLabel(graphName) {
+    function getGraphLabel(schemaName) {
         try {
-            return new URI(graphName).suffix;
+            return new URI(schemaName).suffix;
         } catch {
-            return graphName;
+            return schemaName;
         }
     }
 </script>
@@ -274,9 +274,9 @@
         <div class="mx-2 mt-2 flex h-full flex-col space-y-3">
             <WorkspaceAndGraphSelection
                 bind:workspace={selectedWorkspaceName}
-                bind:graph={graphName}
+                bind:graph={schemaName}
                 {lockedWorkspaceName}
-                {lockedGraphName}
+                {lockedSchemaName}
                 displayAsCard={false}
             />
 

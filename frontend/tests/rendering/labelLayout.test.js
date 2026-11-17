@@ -28,7 +28,7 @@ const CLASS_SIZE = { width: 100, height: 50 };
 
 const GRAPH_TARGET = {
     workspaceName: "ds",
-    graphName: "http://example.com/graph",
+    schemaName: "http://example.com/graph",
     diagramUUID: "diagram",
 };
 
@@ -127,7 +127,7 @@ describe("LabelLayoutController", () => {
         const { state, labelLayout } = controllerFor(
             [classNode("a", 0, 0), classNode("b", 300, 0)],
             [associationEdge("e", "a", "b")],
-            { workspaceName: "ds", graphName: null, diagramUUID: "diagram" },
+            { workspaceName: "ds", schemaName: null, diagramUUID: "diagram" },
         );
 
         labelLayout.handleMove([dropped(labelNodesOf(state.nodes)[0], 5, 10)]);

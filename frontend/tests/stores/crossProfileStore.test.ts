@@ -33,7 +33,7 @@ const MOCK_DIAGRAM = {
     classes: [],
 };
 const MOCK_COLORS = {
-    graphColors: {
+    schemaColors: {
         graph1: "#ffffff",
         graph2: "#000000",
     },

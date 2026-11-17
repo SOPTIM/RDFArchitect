@@ -20,10 +20,10 @@ import { packageStore } from "$lib/stores/packageStore.ts";
 
 import { getPackageId } from "../packageNavigationUtils.svelte.js";
 
-export async function createPackageListForGraph(workspaceName, graphName) {
+export async function createPackageListForGraph(workspaceName, schemaName) {
     const packageData = (await packageStore.getPackages(
         workspaceName,
-        graphName,
+        schemaName,
     )) ?? { internal: [], external: [] };
 
     return [...packageData.internal, ...packageData.external]
@@ -47,11 +47,11 @@ export async function createPackageListForGraph(workspaceName, graphName) {
 
 export async function createClassListForGraph(
     workspaceName,
-    graphName,
+    schemaName,
     selectedClasses,
 ) {
     const classList =
-        (await classStore.getClasses(workspaceName, graphName)) ?? [];
+        (await classStore.getClasses(workspaceName, schemaName)) ?? [];
 
     const grouped = {};
 

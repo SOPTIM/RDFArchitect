@@ -48,7 +48,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "api/workspaces/{workspaceName}/graphs/{graphName}/classes/{classUUID}/associations")
+        "api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/associations")
 @RequiredArgsConstructor
 public class ClassAllAssociationsRESTController {
 
@@ -77,7 +77,7 @@ public class ClassAllAssociationsRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
@@ -94,22 +94,22 @@ public class ClassAllAssociationsRESTController {
                     @RequestBody
                     List<AssociationPairDTO> associationPairList) {
         logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/associations\" from \"{}\".",
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/associations\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         updateAssociationsUseCase.replaceAllAssociations(
                 graphIdentifier, UUID.fromString(classUUID), associationPairList);
 
         logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/associations\" to \"{}\".",
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/associations\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 originURL);
         return Response.SUCCESS;
@@ -133,7 +133,7 @@ public class ClassAllAssociationsRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
@@ -147,22 +147,22 @@ public class ClassAllAssociationsRESTController {
                     @RequestBody
                     AssociationPairDTO associationPair) {
         logger.info(
-                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/associations/\" from \"{}\".",
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/associations/\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         var newAssociationUUIDs =
                 createAssociationUseCase.createAssociation(graphIdentifier, associationPair);
 
         logger.info(
-                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/associations/\" from \"{}\".",
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/associations/\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 originURL);
         return newAssociationUUIDs;

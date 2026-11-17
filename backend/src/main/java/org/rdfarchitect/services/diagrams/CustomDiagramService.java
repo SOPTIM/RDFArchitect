@@ -287,9 +287,9 @@ public class CustomDiagramService
             return "";
         }
         return diagram.getClasses().stream()
-                .filter(cls -> cls.getUuid().equals(classId) && cls.getGraphName() != null)
+                .filter(cls -> cls.getUuid().equals(classId) && cls.getSchemaName() != null)
                 .findFirst()
-                .map(cls -> classNameInGraph(transaction, cls.getGraphName().toString(), classId))
+                .map(cls -> classNameInGraph(transaction, cls.getSchemaName().toString(), classId))
                 .orElse("");
     }
 
@@ -390,7 +390,7 @@ public class CustomDiagramService
         try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             for (var graphName : transaction.graphNames()) {
                 colorsDTO
-                        .getGraphColors()
+                        .getSchemaColors()
                         .put(graphName, transaction.crossProfileColors().getColor(graphName));
             }
         }
@@ -402,10 +402,10 @@ public class CustomDiagramService
             String workspaceName, CrossProfileDiagramColorDataDTO dto) {
         try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             for (var graphName : transaction.graphNames()) {
-                if (dto.getGraphColors().containsKey(graphName)) {
+                if (dto.getSchemaColors().containsKey(graphName)) {
                     transaction
                             .crossProfileColors()
-                            .setColor(graphName, dto.getGraphColors().get(graphName));
+                            .setColor(graphName, dto.getSchemaColors().get(graphName));
                 }
             }
             transaction.commit("Changed the cross profile colours");

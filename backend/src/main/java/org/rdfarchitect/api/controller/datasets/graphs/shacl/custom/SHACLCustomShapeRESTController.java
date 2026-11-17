@@ -40,7 +40,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/shacl/custom/{shaclShapeURI}")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/shacl/custom/{shaclShapeURI}")
 @RequiredArgsConstructor
 public class SHACLCustomShapeRESTController {
 
@@ -73,29 +73,29 @@ public class SHACLCustomShapeRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The property shape to replace.") @PathVariable
                     String shaclShapeURI,
             @Parameter(description = "the triples to replace, requires valid turtle syntax.")
                     @RequestBody
                     String shaclString) {
         logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/{{}}\" from \"{}\".",
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/{{}}\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 shaclShapeURI,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var extendedShaclShapeURI = expandURIUseCase.expandUri(workspaceName, shaclShapeURI);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
         shaclReplaceShapeUseCase.replaceSHACLShape(
                 graphIdentifier, extendedShaclShapeURI, shaclString);
 
         logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/{{}}\" to \"{}\".",
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/{{}}\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 shaclShapeURI,
                 originURL);
         return Response.SUCCESS;
@@ -120,25 +120,25 @@ public class SHACLCustomShapeRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The property shape to delete.") @PathVariable
                     String shaclShapeURI) {
         logger.info(
-                "Received DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/{{}}\" from \"{}\".",
+                "Received DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/{{}}\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 shaclShapeURI,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var extendedShaclShapeURI = expandURIUseCase.expandUri(workspaceName, shaclShapeURI);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
         shaclDeleteShapeUseCase.deleteSHACLShape(graphIdentifier, extendedShaclShapeURI);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/{{}}\" to \"{}\".",
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/{{}}\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 shaclShapeURI,
                 originURL);
         return Response.SUCCESS;

@@ -35,7 +35,7 @@ import {
 
 const GRAPH_TARGET = {
     workspaceName: "ds",
-    graphName: "http://example.com/graph",
+    schemaName: "http://example.com/graph",
     diagramUUID: "diagram",
 };
 
@@ -226,7 +226,7 @@ describe("EdgeLayoutPersistence", () => {
     test("saves a diagram across the dataset over the dataset route", async () => {
         const datasetTarget = {
             workspaceName: "ds",
-            graphName: null,
+            schemaName: null,
             diagramUUID: "d",
         };
         const shown = edge("e");

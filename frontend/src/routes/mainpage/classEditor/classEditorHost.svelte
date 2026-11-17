@@ -40,7 +40,7 @@
         EventType,
     } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { askForExtendSource } from "$lib/extendSourceRequest.svelte.js";
-    import { graphColors } from "$lib/graphColors.svelte.js";
+    import { schemaColors } from "$lib/graphColors.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
     import { superClassFocusRequest } from "$lib/propertyEditorRequest.svelte.js";
     import {
@@ -53,7 +53,7 @@
 
     import ClassEditor from "./classEditor.svelte";
 
-    let { workspaceName, graphName, classUuid, isMerged } = $props();
+    let { workspaceName, schemaName, classUuid, isMerged } = $props();
 
     let mergedClass = $state(null);
     let resolving = $state(false);
@@ -67,30 +67,32 @@
      */
     let lastResolved = null;
 
-    let sourceGraphName = $state(null);
+    let sourceSchemaName = $state(null);
     let sourceClassUuid = $state(null);
     let occurrences = $state([]);
 
-    let activeGraphName = $derived.by(() => {
+    let activeSchemaName = $derived.by(() => {
         if (occurrences.length === 0) {
             return null;
         }
-        const known = uri => occurrences.some(entry => entry.graphName === uri);
+        const known = uri =>
+            occurrences.some(entry => entry.schemaName === uri);
         const override = editorState.classEditorSchema.getValue();
-        if (override?.classUuid === classUuid && known(override.graphName)) {
-            return override.graphName;
+        if (override?.classUuid === classUuid && known(override.schemaName)) {
+            return override.schemaName;
         }
-        if (graphName && known(String(graphName))) {
-            return String(graphName);
+        if (schemaName && known(String(schemaName))) {
+            return String(schemaName);
         }
-        if (known(sourceGraphName)) {
-            return sourceGraphName;
+        if (known(sourceSchemaName)) {
+            return sourceSchemaName;
         }
-        return occurrences[0].graphName;
+        return occurrences[0].schemaName;
     });
 
     let activeOccurrence = $derived(
-        occurrences.find(entry => entry.graphName === activeGraphName) ?? null,
+        occurrences.find(entry => entry.schemaName === activeSchemaName) ??
+            null,
     );
 
     let definedOccurrences = $derived(
@@ -103,7 +105,7 @@
      */
     let extendSource = $derived(
         definedOccurrences.find(
-            occurrence => occurrence.graphName === sourceGraphName,
+            occurrence => occurrence.schemaName === sourceSchemaName,
         ) ??
             definedOccurrences[0] ??
             null,
@@ -115,7 +117,7 @@
 
         if (!isMerged) {
             mergedClass = null;
-            sourceGraphName = graphName ? String(graphName) : null;
+            sourceSchemaName = schemaName ? String(schemaName) : null;
             sourceClassUuid = classUuid;
             return;
         }
@@ -154,20 +156,20 @@
 
                 mergedClass = found;
                 if (!found) {
-                    sourceGraphName = null;
+                    sourceSchemaName = null;
                     sourceClassUuid = null;
                     return;
                 }
 
                 const source = preferredSource(found);
-                sourceGraphName = graphNameOfSource(source);
+                sourceSchemaName = schemaNameOfSource(source);
                 sourceClassUuid = source?.classUUID ?? null;
                 lastResolved = {
                     mergedUuid: found.uuid,
                     sourceUuid: sourceClassUuid,
                 };
 
-                if (found.uuid !== classUuid && !graphName) {
+                if (found.uuid !== classUuid && !schemaName) {
                     editorState.selectedClass.updateValue({
                         type: ClassType.MERGED_CLASS,
                         id: found.uuid,
@@ -186,7 +188,7 @@
     $effect(() => {
         forceReloadTrigger.subscribe();
         const currentWorkspace = workspaceName;
-        const currentGraph = sourceGraphName;
+        const currentGraph = sourceSchemaName;
         const currentClass = sourceClassUuid;
         if (!currentWorkspace || !currentGraph || !currentClass) {
             occurrences = [];
@@ -225,9 +227,9 @@
     $effect(() => {
         editorState.openClassOccurrences.updateValue({
             workspaceName,
-            activeGraphName,
+            activeSchemaName,
             occurrences: definedOccurrences.map(occurrence => ({
-                graphName: occurrence.graphName,
+                schemaName: occurrence.schemaName,
                 classUUID: occurrence.classUUID,
             })),
         });
@@ -264,22 +266,24 @@
      */
     function preferredSource(merged) {
         const originGraph =
-            (graphName ? String(graphName) : null) ??
+            (schemaName ? String(schemaName) : null) ??
             editorState.mergedViewOriginGraph.getValue();
         const originSource = originGraph
-            ? merged.sources?.find(s => graphNameOfSource(s) === originGraph)
+            ? merged.sources?.find(s => schemaNameOfSource(s) === originGraph)
             : null;
         return originSource ?? merged.sources?.[0] ?? null;
     }
 
-    function graphNameOfSource(source) {
-        return source?.graph?.uri ? new URI(source.graph.uri).toString() : null;
+    function schemaNameOfSource(source) {
+        return source?.schema?.uri
+            ? new URI(source.schema.uri).toString()
+            : null;
     }
 
     function selectSchema(occurrence) {
         editorState.classEditorSchema.updateValue({
             classUuid: classUuid,
-            graphName: occurrence.graphName,
+            schemaName: occurrence.schemaName,
         });
     }
 
@@ -293,7 +297,7 @@
         }
         const candidates = sourceCandidates(
             occurrences,
-            activeOccurrence.graphName,
+            activeOccurrence.schemaName,
         );
         if (stubsDiffer(candidates)) {
             askForExtendSource({
@@ -313,7 +317,7 @@
             await extendToSchemaAndReveal({
                 workspaceName,
                 classUuids: [occurrence.classUUID],
-                targetGraphName: activeOccurrence.graphName,
+                targetSchemaName: activeOccurrence.schemaName,
                 targetLabel: schemaLabel(activeOccurrence),
                 selectedClassUuid: classUuid,
             });
@@ -325,12 +329,12 @@
     function closeClassEditorHost(
         {
             workspaceName = null,
-            graphName = null,
+            schemaName = null,
             classUuid = null,
             classType = null,
         } = {
             workspaceName: null,
-            graphName: null,
+            schemaName: null,
             classUuid: null,
             classType: null,
         },
@@ -339,7 +343,7 @@
         // editor was switched over to another one before.
         editorState.clearClassEditorSchema();
         editorState.selectedClassWorkspace.updateValue(workspaceName);
-        editorState.selectedClassGraph.updateValue(graphName);
+        editorState.selectedClassGraph.updateValue(schemaName);
         editorState.selectedClass.updateValue({
             type: classType,
             id: classUuid,
@@ -361,15 +365,15 @@
                     <DropdownMenu.Trigger class="w-full">
                         <div
                             class="bg-window-background text-default-text border-button-border flex h-8 w-full min-w-0 items-center gap-2 rounded border border-solid px-2 font-[350] shadow-xs"
-                            title={activeOccurrence.graphName}
+                            title={activeOccurrence.schemaName}
                         >
                             <span
                                 class="shrink-0"
-                                style={graphColors.get(
+                                style={schemaColors.get(
                                     workspaceName,
-                                    activeOccurrence?.graphName,
+                                    activeOccurrence?.schemaName,
                                 )
-                                    ? `color: ${graphColors.get(workspaceName, activeOccurrence?.graphName)};`
+                                    ? `color: ${schemaColors.get(workspaceName, activeOccurrence?.schemaName)};`
                                     : ""}
                             >
                                 <Fa icon={faDiagramProject} />
@@ -383,12 +387,12 @@
                     <DropdownMenu.Content
                         style="min-width: var(--bits-floating-anchor-width);"
                     >
-                        {#each occurrences as occurrence (occurrence.graphName)}
+                        {#each occurrences as occurrence (occurrence.schemaName)}
                             <DropdownMenu.Item.Button
                                 faIcon={faDiagramProject}
-                                iconColor={graphColors.get(
+                                iconColor={schemaColors.get(
                                     workspaceName,
-                                    occurrence.graphName,
+                                    occurrence.schemaName,
                                 )}
                                 disabled={isWorkspaceReadOnly &&
                                     !occurrence.present}
@@ -422,11 +426,11 @@
             <!-- No schema defines the class, so it is shown in the schema it
                  was opened from: the referenced only case, and the fallback
                  when the schemas could not be loaded. -->
-            {#if sourceGraphName && sourceClassUuid}
+            {#if sourceSchemaName && sourceClassUuid}
                 <div class="h-full overflow-auto">
                     <ClassEditor
                         {workspaceName}
-                        graphName={sourceGraphName}
+                        schemaName={sourceSchemaName}
                         classUuid={sourceClassUuid}
                     />
                 </div>
@@ -453,7 +457,7 @@
             <div class="h-full overflow-auto">
                 <ClassEditor
                     {workspaceName}
-                    graphName={activeOccurrence.graphName}
+                    schemaName={activeOccurrence.schemaName}
                     classUuid={activeOccurrence.classUUID}
                 />
             </div>

@@ -51,7 +51,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/content")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/content")
 @RequiredArgsConstructor
 public class GraphContentRESTController {
 
@@ -93,25 +93,25 @@ public class GraphContentRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/content\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/content\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var format = getRdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 getSchemaUseCase.getSchema(
-                        new GraphIdentifier(workspaceName, extendedGraphName), format);
+                        new GraphIdentifier(workspaceName, extendedSchemaName), format);
 
         // add suggested file name to response
         var fileName = "default";
-        if (!extendedGraphName.equals("default")) {
-            fileName = new URI(extendedGraphName).getSuffix();
+        if (!extendedSchemaName.equals("default")) {
+            fileName = new URI(extendedSchemaName).getSuffix();
         }
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 
@@ -123,9 +123,9 @@ public class GraphContentRESTController {
                         .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
                         .body(outStream.toByteArray());
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/content\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/content\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return body;
     }
@@ -165,19 +165,19 @@ public class GraphContentRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName) {
+                    String schemaName) {
         logger.info(
-                "Received DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/content\" from \"{}\".",
+                "Received DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/content\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        deleteGraphUseCase.deleteGraph(new GraphIdentifier(workspaceName, graphName));
+        deleteGraphUseCase.deleteGraph(new GraphIdentifier(workspaceName, schemaName));
 
         logger.info(
-                "Sending response to DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/content\" to \"{}\".",
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/content\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return Response.SUCCESS;
     }
@@ -198,22 +198,22 @@ public class GraphContentRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The file containing the graph to be inserted")
                     @RequestParam(value = "file", required = false)
                     MultipartFile file) {
         logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/content\" from \"{}\".",
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/content\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        replaceGraphUseCase.replaceGraph(new GraphIdentifier(workspaceName, graphName), file);
+        replaceGraphUseCase.replaceGraph(new GraphIdentifier(workspaceName, schemaName), file);
 
         logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/content\" to \"{}\".",
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/content\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return "success";
     }

@@ -111,7 +111,7 @@ class ImportJobServiceTest {
         assertThat(status.files())
                 .extracting(file -> file.fileName() + ":" + file.state())
                 .containsExactly("first.ttl:IMPORTED", "second.ttl:IMPORTED");
-        assertThat(status.importedGraphNames())
+        assertThat(status.importedSchemaNames())
                 .containsExactly(RDFA.GRAPH_URI + "first", RDFA.GRAPH_URI + "second");
         assertThat(status.failedImports()).isEmpty();
     }
@@ -319,7 +319,7 @@ class ImportJobServiceTest {
         assertThat(status.errorMessage()).isEqualTo("out of memory");
         // The graph is in the store whether the job survived or not, so the caller has to hear
         // about it; otherwise it stays invisible until the workspace is reloaded by hand.
-        assertThat(status.importedGraphNames()).containsExactly(RDFA.GRAPH_URI + "first");
+        assertThat(status.importedSchemaNames()).containsExactly(RDFA.GRAPH_URI + "first");
     }
 
     @Test
@@ -425,7 +425,7 @@ class ImportJobServiceTest {
 
         var waiting = awaitState(jobId, JobState.AWAITING_PREFIX_RESOLUTION);
         assertThat(waiting.prefixComparison()).containsExactly(COMPARISON);
-        assertThat(waiting.importedGraphNames()).isEmpty();
+        assertThat(waiting.importedSchemaNames()).isEmpty();
         assertThat(waiting.files())
                 .singleElement()
                 .extracting(ImportJobUseCase.ImportFileStatus::state)
@@ -498,7 +498,7 @@ class ImportJobServiceTest {
 
         var status = awaitFinished(jobId);
         assertThat(status.state()).isEqualTo(JobState.CANCELLED);
-        assertThat(status.importedGraphNames()).isEmpty();
+        assertThat(status.importedSchemaNames()).isEmpty();
         assertThat(status.files())
                 .singleElement()
                 .extracting(ImportJobUseCase.ImportFileStatus::state)

@@ -41,7 +41,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "/api/workspaces/{workspaceName}/graphs/{graphName}/classes/{classUUID}/enumentries/{enumEntryUUID}")
+        "/api/workspaces/{workspaceName}/schemas/{schemaName}/classes/{classUUID}/enumentries/{enumEntryUUID}")
 @RequiredArgsConstructor
 public class ClassEnumEntriesRESTController {
 
@@ -70,7 +70,7 @@ public class ClassEnumEntriesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The uuid of the enum.") @PathVariable String classUUID,
             @Parameter(description = "The uuid of the enum entry.") @PathVariable
                     String enumEntryUUID,
@@ -80,23 +80,23 @@ public class ClassEnumEntriesRESTController {
                     @RequestBody
                     EnumEntryDTO enumEntry) {
         logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/enumentries/{{}}\" from \"{}\".",
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/enumentries/{{}}\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 enumEntryUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
 
         var newEnumEntryUUID =
                 replaceOrCreateEnumEntryUseCase.replaceOrCreateEnumEntry(
-                        new GraphIdentifier(workspaceName, extendedGraphName), enumEntry);
+                        new GraphIdentifier(workspaceName, extendedSchemaName), enumEntry);
 
         logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/enumentries/{{}}\" from \"{}\".",
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/enumentries/{{}}\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 classUUID,
                 enumEntryUUID,
                 originURL);

@@ -31,7 +31,7 @@
         getExpanded,
         setExpanded,
         hiddenKinds = new Set(),
-        graphName = null,
+        schemaName = null,
         current = false,
         readonly,
         onRestore,
@@ -40,7 +40,7 @@
     const rowKey = $derived(`${change.changeId}::row`);
 
     const visibleDeltas = $derived(
-        deltasToShow(change, { hiddenKinds, graphName }),
+        deltasToShow(change, { hiddenKinds, schemaName }),
     );
 
     /** Whether there is anything behind the row worth expanding it for. */
@@ -72,7 +72,7 @@
 
     function describeContext(context) {
         const kind = labelOf(context.contextName);
-        return context.graphName ? `${kind} — ${context.graphName}` : kind;
+        return context.schemaName ? `${kind} — ${context.schemaName}` : kind;
     }
 
     function getAdditionsKey(context) {
@@ -90,7 +90,7 @@
     // One change can touch the same kind of data in several graphs, so the kind alone would give
     // two contexts the same key and make them expand and collapse together.
     function contextKey(context) {
-        return `${context.graphName ?? "workspace"}::${context.contextName}`;
+        return `${context.schemaName ?? "workspace"}::${context.contextName}`;
     }
 </script>
 

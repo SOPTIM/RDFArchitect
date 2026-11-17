@@ -30,7 +30,7 @@ SvelteKit's filesystem routing is used straightforwardly:
 /shacl/...         →  SHACL views
 ```
 
-The editor listens to URL parameters `?workspace=...&graph=...&package=...` to support deep links.
+The editor listens to URL parameters `?workspace=...&schema=...&package=...` to support deep links.
 
 ## Reactive models
 

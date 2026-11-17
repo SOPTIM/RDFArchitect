@@ -44,7 +44,7 @@
         onOpen = () => {},
         onClose = () => {},
         workspaceName,
-        graphName,
+        schemaName,
         resourceUuid,
         resourceUuids,
     } = $props();
@@ -121,11 +121,11 @@
     }
 
     async function fetchDeleteDependencies() {
-        if (!workspaceName || !graphName || targetUuids.length === 0) {
+        if (!workspaceName || !schemaName || targetUuids.length === 0) {
             console.error(
                 "Missing required properties to delete resource:",
                 workspaceName,
-                graphName,
+                schemaName,
                 targetUuids,
             );
             showDialog = false;
@@ -134,7 +134,7 @@
         let { data } = await getDeletionImpact({
             path: {
                 workspaceName: workspaceName,
-                graphName: graphName,
+                schemaName: schemaName,
             },
             body: targetUuids,
         });
@@ -190,7 +190,7 @@
         const label = isSingle ? roots[0].resourceIdentifier.label : null;
 
         let { error } = await deleteResources({
-            path: { workspaceName: workspaceName, graphName: graphName },
+            path: { workspaceName: workspaceName, schemaName: schemaName },
             body: payload,
         });
         if (error) {
@@ -202,11 +202,11 @@
                     : "Could not delete the selected resources.",
             );
         } else {
-            packageStore.invalidateGraph(workspaceName, graphName);
-            classStore.invalidateGraph(workspaceName, graphName);
+            packageStore.invalidateGraph(workspaceName, schemaName);
+            classStore.invalidateGraph(workspaceName, schemaName);
             crossProfileStore.invalidateWorkspace(workspaceName);
             // The profile header, or the class or package a profile names itself on, may be gone.
-            ontologyStore.invalidateGraph(workspaceName, graphName);
+            ontologyStore.invalidateGraph(workspaceName, schemaName);
             graphStore.invalidateWorkspace(workspaceName);
 
             console.log("Successfully submitted delete request");

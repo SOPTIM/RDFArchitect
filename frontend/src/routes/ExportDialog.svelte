@@ -23,7 +23,7 @@
     let {
         showDialog = $bindable(),
         lockedWorkspaceName,
-        lockedGraphName,
+        lockedSchemaName,
     } = $props();
 
     let disablePrimary = $state(false);
@@ -32,12 +32,12 @@
         graphExportComponent
             ? () =>
                   graphExportComponent.handleExport(
-                      (workspaceName, graphName) =>
+                      (workspaceName, schemaName) =>
                           PUBLIC_BACKEND_URL +
                           "/api/workspaces/" +
                           encodeURIComponent(workspaceName) +
-                          "/graphs/" +
-                          encodeURIComponent(graphName) +
+                          "/schemas/" +
+                          encodeURIComponent(schemaName) +
                           "/content",
                   )
             : null,
@@ -56,7 +56,7 @@
         bind:showDialog
         bind:disablePrimary
         {lockedWorkspaceName}
-        {lockedGraphName}
+        {lockedSchemaName}
         generateOntologyEntries={true}
     />
 </ActionDialog>

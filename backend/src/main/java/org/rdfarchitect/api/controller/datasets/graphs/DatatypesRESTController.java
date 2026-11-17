@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/workspaces/{workspaceName}/graphs/{graphName}/datatypes")
+@RequestMapping("/api/workspaces/{workspaceName}/schemas/{schemaName}/datatypes")
 @RequiredArgsConstructor
 public class DatatypesRESTController {
 
@@ -84,23 +84,23 @@ public class DatatypesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/datatypes\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/datatypes\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
 
         var cimClassList =
                 listDatatypesUseCase.listDatatypes(
-                        new GraphIdentifier(workspaceName, extendedGraphName));
+                        new GraphIdentifier(workspaceName, extendedSchemaName));
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/datatypes\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/datatypes\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return cimClassList;
     }

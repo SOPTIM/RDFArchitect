@@ -43,7 +43,7 @@ public class CIMClass {
 
     private UUID uuid;
 
-    private String graphName;
+    private String schemaName;
 
     private URI uri;
 

@@ -17,11 +17,11 @@
 
 <script>
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
-    import { graphColors } from "$lib/graphColors.svelte.js";
+    import { schemaColors } from "$lib/graphColors.svelte.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { userSettings } from "$lib/userSettings.svelte.js";
     import { normalizeHex } from "$lib/utils/color.js";
-    import { graphLabeller, graphName } from "$lib/utils/graph-label.js";
+    import { graphLabeller, schemaName } from "$lib/utils/graph-label.js";
     import { compareGraphs } from "$lib/utils/graph-order.js";
     import { uriSuffix } from "$lib/utils/iri.js";
 
@@ -46,24 +46,24 @@
 
     async function onOpen() {
         if (!workspaceName) return;
-        const loaded = await graphColors.reload(workspaceName);
+        const loaded = await schemaColors.reload(workspaceName);
         // The colors are keyed by graph URI alone, so the names come from the schema list — the
         // same one the navigation tree reads them from.
         const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
         const nameOf = graphLabeller(graphs);
         const names = new Map(
-            graphs.map(graph => [graphName(graph), nameOf(graph)]),
+            graphs.map(graph => [schemaName(graph), nameOf(graph)]),
         );
         colorEntries = Object.entries(loaded)
-            .map(([graphName, color]) => ({
-                graphName,
+            .map(([schemaName, color]) => ({
+                schemaName,
                 color,
-                name: names.get(graphName) ?? uriSuffix(graphName),
+                name: names.get(schemaName) ?? uriSuffix(schemaName),
             }))
             .sort((a, b) =>
                 compareGraphs(
-                    { label: a.name, name: a.graphName },
-                    { label: b.name, name: b.graphName },
+                    { label: a.name, name: a.schemaName },
+                    { label: b.name, name: b.schemaName },
                 ),
             );
         snapshotOriginal();
@@ -75,12 +75,12 @@
     }
 
     async function saveColors() {
-        const graphColorMap = Object.fromEntries(
-            colorEntries.map(entry => [entry.graphName, entry.color]),
+        const schemaColorMap = Object.fromEntries(
+            colorEntries.map(entry => [entry.schemaName, entry.color]),
         );
-        const saved = await graphColors.replaceAll(
+        const saved = await schemaColors.replaceAll(
             workspaceName,
-            graphColorMap,
+            schemaColorMap,
         );
         if (!saved) {
             return;
@@ -135,7 +135,7 @@
                 </p>
 
                 <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-                    {#each colorEntries as entry (entry.graphName)}
+                    {#each colorEntries as entry (entry.schemaName)}
                         <div
                             class="flex items-center gap-3 rounded border px-3 py-2"
                         >
@@ -143,21 +143,21 @@
                                 type="color"
                                 bind:value={entry.color}
                                 class="h-9 w-12 cursor-pointer rounded border-0 bg-transparent p-0"
-                                title="Pick color for {entry.graphName}"
+                                title="Pick color for {entry.schemaName}"
                             />
 
                             <div class="min-w-0 flex-1">
                                 <p
                                     class="truncate font-medium"
-                                    title={entry.graphName}
+                                    title={entry.schemaName}
                                 >
                                     {entry.name}
                                 </p>
                                 <p
                                     class="text-muted-foreground truncate text-xs"
-                                    title={entry.graphName}
+                                    title={entry.schemaName}
                                 >
-                                    {entry.graphName}
+                                    {entry.schemaName}
                                 </p>
                                 {#if duplicateColors.has(entry.color)}
                                     <p class="text-xs italic">

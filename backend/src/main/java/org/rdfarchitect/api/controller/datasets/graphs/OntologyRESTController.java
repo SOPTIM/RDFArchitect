@@ -47,7 +47,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/workspaces/{workspaceName}/graphs/{graphName}/ontology")
+@RequestMapping("/api/workspaces/{workspaceName}/schemas/{schemaName}/ontology")
 @RequiredArgsConstructor
 public class OntologyRESTController {
 
@@ -85,22 +85,22 @@ public class OntologyRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/ontology\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         var classObject = readOntologyUseCase.getCurrentOntology(graphIdentifier);
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/ontology\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return classObject;
     }
@@ -124,7 +124,7 @@ public class OntologyRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description = "The new ontology",
@@ -133,20 +133,20 @@ public class OntologyRESTController {
                     @RequestBody
                     OntologyDTO newOntology) {
         logger.info(
-                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/ontology\" from \"{}\".",
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         createOntologyUseCase.createOntology(graphIdentifier, newOntology);
 
         logger.info(
-                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/ontology\" to \"{}\".",
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return Response.SUCCESS;
     }
@@ -170,7 +170,7 @@ public class OntologyRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description = "The new ontology",
@@ -179,20 +179,20 @@ public class OntologyRESTController {
                     @RequestBody
                     OntologyDTO newOntology) {
         logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/ontology\" from \"{}\".",
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         updateOntologyUseCase.replaceOntology(graphIdentifier, newOntology);
 
         logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/ontology\" to \"{}\".",
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return Response.SUCCESS;
     }
@@ -216,22 +216,22 @@ public class OntologyRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName) {
+                    String schemaName) {
         logger.info(
-                "Received DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/ontology\" from \"{}\".",
+                "Received DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         deleteOntologyUseCase.deleteOntology(graphIdentifier);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/ontology\" to \"{}\".",
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return Response.SUCCESS;
     }

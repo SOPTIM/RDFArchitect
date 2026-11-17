@@ -49,7 +49,7 @@ public class EdgeDataDTO {
 
     private boolean useToAssociation;
     private boolean useFromAssociation;
-    private String graphName;
+    private String schemaName;
     private String graphKeyword;
     private String color;
 

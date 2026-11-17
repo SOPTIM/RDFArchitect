@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/primitives")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/primitives")
 @RequiredArgsConstructor
 public class PrimitivesRestController {
 
@@ -84,23 +84,23 @@ public class PrimitivesRestController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/primitives\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/primitives\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
 
         var cimClassList =
                 listPrimitivesUseCase.listPrimitives(
-                        new GraphIdentifier(workspaceName, extendedGraphName));
+                        new GraphIdentifier(workspaceName, extendedSchemaName));
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/primitives\" from \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/primitives\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return cimClassList;
     }

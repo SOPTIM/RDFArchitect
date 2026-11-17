@@ -113,7 +113,7 @@
             response = await validateSchema({
                 path: {
                     workspaceName: workspace,
-                    graphName: graph,
+                    schemaName: graph,
                     cgmesVersion: cgmesVersion,
                 },
             });

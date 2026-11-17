@@ -38,7 +38,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/rename")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/rename")
 @RequiredArgsConstructor
 public class GraphRenameRESTController {
 
@@ -67,25 +67,25 @@ public class GraphRenameRESTController {
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
             @Parameter(description = "The url encoded uri of the graph.") @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The url encoded uri to rename the graph to.") @RequestParam
-                    String newGraphName) {
+                    String newSchemaName) {
         logger.info(
-                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/rename\" from \"{}\".",
+                "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/rename\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var extendedNewGraphName = expandURIUseCase.expandUri(workspaceName, newGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var extendedNewSchemaName = expandURIUseCase.expandUri(workspaceName, newSchemaName);
 
         renameGraphUseCase.renameGraph(
-                new GraphIdentifier(workspaceName, extendedGraphName), extendedNewGraphName);
+                new GraphIdentifier(workspaceName, extendedSchemaName), extendedNewSchemaName);
 
         logger.info(
-                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/rename\" to \"{}\".",
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/rename\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return Response.SUCCESS;
     }

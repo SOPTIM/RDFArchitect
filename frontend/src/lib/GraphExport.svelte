@@ -36,13 +36,13 @@
         showDialog = $bindable(),
         disablePrimary = $bindable(),
         lockedWorkspaceName,
-        lockedGraphName,
+        lockedSchemaName,
         generateOntologyEntries = false,
         supportedMediaTypes = supportedRDFMediaTypes,
     } = $props();
 
     let selectedWorkspaceName = $state(null);
-    let graphName = $state(null);
+    let schemaName = $state(null);
     let selectedMediaType = $state();
 
     let ontology = $state();
@@ -63,7 +63,7 @@
     $effect(
         () =>
             (disablePrimary =
-                !selectedWorkspaceName || !graphName || !selectedMediaType),
+                !selectedWorkspaceName || !schemaName || !selectedMediaType),
     );
 
     $effect(async () => {
@@ -77,10 +77,10 @@
     });
 
     $effect(async () => {
-        if (selectedWorkspaceName && graphName) {
+        if (selectedWorkspaceName && schemaName) {
             const result = await ontologyStore.getOntologyForGraph(
                 selectedWorkspaceName,
-                graphName,
+                schemaName,
             );
             if (result == null || result === undefined) {
                 ontology = null;
@@ -96,10 +96,10 @@
     });
 
     $effect(async () => {
-        if (selectedWorkspaceName && graphName && hasOntology) {
+        if (selectedWorkspaceName && schemaName && hasOntology) {
             const { error, data } = await ontologyStore.generateOntologyEntries(
                 selectedWorkspaceName,
-                graphName,
+                schemaName,
             );
             if (!error) {
                 generatedOntologyEntries = data;
@@ -115,7 +115,7 @@
     onMount(async () => {
         selectedWorkspaceName =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
-        graphName = lockedGraphName ?? editorState.selectedGraph.getValue();
+        schemaName = lockedSchemaName ?? editorState.selectedGraph.getValue();
         const saved = userSettings.get("defaultExportFormat", null);
         selectedMediaType = saved
             ? (supportedMediaTypes.find(m => m.mimeType === saved) ??
@@ -129,7 +129,7 @@
     }
 
     async function fetchGraphFile(getAPIRoute) {
-        return fetch(getAPIRoute(selectedWorkspaceName, graphName), {
+        return fetch(getAPIRoute(selectedWorkspaceName, schemaName), {
             method: "GET",
             headers: new Headers({ Accept: selectedMediaType.mimeType }),
             credentials: "include",
@@ -141,7 +141,7 @@
         if (
             !getAPIRoute ||
             !selectedWorkspaceName ||
-            !graphName ||
+            !schemaName ||
             !selectedMediaType
         ) {
             return;
@@ -156,7 +156,7 @@
             }
             const { error } = await ontologyStore.replaceOntology(
                 selectedWorkspaceName,
-                graphName,
+                schemaName,
                 ontology.getPlainObject(),
             );
             if (!error) {
@@ -168,7 +168,7 @@
             if (!response.ok) {
                 toastStore.error(
                     "Export failed",
-                    `Could not export "${graphName}".`,
+                    `Could not export "${schemaName}".`,
                 );
                 return;
             }
@@ -179,7 +179,7 @@
             saveFile(blob, suggestedFilename, selectedMediaType);
             toastStore.success(
                 "Export ready",
-                `"${graphName}" downloaded as ${selectedMediaType.name}.`,
+                `"${schemaName}" downloaded as ${selectedMediaType.name}.`,
             );
         } catch (e) {
             console.error("Failed to download graph:", e);
@@ -209,9 +209,9 @@
 <div class="mx-2 mt-2 flex h-full flex-col">
     <WorkspaceAndGraphSelection
         bind:workspace={selectedWorkspaceName}
-        bind:graph={graphName}
+        bind:graph={schemaName}
         {lockedWorkspaceName}
-        {lockedGraphName}
+        {lockedSchemaName}
         displayAsCard={false}
     />
     {#if generateOntologyEntries}
@@ -258,7 +258,7 @@
                     schema.
                 </p>
             {/if}
-        {:else if graphName}
+        {:else if schemaName}
             <p class="mt-2 text-sm italic">This schema has no profile header</p>
         {/if}
     {/if}

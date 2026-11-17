@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/workspaces/{workspaceName}/graphs/{graphName}/ontology/generate")
+@RequestMapping("/api/workspaces/{workspaceName}/schemas/{schemaName}/ontology/generate")
 @RequiredArgsConstructor
 public class OntologyGenerateEntriesRESTController {
 
@@ -84,23 +84,23 @@ public class OntologyGenerateEntriesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/ontology/generate\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/ontology/generate\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
 
         var ontologyEntries =
                 generateOntologyEntriesUseCase.generateOntologyEntries(graphIdentifier);
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/ontology/generate\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/ontology/generate\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return ontologyEntries;
     }

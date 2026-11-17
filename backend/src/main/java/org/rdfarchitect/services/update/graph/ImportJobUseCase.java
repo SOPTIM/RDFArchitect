@@ -63,10 +63,10 @@ public interface ImportJobUseCase {
      * Progress of a single file.
      *
      * @param sizeBytes size of the file, or {@code -1} when a zip archive does not declare it
-     * @param graphName the uri the file was imported as, {@code null} until it was imported
+     * @param schemaName the uri the file was imported as, {@code null} until it was imported
      */
     record ImportFileStatus(
-            int index, String fileName, long sizeBytes, FileState state, String graphName) {}
+            int index, String fileName, long sizeBytes, FileState state, String schemaName) {}
 
     /**
      * Progress of an import job.
@@ -81,7 +81,7 @@ public interface ImportJobUseCase {
             String workspaceName,
             JobState state,
             List<ImportFileStatus> files,
-            List<String> importedGraphNames,
+            List<String> importedSchemaNames,
             List<String> failedImports,
             List<ImportWarning> warnings,
             List<PrefixComparison> prefixComparison,

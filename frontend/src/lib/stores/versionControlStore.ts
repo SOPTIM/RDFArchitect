@@ -349,7 +349,7 @@ function createVersionControlStore() {
      * be reloaded and what the user has to be told.
      *
      * @param changeId the version to restore to
-     * @param graphNames the graphs to put back, or empty for the whole workspace
+     * @param schemaNames the graphs to put back, or empty for the whole workspace
      * @param workspace the workspace to act on, or the selected one
      * @param standingOn where the workspace stood in its history when the
      *     restore was confirmed — the change it stood on and the newest one
@@ -357,7 +357,7 @@ function createVersionControlStore() {
      */
     async function restore(
         changeId: string,
-        graphNames: string[] = [],
+        schemaNames: string[] = [],
         workspace?: string,
         standingOn?: { current?: string; newest?: string },
     ) {
@@ -375,7 +375,7 @@ function createVersionControlStore() {
                 path: { workspaceName: target },
                 body: {
                     versionId: changeId,
-                    graphNames,
+                    schemaNames,
                     expectedCurrentChangeId: standingOn?.current,
                     expectedNewestChangeId: standingOn?.newest,
                 },
@@ -396,13 +396,13 @@ function createVersionControlStore() {
             if (!data?.change) {
                 toastStore.info(
                     "Nothing to restore",
-                    graphNames.length > 0
+                    schemaNames.length > 0
                         ? "This schema is already at that version."
                         : "The workspace is already at that version.",
                 );
                 return { error: null, skipped: true };
             }
-            if (graphNames.length > 0) {
+            if (schemaNames.length > 0) {
                 // A schema restore is a change of its own, and its message says
                 // what it restored.
                 return landed("restore", target, data);
@@ -520,7 +520,7 @@ function settled<T>(data: T): AsyncSlot<T> {
  */
 function describe(move: Move, change: ChangeLogEntryDto | undefined): string {
     const what = change?.message ?? MOVES[move].unnamedChange;
-    const elsewhere = (change?.affectedGraphNames ?? []).filter(
+    const elsewhere = (change?.affectedSchemaNames ?? []).filter(
         graph => graph !== editorState.selectedGraph.getValue(),
     );
     if (elsewhere.length === 0) return what;
@@ -529,9 +529,9 @@ function describe(move: Move, change: ChangeLogEntryDto | undefined): string {
 }
 
 /** The readable tail of a graph URI, for a label that has to fit in a toast. */
-function shortName(graphName: string): string {
-    const tail = graphName.split(/[#/]/).filter(Boolean).pop();
-    return tail || graphName;
+function shortName(schemaName: string): string {
+    const tail = schemaName.split(/[#/]/).filter(Boolean).pop();
+    return tail || schemaName;
 }
 
 export { createVersionControlStore };

@@ -169,7 +169,7 @@ export class NodeOrderController {
             updateClassPositions({
                 path: {
                     workspaceName: editorState.selectedWorkspace.getValue(),
-                    graphName: editorState.selectedGraph.getValue(),
+                    schemaName: editorState.selectedGraph.getValue(),
                     diagramUUID: editorState.selectedDiagram.getProperty("id"),
                 },
                 body: classPositionDTOList,

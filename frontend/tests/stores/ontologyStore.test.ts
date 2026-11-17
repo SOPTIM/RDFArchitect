@@ -102,7 +102,7 @@ describe("ontologyStore", () => {
             expect(api.getOntology).not.toHaveBeenCalled();
         });
 
-        test("returns null if graphName is empty", async () => {
+        test("returns null if schemaName is empty", async () => {
             const result = await store.getOntologyForGraph(WORKSPACE_A, "");
             expect(result).toBeNull();
             expect(api.getOntology).not.toHaveBeenCalled();
@@ -129,7 +129,7 @@ describe("ontologyStore", () => {
             expect(result).toEqual(MOCK_ONTOLOGY);
             expect(api.getOntology).toHaveBeenCalledTimes(1);
             expect(api.getOntology).toHaveBeenCalledWith({
-                path: { workspaceName: WORKSPACE_A, graphName: GRAPH_URI_1 },
+                path: { workspaceName: WORKSPACE_A, schemaName: GRAPH_URI_1 },
             });
         });
 
@@ -270,7 +270,7 @@ describe("ontologyStore", () => {
             await store.generateOntologyEntries(WORKSPACE_A, GRAPH_URI_1);
 
             expect(api.getOntologyEntries).toHaveBeenCalledWith({
-                path: { workspaceName: WORKSPACE_A, graphName: GRAPH_URI_1 },
+                path: { workspaceName: WORKSPACE_A, schemaName: GRAPH_URI_1 },
             });
         });
 
@@ -389,7 +389,7 @@ describe("ontologyStore", () => {
             await store.createOntology(WORKSPACE_A, GRAPH_URI_1, MOCK_ONTOLOGY);
 
             expect(api.createOntology).toHaveBeenCalledWith({
-                path: { workspaceName: WORKSPACE_A, graphName: GRAPH_URI_1 },
+                path: { workspaceName: WORKSPACE_A, schemaName: GRAPH_URI_1 },
                 body: MOCK_ONTOLOGY,
             });
         });
@@ -478,7 +478,7 @@ describe("ontologyStore", () => {
             );
 
             expect(api.replaceOntology).toHaveBeenCalledWith({
-                path: { workspaceName: WORKSPACE_A, graphName: GRAPH_URI_1 },
+                path: { workspaceName: WORKSPACE_A, schemaName: GRAPH_URI_1 },
                 body: MOCK_ONTOLOGY,
             });
         });

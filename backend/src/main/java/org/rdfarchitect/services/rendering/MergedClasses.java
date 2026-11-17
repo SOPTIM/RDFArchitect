@@ -55,10 +55,10 @@ public final class MergedClasses {
             List<ClassInDiagram> classesInDiagram, Map<String, ICIMModelFacade> modelsByGraphName) {
         var classUriByUuid = new LinkedHashMap<UUID, String>();
         for (var classInDiagram : classesInDiagram) {
-            if (classInDiagram.getGraphName() == null || classInDiagram.getUuid() == null) {
+            if (classInDiagram.getSchemaName() == null || classInDiagram.getUuid() == null) {
                 continue;
             }
-            var model = modelsByGraphName.get(classInDiagram.getGraphName().toString());
+            var model = modelsByGraphName.get(classInDiagram.getSchemaName().toString());
             if (model == null) {
                 continue;
             }

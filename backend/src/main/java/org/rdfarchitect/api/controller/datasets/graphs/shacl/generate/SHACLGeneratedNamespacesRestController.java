@@ -40,7 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.nio.charset.StandardCharsets;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/shacl/generated/namespaces")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/shacl/generated/namespaces")
 @RequiredArgsConstructor
 public class SHACLGeneratedNamespacesRestController {
 
@@ -77,27 +77,27 @@ public class SHACLGeneratedNamespacesRestController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName) {
+                    String schemaName) {
         logger.info(
-                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/generated/namespaces/ttl\" from \"{}\".",
+                "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/generated/namespaces/ttl\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
 
         // fetch data
         var shaclString =
                 shaclExportUseCase
                         .exportGeneratedSHACLNamespaces(
-                                new GraphIdentifier(workspaceName, extendedGraphName),
+                                new GraphIdentifier(workspaceName, extendedSchemaName),
                                 RDFFormat.TURTLE)
                         .toString(StandardCharsets.UTF_8);
 
         logger.info(
-                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/generated/namespaces/ttl\" to \"{}\".",
+                "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/generated/namespaces/ttl\" to \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 originURL);
         return shaclString;
     }

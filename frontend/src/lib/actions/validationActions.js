@@ -40,7 +40,7 @@ import { goto } from "$app/navigation";
  */
 export async function validateWorkspaceAndShowResult(
     workspaceName,
-    graphName = null,
+    schemaName = null,
     schemaLabel = null,
 ) {
     if (validationState.running.getValue()) {
@@ -48,16 +48,19 @@ export async function validateWorkspaceAndShowResult(
     }
     validationState.running.updateValue(true);
     const pending = toastStore.info(
-        graphName
+        schemaName
             ? `Validating ${schemaLabel ?? "schema"} against its workspace…`
             : `Validating workspace ${workspaceName}…`,
         undefined,
         { duration: 0 },
     );
     try {
-        const response = graphName
+        const response = schemaName
             ? await validateSchemaInWorkspace({
-                  path: { workspaceName: workspaceName, graphName: graphName },
+                  path: {
+                      workspaceName: workspaceName,
+                      schemaName: schemaName,
+                  },
               })
             : await validateWorkspace({
                   path: { workspaceName: workspaceName },
@@ -66,7 +69,7 @@ export async function validateWorkspaceAndShowResult(
         if (response.error) {
             console.error(response.error);
             toastStore.error(
-                graphName
+                schemaName
                     ? "Something went wrong while validating the schema in its workspace."
                     : "Something went wrong while validating the workspace.",
             );
@@ -76,7 +79,7 @@ export async function validateWorkspaceAndShowResult(
         validationState.context.updateValue(
             validationContext(ValidationKind.WORKSPACE, {
                 workspace: workspaceName,
-                graph: graphName,
+                graph: schemaName,
                 schemaLabel,
             }),
         );
@@ -90,7 +93,7 @@ export async function validateWorkspaceAndShowResult(
 
 export function canOpenOccurrence(workspaceName, occurrence) {
     return (
-        !!workspaceName && !!occurrence?.graphName && !!occurrence?.classUUID
+        !!workspaceName && !!occurrence?.schemaName && !!occurrence?.classUUID
     );
 }
 
@@ -102,11 +105,11 @@ export async function openOccurrence(workspaceName, occurrence) {
     workspaceState.activate(workspaceName);
     editorState.selectPackage(
         workspaceName,
-        occurrence.graphName,
+        occurrence.schemaName,
         occurrence.packageUUID ?? "default",
     );
     editorState.selectedClassWorkspace.updateValue(workspaceName);
-    editorState.selectedClassGraph.updateValue(occurrence.graphName);
+    editorState.selectedClassGraph.updateValue(occurrence.schemaName);
     editorState.selectedClass.updateValue({
         type: ClassType.SINGLE_CLASS,
         id: occurrence.classUUID,

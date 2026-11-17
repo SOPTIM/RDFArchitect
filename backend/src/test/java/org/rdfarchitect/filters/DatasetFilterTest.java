@@ -126,7 +126,7 @@ class DatasetFilterTest {
     @Test
     void doFilter_uploadBringingItsWorkspace_isAllowedForAnUnknownName() throws Exception {
         filter.doFilter(
-                request("PUT", "/api/workspaces/brandNew/graphs/http%3A%2F%2Fex.org%2Fg/content"),
+                request("PUT", "/api/workspaces/brandNew/schemas/http%3A%2F%2Fex.org%2Fg/content"),
                 response,
                 chain);
 
@@ -136,7 +136,7 @@ class DatasetFilterTest {
     @Test
     void doFilter_importProgress_isAllowedForAnUnknownName() throws Exception {
         filter.doFilter(
-                request("GET", "/api/workspaces/brandNew/graphs/content/imports/42"),
+                request("GET", "/api/workspaces/brandNew/schemas/content/imports/42"),
                 response,
                 chain);
 
@@ -155,7 +155,7 @@ class DatasetFilterTest {
     @Test
     void doFilter_putOnAGraphOfAForeignWorkspace_isRejected() {
         // The whitelist covers the content upload, not every PUT below a workspace.
-        var request = request("PUT", "/api/workspaces/" + FOREIGN + "/graphs/g/keyword");
+        var request = request("PUT", "/api/workspaces/" + FOREIGN + "/schemas/g/keyword");
 
         assertThatThrownBy(() -> filter.doFilter(request, response, chain))
                 .isInstanceOf(DatasetAccessDeniedException.class)

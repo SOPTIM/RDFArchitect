@@ -47,7 +47,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/content/imports")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/content/imports")
 @RequiredArgsConstructor
 public class GraphBulkContentRESTController {
 
@@ -83,17 +83,17 @@ public class GraphBulkContentRESTController {
             @Parameter(description = "The files containing the graph data") @RequestParam("files")
                     List<MultipartFile> files,
             @Parameter(description = "Optional graph URIs, one per file. Defaults to file names.")
-                    @RequestParam(value = "graphNames", required = false)
-                    List<String> graphNames) {
+                    @RequestParam(value = "schemaNames", required = false)
+                    List<String> schemaNames) {
         logger.info(
-                "Received POST request: \"/api/workspaces/{{}}/graphs/content/imports\" from \"{}\".",
+                "Received POST request: \"/api/workspaces/{{}}/schemas/content/imports\" from \"{}\".",
                 workspaceName,
                 originURL);
 
-        var jobId = importJobUseCase.startImport(workspaceName, files, graphNames);
+        var jobId = importJobUseCase.startImport(workspaceName, files, schemaNames);
 
         logger.info(
-                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/content/imports\" to \"{}\": job {}.",
+                "Sending response to POST request: \"/api/workspaces/{{}}/schemas/content/imports\" to \"{}\": job {}.",
                 workspaceName,
                 originURL,
                 jobId);
@@ -148,7 +148,7 @@ public class GraphBulkContentRESTController {
                     @RequestBody
                     List<PrefixResolutionDTO> resolutions) {
         logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/graphs/content/imports/{{}}/prefix-resolutions\" from \"{}\".",
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/content/imports/{{}}/prefix-resolutions\" from \"{}\".",
                 workspaceName,
                 jobId,
                 originURL);
@@ -156,7 +156,7 @@ public class GraphBulkContentRESTController {
         var resolved = importJobUseCase.resolvePrefixConflicts(workspaceName, jobId, resolutions);
 
         logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/content/imports/{{}}/prefix-resolutions\" to \"{}\".",
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/content/imports/{{}}/prefix-resolutions\" to \"{}\".",
                 workspaceName,
                 jobId,
                 originURL);
@@ -186,7 +186,7 @@ public class GraphBulkContentRESTController {
                     String workspaceName,
             @Parameter(description = "The id of the import job.") @PathVariable UUID jobId) {
         logger.info(
-                "Received DELETE request: \"/api/workspaces/{{}}/graphs/content/imports/{{}}\" from \"{}\".",
+                "Received DELETE request: \"/api/workspaces/{{}}/schemas/content/imports/{{}}\" from \"{}\".",
                 workspaceName,
                 jobId,
                 originURL);

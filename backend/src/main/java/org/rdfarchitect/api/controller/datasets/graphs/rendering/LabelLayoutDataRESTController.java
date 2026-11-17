@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/layout/{diagramUUID}/labels")
+@RequestMapping("api/workspaces/{workspaceName}/schemas/{schemaName}/layout/{diagramUUID}/labels")
 @RequiredArgsConstructor
 public class LabelLayoutDataRESTController {
 
@@ -68,7 +68,7 @@ public class LabelLayoutDataRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphName,
+                    String schemaName,
             @Parameter(description = "The UUID of the package or custom diagram being updated.")
                     @PathVariable
                     String diagramUUID,
@@ -88,25 +88,25 @@ public class LabelLayoutDataRESTController {
                     List<LabelPositionDTO> labelPositionDTOList) {
 
         logger.info(
-                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/layout/{{}}/labels\" from \"{}\".",
+                "Received PUT request: \"/api/workspaces/{{}}/schemas/{{}}/layout/{{}}/labels\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 diagramUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var resolvedDiagramUUID =
                 !diagramUUID.equals("default") ? UUID.fromString(diagramUUID) : null;
 
         updateLabelPositionsUseCase.updateLabelPositions(
-                new GraphIdentifier(workspaceName, extendedGraphName),
+                new GraphIdentifier(workspaceName, extendedSchemaName),
                 resolvedDiagramUUID,
                 labelPositionDTOList);
 
         logger.info(
-                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/layout/{{}}/labels\" from \"{}\".",
+                "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/layout/{{}}/labels\" from \"{}\".",
                 workspaceName,
-                graphName,
+                schemaName,
                 diagramUUID,
                 originURL);
         return "success";

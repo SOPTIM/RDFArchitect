@@ -96,7 +96,7 @@ class PastePreviewServiceTest {
     private PasteSourceClassDTO source(String classUUID) {
         var source = new PasteSourceClassDTO();
         source.setSourceWorkspaceName(sourceGraphIdentifier.workspaceName());
-        source.setSourceGraphName(sourceGraphIdentifier.graphName());
+        source.setSourceSchemaName(sourceGraphIdentifier.graphName());
         source.setClassUUID(classUUID);
         return source;
     }
