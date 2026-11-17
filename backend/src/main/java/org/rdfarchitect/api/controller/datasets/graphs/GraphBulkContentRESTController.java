@@ -82,7 +82,9 @@ public class GraphBulkContentRESTController {
                     String workspaceName,
             @Parameter(description = "The files containing the graph data") @RequestParam("files")
                     List<MultipartFile> files,
-            @Parameter(description = "Optional graph URIs, one per file. Defaults to file names.")
+            @Parameter(
+                            description =
+                                    "Optional schema names, one per file. Defaults to the file names without extension.")
                     @RequestParam(value = "schemaNames", required = false)
                     List<String> schemaNames) {
         logger.info(

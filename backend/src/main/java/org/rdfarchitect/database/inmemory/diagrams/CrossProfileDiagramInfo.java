@@ -46,7 +46,7 @@ public class CrossProfileDiagramInfo extends SnapshotParticipant<Map<String, Str
     /**
      * Returns the colour of a graph.
      *
-     * @param schemaName the graph URI
+     * @param schemaName the schema name
      * @return the colour, or {@code null} if the graph has none
      */
     @Override
@@ -57,7 +57,7 @@ public class CrossProfileDiagramInfo extends SnapshotParticipant<Map<String, Str
     /**
      * Sets the colour of a graph.
      *
-     * @param schemaName the graph URI
+     * @param schemaName the schema name
      * @param color the colour to use
      */
     @Override

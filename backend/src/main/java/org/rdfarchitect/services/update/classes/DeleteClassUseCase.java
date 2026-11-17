@@ -27,7 +27,7 @@ public interface DeleteClassUseCase {
     /**
      * Deletes the class with the given name from the graph.
      *
-     * @param graphIdentifier Graph URI and dataset name of the class to be deleted
+     * @param graphIdentifier Schema name and dataset name of the class to be deleted
      * @param classUUID UUID of the class to be deleted
      */
     void deleteClass(GraphIdentifier graphIdentifier, UUID classUUID);

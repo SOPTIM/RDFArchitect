@@ -78,11 +78,7 @@ public class OntologyGenerateEntriesRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName) {
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName) {
         logger.info(
                 "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/ontology/generate\" from \"{}\".",
                 workspaceName,

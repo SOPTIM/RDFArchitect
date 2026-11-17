@@ -789,7 +789,7 @@ public class Workspace {
     /**
      * Returns the graph identified by {@code schemaName}.
      *
-     * @param schemaName the graph URI
+     * @param schemaName the schema name
      * @return the graph's contents
      * @throws ResourceNotFoundException if there is no graph of that name
      */

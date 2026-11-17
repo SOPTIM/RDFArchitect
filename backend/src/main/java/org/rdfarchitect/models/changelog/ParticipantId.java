@@ -24,7 +24,7 @@ import java.util.Locale;
  * part of the workspace a commit touched without holding on to the participant itself.
  *
  * @param kind the kind of data the participant holds
- * @param scope the graph URI for graph-scoped participants, or {@code null} for workspace-scoped
+ * @param scope the schema name for graph-scoped participants, or {@code null} for workspace-scoped
  *     ones
  */
 public record ParticipantId(Kind kind, String scope) {

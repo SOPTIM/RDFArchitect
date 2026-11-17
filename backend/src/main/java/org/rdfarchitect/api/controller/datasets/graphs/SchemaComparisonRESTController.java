@@ -81,11 +81,7 @@ public class SchemaComparisonRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The file containing the graph to be compared.")
                     @RequestParam("file")
                     MultipartFile file) {
@@ -135,15 +131,12 @@ public class SchemaComparisonRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the base dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the base graph, or \"default\" to access the default graph.")
-                    @PathVariable
+            @Parameter(description = "The name of the base schema.") @PathVariable
                     String schemaName,
             @Parameter(description = "The literal name of the dataset to compare against.")
                     @RequestParam("otherWorkspace")
                     String otherWorkspace,
-            @Parameter(description = "The url encoded uri of the graph to compare against.")
+            @Parameter(description = "The name of the schema to compare against.")
                     @RequestParam("otherSchema")
                     String otherSchema) {
         logger.info(

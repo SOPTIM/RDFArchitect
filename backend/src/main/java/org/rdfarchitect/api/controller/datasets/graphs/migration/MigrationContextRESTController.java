@@ -71,7 +71,7 @@ public class MigrationContextRESTController {
                     String workspaceA,
             @Parameter(
                             description =
-                                    "URI of graph A. Required together with workspace_a when not uploading graph A as a file.")
+                                    "Name of schema A. Required together with workspace_a when not uploading schema A as a file.")
                     @RequestParam(required = false)
                     String schemaA,
             @Parameter(
@@ -86,7 +86,7 @@ public class MigrationContextRESTController {
                     String workspaceB,
             @Parameter(
                             description =
-                                    "URI of graph B. Required together with workspace_b when not uploading graph B as a file.")
+                                    "Name of schema B. Required together with workspace_b when not uploading schema B as a file.")
                     @RequestParam(required = false)
                     String schemaB,
             @Parameter(

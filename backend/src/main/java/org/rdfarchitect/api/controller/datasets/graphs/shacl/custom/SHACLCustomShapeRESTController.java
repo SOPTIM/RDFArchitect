@@ -66,11 +66,7 @@ public class SHACLCustomShapeRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The property shape to replace.") @PathVariable
                     String shaclShapeURI,
             @Parameter(description = "the triples to replace, requires valid turtle syntax.")
@@ -110,11 +106,7 @@ public class SHACLCustomShapeRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The property shape to delete.") @PathVariable
                     String shaclShapeURI) {
         logger.info(

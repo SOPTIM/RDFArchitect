@@ -79,11 +79,7 @@ public class OntologyRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName) {
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName) {
         logger.info(
                 "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" from \"{}\".",
                 workspaceName,
@@ -117,11 +113,7 @@ public class OntologyRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description = "The new ontology",
@@ -162,11 +154,7 @@ public class OntologyRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description = "The new ontology",
@@ -207,11 +195,7 @@ public class OntologyRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName) {
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName) {
         logger.info(
                 "Received DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/ontology\" from \"{}\".",
                 workspaceName,

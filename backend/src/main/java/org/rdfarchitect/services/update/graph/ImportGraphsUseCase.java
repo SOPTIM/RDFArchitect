@@ -25,7 +25,7 @@ import java.util.List;
 public interface ImportGraphsUseCase {
 
     /**
-     * Result of a graph import operation, separating successfully imported graph URIs from the
+     * Result of a graph import operation, separating successfully imported schema names from the
      * filenames of files that failed to import and any non-fatal warnings raised while importing.
      *
      * @param importedSchemaNames the URIs of successfully imported graphs
@@ -57,11 +57,11 @@ public interface ImportGraphsUseCase {
      * @param workspaceName The name of the dataset where the graphs will be imported.
      * @param files The list of files containing the graph data to be imported. A zip archive is
      *     unpacked and each graph file in it imported on its own.
-     * @param schemaNames The list of graph URIs corresponding to each file.
+     * @param schemaNames The list of schema names corresponding to each file.
      * @param listener Receives the progress of the import and can cancel it; pass {@link
      *     ImportProgressListener#NOOP} when neither is needed.
-     * @return A record storing both the successfully imported graph URIs and the filenames of files
-     *     that failed to import.
+     * @return A record storing both the successfully imported schema names and the filenames of
+     *     files that failed to import.
      */
     ImportResult importGraphs(
             String workspaceName,

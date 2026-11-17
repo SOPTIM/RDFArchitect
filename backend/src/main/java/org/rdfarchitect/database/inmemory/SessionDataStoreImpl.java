@@ -356,7 +356,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
      * Throws an exceptions if the graph or its dataset does not exist
      *
      * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
+     *     schema name.
      * @throws DataAccessException if the dataset or graph does not exist.
      */
     private void assertThatGraphExists(GraphIdentifier graphIdentifier) {
