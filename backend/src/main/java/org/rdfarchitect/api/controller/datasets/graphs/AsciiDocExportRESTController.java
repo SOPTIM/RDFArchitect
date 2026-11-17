@@ -97,10 +97,7 @@ public class AsciiDocExportRESTController {
                 exportGraphAsciiDocUseCase.exportGraphAsAsciiDoc(
                         new GraphIdentifier(workspaceName, schemaName), fileEnding, embedDiagrams);
 
-        var fileName = "default";
-        if (!schemaName.equals("default")) {
-            fileName = new URI(schemaName).getSuffix();
-        }
+        var fileName = new URI(schemaName).getSuffix();
         fileName += ".adoc";
 
         var headers = new HttpHeaders();

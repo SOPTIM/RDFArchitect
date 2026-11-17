@@ -69,12 +69,7 @@ public class QueryDatasetService
         // fetch graphs and insert into resultDataset
         try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             for (String schemaName : transaction.schemaNames()) {
-                if (schemaName.equals("default")) {
-                    resultDataset.setDefaultModel(getGraphAsModel(workspaceName, "default"));
-                } else {
-                    resultDataset.addNamedModel(
-                            schemaName, getGraphAsModel(workspaceName, schemaName));
-                }
+                resultDataset.addNamedModel(schemaName, getGraphAsModel(workspaceName, schemaName));
             }
         }
 

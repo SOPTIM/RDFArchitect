@@ -71,13 +71,14 @@ class HTMLExportRESTControllerTest {
     }
 
     @Test
-    void getHTMLExport_defaultGraph_fallsBackToDefaultFileName() {
-        stubExport("default");
+    void getHTMLExport_namesTheFileAfterTheGraphAsItIs() {
+        stubExport("http://graph#my-profile");
 
         var response =
-                controller.getHTMLExport(HttpHeaders.ORIGIN, "dataset", "default", "png", false);
+                controller.getHTMLExport(
+                        HttpHeaders.ORIGIN, "dataset", "http://graph#my-profile", "png", false);
 
         assertThat(response.getHeaders().getContentDisposition().getFilename())
-                .isEqualTo("default.html");
+                .isEqualTo("my-profile.html");
     }
 }

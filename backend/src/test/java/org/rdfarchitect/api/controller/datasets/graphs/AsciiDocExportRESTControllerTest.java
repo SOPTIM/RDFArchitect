@@ -71,14 +71,14 @@ class AsciiDocExportRESTControllerTest {
     }
 
     @Test
-    void getAsciiDocExport_defaultGraph_fallsBackToDefaultFileName() {
-        stubExport("default");
+    void getAsciiDocExport_namesTheFileAfterTheGraphAsItIs() {
+        stubExport("http://graph#my-profile");
 
         var response =
                 controller.getAsciiDocExport(
-                        HttpHeaders.ORIGIN, "dataset", "default", "png", false);
+                        HttpHeaders.ORIGIN, "dataset", "http://graph#my-profile", "png", false);
 
         assertThat(response.getHeaders().getContentDisposition().getFilename())
-                .isEqualTo("default.adoc");
+                .isEqualTo("my-profile.adoc");
     }
 }

@@ -73,8 +73,6 @@ class WorkspaceTest {
         return graph;
     }
 
-    private static final String DEFAULT_GRAPH_NAME = "default";
-
     @Test
     void constructor_noArgs_returnsEmptyCollection() {
         // Arrange
@@ -133,28 +131,17 @@ class WorkspaceTest {
     }
 
     @Test
-    void constructor_defaultGraphOnlyDataset_returnCollectionWith1Graph() {
+    void constructor_defaultGraphOnlyDataset_leavesTheDefaultGraphOut() {
         // Arrange
         var dataset = DatasetFactory.create();
         Graph model = dataset.getDefaultModel().getGraph();
         model.add(TestRDFUtils.triple("a a a"));
-        model.add(TestRDFUtils.triple("b b b"));
-        model.add(TestRDFUtils.triple("c c c"));
-
-        Workspace workspace = new Workspace(WORKSPACE, dataset);
 
         // Act
-        List<String> schemaNames = workspace.listSchemaNames();
-        int size = schemaNames.size();
+        Workspace workspace = new Workspace(WORKSPACE, dataset);
 
         // Assert
-        assertThat(size).isEqualTo(1);
-        try (var transaction = workspace.begin(ReadWrite.READ)) {
-            var ctx = transaction.graph(DEFAULT_GRAPH_NAME);
-            assertThat(ctx).isNotNull();
-            assertThat(ctx.getRdfGraph().find().toList()).hasSize(3);
-            assertThat(transaction.mode()).isEqualTo(ReadWrite.READ);
-        }
+        assertThat(workspace.listSchemaNames()).isEmpty();
     }
 
     @ParameterizedTest
@@ -173,21 +160,6 @@ class WorkspaceTest {
             assertThat(ctx).isNotNull();
             assertThat(ctx.getRdfGraph().isIsomorphicWith(exampleGraphs.get(1))).isTrue();
             assertThat(transaction.mode()).isEqualTo(mode);
-        }
-    }
-
-    @Test
-    void begin_nonExistingDefaultSchemaName_returnsEmptyDefaultGraph() {
-        // Arrange
-        Workspace workspace = new Workspace(WORKSPACE);
-
-        // Act
-        try (var transaction = workspace.begin(ReadWrite.READ)) {
-            var ctx = transaction.graph(DEFAULT_GRAPH_NAME);
-            // Assert
-            assertThat(ctx).isNotNull();
-            assertThat(ctx.getRdfGraph().find().toList()).isEmpty();
-            assertThat(transaction.mode()).isEqualTo(ReadWrite.READ);
         }
     }
 
@@ -271,8 +243,7 @@ class WorkspaceTest {
             strings = {
                 "http://example.org/graph1",
                 "http://example.org/graph2",
-                "http://example.org/graph3",
-                DEFAULT_GRAPH_NAME
+                "http://example.org/graph3"
             })
     void create_validName_returnsGraphRewindable(String schemaName) {
         // Arrange

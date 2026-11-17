@@ -38,7 +38,7 @@ import java.util.UUID;
 public interface SessionDataStore {
 
     static Dataset wrapGraphInDataset(Graph graph, String schemaName) {
-        if (schemaName == null || schemaName.equals("default")) {
+        if (schemaName == null) {
             return DatasetFactory.wrap(ModelFactory.createModelForGraph(graph));
         }
         return DatasetFactory.createGeneral()

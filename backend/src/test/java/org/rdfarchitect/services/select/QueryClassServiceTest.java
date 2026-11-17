@@ -50,7 +50,8 @@ class QueryClassServiceTest {
 
     private QueryClassService queryClassService;
     private DatabasePort databasePort;
-    private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
+    private final GraphIdentifier graphIdentifier =
+            new GraphIdentifier("default", "http://example.org/graph");
 
     @Autowired private ClassUMLAdaptedMapper umlAdaptedClassMapper;
     @Autowired private ClassMapper classMapper;

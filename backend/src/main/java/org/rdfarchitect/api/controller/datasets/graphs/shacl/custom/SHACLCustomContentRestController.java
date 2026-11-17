@@ -248,10 +248,7 @@ public class SHACLCustomContentRestController {
     private ResponseEntity<byte[]> buildResponseEntity(
             String schemaName, RDFFormat format, ByteArrayOutputStream outStream) {
         // add suggested file name to response
-        var fileName = "shacl";
-        if (!schemaName.equals("default")) {
-            fileName = new URI(schemaName + "-shacl").getSuffix();
-        }
+        var fileName = new URI(schemaName + "-shacl").getSuffix();
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 
         var headers = new HttpHeaders();

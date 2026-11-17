@@ -61,7 +61,8 @@ public class DiagramLayoutServicesTestBase {
 
     public static final String TTL_FILES_PATH =
             "src/test/java/org/rdfarchitect/services/dl/update/";
-    public static final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
+    public static final GraphIdentifier graphIdentifier =
+            new GraphIdentifier("default", "http://example.org/graph");
     // CONSTANTS FOR ASSERTS
     public static final String PACKAGE_A_LABEL = "packageA";
     public static final UUID PACKAGE_A_UUID =

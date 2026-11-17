@@ -94,10 +94,7 @@ public class HTMLExportRESTController {
                 exportGraphHTMLUseCase.exportGraphAsHTML(
                         new GraphIdentifier(workspaceName, schemaName), fileEnding, embedDiagrams);
 
-        var fileName = "default";
-        if (!schemaName.equals("default")) {
-            fileName = new URI(schemaName).getSuffix();
-        }
+        var fileName = new URI(schemaName).getSuffix();
         fileName += ".html";
 
         var headers = new HttpHeaders();

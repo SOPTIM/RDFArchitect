@@ -286,14 +286,10 @@ public class SessionDataStoreImpl implements SessionDataStore {
         var dataset = DatasetFactory.createGeneral();
         dataset.getPrefixMapping().setNsPrefixes(prefixMapping);
 
-        // insert graphs
-        // default
-        var graph = fetchGraph(databaseConnection, workspaceName, "default");
-        dataset.setDefaultModel(ModelFactory.createModelForGraph(graph));
-        // named
+        // insert named graphs, the default graph holds no graph of the workspace
         while (queryResultSet.hasNext()) {
             var schemaName = queryResultSet.next().get(graphVar).asNode();
-            graph = fetchGraph(databaseConnection, workspaceName, schemaName.getURI());
+            var graph = fetchGraph(databaseConnection, workspaceName, schemaName.getURI());
             dataset.addNamedModel(schemaName.getURI(), ModelFactory.createModelForGraph(graph));
         }
         return dataset;

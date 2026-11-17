@@ -82,7 +82,7 @@ public class ExportAsciiDocService implements ExportGraphAsciiDocUseCase {
     private String anchorPrefix(GraphIdentifier graphIdentifier) {
         var schemaName = graphIdentifier.schemaName();
         var name = DEFAULT_NAME;
-        if (schemaName != null && !schemaName.isBlank() && !DEFAULT_NAME.equals(schemaName)) {
+        if (schemaName != null && !schemaName.isBlank()) {
             try {
                 var suffix = new URI(schemaName).getSuffix();
                 name = suffix.isBlank() ? schemaName : suffix;

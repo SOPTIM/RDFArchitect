@@ -254,19 +254,9 @@ public class SearchService implements SearchUseCase {
             SearchFilter filter,
             List<SearchResult> searchResults,
             List<SearchResult> externalSearchResults) {
-        String specificInternalQuery;
-        String specificExternalQuery;
-        if (Objects.equals(graphIdentifier.schemaName(), "default")) {
-            specificInternalQuery = SPARQL_INTERNAL_QUERY.replace(GRAPH, "");
-            specificExternalQuery = SPARQL_EXTERNAL_QUERY.replace(GRAPH, "");
-        } else {
-            specificInternalQuery =
-                    SPARQL_INTERNAL_QUERY.replace(
-                            GRAPH, "FROM <" + graphIdentifier.schemaName() + ">");
-            specificExternalQuery =
-                    SPARQL_EXTERNAL_QUERY.replace(
-                            GRAPH, "FROM <" + graphIdentifier.schemaName() + ">");
-        }
+        var from = "FROM <" + graphIdentifier.schemaName() + ">";
+        var specificInternalQuery = SPARQL_INTERNAL_QUERY.replace(GRAPH, from);
+        var specificExternalQuery = SPARQL_EXTERNAL_QUERY.replace(GRAPH, from);
         specificInternalQuery = specificInternalQuery.replace("searchQuery", query);
         specificExternalQuery = specificExternalQuery.replace("searchQuery", query);
         var internalQueryWithPackageConstraint =

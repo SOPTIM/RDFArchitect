@@ -61,11 +61,11 @@ public class CIMBaseUpdateBuilder {
     /**
      * Sets the graph the query should be executed on.
      *
-     * @param schemaName the SchemaName or "default"/null
+     * @param schemaName the graph URI, or null for the default graph
      * @return {@link CIMBaseUpdateBuilder this}
      */
     public CIMBaseUpdateBuilder setGraph(String schemaName) {
-        if (schemaName != null && !schemaName.equals("default")) {
+        if (schemaName != null) {
             baseUpdate.with(NodeFactory.createURI(schemaName));
         }
         return this;

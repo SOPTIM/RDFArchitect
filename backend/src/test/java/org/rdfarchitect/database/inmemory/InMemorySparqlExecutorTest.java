@@ -101,7 +101,7 @@ class InMemorySparqlExecutorTest {
     @Test
     void executeSingleQuery_onDefaultWithValidAllQuery_shouldReturnAllResults() {
         // Arrange
-        String schemaName = "default";
+        String schemaName = null;
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
@@ -151,7 +151,7 @@ class InMemorySparqlExecutorTest {
     @Test
     void executeSingleQuery_onDefaultWithValidNoResultQuery_shouldReturnEmptyResultSet() {
         // Arrange
-        String schemaName = "default";
+        String schemaName = null;
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
@@ -194,7 +194,7 @@ class InMemorySparqlExecutorTest {
     @Test
     void executeSingleQuery_queryNotSelectedExistentGraph_emptyResult() {
         // Arrange
-        String schemaName = "default";
+        String schemaName = null;
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
@@ -214,7 +214,7 @@ class InMemorySparqlExecutorTest {
     @Test
     void executeSingleUpdate_onDefaultWithValidUpdate_shouldUpdateGraph() {
         // Arrange
-        String schemaName = "default";
+        String schemaName = "http://example.org/graph";
         exampleGraphs = List.of(createExampleGraph(), GraphFactory.createDefaultGraph());
         var identifier = new GraphIdentifier(WORKSPACE, schemaName);
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.get(1));
@@ -229,7 +229,7 @@ class InMemorySparqlExecutorTest {
             try (var transaction = inMemoryDatabase.beginTransaction(WORKSPACE, ReadWrite.WRITE)) {
                 var dataset =
                         SessionDataStore.wrapGraphInDataset(
-                                transaction.graph(schemaName).getRdfGraph(), schemaName);
+                                transaction.graph(schemaName).getRdfGraph(), null);
                 UpdateExecutionFactory.create(update, dataset).execute();
                 transaction.commit("inserted a triple");
             }

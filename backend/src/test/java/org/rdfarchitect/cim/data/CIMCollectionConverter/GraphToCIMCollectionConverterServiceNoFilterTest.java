@@ -57,7 +57,8 @@ class GraphToCIMCollectionConverterServiceNoFilterTest {
     private final GraphToCIMCollectionConverterUseCase converter =
             new GraphToCIMCollectionConverterService(new InMemoryDatabaseAdapter(database));
 
-    private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
+    private final GraphIdentifier graphIdentifier =
+            new GraphIdentifier("default", "http://example.org/graph");
 
     private static final String PATH =
             "src/test/java/org/rdfarchitect/cim/data/CIMCollectionConverter/";

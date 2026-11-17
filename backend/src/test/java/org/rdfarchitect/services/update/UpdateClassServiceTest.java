@@ -68,7 +68,8 @@ class UpdateClassServiceTest {
     private DatabasePort databasePort;
     private UpdateClassLayoutService mockUpdateClassLayoutService;
     private CustomDiagramService mockCustomDiagramService;
-    private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
+    private final GraphIdentifier graphIdentifier =
+            new GraphIdentifier("default", "http://example.org/graph");
 
     @Autowired private ClassUMLAdaptedMapper classMapper;
     @Autowired private PackageMapper packageMapper;

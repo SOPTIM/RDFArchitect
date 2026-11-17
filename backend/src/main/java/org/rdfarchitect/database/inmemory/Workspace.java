@@ -24,7 +24,6 @@ import lombok.Setter;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.config.GraphCompressionConfig;
 import org.rdfarchitect.database.WorkspaceTransaction;
@@ -85,7 +84,6 @@ public class Workspace {
 
     private static final Logger logger = LoggerFactory.getLogger(Workspace.class);
 
-    private static final String DEFAULT_GRAPH_NAME = "default";
     private static final String INITIAL_CHANGE_MESSAGE = "Loaded the workspace";
 
     @Setter @Getter private volatile boolean isReadOnly = true;
@@ -134,7 +132,9 @@ public class Workspace {
     }
 
     /**
-     * Builds a workspace from a Jena dataset, taking over its prefixes and every one of its graphs.
+     * Builds a workspace from a Jena dataset, taking over its prefixes and every one of its named
+     * graphs. The default graph of the dataset is not taken over: every graph of a workspace is a
+     * named graph.
      *
      * @param workspaceName the name the workspace is known by
      * @param dataset the dataset to read
@@ -143,11 +143,6 @@ public class Workspace {
         this(workspaceName);
         try (var transaction = begin(ReadWrite.WRITE)) {
             this.prefixes.addAll(dataset.getPrefixMapping());
-            if (!dataset.getDefaultModel().isEmpty()) {
-                graphs.put(
-                        DEFAULT_GRAPH_NAME,
-                        new GraphWithContext(dataset.getDefaultModel().getGraph(), txnContext));
-            }
             for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
                 var schemaName = it.next().getURI();
                 graphs.put(
@@ -796,14 +791,11 @@ public class Workspace {
     // -------------------------------------------------------------------------
 
     /**
-     * Returns the graph identified by {@code schemaName}, creating the default graph if it is asked
-     * for and does not exist yet.
-     *
-     * <p>A reader gets an empty graph that is not kept: a read transaction enrols nothing, so the
-     * insertion could neither be rolled back nor seen by a concurrent reader doing the same.
+     * Returns the graph identified by {@code schemaName}.
      *
      * @param schemaName the graph URI
      * @return the graph's contents
+     * @throws ResourceNotFoundException if there is no graph of that URI
      */
     GraphWithContext getGraphWithContext(String schemaName) {
         var existing = graphs.get(schemaName);
@@ -811,14 +803,7 @@ public class Workspace {
             return existing;
         }
         assertValidSchemaName(schemaName);
-        if (!schemaName.equals(DEFAULT_GRAPH_NAME)) {
-            throw new ResourceNotFoundException("Graph URI " + schemaName + " does not exist.");
-        }
-        var defaultGraph = new GraphWithContext(GraphFactory.createDefaultGraph(), txnContext);
-        if (txnContext.transactionMode() == ReadWrite.WRITE) {
-            graphs.put(DEFAULT_GRAPH_NAME, defaultGraph);
-        }
-        return defaultGraph;
+        throw new ResourceNotFoundException("Graph URI " + schemaName + " does not exist.");
     }
 
     /** Returns a snapshot of the current graph URIs. */
@@ -840,7 +825,7 @@ public class Workspace {
     }
 
     static void assertValidSchemaName(String schemaName) {
-        if (!schemaName.equals(DEFAULT_GRAPH_NAME) && !RDFUtils.isURL(schemaName)) {
+        if (!RDFUtils.isURL(schemaName)) {
             throw new IllegalArgumentException("Graph Uri " + schemaName + " is not a valid URI");
         }
     }

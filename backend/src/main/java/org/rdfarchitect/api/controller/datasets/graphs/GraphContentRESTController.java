@@ -105,10 +105,7 @@ public class GraphContentRESTController {
                 getSchemaUseCase.getSchema(new GraphIdentifier(workspaceName, schemaName), format);
 
         // add suggested file name to response
-        var fileName = "default";
-        if (!schemaName.equals("default")) {
-            fileName = new URI(schemaName).getSuffix();
-        }
+        var fileName = new URI(schemaName).getSuffix();
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 
         var headers = new HttpHeaders();
