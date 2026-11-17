@@ -31,7 +31,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.dl.update.SyncDiagramLayoutUseCase;
 import org.rdfarchitect.services.select.ListGraphsUseCase;
 
@@ -173,7 +172,7 @@ class CustomDiagramsServiceTest {
     @Test
     void removeFromDiagram_classRemovedFromDatasetDiagram_diagramIsEmpty() {
         var classId = UUID.randomUUID();
-        var classInDiagram = new ClassInDiagram(classId, new URI("http://example.org#graph"));
+        var classInDiagram = new ClassInDiagram(classId, "http://example.org#graph");
         var diagramId = UUID.randomUUID();
         var diagram = new CustomDiagram(diagramId);
         diagram.setClasses(new ArrayList<>(List.of(classInDiagram)));
@@ -190,7 +189,7 @@ class CustomDiagramsServiceTest {
     @Test
     void removeFromDiagram_classRemovedFromGraphDiagram_diagramIsEmpty() {
         var classId = UUID.randomUUID();
-        var classInDiagram = new ClassInDiagram(classId, new URI("http://example.org#graph"));
+        var classInDiagram = new ClassInDiagram(classId, "http://example.org#graph");
         var diagramId = UUID.randomUUID();
         var diagram = new CustomDiagram(diagramId);
         diagram.setClasses(new ArrayList<>(List.of(classInDiagram)));
@@ -208,7 +207,7 @@ class CustomDiagramsServiceTest {
     @Test
     void removeFromAllDiagrams_classInGraphAndDatasetDiagram_removedFromBoth() {
         var classId = UUID.randomUUID();
-        var classInDiagram = new ClassInDiagram(classId, new URI("http://example.org#graph"));
+        var classInDiagram = new ClassInDiagram(classId, "http://example.org#graph");
 
         var graphDiagram = new CustomDiagram(UUID.randomUUID());
         graphDiagram.setClasses(new ArrayList<>(List.of(classInDiagram)));

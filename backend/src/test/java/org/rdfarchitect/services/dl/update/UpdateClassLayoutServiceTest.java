@@ -36,7 +36,6 @@ import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.dl.rdf.resources.DL;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.dl.DiagramLayoutServicesTestBase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
@@ -117,7 +116,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
     }
 
     private static ClassInDiagram classAInDiagram() {
-        return new ClassInDiagram(CLASS_A_UUID, new URI(GRAPH_URI));
+        return new ClassInDiagram(CLASS_A_UUID, GRAPH_URI);
     }
 
     @AfterEach

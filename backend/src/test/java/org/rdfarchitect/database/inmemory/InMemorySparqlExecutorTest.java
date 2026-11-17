@@ -125,7 +125,7 @@ class InMemorySparqlExecutorTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"http://anyUri", "http://example.org/graph"})
+    @ValueSource(strings = {"anyName", "my profile"})
     void executeSingleQuery_onNamedWithValidAllQuery_shouldReturnAllResults(String schemaName) {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());

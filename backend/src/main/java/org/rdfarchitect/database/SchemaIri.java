@@ -55,6 +55,15 @@ public class SchemaIri {
         if (iri.startsWith(PREFIX)) {
             return URLDecoder.decode(iri.substring(PREFIX.length()), StandardCharsets.UTF_8);
         }
-        return iri;
+        var trimmed = iri;
+        while (trimmed.endsWith("/") || trimmed.endsWith("#")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        var cut = Math.max(trimmed.lastIndexOf('#'), trimmed.lastIndexOf('/'));
+        if (cut < 0) {
+            cut = trimmed.lastIndexOf(':');
+        }
+        var localName = trimmed.substring(cut + 1);
+        return localName.isEmpty() ? iri : localName;
     }
 }

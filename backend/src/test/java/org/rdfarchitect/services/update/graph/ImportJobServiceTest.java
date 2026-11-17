@@ -34,7 +34,6 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.graph.InvalidPrefixException;
-import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase.ImportResult;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.FileState;
 import org.rdfarchitect.services.update.graph.ImportJobUseCase.JobState;
@@ -111,8 +110,7 @@ class ImportJobServiceTest {
         assertThat(status.files())
                 .extracting(file -> file.fileName() + ":" + file.state())
                 .containsExactly("first.ttl:IMPORTED", "second.ttl:IMPORTED");
-        assertThat(status.importedSchemaNames())
-                .containsExactly(RDFA.GRAPH_URI + "first", RDFA.GRAPH_URI + "second");
+        assertThat(status.importedSchemaNames()).containsExactly("first", "second");
         assertThat(status.failedImports()).isEmpty();
     }
 
@@ -224,7 +222,7 @@ class ImportJobServiceTest {
                             listener.started(0);
                             running.countDown();
                             awaitLatch(release);
-                            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
+                            listener.finished(0, Outcome.IMPORTED, "first");
                             return new ImportResult();
                         });
         var jobId = service.startImport(DATASET, List.of(graphFile("first.ttl")), null);
@@ -306,7 +304,7 @@ class ImportJobServiceTest {
                                     List.of(
                                             new PlannedImport(0, "first.ttl", 1),
                                             new PlannedImport(1, "second.ttl", 1)));
-                            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
+                            listener.finished(0, Outcome.IMPORTED, "first");
                             throw new IllegalStateException("out of memory");
                         });
 
@@ -319,7 +317,7 @@ class ImportJobServiceTest {
         assertThat(status.errorMessage()).isEqualTo("out of memory");
         // The graph is in the store whether the job survived or not, so the caller has to hear
         // about it; otherwise it stays invisible until the workspace is reloaded by hand.
-        assertThat(status.importedSchemaNames()).containsExactly(RDFA.GRAPH_URI + "first");
+        assertThat(status.importedSchemaNames()).containsExactly("first");
     }
 
     @Test
@@ -332,7 +330,7 @@ class ImportJobServiceTest {
                                             new PlannedImport(0, "first.ttl", 1),
                                             new PlannedImport(1, "second.ttl", 1),
                                             new PlannedImport(2, "third.ttl", 1)));
-                            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
+                            listener.finished(0, Outcome.IMPORTED, "first");
                             listener.started(1);
                             throw new IllegalStateException("out of memory");
                         });
@@ -574,8 +572,8 @@ class ImportJobServiceTest {
                 return result;
             }
             listener.started(0);
-            listener.finished(0, Outcome.IMPORTED, RDFA.GRAPH_URI + "first");
-            result.importedSchemaNames().add(RDFA.GRAPH_URI + "first");
+            listener.finished(0, Outcome.IMPORTED, "first");
+            result.importedSchemaNames().add("first");
             return result;
         };
     }

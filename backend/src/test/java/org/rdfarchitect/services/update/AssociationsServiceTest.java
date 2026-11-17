@@ -54,9 +54,9 @@ import java.util.UUID;
 
 /**
  * The graph these tests run on is a <em>named</em> graph, as every schema in the running app is
- * (`{@link org.rdfarchitect.models.cim.rdf.resources.RDFA#GRAPH_URI}`). An update built for a named
- * graph has to be executed against a dataset that knows that name, so writing to the default graph
- * instead silently discards it.
+ * (`{@link org.rdfarchitect.database.SchemaIri}`). An update built for a named graph has to be
+ * executed against a dataset that knows that name, so writing to the default graph instead silently
+ * discards it.
  */
 @SpringBootTest
 class AssociationsServiceTest {

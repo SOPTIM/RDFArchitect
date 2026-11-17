@@ -39,7 +39,6 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.springframework.stereotype.Service;
@@ -124,7 +123,7 @@ public class QueryDatasetService
      */
     private GraphDTO readGraph(
             WorkspaceTransaction transaction, String schemaName, PrefixMapping datasetPrefixes) {
-        var dto = GraphDTO.builder().uri(new URI(schemaName)).build();
+        var dto = GraphDTO.builder().name(schemaName).build();
         try {
             var stored = transaction.graph(schemaName).getRdfGraph();
             var graph = GraphUtils.deepCopy(stored);

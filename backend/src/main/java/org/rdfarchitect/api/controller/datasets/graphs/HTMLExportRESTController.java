@@ -25,7 +25,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.select.ExportGraphHTMLUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,7 +93,7 @@ public class HTMLExportRESTController {
                 exportGraphHTMLUseCase.exportGraphAsHTML(
                         new GraphIdentifier(workspaceName, schemaName), fileEnding, embedDiagrams);
 
-        var fileName = new URI(schemaName).getSuffix();
+        var fileName = schemaName;
         fileName += ".html";
 
         var headers = new HttpHeaders();

@@ -59,7 +59,7 @@ public final class MergedClasses {
             if (classInDiagram.getSchemaName() == null || classInDiagram.getUuid() == null) {
                 continue;
             }
-            var model = modelsBySchemaName.get(classInDiagram.getSchemaName().toString());
+            var model = modelsBySchemaName.get(classInDiagram.getSchemaName());
             if (model == null) {
                 continue;
             }

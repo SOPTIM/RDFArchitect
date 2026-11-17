@@ -27,6 +27,7 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.config.GraphCompressionConfig;
 import org.rdfarchitect.database.SchemaIri;
+import org.rdfarchitect.database.SchemaNames;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagramCollection;
@@ -46,8 +47,6 @@ import org.rdfarchitect.models.changelog.WorkspaceChangeLog;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLog.HistorySince;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 import org.rdfarchitect.rdf.graph.wrapper.TransactionParticipant;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
@@ -147,7 +146,7 @@ public class Workspace {
             for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
                 var graphIri = it.next().getURI();
                 graphs.put(
-                        SchemaIri.toName(graphIri),
+                        SchemaNames.unique(SchemaIri.toName(graphIri), graphs.uris()),
                         new GraphWithContext(
                                 dataset.getNamedModel(graphIri).getGraph(), txnContext));
             }
@@ -565,9 +564,9 @@ public class Workspace {
                                         diagrams.get().values(), renamed));
     }
 
-    /** Returns the URI each graph renamed since a version of the set of graphs has now. */
-    private Map<URI, URI> renamedSince(int graphSetVersionsBack) {
-        var renamed = new HashMap<URI, URI>();
+    /** Returns the name each graph renamed since a version of the set of graphs has now. */
+    private Map<String, String> renamedSince(int graphSetVersionsBack) {
+        var renamed = new HashMap<String, String>();
         graphs.graphsByUriAt(graphSetVersionsBack)
                 .forEach(
                         (uriThen, graph) ->
@@ -576,11 +575,7 @@ public class Workspace {
                                         .map(Map.Entry::getKey)
                                         .filter(uriNow -> !uriNow.equals(uriThen))
                                         .findFirst()
-                                        .ifPresent(
-                                                uriNow ->
-                                                        renamed.put(
-                                                                new URI(uriThen),
-                                                                new URI(uriNow))));
+                                        .ifPresent(uriNow -> renamed.put(uriThen, uriNow)));
         return renamed;
     }
 
@@ -796,15 +791,14 @@ public class Workspace {
      *
      * @param schemaName the graph URI
      * @return the graph's contents
-     * @throws ResourceNotFoundException if there is no graph of that URI
+     * @throws ResourceNotFoundException if there is no graph of that name
      */
     GraphWithContext getGraphWithContext(String schemaName) {
         var existing = graphs.get(schemaName);
         if (existing != null) {
             return existing;
         }
-        assertValidSchemaName(schemaName);
-        throw new ResourceNotFoundException("Graph URI " + schemaName + " does not exist.");
+        throw new ResourceNotFoundException("Schema " + schemaName + " does not exist.");
     }
 
     /** Returns a snapshot of the current graph URIs. */
@@ -822,12 +816,6 @@ public class Workspace {
     public PrefixMappingReadOnly getPrefixMapping() {
         try (var _ = begin(ReadWrite.READ)) {
             return prefixes.readOnlyView();
-        }
-    }
-
-    static void assertValidSchemaName(String schemaName) {
-        if (!RDFUtils.isURL(schemaName)) {
-            throw new IllegalArgumentException("Graph Uri " + schemaName + " is not a valid URI");
         }
     }
 }

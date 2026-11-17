@@ -170,7 +170,7 @@ class ImportConcurrencyTest {
                         List.of(
                                 new BlockingMultipartFile(TURTLE, null, null),
                                 new BlockingMultipartFile(OTHER_TURTLE, null, null)),
-                        List.of("http://example.org/one", "http://example.org/two"),
+                        List.of("one", "two"),
                         ImportProgressListener.NOOP);
 
         assertThat(result.importedSchemaNames()).hasSize(2);
@@ -191,7 +191,7 @@ class ImportConcurrencyTest {
                 List.of(
                         new BlockingMultipartFile(TURTLE, null, null),
                         new BlockingMultipartFile(OTHER_TURTLE, null, null)),
-                List.of("http://example.org/one", "http://example.org/two"),
+                List.of("one", "two"),
                 ImportProgressListener.NOOP);
 
         databasePort.undo(WORKSPACE);

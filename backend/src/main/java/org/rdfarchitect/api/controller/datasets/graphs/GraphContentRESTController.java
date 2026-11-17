@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.select.GetSchemaUseCase;
 import org.rdfarchitect.services.update.graph.DeleteGraphUseCase;
 import org.rdfarchitect.services.update.graph.ReplaceGraphUseCase;
@@ -105,7 +104,7 @@ public class GraphContentRESTController {
                 getSchemaUseCase.getSchema(new GraphIdentifier(workspaceName, schemaName), format);
 
         // add suggested file name to response
-        var fileName = new URI(schemaName).getSuffix();
+        var fileName = schemaName;
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 
         var headers = new HttpHeaders();

@@ -20,15 +20,15 @@ package org.rdfarchitect.database;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.jena.irix.IRIx;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class SchemaIriTest {
 
     @ParameterizedTest
     @ValueSource(
-            strings = {"http://graph#my-profile", "my profile", "a%b#c&d+e", "Équipement", "3.0"})
+            strings = {"my-profile", "my profile", "a%b#c&d+e", "Équipement", "default", "3.0"})
     void of_anyName_isAnAbsoluteIriThatGivesTheNameBack(String name) {
         var iri = SchemaIri.of(name);
 
@@ -36,9 +36,14 @@ class SchemaIriTest {
         assertThat(SchemaIri.toName(iri)).isEqualTo(name);
     }
 
-    @Test
-    void toName_iriStoredBeforeGraphsWereNamed_isItsOwnName() {
-        assertThat(SchemaIri.toName("http://graph#my_profile"))
-                .isEqualTo("http://graph#my_profile");
+    @ParameterizedTest
+    @CsvSource({
+        "http://graph#my_profile, my_profile",
+        "http://iec.ch/TC57/CIM100#, CIM100",
+        "http://example.org/graphs/EQ/, EQ",
+        "urn:example:legacy, legacy"
+    })
+    void toName_iriStoredBeforeGraphsWereNamed_givesItsLocalName(String iri, String name) {
+        assertThat(SchemaIri.toName(iri)).isEqualTo(name);
     }
 }

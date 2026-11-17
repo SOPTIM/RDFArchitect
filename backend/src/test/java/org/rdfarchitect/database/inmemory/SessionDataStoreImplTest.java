@@ -43,9 +43,9 @@ import java.util.Map;
 
 class SessionDataStoreImplTest {
 
-    private static final String GRAPH_URI = "http://example.org/schema";
+    private static final String GRAPH_NAME = "schema";
     private static final String NAME = "a";
-    private static final GraphIdentifier GRAPH_IDENTIFIER = new GraphIdentifier(NAME, GRAPH_URI);
+    private static final GraphIdentifier GRAPH_IDENTIFIER = new GraphIdentifier(NAME, GRAPH_NAME);
 
     private List<Graph> exampleGraphs;
 
@@ -93,7 +93,7 @@ class SessionDataStoreImplTest {
     void wrapGraph_NamedGraph_datasetWithNamedGraphInDataset() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
-        var schemaName = "http://example.com/graph";
+        var schemaName = "my-profile";
 
         // Act
         var dataset = SessionDataStore.wrapGraphInDataset(exampleGraphs.getFirst(), schemaName);
@@ -104,14 +104,14 @@ class SessionDataStoreImplTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"a", "anyValid", GRAPH_URI})
+    @ValueSource(strings = {"a", "anyValid", GRAPH_NAME})
     void create_validWorkspaceNameNames_createsEmptyCollections(String name) {
         // Arrange
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
 
         // Act
         TestWorkspaces.createGraph(
-                inMemoryDatabase, new GraphIdentifier(name, GRAPH_URI), exampleGraphs.getFirst());
+                inMemoryDatabase, new GraphIdentifier(name, GRAPH_NAME), exampleGraphs.getFirst());
 
         // Assert
         assertThat(inMemoryDatabase.listDatasets()).contains(name);
@@ -135,7 +135,7 @@ class SessionDataStoreImplTest {
         // Arrange
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
         TestWorkspaces.createGraph(
-                inMemoryDatabase, new GraphIdentifier("any", GRAPH_URI), exampleGraphs.getFirst());
+                inMemoryDatabase, new GraphIdentifier("any", GRAPH_NAME), exampleGraphs.getFirst());
 
         // Act
         inMemoryDatabase.deleteDataset("other");
@@ -224,7 +224,7 @@ class SessionDataStoreImplTest {
                 List.of(GraphFactory.createDefaultGraph(), GraphFactory.createDefaultGraph());
         TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
         TestWorkspaces.createGraph(
-                inMemoryDatabase, new GraphIdentifier("b", GRAPH_URI), exampleGraphs.get(1));
+                inMemoryDatabase, new GraphIdentifier("b", GRAPH_NAME), exampleGraphs.get(1));
 
         // Act
         var datasets = inMemoryDatabase.listDatasets();
@@ -295,7 +295,7 @@ class SessionDataStoreImplTest {
         TestWorkspaces.createGraph(inMemoryDatabase, GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         assertThatExceptionOfType(ResourceNotFoundException.class)
-                .isThrownBy(() -> deleteGraph(new GraphIdentifier("b", GRAPH_URI)));
+                .isThrownBy(() -> deleteGraph(new GraphIdentifier("b", GRAPH_NAME)));
     }
 
     @Test
@@ -378,7 +378,7 @@ class SessionDataStoreImplTest {
         var schemaNames = inMemoryDatabase.listSchemaNames(NAME);
 
         // Assert
-        assertThat(schemaNames).contains(GRAPH_URI, "http://example.com/graph");
+        assertThat(schemaNames).contains(GRAPH_NAME, "http://example.com/graph");
     }
 
     @Test

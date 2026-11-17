@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.graph.source.implementations.GraphFileSourceImpl;
 import org.rdfarchitect.rdf.graph.source.implementations.GraphStringSourceImpl;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
@@ -248,7 +247,7 @@ public class SHACLCustomContentRestController {
     private ResponseEntity<byte[]> buildResponseEntity(
             String schemaName, RDFFormat format, ByteArrayOutputStream outStream) {
         // add suggested file name to response
-        var fileName = new URI(schemaName + "-shacl").getSuffix();
+        var fileName = schemaName + "-shacl";
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 
         var headers = new HttpHeaders();

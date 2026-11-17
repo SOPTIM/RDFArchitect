@@ -607,8 +607,7 @@ public class UpdateClassLayoutService
         if (classes.isEmpty()) {
             return;
         }
-        var schemaNames =
-                classes.stream().map(c -> c.getSchemaName().toString()).collect(Collectors.toSet());
+        var schemaNames = classes.stream().map(c -> c.getSchemaName()).collect(Collectors.toSet());
         var existingSchemaNames = new HashSet<>(databasePort.listSchemaNames(workspaceName));
         if (!existingSchemaNames.containsAll(schemaNames)) {
             throw new IllegalArgumentException(
@@ -644,8 +643,8 @@ public class UpdateClassLayoutService
         var classesBySchemaName =
                 classes.stream()
                         .filter(cls -> cls.getSchemaName() != null && cls.getUuid() != null)
-                        .filter(cls -> existingSchemaNames.contains(cls.getSchemaName().toString()))
-                        .collect(Collectors.groupingBy(cls -> cls.getSchemaName().toString()));
+                        .filter(cls -> existingSchemaNames.contains(cls.getSchemaName()))
+                        .collect(Collectors.groupingBy(cls -> cls.getSchemaName()));
 
         var classUriByUuid = new HashMap<UUID, String>();
         for (var entry : classesBySchemaName.entrySet()) {

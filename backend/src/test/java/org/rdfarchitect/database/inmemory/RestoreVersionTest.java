@@ -37,7 +37,6 @@ import org.rdfarchitect.exception.graph.RestoreTargetChangedException;
 import org.rdfarchitect.models.changelog.HistoryPosition;
 import org.rdfarchitect.models.changelog.RevertScope;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.List;
 import java.util.UUID;
@@ -332,8 +331,7 @@ class RestoreVersionTest {
             var diagramId = UUID.randomUUID();
             try (var transaction = workspace.begin(ReadWrite.WRITE)) {
                 var diagram = new CustomDiagram(diagramId);
-                diagram.setClasses(
-                        List.of(new ClassInDiagram(UUID.randomUUID(), new URI(GRAPH_A))));
+                diagram.setClasses(List.of(new ClassInDiagram(UUID.randomUUID(), GRAPH_A)));
                 transaction.graph(GRAPH_A).getCustomDiagrams().put(diagramId, diagram);
                 transaction.commit("added a diagram");
             }

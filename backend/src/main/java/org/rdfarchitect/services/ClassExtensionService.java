@@ -173,9 +173,7 @@ public class ClassExtensionService implements ClassExtensionUseCase {
                             : String.join(", ", labels);
             transaction.commit(
                     ChangeDescriptions.actionOn(
-                            "Added " + added + " to",
-                            "schema",
-                            ChangeDescriptions.localName(newGraphIdentifier.schemaName())));
+                            "Added " + added + " to", "schema", newGraphIdentifier.schemaName()));
         }
         return insertedUris;
     }

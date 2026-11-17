@@ -54,7 +54,6 @@ import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.rdf.resources.DL;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.models.dto.rendering.svelteflow.RenderMergedDiagramSvelteFlowService;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
@@ -1218,7 +1217,7 @@ class EdgeLayoutTest {
     }
 
     private static ClassInDiagram classInGraphOne(UUID classUUID) {
-        return new ClassInDiagram(classUUID, new URI(GRAPH_ONE));
+        return new ClassInDiagram(classUUID, GRAPH_ONE);
     }
 
     private static UUID merged(String localName) {

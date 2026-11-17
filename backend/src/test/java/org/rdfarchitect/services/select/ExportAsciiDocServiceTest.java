@@ -42,8 +42,7 @@ import java.util.UUID;
 @ExtendWith(MockitoExtension.class)
 class ExportAsciiDocServiceTest {
 
-    private static final GraphIdentifier GRAPH_IDENTIFIER =
-            new GraphIdentifier("dataset", "http://example.com/EQ");
+    private static final GraphIdentifier GRAPH_IDENTIFIER = new GraphIdentifier("dataset", "EQ");
 
     @Mock private GetClassListUseCase getClassListUseCase;
 
@@ -388,19 +387,19 @@ class ExportAsciiDocServiceTest {
     }
 
     @Test
-    void exportGraphAsAsciiDoc_defaultGraph_usesDefaultAnchorPrefix() {
-        var graphIdentifier = new GraphIdentifier("dataset", "default");
+    void exportGraphAsAsciiDoc_schemaNameWithDash_usesItAsAnchorPrefix() {
+        var graphIdentifier = new GraphIdentifier("dataset", "my-profile");
         var clazz =
                 classBuilder("MyClass").stereotypes(List.of(CIMStereotypes.concreteString)).build();
 
         var adoc = exportAsciiDoc(graphIdentifier, List.of(clazz));
 
-        assertThat(adoc).contains("[[default_MyClass]]");
+        assertThat(adoc).contains("[[my_profile_MyClass]]");
     }
 
     @Test
     void exportGraphAsAsciiDoc_schemaNameStartingWithDigit_producesValidIdentifier() {
-        var graphIdentifier = new GraphIdentifier("dataset", "http://example.com/ns/3.0");
+        var graphIdentifier = new GraphIdentifier("dataset", "3.0");
         var clazz =
                 classBuilder("MyClass").stereotypes(List.of(CIMStereotypes.concreteString)).build();
 
