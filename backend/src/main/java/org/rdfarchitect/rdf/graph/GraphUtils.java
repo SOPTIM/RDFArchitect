@@ -55,8 +55,8 @@ import java.util.stream.Stream;
 public class GraphUtils {
 
     /**
-     * How many fingerprints may go into telling look-alike blank nodes apart, which bounds the time
-     * a text built to make that hard can take. The largest official files stay well below it.
+     * Upper bound on the fingerprints {@link #separateLookalikes} may compute, so that a crafted
+     * file cannot keep it busy for long.
      */
     private static final long REFINEMENT_BUDGET = 2_000_000L;
 
@@ -157,11 +157,13 @@ public class GraphUtils {
     }
 
     /**
-     * Refines every blank node's label from its neighbours' until the labels stop changing.
+     * Labels every blank node with a hash of its edges, refined from its neighbours' labels for up
+     * to ten passes, so that a node's label covers what lies within ten hops of it. Nodes that
+     * still share a label but differ further away are then told apart by {@link
+     * #separateLookalikes}.
      *
-     * <p>Each node's edges are collected once up front. Scanning every triple for every node on
-     * every pass was quadratic, and an official constraints file — tens of thousands of blank nodes
-     * in its property shapes and {@code sh:in} lists — took minutes to save.
+     * <p>Each node's edges are collected once, so a pass takes time linear in the number of
+     * triples.
      */
     private static Map<Node, String> computeBlankNodeHashes(
             List<Triple> triples, Set<Node> blankNodes) {
@@ -200,16 +202,16 @@ public class GraphUtils {
     }
 
     /**
-     * Keeps apart blank nodes that only look alike from close up.
+     * Gives distinct labels to blank nodes that share a label but differ more than ten hops away.
      *
-     * <p>Two nodes with the same label become one node in the result, which is right for true
-     * duplicates. But the passes above see ten hops, and two long lists differing only further
-     * along than that shared their middle cells. A shared cell has two ways on, so a reader took
-     * the wrong one: official constraints files lost classes from their {@code sh:in} lists.
+     * <p>Blank nodes with the same label are merged into one, which is only correct if they are
+     * identical all the way out. Two long {@code rdf:List}s that differ only after their tenth cell
+     * would otherwise share their middle cells.
      *
-     * <p>So nodes still sharing a label are refined until no group splits, and what is left is the
-     * same all the way out and safe to merge. Every other node keeps the label it already has,
-     * which leaves it unaffected by an edit far away.
+     * <p>Nodes sharing a label are refined until no group splits any further. Only groups that
+     * split get new labels; all other nodes, including true duplicates, keep theirs, so an edit
+     * elsewhere in the graph does not change them. If {@link #REFINEMENT_BUDGET} runs out, the
+     * remaining groups are kept apart by {@link #keepApart}.
      */
     private static void separateLookalikes(Map<Node, List<Edge>> edges, Map<Node, String> hashes) {
         var lookalikes = groupsSharingALabel(hashes.keySet(), hashes);
