@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
 import org.rdfarchitect.rdf.TestRDFUtils;
@@ -98,7 +99,7 @@ class SessionDataStoreImplTest {
         var dataset = SessionDataStore.wrapGraphInDataset(exampleGraphs.getFirst(), schemaName);
 
         // Assert
-        assertThat(dataset.getNamedModel(schemaName).getGraph())
+        assertThat(dataset.getNamedModel(SchemaIri.of(schemaName)).getGraph())
                 .isEqualTo(exampleGraphs.getFirst());
     }
 

@@ -25,6 +25,7 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.models.changelog.HistoryPosition;
@@ -37,12 +38,22 @@ import java.util.UUID;
 
 public interface SessionDataStore {
 
+    /**
+     * Wraps {@code graph} in a {@link Dataset} so it can be queried with SPARQL. A graph with a
+     * name becomes the named graph {@link SchemaIri#of(String)} gives for that name, which is where
+     * {@code CIMBaseQueryBuilder} and {@code CIMBaseUpdateBuilder} look for it; a graph without a
+     * name becomes the default graph.
+     *
+     * @param graph the graph to wrap
+     * @param schemaName the graph name, or null for an unnamed graph
+     * @return the dataset holding {@code graph}
+     */
     static Dataset wrapGraphInDataset(Graph graph, String schemaName) {
         if (schemaName == null) {
             return DatasetFactory.wrap(ModelFactory.createModelForGraph(graph));
         }
         return DatasetFactory.createGeneral()
-                .addNamedModel(schemaName, ModelFactory.createModelForGraph(graph));
+                .addNamedModel(SchemaIri.of(schemaName), ModelFactory.createModelForGraph(graph));
     }
 
     /**

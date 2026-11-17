@@ -26,6 +26,7 @@ import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.config.GraphCompressionConfig;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagramCollection;
@@ -133,8 +134,8 @@ public class Workspace {
 
     /**
      * Builds a workspace from a Jena dataset, taking over its prefixes and every one of its named
-     * graphs. The default graph of the dataset is not taken over: every graph of a workspace is a
-     * named graph.
+     * graphs, each under the name {@link SchemaIri#toName(String)} gives for its IRI. The default
+     * graph of the dataset is not taken over: every graph of a workspace is a named graph.
      *
      * @param workspaceName the name the workspace is known by
      * @param dataset the dataset to read
@@ -144,11 +145,11 @@ public class Workspace {
         try (var transaction = begin(ReadWrite.WRITE)) {
             this.prefixes.addAll(dataset.getPrefixMapping());
             for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
-                var schemaName = it.next().getURI();
+                var graphIri = it.next().getURI();
                 graphs.put(
-                        schemaName,
+                        SchemaIri.toName(graphIri),
                         new GraphWithContext(
-                                dataset.getNamedModel(schemaName).getGraph(), txnContext));
+                                dataset.getNamedModel(graphIri).getGraph(), txnContext));
             }
             transaction.commit(INITIAL_CHANGE_MESSAGE);
         }

@@ -38,6 +38,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.rdf.TestRDFUtils;
 
 import utils.TestWorkspaces;
@@ -130,7 +131,7 @@ class InMemorySparqlExecutorTest {
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
-        String queryString = "SELECT * FROM <" + schemaName + "> WHERE { ?s ?p ?o }";
+        String queryString = "SELECT * FROM <" + SchemaIri.of(schemaName) + "> WHERE { ?s ?p ?o }";
         var query = QueryFactory.create(queryString);
 
         // Act
@@ -177,7 +178,7 @@ class InMemorySparqlExecutorTest {
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
         String queryString =
                 "SELECT * FROM <"
-                        + schemaName
+                        + SchemaIri.of(schemaName)
                         + "> WHERE { ?s ?p ?o . FILTER(?p = <http://nonexisting>) }";
         var query = QueryFactory.create(queryString);
 

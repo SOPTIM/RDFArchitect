@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.ResourceConflictException;
@@ -128,6 +129,22 @@ class WorkspaceTest {
                 assertThat(transaction.mode()).isEqualTo(ReadWrite.READ);
             }
         }
+    }
+
+    @Test
+    void constructor_namedGraphs_namesEachGraphAfterItsIri() {
+        // Arrange
+        var dataset = DatasetFactory.create();
+        for (var iri : List.of(SchemaIri.of("http://graph#schema"), "http://graph#legacy")) {
+            dataset.getNamedModel(iri).getGraph().add(TestRDFUtils.triple("a a a"));
+        }
+
+        // Act
+        Workspace workspace = new Workspace(WORKSPACE, dataset);
+
+        // Assert
+        assertThat(workspace.listSchemaNames())
+                .containsExactlyInAnyOrder("http://graph#schema", "http://graph#legacy");
     }
 
     @Test

@@ -36,6 +36,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.DatasetDTO;
 import org.rdfarchitect.api.dto.GraphDTO;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
@@ -69,7 +70,8 @@ public class QueryDatasetService
         // fetch graphs and insert into resultDataset
         try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             for (String schemaName : transaction.schemaNames()) {
-                resultDataset.addNamedModel(schemaName, getGraphAsModel(workspaceName, schemaName));
+                resultDataset.addNamedModel(
+                        SchemaIri.of(schemaName), getGraphAsModel(workspaceName, schemaName));
             }
         }
 
