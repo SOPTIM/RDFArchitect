@@ -109,38 +109,34 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
 
     @Override
     public void createGraph(String schemaName, Graph newGraph) {
-        var expanded = prefixes.expandPrefix(schemaName);
-        Workspace.assertValidSchemaName(expanded);
-        graphs.put(expanded, new GraphWithContext(newGraph, txnContext));
+        Workspace.assertValidSchemaName(schemaName);
+        graphs.put(schemaName, new GraphWithContext(newGraph, txnContext));
         prefixes.addAll(newGraph.getPrefixMapping());
-        crossProfileDiagramInfo.setColor(expanded, CrossProfileUtils.generateRandomDarkColor());
+        crossProfileDiagramInfo.setColor(schemaName, CrossProfileUtils.generateRandomDarkColor());
     }
 
     @Override
     public void deleteGraph(String schemaName) {
-        var expanded = prefixes.expandPrefix(schemaName);
-        graphs.remove(expanded);
-        crossProfileDiagramInfo.removeColor(expanded);
+        graphs.remove(schemaName);
+        crossProfileDiagramInfo.removeColor(schemaName);
     }
 
     @Override
     public void renameGraph(String oldSchemaName, String newSchemaName) {
-        var oldUri = prefixes.expandPrefix(oldSchemaName);
-        var newUri = prefixes.expandPrefix(newSchemaName);
-        Workspace.assertValidSchemaName(oldUri);
-        Workspace.assertValidSchemaName(newUri);
-        if (oldUri.equals(newUri)) {
+        Workspace.assertValidSchemaName(oldSchemaName);
+        Workspace.assertValidSchemaName(newSchemaName);
+        if (oldSchemaName.equals(newSchemaName)) {
             return;
         }
-        if (!graphs.contains(oldUri)) {
-            throw new ResourceNotFoundException("Graph URI " + oldUri + " does not exist.");
+        if (!graphs.contains(oldSchemaName)) {
+            throw new ResourceNotFoundException("Graph URI " + oldSchemaName + " does not exist.");
         }
-        if (graphs.contains(newUri)) {
-            throw new ResourceConflictException("Graph URI " + newUri + " already exists.");
+        if (graphs.contains(newSchemaName)) {
+            throw new ResourceConflictException("Graph URI " + newSchemaName + " already exists.");
         }
-        graphs.rename(oldUri, newUri);
-        renameGraphInDiagrams(oldUri, newUri);
-        crossProfileDiagramInfo.renameGraph(oldUri, newUri);
+        graphs.rename(oldSchemaName, newSchemaName);
+        renameGraphInDiagrams(oldSchemaName, newSchemaName);
+        crossProfileDiagramInfo.renameGraph(oldSchemaName, newSchemaName);
     }
 
     @Override

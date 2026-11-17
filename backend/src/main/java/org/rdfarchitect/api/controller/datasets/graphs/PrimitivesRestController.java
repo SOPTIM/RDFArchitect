@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ListPrimitivesUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +47,6 @@ public class PrimitivesRestController {
 
     private static final Logger logger = LoggerFactory.getLogger(PrimitivesRestController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final ListPrimitivesUseCase listPrimitivesUseCase;
 
     @Operation(
@@ -91,11 +89,9 @@ public class PrimitivesRestController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-
         var cimClassList =
                 listPrimitivesUseCase.listPrimitives(
-                        new GraphIdentifier(workspaceName, extendedSchemaName));
+                        new GraphIdentifier(workspaceName, schemaName));
 
         logger.info(
                 "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/primitives\" from \"{}\".",

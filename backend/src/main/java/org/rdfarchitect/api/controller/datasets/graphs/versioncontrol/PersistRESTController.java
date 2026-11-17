@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.versioncontrol.PersistUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +42,6 @@ public class PersistRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(PersistRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final PersistUseCase persistUseCase;
 
     @Operation(
@@ -72,9 +70,7 @@ public class PersistRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-
-        persistUseCase.persist(new GraphIdentifier(workspaceName, extendedSchemaName));
+        persistUseCase.persist(new GraphIdentifier(workspaceName, schemaName));
 
         logger.info(
                 "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/redo\" to \"{}\".",

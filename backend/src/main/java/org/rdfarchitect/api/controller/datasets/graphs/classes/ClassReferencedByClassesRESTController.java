@@ -24,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.relations.ClassRelationsDTO;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.GetClassesReferencingThisClassUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,8 +44,6 @@ public class ClassReferencedByClassesRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ClassReferencedByClassesRESTController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final GetClassesReferencingThisClassUseCase getClassesReferencingThisClassUseCase;
 
@@ -77,8 +74,7 @@ public class ClassReferencedByClassesRESTController {
                 classUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var classesReferencingThisClass =
                 getClassesReferencingThisClassUseCase.getClassesReferencingThisClass(

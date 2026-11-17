@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ListExternalPackagesUseCase;
 import org.rdfarchitect.services.select.ListInternalPackagesUseCase;
 import org.rdfarchitect.services.update.packages.AddPackageUseCase;
@@ -52,7 +51,6 @@ public class AllPackagesRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(AllPackagesRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final AddPackageUseCase addPackageUseCase;
     private final ListInternalPackagesUseCase listInternalPackagesUseCase;
     private final ListExternalPackagesUseCase listExternalPackagesUseCase;
@@ -97,15 +95,13 @@ public class AllPackagesRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-
         var internalPackageList =
                 listInternalPackagesUseCase.listInternalPackages(
-                        new GraphIdentifier(workspaceName, extendedSchemaName));
+                        new GraphIdentifier(workspaceName, schemaName));
 
         var externalPackageList =
                 listExternalPackagesUseCase.listExternalPackages(
-                        new GraphIdentifier(workspaceName, extendedSchemaName));
+                        new GraphIdentifier(workspaceName, schemaName));
 
         logger.info(
                 "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/packages\" from \"{}\".",
@@ -146,11 +142,8 @@ public class AllPackagesRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var extendedPackageURIPrefix =
-                expandURIUseCase.expandUri(workspaceName, packageDTO.getPrefix());
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
-        packageDTO.setPrefix(extendedPackageURIPrefix);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
+        packageDTO.setPrefix(packageDTO.getPrefix());
 
         var newPackageUUID = addPackageUseCase.addPackage(graphIdentifier, packageDTO);
 

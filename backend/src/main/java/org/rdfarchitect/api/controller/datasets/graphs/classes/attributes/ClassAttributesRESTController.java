@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.attributes.UpdateAttributesUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +49,6 @@ public class ClassAttributesRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(ClassAttributesRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final UpdateAttributesUseCase updateAttributesUseCase;
 
     @Operation(
@@ -95,8 +93,7 @@ public class ClassAttributesRESTController {
                 attributeUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var newAttributeUUID = updateAttributesUseCase.replaceAttribute(graphIdentifier, attribute);
 

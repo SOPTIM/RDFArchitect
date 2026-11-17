@@ -24,7 +24,6 @@ import static org.mockito.Mockito.when;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ExportGraphAsciiDocUseCase;
 import org.springframework.http.HttpHeaders;
 
@@ -32,30 +31,28 @@ import java.nio.charset.StandardCharsets;
 
 class AsciiDocExportRESTControllerTest {
 
-    private ExpandURIUseCase expandURIUseCase;
     private ExportGraphAsciiDocUseCase exportGraphAsciiDocUseCase;
     private AsciiDocExportRESTController controller;
 
     @BeforeEach
     void setUp() {
-        expandURIUseCase = mock(ExpandURIUseCase.class);
         exportGraphAsciiDocUseCase = mock(ExportGraphAsciiDocUseCase.class);
-        controller = new AsciiDocExportRESTController(expandURIUseCase, exportGraphAsciiDocUseCase);
+        controller = new AsciiDocExportRESTController(exportGraphAsciiDocUseCase);
     }
 
-    private void stubExport(String schemaName, String expandedSchemaName) {
-        when(expandURIUseCase.expandUri("dataset", schemaName)).thenReturn(expandedSchemaName);
+    private void stubExport(String schemaName) {
         when(exportGraphAsciiDocUseCase.exportGraphAsAsciiDoc(
-                        new GraphIdentifier("dataset", expandedSchemaName), "png", false))
+                        new GraphIdentifier("dataset", schemaName), "png", false))
                 .thenReturn("== Concrete Classes".getBytes(StandardCharsets.UTF_8));
     }
 
     @Test
     void getAsciiDocExport_namesTheFileAfterTheGraph() {
-        stubExport("EQ", "http://example.com/EQ");
+        stubExport("http://example.com/EQ");
 
         var response =
-                controller.getAsciiDocExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png", false);
+                controller.getAsciiDocExport(
+                        HttpHeaders.ORIGIN, "dataset", "http://example.com/EQ", "png", false);
 
         assertThat(response.getHeaders().getContentDisposition().getFilename())
                 .isEqualTo("EQ.adoc");
@@ -63,10 +60,11 @@ class AsciiDocExportRESTControllerTest {
 
     @Test
     void getAsciiDocExport_exposesTheContentDispositionToTheBrowser() {
-        stubExport("EQ", "http://example.com/EQ");
+        stubExport("http://example.com/EQ");
 
         var response =
-                controller.getAsciiDocExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png", false);
+                controller.getAsciiDocExport(
+                        HttpHeaders.ORIGIN, "dataset", "http://example.com/EQ", "png", false);
 
         assertThat(response.getHeaders().getAccessControlExposeHeaders())
                 .containsExactly(HttpHeaders.CONTENT_DISPOSITION);
@@ -74,7 +72,7 @@ class AsciiDocExportRESTControllerTest {
 
     @Test
     void getAsciiDocExport_defaultGraph_fallsBackToDefaultFileName() {
-        stubExport("default", "default");
+        stubExport("default");
 
         var response =
                 controller.getAsciiDocExport(

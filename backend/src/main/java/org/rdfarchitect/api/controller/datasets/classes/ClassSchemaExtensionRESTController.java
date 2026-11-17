@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.dto.ClassExtensionResultDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ClassExtensionUseCase;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -45,8 +44,6 @@ public class ClassSchemaExtensionRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ClassSchemaExtensionRESTController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final ClassExtensionUseCase classExtensionUseCase;
 
@@ -74,10 +71,7 @@ public class ClassSchemaExtensionRESTController {
                 workspaceName,
                 originURL);
 
-        var targetGraphIdentifier =
-                new GraphIdentifier(
-                        workspaceName,
-                        expandURIUseCase.expandUri(workspaceName, request.schemaName()));
+        var targetGraphIdentifier = new GraphIdentifier(workspaceName, request.schemaName());
 
         var results =
                 classExtensionUseCase.extendClasses(

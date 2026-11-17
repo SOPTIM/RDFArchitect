@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ListStereotypesUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +47,6 @@ public class StereotypesRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(StereotypesRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final ListStereotypesUseCase listStereotypesUseCase;
 
     @Operation(
@@ -90,11 +88,9 @@ public class StereotypesRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-
         var resultList =
                 listStereotypesUseCase.listStereotypes(
-                        new GraphIdentifier(workspaceName, extendedSchemaName));
+                        new GraphIdentifier(workspaceName, schemaName));
 
         logger.info(
                 "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/stereotypes\" to \"{}\".",

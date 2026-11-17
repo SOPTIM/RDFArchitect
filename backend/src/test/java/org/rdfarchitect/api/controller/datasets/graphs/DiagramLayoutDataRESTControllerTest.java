@@ -20,7 +20,6 @@ package org.rdfarchitect.api.controller.datasets.graphs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +28,6 @@ import org.rdfarchitect.api.controller.datasets.graphs.rendering.DiagramLayoutDa
 import org.rdfarchitect.api.dto.dl.DiagramLayoutDTO;
 import org.rdfarchitect.api.dto.dl.EdgeLayoutDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.dl.update.UpdateDiagramLayoutUseCase;
 import org.rdfarchitect.services.dl.update.edgelayout.UpdateEdgeLayoutUseCase;
 import org.springframework.http.HttpHeaders;
@@ -39,7 +37,7 @@ import java.util.UUID;
 
 class DiagramLayoutDataRESTControllerTest {
 
-    private static final GraphIdentifier GRAPH = new GraphIdentifier("dataset", "expanded-graph");
+    private static final GraphIdentifier GRAPH = new GraphIdentifier("dataset", "graph");
 
     private UpdateDiagramLayoutUseCase updateDiagramLayoutUseCase;
     private UpdateEdgeLayoutUseCase updateEdgeLayoutUseCase;
@@ -47,13 +45,11 @@ class DiagramLayoutDataRESTControllerTest {
 
     @BeforeEach
     void setUp() {
-        var expandURIUseCase = mock(ExpandURIUseCase.class);
-        when(expandURIUseCase.expandUri("dataset", "graph")).thenReturn("expanded-graph");
         updateDiagramLayoutUseCase = mock(UpdateDiagramLayoutUseCase.class);
         updateEdgeLayoutUseCase = mock(UpdateEdgeLayoutUseCase.class);
         controller =
                 new DiagramLayoutDataRESTController(
-                        expandURIUseCase, updateDiagramLayoutUseCase, updateEdgeLayoutUseCase);
+                        updateDiagramLayoutUseCase, updateEdgeLayoutUseCase);
     }
 
     @Test

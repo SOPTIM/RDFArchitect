@@ -23,7 +23,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.schemamigration.ClearMigrationContextUseCase;
 import org.rdfarchitect.services.schemamigration.SetMigrationContextUseCase;
 import org.slf4j.Logger;
@@ -46,7 +45,6 @@ public class MigrationContextRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(MigrationContextRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final SetMigrationContextUseCase setMigrationContextUseCase;
     private final ClearMigrationContextUseCase clearMigrationContextUseCase;
 
@@ -104,24 +102,20 @@ public class MigrationContextRESTController {
         }
         // stored to stored
         else if (workspaceA != null && workspaceB != null && schemaA != null && schemaB != null) {
-            var extendedSchemaNameA = expandURIUseCase.expandUri(workspaceA, schemaA);
-            var extendedSchemaNameB = expandURIUseCase.expandUri(workspaceB, schemaB);
             setMigrationContextUseCase.setMigrationContext(
-                    new GraphIdentifier(workspaceA, extendedSchemaNameA),
-                    new GraphIdentifier(workspaceB, extendedSchemaNameB),
+                    new GraphIdentifier(workspaceA, schemaA),
+                    new GraphIdentifier(workspaceB, schemaB),
                     ignorePrefixes);
         }
         // file to stored
         else if (fileA != null && workspaceB != null && schemaB != null) {
-            var extendedSchemaNameB = expandURIUseCase.expandUri(workspaceB, schemaB);
             setMigrationContextUseCase.setMigrationContext(
-                    fileA, new GraphIdentifier(workspaceB, extendedSchemaNameB), ignorePrefixes);
+                    fileA, new GraphIdentifier(workspaceB, schemaB), ignorePrefixes);
         }
         // stored to file
         else if (workspaceA != null && schemaA != null && fileA != null) {
-            var extendedSchemaNameA = expandURIUseCase.expandUri(workspaceA, schemaA);
             setMigrationContextUseCase.setMigrationContext(
-                    new GraphIdentifier(workspaceA, extendedSchemaNameA), fileA, ignorePrefixes);
+                    new GraphIdentifier(workspaceA, schemaA), fileA, ignorePrefixes);
         } else {
             logger.warn(
                     "Invalid request to POST \"/api/migrations/context\" from \"{}\". Missing required parameters.",

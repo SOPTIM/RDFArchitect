@@ -29,7 +29,6 @@ import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.attributes.CreateAttributeUseCase;
 import org.rdfarchitect.services.update.classes.attributes.UpdateAttributesUseCase;
 import org.slf4j.Logger;
@@ -55,7 +54,6 @@ public class ClassAllAttributesRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(ClassAllAttributesRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final CreateAttributeUseCase createAttributeUseCase;
     private final UpdateAttributesUseCase updateAttributesUseCase;
 
@@ -93,8 +91,7 @@ public class ClassAllAttributesRESTController {
                 classUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var newAttributeUUID = createAttributeUseCase.createAttribute(graphIdentifier, attribute);
 
@@ -148,8 +145,7 @@ public class ClassAllAttributesRESTController {
                 classUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         updateAttributesUseCase.replaceAllAttributes(
                 graphIdentifier, UUID.fromString(classUUID), attributeList);

@@ -24,7 +24,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ResolveIdentifierUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +42,6 @@ public class ResolveIdentifierRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(ResolveIdentifierRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final ResolveIdentifierUseCase resolveIdentifierUseCase;
 
     @Operation(
@@ -76,13 +74,9 @@ public class ResolveIdentifierRESTController {
                 iriIdentifier,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var extendedResourceIRI = expandURIUseCase.expandUri(workspaceName, iriIdentifier);
-
         var uuid =
                 resolveIdentifierUseCase.resolveIRI(
-                        new GraphIdentifier(workspaceName, extendedSchemaName),
-                        extendedResourceIRI);
+                        new GraphIdentifier(workspaceName, schemaName), iriIdentifier);
 
         logger.info(
                 "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/resolve/iri/{{}}\" to \"{}\".",

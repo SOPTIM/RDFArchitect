@@ -32,7 +32,6 @@ import org.rdfarchitect.models.cim.data.dto.facade.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.GraphUtils;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
@@ -47,7 +46,6 @@ import java.util.UUID;
 public class CopyClassSourceReader {
 
     private final DatabasePort databasePort;
-    private final ExpandURIUseCase expandURIUseCase;
 
     public List<CopyClassSource> toSources(List<PasteSourceClassDTO> sourceDTOs) {
         if (sourceDTOs == null) {
@@ -55,17 +53,12 @@ public class CopyClassSourceReader {
         }
         return sourceDTOs.stream()
                 .map(
-                        dto -> {
-                            var expandedSchemaName =
-                                    expandURIUseCase.expandUri(
-                                            dto.getSourceWorkspaceName(),
-                                            dto.getSourceSchemaName());
-                            var sourceGraphIdentifier =
-                                    new GraphIdentifier(
-                                            dto.getSourceWorkspaceName(), expandedSchemaName);
-                            return new CopyClassSource(
-                                    sourceGraphIdentifier, UUID.fromString(dto.getClassUUID()));
-                        })
+                        dto ->
+                                new CopyClassSource(
+                                        new GraphIdentifier(
+                                                dto.getSourceWorkspaceName(),
+                                                dto.getSourceSchemaName()),
+                                        UUID.fromString(dto.getClassUUID())))
                 .toList();
     }
 

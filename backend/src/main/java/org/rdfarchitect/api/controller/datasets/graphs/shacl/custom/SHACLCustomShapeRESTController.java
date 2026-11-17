@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLDeleteShapeUseCase;
 import org.rdfarchitect.services.shacl.SHACLReplaceShapeUseCase;
 import org.slf4j.Logger;
@@ -46,8 +45,6 @@ public class SHACLCustomShapeRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(SHACLCustomShapeRESTController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final SHACLReplaceShapeUseCase shaclReplaceShapeUseCase;
 
@@ -86,11 +83,8 @@ public class SHACLCustomShapeRESTController {
                 shaclShapeURI,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var extendedShaclShapeURI = expandURIUseCase.expandUri(workspaceName, shaclShapeURI);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
-        shaclReplaceShapeUseCase.replaceSHACLShape(
-                graphIdentifier, extendedShaclShapeURI, shaclString);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
+        shaclReplaceShapeUseCase.replaceSHACLShape(graphIdentifier, shaclShapeURI, shaclString);
 
         logger.info(
                 "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/{{}}\" to \"{}\".",
@@ -130,10 +124,8 @@ public class SHACLCustomShapeRESTController {
                 shaclShapeURI,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var extendedShaclShapeURI = expandURIUseCase.expandUri(workspaceName, shaclShapeURI);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
-        shaclDeleteShapeUseCase.deleteSHACLShape(graphIdentifier, extendedShaclShapeURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
+        shaclDeleteShapeUseCase.deleteSHACLShape(graphIdentifier, shaclShapeURI);
 
         logger.info(
                 "Sending response to DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/{{}}\" to \"{}\".",

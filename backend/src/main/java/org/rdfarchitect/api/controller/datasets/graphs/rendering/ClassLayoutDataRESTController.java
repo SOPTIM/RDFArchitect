@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassPositionsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +48,6 @@ public class ClassLayoutDataRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(ClassLayoutDataRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final UpdateClassPositionsUseCase updateClassPositionsUseCase;
 
     @Operation(
@@ -94,12 +92,11 @@ public class ClassLayoutDataRESTController {
                 diagramUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var resolvedPackageUUID =
                 !diagramUUID.equals("default") ? UUID.fromString(diagramUUID) : null;
 
         updateClassPositionsUseCase.updateClassPositions(
-                new GraphIdentifier(workspaceName, extendedSchemaName),
+                new GraphIdentifier(workspaceName, schemaName),
                 resolvedPackageUUID,
                 classPositionDTOList);
 

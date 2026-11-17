@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.graph.RenameGraphUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +43,6 @@ public class GraphRenameRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(GraphRenameRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final RenameGraphUseCase renameGraphUseCase;
 
     @Operation(
@@ -76,11 +74,8 @@ public class GraphRenameRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var extendedNewSchemaName = expandURIUseCase.expandUri(workspaceName, newSchemaName);
-
         renameGraphUseCase.renameGraph(
-                new GraphIdentifier(workspaceName, extendedSchemaName), extendedNewSchemaName);
+                new GraphIdentifier(workspaceName, schemaName), newSchemaName);
 
         logger.info(
                 "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/rename\" to \"{}\".",

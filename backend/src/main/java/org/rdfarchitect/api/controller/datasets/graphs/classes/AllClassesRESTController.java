@@ -30,7 +30,6 @@ import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.GetClassListUseCase;
 import org.rdfarchitect.services.update.classes.AddClassUseCase;
 import org.slf4j.Logger;
@@ -54,7 +53,6 @@ public class AllClassesRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(AllClassesRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final GetClassListUseCase getClassListUseCase;
     private final AddClassUseCase addClassUseCase;
 
@@ -107,16 +105,13 @@ public class AllClassesRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var extendedClassURIPrefix =
-                expandURIUseCase.expandUri(workspaceName, addNewClassRequest.classURIPrefix);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var classUUID =
                 addClassUseCase.addClass(
                         graphIdentifier,
                         addNewClassRequest.packageDTO,
-                        extendedClassURIPrefix,
+                        addNewClassRequest.classURIPrefix,
                         addNewClassRequest.className,
                         addNewClassRequest.classLayoutPosition);
 
@@ -172,12 +167,9 @@ public class AllClassesRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-
         var cimClassList =
                 getClassListUseCase.getClassList(
-                        new GraphIdentifier(workspaceName, extendedSchemaName),
-                        includeExternalClasses);
+                        new GraphIdentifier(workspaceName, schemaName), includeExternalClasses);
 
         logger.info(
                 "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/classes\" to \"{}\".",

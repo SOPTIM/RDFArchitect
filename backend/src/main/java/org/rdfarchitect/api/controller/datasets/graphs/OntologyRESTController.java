@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.ontology.OntologyDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ontology.ReadOntologyUseCase;
 import org.rdfarchitect.services.update.ontology.CreateOntologyUseCase;
 import org.rdfarchitect.services.update.ontology.DeleteOntologyUseCase;
@@ -53,7 +52,6 @@ public class OntologyRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(OntologyRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final CreateOntologyUseCase createOntologyUseCase;
     private final ReadOntologyUseCase readOntologyUseCase;
     private final UpdateOntologyUseCase updateOntologyUseCase;
@@ -92,8 +90,7 @@ public class OntologyRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var classObject = readOntologyUseCase.getCurrentOntology(graphIdentifier);
 
@@ -138,8 +135,7 @@ public class OntologyRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         createOntologyUseCase.createOntology(graphIdentifier, newOntology);
 
@@ -184,8 +180,7 @@ public class OntologyRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         updateOntologyUseCase.replaceOntology(graphIdentifier, newOntology);
 
@@ -223,8 +218,7 @@ public class OntologyRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         deleteOntologyUseCase.deleteOntology(graphIdentifier);
 

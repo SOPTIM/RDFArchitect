@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
 import org.rdfarchitect.api.dto.validation.ValidationReportDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.validation.SchemaValidationUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +46,6 @@ public class SchemaValidationRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(SchemaValidationRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final SchemaValidationUseCase schemaValidationUseCase;
 
     @Operation(
@@ -88,10 +86,9 @@ public class SchemaValidationRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var report =
                 schemaValidationUseCase.validateSchema(
-                        new GraphIdentifier(workspaceName, extendedSchemaName), cgmesVersion);
+                        new GraphIdentifier(workspaceName, schemaName), cgmesVersion);
 
         logger.info(
                 "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/validation\" to \"{}\".",

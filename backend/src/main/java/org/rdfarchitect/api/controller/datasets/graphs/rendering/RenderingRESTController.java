@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.GetRenderingDataUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,8 +49,6 @@ public class RenderingRESTController {
     private static final Logger logger = LoggerFactory.getLogger(RenderingRESTController.class);
 
     private final GetRenderingDataUseCase getRenderingDataUseCase;
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     @Operation(
             summary = "Get rendering data",
@@ -83,14 +80,13 @@ public class RenderingRESTController {
                     @PathVariable
                     String schemaName,
             @RequestBody GraphFilter filter) {
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         logger.info(
                 "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/rendering\" from \"{}\".",
                 workspaceName,
                 schemaName,
                 originURL);
 
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var packageUUID =
                 !filter.getPackageUUID().equals("default")

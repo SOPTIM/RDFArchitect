@@ -26,7 +26,6 @@ import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.GetRenderingDataUseCase;
 import org.rdfarchitect.services.diagrams.DeleteCustomDiagramUseCase;
 import org.rdfarchitect.services.diagrams.ReplaceCustomDiagramUseCase;
@@ -58,8 +57,6 @@ public class CustomDiagramsRESTController {
 
     private final ReplaceCustomDiagramUseCase replaceCustomDiagramUseCase;
 
-    private final ExpandURIUseCase expandURIUseCase;
-
     @PostMapping
     public RenderingDataDTO getCustomProfileViewRenderingData(
             @Parameter(description = "The name/url of the inquirer.")
@@ -84,11 +81,9 @@ public class CustomDiagramsRESTController {
                 diagramId,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-
         var result =
                 getRenderingDataUseCase.getCustomDiagramRenderingData(
-                        new GraphIdentifier(workspaceName, extendedSchemaName),
+                        new GraphIdentifier(workspaceName, schemaName),
                         filter,
                         UUID.fromString(diagramId));
 
@@ -126,9 +121,8 @@ public class CustomDiagramsRESTController {
                 diagramId,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         replaceCustomDiagramUseCase.replaceCustomGraphDiagram(
-                new GraphIdentifier(workspaceName, extendedSchemaName), diagramId, diagram);
+                new GraphIdentifier(workspaceName, schemaName), diagramId, diagram);
 
         logger.info(
                 "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}\" from \"{}\"",
@@ -162,9 +156,8 @@ public class CustomDiagramsRESTController {
                 diagramId,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         deleteCustomDiagramUseCase.deleteCustomGraphDiagram(
-                new GraphIdentifier(workspaceName, extendedSchemaName), diagramId);
+                new GraphIdentifier(workspaceName, schemaName), diagramId);
 
         logger.info(
                 "Sending response to DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}\" from \"{}\"",

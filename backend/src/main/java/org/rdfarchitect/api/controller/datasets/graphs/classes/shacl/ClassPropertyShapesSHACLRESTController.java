@@ -24,7 +24,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLGetClassRelationsUseCase;
 import org.rdfarchitect.shacl.dto.PropertyShapesWrapper;
 import org.slf4j.Logger;
@@ -47,8 +46,6 @@ public class ClassPropertyShapesSHACLRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ClassPropertyShapesSHACLRESTController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final SHACLGetClassRelationsUseCase shaclGetClassRelationsUseCase;
 
@@ -80,8 +77,7 @@ public class ClassPropertyShapesSHACLRESTController {
                 classUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
         var res =
                 shaclGetClassRelationsUseCase.getPropertyShapes(
                         graphIdentifier, UUID.fromString(classUUID));

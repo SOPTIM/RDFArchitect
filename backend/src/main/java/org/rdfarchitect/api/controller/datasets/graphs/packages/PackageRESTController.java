@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.packages.DeletePackageUseCase;
 import org.rdfarchitect.services.update.packages.GetPackageUseCase;
 import org.rdfarchitect.services.update.packages.ReplacePackageUseCase;
@@ -50,7 +49,6 @@ public class PackageRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(PackageRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final ReplacePackageUseCase replacePackageUseCase;
     private final DeletePackageUseCase deletePackageUseCase;
     private final GetPackageUseCase getPackageUseCase;
@@ -88,8 +86,7 @@ public class PackageRESTController {
                 originURL,
                 packageUUID);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         replacePackageUseCase.replacePackage(graphIdentifier, packageDTO);
 
@@ -131,8 +128,7 @@ public class PackageRESTController {
                 packageUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         deletePackageUseCase.deletePackage(graphIdentifier, packageUUID);
 
@@ -174,8 +170,7 @@ public class PackageRESTController {
                 packageUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var result = getPackageUseCase.getPackage(graphIdentifier, packageUUID);
 

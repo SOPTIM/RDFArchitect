@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ListDatatypesUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +47,6 @@ public class DatatypesRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(DatatypesRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final ListDatatypesUseCase listDatatypesUseCase;
 
     @Operation(
@@ -91,11 +89,8 @@ public class DatatypesRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-
         var cimClassList =
-                listDatatypesUseCase.listDatatypes(
-                        new GraphIdentifier(workspaceName, extendedSchemaName));
+                listDatatypesUseCase.listDatatypes(new GraphIdentifier(workspaceName, schemaName));
 
         logger.info(
                 "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/datatypes\" to \"{}\".",

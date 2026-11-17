@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.dl.LabelPositionDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.dl.update.labellayout.UpdateLabelPositionsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +48,6 @@ public class LabelLayoutDataRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(LabelLayoutDataRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final UpdateLabelPositionsUseCase updateLabelPositionsUseCase;
 
     @Operation(
@@ -94,12 +92,11 @@ public class LabelLayoutDataRESTController {
                 diagramUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var resolvedDiagramUUID =
                 !diagramUUID.equals("default") ? UUID.fromString(diagramUUID) : null;
 
         updateLabelPositionsUseCase.updateLabelPositions(
-                new GraphIdentifier(workspaceName, extendedSchemaName),
+                new GraphIdentifier(workspaceName, schemaName),
                 resolvedDiagramUUID,
                 labelPositionDTOList);
 

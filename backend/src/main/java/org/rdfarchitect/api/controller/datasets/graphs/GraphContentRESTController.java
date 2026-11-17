@@ -28,7 +28,6 @@ import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.GetSchemaUseCase;
 import org.rdfarchitect.services.update.graph.DeleteGraphUseCase;
 import org.rdfarchitect.services.update.graph.ReplaceGraphUseCase;
@@ -57,7 +56,6 @@ public class GraphContentRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(GraphContentRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final GetSchemaUseCase getSchemaUseCase;
     private final DeleteGraphUseCase deleteGraphUseCase;
     private final ReplaceGraphUseCase replaceGraphUseCase;
@@ -100,18 +98,16 @@ public class GraphContentRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var format = getRdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
-                getSchemaUseCase.getSchema(
-                        new GraphIdentifier(workspaceName, extendedSchemaName), format);
+                getSchemaUseCase.getSchema(new GraphIdentifier(workspaceName, schemaName), format);
 
         // add suggested file name to response
         var fileName = "default";
-        if (!extendedSchemaName.equals("default")) {
-            fileName = new URI(extendedSchemaName).getSuffix();
+        if (!schemaName.equals("default")) {
+            fileName = new URI(schemaName).getSuffix();
         }
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 

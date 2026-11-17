@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.GetClassInformationUseCase;
 import org.rdfarchitect.services.update.classes.DeleteClassUseCase;
 import org.rdfarchitect.services.update.classes.ReplaceClassUseCase;
@@ -54,7 +53,6 @@ public class ClassRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(ClassRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final GetClassInformationUseCase getClassInformationUseCase;
     private final ReplaceClassUseCase replaceClassUseCase;
     private final DeleteClassUseCase deleteClassUseCase;
@@ -101,8 +99,7 @@ public class ClassRESTController {
                 classUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var classObject =
                 getClassInformationUseCase.getClassInformation(
@@ -156,8 +153,7 @@ public class ClassRESTController {
                 classUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         replaceClassUseCase.replaceClass(graphIdentifier, newClass);
 

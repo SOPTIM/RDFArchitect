@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,8 +49,6 @@ import java.util.Map;
 public class SHACLContentRestController {
 
     private static final Logger logger = LoggerFactory.getLogger(SHACLContentRestController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final SHACLExportUseCase shaclExportUseCase;
 
@@ -94,14 +91,13 @@ public class SHACLContentRestController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var format = getRdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 shaclExportUseCase.exportCombinedSHACLGraph(
-                        new GraphIdentifier(workspaceName, extendedSchemaName), format);
-        var body = buildResponseEntity(extendedSchemaName, format, outStream);
+                        new GraphIdentifier(workspaceName, schemaName), format);
+        var body = buildResponseEntity(schemaName, format, outStream);
 
         logger.info(
                 "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/file\" to \"{}\".",
@@ -112,11 +108,11 @@ public class SHACLContentRestController {
     }
 
     private ResponseEntity<byte[]> buildResponseEntity(
-            String extendedSchemaName, RDFFormat format, ByteArrayOutputStream outStream) {
+            String schemaName, RDFFormat format, ByteArrayOutputStream outStream) {
         // add suggested file name to response
         var fileName = "shacl";
-        if (!extendedSchemaName.equals("default")) {
-            fileName = new URI(extendedSchemaName + "-shacl").getSuffix();
+        if (!schemaName.equals("default")) {
+            fileName = new URI(schemaName + "-shacl").getSuffix();
         }
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 

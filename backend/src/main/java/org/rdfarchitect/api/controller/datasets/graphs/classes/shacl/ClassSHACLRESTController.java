@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLGetClassRelationsUseCase;
 import org.rdfarchitect.services.shacl.SHACLUpdateUseCase;
 import org.rdfarchitect.shacl.dto.CustomAndGeneratedTuple;
@@ -49,8 +48,6 @@ import java.util.UUID;
 public class ClassSHACLRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(ClassSHACLRESTController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final SHACLGetClassRelationsUseCase shaclGetClassRelationsUseCase;
 
@@ -84,8 +81,7 @@ public class ClassSHACLRESTController {
                 classUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
         var res =
                 shaclGetClassRelationsUseCase.getSHACLToClassRelations(
                         graphIdentifier, UUID.fromString(classUUID));
@@ -129,8 +125,7 @@ public class ClassSHACLRESTController {
                 classUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
         shaclUpdateUseCase.updateClassSHACL(
                 graphIdentifier, UUID.fromString(classUUID), shaclString);
 

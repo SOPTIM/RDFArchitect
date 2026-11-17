@@ -806,14 +806,13 @@ public class Workspace {
      * @return the graph's contents
      */
     GraphWithContext getGraphWithContext(String schemaName) {
-        var expanded = prefixes.expandPrefix(schemaName);
-        var existing = graphs.get(expanded);
+        var existing = graphs.get(schemaName);
         if (existing != null) {
             return existing;
         }
-        assertValidSchemaName(expanded);
-        if (!expanded.equals(DEFAULT_GRAPH_NAME)) {
-            throw new ResourceNotFoundException("Graph URI " + expanded + " does not exist.");
+        assertValidSchemaName(schemaName);
+        if (!schemaName.equals(DEFAULT_GRAPH_NAME)) {
+            throw new ResourceNotFoundException("Graph URI " + schemaName + " does not exist.");
         }
         var defaultGraph = new GraphWithContext(GraphFactory.createDefaultGraph(), txnContext);
         if (txnContext.transactionMode() == ReadWrite.WRITE) {

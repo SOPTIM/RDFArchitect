@@ -47,7 +47,6 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.services.ExpandURIService;
 import org.rdfarchitect.services.update.classes.CopyClassReferenceResolver;
 import org.rdfarchitect.services.update.classes.CopyClassService;
 import org.rdfarchitect.services.update.classes.CopyClassSourceReader;
@@ -95,7 +94,7 @@ class CopyClassServiceTest {
         copyClassService =
                 new CopyClassService(
                         databasePort,
-                        new CopyClassSourceReader(databasePort, new ExpandURIService(databasePort)),
+                        new CopyClassSourceReader(databasePort),
                         new CopyClassReferenceResolver(databasePort),
                         false);
         var file = readMultipartFileFromFile(PATH, "class.ttl");

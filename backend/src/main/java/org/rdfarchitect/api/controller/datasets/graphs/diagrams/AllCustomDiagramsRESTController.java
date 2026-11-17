@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +48,6 @@ public class AllCustomDiagramsRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(AllCustomDiagramsRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
 
     @Operation(
@@ -91,11 +89,9 @@ public class AllCustomDiagramsRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-
         var result =
                 getCustomDiagramsUseCase.getCustomDiagramsForGraph(
-                        new GraphIdentifier(workspaceName, extendedSchemaName));
+                        new GraphIdentifier(workspaceName, schemaName));
 
         logger.info(
                 "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams\" from \"{}\"",

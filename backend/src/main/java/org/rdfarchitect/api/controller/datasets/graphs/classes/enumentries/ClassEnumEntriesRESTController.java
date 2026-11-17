@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.enumentries.ReplaceOrCreateEnumEntryUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +46,6 @@ public class ClassEnumEntriesRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ClassEnumEntriesRESTController.class);
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final ReplaceOrCreateEnumEntryUseCase replaceOrCreateEnumEntryUseCase;
 
@@ -87,11 +85,9 @@ public class ClassEnumEntriesRESTController {
                 enumEntryUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-
         var newEnumEntryUUID =
                 replaceOrCreateEnumEntryUseCase.replaceOrCreateEnumEntry(
-                        new GraphIdentifier(workspaceName, extendedSchemaName), enumEntry);
+                        new GraphIdentifier(workspaceName, schemaName), enumEntry);
 
         logger.info(
                 "Sending response to PUT request: \"/api/workspaces/{{}}/schemas/{{}}/classes/{{}}/enumentries/{{}}\" from \"{}\".",

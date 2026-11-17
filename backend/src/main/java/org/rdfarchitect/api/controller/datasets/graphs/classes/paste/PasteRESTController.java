@@ -27,7 +27,6 @@ import org.rdfarchitect.api.dto.PasteClassesRequestDTO;
 import org.rdfarchitect.api.dto.PastePreviewRequestDTO;
 import org.rdfarchitect.api.dto.PastePreviewResponseDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.CopyClassUseCase;
 import org.rdfarchitect.services.update.classes.PastePreviewUseCase;
 import org.slf4j.Logger;
@@ -49,7 +48,6 @@ public class PasteRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(PasteRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final CopyClassUseCase copyClassUseCase;
     private final PastePreviewUseCase pastePreviewUseCase;
 
@@ -87,10 +85,7 @@ public class PasteRESTController {
                 pasteRequest.getSources() == null ? 0 : pasteRequest.getSources().size(),
                 originURL);
 
-        var targetExtendedSchemaName =
-                expandURIUseCase.expandUri(targetWorkspaceName, targetSchemaName);
-        var targetGraphIdentifier =
-                new GraphIdentifier(targetWorkspaceName, targetExtendedSchemaName);
+        var targetGraphIdentifier = new GraphIdentifier(targetWorkspaceName, targetSchemaName);
 
         var responses = copyClassUseCase.copyClasses(pasteRequest, targetGraphIdentifier);
 
@@ -134,10 +129,7 @@ public class PasteRESTController {
                 previewRequest.getSources() == null ? 0 : previewRequest.getSources().size(),
                 originURL);
 
-        var targetExtendedSchemaName =
-                expandURIUseCase.expandUri(targetWorkspaceName, targetSchemaName);
-        var targetGraphIdentifier =
-                new GraphIdentifier(targetWorkspaceName, targetExtendedSchemaName);
+        var targetGraphIdentifier = new GraphIdentifier(targetWorkspaceName, targetSchemaName);
 
         return pastePreviewUseCase.previewPaste(previewRequest, targetGraphIdentifier);
     }

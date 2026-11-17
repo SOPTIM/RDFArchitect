@@ -41,7 +41,6 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.services.ExpandURIService;
 import org.rdfarchitect.services.update.classes.CopyClassReference.Kind;
 import org.rdfarchitect.services.update.classes.CopyClassReferenceResolver;
 import org.rdfarchitect.services.update.classes.CopyClassSourceReader;
@@ -79,7 +78,7 @@ class PastePreviewServiceTest {
         pastePreviewService =
                 new PastePreviewService(
                         databasePort,
-                        new CopyClassSourceReader(databasePort, new ExpandURIService(databasePort)),
+                        new CopyClassSourceReader(databasePort),
                         new CopyClassReferenceResolver(databasePort));
 
         var file = readMultipartFileFromFile(PATH, "class-with-references.ttl");

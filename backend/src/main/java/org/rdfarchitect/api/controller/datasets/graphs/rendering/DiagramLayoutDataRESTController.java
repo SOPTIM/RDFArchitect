@@ -29,7 +29,6 @@ import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.dl.DiagramLayoutDTO;
 import org.rdfarchitect.api.dto.dl.EdgeLayoutDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.dl.update.UpdateDiagramLayoutUseCase;
 import org.rdfarchitect.services.dl.update.edgelayout.UpdateEdgeLayoutUseCase;
 import org.slf4j.Logger;
@@ -52,7 +51,6 @@ public class DiagramLayoutDataRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(DiagramLayoutDataRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final UpdateDiagramLayoutUseCase updateDiagramLayoutUseCase;
     private final UpdateEdgeLayoutUseCase updateEdgeLayoutUseCase;
 
@@ -162,8 +160,7 @@ public class DiagramLayoutDataRESTController {
     }
 
     private GraphIdentifier graphIdentifier(String workspaceName, String schemaName) {
-        return new GraphIdentifier(
-                workspaceName, expandURIUseCase.expandUri(workspaceName, schemaName));
+        return new GraphIdentifier(workspaceName, schemaName);
     }
 
     private static UUID resolveDiagramUUID(String diagramUUID) {

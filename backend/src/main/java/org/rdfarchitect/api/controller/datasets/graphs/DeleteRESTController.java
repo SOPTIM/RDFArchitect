@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.dto.delete.ResourceDeleteRequest;
 import org.rdfarchitect.api.dto.delete.relations.AffectedResource;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.delete.DeleteResourcesUseCase;
 import org.rdfarchitect.services.delete.FindDeleteDependenciesUseCase;
 import org.slf4j.Logger;
@@ -50,7 +49,6 @@ public class DeleteRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(DeleteRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final FindDeleteDependenciesUseCase findDeleteDependenciesUseCase;
     private final DeleteResourcesUseCase deleteResourcesUseCase;
 
@@ -84,8 +82,7 @@ public class DeleteRESTController {
                 uuids.size(),
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var result = findDeleteDependenciesUseCase.getDeleteDependencies(graphIdentifier, uuids);
 
@@ -129,10 +126,8 @@ public class DeleteRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-
         deleteResourcesUseCase.executeDeleteRequests(
-                new GraphIdentifier(workspaceName, extendedSchemaName), deleteRequests);
+                new GraphIdentifier(workspaceName, schemaName), deleteRequests);
 
         logger.info(
                 "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/delete-requests\" from \"{}\".",

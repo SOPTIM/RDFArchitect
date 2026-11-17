@@ -24,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CustomDiagramLayoutUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,8 +46,6 @@ public class CustomDiagramAllClassesRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(CustomDiagramAllClassesRESTController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final CustomDiagramLayoutUseCase customDiagramLayoutUseCase;
 
@@ -78,9 +75,8 @@ public class CustomDiagramAllClassesRESTController {
                 diagramId,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         customDiagramLayoutUseCase.addClassesToCustomDiagram(
-                new GraphIdentifier(workspaceName, extendedSchemaName),
+                new GraphIdentifier(workspaceName, schemaName),
                 UUID.fromString(diagramId),
                 classes);
 
@@ -120,9 +116,8 @@ public class CustomDiagramAllClassesRESTController {
                 classIds.size(),
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         customDiagramLayoutUseCase.removeClassesFromCustomDiagram(
-                new GraphIdentifier(workspaceName, extendedSchemaName),
+                new GraphIdentifier(workspaceName, schemaName),
                 UUID.fromString(diagramId),
                 classIds);
 

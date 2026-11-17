@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ExportGraphHTMLUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +49,6 @@ public class HTMLExportRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(HTMLExportRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final ExportGraphHTMLUseCase exportGraphHTMLUseCase;
 
     @Operation(
@@ -92,17 +90,13 @@ public class HTMLExportRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-
         var output =
                 exportGraphHTMLUseCase.exportGraphAsHTML(
-                        new GraphIdentifier(workspaceName, extendedSchemaName),
-                        fileEnding,
-                        embedDiagrams);
+                        new GraphIdentifier(workspaceName, schemaName), fileEnding, embedDiagrams);
 
         var fileName = "default";
-        if (!extendedSchemaName.equals("default")) {
-            fileName = new URI(extendedSchemaName).getSuffix();
+        if (!schemaName.equals("default")) {
+            fileName = new URI(schemaName).getSuffix();
         }
         fileName += ".html";
 

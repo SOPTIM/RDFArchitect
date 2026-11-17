@@ -34,7 +34,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.services.ExpandURIService;
 import org.rdfarchitect.services.update.classes.CopyClassSource;
 import org.rdfarchitect.services.update.classes.CopyClassSourceReader;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -61,7 +60,7 @@ class CopyClassSourceReaderTest {
         SessionContext.setSessionId(UUID.randomUUID().toString());
         databasePort =
                 spy(new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig())));
-        sourceReader = new CopyClassSourceReader(databasePort, new ExpandURIService(databasePort));
+        sourceReader = new CopyClassSourceReader(databasePort);
 
         var file = readMultipartFileFromFile(PATH, "class.ttl");
         var graphSource =

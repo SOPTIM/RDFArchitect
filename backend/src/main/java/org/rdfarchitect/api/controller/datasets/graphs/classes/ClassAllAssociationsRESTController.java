@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.associations.AssociationsService;
 import org.rdfarchitect.services.update.classes.associations.CreateAssociationUseCase;
 import org.rdfarchitect.services.update.classes.associations.UpdateAssociationsUseCase;
@@ -55,7 +54,6 @@ public class ClassAllAssociationsRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(ClassAllAssociationsRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final CreateAssociationUseCase createAssociationUseCase;
     private final UpdateAssociationsUseCase updateAssociationsUseCase;
 
@@ -100,8 +98,7 @@ public class ClassAllAssociationsRESTController {
                 classUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         updateAssociationsUseCase.replaceAllAssociations(
                 graphIdentifier, UUID.fromString(classUUID), associationPairList);
@@ -153,8 +150,7 @@ public class ClassAllAssociationsRESTController {
                 classUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var newAssociationUUIDs =
                 createAssociationUseCase.createAssociation(graphIdentifier, associationPair);

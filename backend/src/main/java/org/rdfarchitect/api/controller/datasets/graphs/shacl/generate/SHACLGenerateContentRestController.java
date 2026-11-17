@@ -29,7 +29,6 @@ import org.apache.jena.riot.system.PrefixEntry;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.rdfarchitect.services.shacl.SHACLGenerateUseCase;
 import org.slf4j.Logger;
@@ -54,8 +53,6 @@ public class SHACLGenerateContentRestController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(SHACLGenerateContentRestController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final SHACLExportUseCase shaclExportUseCase;
 
@@ -86,11 +83,9 @@ public class SHACLGenerateContentRestController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-
         var result =
                 shaclGenerateUseCase.exportGeneratedSHACLGraph(
-                        new GraphIdentifier(workspaceName, extendedSchemaName),
+                        new GraphIdentifier(workspaceName, schemaName),
                         PrefixEntry.create(RDFA.NS_PREFIX_SHACL, RDFA.NS_URI_SHACL));
 
         logger.info(
@@ -139,14 +134,13 @@ public class SHACLGenerateContentRestController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var format = getRdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 shaclExportUseCase.exportGeneratedSHACLGraph(
-                        new GraphIdentifier(workspaceName, extendedSchemaName), format);
-        var body = buildResponseEntity(extendedSchemaName, format, outStream);
+                        new GraphIdentifier(workspaceName, schemaName), format);
+        var body = buildResponseEntity(schemaName, format, outStream);
 
         logger.info(
                 "Sending response to GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/generate/file\" to \"{}\".",
@@ -157,11 +151,11 @@ public class SHACLGenerateContentRestController {
     }
 
     private ResponseEntity<byte[]> buildResponseEntity(
-            String extendedSchemaName, RDFFormat format, ByteArrayOutputStream outStream) {
+            String schemaName, RDFFormat format, ByteArrayOutputStream outStream) {
         // add suggested file name to response
         var fileName = "shacl";
-        if (!extendedSchemaName.equals("default")) {
-            fileName = new URI(extendedSchemaName + "-shacl").getSuffix();
+        if (!schemaName.equals("default")) {
+            fileName = new URI(schemaName + "-shacl").getSuffix();
         }
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 

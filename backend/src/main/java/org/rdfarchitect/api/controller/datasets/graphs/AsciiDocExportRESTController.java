@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ExportGraphAsciiDocUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +52,6 @@ public class AsciiDocExportRESTController {
 
     private static final MediaType ASCIIDOC = new MediaType("text", "asciidoc");
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final ExportGraphAsciiDocUseCase exportGraphAsciiDocUseCase;
 
     @Operation(
@@ -95,17 +93,13 @@ public class AsciiDocExportRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-
         var output =
                 exportGraphAsciiDocUseCase.exportGraphAsAsciiDoc(
-                        new GraphIdentifier(workspaceName, extendedSchemaName),
-                        fileEnding,
-                        embedDiagrams);
+                        new GraphIdentifier(workspaceName, schemaName), fileEnding, embedDiagrams);
 
         var fileName = "default";
-        if (!extendedSchemaName.equals("default")) {
-            fileName = new URI(extendedSchemaName).getSuffix();
+        if (!schemaName.equals("default")) {
+            fileName = new URI(schemaName).getSuffix();
         }
         fileName += ".adoc";
 

@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.changes.triplechanges.TriplePackageChange;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.compare.SchemaComparisonUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +51,6 @@ public class SchemaComparisonRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(SchemaComparisonRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final SchemaComparisonUseCase schemaComparisonUseCase;
 
     @Operation(
@@ -97,10 +95,9 @@ public class SchemaComparisonRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
         var changes =
                 schemaComparisonUseCase.compareSchemas(
-                        new GraphIdentifier(workspaceName, extendedSchemaName), file);
+                        new GraphIdentifier(workspaceName, schemaName), file);
 
         logger.info(
                 "Sending response to POST request: \"/api/workspaces/{{}}/schemas/{{}}/compare\" from \"{}\".",
@@ -157,13 +154,10 @@ public class SchemaComparisonRESTController {
                 otherSchema,
                 originURL);
 
-        var baseSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var otherSchemaName = expandURIUseCase.expandUri(otherWorkspace, otherSchema);
-
         var changes =
                 schemaComparisonUseCase.compareSchemas(
-                        new GraphIdentifier(workspaceName, baseSchemaName),
-                        new GraphIdentifier(otherWorkspace, otherSchemaName));
+                        new GraphIdentifier(workspaceName, schemaName),
+                        new GraphIdentifier(otherWorkspace, otherSchema));
 
         logger.info(
                 "Sending response to GET request: \"/api/workspaces/{{}/schemas/{{}/compare?otherWorkspace={{}}&otherSchema={{}}\" from \"{}\".",

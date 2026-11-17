@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,8 +45,6 @@ public class SHACLCustomNamespacesRestController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(SHACLCustomNamespacesRestController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final SHACLExportUseCase shaclExportUseCase;
 
@@ -84,14 +81,11 @@ public class SHACLCustomNamespacesRestController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-
         // fetch data
         var shaclString =
                 shaclExportUseCase
                         .exportCustomSHACLNamespaces(
-                                new GraphIdentifier(workspaceName, extendedSchemaName),
-                                RDFFormat.TURTLE)
+                                new GraphIdentifier(workspaceName, schemaName), RDFFormat.TURTLE)
                         .toString(StandardCharsets.UTF_8);
 
         logger.info(

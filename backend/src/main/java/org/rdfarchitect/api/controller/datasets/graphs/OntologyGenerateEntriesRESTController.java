@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.ontology.OntologyEntry;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ontology.GenerateOntologyEntriesUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +48,6 @@ public class OntologyGenerateEntriesRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(OntologyGenerateEntriesRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final GenerateOntologyEntriesUseCase generateOntologyEntriesUseCase;
 
     @Operation(
@@ -91,8 +89,7 @@ public class OntologyGenerateEntriesRESTController {
                 schemaName,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var ontologyEntries =
                 generateOntologyEntriesUseCase.generateOntologyEntries(graphIdentifier);

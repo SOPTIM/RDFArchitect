@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.enumentries.ReplaceOrCreateEnumEntryUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +48,6 @@ public class ClassAllEnumEntriesRESTController {
 
     private static final Logger logger =
             LoggerFactory.getLogger(ClassAllEnumEntriesRESTController.class);
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final ReplaceOrCreateEnumEntryUseCase replaceOrCreateEnumEntryUseCase;
 
@@ -90,8 +88,7 @@ public class ClassAllEnumEntriesRESTController {
                 classUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var newEnumEntryUUID =
                 replaceOrCreateEnumEntryUseCase.replaceOrCreateEnumEntry(

@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.associations.AssociationsService;
 import org.rdfarchitect.services.update.classes.associations.UpdateAssociationsUseCase;
 import org.slf4j.Logger;
@@ -49,7 +48,6 @@ public class ClassAssociationsRESTController {
             LoggerFactory.getLogger(ClassAssociationsRESTController.class);
 
     private final UpdateAssociationsUseCase updateAssociationsUseCase;
-    private final ExpandURIUseCase expandURIUseCase;
 
     @Operation(
             summary = "Replace/Create association",
@@ -92,8 +90,7 @@ public class ClassAssociationsRESTController {
                 associationUUID,
                 originURL);
 
-        var extendedSchemaName = expandURIUseCase.expandUri(workspaceName, schemaName);
-        var graphIdentifier = new GraphIdentifier(workspaceName, extendedSchemaName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, schemaName);
 
         var newAssociationUUIDs =
                 updateAssociationsUseCase.replaceAssociation(graphIdentifier, associationPairDTO);
