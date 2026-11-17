@@ -211,9 +211,9 @@ public class SearchService implements SearchUseCase {
                     internalSearchResults,
                     externalSearchResults);
         } else {
-            for (var datasetName : databasePort.listDatasets()) {
+            for (var workspaceName : databasePort.listDatasets()) {
                 searchDataset(
-                        datasetName, query, filter, internalSearchResults, externalSearchResults);
+                        workspaceName, query, filter, internalSearchResults, externalSearchResults);
             }
         }
 
@@ -221,14 +221,14 @@ public class SearchService implements SearchUseCase {
     }
 
     public void searchDataset(
-            String datasetName,
+            String workspaceName,
             String query,
             SearchFilter filter,
             List<SearchResult> searchResults,
             List<SearchResult> externalSearchResults) {
         if (filter.getGraphName() != null) {
             searchGraph(
-                    new GraphIdentifier(datasetName, filter.getGraphName()),
+                    new GraphIdentifier(workspaceName, filter.getGraphName()),
                     query,
                     filter,
                     searchResults,
@@ -236,10 +236,10 @@ public class SearchService implements SearchUseCase {
             return;
         }
 
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             for (String graphName : transaction.graphNames()) {
                 searchGraph(
-                        new GraphIdentifier(datasetName, graphName),
+                        new GraphIdentifier(workspaceName, graphName),
                         query,
                         filter,
                         searchResults,

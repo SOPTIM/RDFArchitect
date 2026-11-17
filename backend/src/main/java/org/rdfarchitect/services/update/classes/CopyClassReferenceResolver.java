@@ -165,7 +165,7 @@ public class CopyClassReferenceResolver {
             return;
         }
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             urisByKind.forEach(

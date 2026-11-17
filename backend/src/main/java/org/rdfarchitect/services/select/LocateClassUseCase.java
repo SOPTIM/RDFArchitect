@@ -32,5 +32,5 @@ public interface LocateClassUseCase {
      *
      * @throws IllegalArgumentException when no graph of the dataset knows the uuid
      */
-    LocatedClass locate(String datasetName, String classUUID);
+    LocatedClass locate(String workspaceName, String classUUID);
 }

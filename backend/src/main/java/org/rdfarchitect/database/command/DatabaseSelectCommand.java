@@ -38,10 +38,10 @@ public interface DatabaseSelectCommand {
     /**
      * Sets the name of the dataset in the database a {@link Query} is executed against.
      *
-     * @param datasetName Name of the dataset
+     * @param workspaceName Name of the dataset
      * @return This {@link DatabaseSelectCommand}
      */
-    DatabaseSelectCommand setDatasetName(String datasetName);
+    DatabaseSelectCommand setWorkspaceName(String workspaceName);
 
     /**
      * Sets the {@link Query} to be executed.

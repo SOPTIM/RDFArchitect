@@ -69,7 +69,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     @Override
     public ImportResult importGraphs(
-            String datasetName,
+            String workspaceName,
             List<MultipartFile> files,
             List<String> graphNames,
             ImportProgressListener listener) {
@@ -81,14 +81,14 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                         .toList());
 
         var result = new ImportResult();
-        var negotiation = negotiatePrefixes(datasetName, sources, listener, result);
+        var negotiation = negotiatePrefixes(workspaceName, sources, listener, result);
 
-        var reservedGraphNames = loadExistingGraphNames(datasetName);
+        var reservedGraphNames = loadExistingGraphNames(workspaceName);
         var parsed = new ArrayList<ParsedGraph>();
         for (var source : sources) {
             importSource(result, parsed, source, reservedGraphNames, listener, negotiation);
         }
-        swapIn(result, datasetName, parsed, negotiation.resolved(), listener);
+        swapIn(result, workspaceName, parsed, negotiation.resolved(), listener);
         return result;
     }
 
@@ -103,7 +103,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
      * been answered.
      */
     private PrefixNegotiation negotiatePrefixes(
-            String datasetName,
+            String workspaceName,
             List<PlannedSource> sources,
             ImportProgressListener listener,
             ImportResult result) {
@@ -116,14 +116,14 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
         var readableFiles =
                 scanned.stream().map(ScanResult::scanned).filter(ScannedFile::readable).toList();
-        var comparison = PrefixComparer.compare(loadExistingPrefixes(datasetName), readableFiles);
+        var comparison = PrefixComparer.compare(loadExistingPrefixes(workspaceName), readableFiles);
         var contested = comparison.stream().filter(PrefixComparison::contested).count();
         if (contested == 0) {
             return new PrefixNegotiation(ResolvedPrefixes.none(), unreadableIndices);
         }
         logger.info(
                 "Import into dataset \"{}\" contests {} namespace prefix(es).",
-                datasetName,
+                workspaceName,
                 contested);
         var resolved = listener.awaitResolvedPrefixes(comparison);
         return new PrefixNegotiation(resolved, unreadableIndices);
@@ -241,9 +241,9 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     /**
      * The prefixes of the dataset, none when it does not exist yet and so collides with nothing.
      */
-    private Map<String, String> loadExistingPrefixes(String datasetName) {
+    private Map<String, String> loadExistingPrefixes(String workspaceName) {
         try {
-            return Map.copyOf(databasePort.getPrefixMapping(datasetName).getNsPrefixMap());
+            return Map.copyOf(databasePort.getPrefixMapping(workspaceName).getNsPrefixMap());
         } catch (RuntimeException _) {
             return Map.of();
         }
@@ -475,7 +475,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
      */
     private void swapIn(
             ImportResult result,
-            String datasetName,
+            String workspaceName,
             List<ParsedGraph> parsed,
             ResolvedPrefixes resolved,
             ImportProgressListener listener) {
@@ -485,8 +485,8 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         // The import may name a workspace that does not exist yet, and one it works in must not be
         // left read-only. Created at the first write, not up front: an import that writes nothing
         // leaves nothing behind, and a new workspace's prefixes cannot contest the first file's.
-        databasePort.createWorkspaceIfAbsent(datasetName);
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+        databasePort.createWorkspaceIfAbsent(workspaceName);
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             resolved.rewriteWorkspacePrefixes(transaction.prefixes())
                     .ifPresent(transaction::setPrefixes);
             for (var graph : parsed) {
@@ -559,9 +559,9 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         return localName == null || localName.isBlank() ? property.getURI() : localName;
     }
 
-    private Set<String> loadExistingGraphNames(String datasetName) {
+    private Set<String> loadExistingGraphNames(String workspaceName) {
         try {
-            return new HashSet<>(databasePort.listGraphNames(datasetName));
+            return new HashSet<>(databasePort.listGraphNames(workspaceName));
         } catch (RuntimeException _) {
             return new HashSet<>();
         }

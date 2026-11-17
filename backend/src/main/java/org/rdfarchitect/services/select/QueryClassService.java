@@ -58,10 +58,10 @@ public class QueryClassService
     public ClassUMLAdaptedDTO getClassInformation(
             GraphIdentifier graphIdentifier, String classUUID, boolean includeSuperClasses) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var graph = ctx.getRdfGraph();
-            var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.datasetName());
+            var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.workspaceName());
             var cimClass =
                     CIMUMLObjectFactory.createCIMClassUMLAdapted(
                             graph, graphIdentifier.graphName(), prefixMapping, classUUID);
@@ -109,7 +109,7 @@ public class QueryClassService
     @Override
     public List<ClassDTO> listSuperClasses(GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var graph = ctx.getRdfGraph();
             var superClassList = new ArrayList<CIMClass>();
@@ -117,7 +117,7 @@ public class QueryClassService
                     new CIMObjectFetcher(
                             graph,
                             graphIdentifier.graphName(),
-                            databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+                            databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
             var baseClass = cimObjectFetcher.fetchCIMClass(classUUID.toString());
             superClassList.add(
                     cimObjectFetcher.fetchCIMClass(baseClass.getSuperClass().getUri().toString()));
@@ -137,7 +137,7 @@ public class QueryClassService
     public ClassRelationsDTO getClassesReferencingThisClass(
             GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             return CIMClassRelationFinder.getAllClassRelations(ctx.getRdfGraph(), classUUID);
         }

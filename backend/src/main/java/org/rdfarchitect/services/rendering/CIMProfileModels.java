@@ -43,10 +43,10 @@ public final class CIMProfileModels {
     public static List<CIMProfileModel> loadAll(
             DatabasePort databasePort,
             Map<String, String> keywordsByGraphName,
-            String datasetName,
+            String workspaceName,
             String excludedGraphName) {
         var profiles = new ArrayList<CIMProfileModel>();
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             for (var graphName : transaction.graphNames()) {
                 if (graphName.equals(excludedGraphName)) {
                     continue;
@@ -54,7 +54,7 @@ public final class CIMProfileModels {
                 profiles.add(
                         load(
                                 databasePort,
-                                datasetName,
+                                workspaceName,
                                 graphName,
                                 keywordsByGraphName.get(graphName)));
             }
@@ -64,9 +64,9 @@ public final class CIMProfileModels {
 
     /** Maps each graph of the dataset to its {@code dcat:keyword} short name. */
     public static Map<String, String> keywordsByGraphName(
-            ListGraphsUseCase listGraphsUseCase, String datasetName) {
+            ListGraphsUseCase listGraphsUseCase, String workspaceName) {
         var keywords = new HashMap<String, String>();
-        for (var graph : listGraphsUseCase.listGraphs(datasetName)) {
+        for (var graph : listGraphsUseCase.listGraphs(workspaceName)) {
             if (graph.getUri() != null) {
                 keywords.put(graph.getUri().toString(), graph.getKeyword());
             }
@@ -79,12 +79,12 @@ public final class CIMProfileModels {
      * and tagging it with its cross-profile color and short name.
      */
     private static CIMProfileModel load(
-            DatabasePort databasePort, String datasetName, String graphName, String keyword) {
-        var graphIdentifier = new GraphIdentifier(datasetName, graphName);
+            DatabasePort databasePort, String workspaceName, String graphName, String keyword) {
+        var graphIdentifier = new GraphIdentifier(workspaceName, graphName);
         Graph graphCopy;
         String color;
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             graphCopy = GraphUtils.deepCopy(transaction.graph(graphName).getRdfGraph());
             color = transaction.crossProfileColors().getColor(graphName);
         }

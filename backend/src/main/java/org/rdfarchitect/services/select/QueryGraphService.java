@@ -184,11 +184,11 @@ public class QueryGraphService
 
     @Override
     public List<ClassUMLAdaptedDTO> getFullClassList(GraphIdentifier graphIdentifier) {
-        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.datasetName());
+        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.workspaceName());
         var baseList = getClassList(graphIdentifier, false);
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             return baseList.stream()
                     .filter(dto -> dto.getUuid() != null)
@@ -212,7 +212,7 @@ public class QueryGraphService
         // build query
         var baseQuery =
                 new CIMBaseQueryBuilder()
-                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()))
                         .setGraph(graphIdentifier.graphName())
                         .setOrder()
                         .setDistinct()
@@ -243,13 +243,13 @@ public class QueryGraphService
     public ByteArrayOutputStream getSchema(GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var transaction =
                         databasePort.beginTransaction(
-                                graphIdentifier.datasetName(), ReadWrite.READ);
+                                graphIdentifier.workspaceName(), ReadWrite.READ);
                 var out = new ByteArrayOutputStream()) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var copiedGraph = GraphUtils.deepCopy(ctx.getRdfGraph());
             copiedGraph
                     .getPrefixMapping()
-                    .setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+                    .setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
             GraphUtils.removeUUIDs(copiedGraph);
             CIMModifyingUtils.standardizePackagePrefix(
                     copiedGraph, UserSettingsContext.get().usePackagePrefix());
@@ -267,7 +267,7 @@ public class QueryGraphService
         var internalPackageBaseQuery =
                 new CIMBaseQueryBuilder()
                         .setDistinct()
-                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()))
                         .setGraph(graphIdentifier.graphName())
                         .setType(CIMS.classCategory)
                         .build();
@@ -308,7 +308,7 @@ public class QueryGraphService
         var externalPackageBaseQuery =
                 new CIMBaseQueryBuilder()
                         .setDistinct()
-                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()))
                         .setGraph(graphIdentifier.graphName())
                         .addWhereThisNotExists(RDF.type.getURI(), CIMS.classCategory.getURI())
                         .build()
@@ -369,7 +369,7 @@ public class QueryGraphService
                 new CIMBaseQueryBuilder()
                         .setOrder()
                         .setDistinct()
-                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()))
                         .setGraph(graphIdentifier.graphName())
                         .buildWithoutUriVar();
 
@@ -400,7 +400,7 @@ public class QueryGraphService
     @Override
     public UUID resolveIRI(GraphIdentifier graphIdentifier, String resourceIRI) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             var resource = model.getResource(resourceIRI);

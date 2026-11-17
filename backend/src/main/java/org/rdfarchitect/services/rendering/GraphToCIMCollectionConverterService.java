@@ -63,7 +63,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
     public CIMCollection convert(GraphIdentifier graphIdentifier, GraphFilter filter) {
         Graph copiedGraph;
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             copiedGraph = GraphUtils.deepCopy(ctx.getRdfGraph());
         }
@@ -86,7 +86,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
                 .setGraph(graphIdentifier.graphName())
                 .setDistinct()
                 .setOrder()
-                .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+                .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
     }
 
     private void fetchAllPackages(
@@ -244,7 +244,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
                 new CIMObjectFetcher(
                                 graph,
                                 graphIdentifier.graphName(),
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                                databasePort.getPrefixMapping(graphIdentifier.workspaceName()))
                         .fetchCIMClassList(query.build());
         var classUUIDList = new ArrayList<String>();
         classList.forEach(
@@ -267,7 +267,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
             CIMCollection cimCollection) {
         var classQueryBuilder =
                 CIMQueries.getSpecifiedClassesQuery(
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                         graphIdentifier.graphName(),
                         filter.getAllowedUUIDs());
         fetchClasses(graph, graphIdentifier, filter, cimCollection, classQueryBuilder);
@@ -281,7 +281,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         // classQuery
         var classesInPackageQueryBuilder =
                 CIMQueries.getClassesQuery(
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                         graphIdentifier.graphName());
         appendPackageConstraint(filter, classesInPackageQueryBuilder, CIMQueryVars.URI, true);
         fetchClasses(graph, graphIdentifier, filter, cimCollection, classesInPackageQueryBuilder);
@@ -301,7 +301,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         var associationUri = "?associationUri";
         var associatedClassesQueryBuilder =
                 CIMQueries.getClassesQuery(
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                                databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                                 graphIdentifier.graphName())
                         .addWhere(inPackageClassUri, RDF.type, RDFS.Class)
                         .addWhere(associationUri, RDF.type, RDF.Property)
@@ -329,7 +329,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         var inPackageClassUri = "?inPackageClassUri";
         var associatedClassesQueryBuilder =
                 CIMQueries.getClassesQuery(
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                                databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                                 graphIdentifier.graphName())
                         .addWhere(inPackageClassUri, RDF.type, RDFS.Class)
                         .addWhere(
@@ -362,7 +362,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         for (String classUUID : classUUIDList) {
             var attributeQuery =
                     CIMQueries.getAttributesQuery(
-                            databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                            databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                             classUUID,
                             graphIdentifier.graphName());
             attributesQuery.addUnion(attributeQuery);
@@ -371,7 +371,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
                 new CIMObjectFetcher(
                                 graph,
                                 graphIdentifier.graphName(),
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                                databasePort.getPrefixMapping(graphIdentifier.workspaceName()))
                         .fetchCIMAttributeList(attributesQuery.build());
 
         attributeList.forEach(cimAttribute -> cimCollection.getAttributes().add(cimAttribute));
@@ -397,7 +397,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
             CIMCollection cimCollection) {
         var enumQueryBuilder =
                 CIMQueries.getSpecifiedEnumClassesQuery(
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                         graphIdentifier.graphName(),
                         filter.getAllowedUUIDs());
         collectEnums(graph, graphIdentifier, filter, cimCollection, enumQueryBuilder);
@@ -410,7 +410,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
             CIMCollection cimCollection) {
         var enumsInPackageQueryBuilder =
                 CIMQueries.getEnumClassesQuery(
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                         graphIdentifier.graphName(),
                         null);
         appendPackageConstraint(filter, enumsInPackageQueryBuilder, CIMQueryVars.URI, true);
@@ -427,7 +427,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
                 new CIMObjectFetcher(
                                 graph,
                                 graphIdentifier.graphName(),
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                                databasePort.getPrefixMapping(graphIdentifier.workspaceName()))
                         .fetchCIMClassList(queryBuilder.build());
         enumList.forEach(cimEnum -> cimCollection.getEnums().add(cimEnum));
 
@@ -449,7 +449,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         for (String enumUUID : enumUUIDList) {
             var enumEntryQuery =
                     CIMQueries.getEnumEntriesQuery(
-                            databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                            databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                             graphIdentifier.graphName(),
                             enumUUID);
             enumEntriesQuery.addUnion(enumEntryQuery);
@@ -459,7 +459,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
                 new CIMObjectFetcher(
                                 graph,
                                 graphIdentifier.graphName(),
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                                databasePort.getPrefixMapping(graphIdentifier.workspaceName()))
                         .fetchCIMEnumEntryList(enumEntriesQuery.build());
 
         enumEntryList.forEach(cimEnumEntry -> cimCollection.getEnumEntries().add(cimEnumEntry));
@@ -477,7 +477,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         for (CIMClass cimClass : cimCollection.getClasses()) {
             var associationPairQuery =
                     CIMQueries.getAssociationsQuery(
-                            databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                            databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                             graphIdentifier.graphName(),
                             cimClass.getUuid().toString());
             associationsQuery.addUnion(associationPairQuery);
@@ -486,7 +486,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         for (CIMClass cimEnum : cimCollection.getEnums()) {
             var associationPairQuery =
                     CIMQueries.getAssociationsQuery(
-                            databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                            databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                             graphIdentifier.graphName(),
                             cimEnum.getUuid().toString());
             associationsQuery.addUnion(associationPairQuery);
@@ -496,7 +496,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
                 new CIMObjectFetcher(
                                 graph,
                                 graphIdentifier.graphName(),
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                                databasePort.getPrefixMapping(graphIdentifier.workspaceName()))
                         .fetchCIMAssociationList(associationsQuery.build());
 
         associationList.forEach(

@@ -92,10 +92,10 @@ public interface ImportJobUseCase {
      *
      * @return the id of the started job, to be passed to {@link #getStatus(UUID)}
      */
-    UUID startImport(String datasetName, List<MultipartFile> files, List<String> graphNames);
+    UUID startImport(String workspaceName, List<MultipartFile> files, List<String> graphNames);
 
     /** The current progress of the job, or empty if the session has no such job for the dataset. */
-    Optional<ImportJobStatus> getStatus(String datasetName, UUID jobId);
+    Optional<ImportJobStatus> getStatus(String workspaceName, UUID jobId);
 
     /**
      * Hands the job the decisions it is waiting for and lets it go on importing.
@@ -107,7 +107,7 @@ public interface ImportJobUseCase {
      *     waiting for a decision
      */
     boolean resolvePrefixConflicts(
-            String datasetName, UUID jobId, List<PrefixResolutionDTO> resolutions);
+            String workspaceName, UUID jobId, List<PrefixResolutionDTO> resolutions);
 
     /**
      * Asks the job to stop after the file it is currently importing. A job waiting for prefix
@@ -115,5 +115,5 @@ public interface ImportJobUseCase {
      *
      * @return {@code false} if the session has no such job for the dataset
      */
-    boolean cancel(String datasetName, UUID jobId);
+    boolean cancel(String workspaceName, UUID jobId);
 }

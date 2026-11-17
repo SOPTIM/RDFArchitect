@@ -116,7 +116,7 @@ class UpdateClassServiceTest {
         updateClassService.addClass(graphIdentifier, packageDTO, PREFIX, "newClass", null);
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             assertThat(
                             ctx.getRdfGraph()
@@ -153,7 +153,7 @@ class UpdateClassServiceTest {
 
         assertThat(newUuid).isEqualTo(referencedUuid);
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             assertThat(
@@ -170,7 +170,7 @@ class UpdateClassServiceTest {
     void addClass_packageWithSameIriExists_throwsConflict() {
         var packageUri = PREFIX + "packageCollision";
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             ctx.getRdfGraph()
                     .add(
@@ -199,7 +199,7 @@ class UpdateClassServiceTest {
                 .hasMessageContaining("package with the same IRI");
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             assertThat(
                             ctx.getRdfGraph()
@@ -224,7 +224,7 @@ class UpdateClassServiceTest {
         updateClassService.replaceClass(graphIdentifier, newClass);
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             assertThat(
                             ctx.getRdfGraph()
@@ -302,7 +302,7 @@ class UpdateClassServiceTest {
     /** Referencing a uri that nothing defines makes it a referenced only resource with a uuid. */
     private UUID addReferencedOnlyResource(String label) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             ctx.getRdfGraph()
                     .add(
@@ -312,7 +312,7 @@ class UpdateClassServiceTest {
             transaction.commit("referenced only resource");
         }
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             return UUID.fromString(
@@ -324,7 +324,7 @@ class UpdateClassServiceTest {
     void deleteClass_removesClassResourceFromGraph() {
         updateClassService.deleteClass(graphIdentifier, UUID.fromString(CLASS_UUID));
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             var classResource = model.createResource(PREFIX + "class");

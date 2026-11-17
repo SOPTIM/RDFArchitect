@@ -88,13 +88,13 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
-    public PrefixMapping getPrefixMapping(String datasetName) {
-        return database.getPrefixMapping(datasetName);
+    public PrefixMapping getPrefixMapping(String workspaceName) {
+        return database.getPrefixMapping(workspaceName);
     }
 
     @Override
-    public List<String> listGraphNames(String datasetName) {
-        return database.listGraphNames(datasetName);
+    public List<String> listGraphNames(String workspaceName) {
+        return database.listGraphNames(workspaceName);
     }
 
     @Override
@@ -108,8 +108,8 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
-    public void createDataset(String datasetName) {
-        database.createDataset(datasetName);
+    public void createDataset(String workspaceName) {
+        database.createDataset(workspaceName);
     }
 
     @Override
@@ -118,13 +118,13 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
-    public void deleteDataset(String datasetName) {
-        database.deleteDataset(datasetName);
+    public void deleteDataset(String workspaceName) {
+        database.deleteDataset(workspaceName);
     }
 
     @Override
-    public void renameDataset(String oldDatasetName, String newDatasetName) {
-        database.renameDataset(oldDatasetName, newDatasetName);
+    public void renameDataset(String oldWorkspaceName, String newWorkspaceName) {
+        database.renameDataset(oldWorkspaceName, newWorkspaceName);
     }
 
     @Override
@@ -138,17 +138,17 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
-    public boolean isReadOnly(String datasetName) {
-        return database.isReadOnly(datasetName);
+    public boolean isReadOnly(String workspaceName) {
+        return database.isReadOnly(workspaceName);
     }
 
     @Override
-    public void enableEditing(String datasetName) {
-        database.enableEditing(datasetName);
+    public void enableEditing(String workspaceName) {
+        database.enableEditing(workspaceName);
     }
 
     @Override
-    public void disableEditing(String datasetName) {
-        database.disableEditing(datasetName);
+    public void disableEditing(String workspaceName) {
+        database.disableEditing(workspaceName);
     }
 }

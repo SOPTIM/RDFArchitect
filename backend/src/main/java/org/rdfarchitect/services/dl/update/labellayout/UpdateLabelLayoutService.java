@@ -56,7 +56,7 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
             UUID diagramUUID,
             List<LabelPositionDTO> labelPositionDTOList) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var diagramLayout = ctx.getDiagramLayout();
             var resolvedDiagramUUID =
@@ -77,8 +77,8 @@ public class UpdateLabelLayoutService implements UpdateLabelPositionsUseCase {
 
     @Override
     public void updateLabelPositions(
-            String datasetName, UUID diagramUUID, List<LabelPositionDTO> labelPositionDTOList) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            String workspaceName, UUID diagramUUID, List<LabelPositionDTO> labelPositionDTOList) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             var diagramLayoutModel = transaction.layout().getDiagramLayoutModel();
             applyLabelPositions(diagramLayoutModel, diagramUUID, labelPositionDTOList);
             transaction.commit(

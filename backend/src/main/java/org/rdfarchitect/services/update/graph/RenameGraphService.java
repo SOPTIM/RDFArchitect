@@ -34,7 +34,7 @@ public class RenameGraphService implements RenameGraphUseCase {
     @Override
     public void renameGraph(GraphIdentifier graphIdentifier, String newGraphName) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             transaction.renameGraph(graphIdentifier.graphName(), newGraphName);
             transaction.commit(
                     "Renamed the schema to \"%s\""

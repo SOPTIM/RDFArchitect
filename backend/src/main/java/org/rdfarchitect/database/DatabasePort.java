@@ -122,18 +122,18 @@ public interface DatabasePort {
     /**
      * Loads the namespace prefix mapping for the dataset.
      *
-     * @param datasetName literal dataset name
+     * @param workspaceName literal dataset name
      * @return prefix mapping associated with the dataset
      */
-    PrefixMapping getPrefixMapping(String datasetName);
+    PrefixMapping getPrefixMapping(String workspaceName);
 
     /**
      * Lists all graph URIs belonging to the dataset.
      *
-     * @param datasetName literal dataset name
+     * @param workspaceName literal dataset name
      * @return graph URIs within the dataset
      */
-    List<String> listGraphNames(String datasetName);
+    List<String> listGraphNames(String workspaceName);
 
     /**
      * Persists pending changes of the graph to the backing database.
@@ -153,11 +153,11 @@ public interface DatabasePort {
     /**
      * Creates an empty dataset without any graphs.
      *
-     * @param datasetName the literal dataset name to create
+     * @param workspaceName the literal dataset name to create
      * @throws org.rdfarchitect.exception.database.ResourceConflictException if a dataset with that
      *     name already exists
      */
-    void createDataset(String datasetName);
+    void createDataset(String workspaceName);
 
     /**
      * Creates the workspace unless it already exists. For uploads that address a workspace by name
@@ -168,20 +168,20 @@ public interface DatabasePort {
     void createWorkspaceIfAbsent(String workspaceName);
 
     /**
-     * Removes the dataset identified by {@code datasetName} and clears all graphs that belong to
+     * Removes the dataset identified by {@code workspaceName} and clears all graphs that belong to
      * it.
      *
-     * @param datasetName the literal dataset name to delete
+     * @param workspaceName the literal dataset name to delete
      */
-    void deleteDataset(String datasetName);
+    void deleteDataset(String workspaceName);
 
     /**
      * Renames a dataset, keeping all of its graphs, diagrams and namespaces.
      *
-     * @param oldDatasetName the current literal dataset name
-     * @param newDatasetName the literal dataset name to rename to
+     * @param oldWorkspaceName the current literal dataset name
+     * @param newWorkspaceName the literal dataset name to rename to
      */
-    void renameDataset(String oldDatasetName, String newDatasetName);
+    void renameDataset(String oldWorkspaceName, String newWorkspaceName);
 
     /**
      * Synchronizes dataset metadata and graph structure from the backing database.
@@ -201,22 +201,22 @@ public interface DatabasePort {
     /**
      * Indicates whether the dataset is currently read-only.
      *
-     * @param datasetName literal dataset name
+     * @param workspaceName literal dataset name
      * @return {@code true} if editing is disabled, otherwise {@code false}
      */
-    boolean isReadOnly(String datasetName);
+    boolean isReadOnly(String workspaceName);
 
     /**
      * Enables editing operations on the dataset.
      *
-     * @param datasetName literal dataset name
+     * @param workspaceName literal dataset name
      */
-    void enableEditing(String datasetName);
+    void enableEditing(String workspaceName);
 
     /**
      * Disables editing operations on the dataset, turning it read-only again.
      *
-     * @param datasetName literal dataset name
+     * @param workspaceName literal dataset name
      */
-    void disableEditing(String datasetName);
+    void disableEditing(String workspaceName);
 }

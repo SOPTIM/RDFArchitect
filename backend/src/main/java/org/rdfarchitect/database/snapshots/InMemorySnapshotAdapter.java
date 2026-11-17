@@ -54,17 +54,17 @@ public class InMemorySnapshotAdapter implements SnapshotPort {
     }
 
     @Override
-    public String createSnapshot(String datasetName) {
-        if (!databasePort.listDatasets().contains(datasetName)) {
-            throw new DataAccessException("Dataset '" + datasetName + "' does not exist");
+    public String createSnapshot(String workspaceName) {
+        if (!databasePort.listDatasets().contains(workspaceName)) {
+            throw new DataAccessException("Dataset '" + workspaceName + "' does not exist");
         }
 
         var base64Token = generateBase64Token();
-        var snapshotName = constructSnapshotName(datasetName, base64Token);
+        var snapshotName = constructSnapshotName(workspaceName, base64Token);
 
         var graphsByUri = new LinkedHashMap<String, Graph>();
         PrefixMapping prefixMapping;
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             for (var graphName : transaction.graphNames()) {
                 graphsByUri.put(graphName, copyGraph(transaction.graph(graphName).getRdfGraph()));
             }

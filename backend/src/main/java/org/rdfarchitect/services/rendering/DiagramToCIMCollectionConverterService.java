@@ -69,32 +69,32 @@ public class DiagramToCIMCollectionConverterService
     }
 
     @Override
-    public CIMCollection convert(String datasetName, UUID diagramId) {
+    public CIMCollection convert(String workspaceName, UUID diagramId) {
         List<CopiedGraph> copiedGraphs;
         // The lock only covers taking the copies; converting them would hold up edits and undo
         // for every query over every graph in the diagram.
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
-            var diagram = getDiagram(transaction, datasetName, diagramId);
-            var graphEntries = buildSortedGraphEntries(datasetName, diagram);
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
+            var diagram = getDiagram(transaction, workspaceName, diagramId);
+            var graphEntries = buildSortedGraphEntries(workspaceName, diagram);
             copiedGraphs = copyGraphs(transaction, graphEntries);
         }
         return convertAndMerge(copiedGraphs);
     }
 
     private CustomDiagram getDiagram(
-            WorkspaceTransaction transaction, String datasetName, UUID diagramId) {
+            WorkspaceTransaction transaction, String workspaceName, UUID diagramId) {
         var diagrams = transaction.diagrams();
         if (!diagrams.containsKey(diagramId)) {
             throw new IllegalArgumentException(
                     "Diagram with ID "
                             + diagramId.toString()
                             + " not found in dataset "
-                            + datasetName);
+                            + workspaceName);
         }
         return diagrams.get(diagramId);
     }
 
-    private List<GraphEntry> buildSortedGraphEntries(String datasetName, CustomDiagram diagram) {
+    private List<GraphEntry> buildSortedGraphEntries(String workspaceName, CustomDiagram diagram) {
         return diagram.getClasses().stream()
                 .collect(Collectors.groupingBy(ClassInDiagram::getGraphName))
                 .entrySet()
@@ -103,7 +103,7 @@ public class DiagramToCIMCollectionConverterService
                 .map(
                         e ->
                                 new GraphEntry(
-                                        new GraphIdentifier(datasetName, e.getKey().toString()),
+                                        new GraphIdentifier(workspaceName, e.getKey().toString()),
                                         e.getValue().stream()
                                                 .map(c -> c.getUuid().toString())
                                                 .toList()))

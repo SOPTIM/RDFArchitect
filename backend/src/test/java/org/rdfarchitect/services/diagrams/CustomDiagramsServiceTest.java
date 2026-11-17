@@ -60,7 +60,7 @@ class CustomDiagramsServiceTest {
 
         graphIdentifier = mock(GraphIdentifier.class);
         when(graphIdentifier.graphName()).thenReturn("http://example.org#graph");
-        when(graphIdentifier.datasetName()).thenReturn("dataset");
+        when(graphIdentifier.workspaceName()).thenReturn("dataset");
     }
 
     @Test

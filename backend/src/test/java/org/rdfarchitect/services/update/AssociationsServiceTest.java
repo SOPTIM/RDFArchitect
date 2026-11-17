@@ -110,7 +110,7 @@ class AssociationsServiceTest {
         var uuids =
                 associationsService.createAssociation(graphIdentifier, associationPair(null, null));
 
-        assertThat(databasePort.listChanges(graphIdentifier.datasetName()).getFirst().message())
+        assertThat(databasePort.listChanges(graphIdentifier.workspaceName()).getFirst().message())
                 .doesNotContain(uuids.fromUUID().toString(), uuids.toUUID().toString())
                 .isEqualTo("Created association \"oldLabel.subClass\" → \"subClass.class\"");
     }
@@ -123,7 +123,7 @@ class AssociationsServiceTest {
 
         associationsService.createAssociation(graphIdentifier, pair);
 
-        assertThat(databasePort.listChanges(graphIdentifier.datasetName()).getFirst().message())
+        assertThat(databasePort.listChanges(graphIdentifier.workspaceName()).getFirst().message())
                 .isEqualTo("Created association \"oldLabel.subClass\" → \"class\"");
     }
 
@@ -142,7 +142,7 @@ class AssociationsServiceTest {
 
     private void assertBothDirectionsArePresent() {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var graph = ctx.getRdfGraph();
             assertThat(graph.contains(ASSOCIATION, RDF.type.asNode(), RDF.Property.asNode()))

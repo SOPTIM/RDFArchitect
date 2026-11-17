@@ -45,13 +45,13 @@ public class WorkspaceValidationService implements WorkspaceValidationUseCase {
     private final List<WorkspaceValidationRule> rules;
 
     @Override
-    public ValidationReportDTO validateWorkspace(String datasetName) {
-        return validate(loadProfiles(datasetName), null);
+    public ValidationReportDTO validateWorkspace(String workspaceName) {
+        return validate(loadProfiles(workspaceName), null);
     }
 
     @Override
     public ValidationReportDTO validateSchemaInWorkspace(GraphIdentifier graphIdentifier) {
-        return validate(loadProfiles(graphIdentifier.datasetName()), graphIdentifier.graphName());
+        return validate(loadProfiles(graphIdentifier.workspaceName()), graphIdentifier.graphName());
     }
 
     ValidationReportDTO validate(List<CIMProfileModel> profiles, String scopeGraphName) {
@@ -75,8 +75,8 @@ public class WorkspaceValidationService implements WorkspaceValidationUseCase {
         }
     }
 
-    private List<CIMProfileModel> loadProfiles(String datasetName) {
-        var keywords = CIMProfileModels.keywordsByGraphName(listGraphsUseCase, datasetName);
-        return CIMProfileModels.loadAll(databasePort, keywords, datasetName, null);
+    private List<CIMProfileModel> loadProfiles(String workspaceName) {
+        var keywords = CIMProfileModels.keywordsByGraphName(listGraphsUseCase, workspaceName);
+        return CIMProfileModels.loadAll(databasePort, keywords, workspaceName, null);
     }
 }

@@ -95,7 +95,7 @@ class PastePreviewServiceTest {
 
     private PasteSourceClassDTO source(String classUUID) {
         var source = new PasteSourceClassDTO();
-        source.setSourceWorkspaceName(sourceGraphIdentifier.datasetName());
+        source.setSourceWorkspaceName(sourceGraphIdentifier.workspaceName());
         source.setSourceGraphName(sourceGraphIdentifier.graphName());
         source.setClassUUID(classUUID);
         return source;
@@ -268,7 +268,7 @@ class PastePreviewServiceTest {
     void previewPaste_associationWithoutRange_namesNoAssociationTarget() {
         try (var transaction =
                 databasePort.beginTransaction(
-                        sourceGraphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                        sourceGraphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(sourceGraphIdentifier.graphName());
             ctx.getRdfGraph()
                     .remove(

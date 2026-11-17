@@ -29,8 +29,8 @@ public class SnapshotService implements CreateSnapshotUseCase, LoadSnapshotUseCa
     private final SnapshotPort snapshotPort;
 
     @Override
-    public String createSnapshot(String datasetName) {
-        return snapshotPort.createSnapshot(datasetName);
+    public String createSnapshot(String workspaceName) {
+        return snapshotPort.createSnapshot(workspaceName);
     }
 
     @Override

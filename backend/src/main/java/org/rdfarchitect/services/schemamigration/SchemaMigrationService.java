@@ -103,7 +103,7 @@ public class SchemaMigrationService
 
         Graph updatedGraph;
         try (var transaction =
-                databasePort.beginTransaction(updatedSchema.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(updatedSchema.workspaceName(), ReadWrite.READ)) {
             var updatedCtx = transaction.graph(updatedSchema.graphName());
             updatedGraph = GraphUtils.deepCopy(updatedCtx.getRdfGraph());
         }
@@ -116,14 +116,14 @@ public class SchemaMigrationService
             GraphIdentifier originalSchema, GraphIdentifier updatedSchema, boolean ignorePrefixes) {
         Graph originalGraph;
         try (var transaction =
-                databasePort.beginTransaction(originalSchema.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(originalSchema.workspaceName(), ReadWrite.READ)) {
             var originalCtx = transaction.graph(originalSchema.graphName());
             originalGraph = GraphUtils.deepCopy(originalCtx.getRdfGraph());
         }
 
         Graph updatedGraph;
         try (var transaction =
-                databasePort.beginTransaction(updatedSchema.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(updatedSchema.workspaceName(), ReadWrite.READ)) {
             var updatedCtx = transaction.graph(updatedSchema.graphName());
             updatedGraph = GraphUtils.deepCopy(updatedCtx.getRdfGraph());
         }
@@ -136,7 +136,7 @@ public class SchemaMigrationService
             GraphIdentifier originalSchema, MultipartFile updatedSchema, boolean ignorePrefixes) {
         Graph originalGraph;
         try (var transaction =
-                databasePort.beginTransaction(originalSchema.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(originalSchema.workspaceName(), ReadWrite.READ)) {
             var originalCtx = transaction.graph(originalSchema.graphName());
             originalGraph = GraphUtils.deepCopy(originalCtx.getRdfGraph());
         }

@@ -62,7 +62,7 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
     public void updateEdgeLayouts(
             GraphIdentifier graphIdentifier, UUID diagramUUID, List<EdgeLayoutDTO> edges) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var diagramLayout = ctx.getDiagramLayout();
             var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
@@ -92,15 +92,17 @@ public class UpdateEdgeLayoutDataService implements UpdateEdgeLayoutUseCase {
     }
 
     @Override
-    public void updateEdgeLayouts(String datasetName, UUID diagramUUID, List<EdgeLayoutDTO> edges) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+    public void updateEdgeLayouts(
+            String workspaceName, UUID diagramUUID, List<EdgeLayoutDTO> edges) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             var diagramLayoutModel = transaction.layout().getDiagramLayoutModel();
             var firstLayout = DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null;
             applyEdgeLayouts(
                     diagramLayoutModel,
                     diagramUUID,
                     edges,
-                    EdgeResolver.lazily(() -> EdgeResolver.forDataset(databasePort, datasetName)));
+                    EdgeResolver.lazily(
+                            () -> EdgeResolver.forDataset(databasePort, workspaceName)));
             DiagramLayoutServiceUtils.commitLayout(
                     transaction,
                     firstLayout,

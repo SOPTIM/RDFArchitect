@@ -44,7 +44,7 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
         UUID uuid;
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var graph = ctx.getRdfGraph();
             if (enumEntryDTO.getLabel() == null || enumEntryDTO.getLabel().trim().isEmpty()) {
@@ -57,7 +57,7 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
                 cimEnumEntry.setUuid(uuid);
                 CIMUpdates.insertEnumEntry(
                         graph,
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                         cimEnumEntry);
                 message =
                         ChangeDescriptions.actionOn(
@@ -68,7 +68,7 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
                 uuid = enumEntryDTO.getUuid();
                 CIMUpdates.replaceEnumEntry(
                         graph,
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                         cimEnumEntry);
                 message =
                         ChangeDescriptions.actionOn(

@@ -42,17 +42,17 @@ public class ClassLocatorService implements LocateClassUseCase {
     private final ListGraphsUseCase listGraphsUseCase;
 
     @Override
-    public LocatedClass locate(String datasetName, String classUUID) {
-        for (var graphName : graphsInListingOrder(datasetName)) {
-            var located = locateInGraph(datasetName, graphName, classUUID);
+    public LocatedClass locate(String workspaceName, String classUUID) {
+        for (var graphName : graphsInListingOrder(workspaceName)) {
+            var located = locateInGraph(workspaceName, graphName, classUUID);
             if (located != null) {
                 return located;
             }
         }
-        var merged = locateMergedClass(datasetName, classUUID);
+        var merged = locateMergedClass(workspaceName, classUUID);
         if (merged == null) {
             throw new IllegalArgumentException(
-                    "Class with UUID " + classUUID + " not found in dataset " + datasetName);
+                    "Class with UUID " + classUUID + " not found in dataset " + workspaceName);
         }
         return merged;
     }
@@ -60,9 +60,9 @@ public class ClassLocatorService implements LocateClassUseCase {
     /**
      * The graphs in the order they are listed in, so that the result does not depend on storage.
      */
-    private List<String> graphsInListingOrder(String datasetName) {
-        var keywords = CIMProfileModels.keywordsByGraphName(listGraphsUseCase, datasetName);
-        return databasePort.listGraphNames(datasetName).stream()
+    private List<String> graphsInListingOrder(String workspaceName) {
+        var keywords = CIMProfileModels.keywordsByGraphName(listGraphsUseCase, workspaceName);
+        return databasePort.listGraphNames(workspaceName).stream()
                 .sorted(
                         Comparator.comparing(
                                         (String graphName) -> shortName(keywords, graphName),
@@ -77,10 +77,10 @@ public class ClassLocatorService implements LocateClassUseCase {
         return keyword != null ? keyword : graphName;
     }
 
-    private LocatedClass locateInGraph(String datasetName, String graphName, String classUUID) {
-        var graphIdentifier = new GraphIdentifier(datasetName, graphName);
+    private LocatedClass locateInGraph(String workspaceName, String graphName, String classUUID) {
+        var graphIdentifier = new GraphIdentifier(workspaceName, graphName);
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             return model.listSubjectsWithProperty(RDFA.uuid, classUUID).toList().stream()
@@ -96,11 +96,12 @@ public class ClassLocatorService implements LocateClassUseCase {
         }
     }
 
-    private LocatedClass locateMergedClass(String datasetName, String classUUID) {
-        for (var graphName : graphsInListingOrder(datasetName)) {
-            var graphIdentifier = new GraphIdentifier(datasetName, graphName);
+    private LocatedClass locateMergedClass(String workspaceName, String classUUID) {
+        for (var graphName : graphsInListingOrder(workspaceName)) {
+            var graphIdentifier = new GraphIdentifier(workspaceName, graphName);
             try (var transaction =
-                    databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                    databasePort.beginTransaction(
+                            graphIdentifier.workspaceName(), ReadWrite.READ)) {
                 var ctx = transaction.graph(graphIdentifier.graphName());
                 var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
                 for (var cimClass : new CIMModelFacade(graphName, model).getCIMClasses()) {

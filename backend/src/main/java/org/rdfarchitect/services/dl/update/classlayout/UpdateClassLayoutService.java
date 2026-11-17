@@ -87,7 +87,7 @@ public class UpdateClassLayoutService
             UUID classUUID,
             ClassLayoutPositionDTO classLayoutPosition) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var diagramLayout = ctx.getDiagramLayout();
             var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
@@ -145,7 +145,7 @@ public class UpdateClassLayoutService
             UUID packageUUID,
             List<ClassPositionDTO> classPositionDTOList) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var diagramLayout = ctx.getDiagramLayout();
             var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
@@ -177,15 +177,15 @@ public class UpdateClassLayoutService
 
     @Override
     public void updateClassPositions(
-            String datasetName, UUID diagramUUID, List<ClassPositionDTO> classPositionDTOList) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            String workspaceName, UUID diagramUUID, List<ClassPositionDTO> classPositionDTOList) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             var diagramLayoutModel = transaction.layout().getDiagramLayoutModel();
             var firstLayout = DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null;
             if (applyClassPositions(diagramLayoutModel, diagramUUID, classPositionDTOList)) {
                 EdgeLayoutSync.syncEdges(
                         diagramLayoutModel,
                         diagramUUID,
-                        EdgeResolver.forDataset(databasePort, datasetName));
+                        EdgeResolver.forDataset(databasePort, workspaceName));
             }
             DiagramLayoutServiceUtils.commitLayout(
                     transaction,
@@ -399,7 +399,7 @@ public class UpdateClassLayoutService
     public void updateDiagramObjectName(
             GraphIdentifier graphIdentifier, UUID classUUID, String name) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             for (var diagramObject :
@@ -416,7 +416,7 @@ public class UpdateClassLayoutService
     @Override
     public void deleteClassLayoutData(GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             var diagramUUIDs = new LinkedHashSet<UUID>();
@@ -493,7 +493,7 @@ public class UpdateClassLayoutService
         }
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var diagram = ctx.getCustomDiagrams().get(diagramUUID);
             if (diagram != null) {
@@ -556,7 +556,7 @@ public class UpdateClassLayoutService
         }
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var diagram = ctx.getCustomDiagrams().get(diagramUUID);
             if (diagram != null) {
@@ -603,19 +603,19 @@ public class UpdateClassLayoutService
 
     @Override
     public void addClassesToCustomDatasetDiagram(
-            String datasetName, UUID diagramUUID, List<ClassInDiagram> classes) {
+            String workspaceName, UUID diagramUUID, List<ClassInDiagram> classes) {
         if (classes.isEmpty()) {
             return;
         }
         var graphNames =
                 classes.stream().map(c -> c.getGraphName().toString()).collect(Collectors.toSet());
-        var existingGraphNames = new HashSet<>(databasePort.listGraphNames(datasetName));
+        var existingGraphNames = new HashSet<>(databasePort.listGraphNames(workspaceName));
         if (!existingGraphNames.containsAll(graphNames)) {
             throw new IllegalArgumentException(
-                    "Some referenced graphs do not exist in dataset: " + datasetName);
+                    "Some referenced graphs do not exist in dataset: " + workspaceName);
         }
 
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             var diagram = transaction.diagrams().get(diagramUUID);
             if (diagram != null) {
                 var updated = diagram.getClasses();
@@ -626,11 +626,11 @@ public class UpdateClassLayoutService
             insertLayoutForClasses(
                     diagramLayoutModel,
                     diagramUUID,
-                    mergedUuidsOf(classes, classUriByUuid(datasetName, classes)));
+                    mergedUuidsOf(classes, classUriByUuid(workspaceName, classes)));
             EdgeLayoutSync.syncEdges(
                     diagramLayoutModel,
                     diagramUUID,
-                    EdgeResolver.forDataset(databasePort, datasetName));
+                    EdgeResolver.forDataset(databasePort, workspaceName));
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Added classes to",
@@ -639,8 +639,8 @@ public class UpdateClassLayoutService
         }
     }
 
-    private Map<UUID, String> classUriByUuid(String datasetName, List<ClassInDiagram> classes) {
-        var existingGraphNames = new HashSet<>(databasePort.listGraphNames(datasetName));
+    private Map<UUID, String> classUriByUuid(String workspaceName, List<ClassInDiagram> classes) {
+        var existingGraphNames = new HashSet<>(databasePort.listGraphNames(workspaceName));
         var classesByGraphName =
                 classes.stream()
                         .filter(cls -> cls.getGraphName() != null && cls.getUuid() != null)
@@ -649,9 +649,9 @@ public class UpdateClassLayoutService
 
         var classUriByUuid = new HashMap<UUID, String>();
         for (var entry : classesByGraphName.entrySet()) {
-            var identifier = new GraphIdentifier(datasetName, entry.getKey());
+            var identifier = new GraphIdentifier(workspaceName, entry.getKey());
             try (var transaction =
-                    databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
+                    databasePort.beginTransaction(identifier.workspaceName(), ReadWrite.READ)) {
                 var ctx = transaction.graph(identifier.graphName());
                 var model =
                         new CIMModelFacade(
@@ -667,19 +667,19 @@ public class UpdateClassLayoutService
 
     @Override
     public void removeClassesFromCustomDatasetDiagram(
-            String datasetName, UUID diagramUUID, List<UUID> classUUIDs) {
+            String workspaceName, UUID diagramUUID, List<UUID> classUUIDs) {
         if (classUUIDs.isEmpty()) {
             return;
         }
 
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             var model = transaction.layout().getDiagramLayoutModel();
             var diagram = transaction.diagrams().get(diagramUUID);
             if (diagram == null) {
                 deleteLayoutForClasses(model, diagramUUID, classUUIDs);
             } else {
                 var updated = diagram.getClasses();
-                var classUriByUuid = classUriByUuid(datasetName, updated);
+                var classUriByUuid = classUriByUuid(workspaceName, updated);
                 updated.removeIf(removedByAnyOf(classUUIDs, classUriByUuid));
                 diagram.setClasses(updated);
 
@@ -690,7 +690,7 @@ public class UpdateClassLayoutService
                         classUUIDs.stream().filter(uuid -> !stillRendered.contains(uuid)).toList());
             }
             EdgeLayoutSync.syncEdges(
-                    model, diagramUUID, EdgeResolver.forDataset(databasePort, datasetName));
+                    model, diagramUUID, EdgeResolver.forDataset(databasePort, workspaceName));
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Removed classes from",
@@ -701,8 +701,8 @@ public class UpdateClassLayoutService
 
     @Override
     public void migrateLayoutToNewClassUri(
-            String datasetName, UUID oldMergedUuid, UUID newMergedUuid, String newClassUri) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            String workspaceName, UUID oldMergedUuid, UUID newMergedUuid, String newClassUri) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             var model = transaction.layout().getDiagramLayoutModel();
 
             var diagramUUIDs = new LinkedHashSet<UUID>();

@@ -46,7 +46,7 @@ public class InMemorySparqlExecutor {
             Query query,
             String graphName) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var graph = transaction.graph(graphIdentifier.graphName()).getRdfGraph();
             var dataset = SessionDataStore.wrapGraphInDataset(graph, graphName);
             try (var queryExecution = QueryExecutionFactory.create(query, dataset)) {

@@ -73,7 +73,7 @@ class ImportGraphsServiceTest {
 
     @Test
     void importGraphs_sameFileNameTwice_autoGeneratesUniqueGraphNames() {
-        var datasetName = "ds";
+        var workspaceName = "ds";
 
         var file1 =
                 new MockMultipartFile(
@@ -90,12 +90,12 @@ class ImportGraphsServiceTest {
                         "@prefix ex: <http://example.com/> . ex:d ex:e ex:f ."
                                 .getBytes(StandardCharsets.UTF_8));
 
-        when(databasePortMock.listGraphNames(datasetName))
+        when(databasePortMock.listGraphNames(workspaceName))
                 .thenThrow(new RuntimeException("dataset does not exist"));
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        datasetName, List.of(file1, file2), null, ImportProgressListener.NOOP);
+                        workspaceName, List.of(file1, file2), null, ImportProgressListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedGraphNames())
@@ -111,7 +111,7 @@ class ImportGraphsServiceTest {
 
     @Test
     void importGraphs_workspaceDoesNotExistYet_hasItCreatedBeforeTheFirstGraphIsWritten() {
-        var datasetName = "ds";
+        var workspaceName = "ds";
 
         var file =
                 new MockMultipartFile(
@@ -121,20 +121,20 @@ class ImportGraphsServiceTest {
                         "@prefix ex: <http://example.com/> . ex:a ex:b ex:c ."
                                 .getBytes(StandardCharsets.UTF_8));
 
-        when(databasePortMock.listGraphNames(datasetName))
+        when(databasePortMock.listGraphNames(workspaceName))
                 .thenThrow(new RuntimeException("dataset does not exist"));
 
         importGraphsUseCase.importGraphs(
-                datasetName, List.of(file), null, ImportProgressListener.NOOP);
+                workspaceName, List.of(file), null, ImportProgressListener.NOOP);
 
         var inOrder = inOrder(databasePortMock, transaction);
-        inOrder.verify(databasePortMock).createWorkspaceIfAbsent(datasetName);
+        inOrder.verify(databasePortMock).createWorkspaceIfAbsent(workspaceName);
         inOrder.verify(transaction).createGraph(anyString(), any(Graph.class));
     }
 
     @Test
     void importGraphs_nothingCouldBeRead_leavesNoWorkspaceBehind() {
-        var datasetName = "ds";
+        var workspaceName = "ds";
 
         var file =
                 new MockMultipartFile(
@@ -143,20 +143,20 @@ class ImportGraphsServiceTest {
                         "text/turtle",
                         "this is not turtle at all".getBytes(StandardCharsets.UTF_8));
 
-        when(databasePortMock.listGraphNames(datasetName))
+        when(databasePortMock.listGraphNames(workspaceName))
                 .thenThrow(new RuntimeException("dataset does not exist"));
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        datasetName, List.of(file), null, ImportProgressListener.NOOP);
+                        workspaceName, List.of(file), null, ImportProgressListener.NOOP);
 
         assertThat(result.importedGraphNames()).isEmpty();
-        verify(databasePortMock, never()).createWorkspaceIfAbsent(datasetName);
+        verify(databasePortMock, never()).createWorkspaceIfAbsent(workspaceName);
     }
 
     @Test
     void importGraphs_propertiesWithoutCimMetadata_areReportedAsUndisplayable() {
-        var datasetName = "ds";
+        var workspaceName = "ds";
 
         // Gadget.color and Gadget.owner are plain rdf:Property declarations without the
         // UML#attribute stereotype or cims:AssociationUsed, so they cannot be displayed.
@@ -203,7 +203,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        datasetName, List.of(file), null, ImportProgressListener.NOOP);
+                        workspaceName, List.of(file), null, ImportProgressListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedGraphNames()).containsExactly(RDFA.GRAPH_URI + "schema");
@@ -232,11 +232,11 @@ class ImportGraphsServiceTest {
     }
 
     /** A dataset that binds {@code cim:} to a namespace one of its schemas declares as well. */
-    private void workspaceHolding(String datasetName, String cimNamespace) {
-        when(databasePortMock.getPrefixMapping(datasetName))
+    private void workspaceHolding(String workspaceName, String cimNamespace) {
+        when(databasePortMock.getPrefixMapping(workspaceName))
                 .thenReturn(prefixMapping(cimNamespace));
         when(transaction.prefixes()).thenReturn(prefixMapping(cimNamespace));
-        when(databasePortMock.listGraphNames(datasetName))
+        when(databasePortMock.listGraphNames(workspaceName))
                 .thenReturn(List.of(RDFA.GRAPH_URI + "existing"));
     }
 
@@ -310,12 +310,12 @@ class ImportGraphsServiceTest {
 
     @Test
     void importGraphs_prefixHeldByAnotherNamespace_isAskedAboutBeforeAnythingIsStored() {
-        var datasetName = "ds";
-        workspaceHolding(datasetName, CIM16);
+        var workspaceName = "ds";
+        workspaceHolding(workspaceName, CIM16);
 
         var listener = new RecordingListener(List.of());
         importGraphsUseCase.importGraphs(
-                datasetName, List.of(schemaFile("dl30.ttl", CIM18)), null, listener);
+                workspaceName, List.of(schemaFile("dl30.ttl", CIM18)), null, listener);
 
         assertThat(listener.comparison)
                 .extracting(PrefixComparison::prefix)
@@ -332,11 +332,11 @@ class ImportGraphsServiceTest {
 
     @Test
     void importGraphs_contestedPrefixLeftUndecided_isImportedWithoutIt() {
-        var datasetName = "ds";
-        workspaceHolding(datasetName, CIM16);
+        var workspaceName = "ds";
+        workspaceHolding(workspaceName, CIM16);
 
         importGraphsUseCase.importGraphs(
-                datasetName,
+                workspaceName,
                 List.of(schemaFile("dl30.ttl", CIM18)),
                 null,
                 new RecordingListener(List.of()));
@@ -346,11 +346,11 @@ class ImportGraphsServiceTest {
 
     @Test
     void importGraphs_contestedPrefixRenamed_isImportedUnderTheNewPrefix() {
-        var datasetName = "ds";
-        workspaceHolding(datasetName, CIM16);
+        var workspaceName = "ds";
+        workspaceHolding(workspaceName, CIM16);
 
         importGraphsUseCase.importGraphs(
-                datasetName,
+                workspaceName,
                 List.of(schemaFile("dl30.ttl", CIM18)),
                 null,
                 new RecordingListener(
@@ -361,11 +361,11 @@ class ImportGraphsServiceTest {
 
     @Test
     void importGraphs_contestedPrefixHandedToTheImport_keepsTheImportedBinding() {
-        var datasetName = "ds";
-        workspaceHolding(datasetName, CIM16);
+        var workspaceName = "ds";
+        workspaceHolding(workspaceName, CIM16);
 
         importGraphsUseCase.importGraphs(
-                datasetName,
+                workspaceName,
                 List.of(schemaFile("dl30.ttl", CIM18)),
                 null,
                 new RecordingListener(
@@ -376,11 +376,11 @@ class ImportGraphsServiceTest {
 
     @Test
     void importGraphs_datasetPrefixRenamed_isRewrittenAlongsideTheImportedGraphs() {
-        var datasetName = "ds";
-        workspaceHolding(datasetName, CIM16);
+        var workspaceName = "ds";
+        workspaceHolding(workspaceName, CIM16);
 
         importGraphsUseCase.importGraphs(
-                datasetName,
+                workspaceName,
                 List.of(schemaFile("dl30.ttl", CIM18)),
                 null,
                 new RecordingListener(
@@ -396,8 +396,8 @@ class ImportGraphsServiceTest {
 
     @Test
     void importGraphs_cancelledAfterTheDecision_leavesTheDatasetPrefixesAlone() {
-        var datasetName = "ds";
-        workspaceHolding(datasetName, CIM16);
+        var workspaceName = "ds";
+        workspaceHolding(workspaceName, CIM16);
 
         var listener =
                 new RecordingListener(
@@ -408,7 +408,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        datasetName, List.of(schemaFile("dl30.ttl", CIM18)), null, listener);
+                        workspaceName, List.of(schemaFile("dl30.ttl", CIM18)), null, listener);
 
         assertThat(result.importedGraphNames()).isEmpty();
         verify(transaction, never()).setPrefixes(any());
@@ -416,11 +416,11 @@ class ImportGraphsServiceTest {
 
     @Test
     void importGraphs_datasetPrefixesUntouched_areNotWrittenBack() {
-        var datasetName = "ds";
-        workspaceHolding(datasetName, CIM16);
+        var workspaceName = "ds";
+        workspaceHolding(workspaceName, CIM16);
 
         importGraphsUseCase.importGraphs(
-                datasetName,
+                workspaceName,
                 List.of(schemaFile("dl30.ttl", CIM18)),
                 null,
                 new RecordingListener(List.of()));
@@ -430,11 +430,11 @@ class ImportGraphsServiceTest {
 
     @Test
     void importGraphs_filesDisagreeingOnAPrefix_areAskedAboutEvenWithoutAnExistingBinding() {
-        var datasetName = "ds";
+        var workspaceName = "ds";
 
         var listener = new RecordingListener(List.of());
         importGraphsUseCase.importGraphs(
-                datasetName,
+                workspaceName,
                 List.of(schemaFile("a.ttl", CIM16), schemaFile("b.ttl", CIM18)),
                 null,
                 listener);
@@ -452,12 +452,12 @@ class ImportGraphsServiceTest {
 
     @Test
     void importGraphs_prefixesAgreeing_areNotAskedAbout() {
-        var datasetName = "ds";
-        workspaceHolding(datasetName, CIM16);
+        var workspaceName = "ds";
+        workspaceHolding(workspaceName, CIM16);
 
         var listener = new RecordingListener(List.of());
         importGraphsUseCase.importGraphs(
-                datasetName, List.of(schemaFile("dl24.ttl", CIM16)), null, listener);
+                workspaceName, List.of(schemaFile("dl24.ttl", CIM16)), null, listener);
 
         assertThat(listener.comparison).isNull();
         assertThat(storedPrefixes()).containsEntry("cim", CIM16);
@@ -465,8 +465,8 @@ class ImportGraphsServiceTest {
 
     @Test
     void importGraphs_unreadableFile_isReportedBeforeThePrefixQuestionIsAsked() {
-        var datasetName = "ds";
-        workspaceHolding(datasetName, CIM16);
+        var workspaceName = "ds";
+        workspaceHolding(workspaceName, CIM16);
 
         var broken =
                 new MockMultipartFile(
@@ -478,7 +478,7 @@ class ImportGraphsServiceTest {
         var listener = new RecordingListener(List.of());
         var result =
                 importGraphsUseCase.importGraphs(
-                        datasetName,
+                        workspaceName,
                         List.of(broken, schemaFile("dl30.ttl", CIM18)),
                         null,
                         listener);
@@ -490,8 +490,8 @@ class ImportGraphsServiceTest {
 
     @Test
     void importGraphs_unreadableFile_doesNotBringItsPrefixesIntoTheComparison() {
-        var datasetName = "ds";
-        workspaceHolding(datasetName, CIM16);
+        var workspaceName = "ds";
+        workspaceHolding(workspaceName, CIM16);
 
         var broken =
                 new MockMultipartFile(
@@ -503,7 +503,8 @@ class ImportGraphsServiceTest {
                                 .getBytes(StandardCharsets.UTF_8));
 
         var listener = new RecordingListener(List.of());
-        var result = importGraphsUseCase.importGraphs(datasetName, List.of(broken), null, listener);
+        var result =
+                importGraphsUseCase.importGraphs(workspaceName, List.of(broken), null, listener);
 
         assertThat(listener.comparison).isNull();
         assertThat(result.failedFileNames()).containsExactly("broken.ttl");
@@ -512,7 +513,7 @@ class ImportGraphsServiceTest {
 
     @Test
     void importGraphs_conformantSchema_producesNoWarnings() {
-        var datasetName = "ds";
+        var workspaceName = "ds";
 
         var schema =
                 """
@@ -546,7 +547,7 @@ class ImportGraphsServiceTest {
 
         var result =
                 importGraphsUseCase.importGraphs(
-                        datasetName, List.of(file), null, ImportProgressListener.NOOP);
+                        workspaceName, List.of(file), null, ImportProgressListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
         assertThat(result.importedGraphNames()).containsExactly(RDFA.GRAPH_URI + "schema");

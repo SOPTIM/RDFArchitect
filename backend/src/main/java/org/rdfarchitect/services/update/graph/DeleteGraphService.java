@@ -39,9 +39,9 @@ public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCa
     @Override
     public void deleteGraph(GraphIdentifier graphIdentifier) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             transaction.deleteGraph(graphIdentifier.graphName());
-            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.datasetName());
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.workspaceName());
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Deleted",
@@ -52,7 +52,7 @@ public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCa
 
     @Override
     public void replaceGraph(GraphIdentifier graphIdentifier, MultipartFile file) {
-        databasePort.createWorkspaceIfAbsent(graphIdentifier.datasetName());
+        databasePort.createWorkspaceIfAbsent(graphIdentifier.workspaceName());
         var graph =
                 file == null || file.isEmpty()
                         ? GraphFactory.createDefaultGraph()
@@ -62,10 +62,10 @@ public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCa
                                 .build()
                                 .graph();
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             transaction.deleteGraph(graphIdentifier.graphName());
             transaction.createGraph(graphIdentifier.graphName(), graph);
-            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.datasetName());
+            syncDiagramLayoutUseCase.syncDatasetDiagramLayout(graphIdentifier.workspaceName());
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Replaced",

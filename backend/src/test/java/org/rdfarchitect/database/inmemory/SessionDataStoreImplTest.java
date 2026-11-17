@@ -108,7 +108,7 @@ class SessionDataStoreImplTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"a", "anyValid", DEFAULT_GRAPH_NAME})
-    void create_validDatasetNameNames_createsEmptyCollections(String name) {
+    void create_validWorkspaceNameNames_createsEmptyCollections(String name) {
         // Arrange
         exampleGraphs = List.of(GraphFactory.createDefaultGraph());
 
@@ -250,7 +250,8 @@ class SessionDataStoreImplTest {
 
         // Act/Assert
         try (var transaction =
-                inMemoryDatabase.beginTransaction(GRAPH_IDENTIFIER.datasetName(), ReadWrite.READ)) {
+                inMemoryDatabase.beginTransaction(
+                        GRAPH_IDENTIFIER.workspaceName(), ReadWrite.READ)) {
             assertThat(transaction.graph(GRAPH_IDENTIFIER.graphName())).isNotNull();
         }
     }
@@ -261,7 +262,7 @@ class SessionDataStoreImplTest {
                 .isThrownBy(
                         () ->
                                 inMemoryDatabase.beginTransaction(
-                                        GRAPH_IDENTIFIER.datasetName(), ReadWrite.READ));
+                                        GRAPH_IDENTIFIER.workspaceName(), ReadWrite.READ));
     }
 
     @Test
@@ -271,8 +272,9 @@ class SessionDataStoreImplTest {
 
         deleteGraph(GRAPH_IDENTIFIER);
 
-        assertThat(inMemoryDatabase.listDatasets()).containsExactly(GRAPH_IDENTIFIER.datasetName());
-        assertThat(inMemoryDatabase.listGraphNames(GRAPH_IDENTIFIER.datasetName())).isEmpty();
+        assertThat(inMemoryDatabase.listDatasets())
+                .containsExactly(GRAPH_IDENTIFIER.workspaceName());
+        assertThat(inMemoryDatabase.listGraphNames(GRAPH_IDENTIFIER.workspaceName())).isEmpty();
     }
 
     @Test
@@ -544,7 +546,7 @@ class SessionDataStoreImplTest {
 
     private void deleteGraph(GraphIdentifier id) {
         try (var transaction =
-                inMemoryDatabase.beginTransaction(id.datasetName(), ReadWrite.WRITE)) {
+                inMemoryDatabase.beginTransaction(id.workspaceName(), ReadWrite.WRITE)) {
             transaction.deleteGraph(id.graphName());
             transaction.commit("deleted graph %s".formatted(id.graphName()));
         }
@@ -552,7 +554,7 @@ class SessionDataStoreImplTest {
 
     private void renameGraph(GraphIdentifier id, String newGraphName) {
         try (var transaction =
-                inMemoryDatabase.beginTransaction(id.datasetName(), ReadWrite.WRITE)) {
+                inMemoryDatabase.beginTransaction(id.workspaceName(), ReadWrite.WRITE)) {
             transaction.renameGraph(id.graphName(), newGraphName);
             transaction.commit("renamed graph %s".formatted(id.graphName()));
         }

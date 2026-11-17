@@ -66,14 +66,14 @@ public class UpdatePackageService
         UUID newPackageUUID = UUID.randomUUID();
         packageDTO.setUuid(newPackageUUID);
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var graph = ctx.getRdfGraph();
             var newPackage = packageMapper.toCIMObject(packageDTO);
             assertNoClassWithSameIri(graph, newPackage);
             CIMUpdates.insertPackage(
                     graph,
-                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                    databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                     newPackage);
             createPackageLayoutData.createPackageLayoutData(
                     graphIdentifier, packageDTO, newPackageUUID);
@@ -88,14 +88,14 @@ public class UpdatePackageService
     @Override
     public void replacePackage(GraphIdentifier graphIdentifier, PackageDTO packageDTO) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var graph = ctx.getRdfGraph();
             var newPackage = packageMapper.toCIMObject(packageDTO);
             assertNoClassWithSameIri(graph, newPackage);
             CIMUpdates.replacePackage(
                     graph,
-                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                    databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                     newPackage);
             replaceDiagramUseCase.replaceDiagram(
                     graphIdentifier, packageDTO.getUuid(), packageDTO.getLabel());
@@ -106,13 +106,13 @@ public class UpdatePackageService
     @Override
     public void deletePackage(GraphIdentifier graphIdentifier, UUID packageUUID) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             // Read before deleting: afterwards there is no label left to name the change with.
             var packageLabel = packageLabel(ctx.getRdfGraph(), packageUUID);
             CIMUpdates.deletePackage(
                     ctx.getRdfGraph(),
-                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                    databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                     packageUUID);
             deletePackageLayoutDataUseCase.deletePackageLayoutData(graphIdentifier, packageUUID);
             transaction.commit(
@@ -150,7 +150,7 @@ public class UpdatePackageService
         var baseQuery =
                 new CIMBaseQueryBuilder()
                         .setDistinct()
-                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()))
                         .setGraph(graphIdentifier.graphName())
                         .setType(CIMS.classCategory)
                         .addWhereThis(RDFA.uuid, packageUUID.toString())

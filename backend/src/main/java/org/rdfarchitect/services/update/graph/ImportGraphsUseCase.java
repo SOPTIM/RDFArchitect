@@ -54,7 +54,7 @@ public interface ImportGraphsUseCase {
     /**
      * Imports multiple graphs into the specified dataset.
      *
-     * @param datasetName The name of the dataset where the graphs will be imported.
+     * @param workspaceName The name of the dataset where the graphs will be imported.
      * @param files The list of files containing the graph data to be imported. A zip archive is
      *     unpacked and each graph file in it imported on its own.
      * @param graphNames The list of graph URIs corresponding to each file.
@@ -64,7 +64,7 @@ public interface ImportGraphsUseCase {
      *     that failed to import.
      */
     ImportResult importGraphs(
-            String datasetName,
+            String workspaceName,
             List<MultipartFile> files,
             List<String> graphNames,
             ImportProgressListener listener);

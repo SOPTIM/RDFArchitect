@@ -54,16 +54,16 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
     }
 
     @Override
-    public String createSnapshot(String datasetName) {
+    public String createSnapshot(String workspaceName) {
         if (!fusekiHttpAdminProtocol.ping()) {
             throw new FusekiServerException("Server not available");
         }
-        if (!databasePort.listDatasets().contains(datasetName)) {
-            throw new DataAccessException("Dataset '" + datasetName + "' does not exist");
+        if (!databasePort.listDatasets().contains(workspaceName)) {
+            throw new DataAccessException("Dataset '" + workspaceName + "' does not exist");
         }
 
         var base64Token = generateBase64Token();
-        String snapshotName = constructSnapshotName(datasetName, base64Token);
+        String snapshotName = constructSnapshotName(workspaceName, base64Token);
         String fusekiSnapshotURL = fusekiEndpoint + "/" + snapshotName;
 
         fusekiHttpAdminProtocol.createDataset(snapshotName);
@@ -72,8 +72,8 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
             Txn.executeWrite(
                     conn,
                     () -> {
-                        for (var graphName : databasePort.listGraphNames(datasetName)) {
-                            transferGraph(conn, new GraphIdentifier(datasetName, graphName));
+                        for (var graphName : databasePort.listGraphNames(workspaceName)) {
+                            transferGraph(conn, new GraphIdentifier(workspaceName, graphName));
                         }
                     });
         } catch (Exception e) {
@@ -106,12 +106,12 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
 
     private void transferGraph(RDFConnection conn, GraphIdentifier graphIdentifier) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var copiedGraph = GraphUtils.deepCopy(ctx.getRdfGraph());
             copiedGraph
                     .getPrefixMapping()
-                    .setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+                    .setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
 
             GraphUtils.removeUUIDs(copiedGraph);
 

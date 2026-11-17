@@ -64,12 +64,12 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         }
         var update =
                 CIMUpdates.insertAssociation(
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                         graphIdentifier.graphName(),
                         cimAssociationPair);
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             executeOnGraph(ctx, graphIdentifier, update);
             syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
@@ -85,12 +85,12 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         var cimAssociationPair = associationPairMapper.toCIMObject(associationPair);
         var update =
                 CIMUpdates.replaceAssociation(
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                         graphIdentifier.graphName(),
                         cimAssociationPair);
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             executeOnGraph(ctx, graphIdentifier, update);
             syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
@@ -109,13 +109,13 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         var cimAssociationPairs = associationPairMapper.toCIMObjectList(associationPairList);
         var update =
                 CIMUpdates.replaceAssociations(
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        databasePort.getPrefixMapping(graphIdentifier.workspaceName()),
                         graphIdentifier.graphName(),
                         classUUID,
                         cimAssociationPairs);
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var classResource = CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), classUUID);
             var classLabel = CIMResourceUtils.findLabelForResource(classResource);

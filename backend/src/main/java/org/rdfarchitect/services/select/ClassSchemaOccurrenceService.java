@@ -49,24 +49,24 @@ public class ClassSchemaOccurrenceService implements ListClassSchemaOccurrencesU
 
     @Override
     public List<ClassSchemaOccurrenceDTO> listSchemaOccurrences(
-            String datasetName, String classUUID) {
-        var classUri = locateClassUseCase.locate(datasetName, classUUID).classUri();
-        var schemas = schemasByGraphName(datasetName);
+            String workspaceName, String classUUID) {
+        var classUri = locateClassUseCase.locate(workspaceName, classUUID).classUri();
+        var schemas = schemasByGraphName(workspaceName);
 
         var occurrences = new ArrayList<ClassSchemaOccurrenceDTO>();
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             for (var graphName : transaction.graphNames()) {
                 occurrences.add(
-                        occurrenceIn(datasetName, graphName, schemas.get(graphName), classUri));
+                        occurrenceIn(workspaceName, graphName, schemas.get(graphName), classUri));
             }
         }
         return occurrences;
     }
 
     /** The schemas of the dataset as the schema pickers know them, by graph URI. */
-    private Map<String, GraphDTO> schemasByGraphName(String datasetName) {
+    private Map<String, GraphDTO> schemasByGraphName(String workspaceName) {
         var schemas = new HashMap<String, GraphDTO>();
-        for (var graph : listGraphsUseCase.listGraphs(datasetName)) {
+        for (var graph : listGraphsUseCase.listGraphs(workspaceName)) {
             if (graph.getUri() != null) {
                 schemas.put(graph.getUri().toString(), graph);
             }
@@ -75,12 +75,12 @@ public class ClassSchemaOccurrenceService implements ListClassSchemaOccurrencesU
     }
 
     private ClassSchemaOccurrenceDTO occurrenceIn(
-            String datasetName, String graphName, GraphDTO schema, String classUri) {
+            String workspaceName, String graphName, GraphDTO schema, String classUri) {
         var keyword = schema == null ? null : schema.getKeyword();
         var label = schema == null ? null : schema.getLabel();
-        var graphIdentifier = new GraphIdentifier(datasetName, graphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, graphName);
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var graph = ctx.getRdfGraph();
             var model = ModelFactory.createModelForGraph(graph);

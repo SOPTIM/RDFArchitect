@@ -63,22 +63,25 @@ public class QueryDatasetService
     private final DatabasePort databasePort;
 
     @Override
-    public ByteArrayOutputStream getDatasetSchema(String datasetName, RDFFormat format) {
+    public ByteArrayOutputStream getDatasetSchema(String workspaceName, RDFFormat format) {
         var resultDataset = DatasetFactory.create();
 
         // fetch graphs and insert into resultDataset
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             for (String graphName : transaction.graphNames()) {
                 if (graphName.equals("default")) {
-                    resultDataset.setDefaultModel(getGraphAsModel(datasetName, "default"));
+                    resultDataset.setDefaultModel(getGraphAsModel(workspaceName, "default"));
                 } else {
-                    resultDataset.addNamedModel(graphName, getGraphAsModel(datasetName, graphName));
+                    resultDataset.addNamedModel(
+                            graphName, getGraphAsModel(workspaceName, graphName));
                 }
             }
         }
 
         // add DB prefixes too resultDataset
-        resultDataset.getPrefixMapping().setNsPrefixes(databasePort.getPrefixMapping(datasetName));
+        resultDataset
+                .getPrefixMapping()
+                .setNsPrefixes(databasePort.getPrefixMapping(workspaceName));
 
         // format to file
         var outStream = new ByteArrayOutputStream();
@@ -87,21 +90,21 @@ public class QueryDatasetService
         return outStream;
     }
 
-    private Model getGraphAsModel(String datasetName, String graphName) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+    private Model getGraphAsModel(String workspaceName, String graphName) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             var ctx = transaction.graph(graphName);
             return ModelFactory.createModelForGraph(GraphUtils.deepCopy(ctx.getRdfGraph()));
         }
     }
 
     @Override
-    public List<GraphDTO> listGraphs(String datasetName) {
+    public List<GraphDTO> listGraphs(String workspaceName) {
         var result = new ArrayList<GraphDTO>();
 
         // Read once for the whole listing: it cannot change while it is running, and asking the
         // store per graph takes its lock once per profile of the workspace.
-        var datasetPrefixes = databasePort.getPrefixMapping(datasetName);
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+        var datasetPrefixes = databasePort.getPrefixMapping(workspaceName);
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             for (var graphName : transaction.graphNames()) {
                 result.add(readGraph(transaction, graphName, datasetPrefixes));
             }
@@ -208,8 +211,8 @@ public class QueryDatasetService
     }
 
     @Override
-    public List<CIMPrefixPair> listPrefixes(String datasetName) {
-        var prefixMapping = databasePort.getPrefixMapping(datasetName);
+    public List<CIMPrefixPair> listPrefixes(String workspaceName) {
+        var prefixMapping = databasePort.getPrefixMapping(workspaceName);
 
         var result = new ArrayList<CIMPrefixPair>();
         for (var prefix : prefixMapping.getNsPrefixMap().entrySet()) {
@@ -219,8 +222,8 @@ public class QueryDatasetService
     }
 
     @Override
-    public String listFormattedPrefixes(String datasetName, String format) {
-        var prefixMapping = databasePort.getPrefixMapping(datasetName);
+    public String listFormattedPrefixes(String workspaceName, String format) {
+        var prefixMapping = databasePort.getPrefixMapping(workspaceName);
         var model = ModelFactory.createDefaultModel();
         model.setNsPrefixes(prefixMapping);
         var stream = new ByteArrayOutputStream();
@@ -240,15 +243,15 @@ public class QueryDatasetService
     @Override
     public List<DatasetDTO> listDatasets() {
         var result = new ArrayList<DatasetDTO>();
-        for (var datasetName : databasePort.listDatasets()) {
-            var readonly = databasePort.isReadOnly(datasetName);
-            var prefixMapping = databasePort.getPrefixMapping(datasetName);
+        for (var workspaceName : databasePort.listDatasets()) {
+            var readonly = databasePort.isReadOnly(workspaceName);
+            var prefixMapping = databasePort.getPrefixMapping(workspaceName);
 
             var prefixPairs = new ArrayList<CIMPrefixPair>();
             for (var prefix : prefixMapping.getNsPrefixMap().entrySet()) {
                 prefixPairs.add(new CIMPrefixPair(prefix.getKey() + ":", prefix.getValue()));
             }
-            result.add(new DatasetDTO(datasetName, readonly, prefixPairs));
+            result.add(new DatasetDTO(workspaceName, readonly, prefixPairs));
         }
         return result;
     }

@@ -90,12 +90,12 @@ public interface EdgeResolver {
      * {@link #forMergedProfiles(List)}.
      *
      * @param databasePort the database holding the dataset
-     * @param datasetName the name of the dataset
+     * @param workspaceName the name of the dataset
      * @return the resolver
      */
-    static EdgeResolver forDataset(DatabasePort databasePort, String datasetName) {
+    static EdgeResolver forDataset(DatabasePort databasePort, String workspaceName) {
         return forMergedProfiles(
-                CIMProfileModels.loadAll(databasePort, Map.of(), datasetName, null));
+                CIMProfileModels.loadAll(databasePort, Map.of(), workspaceName, null));
     }
 
     /**

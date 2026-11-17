@@ -49,7 +49,7 @@ public class SchemaComparisonService implements SchemaComparisonUseCase {
                         .build()
                         .graph();
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             return TripleChangeAnalyser.compareGraphs(originalGraph, ctx.getRdfGraph());
         }
@@ -86,7 +86,7 @@ public class SchemaComparisonService implements SchemaComparisonUseCase {
 
     private Graph copyGraph(GraphIdentifier graphIdentifier) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             return GraphUtils.deepCopy(
                     transaction.graph(graphIdentifier.graphName()).getRdfGraph());
         }

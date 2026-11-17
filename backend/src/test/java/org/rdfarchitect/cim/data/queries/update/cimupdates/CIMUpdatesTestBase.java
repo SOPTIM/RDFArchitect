@@ -136,7 +136,7 @@ public class CIMUpdatesTestBase {
 
     /** Opens a transaction on the test workspace. */
     protected WorkspaceTransaction beginTestTransaction(ReadWrite mode) {
-        return databasePort.beginTransaction(graphIdentifier.datasetName(), mode);
+        return databasePort.beginTransaction(graphIdentifier.workspaceName(), mode);
     }
 
     protected void addTriple(Node subject, Node predicate, Node object) {
@@ -193,8 +193,8 @@ public class CIMUpdatesTestBase {
 
     /** Creates a workspace and a graph in it, the way an upload does. */
     private static void createGraph(DatabasePort port, GraphIdentifier id, Graph graph) {
-        port.createWorkspaceIfAbsent(id.datasetName());
-        try (var transaction = port.beginTransaction(id.datasetName(), ReadWrite.WRITE)) {
+        port.createWorkspaceIfAbsent(id.workspaceName());
+        try (var transaction = port.beginTransaction(id.workspaceName(), ReadWrite.WRITE)) {
             transaction.createGraph(id.graphName(), graph);
             transaction.commit("created graph %s".formatted(id.graphName()));
         }

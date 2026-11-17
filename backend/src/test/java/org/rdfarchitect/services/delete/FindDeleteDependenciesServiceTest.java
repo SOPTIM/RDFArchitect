@@ -88,7 +88,7 @@ class FindDeleteDependenciesServiceTest {
         RDFDataMgr.read(graph, in, Lang.TTL);
         in.close();
 
-        workspace = new Workspace(GRAPH_IDENTIFIER.datasetName());
+        workspace = new Workspace(GRAPH_IDENTIFIER.workspaceName());
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
             transaction.createGraph(GRAPH_IDENTIFIER.graphName(), graph);
             transaction.commit("created the test graph");

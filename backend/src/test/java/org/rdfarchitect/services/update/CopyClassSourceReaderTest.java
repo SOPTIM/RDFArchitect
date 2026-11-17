@@ -84,7 +84,7 @@ class CopyClassSourceReaderTest {
         sourceReader.readSources(sources(CLASS_UUID), snapshots);
 
         verify(databasePort, times(1))
-                .beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ);
+                .beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ);
     }
 
     @Test
@@ -93,7 +93,7 @@ class CopyClassSourceReaderTest {
         sourceReader.readSources(sources(CLASS_UUID));
 
         verify(databasePort, times(2))
-                .beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ);
+                .beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ);
     }
 
     @Test

@@ -83,7 +83,7 @@ public class SHACLStoringService
     @Override
     public void replaceCustomSHACLGraph(GraphIdentifier graphIdentifier, Graph shacl) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var storedGraph = ctx.getCustomSHACL();
             storedGraph.clear();
@@ -101,7 +101,7 @@ public class SHACLStoringService
     public ByteArrayOutputStream exportCustomSHACLGraph(
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
             try (var outStream = new ByteArrayOutputStream()) {
@@ -119,12 +119,12 @@ public class SHACLStoringService
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var transaction =
                         databasePort.beginTransaction(
-                                graphIdentifier.datasetName(), ReadWrite.READ);
+                                graphIdentifier.workspaceName(), ReadWrite.READ);
                 var outStream = new ByteArrayOutputStream()) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             ontologyModel.setNsPrefixes(
-                    databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+                    databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
             var generatedShacl =
                     new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true).generate();
 
@@ -152,12 +152,12 @@ public class SHACLStoringService
     public ByteArrayOutputStream exportCombinedSHACLGraph(
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             ontologyModel.setNsPrefixes(
-                    databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+                    databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
             var generatedShacl =
                     new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true).generate();
 
@@ -176,7 +176,7 @@ public class SHACLStoringService
     public ByteArrayOutputStream exportCustomSHACLNamespaces(
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
             try (var outStream = new ByteArrayOutputStream()) {
@@ -196,7 +196,8 @@ public class SHACLStoringService
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var outStream = new ByteArrayOutputStream()) {
             var prefixModel = ModelFactory.createDefaultModel();
-            prefixModel.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+            prefixModel.setNsPrefixes(
+                    databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
             prefixModel.setNsPrefix(SHACL_NAMESPACE.getPrefix(), SHACL_NAMESPACE.getUri());
             prefixModel.write(outStream, format.getLang().getName());
             return outStream;
@@ -210,12 +211,12 @@ public class SHACLStoringService
     public CustomAndGeneratedTuple<SHACLToClassRelations> getSHACLToClassRelations(
             GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             ontologyModel.setNsPrefixes(
-                    databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+                    databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
             var generatedSHACL =
                     new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true)
                             .generateForClassOnly(classUUID);
@@ -271,7 +272,7 @@ public class SHACLStoringService
     private CustomAndGeneratedTuple<List<PropertyShape>> getSHACLShapesByProperty(
             GraphIdentifier graphIdentifier, UUID propertyUUID) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
@@ -324,7 +325,7 @@ public class SHACLStoringService
     public CustomAndGeneratedTuple<List<NodeShape>> getNodeShapesForClass(
             GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
@@ -351,7 +352,7 @@ public class SHACLStoringService
     public List<PropertyShapesWrapper> getPropertyShapes(
             GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
             var shaclToClassAssigner =
@@ -364,7 +365,7 @@ public class SHACLStoringService
     @Override
     public void deleteSHACLShape(GraphIdentifier graphIdentifier, String shaclShapeURI) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
             var deleteModel = ModelFactory.createDefaultModel();
@@ -381,7 +382,7 @@ public class SHACLStoringService
     public void replaceSHACLShape(
             GraphIdentifier graphIdentifier, String shaclShapeURI, String shaclToInsert) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
             Model insertModel = parseTriplesToModel(shaclToInsert);
@@ -412,7 +413,7 @@ public class SHACLStoringService
     public void updateClassSHACL(
             GraphIdentifier graphIdentifier, UUID classUUID, String ttlShaclString) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
@@ -437,7 +438,7 @@ public class SHACLStoringService
         var insertModel = parseTriplesToModel(ttlShaclString);
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());

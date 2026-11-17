@@ -49,7 +49,7 @@ public class UpdateDiagramLayoutService implements UpdateDiagramLayoutUseCase {
     public void updateDiagramLayout(
             GraphIdentifier graphIdentifier, UUID diagramUUID, DiagramLayoutDTO diagramLayout) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var layout = ctx.getDiagramLayout();
             var diagramLayoutModel = layout.getDiagramLayoutModel();
@@ -78,15 +78,16 @@ public class UpdateDiagramLayoutService implements UpdateDiagramLayoutUseCase {
 
     @Override
     public void updateDiagramLayout(
-            String datasetName, UUID diagramUUID, DiagramLayoutDTO diagramLayout) {
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+            String workspaceName, UUID diagramUUID, DiagramLayoutDTO diagramLayout) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
             var diagramLayoutModel = transaction.layout().getDiagramLayoutModel();
             var firstLayout = DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null;
             applyDiagramLayout(
                     diagramLayoutModel,
                     diagramUUID,
                     diagramLayout,
-                    EdgeResolver.lazily(() -> EdgeResolver.forDataset(databasePort, datasetName)));
+                    EdgeResolver.lazily(
+                            () -> EdgeResolver.forDataset(databasePort, workspaceName)));
             DiagramLayoutServiceUtils.commitLayout(
                     transaction,
                     firstLayout || diagramLayout.isAutomatic(),

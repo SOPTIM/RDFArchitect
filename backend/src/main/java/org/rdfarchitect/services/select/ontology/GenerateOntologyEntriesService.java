@@ -42,10 +42,10 @@ public class GenerateOntologyEntriesService implements GenerateOntologyEntriesUs
     @Override
     public List<OntologyEntry> generateOntologyEntries(GraphIdentifier graphIdentifier) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
-            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.workspaceName()));
             return new OntologyGeneratableEntriesBuilder(model)
                     .generateDCTModified(
                             changeLogEntryMapper.toDTOList(changesAffecting(graphIdentifier)))
@@ -56,7 +56,7 @@ public class GenerateOntologyEntriesService implements GenerateOntologyEntriesUs
 
     /** The changes that reached this graph, newest first. */
     private List<WorkspaceChangeLogEntry> changesAffecting(GraphIdentifier graphIdentifier) {
-        return databasePort.listChanges(graphIdentifier.datasetName()).stream()
+        return databasePort.listChanges(graphIdentifier.workspaceName()).stream()
                 .filter(entry -> entry.affectsGraph(graphIdentifier.graphName()))
                 .toList();
     }

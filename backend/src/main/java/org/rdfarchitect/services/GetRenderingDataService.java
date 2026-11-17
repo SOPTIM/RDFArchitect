@@ -57,7 +57,7 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
         RenderingLayoutData layoutData;
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             rdfGraphCopy = GraphUtils.deepCopy(ctx.getRdfGraph());
             layoutData = fetchLayoutData(ctx, packageUUID);
@@ -73,7 +73,7 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
         RenderingLayoutData layoutData;
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.READ)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var diagram = ctx.getCustomDiagrams().get(diagramUUID);
             if (diagram == null) {
@@ -116,13 +116,13 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
             return renderer.renderUML(cimModel, filter, layoutData, List.of(), null, null);
         }
 
-        var datasetName = graphIdentifier.datasetName();
-        var keywords = CIMProfileModels.keywordsByGraphName(listGraphsUseCase, datasetName);
+        var workspaceName = graphIdentifier.workspaceName();
+        var keywords = CIMProfileModels.keywordsByGraphName(listGraphsUseCase, workspaceName);
         var otherProfiles =
                 CIMProfileModels.loadAll(
-                        databasePort, keywords, datasetName, graphIdentifier.graphName());
+                        databasePort, keywords, workspaceName, graphIdentifier.graphName());
         String primaryColor;
-        try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
+        try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             primaryColor = transaction.crossProfileColors().getColor(graphIdentifier.graphName());
         }
 

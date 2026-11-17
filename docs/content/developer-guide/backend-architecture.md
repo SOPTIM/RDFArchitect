@@ -50,7 +50,7 @@ The **in-memory** path (`database/inmemory`) is used heavily in tests and as the
 Its contents (graphs, custom diagrams, layout, namespaces) are reachable only through a workspace transaction, so that a change touching several of them commits or rolls back as a whole and becomes one entry in the workspace changelog:
 
 ```java
-try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
+try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.WRITE)) {
     var ctx = transaction.graph(graphUri);
     // … edit ctx.getRdfGraph(), transaction.diagrams(), transaction.layout() …
     transaction.commit("Deleted class \"Breaker\"");

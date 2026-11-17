@@ -39,7 +39,7 @@ class ImportJob implements ImportProgressListener {
 
     @Getter private final UUID id;
     @Getter private final String sessionId;
-    @Getter private final String datasetName;
+    @Getter private final String workspaceName;
 
     private JobState state = JobState.RUNNING;
     private final List<FileProgress> files = new ArrayList<>();
@@ -54,10 +54,10 @@ class ImportJob implements ImportProgressListener {
     private ResolvedPrefixes resolvedPrefixes;
     private Instant lastPolledAt;
 
-    ImportJob(UUID id, String sessionId, String datasetName, Instant startedAt) {
+    ImportJob(UUID id, String sessionId, String workspaceName, Instant startedAt) {
         this.id = id;
         this.sessionId = sessionId;
-        this.datasetName = datasetName;
+        this.workspaceName = workspaceName;
         this.lastPolledAt = startedAt;
     }
 
@@ -222,7 +222,7 @@ class ImportJob implements ImportProgressListener {
     synchronized ImportJobStatus status() {
         return new ImportJobStatus(
                 id,
-                datasetName,
+                workspaceName,
                 state,
                 files.stream().map(FileProgress::toStatus).toList(),
                 importedGraphNames,

@@ -21,8 +21,8 @@ public interface CreateSnapshotUseCase {
     /**
      * Creates a snapshot for a dataset and persists that snapshot in the Fuseki database
      *
-     * @param datasetName The name of the dataset to be snapshot
+     * @param workspaceName The name of the dataset to be snapshot
      * @return The Base64 token under which the snapshot has been persisted in the database
      */
-    String createSnapshot(String datasetName);
+    String createSnapshot(String workspaceName);
 }

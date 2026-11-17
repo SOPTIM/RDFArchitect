@@ -43,9 +43,9 @@ public interface DatabaseConnection {
      * Executes an {@link Update insertUpdate} against a specific dataset in the database.
      *
      * @param insertUpdate {@link Update Insert update} to be executed
-     * @param datasetName Name of the dataset
+     * @param workspaceName Name of the dataset
      */
-    void sendInsert(Update insertUpdate, String datasetName) throws DataAccessException;
+    void sendInsert(Update insertUpdate, String workspaceName) throws DataAccessException;
 
     /**
      * Inserts a graph via a {@link GraphSource} into the default dataset of the database.
@@ -58,9 +58,9 @@ public interface DatabaseConnection {
      * Inserts a graph via a {@link GraphSource} into a specific dataset of the graph.
      *
      * @param graphSource Source of a graph
-     * @param datasetName Name of the dataset
+     * @param workspaceName Name of the dataset
      */
-    void insertGraph(GraphSource graphSource, String datasetName) throws DataAccessException;
+    void insertGraph(GraphSource graphSource, String workspaceName) throws DataAccessException;
 
     // delete
 
@@ -75,9 +75,9 @@ public interface DatabaseConnection {
      * Executes a {@link Update deleteUpdate} against a specific dataset of the database.
      *
      * @param deleteUpdate {@link Update DeleteUpdate} to be executed
-     * @param datasetName Name of the dataset
+     * @param workspaceName Name of the dataset
      */
-    void sendDelete(Update deleteUpdate, String datasetName) throws DataAccessException;
+    void sendDelete(Update deleteUpdate, String workspaceName) throws DataAccessException;
 
     /**
      * Deletes a specific graph from the default dataset of the database.
@@ -90,9 +90,9 @@ public interface DatabaseConnection {
      * Deletes a specific graph from a specific dataset of the database.
      *
      * @param graphName Name of the graph to be deleted
-     * @param datasetName Name of the dataset
+     * @param workspaceName Name of the dataset
      */
-    void deleteGraph(String datasetName, String graphName) throws DataAccessException;
+    void deleteGraph(String workspaceName, String graphName) throws DataAccessException;
 
     /** Deletes the default graph from the default dataset of the database. */
     void deleteDefaultGraph() throws DataAccessException;
@@ -100,9 +100,9 @@ public interface DatabaseConnection {
     /**
      * Deletes the default graph from a specific dataset of the database.
      *
-     * @param datasetName Name of the dataset
+     * @param workspaceName Name of the dataset
      */
-    void deleteDefaultGraph(String datasetName) throws DataAccessException;
+    void deleteDefaultGraph(String workspaceName) throws DataAccessException;
 
     /** Deletes the default dataset from a database. */
     void deleteDataset();
@@ -110,9 +110,9 @@ public interface DatabaseConnection {
     /**
      * Deletes a specified dataset from a database
      *
-     * @param datasetName Name of the dataset to be deleted
+     * @param workspaceName Name of the dataset to be deleted
      */
-    void deleteDataset(String datasetName);
+    void deleteDataset(String workspaceName);
 
     // update
 
@@ -127,9 +127,9 @@ public interface DatabaseConnection {
      * Executes an {@link Update update} against a specific dataset of the database.
      *
      * @param update {@link Update} to be executed
-     * @param datasetName Name of the dataset
+     * @param workspaceName Name of the dataset
      */
-    void sendUpdate(Update update, String datasetName) throws DataAccessException;
+    void sendUpdate(Update update, String workspaceName) throws DataAccessException;
 
     // select
 
@@ -145,36 +145,36 @@ public interface DatabaseConnection {
      * Executes a {@link Query} against a specific dataset of the database.
      *
      * @param query {@link Query} to be executed
-     * @param datasetName Name of the dataset
+     * @param workspaceName Name of the dataset
      * @return {@link ResultFormatter} for formatted query results
      */
-    ResultFormatter sendSelect(Query query, String datasetName) throws DataAccessException;
+    ResultFormatter sendSelect(Query query, String workspaceName) throws DataAccessException;
 
     /**
      * Get the {@link PrefixMapping} of a specified dataset from the database.
      *
-     * @param datasetName Name of the dataset.
+     * @param workspaceName Name of the dataset.
      * @return {@link PrefixMappingReadOnly}
      */
-    PrefixMappingReadOnly getPrefixMapping(String datasetName);
+    PrefixMappingReadOnly getPrefixMapping(String workspaceName);
 
     /**
      * Appends a new prefix substitution to a datasets current prefixes. If a prefix with the same
      * substitute already exist, it will be replaced.
      *
-     * @param datasetName Name of the dataset.
+     * @param workspaceName Name of the dataset.
      * @param prefix the substituted prefix
      * @param uri the extended prefix
      */
-    void addPrefix(String datasetName, String prefix, String uri);
+    void addPrefix(String workspaceName, String prefix, String uri);
 
     /**
      * Delete a prefix from a specified dataset.
      *
-     * @param datasetName Name of the dataset.
+     * @param workspaceName Name of the dataset.
      * @param prefix The substituted prefix.
      */
-    void deletePrefix(String datasetName, String prefix);
+    void deletePrefix(String workspaceName, String prefix);
 
     /**
      * List the names of all datasets in this database.

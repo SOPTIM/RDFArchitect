@@ -60,43 +60,43 @@ public class SessionDataStoreImpl implements SessionDataStore {
     private final ReentrantLock lock = new ReentrantLock();
 
     @Override
-    public void createDataset(String datasetName) {
-        createDatasetIfAbsent(datasetName);
+    public void createDataset(String workspaceName) {
+        createDatasetIfAbsent(workspaceName);
     }
 
     @Override
-    public boolean createDatasetIfAbsent(String datasetName) {
+    public boolean createDatasetIfAbsent(String workspaceName) {
         lock.lock();
         try {
-            return workspaces.putIfAbsent(datasetName, new Workspace(datasetName)) == null;
+            return workspaces.putIfAbsent(workspaceName, new Workspace(workspaceName)) == null;
         } finally {
             lock.unlock();
         }
     }
 
     @Override
-    public void deleteDataset(String datasetName) {
+    public void deleteDataset(String workspaceName) {
         lock.lock();
         try {
-            workspaces.remove(datasetName);
+            workspaces.remove(workspaceName);
         } finally {
             lock.unlock();
         }
     }
 
     @Override
-    public void renameDataset(String oldDatasetName, String newDatasetName) {
+    public void renameDataset(String oldWorkspaceName, String newWorkspaceName) {
         lock.lock();
         try {
-            if (oldDatasetName.equals(newDatasetName)) {
+            if (oldWorkspaceName.equals(newWorkspaceName)) {
                 return;
             }
-            assertThatDatasetExists(oldDatasetName);
-            if (workspaces.containsKey(newDatasetName)) {
+            assertThatDatasetExists(oldWorkspaceName);
+            if (workspaces.containsKey(newWorkspaceName)) {
                 throw new ResourceConflictException(
-                        "Dataset " + newDatasetName + " already exists");
+                        "Dataset " + newWorkspaceName + " already exists");
             }
-            workspaces.put(newDatasetName, workspaces.remove(oldDatasetName));
+            workspaces.put(newWorkspaceName, workspaces.remove(oldWorkspaceName));
         } finally {
             lock.unlock();
         }
@@ -187,19 +187,19 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public boolean containsGraph(GraphIdentifier graphIdentifier) {
-        var workspace = findWorkspace(graphIdentifier.datasetName());
+        var workspace = findWorkspace(graphIdentifier.workspaceName());
         return workspace != null
                 && workspace.listGraphNames().contains(graphIdentifier.graphName());
     }
 
     @Override
-    public List<String> listGraphNames(String datasetName) {
-        return workspace(datasetName).listGraphNames();
+    public List<String> listGraphNames(String workspaceName) {
+        return workspace(workspaceName).listGraphNames();
     }
 
     @Override
-    public PrefixMappingReadOnly getPrefixMapping(String datasetName) {
-        var workspace = findWorkspace(datasetName);
+    public PrefixMappingReadOnly getPrefixMapping(String workspaceName) {
+        var workspace = findWorkspace(workspaceName);
         return workspace == null
                 ? new PrefixMappingReadOnly(PrefixMapping.Factory.create())
                 : workspace.getPrefixMapping();
@@ -208,16 +208,16 @@ public class SessionDataStoreImpl implements SessionDataStore {
     @Override
     public void writeToDatabase(
             DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.datasetName();
+        final String workspaceName = graphIdentifier.workspaceName();
         final String graphName = graphIdentifier.graphName();
         assertThatGraphExists(graphIdentifier);
-        try (var transaction = beginTransaction(datasetName, ReadWrite.READ)) {
+        try (var transaction = beginTransaction(workspaceName, ReadWrite.READ)) {
             var graphSource =
                     new GraphSourceBuilderImpl()
                             .setGraph(transaction.graph(graphName).getRdfGraph())
                             .setGraphName(graphName)
                             .build();
-            databaseConnection.insertGraph(graphSource, datasetName);
+            databaseConnection.insertGraph(graphSource, workspaceName);
         }
     }
 
@@ -235,11 +235,11 @@ public class SessionDataStoreImpl implements SessionDataStore {
         lock.lock();
         try {
             clearGraphCollections();
-            var datasetNames = databaseConnection.listDatasets();
-            for (var datasetName : datasetNames) {
-                if (!datasetName.startsWith(SNAPSHOT_PREFIX)) {
-                    var dataset = fetchDataset(databaseConnection, datasetName);
-                    workspaces.put(datasetName, new Workspace(datasetName, dataset));
+            var workspaceNames = databaseConnection.listDatasets();
+            for (var workspaceName : workspaceNames) {
+                if (!workspaceName.startsWith(SNAPSHOT_PREFIX)) {
+                    var dataset = fetchDataset(databaseConnection, workspaceName);
+                    workspaces.put(workspaceName, new Workspace(workspaceName, dataset));
                 }
             }
         } finally {
@@ -265,10 +265,10 @@ public class SessionDataStoreImpl implements SessionDataStore {
      * Fetches a dataset from a {@link DatabaseConnection database}.
      *
      * @param databaseConnection The connection to the external Database.
-     * @param datasetName The name of the dataset.
+     * @param workspaceName The name of the dataset.
      * @return fetched {@link Graph}
      */
-    private Dataset fetchDataset(DatabaseConnection databaseConnection, String datasetName) {
+    private Dataset fetchDataset(DatabaseConnection databaseConnection, String workspaceName) {
         // build query
         var graphVar = "?graph";
         var graphQuery =
@@ -279,8 +279,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
                         .build();
 
         // fetch data
-        var queryResultSet = databaseConnection.sendSelect(graphQuery, datasetName).asResultSet();
-        var prefixMapping = databaseConnection.getPrefixMapping(datasetName);
+        var queryResultSet = databaseConnection.sendSelect(graphQuery, workspaceName).asResultSet();
+        var prefixMapping = databaseConnection.getPrefixMapping(workspaceName);
 
         // insert prefixes
         var dataset = DatasetFactory.createGeneral();
@@ -288,12 +288,12 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
         // insert graphs
         // default
-        var graph = fetchGraph(databaseConnection, datasetName, "default");
+        var graph = fetchGraph(databaseConnection, workspaceName, "default");
         dataset.setDefaultModel(ModelFactory.createModelForGraph(graph));
         // named
         while (queryResultSet.hasNext()) {
             var graphName = queryResultSet.next().get(graphVar).asNode();
-            graph = fetchGraph(databaseConnection, datasetName, graphName.getURI());
+            graph = fetchGraph(databaseConnection, workspaceName, graphName.getURI());
             dataset.addNamedModel(graphName.getURI(), ModelFactory.createModelForGraph(graph));
         }
         return dataset;
@@ -303,12 +303,12 @@ public class SessionDataStoreImpl implements SessionDataStore {
      * Fetches a single graph from a {@link DatabaseConnection database}.
      *
      * @param databaseConnection The connection to the external Database.
-     * @param datasetName The name of the dataset.
+     * @param workspaceName The name of the dataset.
      * @param graphName The graphName.
      * @return fetched {@link Graph}
      */
     private Graph fetchGraph(
-            DatabaseConnection databaseConnection, String datasetName, String graphName) {
+            DatabaseConnection databaseConnection, String workspaceName, String graphName) {
         var query =
                 new CIMBaseQueryBuilder()
                         .setGraph(graphName)
@@ -318,7 +318,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
                         .addVar("?obj")
                         .addWhere("?sub", "?pre", "?obj")
                         .build();
-        var queryRes = databaseConnection.sendSelect(query, datasetName).asResultSet();
+        var queryRes = databaseConnection.sendSelect(query, workspaceName).asResultSet();
         var resGraph = GraphFactory.createDefaultGraph();
         while (queryRes.hasNext()) {
             var triple = queryRes.next();
@@ -331,29 +331,29 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     @Override
-    public boolean isReadOnly(String datasetName) {
-        return workspace(datasetName).isReadOnly();
+    public boolean isReadOnly(String workspaceName) {
+        return workspace(workspaceName).isReadOnly();
     }
 
     @Override
-    public void enableEditing(String datasetName) {
-        workspace(datasetName).setReadOnly(false);
+    public void enableEditing(String workspaceName) {
+        workspace(workspaceName).setReadOnly(false);
     }
 
     @Override
-    public void disableEditing(String datasetName) {
-        workspace(datasetName).setReadOnly(true);
+    public void disableEditing(String workspaceName) {
+        workspace(workspaceName).setReadOnly(true);
     }
 
     /**
      * Throws an exceptions if the dataset does not exist
      *
-     * @param datasetName The name of the dataset.
+     * @param workspaceName The name of the dataset.
      * @throws DataAccessException if the dataset does not exist.
      */
-    private void assertThatDatasetExists(String datasetName) {
-        if (!workspaces.containsKey(datasetName)) {
-            throw new ResourceNotFoundException("Workspace " + datasetName + " does not exist");
+    private void assertThatDatasetExists(String workspaceName) {
+        if (!workspaces.containsKey(workspaceName)) {
+            throw new ResourceNotFoundException("Workspace " + workspaceName + " does not exist");
         }
     }
 
@@ -365,11 +365,11 @@ public class SessionDataStoreImpl implements SessionDataStore {
      * @throws DataAccessException if the dataset or graph does not exist.
      */
     private void assertThatGraphExists(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.datasetName();
+        final String workspaceName = graphIdentifier.workspaceName();
         final String graphName = graphIdentifier.graphName();
-        if (!workspace(datasetName).listGraphNames().contains(graphName)) {
+        if (!workspace(workspaceName).listGraphNames().contains(graphName)) {
             throw new ResourceNotFoundException(
-                    "Graph " + graphName + " does not exist in workspace " + datasetName);
+                    "Graph " + graphName + " does not exist in workspace " + workspaceName);
         }
     }
 }

@@ -38,9 +38,9 @@ public class TestWorkspaces {
      */
     public static void createGraph(
             DatabasePort databasePort, GraphIdentifier identifier, Graph graph) {
-        databasePort.createWorkspaceIfAbsent(identifier.datasetName());
+        databasePort.createWorkspaceIfAbsent(identifier.workspaceName());
         try (var transaction =
-                databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(identifier.workspaceName(), ReadWrite.WRITE)) {
             transaction.createGraph(identifier.graphName(), graph);
             transaction.commit("created graph %s".formatted(identifier.graphName()));
         }
@@ -56,8 +56,9 @@ public class TestWorkspaces {
      */
     public static void createGraph(
             SessionDataStore store, GraphIdentifier identifier, Graph graph) {
-        store.createDatasetIfAbsent(identifier.datasetName());
-        try (var transaction = store.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
+        store.createDatasetIfAbsent(identifier.workspaceName());
+        try (var transaction =
+                store.beginTransaction(identifier.workspaceName(), ReadWrite.WRITE)) {
             transaction.createGraph(identifier.graphName(), graph);
             transaction.commit("created graph %s".formatted(identifier.graphName()));
         }

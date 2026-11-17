@@ -40,10 +40,10 @@ public class SHACLGenerateService implements SHACLGenerateUseCase {
     @Override
     public String exportGeneratedSHACLGraph(
             GraphIdentifier graphIdentifier, PrefixEntry shaclPrefix) {
-        var prefixes = databasePort.getPrefixMapping(graphIdentifier.datasetName());
+        var prefixes = databasePort.getPrefixMapping(graphIdentifier.workspaceName());
         try (var transaction =
                         databasePort.beginTransaction(
-                                graphIdentifier.datasetName(), ReadWrite.READ);
+                                graphIdentifier.workspaceName(), ReadWrite.READ);
                 var outStream = new ByteArrayOutputStream()) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());

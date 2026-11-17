@@ -51,7 +51,7 @@ public class UpdatePackageLayoutService
         cimPackage.setUuid(newPackageUUID);
 
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             DiagramLayoutServiceUtils.insertDiagram(
@@ -65,7 +65,7 @@ public class UpdatePackageLayoutService
     @Override
     public void deletePackageLayoutData(GraphIdentifier graphIdentifier, UUID packageUUID) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             var packageName =
@@ -81,7 +81,7 @@ public class UpdatePackageLayoutService
     public void replaceDiagram(
             GraphIdentifier graphIdentifier, UUID packageUUID, String packageName) {
         try (var transaction =
-                databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
+                databasePort.beginTransaction(graphIdentifier.workspaceName(), ReadWrite.WRITE)) {
             var ctx = transaction.graph(graphIdentifier.graphName());
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             var diagramMRID = new MRID(packageUUID);

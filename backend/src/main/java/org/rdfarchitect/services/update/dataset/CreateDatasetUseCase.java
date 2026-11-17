@@ -20,10 +20,10 @@ package org.rdfarchitect.services.update.dataset;
 public interface CreateDatasetUseCase {
 
     /**
-     * Creates an empty dataset addressed by {@code datasetName}. Existing datasets are left
+     * Creates an empty dataset addressed by {@code workspaceName}. Existing datasets are left
      * untouched.
      *
-     * @param datasetName the literal name of the dataset to create
+     * @param workspaceName the literal name of the dataset to create
      */
-    void createDataset(String datasetName);
+    void createDataset(String workspaceName);
 }
