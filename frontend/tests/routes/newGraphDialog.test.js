@@ -24,7 +24,7 @@ import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 import NewGraphDialog from "../../src/routes/NewGraphDialog.svelte";
 
 const EQUIPMENT = {
-    uri: { prefix: "http://graph#", suffix: "Equipment" },
+    name: "Equipment",
     keyword: "EQ",
 };
 
@@ -42,7 +42,7 @@ async function open() {
 }
 
 function nameInput() {
-    return document.querySelector('input[placeholder="http://graph#"]');
+    return document.querySelector('input[placeholder="Schema name"]');
 }
 
 function button(label) {
@@ -89,8 +89,8 @@ afterEach(() => {
 
 describe("NewGraphDialog", () => {
     /**
-     * The workspace lists its schemas as GraphDtos, and reading one as if it were a URI made
-     * every comparison match the empty string — so no name was ever reported as taken.
+     * The workspace lists its schemas as GraphDtos, and reading one as if it were a plain name
+     * made every comparison miss — so no name was ever reported as taken.
      */
     test("refuses a name a schema of the workspace already has", async () => {
         await open();
@@ -110,5 +110,19 @@ describe("NewGraphDialog", () => {
             "Schema already exists",
         );
         expect(button("Create Schema").disabled).toBe(false);
+    });
+
+    test("creates the schema under the trimmed name", async () => {
+        await open();
+
+        await type(nameInput(), "  my profile ");
+        button("Create Schema").click();
+
+        await vi.waitFor(() =>
+            expect(graphStore.addEmptyGraph).toHaveBeenCalledWith(
+                "cgmes",
+                "my profile",
+            ),
+        );
     });
 });

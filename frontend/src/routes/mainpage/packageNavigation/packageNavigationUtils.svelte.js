@@ -21,14 +21,15 @@ import {
     multiSelectState,
     SelectionLevel,
 } from "$lib/sharedState.svelte.js";
-import { schemaName as getUri } from "$lib/utils/graph-label.js";
+import { schemaName as nameOf } from "$lib/utils/graph-label.js";
+import { uriString as getUri } from "$lib/utils/iri.js";
 
 const ANY_GRAPH = Symbol("anyGraph");
 
 function normContext(workspace, graph) {
     return {
         workspaceLabel: workspace?.label ?? workspace,
-        schemaName: graph ? getUri(graph) : null,
+        schemaName: graph ? nameOf(graph) : null,
     };
 }
 
@@ -42,7 +43,7 @@ export function isSelectedWorkspace(workspace) {
 export function isSelectedGraph(workspace, graph) {
     return (
         isSelectedWorkspace(workspace) &&
-        editorState.selectedGraph.getValue() === getUri(graph)
+        editorState.selectedGraph.getValue() === nameOf(graph)
     );
 }
 

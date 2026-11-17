@@ -25,11 +25,11 @@ import { graphStore } from "$lib/stores/graphStore.ts";
 import EditMenuHarness from "./EditMenuHarness.svelte";
 
 const WORKSPACE = "cgmes";
-const GRAPH = "http://graph#EquipmentCore";
+const GRAPH = "EquipmentCore";
 
 /** A CGMES 2.4.15 profile: no ontology object, its name is fixed on a version class. */
 const LEGACY = {
-    uri: { prefix: "http://graph#", suffix: "EquipmentCore" },
+    name: "EquipmentCore",
     keyword: "EQ",
     label: "EquipmentProfile",
     profileClassIri:

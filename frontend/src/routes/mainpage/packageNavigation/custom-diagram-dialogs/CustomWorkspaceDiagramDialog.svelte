@@ -30,7 +30,7 @@
     import { graphStore } from "$lib/stores/graphStore.ts";
     import {
         graphLabeller,
-        schemaName as getUri,
+        schemaName as nameOf,
     } from "$lib/utils/graph-label.js";
 
     import {
@@ -103,12 +103,12 @@
                     expanded: false,
                 };
             })
-            .sort((a, b) => getUri(a).localeCompare(getUri(b)));
+            .sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
     }
 
     async function createPackageMap() {
         for (const graph of graphs) {
-            const schemaName = getUri(graph);
+            const schemaName = nameOf(graph);
             packagesByGraph[schemaName] = await createPackageListForGraph(
                 lockedWorkspaceName,
                 schemaName,
@@ -117,7 +117,7 @@
     }
 
     async function createClassMap() {
-        const schemaNames = graphs.map(graph => getUri(graph));
+        const schemaNames = graphs.map(graph => nameOf(graph));
         const result = {};
 
         await Promise.all(
@@ -155,7 +155,7 @@
         }
 
         graphs.forEach(graph => {
-            const schemaName = getUri(graph);
+            const schemaName = nameOf(graph);
             const packages = packagesByGraph[schemaName];
             let classesSelectedInGraph = false;
             packages.forEach(pack => {
@@ -254,12 +254,12 @@
             id="class-tree"
             class="h-full max-h-[55vh] items-stretch gap-[0.1rem] overflow-y-auto empty:hidden"
         >
-            {#each graphs as graph, index (getUri(graph))}
+            {#each graphs as graph, index (nameOf(graph))}
                 <GraphSelectSection
                     bind:graph={graphs[index]}
                     label={schemaLabel(graph)}
-                    bind:packages={packagesByGraph[getUri(graph)]}
-                    classesByPackage={classesByPackageAndGraph[getUri(graph)] ??
+                    bind:packages={packagesByGraph[nameOf(graph)]}
+                    classesByPackage={classesByPackageAndGraph[nameOf(graph)] ??
                         []}
                 />
             {/each}

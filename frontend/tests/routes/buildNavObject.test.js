@@ -23,7 +23,7 @@ import { getWorkspaceNavEntry } from "../../src/routes/mainpage/packageNavigatio
 
 /** A CGMES 3.0 profile, which names and versions itself. */
 const CURRENT = {
-    uri: { prefix: "http://example.org/schemas/", suffix: "Equipment" },
+    name: "Equipment",
     keyword: "EQ",
     label: "Core Equipment Vocabulary",
     description: "The core equipment profile.",
@@ -36,17 +36,14 @@ const CURRENT = {
  * same package label, so only the graph they were imported into separates them.
  */
 const LEGACY_CORE = {
-    uri: { prefix: "http://example.org/schemas/", suffix: "EquipmentCore" },
+    name: "EquipmentCore",
     keyword: "EQ",
     label: "EquipmentProfile",
     versionIris: ["http://entsoe.eu/CIM/EquipmentCore/3/1"],
 };
 
 const LEGACY_CORE_OPERATION = {
-    uri: {
-        prefix: "http://example.org/schemas/",
-        suffix: "EquipmentCoreOperation",
-    },
+    name: "EquipmentCoreOperation",
     keyword: "EQ",
     label: "EquipmentProfile",
     versionIris: ["http://entsoe.eu/CIM/EquipmentOperation/3/1"],
@@ -90,9 +87,9 @@ describe("getWorkspaceNavEntry", () => {
             "EquipmentProfile (EquipmentCoreOperation)",
         ]);
         expect(entries.map(entry => entry.id)).toEqual([
-            "http://example.org/schemas/Equipment",
-            "http://example.org/schemas/EquipmentCore",
-            "http://example.org/schemas/EquipmentCoreOperation",
+            "Equipment",
+            "EquipmentCore",
+            "EquipmentCoreOperation",
         ]);
     });
 

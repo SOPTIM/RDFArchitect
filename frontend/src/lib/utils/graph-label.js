@@ -20,29 +20,20 @@
  *
  * The navigation tree, the changelog, the schema colors, the schema lists of a class and every
  * schema picker name a graph the same way, so the rule lives here rather than in each of them: a
- * profile's own name first, its keyword when it has no name, and the tail of its URI when it is
+ * profile's own name first, its keyword when it has no name, and the name of the graph when it is
  * not a CIM profile at all.
  */
 
-import { uriSuffix } from "./iri.js";
-
 /**
- * The full URI of a resource as the backend sends it: a `GraphDto` holding a URI split into
- * prefix and suffix, a bare split URI, or a string that already is the URI.
- *
- * The navigation reaches this as `getUri`, which `packageNavigationUtils` re-exports.
+ * The name a schema is addressed by: of a `GraphDto` as the backend sends it, or the name itself.
  */
 export function schemaName(graph) {
-    const uri = graph?.uri ?? graph;
-    if (typeof uri === "string") {
-        return uri;
-    }
-    return `${uri?.prefix ?? ""}${uri?.suffix ?? ""}`;
+    return typeof graph === "string" ? graph : (graph?.name ?? "");
 }
 
 /** A single graph's name, without regard to the other schemas of its workspace. */
 export function graphLabel(graph) {
-    return graph?.label || graph?.keyword || uriSuffix(schemaName(graph));
+    return graph?.label || graph?.keyword || schemaName(graph);
 }
 
 /**
@@ -50,8 +41,8 @@ export function graphLabel(graph) {
  *
  * Schemas do collide: the four CGMES 2.4.15 equipment profiles share a keyword, a package label
  * and even their version IRIs, and only the graph they were imported into separates them. Where
- * that happens the tail of the URI is appended, and nowhere else — a name is more useful than a
- * name plus a URI when it is already unambiguous.
+ * that happens the name of the graph is appended, and nowhere else — a label is more useful than a
+ * label plus a graph name when it is already unambiguous.
  *
  * @param {Array} graphs every schema of the workspace, as the backend listed them
  * @returns {(graph) => string}
@@ -67,7 +58,7 @@ export function graphLabeller(graphs) {
         if ((seen.get(name) ?? 0) < 2) {
             return name;
         }
-        const suffix = uriSuffix(schemaName(graph));
+        const suffix = schemaName(graph);
         return suffix && suffix !== name ? `${name} (${suffix})` : name;
     };
 }
@@ -76,9 +67,8 @@ export function graphLabeller(graphs) {
  * What hovering a schema tells you that its name does not: which profile version it claims to
  * be, and what it is for.
  *
- * A graph URI names the graph and nothing else — it is generated, and the reader never chose it
- * — so it appears only for a schema that states nothing about itself, where it is the one thing
- * left to say.
+ * The graph name is already on screen for a schema that states nothing about itself, so for
+ * such a schema it is the one thing left to say; every other schema is described by its profile.
  */
 export function graphTooltip(graph) {
     const versionIris = graph?.versionIris ?? [];

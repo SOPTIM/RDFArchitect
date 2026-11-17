@@ -41,7 +41,6 @@
     } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { askForExtendSource } from "$lib/extendSourceRequest.svelte.js";
     import { schemaColors } from "$lib/graphColors.svelte.js";
-    import { URI } from "$lib/models/dto/index.ts";
     import { superClassFocusRequest } from "$lib/propertyEditorRequest.svelte.js";
     import {
         ClassType,
@@ -275,9 +274,7 @@
     }
 
     function schemaNameOfSource(source) {
-        return source?.schema?.uri
-            ? new URI(source.schema.uri).toString()
-            : null;
+        return source?.schema?.name ?? null;
     }
 
     function selectSchema(occurrence) {

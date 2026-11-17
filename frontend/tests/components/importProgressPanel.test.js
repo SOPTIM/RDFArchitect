@@ -57,8 +57,7 @@ function fileOf(index, fileName, state, extra = {}) {
         fileName,
         sizeBytes: 100,
         state,
-        schemaName:
-            state === FileState.IMPORTED ? `http://graph#${fileName}` : null,
+        schemaName: state === FileState.IMPORTED ? fileName : null,
         ...extra,
     };
 }

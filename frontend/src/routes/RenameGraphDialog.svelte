@@ -19,7 +19,6 @@
     import { v4 as uuidv4 } from "uuid";
 
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { URI } from "$lib/models/dto/index.ts";
     import {
         editorState,
         forceReloadTrigger,
@@ -27,9 +26,9 @@
     import { graphStore } from "$lib/stores/graphStore.ts";
     import {
         graphLabeller,
-        schemaName as uriOf,
+        schemaName as nameOfGraph,
     } from "$lib/utils/graph-label.js";
-    import { toLocalName, uriSuffix } from "$lib/utils/iri.js";
+    import { uriSuffix } from "$lib/utils/iri.js";
 
     let {
         showDialog = $bindable(),
@@ -39,17 +38,9 @@
     } = $props();
 
     const uniqueId = uuidv4();
-    /**
-     * Every graph the app makes lives here — see `RDFA.GRAPH_URI`, `NewGraphDialog` and
-     * `ImportDialog`. A graph URI names the graph and nothing else, so it is not something to
-     * choose: only its tail is editable, and an older graph keeps whatever namespace it has.
-     */
-    const defaultNamespace = "http://graph#";
     const nameInputId = `renameSchemaName-${uniqueId}`;
 
     let nameUserInput = $state("");
-    let initialName = $state("");
-    let namespace = $state(defaultNamespace);
     let otherSchemaNames = $state([]);
     /** What the profile calls itself, if it does. Empty for a graph with no header to read. */
     let profileName = $state("");
@@ -61,40 +52,27 @@
      */
     let headerTarget = $state(null);
 
-    const trimmedName = $derived(nameUserInput.trim());
-    const localName = $derived(toLocalName(trimmedName));
-    const resolvedSchemaName = $derived(localName ? namespace + localName : "");
+    const resolvedSchemaName = $derived(nameUserInput.trim());
     const graphExists = $derived(
         !!resolvedSchemaName && otherSchemaNames.includes(resolvedSchemaName),
     );
-    /**
-     * A rename is a change of the graph URI, and the URI is built from the name rather than being
-     * it: "My Notes" and "MyNotes" are the same graph, and renaming one to the other would report
-     * success for a request the backend turns into nothing.
-     */
-    const uriChanged = $derived(
-        !!resolvedSchemaName && resolvedSchemaName !== schemaName,
-    );
     const disableSubmit = $derived(
-        !resolvedSchemaName || graphExists || !uriChanged,
+        !resolvedSchemaName || graphExists || resolvedSchemaName === schemaName,
     );
-    /** Shown where the typed name cannot stand in a URI as written. */
-    const spelledAs = $derived(localName !== trimmedName ? localName : "");
 
     async function onOpen() {
-        const uri = schemaName ? new URI(schemaName) : null;
-        namespace = uri?.prefix || defaultNamespace;
-        initialName = uri?.suffix ?? "";
-        nameUserInput = initialName;
+        nameUserInput = schemaName ?? "";
 
         const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
         const nameOf = graphLabeller(graphs);
-        const current = graphs.find(graph => uriOf(graph) === schemaName);
+        const current = graphs.find(graph => nameOfGraph(graph) === schemaName);
         // Named among the other schemas, not on its own: the schemas this dialog has to tell
         // apart are exactly the ones whose profiles name themselves alike.
         profileName = current?.label || current?.keyword ? nameOf(current) : "";
         headerTarget = headerTargetOf(current);
-        otherSchemaNames = graphs.map(uriOf).filter(uri => uri !== schemaName);
+        otherSchemaNames = graphs
+            .map(nameOfGraph)
+            .filter(name => name !== schemaName);
     }
 
     function headerTargetOf(graph) {
@@ -113,8 +91,6 @@
 
     function onClose() {
         nameUserInput = "";
-        initialName = "";
-        namespace = defaultNamespace;
         otherSchemaNames = [];
         profileName = "";
         headerTarget = null;
@@ -166,14 +142,6 @@
 
         {#if graphExists}
             <div class="mt-1 mb-1 h-6 text-sm">Schema already exists</div>
-        {:else if spelledAs}
-            <!--
-              The graph URI is built from the name, so a name an IRI cannot carry as written is
-              spelled differently in it - and without saying so, Rename simply stays greyed out.
-            -->
-            <div class="mt-1 mb-1 h-6 text-sm">
-                Stored as {spelledAs}
-            </div>
         {/if}
 
         {#if profileName}

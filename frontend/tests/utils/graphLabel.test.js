@@ -26,7 +26,7 @@ import {
 
 /** A CGMES 3.0 profile, which names and versions itself. */
 const CURRENT = {
-    uri: { prefix: "http://example.org/schemas/", suffix: "Equipment" },
+    name: "Equipment",
     keyword: "EQ",
     label: "Core Equipment Vocabulary",
     description: "The core equipment profile.",
@@ -36,7 +36,7 @@ const CURRENT = {
 
 /** A CGMES 2.4.15 profile, which has a name but no version. */
 const LEGACY = {
-    uri: { prefix: "http://example.org/schemas/", suffix: "EquipmentCore" },
+    name: "EquipmentCore",
     keyword: "EQ",
     label: "EquipmentProfile",
     versionIris: ["http://entsoe.eu/CIM/EquipmentCore/3/1"],
@@ -44,20 +44,20 @@ const LEGACY = {
 
 /** A graph that is no CIM profile at all. */
 const PLAIN = {
-    uri: { prefix: "http://example.org/schemas/", suffix: "Notes" },
+    name: "Notes",
 };
 
 describe("schemaName", () => {
-    test("joins the prefix and suffix the backend splits a URI into", () => {
-        expect(schemaName(CURRENT)).toBe(
-            "http://example.org/schemas/Equipment",
-        );
+    test("takes the name the backend sends", () => {
+        expect(schemaName(CURRENT)).toBe("Equipment");
     });
 
-    test("accepts a bare URI, so a locked graph can be passed in as is", () => {
-        expect(schemaName("http://example.org/schemas/Equipment")).toBe(
-            "http://example.org/schemas/Equipment",
-        );
+    test("accepts a bare name, so a locked graph can be passed in as is", () => {
+        expect(schemaName("Equipment")).toBe("Equipment");
+    });
+
+    test("is empty for no graph at all", () => {
+        expect(schemaName(undefined)).toBe("");
     });
 });
 
@@ -70,7 +70,7 @@ describe("graphLabel", () => {
         expect(graphLabel({ ...CURRENT, label: null })).toBe("EQ");
     });
 
-    test("falls back to the URI suffix when the graph is no profile", () => {
+    test("falls back to the graph name when the graph is no profile", () => {
         expect(graphLabel(PLAIN)).toBe("Notes");
     });
 });
@@ -87,10 +87,7 @@ describe("graphLabeller", () => {
         const core = { ...LEGACY };
         const coreOperation = {
             ...LEGACY,
-            uri: {
-                prefix: "http://example.org/schemas/",
-                suffix: "EquipmentCoreOperation",
-            },
+            name: "EquipmentCoreOperation",
         };
 
         const nameOf = graphLabeller([core, coreOperation]);
@@ -101,11 +98,12 @@ describe("graphLabeller", () => {
         );
     });
 
-    test("does not repeat a name that already is the URI suffix", () => {
-        const one = { uri: { prefix: "http://a.example/", suffix: "Notes" } };
-        const two = { uri: { prefix: "http://b.example/", suffix: "Notes" } };
+    test("does not repeat a name that already is the graph name", () => {
+        const two = { name: "Other", keyword: "Notes" };
+        const three = { name: "Notes" };
 
-        expect(graphLabeller([one, two])(one)).toBe("Notes");
+        expect(graphLabeller([two, three])(three)).toBe("Notes");
+        expect(graphLabeller([two, three])(two)).toBe("Notes (Other)");
     });
 });
 
@@ -126,13 +124,11 @@ describe("graphTooltip", () => {
         );
     });
 
-    test("leaves out the graph URI, which the reader never chose", () => {
-        expect(graphTooltip(CURRENT)).not.toContain(
-            "http://example.org/schemas/Equipment",
-        );
+    test("leaves out the graph name, which is already on screen", () => {
+        expect(graphTooltip(CURRENT).split("\n")).not.toContain("Equipment");
     });
 
     test("falls back to the graph for one that says nothing about itself", () => {
-        expect(graphTooltip(PLAIN)).toBe("http://example.org/schemas/Notes");
+        expect(graphTooltip(PLAIN)).toBe("Notes");
     });
 });

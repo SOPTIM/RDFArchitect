@@ -23,7 +23,6 @@
     import { normalizeHex } from "$lib/utils/color.js";
     import { graphLabeller, schemaName } from "$lib/utils/graph-label.js";
     import { compareGraphs } from "$lib/utils/graph-order.js";
-    import { uriSuffix } from "$lib/utils/iri.js";
 
     let { showDialog = $bindable(), workspaceName } = $props();
 
@@ -47,7 +46,7 @@
     async function onOpen() {
         if (!workspaceName) return;
         const loaded = await schemaColors.reload(workspaceName);
-        // The colors are keyed by graph URI alone, so the names come from the schema list — the
+        // The colors are keyed by graph name alone, so the names come from the schema list — the
         // same one the navigation tree reads them from.
         const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
         const nameOf = graphLabeller(graphs);
@@ -58,7 +57,7 @@
             .map(([schemaName, color]) => ({
                 schemaName,
                 color,
-                name: names.get(schemaName) ?? uriSuffix(schemaName),
+                name: names.get(schemaName) ?? schemaName,
             }))
             .sort((a, b) =>
                 compareGraphs(

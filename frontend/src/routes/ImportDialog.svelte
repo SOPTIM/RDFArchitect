@@ -50,7 +50,6 @@
     const DEFAULT_WORKSPACE_NAME = "default";
     const POLL_INTERVAL_MS = 300;
     const MAX_FAILED_POLLS = 3;
-    const GRAPH_NAMESPACE_URI = "http://graph#"; // Keep in sync with RDFA.GRAPH_URI (backend)
     const DEFAULT_GRAPH_NAME = "graph";
     const supportedFileExtensions = supportedRDFMediaTypes.map(
         type => type.fileExtension,
@@ -168,7 +167,8 @@
         return readOnlyWorkspaces.includes(targetWorkspace);
     }
 
-    function getSanitizedSchemaName(fileName) {
+    /** The file name without its extension, which the backend names the schema by as well. */
+    function buildSchemaName(fileName) {
         if (!fileName) {
             return DEFAULT_GRAPH_NAME;
         }
@@ -178,24 +178,7 @@
             lastDotIndex === -1
                 ? normalized
                 : normalized.substring(0, lastDotIndex);
-        const sanitized = baseName.replace(/\W/g, "_");
-        return sanitized.trim() ? sanitized : DEFAULT_GRAPH_NAME;
-    }
-
-    function buildSchemaName(fileName) {
-        const sanitized = getSanitizedSchemaName(fileName);
-        return `${GRAPH_NAMESPACE_URI}${sanitized}`;
-    }
-
-    function ensureSchemaNamespaceUri(schemaName, fallbackName) {
-        const trimmed = schemaName?.trim();
-        if (!trimmed) {
-            return buildSchemaName(fallbackName);
-        }
-        if (trimmed.includes("://")) {
-            return trimmed;
-        }
-        return `${GRAPH_NAMESPACE_URI}${trimmed}`;
+        return baseName.trim() ? baseName : DEFAULT_GRAPH_NAME;
     }
 
     function addFiles(newFiles, directoryNames = []) {
@@ -246,9 +229,7 @@
         const workspaceName = getUserInputWorkspaceName();
         const filesToImport = files.map(entry => entry.file);
         const schemaNames = files.map(entry =>
-            entry.isZip
-                ? ""
-                : ensureSchemaNamespaceUri(entry.schemaName, entry.file.name),
+            entry.isZip ? "" : entry.schemaName.trim(),
         );
 
         const currentProgress = new ImportProgress();
@@ -574,7 +555,7 @@
                             >
                                 <div class="flex-1">
                                     <input
-                                        id={`graph-uri-${index}`}
+                                        id={`graph-name-${index}`}
                                         class="border-border bg-window-background focus:border-blue ring-none w-full rounded border-2 p-2 text-sm outline-none"
                                         type="text"
                                         value={fileEntry.isZip

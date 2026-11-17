@@ -28,7 +28,7 @@ function asGraph(occurrence) {
     return {
         label: occurrence?.label,
         keyword: occurrence?.keyword,
-        uri: occurrence?.schemaName,
+        name: occurrence?.schemaName,
     };
 }
 

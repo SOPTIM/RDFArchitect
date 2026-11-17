@@ -20,7 +20,6 @@
     import { Handle, Position } from "@xyflow/svelte";
     import { Fa } from "svelte-fa";
 
-    import { URI } from "$lib/models/dto/index.ts";
     import {
         propertyEditorRequest,
         PropertyKind,
@@ -352,14 +351,7 @@
     }
 
     function getGraphLabel(schemaName, keyword) {
-        if (keyword) {
-            return keyword;
-        }
-        try {
-            return new URI(schemaName).suffix;
-        } catch {
-            return schemaName;
-        }
+        return keyword || schemaName;
     }
 </script>
 

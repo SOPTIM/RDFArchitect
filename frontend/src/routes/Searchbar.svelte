@@ -27,7 +27,6 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { URI } from "$lib/models/dto/index.ts";
     import { editorState } from "$lib/sharedState.svelte.js";
     import {
         navigateToClass,
@@ -156,7 +155,7 @@
     }
 
     function formatSearchResult(result) {
-        let path = `${result.workspaceName}/${new URI(result.schemaName).suffix}/`;
+        let path = `${result.workspaceName}/${result.schemaName}/`;
         if (result.type !== "PACKAGE") {
             if (result.packageLabel) {
                 path += `${getPackageDisplayLabel(result.packageLabel.value)}/`;

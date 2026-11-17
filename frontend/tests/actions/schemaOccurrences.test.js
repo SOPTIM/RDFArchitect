@@ -87,7 +87,7 @@ describe("schemaLabel", () => {
     it("names a schema the way the navigation tree does", () => {
         const named = sortSchemaOccurrences([
             {
-                schemaName: "http://graph#Equipment",
+                schemaName: "Equipment",
                 keyword: "EQ",
                 label: "Core Equipment Vocabulary",
             },
@@ -97,10 +97,8 @@ describe("schemaLabel", () => {
     });
 
     it("falls back to the keyword and then to the graph", () => {
-        expect(
-            schemaLabel({ schemaName: "http://graph#EQ_", keyword: "EQ" }),
-        ).toBe("EQ");
-        expect(schemaLabel({ schemaName: "http://graph#Notes" })).toBe("Notes");
+        expect(schemaLabel({ schemaName: "EQ_", keyword: "EQ" })).toBe("EQ");
+        expect(schemaLabel({ schemaName: "Notes" })).toBe("Notes");
     });
 
     /**
@@ -110,11 +108,11 @@ describe("schemaLabel", () => {
     it("tells apart the schemas that read alike", () => {
         const occurrences = sortSchemaOccurrences([
             {
-                schemaName: "http://graph#EquipmentCore",
+                schemaName: "EquipmentCore",
                 label: "EquipmentProfile",
             },
             {
-                schemaName: "http://graph#EquipmentOperation",
+                schemaName: "EquipmentOperation",
                 label: "EquipmentProfile",
             },
         ]);
@@ -129,30 +127,25 @@ describe("schemaLabel", () => {
 describe("sortSchemaOccurrences", () => {
     it("orders by the name the schema is shown under, not by its keyword", () => {
         const occurrences = [
-            { schemaName: "http://graph#a", keyword: "ZZ", label: "Apples" },
-            { schemaName: "http://graph#b", keyword: "AA", label: "Bananas" },
+            { schemaName: "a", keyword: "ZZ", label: "Apples" },
+            { schemaName: "b", keyword: "AA", label: "Bananas" },
         ];
 
         expect(
             sortSchemaOccurrences(occurrences).map(o => o.schemaName),
-        ).toEqual(["http://graph#a", "http://graph#b"]);
+        ).toEqual(["a", "b"]);
     });
 
-    it("orders by short name and falls back to the uri", () => {
+    it("orders by short name and falls back to the graph name", () => {
         const occurrences = [
-            { schemaName: "http://graph#z", keyword: "OP" },
-            { schemaName: "http://graph#a", keyword: "OP" },
-            { schemaName: "http://graph#b", keyword: "EQ" },
-            { schemaName: "http://graph#c", keyword: null },
+            { schemaName: "z", keyword: "OP" },
+            { schemaName: "a", keyword: "OP" },
+            { schemaName: "b", keyword: "EQ" },
+            { schemaName: "c", keyword: null },
         ];
         expect(
             sortSchemaOccurrences(occurrences).map(o => o.schemaName),
-        ).toEqual([
-            "http://graph#c",
-            "http://graph#b",
-            "http://graph#a",
-            "http://graph#z",
-        ]);
+        ).toEqual(["c", "b", "a", "z"]);
     });
 });
 
