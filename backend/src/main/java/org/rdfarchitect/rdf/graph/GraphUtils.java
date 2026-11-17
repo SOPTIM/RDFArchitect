@@ -38,9 +38,11 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,6 +53,12 @@ import java.util.stream.Stream;
 /** Utility class for graph operations */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class GraphUtils {
+
+    /**
+     * Upper bound on the fingerprints {@link #separateLookalikes} may compute, so that a crafted
+     * file cannot keep it busy for long.
+     */
+    private static final long REFINEMENT_BUDGET = 2_000_000L;
 
     private static final Set<String> RELEVANT_TYPES =
             Set.of(RDF.Property.toString(), RDFS.Class.toString());
@@ -148,8 +156,29 @@ public class GraphUtils {
         return n.isBlank() ? NodeFactory.createBlankNode(hashes.get(n)) : n;
     }
 
+    /**
+     * Labels every blank node with a hash of its edges, refined from its neighbours' labels for up
+     * to ten passes, so that a node's label covers what lies within ten hops of it. Nodes that
+     * still share a label but differ further away are then told apart by {@link
+     * #separateLookalikes}.
+     *
+     * <p>Each node's edges are collected once, so a pass takes time linear in the number of
+     * triples.
+     */
     private static Map<Node, String> computeBlankNodeHashes(
             List<Triple> triples, Set<Node> blankNodes) {
+        var edges = new HashMap<Node, List<Edge>>();
+        for (var t : triples) {
+            if (t.getSubject().isBlank()) {
+                edges.computeIfAbsent(t.getSubject(), ignored -> new ArrayList<>())
+                        .add(new Edge("o:", t.getPredicate(), t.getObject()));
+            }
+            if (t.getObject().isBlank()) {
+                edges.computeIfAbsent(t.getObject(), ignored -> new ArrayList<>())
+                        .add(new Edge("s:", t.getPredicate(), t.getSubject()));
+            }
+        }
+
         Map<Node, String> hashes = new HashMap<>();
         blankNodes.forEach(bn -> hashes.put(bn, ""));
 
@@ -157,7 +186,7 @@ public class GraphUtils {
             var next = new HashMap<Node, String>();
             var changed = false;
             for (var bn : blankNodes) {
-                var h = blankNodeFingerprint(bn, triples, hashes);
+                var h = blankNodeFingerprint(edges.getOrDefault(bn, List.of()), hashes);
                 next.put(bn, h);
                 if (!h.equals(hashes.get(bn))) {
                     changed = true;
@@ -168,19 +197,92 @@ public class GraphUtils {
                 break;
             }
         }
+        separateLookalikes(edges, hashes);
         return hashes;
     }
 
-    private static String blankNodeFingerprint(
-            Node bn, List<Triple> triples, Map<Node, String> hashes) {
-        var lines = new ArrayList<String>();
-        for (var t : triples) {
-            if (t.getSubject().equals(bn)) {
-                lines.add("o:" + t.getPredicate() + "=" + nodeLabel(t.getObject(), hashes));
+    /**
+     * Gives distinct labels to blank nodes that share a label but differ more than ten hops away.
+     *
+     * <p>Blank nodes with the same label are merged into one, which is only correct if they are
+     * identical all the way out. Two long {@code rdf:List}s that differ only after their tenth cell
+     * would otherwise share their middle cells.
+     *
+     * <p>Nodes sharing a label are refined until no group splits any further. Only groups that
+     * split get new labels; all other nodes, including true duplicates, keep theirs, so an edit
+     * elsewhere in the graph does not change them. If {@link #REFINEMENT_BUDGET} runs out, the
+     * remaining groups are kept apart by {@link #keepApart}.
+     */
+    private static void separateLookalikes(Map<Node, List<Edge>> edges, Map<Node, String> hashes) {
+        var lookalikes = groupsSharingALabel(hashes.keySet(), hashes);
+        var refined = new HashMap<>(hashes);
+        var groups = lookalikes;
+        var budget = REFINEMENT_BUDGET;
+        while (!groups.isEmpty()) {
+            var next = new HashMap<Node, String>();
+            for (var group : groups) {
+                for (var node : group) {
+                    var fingerprint =
+                            blankNodeFingerprint(edges.getOrDefault(node, List.of()), refined);
+                    // The old label goes in as well, so that a group can only ever split further.
+                    next.put(node, sha256prefix(refined.get(node) + "|" + fingerprint));
+                }
             }
-            if (t.getObject().equals(bn)) {
-                lines.add("s:" + t.getPredicate() + "=" + nodeLabel(t.getSubject(), hashes));
+            var split = groupsSharingALabel(next.keySet(), next);
+            if (split.size() == groups.size() && next.size() == nodesIn(split)) {
+                break;
             }
+            refined.putAll(next);
+            groups = split;
+            budget -= next.size();
+            if (budget <= 0) {
+                keepApart(groups, refined);
+                break;
+            }
+        }
+        // Only a group that really split takes new labels: true duplicates keep theirs, however
+        // many passes something else elsewhere in the graph needed.
+        for (var group : lookalikes) {
+            if (group.stream().map(refined::get).distinct().count() > 1) {
+                group.forEach(node -> hashes.put(node, refined.get(node)));
+            }
+        }
+    }
+
+    /** The groups of more than one node carrying the same label. */
+    private static List<List<Node>> groupsSharingALabel(
+            Collection<Node> nodes, Map<Node, String> labels) {
+        return nodes.stream().collect(Collectors.groupingBy(labels::get)).values().stream()
+                .filter(group -> group.size() > 1)
+                .toList();
+    }
+
+    private static int nodesIn(List<List<Node>> groups) {
+        return groups.stream().mapToInt(List::size).sum();
+    }
+
+    /**
+     * Gives up on telling {@code groups} apart by content, and does not merge them.
+     *
+     * <p>Only something built to be pathological gets here, and a label that differs between two
+     * parses of it costs a noisier diff, where a wrong merge would change what it says.
+     */
+    private static void keepApart(List<List<Node>> groups, Map<Node, String> hashes) {
+        for (var group : groups) {
+            for (int index = 1; index < group.size(); index++) {
+                var node = group.get(index);
+                hashes.put(node, sha256prefix(hashes.get(node) + "|" + index));
+            }
+        }
+    }
+
+    /** One triple seen from a blank node: which end the node is on, and what is at the other. */
+    private record Edge(String direction, Node predicate, Node other) {}
+
+    private static String blankNodeFingerprint(List<Edge> edges, Map<Node, String> hashes) {
+        var lines = new ArrayList<String>(edges.size());
+        for (var edge : edges) {
+            lines.add(edge.direction() + edge.predicate() + "=" + nodeLabel(edge.other(), hashes));
         }
         Collections.sort(lines);
         return sha256prefix(String.join("|", lines));
@@ -194,11 +296,7 @@ public class GraphUtils {
         try {
             var digest = MessageDigest.getInstance("SHA-256");
             var bytes = digest.digest(input.getBytes(StandardCharsets.UTF_8));
-            var sb = new StringBuilder(32);
-            for (int i = 0; i < 16; i++) {
-                sb.append(String.format("%02x", bytes[i]));
-            }
-            return sb.toString();
+            return HexFormat.of().formatHex(bytes, 0, 16);
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
         }

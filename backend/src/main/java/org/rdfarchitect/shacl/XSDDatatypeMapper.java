@@ -22,12 +22,37 @@ import lombok.experimental.UtilityClass;
 import org.apache.jena.datatypes.BaseDatatype;
 import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.datatypes.TypeMapper;
+import org.apache.jena.datatypes.xsd.XSDDatatype;
+import org.apache.jena.datatypes.xsd.impl.RDFLangString;
 import org.apache.jena.vocabulary.XSD;
+
+import java.util.Map;
 
 @UtilityClass
 public class XSDDatatypeMapper {
 
+    /**
+     * CIM primitives whose name is not the local name of the datatype they stand for. Without
+     * these, composing {@code xsd:<label>} invents datatypes such as {@code xsd:MonthDay} that no
+     * validator knows and that contradict every official ENTSO-E constraint on the same attribute.
+     */
+    private static final Map<String, RDFDatatype> CIM_PRIMITIVE_ALIASES =
+            Map.of(
+                    "MonthDay", XSDDatatype.XSDgMonthDay,
+                    "URI", XSDDatatype.XSDanyURI,
+                    "IRI", XSDDatatype.XSDanyURI,
+                    "StringIRI", XSDDatatype.XSDanyURI,
+                    "URL", XSDDatatype.XSDanyURI,
+                    "StringFixedLanguage", XSDDatatype.XSDstring,
+                    "UUID", XSDDatatype.XSDstring,
+                    "Version", XSDDatatype.XSDstring,
+                    "LangString", RDFLangString.rdfLangString);
+
     public RDFDatatype classLabelToDatatype(String primitiveDatatypeClassLabel) {
+        var alias = CIM_PRIMITIVE_ALIASES.get(primitiveDatatypeClassLabel);
+        if (alias != null) {
+            return alias;
+        }
         var xsdUri = XSD.getURI() + primitiveDatatypeClassLabel;
         var typeListIterator = TypeMapper.getInstance().listTypes();
         while (typeListIterator.hasNext()) {
@@ -37,5 +62,24 @@ public class XSDDatatypeMapper {
             }
         }
         return new BaseDatatype(xsdUri);
+    }
+
+    /**
+     * Returns the datatype for writing a value that has no language tag, such as a default value.
+     * {@code rdf:langString} requires a language tag, so it is replaced by {@code xsd:string}; any
+     * other datatype is returned unchanged.
+     */
+    public RDFDatatype datatypeForUntaggedValue(RDFDatatype datatype) {
+        return datatype == RDFLangString.rdfLangString ? XSDDatatype.XSDstring : datatype;
+    }
+
+    /**
+     * Returns whether a value without a language tag, such as a fixed or default value, can be
+     * typed with {@code datatype}. This requires the datatype to be known to Jena and not to be
+     * {@code rdf:langString}, which requires a language tag.
+     */
+    public boolean canTypeUntaggedValue(RDFDatatype datatype) {
+        return datatype != RDFLangString.rdfLangString
+                && TypeMapper.getInstance().getTypeByName(datatype.getURI()) != null;
     }
 }
