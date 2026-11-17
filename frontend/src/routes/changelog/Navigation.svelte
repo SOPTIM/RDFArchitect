@@ -33,7 +33,7 @@
 
     import { getUri } from "../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
 
-    const { graphUri = null, onSelectGraph } = $props();
+    const { graphName = null, onSelectGraph } = $props();
 
     let workspaceList = $state([]);
 
@@ -96,7 +96,7 @@
                             hasChildren={workspace.graphs.length > 0}
                             expanded={workspace.showContents}
                             isSelected={workspace.label ===
-                                selectedWorkspaceName && !graphUri}
+                                selectedWorkspaceName && !graphName}
                             title="{workspace.label} — every change in the workspace"
                             onclick={() => {
                                 workspaceState.activate(workspace.label);
@@ -117,7 +117,7 @@
                                     icon={faDiagramProject}
                                     isSelected={selectedWorkspaceName ===
                                         workspace.label &&
-                                        getUri(graph) === graphUri}
+                                        getUri(graph) === graphName}
                                     title={getUri(graph)}
                                     onclick={() => {
                                         workspaceState.activate(

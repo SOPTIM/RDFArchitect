@@ -173,10 +173,10 @@ public interface InMemoryDatabase {
      * List all graphs contained in a specified Dataset
      *
      * @param datasetName The name of the dataset.
-     * @return A list of GraphUris
+     * @return A list of GraphNames
      * @throws DataAccessException if the dataset does not exist.
      */
-    List<String> listGraphUris(String datasetName);
+    List<String> listGraphNames(String datasetName);
 
     /**
      * Lists the prefixes belonging to a specified dataset.

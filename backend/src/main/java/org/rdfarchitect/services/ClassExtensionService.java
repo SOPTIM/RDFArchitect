@@ -62,10 +62,10 @@ public class ClassExtensionService implements ClassExtensionUseCase {
 
         for (var classUUID : classUUIDs) {
             var located = locateClassUseCase.locate(datasetName, classUUID);
-            var sourceGraph = new GraphIdentifier(datasetName, located.graphUri());
+            var sourceGraph = new GraphIdentifier(datasetName, located.graphName());
             try (var transaction =
                     databasePort.beginTransaction(sourceGraph.datasetName(), ReadWrite.READ)) {
-                var ctx = transaction.graph(sourceGraph.graphUri());
+                var ctx = transaction.graph(sourceGraph.graphName());
                 stubsBySourceUUID.put(
                         classUUID,
                         fetchStubbedClassCopy(
@@ -101,7 +101,7 @@ public class ClassExtensionService implements ClassExtensionUseCase {
         var cimObjectFetcher =
                 new CIMObjectFetcher(
                         graph,
-                        graphIdentifier.graphUri(),
+                        graphIdentifier.graphName(),
                         databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
         var classCopy = cimObjectFetcher.fetchCIMClass(classUUID);
@@ -110,7 +110,7 @@ public class ClassExtensionService implements ClassExtensionUseCase {
                     "Class with UUID "
                             + classUUID
                             + " not found in graph "
-                            + graphIdentifier.graphUri());
+                            + graphIdentifier.graphName());
         }
 
         // set new UUID and remove concrete stereotype
@@ -149,7 +149,7 @@ public class ClassExtensionService implements ClassExtensionUseCase {
         var insertedUris = new LinkedHashSet<String>();
         try (var transaction =
                 databasePort.beginTransaction(newGraphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(newGraphIdentifier.graphUri());
+            var ctx = transaction.graph(newGraphIdentifier.graphName());
             var newGraph = ctx.getRdfGraph();
             var labels = new ArrayList<String>();
             for (var stub : stubs) {
@@ -174,7 +174,7 @@ public class ClassExtensionService implements ClassExtensionUseCase {
                     ChangeDescriptions.actionOn(
                             "Added " + added + " to",
                             "schema",
-                            ChangeDescriptions.localName(newGraphIdentifier.graphUri())));
+                            ChangeDescriptions.localName(newGraphIdentifier.graphName())));
         }
         return insertedUris;
     }
@@ -189,13 +189,13 @@ public class ClassExtensionService implements ClassExtensionUseCase {
         var identifiers = new LinkedHashMap<String, TargetIdentifiers>();
         try (var transaction =
                 databasePort.beginTransaction(newGraphIdentifier.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(newGraphIdentifier.graphUri());
+            var ctx = transaction.graph(newGraphIdentifier.graphName());
             var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             for (var stub : stubs) {
                 var uri = stub.getUri().toString();
                 var target =
                         org.rdfarchitect.models.cim.data.dto.facade.CIMClass.fromResource(
-                                newGraphIdentifier.graphUri(), model, model.getResource(uri));
+                                newGraphIdentifier.graphName(), model, model.getResource(uri));
                 identifiers.put(
                         uri,
                         new TargetIdentifiers(

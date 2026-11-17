@@ -21,7 +21,7 @@ import {
     graphLabel,
     graphLabeller,
     graphTooltip,
-    graphUri,
+    graphName,
 } from "$lib/utils/graph-label.js";
 
 /** A CGMES 3.0 profile, which names and versions itself. */
@@ -47,13 +47,13 @@ const PLAIN = {
     uri: { prefix: "http://example.org/graphs/", suffix: "Notes" },
 };
 
-describe("graphUri", () => {
+describe("graphName", () => {
     test("joins the prefix and suffix the backend splits a URI into", () => {
-        expect(graphUri(CURRENT)).toBe("http://example.org/graphs/Equipment");
+        expect(graphName(CURRENT)).toBe("http://example.org/graphs/Equipment");
     });
 
     test("accepts a bare URI, so a locked graph can be passed in as is", () => {
-        expect(graphUri("http://example.org/graphs/Equipment")).toBe(
+        expect(graphName("http://example.org/graphs/Equipment")).toBe(
             "http://example.org/graphs/Equipment",
         );
     });

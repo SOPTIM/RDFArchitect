@@ -43,7 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/rendering")
+@RequestMapping("/api/datasets/{datasetName}/graphs/{graphName}/rendering")
 @RequiredArgsConstructor
 public class RenderingRESTController {
 
@@ -81,16 +81,16 @@ public class RenderingRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @RequestBody GraphFilter filter) {
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/rendering\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
 
         var packageUUID =
                 !filter.getPackageUUID().equals("default")
@@ -103,7 +103,7 @@ public class RenderingRESTController {
         logger.info(
                 "Sending response to GET request \"/api/datasets/{{}}/graphs/{{}}/rendering\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return renderingData;
     }

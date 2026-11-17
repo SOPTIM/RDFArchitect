@@ -81,7 +81,7 @@ class WorkspaceTest {
         Workspace workspace = new Workspace(WORKSPACE);
 
         // Act
-        int size = workspace.listGraphUris().size();
+        int size = workspace.listGraphNames().size();
 
         // Assert
         assertThat(size).isZero();
@@ -93,7 +93,7 @@ class WorkspaceTest {
         Workspace workspace = new Workspace(WORKSPACE, DatasetFactory.create());
 
         // Act
-        int size = workspace.listGraphUris().size();
+        int size = workspace.listGraphNames().size();
 
         // Assert
         assertThat(size).isZero();
@@ -117,12 +117,12 @@ class WorkspaceTest {
         Workspace workspace = new Workspace(WORKSPACE, dataset);
 
         // Act
-        List<String> graphUris = workspace.listGraphUris();
-        int size = graphUris.size();
+        List<String> graphNames = workspace.listGraphNames();
+        int size = graphNames.size();
 
         // Assert
         assertThat(size).isEqualTo(3);
-        for (String uri : graphUris) {
+        for (String uri : graphNames) {
             try (var transaction = workspace.begin(ReadWrite.READ)) {
                 var ctx = transaction.graph(uri);
                 assertThat(ctx).isNotNull();
@@ -144,8 +144,8 @@ class WorkspaceTest {
         Workspace workspace = new Workspace(WORKSPACE, dataset);
 
         // Act
-        List<String> graphUris = workspace.listGraphUris();
-        int size = graphUris.size();
+        List<String> graphNames = workspace.listGraphNames();
+        int size = graphNames.size();
 
         // Assert
         assertThat(size).isEqualTo(1);
@@ -159,7 +159,7 @@ class WorkspaceTest {
 
     @ParameterizedTest
     @EnumSource(ReadWrite.class)
-    void begin_existingGraphUri_returnsGraphRewindable(ReadWrite mode) {
+    void begin_existingGraphName_returnsGraphRewindable(ReadWrite mode) {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
 
@@ -177,7 +177,7 @@ class WorkspaceTest {
     }
 
     @Test
-    void begin_nonExistingDefaultGraphUri_returnsEmptyDefaultGraph() {
+    void begin_nonExistingDefaultGraphName_returnsEmptyDefaultGraph() {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
 
@@ -192,7 +192,7 @@ class WorkspaceTest {
     }
 
     @Test
-    void begin_nonExistingNamedGraphUri_throwsException() {
+    void begin_nonExistingNamedGraphName_throwsException() {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
 
@@ -204,14 +204,14 @@ class WorkspaceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"", "foo", "bar", "otherInvalidUri"})
-    void begin_invalidUri_throwsException(String graphUri) {
+    void begin_invalidUri_throwsException(String graphName) {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
 
         // Act/Assert
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> workspace.getGraphWithContext(graphUri))
-                .withMessage("Graph Uri " + graphUri + " is not a valid URI");
+                .isThrownBy(() -> workspace.getGraphWithContext(graphName))
+                .withMessage("Graph Uri " + graphName + " is not a valid URI");
     }
 
     @Test
@@ -274,15 +274,15 @@ class WorkspaceTest {
                 "http://example.org/graph3",
                 DEFAULT_GRAPH_NAME
             })
-    void create_validName_returnsGraphRewindable(String graphUri) {
+    void create_validName_returnsGraphRewindable(String graphName) {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
 
         // Act
-        createGraph(workspace, graphUri, exampleGraphs.getFirst());
+        createGraph(workspace, graphName, exampleGraphs.getFirst());
         try (var transaction = workspace.begin(ReadWrite.READ)) {
-            var ctx = transaction.graph(graphUri);
+            var ctx = transaction.graph(graphName);
             // Assert
             assertThat(ctx).isNotNull();
             assertThat(ctx.getRdfGraph().isIsomorphicWith(exampleGraphs.get(1))).isTrue();
@@ -292,7 +292,7 @@ class WorkspaceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"", "foo", "bar", "otherInvalidUri"})
-    void create_invalidUri_throwsException(String graphUri) {
+    void create_invalidUri_throwsException(String graphName) {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph());
@@ -300,11 +300,11 @@ class WorkspaceTest {
         // Act/Assert
         var firstGraph = exampleGraphs.getFirst();
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> createGraph(workspace, graphUri, firstGraph));
+                .isThrownBy(() -> createGraph(workspace, graphName, firstGraph));
     }
 
     @Test
-    void remove_existingGraphUri_removesGraph() {
+    void remove_existingGraphName_removesGraph() {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph());
@@ -314,11 +314,11 @@ class WorkspaceTest {
         deleteGraph(workspace, "http://example.org/graph1");
 
         // Assert
-        assertThat(workspace.listGraphUris()).isEmpty();
+        assertThat(workspace.listGraphNames()).isEmpty();
     }
 
     @Test
-    void rename_existingGraphUri_keepsContentUnderNewUri() {
+    void rename_existingGraphName_keepsContentUnderNewUri() {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
@@ -328,7 +328,7 @@ class WorkspaceTest {
         renameGraph(workspace, "http://example.org/graph1", "http://example.org/graph2");
 
         // Assert
-        assertThat(workspace.listGraphUris()).containsExactly("http://example.org/graph2");
+        assertThat(workspace.listGraphNames()).containsExactly("http://example.org/graph2");
         try (var transaction = workspace.begin(ReadWrite.READ)) {
             var ctx = transaction.graph("http://example.org/graph2");
             assertThat(ctx.getRdfGraph().isIsomorphicWith(exampleGraphs.get(1))).isTrue();
@@ -336,7 +336,7 @@ class WorkspaceTest {
     }
 
     @Test
-    void rename_updatesGraphUriInCustomDiagrams() {
+    void rename_updatesGraphNameInCustomDiagrams() {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph());
@@ -360,13 +360,13 @@ class WorkspaceTest {
         // Assert
         try (var transaction = workspace.begin(ReadWrite.READ)) {
             assertThat(transaction.diagrams().get(diagramId).getClasses())
-                    .extracting(entry -> entry.getGraphUri().toString())
+                    .extracting(entry -> entry.getGraphName().toString())
                     .containsExactly("http://example.org/graph2", "http://example.org/other");
         }
     }
 
     @Test
-    void rename_updatesGraphUriInSchemaScopedCustomDiagrams() {
+    void rename_updatesGraphNameInSchemaScopedCustomDiagrams() {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
@@ -408,7 +408,7 @@ class WorkspaceTest {
                                     .getCustomDiagrams()
                                     .get(ownDiagramId)
                                     .getClasses())
-                    .extracting(entry -> entry.getGraphUri().toString())
+                    .extracting(entry -> entry.getGraphName().toString())
                     .containsExactly("http://example.org/graph2");
             assertThat(
                             transaction
@@ -416,7 +416,7 @@ class WorkspaceTest {
                                     .getCustomDiagrams()
                                     .get(foreignDiagramId)
                                     .getClasses())
-                    .extracting(entry -> entry.getGraphUri().toString())
+                    .extracting(entry -> entry.getGraphName().toString())
                     .containsExactly("http://example.org/graph2");
         }
     }
@@ -482,7 +482,7 @@ class WorkspaceTest {
     }
 
     @Test
-    void rename_nonExistingGraphUri_throwsException() {
+    void rename_nonExistingGraphName_throwsException() {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
 
@@ -497,7 +497,7 @@ class WorkspaceTest {
     }
 
     @Test
-    void rename_alreadyTakenGraphUri_throwsException() {
+    void rename_alreadyTakenGraphName_throwsException() {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
@@ -515,7 +515,7 @@ class WorkspaceTest {
     }
 
     @Test
-    void remove_nonExistingGraphUri_doesNothing() {
+    void remove_nonExistingGraphName_doesNothing() {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
 
@@ -523,23 +523,23 @@ class WorkspaceTest {
         deleteGraph(workspace, "http://example.org/nonexistent");
 
         // Assert
-        assertThat(workspace.listGraphUris()).isEmpty();
+        assertThat(workspace.listGraphNames()).isEmpty();
     }
 
     @Test
-    void listGraphUris_emptyCollection_returnsEmptyList() {
+    void listGraphNames_emptyCollection_returnsEmptyList() {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
 
         // Act
-        List<String> graphUris = workspace.listGraphUris();
+        List<String> graphNames = workspace.listGraphNames();
 
         // Assert
-        assertThat(graphUris).isEmpty();
+        assertThat(graphNames).isEmpty();
     }
 
     @Test
-    void listGraphUris_nonEmptyCollection_returnsListWithGraphUris() {
+    void listGraphNames_nonEmptyCollection_returnsListWithGraphNames() {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
         exampleGraphs = List.of(createExampleGraph(), createExampleGraph(), createExampleGraph());
@@ -548,10 +548,10 @@ class WorkspaceTest {
         createGraph(workspace, "http://example.org/graph3", exampleGraphs.get(2));
 
         // Act
-        List<String> graphUris = workspace.listGraphUris();
+        List<String> graphNames = workspace.listGraphNames();
 
         // Assert
-        assertThat(graphUris)
+        assertThat(graphNames)
                 .containsExactlyInAnyOrder(
                         "http://example.org/graph1",
                         "http://example.org/graph2",
@@ -559,15 +559,15 @@ class WorkspaceTest {
     }
 
     @Test
-    void listGraphUris_emptyDataset_returnsEmptyList() {
+    void listGraphNames_emptyDataset_returnsEmptyList() {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE, DatasetFactory.create());
 
         // Act
-        List<String> graphUris = workspace.listGraphUris();
+        List<String> graphNames = workspace.listGraphNames();
 
         // Assert
-        assertThat(graphUris).isEmpty();
+        assertThat(graphNames).isEmpty();
     }
 
     @Test
@@ -777,24 +777,24 @@ class WorkspaceTest {
                                 "owl", "http://www.w3.org/2002/07/owl#"));
     }
 
-    private static void createGraph(Workspace workspace, String graphUri, Graph graph) {
+    private static void createGraph(Workspace workspace, String graphName, Graph graph) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.createGraph(graphUri, graph);
-            transaction.commit("created graph %s".formatted(graphUri));
+            transaction.createGraph(graphName, graph);
+            transaction.commit("created graph %s".formatted(graphName));
         }
     }
 
-    private static void renameGraph(Workspace workspace, String oldGraphUri, String newGraphUri) {
+    private static void renameGraph(Workspace workspace, String oldGraphName, String newGraphName) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.renameGraph(oldGraphUri, newGraphUri);
-            transaction.commit("renamed graph %s".formatted(oldGraphUri));
+            transaction.renameGraph(oldGraphName, newGraphName);
+            transaction.commit("renamed graph %s".formatted(oldGraphName));
         }
     }
 
-    private static void deleteGraph(Workspace workspace, String graphUri) {
+    private static void deleteGraph(Workspace workspace, String graphName) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.deleteGraph(graphUri);
-            transaction.commit("deleted graph %s".formatted(graphUri));
+            transaction.deleteGraph(graphName);
+            transaction.commit("deleted graph %s".formatted(graphName));
         }
     }
 

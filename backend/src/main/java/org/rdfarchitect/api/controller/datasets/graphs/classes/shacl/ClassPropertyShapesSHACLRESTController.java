@@ -41,7 +41,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/shacl/propertyShapes")
+        "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/shacl/propertyShapes")
 @RequiredArgsConstructor
 public class ClassPropertyShapesSHACLRESTController {
 
@@ -71,17 +71,17 @@ public class ClassPropertyShapesSHACLRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl/propertyShapes\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
         var res =
                 shaclGetClassRelationsUseCase.getPropertyShapes(
                         graphIdentifier, UUID.fromString(classUUID));
@@ -89,7 +89,7 @@ public class ClassPropertyShapesSHACLRESTController {
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl/propertyShapes\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 originURL);
         return res;

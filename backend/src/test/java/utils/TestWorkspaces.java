@@ -41,8 +41,8 @@ public class TestWorkspaces {
         databasePort.createWorkspaceIfAbsent(identifier.datasetName());
         try (var transaction =
                 databasePort.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(identifier.graphUri(), graph);
-            transaction.commit("created graph %s".formatted(identifier.graphUri()));
+            transaction.createGraph(identifier.graphName(), graph);
+            transaction.commit("created graph %s".formatted(identifier.graphName()));
         }
     }
 
@@ -58,8 +58,8 @@ public class TestWorkspaces {
             SessionDataStore store, GraphIdentifier identifier, Graph graph) {
         store.createDatasetIfAbsent(identifier.datasetName());
         try (var transaction = store.beginTransaction(identifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(identifier.graphUri(), graph);
-            transaction.commit("created graph %s".formatted(identifier.graphUri()));
+            transaction.createGraph(identifier.graphName(), graph);
+            transaction.commit("created graph %s".formatted(identifier.graphName()));
         }
     }
 }

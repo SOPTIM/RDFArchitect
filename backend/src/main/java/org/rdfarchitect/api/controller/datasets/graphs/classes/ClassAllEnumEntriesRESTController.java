@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/enumentries")
+@RequestMapping("/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/enumentries")
 @RequiredArgsConstructor
 public class ClassAllEnumEntriesRESTController {
 
@@ -75,7 +75,7 @@ public class ClassAllEnumEntriesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The uuid of the enum.") @PathVariable String classUUID,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
@@ -85,12 +85,12 @@ public class ClassAllEnumEntriesRESTController {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/enumentries\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
 
         var newEnumEntryUUID =
                 replaceOrCreateEnumEntryUseCase.replaceOrCreateEnumEntry(
@@ -99,7 +99,7 @@ public class ClassAllEnumEntriesRESTController {
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/enumentries\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 originURL);
         return newEnumEntryUUID;

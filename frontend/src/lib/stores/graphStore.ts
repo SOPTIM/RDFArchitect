@@ -76,97 +76,97 @@ function createGraphStore() {
 
     async function addEmptyGraph(
         workspaceName: string,
-        graphURI: string,
+        graphName: string,
     ): Promise<Result> {
         console.log(
-            `${LOG_PREFIX} Adding empty graph "${graphURI}" to workspace "${workspaceName}"`,
+            `${LOG_PREFIX} Adding empty graph "${graphName}" to workspace "${workspaceName}"`,
         );
 
         const { error } = await replaceGraph({
-            path: { datasetName: workspaceName, graphURI },
+            path: { datasetName: workspaceName, graphName },
         });
 
         if (error) {
             console.error(
-                `Failed to create empty graph "${graphURI}" to workspace "${workspaceName}"`,
+                `Failed to create empty graph "${graphName}" to workspace "${workspaceName}"`,
             );
             toastStore.error(
                 "Create failed",
-                `Could not create schema "${graphURI}".`,
+                `Could not create schema "${graphName}".`,
             );
             return { error };
         }
 
         invalidateWorkspace(workspaceName);
-        console.log(`${LOG_PREFIX} Added empty graph "${graphURI}"`);
+        console.log(`${LOG_PREFIX} Added empty graph "${graphName}"`);
         toastStore.success(
             "Schema created",
-            `"${graphURI}" was added to "${workspaceName}".`,
+            `"${graphName}" was added to "${workspaceName}".`,
         );
         return { error: null };
     }
 
     async function renameGraph(
         workspaceName: string,
-        oldGraphURI: string,
-        newGraphURI: string,
+        oldGraphName: string,
+        newGraphName: string,
     ): Promise<Result> {
         console.log(
-            `${LOG_PREFIX} Renaming graph "${oldGraphURI}" to "${newGraphURI}" in workspace "${workspaceName}"`,
+            `${LOG_PREFIX} Renaming graph "${oldGraphName}" to "${newGraphName}" in workspace "${workspaceName}"`,
         );
 
         const { error } = await sdkRenameGraph({
-            path: { datasetName: workspaceName, graphURI: oldGraphURI },
-            query: { newGraphURI },
+            path: { datasetName: workspaceName, graphName: oldGraphName },
+            query: { newGraphName },
         });
 
         if (error) {
             const isConflict = (error as { status?: number })?.status === 409;
             console.error(
-                `${LOG_PREFIX} Failed to rename graph "${oldGraphURI}"`,
+                `${LOG_PREFIX} Failed to rename graph "${oldGraphName}"`,
                 await describeError(error),
             );
             toastStore.error(
                 "Rename failed",
                 isConflict
-                    ? `A schema with the uri "${newGraphURI}" already exists.`
-                    : `Could not rename schema "${oldGraphURI}".`,
+                    ? `A schema with the uri "${newGraphName}" already exists.`
+                    : `Could not rename schema "${oldGraphName}".`,
             );
             return { error };
         }
 
         invalidateWorkspace(workspaceName);
         console.log(
-            `${LOG_PREFIX} Renamed graph "${oldGraphURI}" to "${newGraphURI}"`,
+            `${LOG_PREFIX} Renamed graph "${oldGraphName}" to "${newGraphName}"`,
         );
         toastStore.success(
             "Schema renamed",
-            `"${oldGraphURI}" is now "${newGraphURI}".`,
+            `"${oldGraphName}" is now "${newGraphName}".`,
         );
         return { error: null };
     }
 
     async function removeGraph(
         workspaceName: string,
-        graphURI: string,
+        graphName: string,
     ): Promise<Result> {
         console.log(
-            `${LOG_PREFIX} Deleting graph "${graphURI}" from workspace "${workspaceName}"`,
+            `${LOG_PREFIX} Deleting graph "${graphName}" from workspace "${workspaceName}"`,
         );
 
         const { error } = await deleteGraph({
-            path: { datasetName: workspaceName, graphURI },
+            path: { datasetName: workspaceName, graphName },
         });
 
         if (error) {
             const msg = await describeError(error);
             console.error(
-                `${LOG_PREFIX} Could not delete graph "${graphURI}" from workspace "${workspaceName}":`,
+                `${LOG_PREFIX} Could not delete graph "${graphName}" from workspace "${workspaceName}":`,
                 msg,
             );
             toastStore.error(
                 "Delete failed",
-                `Could not delete schema "${graphURI}".`,
+                `Could not delete schema "${graphName}".`,
             );
             return { error };
         }
@@ -177,7 +177,7 @@ function createGraphStore() {
             const nextData =
                 dsState.data?.filter(g => {
                     const uri = `${g.uri?.prefix ?? ""}${g.uri?.suffix ?? ""}`;
-                    return uri !== graphURI;
+                    return uri !== graphName;
                 }) ?? null;
 
             return setWorkspaceState(s, workspaceName, {
@@ -187,9 +187,9 @@ function createGraphStore() {
         });
 
         console.log(
-            `${LOG_PREFIX} Deleted graph "${graphURI}" from workspace "${workspaceName}"`,
+            `${LOG_PREFIX} Deleted graph "${graphName}" from workspace "${workspaceName}"`,
         );
-        toastStore.success("Schema deleted", `"${graphURI}" was removed.`);
+        toastStore.success("Schema deleted", `"${graphName}" was removed.`);
 
         return { error: null };
     }
@@ -240,7 +240,7 @@ function setWorkspaceState(
 async function startImport(
     workspaceName: string,
     files: File[],
-    graphUris: string[],
+    graphNames: string[],
     options: {
         onUploadProgress?: (percent: number) => void;
         signal?: AbortSignal;
@@ -260,7 +260,7 @@ async function startImport(
         const jobId = await uploadImport(
             workspaceName,
             files,
-            graphUris,
+            graphNames,
             options,
         );
         console.log(`${LOG_PREFIX} Import job "${jobId}" started`);
@@ -357,14 +357,14 @@ async function cancelImport(
 function uploadImport(
     workspaceName: string,
     files: File[],
-    graphUris: string[],
+    graphNames: string[],
     options: {
         onUploadProgress?: (percent: number) => void;
         signal?: AbortSignal;
     },
 ): Promise<string> {
-    const query = graphUris
-        .map(graphUri => `graphUris=${encodeURIComponent(graphUri ?? "")}`)
+    const query = graphNames
+        .map(graphName => `graphNames=${encodeURIComponent(graphName ?? "")}`)
         .join("&");
     const url =
         `${PUBLIC_BACKEND_URL}/api/datasets/${encodeURIComponent(workspaceName)}` +

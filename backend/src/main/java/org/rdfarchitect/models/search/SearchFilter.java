@@ -23,6 +23,6 @@ import lombok.Data;
 public class SearchFilter {
 
     private String datasetName;
-    private String graphUri;
+    private String graphName;
     private String packageUUID;
 }

@@ -41,7 +41,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/enumentries/{enumEntryUUID}")
+        "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/enumentries/{enumEntryUUID}")
 @RequiredArgsConstructor
 public class ClassEnumEntriesRESTController {
 
@@ -70,7 +70,7 @@ public class ClassEnumEntriesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The uuid of the enum.") @PathVariable String classUUID,
             @Parameter(description = "The uuid of the enum entry.") @PathVariable
                     String enumEntryUUID,
@@ -82,21 +82,21 @@ public class ClassEnumEntriesRESTController {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/enumentries/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 enumEntryUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
 
         var newEnumEntryUUID =
                 replaceOrCreateEnumEntryUseCase.replaceOrCreateEnumEntry(
-                        new GraphIdentifier(datasetName, extendedGraphURI), enumEntry);
+                        new GraphIdentifier(datasetName, extendedGraphName), enumEntry);
 
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/enumentries/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 enumEntryUUID,
                 originURL);

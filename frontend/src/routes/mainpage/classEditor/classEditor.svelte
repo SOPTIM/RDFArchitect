@@ -55,7 +55,7 @@
     import Stereotypes from "./components/stereotypes/Stereotypes.svelte";
     import SuperClass from "./components/SuperClass.svelte";
 
-    const { workspaceName, graphUri, classUuid } = $props();
+    const { workspaceName, graphName, classUuid } = $props();
 
     const enumerationStereotype =
         "http://iec.ch/TC57/NonStandard/UML#enumeration";
@@ -74,8 +74,8 @@
         get workspaceName() {
             return workspaceName;
         },
-        get graphUri() {
-            return graphUri;
+        get graphName() {
+            return graphName;
         },
         get classUuid() {
             return classUuid;
@@ -141,14 +141,14 @@
         (async () => {
             const classDto = await classStore.getClassInfo(
                 workspaceName,
-                graphUri,
+                graphName,
                 classUuid,
             );
             if (cancellation.cancelled) return;
             if (classDto == null) {
                 return closeClassEditor({
                     workspaceName: workspaceName,
-                    graphUri: graphUri,
+                    graphName: graphName,
                     classUuid: null,
                 });
             }
@@ -201,12 +201,12 @@
     export function closeClassEditor(
         {
             workspaceName = null,
-            graphUri = null,
+            graphName = null,
             classUuid = null,
             classType = null,
         } = {
             workspaceName: null,
-            graphUri: null,
+            graphName: null,
             classUuid: null,
             classType: null,
         },
@@ -216,7 +216,7 @@
         if (!showDiscardSaveConfirmDialog && reactiveClass?.isModified) {
             showDiscardSaveConfirmDialog = true;
             workspaceOfClassToOpenNext = workspaceName;
-            graphOfClassToOpenNext = graphUri;
+            graphOfClassToOpenNext = graphName;
             classToOpenNext = classUuid;
             classTypeOfClassToOpenNext = classType;
             return;
@@ -225,7 +225,7 @@
         // editor was switched over to another one before.
         editorState.clearClassEditorSchema();
         editorState.selectedClassWorkspace.updateValue(workspaceName);
-        editorState.selectedClassGraph.updateValue(graphUri);
+        editorState.selectedClassGraph.updateValue(graphName);
         editorState.selectedClass.updateValue({
             type: classType,
             id: classUuid,
@@ -241,7 +241,7 @@
     async function createReferencedClass() {
         creatingClass = true;
 
-        const { error } = await classStore.addClass(workspaceName, graphUri, {
+        const { error } = await classStore.addClass(workspaceName, graphName, {
             packageDTO: await packageOfCurrentDiagram(),
             classURIPrefix: externalClass.prefix,
             className: externalClass.label,
@@ -257,12 +257,12 @@
         if (!diagramId || diagramId === "default") {
             return null;
         }
-        const packages = await getPackages(workspaceName, graphUri);
+        const packages = await getPackages(workspaceName, graphName);
         return packages.find(pkg => pkg.uuid === diagramId) ?? null;
     }
 
     async function loadContext(cancellation) {
-        const data = await loadClassEditorContextData(workspaceName, graphUri);
+        const data = await loadClassEditorContextData(workspaceName, graphName);
         if (cancellation.cancelled) return;
         Object.assign(context, data);
         loadingContext = false;
@@ -296,7 +296,7 @@
             targetUuids.map(async uuid => {
                 const res = await classStore.getClassInfo(
                     workspaceName,
-                    graphUri,
+                    graphName,
                     uuid,
                 );
                 if (!res) return null;
@@ -324,7 +324,7 @@
                 }
                 closeClassEditor({
                     workspaceName,
-                    graphUri,
+                    graphName,
                     classUuid: classUuidToOpen,
                     classType: ClassType.SINGLE_CLASS,
                 });

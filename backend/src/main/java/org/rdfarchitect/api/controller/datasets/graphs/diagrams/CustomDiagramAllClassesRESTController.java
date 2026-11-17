@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/diagrams/{diagramId}/classes")
+@RequestMapping("/api/datasets/{datasetName}/graphs/{graphName}/diagrams/{diagramId}/classes")
 @RequiredArgsConstructor
 public class CustomDiagramAllClassesRESTController {
 
@@ -66,7 +66,7 @@ public class CustomDiagramAllClassesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
             @Parameter(description = "The list of the classes to be added to the diagram")
                     @RequestBody
@@ -74,20 +74,20 @@ public class CustomDiagramAllClassesRESTController {
         logger.info(
                 "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"",
                 datasetName,
-                graphURI,
+                graphName,
                 diagramId,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
         customDiagramLayoutUseCase.addClassesToCustomDiagram(
-                new GraphIdentifier(datasetName, extendedGraphURI),
+                new GraphIdentifier(datasetName, extendedGraphName),
                 UUID.fromString(diagramId),
                 classes);
 
         logger.info(
                 "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"",
                 datasetName,
-                graphURI,
+                graphName,
                 diagramId,
                 originURL);
         return Response.SUCCESS;
@@ -107,7 +107,7 @@ public class CustomDiagramAllClassesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
             @Parameter(description = "The list of class uuids to be removed from the diagram")
                     @RequestBody
@@ -115,21 +115,21 @@ public class CustomDiagramAllClassesRESTController {
         logger.info(
                 "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes\" for {} class(es) from \"{}\"",
                 datasetName,
-                graphURI,
+                graphName,
                 diagramId,
                 classIds.size(),
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
         customDiagramLayoutUseCase.removeClassesFromCustomDiagram(
-                new GraphIdentifier(datasetName, extendedGraphURI),
+                new GraphIdentifier(datasetName, extendedGraphName),
                 UUID.fromString(diagramId),
                 classIds);
 
         logger.info(
                 "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"",
                 datasetName,
-                graphURI,
+                graphName,
                 diagramId,
                 originURL);
         return Response.SUCCESS;

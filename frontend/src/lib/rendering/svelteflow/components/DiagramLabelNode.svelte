@@ -38,7 +38,7 @@
         data.associationEndUUID && data.ownerClassId
             ? {
                   classUuid: data.ownerClassId,
-                  graphUri: data.graphUri,
+                  graphName: data.graphName,
                   kind: PropertyKind.ASSOCIATION,
                   propertyUuid: data.associationEndUUID,
                   focus:

@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/resolve")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/resolve")
 @RequiredArgsConstructor
 public class ResolveIdentifierRESTController {
 
@@ -65,28 +65,28 @@ public class ResolveIdentifierRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The url encoded iri identifier of the cim resource.")
                     @PathVariable
                     String iriIdentifier) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/resolve/iri/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 iriIdentifier,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
         var extendedResourceIRI = expandURIUseCase.expandUri(datasetName, iriIdentifier);
 
         var uuid =
                 resolveIdentifierUseCase.resolveIRI(
-                        new GraphIdentifier(datasetName, extendedGraphURI), extendedResourceIRI);
+                        new GraphIdentifier(datasetName, extendedGraphName), extendedResourceIRI);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/resolve/iri/{{}}\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 iriIdentifier,
                 originURL);
         return uuid.toString();

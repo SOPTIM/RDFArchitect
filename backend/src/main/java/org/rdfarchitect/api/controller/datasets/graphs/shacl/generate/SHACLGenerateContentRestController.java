@@ -48,7 +48,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/generate")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/shacl/generate")
 @RequiredArgsConstructor
 public class SHACLGenerateContentRestController {
 
@@ -79,24 +79,24 @@ public class SHACLGenerateContentRestController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphName) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generate/string\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
 
         var result =
                 shaclGenerateUseCase.exportGeneratedSHACLGraph(
-                        new GraphIdentifier(datasetName, extendedGraphURI),
+                        new GraphIdentifier(datasetName, extendedGraphName),
                         PrefixEntry.create(RDFA.NS_PREFIX_SHACL, RDFA.NS_URI_SHACL));
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generate/string\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return result;
     }
@@ -132,36 +132,36 @@ public class SHACLGenerateContentRestController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphName) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generate/file\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
         var format = getRdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 shaclExportUseCase.exportGeneratedSHACLGraph(
-                        new GraphIdentifier(datasetName, extendedGraphURI), format);
-        var body = buildResponseEntity(extendedGraphURI, format, outStream);
+                        new GraphIdentifier(datasetName, extendedGraphName), format);
+        var body = buildResponseEntity(extendedGraphName, format, outStream);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generate/file\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return body;
     }
 
     private ResponseEntity<byte[]> buildResponseEntity(
-            String extendedGraphURI, RDFFormat format, ByteArrayOutputStream outStream) {
+            String extendedGraphName, RDFFormat format, ByteArrayOutputStream outStream) {
         // add suggested file name to response
         var fileName = "shacl";
-        if (!extendedGraphURI.equals("default")) {
-            fileName = new URI(extendedGraphURI + "-shacl").getSuffix();
+        if (!extendedGraphName.equals("default")) {
+            fileName = new URI(extendedGraphName + "-shacl").getSuffix();
         }
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 

@@ -51,12 +51,12 @@ public class WorkspaceValidationService implements WorkspaceValidationUseCase {
 
     @Override
     public ValidationReportDTO validateSchemaInWorkspace(GraphIdentifier graphIdentifier) {
-        return validate(loadProfiles(graphIdentifier.datasetName()), graphIdentifier.graphUri());
+        return validate(loadProfiles(graphIdentifier.datasetName()), graphIdentifier.graphName());
     }
 
-    ValidationReportDTO validate(List<CIMProfileModel> profiles, String scopeGraphUri) {
-        var context = new WorkspaceValidationContext(profiles, scopeGraphUri);
-        var issues = new IssueCollector(context.getOccurrences(), scopeGraphUri);
+    ValidationReportDTO validate(List<CIMProfileModel> profiles, String scopeGraphName) {
+        var context = new WorkspaceValidationContext(profiles, scopeGraphName);
+        var issues = new IssueCollector(context.getOccurrences(), scopeGraphName);
         rules.forEach(rule -> runRule(rule, context, issues));
         context.getBuiltIndex()
                 .ifPresent(index -> index.readFailures().forEach(issues::reportReadFailure));
@@ -76,7 +76,7 @@ public class WorkspaceValidationService implements WorkspaceValidationUseCase {
     }
 
     private List<CIMProfileModel> loadProfiles(String datasetName) {
-        var keywords = CIMProfileModels.keywordsByGraphUri(listGraphsUseCase, datasetName);
+        var keywords = CIMProfileModels.keywordsByGraphName(listGraphsUseCase, datasetName);
         return CIMProfileModels.loadAll(databasePort, keywords, datasetName, null);
     }
 }

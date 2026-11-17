@@ -44,7 +44,7 @@
         onOpen = () => {},
         onClose = () => {},
         workspaceName,
-        graphUri,
+        graphName,
         resourceUuid,
         resourceUuids,
     } = $props();
@@ -121,11 +121,11 @@
     }
 
     async function fetchDeleteDependencies() {
-        if (!workspaceName || !graphUri || targetUuids.length === 0) {
+        if (!workspaceName || !graphName || targetUuids.length === 0) {
             console.error(
                 "Missing required properties to delete resource:",
                 workspaceName,
-                graphUri,
+                graphName,
                 targetUuids,
             );
             showDialog = false;
@@ -134,7 +134,7 @@
         let { data } = await getDeletionImpact({
             path: {
                 datasetName: workspaceName,
-                graphURI: graphUri,
+                graphName: graphName,
             },
             body: targetUuids,
         });
@@ -190,7 +190,7 @@
         const label = isSingle ? roots[0].resourceIdentifier.label : null;
 
         let { error } = await deleteResources({
-            path: { datasetName: workspaceName, graphURI: graphUri },
+            path: { datasetName: workspaceName, graphName: graphName },
             body: payload,
         });
         if (error) {
@@ -202,11 +202,11 @@
                     : "Could not delete the selected resources.",
             );
         } else {
-            packageStore.invalidateGraph(workspaceName, graphUri);
-            classStore.invalidateGraph(workspaceName, graphUri);
+            packageStore.invalidateGraph(workspaceName, graphName);
+            classStore.invalidateGraph(workspaceName, graphName);
             crossProfileStore.invalidateWorkspace(workspaceName);
             // The profile header, or the class or package a profile names itself on, may be gone.
-            ontologyStore.invalidateGraph(workspaceName, graphUri);
+            ontologyStore.invalidateGraph(workspaceName, graphName);
             graphStore.invalidateWorkspace(workspaceName);
 
             console.log("Successfully submitted delete request");

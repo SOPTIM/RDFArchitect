@@ -31,12 +31,12 @@ let target = null;
 
 export async function startPaste(
     workspaceName,
-    graphURI,
+    graphName,
     targetPackageUUID,
     options,
 ) {
-    target = { workspaceName, graphURI, targetPackageUUID };
-    const preview = await loadPastePreview(workspaceName, graphURI, options);
+    target = { workspaceName, graphName, targetPackageUUID };
+    const preview = await loadPastePreview(workspaceName, graphName, options);
     if (preview === PASTE_PREVIEW_FAILED) {
         return;
     }
@@ -50,6 +50,6 @@ export async function startPaste(
 }
 
 export async function confirmPaste(options) {
-    const { workspaceName, graphURI, targetPackageUUID } = target;
-    await saveCopyClass(workspaceName, graphURI, targetPackageUUID, options);
+    const { workspaceName, graphName, targetPackageUUID } = target;
+    await saveCopyClass(workspaceName, graphName, targetPackageUUID, options);
 }

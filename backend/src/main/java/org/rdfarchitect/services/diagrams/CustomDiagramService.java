@@ -71,7 +71,7 @@ public class CustomDiagramService
     public List<CustomDiagramDTO> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             return ctx.getCustomDiagrams().values().stream()
                     .map(
                             diagram ->
@@ -112,7 +112,7 @@ public class CustomDiagramService
     private List<CIMProfileModel> loadProfiles(String datasetName) {
         return CIMProfileModels.loadAll(
                 databasePort,
-                CIMProfileModels.keywordsByGraphUri(listGraphsUseCase, datasetName),
+                CIMProfileModels.keywordsByGraphName(listGraphsUseCase, datasetName),
                 datasetName,
                 null);
     }
@@ -148,7 +148,7 @@ public class CustomDiagramService
         Map<String, MergedClassDTO> mergeMap = new LinkedHashMap<>();
 
         for (var profile : profiles) {
-            var graphUri = profile.graphUri();
+            var graphName = profile.graphName();
 
             for (var cimClass : profile.model().getCIMClasses()) {
                 var classUri = cimClass.getUri().toString();
@@ -165,7 +165,7 @@ public class CustomDiagramService
                                                 .build());
 
                 merged.getSources()
-                        .add(new ClassSourceDTO(cimClass.getUuid(), graphDTOsMap.get(graphUri)));
+                        .add(new ClassSourceDTO(cimClass.getUuid(), graphDTOsMap.get(graphName)));
             }
         }
         return mergeMap;
@@ -286,25 +286,25 @@ public class CustomDiagramService
             return "";
         }
         return diagram.getClasses().stream()
-                .filter(cls -> cls.getUuid().equals(classId) && cls.getGraphUri() != null)
+                .filter(cls -> cls.getUuid().equals(classId) && cls.getGraphName() != null)
                 .findFirst()
-                .map(cls -> classNameInGraph(transaction, cls.getGraphUri().toString(), classId))
+                .map(cls -> classNameInGraph(transaction, cls.getGraphName().toString(), classId))
                 .orElse("");
     }
 
     private static String classNameInGraph(
-            WorkspaceTransaction transaction, String graphUri, UUID classId) {
-        if (!transaction.graphUris().contains(graphUri)) {
+            WorkspaceTransaction transaction, String graphName, UUID classId) {
+        if (!transaction.graphNames().contains(graphName)) {
             return "";
         }
-        return ChangeDescriptions.className(transaction.graph(graphUri).getRdfGraph(), classId);
+        return ChangeDescriptions.className(transaction.graph(graphName).getRdfGraph(), classId);
     }
 
     @Override
     public void deleteCustomGraphDiagram(GraphIdentifier graphIdentifier, String diagramId) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var removed = ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
             syncDiagramLayoutUseCase.syncDiagramLayout(graphIdentifier);
             transaction.commit(
@@ -326,7 +326,7 @@ public class CustomDiagramService
         }
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             // dto is necessary for swagger to infer the correct type, but we need to create a new
             // CustomDiagram object to store in the database
             var diagram =
@@ -347,7 +347,7 @@ public class CustomDiagramService
             GraphIdentifier graphIdentifier, String diagramId, UUID classId) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var diagram = ctx.getCustomDiagrams().get(UUID.fromString(diagramId));
             var className = ChangeDescriptions.className(ctx.getRdfGraph(), classId);
             if (diagram != null) {
@@ -368,7 +368,7 @@ public class CustomDiagramService
     public void removeFromAllDiagrams(GraphIdentifier graphIdentifier, UUID classId) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             for (var diagram : ctx.getCustomDiagrams().values()) {
                 var classes = diagram.getClasses();
                 classes.removeIf(c -> c.getUuid().equals(classId));
@@ -387,10 +387,10 @@ public class CustomDiagramService
     public CrossProfileDiagramColorDataDTO getCrossProfileColors(String datasetName) {
         var colorsDTO = new CrossProfileDiagramColorDataDTO(new HashMap<>());
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
-            for (var graphUri : transaction.graphUris()) {
+            for (var graphName : transaction.graphNames()) {
                 colorsDTO
                         .getGraphColors()
-                        .put(graphUri, transaction.crossProfileColors().getColor(graphUri));
+                        .put(graphName, transaction.crossProfileColors().getColor(graphName));
             }
         }
         return colorsDTO;
@@ -399,11 +399,11 @@ public class CustomDiagramService
     @Override
     public void replaceCrossProfileColors(String datasetName, CrossProfileDiagramColorDataDTO dto) {
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.WRITE)) {
-            for (var graphUri : transaction.graphUris()) {
-                if (dto.getGraphColors().containsKey(graphUri)) {
+            for (var graphName : transaction.graphNames()) {
+                if (dto.getGraphColors().containsKey(graphName)) {
                     transaction
                             .crossProfileColors()
-                            .setColor(graphUri, dto.getGraphColors().get(graphUri));
+                            .setColor(graphName, dto.getGraphColors().get(graphName));
                 }
             }
             transaction.commit("Changed the cross profile colours");

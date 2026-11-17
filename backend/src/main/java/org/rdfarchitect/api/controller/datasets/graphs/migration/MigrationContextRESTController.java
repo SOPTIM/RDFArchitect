@@ -63,12 +63,12 @@ public class MigrationContextRESTController {
                     String originURL,
             @Parameter(
                             description =
-                                    "The file containing graph A. Mutually exclusive with dataset_a and graph_uri_a.")
+                                    "The file containing graph A. Mutually exclusive with dataset_a and graph_name_a.")
                     @RequestPart(required = false)
                     MultipartFile fileA,
             @Parameter(
                             description =
-                                    "Dataset of graph A. Required together with graph_uri_a when not uploading graph A as a file.")
+                                    "Dataset of graph A. Required together with graph_name_a when not uploading graph A as a file.")
                     @RequestParam(required = false)
                     String datasetA,
             @Parameter(
@@ -78,12 +78,12 @@ public class MigrationContextRESTController {
                     String graphA,
             @Parameter(
                             description =
-                                    "The file containing graph B. Mutually exclusive with dataset_b and graph_uri_b.")
+                                    "The file containing graph B. Mutually exclusive with dataset_b and graph_name_b.")
                     @RequestPart(required = false)
                     MultipartFile fileB,
             @Parameter(
                             description =
-                                    "Dataset of graph B. Required together with graph_uri_b when not uploading graph B as a file.")
+                                    "Dataset of graph B. Required together with graph_name_b when not uploading graph B as a file.")
                     @RequestParam(required = false)
                     String datasetB,
             @Parameter(
@@ -104,24 +104,24 @@ public class MigrationContextRESTController {
         }
         // stored to stored
         else if (datasetA != null && datasetB != null && graphA != null && graphB != null) {
-            var extendedGraphURIA = expandURIUseCase.expandUri(datasetA, graphA);
-            var extendedGraphURIB = expandURIUseCase.expandUri(datasetB, graphB);
+            var extendedGraphNameA = expandURIUseCase.expandUri(datasetA, graphA);
+            var extendedGraphNameB = expandURIUseCase.expandUri(datasetB, graphB);
             setMigrationContextUseCase.setMigrationContext(
-                    new GraphIdentifier(datasetA, extendedGraphURIA),
-                    new GraphIdentifier(datasetB, extendedGraphURIB),
+                    new GraphIdentifier(datasetA, extendedGraphNameA),
+                    new GraphIdentifier(datasetB, extendedGraphNameB),
                     ignorePrefixes);
         }
         // file to stored
         else if (fileA != null && datasetB != null && graphB != null) {
-            var extendedGraphURIB = expandURIUseCase.expandUri(datasetB, graphB);
+            var extendedGraphNameB = expandURIUseCase.expandUri(datasetB, graphB);
             setMigrationContextUseCase.setMigrationContext(
-                    fileA, new GraphIdentifier(datasetB, extendedGraphURIB), ignorePrefixes);
+                    fileA, new GraphIdentifier(datasetB, extendedGraphNameB), ignorePrefixes);
         }
         // stored to file
         else if (datasetA != null && graphA != null && fileA != null) {
-            var extendedGraphURIA = expandURIUseCase.expandUri(datasetA, graphA);
+            var extendedGraphNameA = expandURIUseCase.expandUri(datasetA, graphA);
             setMigrationContextUseCase.setMigrationContext(
-                    new GraphIdentifier(datasetA, extendedGraphURIA), fileA, ignorePrefixes);
+                    new GraphIdentifier(datasetA, extendedGraphNameA), fileA, ignorePrefixes);
         } else {
             logger.warn(
                     "Invalid request to POST \"/api/migrations/context\" from \"{}\". Missing required parameters.",

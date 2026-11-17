@@ -25,8 +25,8 @@ import {
     stubsDiffer,
 } from "../../src/lib/actions/schemaOccurrences.js";
 
-function occurrence(graphUri, present, stub = null) {
-    return { graphUri, present, classUUID: `${graphUri}-uuid`, stub };
+function occurrence(graphName, present, stub = null) {
+    return { graphName, present, classUUID: `${graphName}-uuid`, stub };
 }
 
 const stub = overrides => ({
@@ -48,7 +48,7 @@ describe("sourceCandidates", () => {
             occurrence("tp", true, stub()),
         ];
         expect(
-            sourceCandidates(occurrences, "tp").map(c => c.graphUri),
+            sourceCandidates(occurrences, "tp").map(c => c.graphName),
         ).toEqual(["op"]);
     });
 });
@@ -87,7 +87,7 @@ describe("schemaLabel", () => {
     it("names a schema the way the navigation tree does", () => {
         const named = sortSchemaOccurrences([
             {
-                graphUri: "http://graph#Equipment",
+                graphName: "http://graph#Equipment",
                 keyword: "EQ",
                 label: "Core Equipment Vocabulary",
             },
@@ -98,9 +98,9 @@ describe("schemaLabel", () => {
 
     it("falls back to the keyword and then to the graph", () => {
         expect(
-            schemaLabel({ graphUri: "http://graph#EQ_", keyword: "EQ" }),
+            schemaLabel({ graphName: "http://graph#EQ_", keyword: "EQ" }),
         ).toBe("EQ");
-        expect(schemaLabel({ graphUri: "http://graph#Notes" })).toBe("Notes");
+        expect(schemaLabel({ graphName: "http://graph#Notes" })).toBe("Notes");
     });
 
     /**
@@ -110,11 +110,11 @@ describe("schemaLabel", () => {
     it("tells apart the schemas that read alike", () => {
         const occurrences = sortSchemaOccurrences([
             {
-                graphUri: "http://graph#EquipmentCore",
+                graphName: "http://graph#EquipmentCore",
                 label: "EquipmentProfile",
             },
             {
-                graphUri: "http://graph#EquipmentOperation",
+                graphName: "http://graph#EquipmentOperation",
                 label: "EquipmentProfile",
             },
         ]);
@@ -129,30 +129,30 @@ describe("schemaLabel", () => {
 describe("sortSchemaOccurrences", () => {
     it("orders by the name the schema is shown under, not by its keyword", () => {
         const occurrences = [
-            { graphUri: "http://graph#a", keyword: "ZZ", label: "Apples" },
-            { graphUri: "http://graph#b", keyword: "AA", label: "Bananas" },
+            { graphName: "http://graph#a", keyword: "ZZ", label: "Apples" },
+            { graphName: "http://graph#b", keyword: "AA", label: "Bananas" },
         ];
 
-        expect(sortSchemaOccurrences(occurrences).map(o => o.graphUri)).toEqual(
-            ["http://graph#a", "http://graph#b"],
-        );
+        expect(
+            sortSchemaOccurrences(occurrences).map(o => o.graphName),
+        ).toEqual(["http://graph#a", "http://graph#b"]);
     });
 
     it("orders by short name and falls back to the uri", () => {
         const occurrences = [
-            { graphUri: "http://graph#z", keyword: "OP" },
-            { graphUri: "http://graph#a", keyword: "OP" },
-            { graphUri: "http://graph#b", keyword: "EQ" },
-            { graphUri: "http://graph#c", keyword: null },
+            { graphName: "http://graph#z", keyword: "OP" },
+            { graphName: "http://graph#a", keyword: "OP" },
+            { graphName: "http://graph#b", keyword: "EQ" },
+            { graphName: "http://graph#c", keyword: null },
         ];
-        expect(sortSchemaOccurrences(occurrences).map(o => o.graphUri)).toEqual(
-            [
-                "http://graph#c",
-                "http://graph#b",
-                "http://graph#a",
-                "http://graph#z",
-            ],
-        );
+        expect(
+            sortSchemaOccurrences(occurrences).map(o => o.graphName),
+        ).toEqual([
+            "http://graph#c",
+            "http://graph#b",
+            "http://graph#a",
+            "http://graph#z",
+        ]);
     });
 });
 
@@ -164,7 +164,7 @@ describe("groupCandidatesByStub", () => {
             occurrence("sc", true, stub({ comment: "Something else." })),
         ]);
         expect(
-            groups.map(group => group.occurrences.map(o => o.graphUri)),
+            groups.map(group => group.occurrences.map(o => o.graphName)),
         ).toEqual([["op", "tp"], ["sc"]]);
         expect(groups.map(group => group.key)).toEqual(["op", "sc"]);
     });
@@ -176,7 +176,7 @@ describe("mergeSchemaOccurrences", () => {
             [occurrence("op", true, stub()), occurrence("sc", true, stub())],
             [occurrence("op", true, stub()), occurrence("sc", false)],
         ]);
-        expect(merged.map(entry => [entry.graphUri, entry.present])).toEqual([
+        expect(merged.map(entry => [entry.graphName, entry.present])).toEqual([
             ["op", true],
             ["sc", false],
         ]);

@@ -69,11 +69,11 @@ function createGraphColors() {
         const seeded = {};
         Object.keys(stored)
             .sort((a, b) => a.localeCompare(b))
-            .forEach((graphUri, index) => {
-                const existing = normalizeHex(stored[graphUri]);
-                resolved[graphUri] = existing ?? defaultColorFor(index);
+            .forEach((graphName, index) => {
+                const existing = normalizeHex(stored[graphName]);
+                resolved[graphName] = existing ?? defaultColorFor(index);
                 if (!existing) {
-                    seeded[graphUri] = resolved[graphUri];
+                    seeded[graphName] = resolved[graphName];
                 }
             });
 
@@ -97,8 +97,8 @@ function createGraphColors() {
     }
 
     return {
-        get(workspaceName, graphUri) {
-            return byWorkspace[workspaceName]?.[graphUri] ?? null;
+        get(workspaceName, graphName) {
+            return byWorkspace[workspaceName]?.[graphName] ?? null;
         },
 
         reload(workspaceName) {
@@ -108,20 +108,20 @@ function createGraphColors() {
             return pendingLoads.get(workspaceName) ?? startLoad(workspaceName);
         },
 
-        async set(workspaceName, graphUri, color) {
+        async set(workspaceName, graphName, color) {
             const hex = normalizeHex(color);
             if (!hex) {
                 return false;
             }
             const previous = byWorkspace[workspaceName] ?? {};
-            byWorkspace[workspaceName] = { ...previous, [graphUri]: hex };
+            byWorkspace[workspaceName] = { ...previous, [graphName]: hex };
 
-            const saved = await put(workspaceName, { [graphUri]: hex });
+            const saved = await put(workspaceName, { [graphName]: hex });
             if (!saved) {
                 byWorkspace[workspaceName] = previous;
                 toastStore.error(
                     "Save failed",
-                    `Could not save the color for "${graphUri}".`,
+                    `Could not save the color for "${graphName}".`,
                 );
                 return false;
             }
@@ -150,7 +150,7 @@ function createGraphColors() {
 function normalizeColors(colorsByGraph) {
     return Object.fromEntries(
         Object.entries(colorsByGraph)
-            .map(([graphUri, color]) => [graphUri, normalizeHex(color)])
+            .map(([graphName, color]) => [graphName, normalizeHex(color)])
             .filter(([, color]) => color !== null),
     );
 }

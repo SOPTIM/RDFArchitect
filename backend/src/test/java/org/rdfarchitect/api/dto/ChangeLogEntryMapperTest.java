@@ -155,8 +155,8 @@ class ChangeLogEntryMapperTest {
                 () -> assertThat(deletion.getPredicate()).isEqualTo(PRED),
                 () -> assertThat(deletion.getObject()).isEqualTo(DELETED),
                 () -> assertThat(dto.getAffectedKinds()).containsExactly("rdf"),
-                () -> assertThat(dto.getAffectedGraphUris()).containsExactly(GRAPH_URI),
-                () -> assertThat(dto.getRestorableGraphUris()).containsExactly(GRAPH_URI));
+                () -> assertThat(dto.getAffectedGraphNames()).containsExactly(GRAPH_URI),
+                () -> assertThat(dto.getRestorableGraphNames()).containsExactly(GRAPH_URI));
     }
 
     @Test
@@ -269,7 +269,7 @@ class ChangeLogEntryMapperTest {
         var dto = changeLogEntryMapper.toDTO(entry);
 
         assertAll(
-                () -> assertThat(dto.getAffectedGraphUris()).containsExactly(GRAPH_URI),
-                () -> assertThat(dto.getRestorableGraphUris()).isEmpty());
+                () -> assertThat(dto.getAffectedGraphNames()).containsExactly(GRAPH_URI),
+                () -> assertThat(dto.getRestorableGraphNames()).isEmpty());
     }
 }

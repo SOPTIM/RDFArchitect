@@ -45,7 +45,7 @@ const MOCK_JOB_STATUS: api.ImportJobStatus = {
     datasetName: WORKSPACE_A,
     state: "COMPLETED",
     files: [],
-    importedGraphUris: [GRAPH_URI],
+    importedGraphNames: [GRAPH_URI],
     failedImports: [],
     warnings: [],
 };
@@ -228,7 +228,7 @@ describe("graphStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.replaceGraph).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, graphURI: GRAPH_URI },
+                path: { datasetName: WORKSPACE_A, graphName: GRAPH_URI },
             });
 
             const state = get(store);
@@ -289,7 +289,7 @@ describe("graphStore", () => {
             expect(request.method).toBe("POST");
             expect(request.url).toBe(
                 `/api/datasets/${WORKSPACE_A}/graphs/content/imports` +
-                    `?graphUris=${encodeURIComponent(GRAPH_URI)}`,
+                    `?graphNames=${encodeURIComponent(GRAPH_URI)}`,
             );
             expect(request.withCredentials).toBe(true);
             expect(request.body.getAll("files")).toEqual([MOCK_FILE]);
@@ -450,7 +450,7 @@ describe("graphStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.deleteGraph).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, graphURI: GRAPH_URI },
+                path: { datasetName: WORKSPACE_A, graphName: GRAPH_URI },
             });
         });
 

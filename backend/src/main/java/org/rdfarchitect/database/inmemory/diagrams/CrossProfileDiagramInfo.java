@@ -46,51 +46,51 @@ public class CrossProfileDiagramInfo extends SnapshotParticipant<Map<String, Str
     /**
      * Returns the colour of a graph.
      *
-     * @param graphUri the graph URI
+     * @param graphName the graph URI
      * @return the colour, or {@code null} if the graph has none
      */
     @Override
-    public String getColor(String graphUri) {
-        return colors.getOrDefault(graphUri, null);
+    public String getColor(String graphName) {
+        return colors.getOrDefault(graphName, null);
     }
 
     /**
      * Sets the colour of a graph.
      *
-     * @param graphUri the graph URI
+     * @param graphName the graph URI
      * @param color the colour to use
      */
     @Override
-    public void setColor(String graphUri, String color) {
+    public void setColor(String graphName, String color) {
         beginChange();
-        colors.put(graphUri, color);
+        colors.put(graphName, color);
     }
 
     /**
      * Drops the colour of a graph that is deleted, so that it does not linger for a graph that
      * later takes over the URI.
      *
-     * @param graphUri the URI of the deleted graph
+     * @param graphName the URI of the deleted graph
      */
-    public void removeColor(String graphUri) {
-        if (!colors.containsKey(graphUri)) {
+    public void removeColor(String graphName) {
+        if (!colors.containsKey(graphName)) {
             return;
         }
         beginChange();
-        colors.remove(graphUri);
+        colors.remove(graphName);
     }
 
     /**
      * Moves the colour of a graph to its new URI.
      *
-     * @param oldGraphUri the URI the graph had
-     * @param newGraphUri the URI the graph now has
+     * @param oldGraphName the URI the graph had
+     * @param newGraphName the URI the graph now has
      */
-    public void renameGraph(String oldGraphUri, String newGraphUri) {
+    public void renameGraph(String oldGraphName, String newGraphName) {
         beginChange();
-        var color = colors.remove(oldGraphUri);
+        var color = colors.remove(oldGraphName);
         if (color != null) {
-            colors.put(newGraphUri, color);
+            colors.put(newGraphName, color);
         }
     }
 

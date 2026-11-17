@@ -101,7 +101,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         var diagramUUID = UUID.randomUUID();
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             ctx.getCustomDiagrams()
                     .put(diagramUUID, new CustomDiagram(diagramUUID, "custom", new ArrayList<>()));
             transaction.commit("created custom diagram");

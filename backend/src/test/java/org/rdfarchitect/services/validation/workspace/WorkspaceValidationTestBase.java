@@ -55,18 +55,18 @@ abstract class WorkspaceValidationTestBase {
 
     protected ValidationReportDTO validate(
             List<WorkspaceValidationRule> rules,
-            String scopeGraphUri,
+            String scopeGraphName,
             CIMProfileModel... profiles) {
         var service =
                 new WorkspaceValidationService(
                         mock(DatabasePort.class), mock(ListGraphsUseCase.class), rules);
-        return service.validate(List.of(profiles), scopeGraphUri);
+        return service.validate(List.of(profiles), scopeGraphName);
     }
 
     protected CIMProfileModel profile(String keyword, Model model) {
-        var graphUri = "http://example.org/graph/" + keyword;
+        var graphName = "http://example.org/graph/" + keyword;
         GraphUtils.enhanceWithUUIDs(model.getGraph());
-        return new CIMProfileModel(graphUri, null, keyword, new CIMModelFacade(graphUri, model));
+        return new CIMProfileModel(graphName, null, keyword, new CIMModelFacade(graphName, model));
     }
 
     protected List<ValidationIssueDTO> issues(

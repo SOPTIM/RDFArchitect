@@ -36,7 +36,7 @@ export const PASTE_PREVIEW_FAILED = Symbol("pastePreviewFailed");
 function sourcesOf(entries) {
     return entries.map(e => ({
         sourceDatasetName: e.workspaceName,
-        sourceGraphURI: e.graphURI,
+        sourceGraphName: e.graphName,
         classUUID: e.classUUID,
     }));
 }
@@ -46,7 +46,7 @@ function sourcesOf(entries) {
  * the chosen paste variant copies can make the paste incomplete, so only that decides. A preview
  * that fails reports PASTE_PREVIEW_FAILED and has already told the user that the paste failed.
  */
-export async function loadPastePreview(workspaceName, graphURI, options) {
+export async function loadPastePreview(workspaceName, graphName, options) {
     const entries = copyState.getEntries();
     const copiesAnything = PASTE_REFERENCE_KINDS.some(
         ({ option }) => options[option],
@@ -56,7 +56,7 @@ export async function loadPastePreview(workspaceName, graphURI, options) {
         const { data, error } = await previewPaste({
             path: {
                 targetDatasetName: workspaceName,
-                targetGraphURI: graphURI,
+                targetGraphName: graphName,
             },
             body: {
                 sources: sourcesOf(entries),
@@ -84,7 +84,7 @@ function reportPreviewFailure(reason) {
 
 export async function saveCopyClass(
     workspaceName,
-    graphURI,
+    graphName,
     targetPackageUUID,
     options,
 ) {
@@ -102,7 +102,7 @@ export async function saveCopyClass(
     try {
         const { data, error } = await classStore.saveCopyClass(
             workspaceName,
-            graphURI,
+            graphName,
             payload,
         );
         if (!error) {
@@ -110,8 +110,8 @@ export async function saveCopyClass(
             crossProfileStore.invalidateWorkspace(workspaceName);
             editorState.selectedWorkspace.updateValue(workspaceName);
             editorState.selectedClassWorkspace.updateValue(workspaceName);
-            editorState.selectedGraph.updateValue(graphURI);
-            editorState.selectedClassGraph.updateValue(graphURI);
+            editorState.selectedGraph.updateValue(graphName);
+            editorState.selectedClassGraph.updateValue(graphName);
             editorState.selectedDiagram.updateValue({
                 type: DiagramType.PACKAGE,
                 id: targetPackageUUID ?? "default",

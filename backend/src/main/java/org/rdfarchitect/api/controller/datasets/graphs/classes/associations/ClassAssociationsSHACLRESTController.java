@@ -45,7 +45,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/associations/{associationUUID}/shacl")
+        "api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/associations/{associationUUID}/shacl")
 @RequiredArgsConstructor
 public class ClassAssociationsSHACLRESTController {
 
@@ -76,20 +76,20 @@ public class ClassAssociationsSHACLRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @Parameter(description = "The uuid of the association.") @PathVariable
                     String associationUUID) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/{{}}/shacl\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 associationUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
 
         var shacl =
                 shaclGetShapeUseCase.getPropertyShapesForAssociation(
@@ -98,7 +98,7 @@ public class ClassAssociationsSHACLRESTController {
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/{{}}/shacl\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 associationUUID,
                 originURL);
@@ -123,7 +123,7 @@ public class ClassAssociationsSHACLRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @Parameter(description = "The uuid of the association.") @PathVariable
                     String associationUUID,
@@ -132,13 +132,13 @@ public class ClassAssociationsSHACLRESTController {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/{{}}/shacl\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 associationUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
 
         shaclUpdateUseCase.updatePropertyShacl(
                 graphIdentifier, UUID.fromString(associationUUID), shaclString);
@@ -146,7 +146,7 @@ public class ClassAssociationsSHACLRESTController {
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/{{}}/shacl\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 associationUUID,
                 originURL);

@@ -128,7 +128,7 @@ public class CIMUpdatesTestBase {
         var graph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.graphUri())
+                        .setGraphName(graphIdentifier.graphName())
                         .build()
                         .graph();
         createGraph(databasePort, graphIdentifier, graph);
@@ -158,7 +158,7 @@ public class CIMUpdatesTestBase {
             var ctx = transaction.graph(GRAPH_URI);
             var dataset =
                     SessionDataStore.wrapGraphInDataset(
-                            ctx.getRdfGraph(), graphIdentifier.graphUri());
+                            ctx.getRdfGraph(), graphIdentifier.graphName());
             UpdateExecutionFactory.create(update, dataset).execute();
             transaction.commit("test change");
         }
@@ -185,7 +185,7 @@ public class CIMUpdatesTestBase {
             var update = updateBuilder.apply(ctx.getRdfGraph());
             var dataset =
                     org.rdfarchitect.database.inmemory.SessionDataStore.wrapGraphInDataset(
-                            ctx.getRdfGraph(), graphIdentifier.graphUri());
+                            ctx.getRdfGraph(), graphIdentifier.graphName());
             org.apache.jena.update.UpdateExecutionFactory.create(update, dataset).execute();
             transaction.commit("test change");
         }
@@ -195,8 +195,8 @@ public class CIMUpdatesTestBase {
     private static void createGraph(DatabasePort port, GraphIdentifier id, Graph graph) {
         port.createWorkspaceIfAbsent(id.datasetName());
         try (var transaction = port.beginTransaction(id.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(id.graphUri(), graph);
-            transaction.commit("created graph %s".formatted(id.graphUri()));
+            transaction.createGraph(id.graphName(), graph);
+            transaction.commit("created graph %s".formatted(id.graphName()));
         }
     }
 }

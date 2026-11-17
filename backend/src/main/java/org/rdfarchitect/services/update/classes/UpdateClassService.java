@@ -97,7 +97,7 @@ public class UpdateClassService
     public void replaceClass(GraphIdentifier graphIdentifier, ClassUMLAdaptedDTO newClass) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var graph = ctx.getRdfGraph();
             var oldClassUri =
                     CIMResourceUtils.findResourceForUuid(graph, newClass.getUuid()).getURI();
@@ -152,7 +152,7 @@ public class UpdateClassService
         UUID newClassUUID;
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var graph = ctx.getRdfGraph();
             var newClass = constructClass(cimPackage, classURIPrefix, className);
             assertNoPackageWithSameIri(graph, newClass);
@@ -206,7 +206,7 @@ public class UpdateClassService
     public void deleteClass(GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var classResource = CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), classUUID);
             var classLabel = CIMResourceUtils.findLabelForResource(classResource);
             CIMUpdates.deleteClass(

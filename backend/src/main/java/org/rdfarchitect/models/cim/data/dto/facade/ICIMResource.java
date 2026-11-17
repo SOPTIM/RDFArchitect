@@ -27,7 +27,7 @@ public interface ICIMResource {
 
     UUID getUuid();
 
-    String getGraphUri();
+    String getGraphName();
 
     URI getUri();
 

@@ -39,18 +39,18 @@ public class CIMAttribute extends CIMResource implements ICIMAttribute {
     private static final Property LITERAL_WRAPPER_PROPERTY =
             ResourceFactory.createProperty(RDFS.Literal.getURI());
 
-    public CIMAttribute(String graphUri, Model model, UUID uuid) {
-        super(graphUri, model, uuid);
+    public CIMAttribute(String graphName, Model model, UUID uuid) {
+        super(graphName, model, uuid);
     }
 
-    public CIMAttribute(String graphUri, Model model, Resource resource) {
-        super(graphUri, model, resource);
+    public CIMAttribute(String graphName, Model model, Resource resource) {
+        super(graphName, model, resource);
     }
 
     @Override
     public ICIMClass getDomain() {
         var domain = getRequiredUniqueJenaProperty(RDFS.domain);
-        return CIMClass.fromResource(getGraphUri(), getModel(), domain);
+        return CIMClass.fromResource(getGraphName(), getModel(), domain);
     }
 
     @Override
@@ -75,7 +75,7 @@ public class CIMAttribute extends CIMResource implements ICIMAttribute {
                             + getUuid()
                             + ".");
         }
-        return CIMClass.fromResource(getGraphUri(), getModel(), dataType);
+        return CIMClass.fromResource(getGraphName(), getModel(), dataType);
     }
 
     @Override

@@ -39,7 +39,7 @@ export function associationEditTarget(edge) {
     }
     return {
         classUuid: ownerClassIdOf(edge, label),
-        graphUri: edge.data?.graphUri ?? null,
+        graphName: edge.data?.graphName ?? null,
         kind: PropertyKind.ASSOCIATION,
         propertyUuid: label.associationEndUUID,
         focus: FocusField.LABEL,

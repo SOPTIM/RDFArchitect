@@ -178,7 +178,7 @@ function collectBySchema(sortedIssues) {
         for (const occurrence of occurrences) {
             addToGroup(
                 groups,
-                occurrence.graphUri ?? NO_KEY,
+                occurrence.graphName ?? NO_KEY,
                 schemaLabelOf(occurrence),
                 issue,
             );
@@ -191,7 +191,7 @@ function schemaLabelOf(occurrence) {
     if (occurrence.keyword) {
         return occurrence.keyword;
     }
-    const uri = occurrence.graphUri ?? "";
+    const uri = occurrence.graphName ?? "";
     return uri.substring(
         Math.max(uri.lastIndexOf("#"), uri.lastIndexOf("/")) + 1,
     );

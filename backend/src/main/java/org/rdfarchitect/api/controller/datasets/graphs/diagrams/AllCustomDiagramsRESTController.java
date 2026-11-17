@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/diagrams")
+@RequestMapping("/api/datasets/{datasetName}/graphs/{graphName}/diagrams")
 @RequiredArgsConstructor
 public class AllCustomDiagramsRESTController {
 
@@ -84,23 +84,23 @@ public class AllCustomDiagramsRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphName) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams\" from \"{}\"",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
 
         var result =
                 getCustomDiagramsUseCase.getCustomDiagramsForGraph(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+                        new GraphIdentifier(datasetName, extendedGraphName));
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams\" from \"{}\"",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return result;
     }

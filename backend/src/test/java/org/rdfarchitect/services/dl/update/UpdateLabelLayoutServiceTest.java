@@ -262,7 +262,7 @@ class UpdateLabelLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var graph = ctx.getRdfGraph();
 
             graph.add(classA, RDF.type.asNode(), RDFS.Class.asNode());

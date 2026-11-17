@@ -40,7 +40,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/validate/{cgmesVersion}")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/validate/{cgmesVersion}")
 @RequiredArgsConstructor
 public class SchemaValidationRESTController {
 
@@ -80,23 +80,23 @@ public class SchemaValidationRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @PathVariable CGMESVersion cgmesVersion) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/validation\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
         var report =
                 schemaValidationUseCase.validateSchema(
-                        new GraphIdentifier(datasetName, extendedGraphURI), cgmesVersion);
+                        new GraphIdentifier(datasetName, extendedGraphName), cgmesVersion);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/validation\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return report;
     }

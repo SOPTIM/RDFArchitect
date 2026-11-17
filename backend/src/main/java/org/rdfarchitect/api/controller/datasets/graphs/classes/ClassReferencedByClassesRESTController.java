@@ -39,7 +39,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/referencedByClasses")
+        "api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/referencedByClasses")
 @RequiredArgsConstructor
 public class ClassReferencedByClassesRESTController {
 
@@ -68,17 +68,17 @@ public class ClassReferencedByClassesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/referencedByClasses\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
 
         var classesReferencingThisClass =
                 getClassesReferencingThisClassUseCase.getClassesReferencingThisClass(
@@ -87,7 +87,7 @@ public class ClassReferencedByClassesRESTController {
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/referencedByClasses\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 originURL);
         return classesReferencingThisClass;

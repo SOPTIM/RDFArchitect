@@ -140,7 +140,7 @@
                     graphNavEntry={classGraphNavEntry}
                     classNavEntry={cls}
                     diagramId={diagram.diagramId}
-                    diagramGraphUri={graphNavEntry?.id}
+                    diagramGraphName={graphNavEntry?.id}
                     {classType}
                     {diagramType}
                     {rangeSiblings}
@@ -156,7 +156,7 @@
     <CustomGraphDiagramDialog
         bind:showDialog={showEditDiagramDialog}
         lockedWorkspaceName={workspaceNavEntry.id}
-        lockedGraphUri={graphNavEntry.id}
+        lockedGraphName={graphNavEntry.id}
         diagramName={diagram.name}
         diagramId={diagram.diagramId}
         selectedClasses={diagram.classes}
@@ -174,6 +174,6 @@
 <CustomDiagramDeleteDialog
     bind:showDialog={showDeleteDiagramDialog}
     workspaceName={workspaceNavEntry.id}
-    graphUri={graphNavEntry ? graphNavEntry.id : null}
+    graphName={graphNavEntry ? graphNavEntry.id : null}
     {diagram}
 />

@@ -188,12 +188,13 @@ public class SessionDataStoreImpl implements SessionDataStore {
     @Override
     public boolean containsGraph(GraphIdentifier graphIdentifier) {
         var workspace = findWorkspace(graphIdentifier.datasetName());
-        return workspace != null && workspace.listGraphUris().contains(graphIdentifier.graphUri());
+        return workspace != null
+                && workspace.listGraphNames().contains(graphIdentifier.graphName());
     }
 
     @Override
-    public List<String> listGraphUris(String datasetName) {
-        return workspace(datasetName).listGraphUris();
+    public List<String> listGraphNames(String datasetName) {
+        return workspace(datasetName).listGraphNames();
     }
 
     @Override
@@ -208,13 +209,13 @@ public class SessionDataStoreImpl implements SessionDataStore {
     public void writeToDatabase(
             DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier) {
         final String datasetName = graphIdentifier.datasetName();
-        final String graphUri = graphIdentifier.graphUri();
+        final String graphName = graphIdentifier.graphName();
         assertThatGraphExists(graphIdentifier);
         try (var transaction = beginTransaction(datasetName, ReadWrite.READ)) {
             var graphSource =
                     new GraphSourceBuilderImpl()
-                            .setGraph(transaction.graph(graphUri).getRdfGraph())
-                            .setGraphName(graphUri)
+                            .setGraph(transaction.graph(graphName).getRdfGraph())
+                            .setGraphName(graphName)
                             .build();
             databaseConnection.insertGraph(graphSource, datasetName);
         }
@@ -291,9 +292,9 @@ public class SessionDataStoreImpl implements SessionDataStore {
         dataset.setDefaultModel(ModelFactory.createModelForGraph(graph));
         // named
         while (queryResultSet.hasNext()) {
-            var graphURI = queryResultSet.next().get(graphVar).asNode();
-            graph = fetchGraph(databaseConnection, datasetName, graphURI.getURI());
-            dataset.addNamedModel(graphURI.getURI(), ModelFactory.createModelForGraph(graph));
+            var graphName = queryResultSet.next().get(graphVar).asNode();
+            graph = fetchGraph(databaseConnection, datasetName, graphName.getURI());
+            dataset.addNamedModel(graphName.getURI(), ModelFactory.createModelForGraph(graph));
         }
         return dataset;
     }
@@ -303,14 +304,14 @@ public class SessionDataStoreImpl implements SessionDataStore {
      *
      * @param databaseConnection The connection to the external Database.
      * @param datasetName The name of the dataset.
-     * @param graphUri The graphUri.
+     * @param graphName The graphName.
      * @return fetched {@link Graph}
      */
     private Graph fetchGraph(
-            DatabaseConnection databaseConnection, String datasetName, String graphUri) {
+            DatabaseConnection databaseConnection, String datasetName, String graphName) {
         var query =
                 new CIMBaseQueryBuilder()
-                        .setGraph(graphUri)
+                        .setGraph(graphName)
                         .build()
                         .addVar("?sub")
                         .addVar("?pre")
@@ -365,10 +366,10 @@ public class SessionDataStoreImpl implements SessionDataStore {
      */
     private void assertThatGraphExists(GraphIdentifier graphIdentifier) {
         final String datasetName = graphIdentifier.datasetName();
-        final String graphUri = graphIdentifier.graphUri();
-        if (!workspace(datasetName).listGraphUris().contains(graphUri)) {
+        final String graphName = graphIdentifier.graphName();
+        if (!workspace(datasetName).listGraphNames().contains(graphName)) {
             throw new ResourceNotFoundException(
-                    "Graph " + graphUri + " does not exist in workspace " + datasetName);
+                    "Graph " + graphName + " does not exist in workspace " + datasetName);
         }
     }
 }

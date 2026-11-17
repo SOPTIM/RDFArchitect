@@ -331,13 +331,13 @@ class QueryDatasetServiceTest {
         return graphs.getFirst();
     }
 
-    private static String labelOf(List<GraphDTO> graphs, String graphUri) {
-        return graphOf(graphs, graphUri).getLabel();
+    private static String labelOf(List<GraphDTO> graphs, String graphName) {
+        return graphOf(graphs, graphName).getLabel();
     }
 
-    private static GraphDTO graphOf(List<GraphDTO> graphs, String graphUri) {
+    private static GraphDTO graphOf(List<GraphDTO> graphs, String graphName) {
         return graphs.stream()
-                .filter(graph -> graph.getUri().toString().equals(graphUri))
+                .filter(graph -> graph.getUri().toString().equals(graphName))
                 .findFirst()
                 .orElseThrow();
     }
@@ -347,12 +347,12 @@ class QueryDatasetServiceTest {
      * assigns the {@code rdfa:uuid} the class editor navigates by. Creating the graph without one
      * leaves every resource without an id.
      */
-    private void createGraph(String graphUri, String turtle) {
+    private void createGraph(String graphName, String turtle) {
         var graph = GraphFactory.createDefaultGraph();
         RDFParser.create().source(new StringReader(turtle)).lang(Lang.TURTLE).parse(graph);
         databasePort.createWorkspaceIfAbsent(DATASET);
         try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.WRITE)) {
-            transaction.createGraph(graphUri, graph);
+            transaction.createGraph(graphName, graph);
             transaction.commit("import");
         }
     }

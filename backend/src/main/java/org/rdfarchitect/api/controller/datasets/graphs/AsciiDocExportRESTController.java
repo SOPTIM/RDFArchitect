@@ -44,7 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/asciidocexport/{fileEnding}")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/asciidocexport/{fileEnding}")
 @RequiredArgsConstructor
 public class AsciiDocExportRESTController {
 
@@ -81,7 +81,7 @@ public class AsciiDocExportRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The file ending of the diagram files.") @PathVariable
                     String fileEnding,
             @Parameter(
@@ -92,20 +92,20 @@ public class AsciiDocExportRESTController {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/asciidocexport\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
 
         var output =
                 exportGraphAsciiDocUseCase.exportGraphAsAsciiDoc(
-                        new GraphIdentifier(datasetName, extendedGraphURI),
+                        new GraphIdentifier(datasetName, extendedGraphName),
                         fileEnding,
                         embedDiagrams);
 
         var fileName = "default";
-        if (!extendedGraphURI.equals("default")) {
-            fileName = new URI(extendedGraphURI).getSuffix();
+        if (!extendedGraphName.equals("default")) {
+            fileName = new URI(extendedGraphName).getSuffix();
         }
         fileName += ".adoc";
 
@@ -121,7 +121,7 @@ public class AsciiDocExportRESTController {
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/asciidocexport\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return body;
     }

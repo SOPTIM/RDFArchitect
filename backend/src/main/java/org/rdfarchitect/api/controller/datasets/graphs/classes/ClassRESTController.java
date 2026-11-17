@@ -48,7 +48,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}")
+@RequestMapping("/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}")
 @RequiredArgsConstructor
 public class ClassRESTController {
 
@@ -86,7 +86,7 @@ public class ClassRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @Parameter(
                             description =
@@ -97,12 +97,12 @@ public class ClassRESTController {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
 
         var classObject =
                 getClassInformationUseCase.getClassInformation(
@@ -111,7 +111,7 @@ public class ClassRESTController {
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 originURL);
         return classObject;
@@ -136,7 +136,7 @@ public class ClassRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
@@ -152,19 +152,19 @@ public class ClassRESTController {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
 
         replaceClassUseCase.replaceClass(graphIdentifier, newClass);
 
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 originURL);
         return Response.SUCCESS;
@@ -189,23 +189,23 @@ public class ClassRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
         logger.info(
                 "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 originURL);
 
-        var graphIdentifier = new GraphIdentifier(datasetName, graphURI);
+        var graphIdentifier = new GraphIdentifier(datasetName, graphName);
 
         deleteClassUseCase.deleteClass(graphIdentifier, UUID.fromString(classUUID));
 
         logger.info(
                 "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 originURL);
         return Response.SUCCESS;

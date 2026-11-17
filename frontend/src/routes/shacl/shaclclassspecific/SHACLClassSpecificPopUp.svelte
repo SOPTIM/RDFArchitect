@@ -26,7 +26,7 @@
 
     let {
         workspaceName,
-        graphUri,
+        graphName,
         reactiveClass,
         showDialog = $bindable(),
     } = $props();
@@ -61,7 +61,7 @@
             const { data, error } = await getShaclRelatedToClass({
                 path: {
                     datasetName: workspaceName,
-                    graphURI: graphUri,
+                    graphName: graphName,
                     classUUID: reactiveClass.uuid.value,
                 },
             });
@@ -81,7 +81,7 @@
 
     function goToClass(classUUID) {
         editorState.selectedClassWorkspace.updateValue(workspaceName);
-        editorState.selectedClassGraph.updateValue(graphUri);
+        editorState.selectedClassGraph.updateValue(graphName);
         editorState.selectedClass.updateValue({
             type: ClassType.SINGLE_CLASS,
             id: classUUID,

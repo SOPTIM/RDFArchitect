@@ -48,7 +48,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/classes")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/classes")
 @RequiredArgsConstructor
 public class AllClassesRESTController {
 
@@ -94,7 +94,7 @@ public class AllClassesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description =
@@ -104,13 +104,13 @@ public class AllClassesRESTController {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
         var extendedClassURIPrefix =
                 expandURIUseCase.expandUri(datasetName, addNewClassRequest.classURIPrefix);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
 
         var classUUID =
                 addClassUseCase.addClass(
@@ -123,7 +123,7 @@ public class AllClassesRESTController {
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
         return classUUID.toString();
@@ -162,26 +162,27 @@ public class AllClassesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "Whether to include external classes.")
                     @RequestParam(required = false, defaultValue = "false")
                     boolean includeExternalClasses) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
 
         var cimClassList =
                 getClassListUseCase.getClassList(
-                        new GraphIdentifier(datasetName, extendedGraphURI), includeExternalClasses);
+                        new GraphIdentifier(datasetName, extendedGraphName),
+                        includeExternalClasses);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return cimClassList;
     }

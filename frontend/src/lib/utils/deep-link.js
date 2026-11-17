@@ -39,7 +39,7 @@ export const TermType = {
 /**
  * @typedef {object} DeepLinkTarget
  * @property {string} datasetName
- * @property {string} graphUri
+ * @property {string} graphName
  * @property {string | null} packageUUID
  * @property {string} classUUID the class to open — for a property, the class that declares it
  * @property {string | null} propertyUUID the attribute/association/enum entry to focus, if any
@@ -82,27 +82,27 @@ export async function resolveTermTarget({ dataset, graph, ref }) {
  * graph is probed until the class is found.
  *
  * @param {{dataset: string | null, graph: string | null, classRef: string}} params
- * @returns {Promise<{datasetName: string, graphUri: string, packageUUID: string | null, classUUID: string} | null>}
+ * @returns {Promise<{datasetName: string, graphName: string, packageUUID: string | null, classUUID: string} | null>}
  */
 export async function resolveClassTarget({ dataset, graph, classRef }) {
     const candidates =
         dataset && graph
             ? [[dataset, graph]]
             : await listGraphPairs(dataset, graph);
-    for (const [datasetName, graphUri] of candidates) {
+    for (const [datasetName, graphName] of candidates) {
         const classUUID = validate(classRef)
             ? classRef
-            : await tryResolveIri(datasetName, graphUri, classRef);
+            : await tryResolveIri(datasetName, graphName, classRef);
         if (!classUUID) {
             continue;
         }
-        const info = await tryGetClassInfo(datasetName, graphUri, classUUID);
+        const info = await tryGetClassInfo(datasetName, graphName, classUUID);
         if (!info) {
             continue;
         }
         return {
             datasetName,
-            graphUri,
+            graphName,
             packageUUID: info.package?.uuid ?? null,
             classUUID,
         };
@@ -122,7 +122,7 @@ async function resolvePropertyTarget({ dataset, graph, iri }) {
     for (const query of searchQueriesFor(iri)) {
         const results = await trySearch(query, {
             datasetName: dataset,
-            graphUri: graph,
+            graphName: graph,
             packageUUID: null,
         });
         const hit = results.find(
@@ -131,7 +131,7 @@ async function resolvePropertyTarget({ dataset, graph, iri }) {
         if (hit) {
             return {
                 datasetName: hit.datasetName,
-                graphUri: graphUriOf(hit.graphUri),
+                graphName: graphNameOf(hit.graphName),
                 packageUUID: hit.packageUUID ?? null,
                 classUUID: hit.parentClassUUID,
                 propertyUUID: hit.uuid ?? null,
@@ -168,7 +168,7 @@ function sameIri(uri, iri) {
         return false;
     }
     try {
-        return graphUriOf(uri) === iri;
+        return graphNameOf(uri) === iri;
     } catch {
         return false;
     }
@@ -193,11 +193,11 @@ async function listGraphPairs(datasetFilter, graphFilter) {
             continue;
         }
         for (const graph of graphs) {
-            const graphUri = graphUriOf(graph.uri);
-            if (graphFilter && graphUri !== graphFilter) {
+            const graphName = graphNameOf(graph.uri);
+            if (graphFilter && graphName !== graphFilter) {
                 continue;
             }
-            pairs.push([datasetName, graphUri]);
+            pairs.push([datasetName, graphName]);
         }
     }
     return pairs;
@@ -210,13 +210,13 @@ async function listGraphPairs(datasetFilter, graphFilter) {
  * @param {string | {prefix: string | null, suffix: string}} graph
  * @returns {string} the full graph IRI
  */
-function graphUriOf(graph) {
+function graphNameOf(graph) {
     return typeof graph === "string" ? graph : new URI(graph).toString();
 }
 
-async function tryResolveIri(datasetName, graphUri, iri) {
+async function tryResolveIri(datasetName, graphName, iri) {
     const { data, error } = await resolveIri({
-        path: { datasetName, graphURI: graphUri, iriIdentifier: iri },
+        path: { datasetName, graphName: graphName, iriIdentifier: iri },
     });
     if (error || !data) {
         return null;
@@ -234,9 +234,9 @@ async function tryResolveIri(datasetName, graphUri, iri) {
  * and hands back the undrained body, which is truthy. Only a payload that identifies itself with a
  * uuid is therefore a class; anything else lets the caller go on and look for a property.
  */
-async function tryGetClassInfo(datasetName, graphUri, classUUID) {
+async function tryGetClassInfo(datasetName, graphName, classUUID) {
     const { data, error } = await getClassInformation({
-        path: { datasetName, graphURI: graphUri, classUUID },
+        path: { datasetName, graphName: graphName, classUUID },
     });
     return error || !data?.uuid ? null : data;
 }

@@ -60,7 +60,7 @@
             let { data, error } = await getGeneratedShaclasString({
                 path: {
                     datasetName: editorState.selectedWorkspace.getValue(),
-                    graphURI: editorState.selectedGraph.getValue(),
+                    graphName: editorState.selectedGraph.getValue(),
                 },
             });
 
@@ -83,7 +83,7 @@
             let { data, error } = await getCustomShaclasString({
                 path: {
                     datasetName: editorState.selectedWorkspace.getValue(),
-                    graphURI: editorState.selectedGraph.getValue(),
+                    graphName: editorState.selectedGraph.getValue(),
                 },
             });
 
@@ -105,7 +105,7 @@
             let { error } = await replaceGraphWithGraphString({
                 path: {
                     datasetName: editorState.selectedWorkspace.getValue(),
-                    graphURI: editorState.selectedGraph.getValue(),
+                    graphName: editorState.selectedGraph.getValue(),
                 },
                 body: customSHACL ? customSHACL : " ",
             });

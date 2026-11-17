@@ -93,8 +93,8 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
-    public List<String> listGraphUris(String datasetName) {
-        return database.listGraphUris(datasetName);
+    public List<String> listGraphNames(String datasetName) {
+        return database.listGraphNames(datasetName);
     }
 
     @Override

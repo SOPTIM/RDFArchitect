@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/ontology/generate")
+@RequestMapping("/api/datasets/{datasetName}/graphs/{graphName}/ontology/generate")
 @RequiredArgsConstructor
 public class OntologyGenerateEntriesRESTController {
 
@@ -84,15 +84,15 @@ public class OntologyGenerateEntriesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphName) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/ontology/generate\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
 
         var ontologyEntries =
                 generateOntologyEntriesUseCase.generateOntologyEntries(graphIdentifier);
@@ -100,7 +100,7 @@ public class OntologyGenerateEntriesRESTController {
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/ontology/generate\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return ontologyEntries;
     }

@@ -37,7 +37,7 @@
     let {
         showDialog = $bindable(),
         workspace,
-        graphUri,
+        graphName,
         namespaces,
         ontology = $bindable(),
         readonly,
@@ -126,7 +126,7 @@
     async function save() {
         loadingOntology = true;
         try {
-            await saveOntology(workspace, graphUri, ontologyObject);
+            await saveOntology(workspace, graphName, ontologyObject);
             const ontology = await getOntology();
             if (ontology) {
                 ontologyObject = new ReactiveOntology(
@@ -137,7 +137,7 @@
                 );
             }
             ontologyObject.save();
-            ontologyStore.invalidateGraph(workspace, graphUri);
+            ontologyStore.invalidateGraph(workspace, graphName);
             // The header names the schema in the navigation, and the tree reads that name from
             // the graph list rather than from here — so the tree has to be rebuilt whoever
             // opened this dialog. onSubmit is the caller's own refresh on top of that.
@@ -159,24 +159,24 @@
     }
 
     async function getOntology() {
-        if (!graphUri) {
+        if (!graphName) {
             return null;
         }
-        return await ontologyStore.getOntologyForGraph(workspace, graphUri);
+        return await ontologyStore.getOntologyForGraph(workspace, graphName);
     }
 
-    async function saveOntology(workspaceName, graphUri, ontologyObject) {
+    async function saveOntology(workspaceName, graphName, ontologyObject) {
         const serializable = ontologyObject.getPlainObject();
         if (ontologyObject.uuid.value) {
             await ontologyStore.replaceOntology(
                 workspaceName,
-                graphUri,
+                graphName,
                 serializable,
             );
         } else {
             await ontologyStore.createOntology(
                 workspaceName,
-                graphUri,
+                graphName,
                 serializable,
             );
         }
@@ -342,5 +342,5 @@
     scrollToBottom={scrollEntriesToBottom}
     {namespaces}
     {workspace}
-    {graphUri}
+    {graphName}
 />

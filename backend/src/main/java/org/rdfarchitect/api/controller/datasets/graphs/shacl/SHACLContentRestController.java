@@ -45,7 +45,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/combined")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/shacl/combined")
 @RequiredArgsConstructor
 public class SHACLContentRestController {
 
@@ -87,36 +87,36 @@ public class SHACLContentRestController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphName) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/file\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
         var format = getRdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 shaclExportUseCase.exportCombinedSHACLGraph(
-                        new GraphIdentifier(datasetName, extendedGraphURI), format);
-        var body = buildResponseEntity(extendedGraphURI, format, outStream);
+                        new GraphIdentifier(datasetName, extendedGraphName), format);
+        var body = buildResponseEntity(extendedGraphName, format, outStream);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/file\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return body;
     }
 
     private ResponseEntity<byte[]> buildResponseEntity(
-            String extendedGraphURI, RDFFormat format, ByteArrayOutputStream outStream) {
+            String extendedGraphName, RDFFormat format, ByteArrayOutputStream outStream) {
         // add suggested file name to response
         var fileName = "shacl";
-        if (!extendedGraphURI.equals("default")) {
-            fileName = new URI(extendedGraphURI + "-shacl").getSuffix();
+        if (!extendedGraphName.equals("default")) {
+            fileName = new URI(extendedGraphName + "-shacl").getSuffix();
         }
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 

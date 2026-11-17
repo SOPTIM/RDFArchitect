@@ -27,14 +27,14 @@
     import { graphStore } from "$lib/stores/graphStore.ts";
     import {
         graphLabeller,
-        graphUri as uriOf,
+        graphName as uriOf,
     } from "$lib/utils/graph-label.js";
     import { toLocalName, uriSuffix } from "$lib/utils/iri.js";
 
     let {
         showDialog = $bindable(),
         workspaceName,
-        graphUri,
+        graphName,
         onEditHeader,
     } = $props();
 
@@ -50,7 +50,7 @@
     let nameUserInput = $state("");
     let initialName = $state("");
     let namespace = $state(defaultNamespace);
-    let otherGraphUris = $state([]);
+    let otherGraphNames = $state([]);
     /** What the profile calls itself, if it does. Empty for a graph with no header to read. */
     let profileName = $state("");
     /**
@@ -63,9 +63,9 @@
 
     const trimmedName = $derived(nameUserInput.trim());
     const localName = $derived(toLocalName(trimmedName));
-    const resolvedGraphUri = $derived(localName ? namespace + localName : "");
+    const resolvedGraphName = $derived(localName ? namespace + localName : "");
     const graphExists = $derived(
-        !!resolvedGraphUri && otherGraphUris.includes(resolvedGraphUri),
+        !!resolvedGraphName && otherGraphNames.includes(resolvedGraphName),
     );
     /**
      * A rename is a change of the graph URI, and the URI is built from the name rather than being
@@ -73,28 +73,28 @@
      * success for a request the backend turns into nothing.
      */
     const uriChanged = $derived(
-        !!resolvedGraphUri && resolvedGraphUri !== graphUri,
+        !!resolvedGraphName && resolvedGraphName !== graphName,
     );
     const disableSubmit = $derived(
-        !resolvedGraphUri || graphExists || !uriChanged,
+        !resolvedGraphName || graphExists || !uriChanged,
     );
     /** Shown where the typed name cannot stand in a URI as written. */
     const spelledAs = $derived(localName !== trimmedName ? localName : "");
 
     async function onOpen() {
-        const uri = graphUri ? new URI(graphUri) : null;
+        const uri = graphName ? new URI(graphName) : null;
         namespace = uri?.prefix || defaultNamespace;
         initialName = uri?.suffix ?? "";
         nameUserInput = initialName;
 
         const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
         const nameOf = graphLabeller(graphs);
-        const current = graphs.find(graph => uriOf(graph) === graphUri);
+        const current = graphs.find(graph => uriOf(graph) === graphName);
         // Named among the other schemas, not on its own: the schemas this dialog has to tell
         // apart are exactly the ones whose profiles name themselves alike.
         profileName = current?.label || current?.keyword ? nameOf(current) : "";
         headerTarget = headerTargetOf(current);
-        otherGraphUris = graphs.map(uriOf).filter(uri => uri !== graphUri);
+        otherGraphNames = graphs.map(uriOf).filter(uri => uri !== graphName);
     }
 
     function headerTargetOf(graph) {
@@ -115,7 +115,7 @@
         nameUserInput = "";
         initialName = "";
         namespace = defaultNamespace;
-        otherGraphUris = [];
+        otherGraphNames = [];
         profileName = "";
         headerTarget = null;
     }
@@ -129,17 +129,17 @@
     }
 
     async function renameGraph() {
-        const oldGraphUri = graphUri;
-        const newGraphUri = resolvedGraphUri;
+        const oldGraphName = graphName;
+        const newGraphName = resolvedGraphName;
 
         const { error } = await graphStore.renameGraph(
             workspaceName,
-            oldGraphUri,
-            newGraphUri,
+            oldGraphName,
+            newGraphName,
         );
         if (error) return;
 
-        editorState.renameGraph(workspaceName, oldGraphUri, newGraphUri);
+        editorState.renameGraph(workspaceName, oldGraphName, newGraphName);
         forceReloadTrigger.trigger();
     }
 </script>

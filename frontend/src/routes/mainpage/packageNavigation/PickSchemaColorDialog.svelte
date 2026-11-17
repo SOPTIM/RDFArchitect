@@ -23,7 +23,7 @@
     let {
         showDialog = $bindable(),
         workspaceName,
-        graphUri,
+        graphName,
         graphLabel,
     } = $props();
 
@@ -33,12 +33,12 @@
     const hasChanges = $derived(color !== originalColor);
 
     function onOpen() {
-        color = graphColors.get(workspaceName, graphUri) ?? "#000000";
+        color = graphColors.get(workspaceName, graphName) ?? "#000000";
         originalColor = color;
     }
 
     async function saveColor() {
-        const saved = await graphColors.set(workspaceName, graphUri, color);
+        const saved = await graphColors.set(workspaceName, graphName, color);
         if (saved) {
             originalColor = color;
         }
@@ -69,8 +69,8 @@
     isValid={true}
 >
     <div class="mx-2 flex flex-col gap-3 py-2">
-        <p class="text-muted-foreground truncate text-xs" title={graphUri}>
-            {graphLabel ?? graphUri}
+        <p class="text-muted-foreground truncate text-xs" title={graphName}>
+            {graphLabel ?? graphName}
         </p>
 
         <div class="flex items-center gap-3">

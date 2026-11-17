@@ -30,7 +30,7 @@
         editorState.selectedClassWorkspace.getValue() ??
             editorState.selectedWorkspace.getValue(),
     );
-    let classGraphUri = $derived(
+    let classGraphName = $derived(
         editorState.selectedClassGraph.getValue() ??
             editorState.selectedGraph.getValue(),
     );
@@ -115,7 +115,7 @@
             {#if isClassSelected}
                 <ClassEditorHost
                     workspaceName={classWorkspaceName}
-                    graphUri={classGraphUri}
+                    graphName={classGraphName}
                     classUuid={editorState.selectedClass.getProperty("id")}
                     isMerged={isMergedClass}
                 />

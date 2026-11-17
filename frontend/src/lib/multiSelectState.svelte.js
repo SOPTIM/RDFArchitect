@@ -19,7 +19,7 @@ import { StateValuePair } from "./statePrimitives.svelte.js";
 
 /** Stable identity key for a selection entry (workspace + graph + class uuid). */
 function entryKey(entry) {
-    return `${entry.workspaceName}::${entry.graphUri}::${entry.classUuid}`;
+    return `${entry.workspaceName}::${entry.graphName}::${entry.classUuid}`;
 }
 
 /** Unions two selection-entry lists, keeping order and de-duplicating by key. */
@@ -72,8 +72,8 @@ export class MultiSelectState {
         return this.selectedClasses.subscribe();
     }
 
-    isSelected(workspaceName, graphUri, classUuid) {
-        const key = entryKey({ workspaceName, graphUri, classUuid });
+    isSelected(workspaceName, graphName, classUuid) {
+        const key = entryKey({ workspaceName, graphName, classUuid });
         return this.#selectedKeys().has(key);
     }
 
@@ -109,17 +109,17 @@ export class MultiSelectState {
         return list.every(
             e =>
                 e.workspaceName === first.workspaceName &&
-                e.graphUri === first.graphUri,
+                e.graphName === first.graphName,
         );
     }
 
     /**
-     * The selection mapped to copyState's `{ classUUID, graphURI, workspaceName }` shape.
+     * The selection mapped to copyState's `{ classUUID, graphName, workspaceName }` shape.
      */
     toCopyEntries() {
         return this.getSelected().map(e => ({
             classUUID: e.classUuid,
-            graphURI: e.graphUri,
+            graphName: e.graphName,
             workspaceName: e.workspaceName,
         }));
     }

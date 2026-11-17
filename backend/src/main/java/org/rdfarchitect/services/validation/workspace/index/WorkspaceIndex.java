@@ -43,22 +43,22 @@ public class WorkspaceIndex {
 
     private final List<ReadFailure> readFailures = new ArrayList<>();
 
-    private final String scopeGraphUri;
+    private final String scopeGraphName;
 
-    private WorkspaceIndex(String scopeGraphUri) {
-        this.scopeGraphUri = scopeGraphUri;
+    private WorkspaceIndex(String scopeGraphName) {
+        this.scopeGraphName = scopeGraphName;
     }
 
     /**
      * Reads every schema once and indexes its classes, attributes, associations and enum entries by
      * URI. What cannot be read ends up in {@link #readFailures()} instead of failing the run.
      *
-     * @param scopeGraphUri the schema the run is about, which narrows the shared views to the URIs
+     * @param scopeGraphName the schema the run is about, which narrows the shared views to the URIs
      *     that schema takes part in, or null for the whole workspace
      * @return the index over all schemas
      */
-    public static WorkspaceIndex of(List<CIMProfileModel> profiles, String scopeGraphUri) {
-        var index = new WorkspaceIndex(scopeGraphUri);
+    public static WorkspaceIndex of(List<CIMProfileModel> profiles, String scopeGraphName) {
+        var index = new WorkspaceIndex(scopeGraphName);
         profiles.forEach(index::addProfile);
         return index;
     }
@@ -180,17 +180,17 @@ public class WorkspaceIndex {
      */
     private static boolean isInSeveralSchemas(List<? extends Occurrence<?>> occurrences) {
         return occurrences.stream()
-                        .map(occurrence -> occurrence.profile().graphUri())
+                        .map(occurrence -> occurrence.profile().graphName())
                         .distinct()
                         .count()
                 > 1;
     }
 
     private boolean isInScope(List<? extends Occurrence<?>> occurrences) {
-        return scopeGraphUri == null
+        return scopeGraphName == null
                 || occurrences.stream()
                         .anyMatch(
                                 occurrence ->
-                                        scopeGraphUri.equals(occurrence.profile().graphUri()));
+                                        scopeGraphName.equals(occurrence.profile().graphName()));
     }
 }

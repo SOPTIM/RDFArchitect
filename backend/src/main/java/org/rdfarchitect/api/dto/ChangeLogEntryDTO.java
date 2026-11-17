@@ -34,22 +34,22 @@ public class ChangeLogEntryDTO {
     private List<String> removedOnUndo;
 
     /** The graphs this change touched, so the editor can offer to go where it landed. */
-    private List<String> affectedGraphUris;
+    private List<String> affectedGraphNames;
 
     /**
      * The graphs a restore held to one graph would take this change back in. Narrower than {@link
-     * #getAffectedGraphUris()}: creating, deleting and renaming a graph is recorded against the set
-     * of graphs, which a restore held to a graph leaves alone, so a question about such a restore
-     * must not promise to undo it.
+     * #getAffectedGraphNames()}: creating, deleting and renaming a graph is recorded against the
+     * set of graphs, which a restore held to a graph leaves alone, so a question about such a
+     * restore must not promise to undo it.
      */
-    private List<String> restorableGraphUris;
+    private List<String> restorableGraphNames;
 
     /**
      * The graphs a restore held to one graph can take back to this version: those that already
      * existed right after it, under the URIs they have now. A graph created since has nothing to go
      * back to, so a restore held to it can only cover the whole workspace.
      */
-    private List<String> restoreTargetGraphUris;
+    private List<String> restoreTargetGraphNames;
 
     /**
      * Whether an undo has stepped over this change, so that it lies ahead of the workspace rather

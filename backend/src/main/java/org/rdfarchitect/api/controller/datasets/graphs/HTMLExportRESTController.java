@@ -44,7 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/htmlexport/{fileEnding}")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/htmlexport/{fileEnding}")
 @RequiredArgsConstructor
 public class HTMLExportRESTController {
 
@@ -78,7 +78,7 @@ public class HTMLExportRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The file ending of the diagram files.") @PathVariable
                     String fileEnding,
             @Parameter(
@@ -89,20 +89,20 @@ public class HTMLExportRESTController {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/htmlexport\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
 
         var output =
                 exportGraphHTMLUseCase.exportGraphAsHTML(
-                        new GraphIdentifier(datasetName, extendedGraphURI),
+                        new GraphIdentifier(datasetName, extendedGraphName),
                         fileEnding,
                         embedDiagrams);
 
         var fileName = "default";
-        if (!extendedGraphURI.equals("default")) {
-            fileName = new URI(extendedGraphURI).getSuffix();
+        if (!extendedGraphName.equals("default")) {
+            fileName = new URI(extendedGraphName).getSuffix();
         }
         fileName += ".html";
 
@@ -118,7 +118,7 @@ public class HTMLExportRESTController {
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/htmlexport\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return body;
     }

@@ -149,11 +149,11 @@ public class Workspace {
                         new GraphWithContext(dataset.getDefaultModel().getGraph(), txnContext));
             }
             for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
-                var graphURI = it.next().getURI();
+                var graphName = it.next().getURI();
                 graphs.put(
-                        graphURI,
+                        graphName,
                         new GraphWithContext(
-                                dataset.getNamedModel(graphURI).getGraph(), txnContext));
+                                dataset.getNamedModel(graphName).getGraph(), txnContext));
             }
             transaction.commit(INITIAL_CHANGE_MESSAGE);
         }
@@ -565,7 +565,7 @@ public class Workspace {
                 .map(CustomDiagramCollection.class::cast)
                 .forEach(
                         diagrams ->
-                                WorkspaceTransactionImpl.rewriteGraphUris(
+                                WorkspaceTransactionImpl.rewriteGraphNames(
                                         diagrams.get().values(), renamed));
     }
 
@@ -669,7 +669,7 @@ public class Workspace {
         versionsGained.keySet().forEach(participant -> requireHeldThen(participant, graphsThen));
         // A graph created since may have no changes of its own to take back, yet the URI held
         // something else at the version, or nothing at all.
-        scope.graphUris().stream()
+        scope.graphNames().stream()
                 .map(graphs.view()::get)
                 .filter(Objects::nonNull)
                 .forEach(graph -> requireHeldThen(graph.getRdfGraph(), graphsThen));
@@ -692,15 +692,15 @@ public class Workspace {
      * otherwise be reported as already standing at that version.
      */
     private void requireStillHeld(RevertScope scope) {
-        scope.graphUris().stream()
-                .filter(graphUri -> !graphs.contains(graphUri))
+        scope.graphNames().stream()
+                .filter(graphName -> !graphs.contains(graphName))
                 .findFirst()
                 .ifPresent(
-                        graphUri -> {
+                        graphName -> {
                             throw new RestoreRefusedException(
                                     ("Cannot restore %s to that version: the workspace holds no "
                                                     + "schema under that URI.")
-                                            .formatted(graphUri));
+                                            .formatted(graphName));
                         });
     }
 
@@ -775,7 +775,8 @@ public class Workspace {
             for (int i = 0; i < behind.size(); i++) {
                 reached.add(
                         asCurrentlyIdentified(behind.get(i))
-                                .withRestoreTargetGraphUris(graphsHeldAfter(behind.subList(0, i))));
+                                .withRestoreTargetGraphNames(
+                                        graphsHeldAfter(behind.subList(0, i))));
             }
             return Stream.concat(
                             // Furthest ahead first: the redo stack hands out the next one to
@@ -795,17 +796,17 @@ public class Workspace {
     // -------------------------------------------------------------------------
 
     /**
-     * Returns the graph identified by {@code graphUri}, creating the default graph if it is asked
+     * Returns the graph identified by {@code graphName}, creating the default graph if it is asked
      * for and does not exist yet.
      *
      * <p>A reader gets an empty graph that is not kept: a read transaction enrols nothing, so the
      * insertion could neither be rolled back nor seen by a concurrent reader doing the same.
      *
-     * @param graphUri the graph URI
+     * @param graphName the graph URI
      * @return the graph's contents
      */
-    GraphWithContext getGraphWithContext(String graphUri) {
-        var expanded = prefixes.expandPrefix(graphUri);
+    GraphWithContext getGraphWithContext(String graphName) {
+        var expanded = prefixes.expandPrefix(graphName);
         var existing = graphs.get(expanded);
         if (existing != null) {
             return existing;
@@ -822,7 +823,7 @@ public class Workspace {
     }
 
     /** Returns a snapshot of the current graph URIs. */
-    public List<String> listGraphUris() {
+    public List<String> listGraphNames() {
         try (var _ = begin(ReadWrite.READ)) {
             return graphs.uris();
         }
@@ -839,9 +840,9 @@ public class Workspace {
         }
     }
 
-    static void assertValidGraphName(String graphUri) {
-        if (!graphUri.equals(DEFAULT_GRAPH_NAME) && !RDFUtils.isURL(graphUri)) {
-            throw new IllegalArgumentException("Graph Uri " + graphUri + " is not a valid URI");
+    static void assertValidGraphName(String graphName) {
+        if (!graphName.equals(DEFAULT_GRAPH_NAME) && !RDFUtils.isURL(graphName)) {
+            throw new IllegalArgumentException("Graph Uri " + graphName + " is not a valid URI");
         }
     }
 }

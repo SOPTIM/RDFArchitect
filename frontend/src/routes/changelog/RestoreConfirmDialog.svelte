@@ -29,7 +29,7 @@
     import { labelOf } from "./changeKinds.js";
     import { restoresChange } from "./changelogFilter.js";
 
-    const { request, graphUri = null, onConfirm, onCancel } = $props();
+    const { request, graphName = null, onConfirm, onCancel } = $props();
 
     /**
      * Starts on, because the question was asked of one schema's history: restoring the whole
@@ -48,9 +48,9 @@
      * and only the whole workspace can be taken that far.
      */
     let schemaCanGoBack = $derived(
-        !!graphUri &&
+        !!graphName &&
             !goingForward &&
-            (request?.change.restoreTargetGraphUris ?? []).includes(graphUri),
+            (request?.change.restoreTargetGraphNames ?? []).includes(graphName),
     );
 
     /** Whether the question on the table is a restore held to the schema in view. */
@@ -63,7 +63,7 @@
      */
     let affected = $derived(
         (request?.reapplied ?? request?.takenBack ?? []).filter(
-            change => !restoringOneSchema || restoresChange(change, graphUri),
+            change => !restoringOneSchema || restoresChange(change, graphName),
         ),
     );
 
@@ -88,7 +88,7 @@
     }
 
     function confirm() {
-        const chosen = restoringOneSchema ? [graphUri] : [];
+        const chosen = restoringOneSchema ? [graphName] : [];
         thisSchemaOnly = true;
         onConfirm(chosen);
     }
@@ -133,7 +133,7 @@
                         {/each}
                     </ul>
                 {/if}
-                {#if graphUri && !goingForward && !schemaCanGoBack}
+                {#if graphName && !goingForward && !schemaCanGoBack}
                     <p class="border-border border-t pt-2 text-xs">
                         This schema did not exist yet at that version, so only
                         the whole workspace can be restored to it.

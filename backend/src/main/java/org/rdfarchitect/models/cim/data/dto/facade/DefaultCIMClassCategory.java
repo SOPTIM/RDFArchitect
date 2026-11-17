@@ -31,12 +31,12 @@ import java.util.UUID;
 
 public class DefaultCIMClassCategory implements ICIMClassCategory {
 
-    private final String graphUri;
+    private final String graphName;
 
     private final Model model;
 
-    public DefaultCIMClassCategory(String graphUri, Model model) {
-        this.graphUri = graphUri;
+    public DefaultCIMClassCategory(String graphName, Model model) {
+        this.graphName = graphName;
         this.model = model;
     }
 
@@ -46,8 +46,8 @@ public class DefaultCIMClassCategory implements ICIMClassCategory {
     }
 
     @Override
-    public String getGraphUri() {
-        return graphUri;
+    public String getGraphName() {
+        return graphName;
     }
 
     @Override
@@ -78,7 +78,7 @@ public class DefaultCIMClassCategory implements ICIMClassCategory {
                         .toList();
         var classes = new ArrayList<ICIMClass>();
         for (var classResource : classResources) {
-            classes.add(new CIMClass(graphUri, model, classResource));
+            classes.add(new CIMClass(graphName, model, classResource));
         }
         return classes;
     }

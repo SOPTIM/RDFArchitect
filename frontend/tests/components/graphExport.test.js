@@ -47,7 +47,7 @@ function graphOf(name) {
     return `http://graph#${name}`;
 }
 
-async function open(graphUri) {
+async function open(graphName) {
     target = document.createElement("div");
     document.body.appendChild(target);
     mounted = mount(GraphExport, {
@@ -55,7 +55,7 @@ async function open(graphUri) {
         props: {
             showDialog: true,
             lockedWorkspaceName: WORKSPACE,
-            lockedGraphUri: graphUri,
+            lockedGraphName: graphName,
             generateOntologyEntries: true,
         },
     });
@@ -135,8 +135,8 @@ afterEach(() => {
 
 describe("GraphExport", () => {
     test("saves the generated entries into the header the schema has", async () => {
-        const graphUri = graphOf("Equipment");
-        const component = await open(graphUri);
+        const graphName = graphOf("Equipment");
+        const component = await open(graphName);
         await vi.waitFor(() =>
             expect(api.getOntologyEntries).toHaveBeenCalled(),
         );
@@ -158,14 +158,14 @@ describe("GraphExport", () => {
      * - used to leave exactly that in the cache, an ontology of entries alone.
      */
     test("writes no header into a schema that has none", async () => {
-        const graphUri = graphOf("Notes");
+        const graphName = graphOf("Notes");
         vi.mocked(api.getOntology).mockResolvedValue({
             data: null,
             error: undefined,
         });
 
-        await ontologyStore.generateOntologyEntries(WORKSPACE, graphUri);
-        const component = await open(graphUri);
+        await ontologyStore.generateOntologyEntries(WORKSPACE, graphName);
+        const component = await open(graphName);
 
         await component.handleExport(route);
 

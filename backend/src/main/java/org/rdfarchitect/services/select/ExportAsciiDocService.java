@@ -80,14 +80,14 @@ public class ExportAsciiDocService implements ExportGraphAsciiDocUseCase {
 
     /** Prefix of all anchors of this document, derived from the name of the exported graph. */
     private String anchorPrefix(GraphIdentifier graphIdentifier) {
-        var graphUri = graphIdentifier.graphUri();
+        var graphName = graphIdentifier.graphName();
         var name = DEFAULT_NAME;
-        if (graphUri != null && !graphUri.isBlank() && !DEFAULT_NAME.equals(graphUri)) {
+        if (graphName != null && !graphName.isBlank() && !DEFAULT_NAME.equals(graphName)) {
             try {
-                var suffix = new URI(graphUri).getSuffix();
-                name = suffix.isBlank() ? graphUri : suffix;
+                var suffix = new URI(graphName).getSuffix();
+                name = suffix.isBlank() ? graphName : suffix;
             } catch (IllegalArgumentException _) {
-                name = graphUri;
+                name = graphName;
             }
         }
         return identifier(name);

@@ -182,15 +182,15 @@
         return sanitized.trim() ? sanitized : DEFAULT_GRAPH_NAME;
     }
 
-    function buildGraphUri(fileName) {
+    function buildGraphName(fileName) {
         const sanitized = getSanitizedGraphName(fileName);
         return `${GRAPH_NAMESPACE_URI}${sanitized}`;
     }
 
-    function ensureGraphNamespaceUri(graphUri, fallbackName) {
-        const trimmed = graphUri?.trim();
+    function ensureGraphNamespaceUri(graphName, fallbackName) {
+        const trimmed = graphName?.trim();
         if (!trimmed) {
-            return buildGraphUri(fallbackName);
+            return buildGraphName(fallbackName);
         }
         if (trimmed.includes("://")) {
             return trimmed;
@@ -208,9 +208,9 @@
                 }
                 return {
                     file,
-                    graphUri: isZipFile(file.name)
+                    graphName: isZipFile(file.name)
                         ? ""
-                        : buildGraphUri(file.name),
+                        : buildGraphName(file.name),
                     isZip: isZipFile(file.name),
                 };
             })
@@ -226,12 +226,12 @@
         files = files.filter((_, idx) => idx !== index);
     }
 
-    function updateGraphUri(index, graphUri) {
+    function updateGraphName(index, graphName) {
         if (files[index]?.isZip) {
             return;
         }
         files = files.map((entry, idx) =>
-            idx === index ? { ...entry, graphUri } : entry,
+            idx === index ? { ...entry, graphName } : entry,
         );
     }
 
@@ -245,10 +245,10 @@
         }
         const workspaceName = getUserInputWorkspaceName();
         const filesToImport = files.map(entry => entry.file);
-        const graphUris = files.map(entry =>
+        const graphNames = files.map(entry =>
             entry.isZip
                 ? ""
-                : ensureGraphNamespaceUri(entry.graphUri, entry.file.name),
+                : ensureGraphNamespaceUri(entry.graphName, entry.file.name),
         );
 
         const currentProgress = new ImportProgress();
@@ -259,7 +259,7 @@
         const { data, error } = await graphStore.startImport(
             workspaceName,
             filesToImport,
-            graphUris,
+            graphNames,
             {
                 onUploadProgress: percent =>
                     currentProgress.uploadProgress(percent),
@@ -379,7 +379,7 @@
             return;
         }
 
-        let importedGraphUris = currentProgress.importedGraphUris;
+        let importedGraphNames = currentProgress.importedGraphNames;
         if (!currentProgress.finished) {
             currentProgress.cancel();
             await cancelImportJob(workspaceName, jobId);
@@ -390,12 +390,12 @@
                     workspaceName,
                     jobId,
                 );
-                importedGraphUris =
-                    data?.importedGraphUris ?? importedGraphUris;
+                importedGraphNames =
+                    data?.importedGraphNames ?? importedGraphNames;
             }
         }
-        if (importedGraphUris.length > 0) {
-            applyImportResult(importedGraphUris, workspaceName);
+        if (importedGraphNames.length > 0) {
+            applyImportResult(importedGraphNames, workspaceName);
         }
     }
 
@@ -412,9 +412,9 @@
         await graphStore.cancelImport(workspaceName, jobId);
     }
 
-    function applyImportResult(importedGraphUris, workspaceName) {
+    function applyImportResult(importedGraphNames, workspaceName) {
         editorState.selectedWorkspace.updateValue(workspaceName);
-        editorState.selectedGraph.updateValue(importedGraphUris[0] || null);
+        editorState.selectedGraph.updateValue(importedGraphNames[0] || null);
         editorState.selectedDiagram.updateValue({ type: null, id: null });
         editorState.selectedClassWorkspace.updateValue(null);
         editorState.selectedClassGraph.updateValue(null);
@@ -579,10 +579,10 @@
                                         type="text"
                                         value={fileEntry.isZip
                                             ? fileEntry.file.name
-                                            : fileEntry.graphUri}
+                                            : fileEntry.graphName}
                                         disabled={fileEntry.isZip}
                                         oninput={event =>
-                                            updateGraphUri(
+                                            updateGraphName(
                                                 index,
                                                 event.target.value,
                                             )}

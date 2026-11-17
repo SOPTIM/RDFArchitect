@@ -154,8 +154,8 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
-    public List<String> listGraphUris(String datasetName) {
-        return getOrCreateSessionDataStore().listGraphUris(datasetName);
+    public List<String> listGraphNames(String datasetName) {
+        return getOrCreateSessionDataStore().listGraphNames(datasetName);
     }
 
     @Override

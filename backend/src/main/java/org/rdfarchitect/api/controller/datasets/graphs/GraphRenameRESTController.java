@@ -38,7 +38,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/rename")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/rename")
 @RequiredArgsConstructor
 public class GraphRenameRESTController {
 
@@ -67,25 +67,25 @@ public class GraphRenameRESTController {
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName,
             @Parameter(description = "The url encoded uri of the graph.") @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The url encoded uri to rename the graph to.") @RequestParam
-                    String newGraphURI) {
+                    String newGraphName) {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/rename\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var extendedNewGraphURI = expandURIUseCase.expandUri(datasetName, newGraphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedNewGraphName = expandURIUseCase.expandUri(datasetName, newGraphName);
 
         renameGraphUseCase.renameGraph(
-                new GraphIdentifier(datasetName, extendedGraphURI), extendedNewGraphURI);
+                new GraphIdentifier(datasetName, extendedGraphName), extendedNewGraphName);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/rename\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return Response.SUCCESS;
     }

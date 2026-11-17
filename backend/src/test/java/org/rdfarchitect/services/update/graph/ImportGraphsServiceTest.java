@@ -72,7 +72,7 @@ class ImportGraphsServiceTest {
     }
 
     @Test
-    void importGraphs_sameFileNameTwice_autoGeneratesUniqueGraphUris() {
+    void importGraphs_sameFileNameTwice_autoGeneratesUniqueGraphNames() {
         var datasetName = "ds";
 
         var file1 =
@@ -90,7 +90,7 @@ class ImportGraphsServiceTest {
                         "@prefix ex: <http://example.com/> . ex:d ex:e ex:f ."
                                 .getBytes(StandardCharsets.UTF_8));
 
-        when(databasePortMock.listGraphUris(datasetName))
+        when(databasePortMock.listGraphNames(datasetName))
                 .thenThrow(new RuntimeException("dataset does not exist"));
 
         var result =
@@ -98,7 +98,7 @@ class ImportGraphsServiceTest {
                         datasetName, List.of(file1, file2), null, ImportProgressListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
-        assertThat(result.importedGraphUris())
+        assertThat(result.importedGraphNames())
                 .containsExactly(RDFA.GRAPH_URI + "graph", RDFA.GRAPH_URI + "graph_1");
 
         var captor = ArgumentCaptor.forClass(String.class);
@@ -121,7 +121,7 @@ class ImportGraphsServiceTest {
                         "@prefix ex: <http://example.com/> . ex:a ex:b ex:c ."
                                 .getBytes(StandardCharsets.UTF_8));
 
-        when(databasePortMock.listGraphUris(datasetName))
+        when(databasePortMock.listGraphNames(datasetName))
                 .thenThrow(new RuntimeException("dataset does not exist"));
 
         importGraphsUseCase.importGraphs(
@@ -143,14 +143,14 @@ class ImportGraphsServiceTest {
                         "text/turtle",
                         "this is not turtle at all".getBytes(StandardCharsets.UTF_8));
 
-        when(databasePortMock.listGraphUris(datasetName))
+        when(databasePortMock.listGraphNames(datasetName))
                 .thenThrow(new RuntimeException("dataset does not exist"));
 
         var result =
                 importGraphsUseCase.importGraphs(
                         datasetName, List.of(file), null, ImportProgressListener.NOOP);
 
-        assertThat(result.importedGraphUris()).isEmpty();
+        assertThat(result.importedGraphNames()).isEmpty();
         verify(databasePortMock, never()).createWorkspaceIfAbsent(datasetName);
     }
 
@@ -206,7 +206,7 @@ class ImportGraphsServiceTest {
                         datasetName, List.of(file), null, ImportProgressListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
-        assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "schema");
+        assertThat(result.importedGraphNames()).containsExactly(RDFA.GRAPH_URI + "schema");
         assertThat(result.warnings()).hasSize(1);
 
         var warning = result.warnings().getFirst();
@@ -236,7 +236,7 @@ class ImportGraphsServiceTest {
         when(databasePortMock.getPrefixMapping(datasetName))
                 .thenReturn(prefixMapping(cimNamespace));
         when(transaction.prefixes()).thenReturn(prefixMapping(cimNamespace));
-        when(databasePortMock.listGraphUris(datasetName))
+        when(databasePortMock.listGraphNames(datasetName))
                 .thenReturn(List.of(RDFA.GRAPH_URI + "existing"));
     }
 
@@ -282,7 +282,7 @@ class ImportGraphsServiceTest {
         }
 
         @Override
-        public void finished(int index, Outcome outcome, String graphUri) {
+        public void finished(int index, Outcome outcome, String graphName) {
             if (outcome == Outcome.FAILED && !asked) {
                 failedBeforeAsking.add(plannedFileNames.get(index));
             }
@@ -410,7 +410,7 @@ class ImportGraphsServiceTest {
                 importGraphsUseCase.importGraphs(
                         datasetName, List.of(schemaFile("dl30.ttl", CIM18)), null, listener);
 
-        assertThat(result.importedGraphUris()).isEmpty();
+        assertThat(result.importedGraphNames()).isEmpty();
         verify(transaction, never()).setPrefixes(any());
     }
 
@@ -485,7 +485,7 @@ class ImportGraphsServiceTest {
 
         assertThat(listener.failedBeforeAsking).containsExactly("broken.ttl");
         assertThat(result.failedFileNames()).containsExactly("broken.ttl");
-        assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "dl30");
+        assertThat(result.importedGraphNames()).containsExactly(RDFA.GRAPH_URI + "dl30");
     }
 
     @Test
@@ -507,7 +507,7 @@ class ImportGraphsServiceTest {
 
         assertThat(listener.comparison).isNull();
         assertThat(result.failedFileNames()).containsExactly("broken.ttl");
-        assertThat(result.importedGraphUris()).isEmpty();
+        assertThat(result.importedGraphNames()).isEmpty();
     }
 
     @Test
@@ -549,7 +549,7 @@ class ImportGraphsServiceTest {
                         datasetName, List.of(file), null, ImportProgressListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
-        assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "schema");
+        assertThat(result.importedGraphNames()).containsExactly(RDFA.GRAPH_URI + "schema");
         assertThat(result.warnings()).isEmpty();
     }
 }

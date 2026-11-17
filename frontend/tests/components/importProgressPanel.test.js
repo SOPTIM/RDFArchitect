@@ -41,9 +41,9 @@ function statusOf(files, state) {
         datasetName: "ds",
         state,
         files,
-        importedGraphUris: files
+        importedGraphNames: files
             .filter(file => file.state === FileState.IMPORTED)
-            .map(file => file.graphUri),
+            .map(file => file.graphName),
         failedImports: files
             .filter(file => file.state === FileState.FAILED)
             .map(file => file.fileName),
@@ -57,7 +57,7 @@ function fileOf(index, fileName, state, extra = {}) {
         fileName,
         sizeBytes: 100,
         state,
-        graphUri:
+        graphName:
             state === FileState.IMPORTED ? `http://graph#${fileName}` : null,
         ...extra,
     };

@@ -22,7 +22,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 public interface RenameGraphUseCase {
 
     /**
-     * Renames the graph addressed by {@code graphIdentifier} to {@code newGraphUri}. The content
+     * Renames the graph addressed by {@code graphIdentifier} to {@code newGraphName}. The content
      * and the history of the graph are kept, references to it are rewritten.
      *
      * <p>The profile header is deliberately left untouched. What a schema is called on screen is
@@ -31,7 +31,7 @@ public interface RenameGraphUseCase {
      * no header to be read from.
      *
      * @param graphIdentifier identifies dataset and current graph URI
-     * @param newGraphUri the graph URI to rename to
+     * @param newGraphName the graph URI to rename to
      */
-    void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri);
+    void renameGraph(GraphIdentifier graphIdentifier, String newGraphName);
 }

@@ -122,18 +122,18 @@
                         <span
                             class="text-default-text flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-bold"
                         >
-                            {#each group.occurrences as occurrence (occurrence.graphUri)}
+                            {#each group.occurrences as occurrence (occurrence.graphName)}
                                 <span
                                     class="flex items-center gap-1"
-                                    title={occurrence.graphUri}
+                                    title={occurrence.graphName}
                                 >
                                     <span
                                         class="shrink-0"
                                         style={graphColors.get(
                                             workspaceName,
-                                            occurrence.graphUri,
+                                            occurrence.graphName,
                                         )
-                                            ? `color: ${graphColors.get(workspaceName, occurrence.graphUri)};`
+                                            ? `color: ${graphColors.get(workspaceName, occurrence.graphName)};`
                                             : ""}
                                     >
                                         <Fa icon={faDiagramProject} />

@@ -29,12 +29,12 @@ import java.util.UUID;
 
 public class CIMAssociation extends CIMResource implements ICIMAssociation {
 
-    public CIMAssociation(String graphUri, Model model, UUID uuid) {
-        super(graphUri, model, uuid);
+    public CIMAssociation(String graphName, Model model, UUID uuid) {
+        super(graphName, model, uuid);
     }
 
-    public CIMAssociation(String graphUri, Model model, Resource resource) {
-        super(graphUri, model, resource);
+    public CIMAssociation(String graphName, Model model, Resource resource) {
+        super(graphName, model, resource);
     }
 
     @Override
@@ -46,19 +46,19 @@ public class CIMAssociation extends CIMResource implements ICIMAssociation {
     @Override
     public ICIMClass getDomain() {
         var domain = getRequiredUniqueJenaProperty(RDFS.domain);
-        return CIMClass.fromResource(getGraphUri(), getModel(), domain);
+        return CIMClass.fromResource(getGraphName(), getModel(), domain);
     }
 
     @Override
     public ICIMClass getRange() {
         var range = getRequiredUniqueJenaProperty(RDFS.range);
-        return CIMClass.fromResource(getGraphUri(), getModel(), range);
+        return CIMClass.fromResource(getGraphName(), getModel(), range);
     }
 
     @Override
     public ICIMAssociation getInverseAssociation() {
         var inverse = getRequiredUniqueJenaProperty(CIMS.inverseRoleName);
-        return new CIMAssociation(getGraphUri(), getModel(), inverse);
+        return new CIMAssociation(getGraphName(), getModel(), inverse);
     }
 
     @Override

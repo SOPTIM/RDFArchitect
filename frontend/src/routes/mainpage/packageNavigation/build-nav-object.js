@@ -24,7 +24,7 @@ import { packageStore } from "$lib/stores/packageStore.ts";
 import {
     graphLabeller,
     graphTooltip,
-    graphUri,
+    graphName,
 } from "$lib/utils/graph-label.js";
 import { compareGraphs } from "$lib/utils/graph-order.js";
 import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
@@ -92,7 +92,7 @@ async function populateWorkspace(workspaceNavEntry) {
     const freshEntries = graphs
         .map(graph => ({
             label: nameOf(graph),
-            fullUri: graphUri(graph),
+            fullUri: graphName(graph),
             tooltip: graphTooltip(graph),
             // The badge adds the keyword to the name. With no title of its own the name already
             // is the keyword, and the entry would read "EQ EQ".

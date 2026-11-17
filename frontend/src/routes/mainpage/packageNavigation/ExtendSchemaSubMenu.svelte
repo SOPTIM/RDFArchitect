@@ -38,7 +38,7 @@
         withInheritance = false,
         workspaceName,
         classUuids = [],
-        currentGraphUri = null,
+        currentGraphName = null,
         selectedClassUuid = null,
         readOnly = false,
         disabled = false,
@@ -54,8 +54,8 @@
     const extendSchemas = $derived(
         schemaOccurrences.filter(
             occurrence =>
-                !currentGraphUri ||
-                occurrence.graphUri !== String(currentGraphUri),
+                !currentGraphName ||
+                occurrence.graphName !== String(currentGraphName),
         ),
     );
 
@@ -93,9 +93,9 @@
         }
         // Only a selection without a schema of its own, as in the cross-profile
         // diagram, leaves the schema to copy from open.
-        const candidates = currentGraphUri
+        const candidates = currentGraphName
             ? []
-            : sourceCandidates(schemaOccurrences, occurrence.graphUri);
+            : sourceCandidates(schemaOccurrences, occurrence.graphName);
         if (classUuids.length === 1 && stubsDiffer(candidates)) {
             askForExtendSource({
                 workspaceName,
@@ -119,7 +119,7 @@
             await extendToSchemaAndReveal({
                 workspaceName,
                 classUuids: uuids,
-                targetGraphUri: occurrence.graphUri,
+                targetGraphName: occurrence.graphName,
                 targetLabel: schemaLabel(occurrence),
                 selectedClassUuid,
                 withInheritance,
@@ -148,13 +148,13 @@
                 {loadingSchemas ? "Loading schemas" : "No other schema"}
             </ContextMenu.Item.Button>
         {:else}
-            {#each extendSchemas as occurrence (occurrence.graphUri)}
+            {#each extendSchemas as occurrence (occurrence.graphName)}
                 <ContextMenu.Item.Button
                     onSelect={() => extendInto(occurrence)}
                     faIcon={faDiagramProject}
                     iconColor={graphColors.get(
                         workspaceName,
-                        occurrence.graphUri,
+                        occurrence.graphName,
                     )}
                     disabled={!!blockedReason(occurrence)}
                 >

@@ -30,7 +30,7 @@
     import { graphStore } from "$lib/stores/graphStore.ts";
     import {
         graphLabeller,
-        graphUri as getUri,
+        graphName as getUri,
     } from "$lib/utils/graph-label.js";
 
     import {
@@ -55,7 +55,7 @@
     let packagesByGraph = $state({});
     let otherDiagrams = $state([]);
     /** Names the schemas the way the navigation tree does, collisions and all. */
-    const graphName = $derived(graphLabeller(graphs));
+    const schemaLabel = $derived(graphLabeller(graphs));
 
     let violations = $derived(
         isValidDiagramName(localDiagramName, otherDiagrams),
@@ -108,23 +108,23 @@
 
     async function createPackageMap() {
         for (const graph of graphs) {
-            const graphUri = getUri(graph);
-            packagesByGraph[graphUri] = await createPackageListForGraph(
+            const graphName = getUri(graph);
+            packagesByGraph[graphName] = await createPackageListForGraph(
                 lockedWorkspaceName,
-                graphUri,
+                graphName,
             );
         }
     }
 
     async function createClassMap() {
-        const graphURIs = graphs.map(graph => getUri(graph));
+        const graphNames = graphs.map(graph => getUri(graph));
         const result = {};
 
         await Promise.all(
-            graphURIs.map(async graphUri => {
-                result[graphUri] = await createClassListForGraph(
+            graphNames.map(async graphName => {
+                result[graphName] = await createClassListForGraph(
                     lockedWorkspaceName,
-                    graphUri,
+                    graphName,
                     selectedClasses,
                 );
             }),
@@ -137,8 +137,8 @@
         graphs.forEach(g => (g.selected = newState));
 
         Object.entries(classesByPackageAndGraph).forEach(
-            ([graphUri, packages]) => {
-                const graphPackages = packagesByGraph[graphUri] ?? [];
+            ([graphName, packages]) => {
+                const graphPackages = packagesByGraph[graphName] ?? [];
 
                 graphPackages.forEach(pack => (pack.selected = newState));
 
@@ -155,13 +155,13 @@
         }
 
         graphs.forEach(graph => {
-            const graphURI = getUri(graph);
-            const packages = packagesByGraph[graphURI];
+            const graphName = getUri(graph);
+            const packages = packagesByGraph[graphName];
             let classesSelectedInGraph = false;
             packages.forEach(pack => {
                 const packageId = pack.uuid;
                 const classesInPackage =
-                    classesByPackageAndGraph[graphURI][packageId] ?? [];
+                    classesByPackageAndGraph[graphName][packageId] ?? [];
 
                 if (classesInPackage.length > 0) {
                     const classesSelectedInPackage =
@@ -180,13 +180,13 @@
     async function submitDiagramClasses() {
         const selectedClassList = Object.entries(
             classesByPackageAndGraph,
-        ).flatMap(([graphUri, packages]) =>
+        ).flatMap(([graphName, packages]) =>
             Object.values(packages)
                 .flat()
                 .filter(cls => cls.selected === true)
                 .map(cls => ({
                     uuid: cls.uuid,
-                    graphUri: graphUri,
+                    graphName: graphName,
                 })),
         );
 
@@ -257,7 +257,7 @@
             {#each graphs as graph, index (getUri(graph))}
                 <GraphSelectSection
                     bind:graph={graphs[index]}
-                    label={graphName(graph)}
+                    label={schemaLabel(graph)}
                     bind:packages={packagesByGraph[getUri(graph)]}
                     classesByPackage={classesByPackageAndGraph[getUri(graph)] ??
                         []}

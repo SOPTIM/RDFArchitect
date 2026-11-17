@@ -44,7 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/packages/{packageUUID}")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/packages/{packageUUID}")
 @RequiredArgsConstructor
 public class PackageRESTController {
 
@@ -73,7 +73,7 @@ public class PackageRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The UUID of the package to be replaced.") @PathVariable
                     String packageUUID,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -84,19 +84,19 @@ public class PackageRESTController {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL,
                 packageUUID);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
 
         replacePackageUseCase.replacePackage(graphIdentifier, packageDTO);
 
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL,
                 packageUUID);
         return Response.SUCCESS;
@@ -120,26 +120,26 @@ public class PackageRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The UUID of the package to be deleted.") @PathVariable
                     UUID packageUUID) {
 
         logger.info(
                 "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 packageUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
 
         deletePackageUseCase.deletePackage(graphIdentifier, packageUUID);
 
         logger.info(
                 "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 packageUUID,
                 originURL);
         return Response.SUCCESS;
@@ -163,26 +163,26 @@ public class PackageRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The UUID of the package to retrieve.") @PathVariable
                     UUID packageUUID) {
 
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 packageUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
 
         var result = getPackageUseCase.getPackage(graphIdentifier, packageUUID);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 packageUUID,
                 originURL);
         return result;

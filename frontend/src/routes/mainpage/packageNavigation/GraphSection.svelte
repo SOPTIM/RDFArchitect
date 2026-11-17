@@ -435,39 +435,39 @@
 <ExportDialog
     bind:showDialog={showExportDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphUri={graphNavEntry.id}
+    lockedGraphName={graphNavEntry.id}
 />
 <GraphDeleteDialog bind:showDialog={showDeleteDialog} />
 <RenameGraphDialog
     bind:showDialog={showRenameDialog}
     workspaceName={workspaceNavEntry.id}
-    graphUri={graphNavEntry.id}
+    graphName={graphNavEntry.id}
     onEditHeader={editProfileHeader}
 />
 <NewPackageDialog
     bind:showDialog={showNewPackageDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphUri={graphNavEntry.id}
+    lockedGraphName={graphNavEntry.id}
 />
 <CustomGraphDiagramDialog
     bind:showDialog={showNewDiagramDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphUri={graphNavEntry.id}
+    lockedGraphName={graphNavEntry.id}
 />
 <CompareDialog
     bind:showDialog={showCompareDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphUri={graphNavEntry.id}
+    lockedGraphName={graphNavEntry.id}
 />
 <SHACLUploadDialog
     bind:showDialog={showSHACLUploadDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphUri={graphNavEntry.id}
+    lockedGraphName={graphNavEntry.id}
 />
 <SHACLExportDialog
     bind:showDialog={showSHACLExportDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphUri={graphNavEntry.id}
+    lockedGraphName={graphNavEntry.id}
 />
 <SHACLFullViewDialog bind:showDialog={showSHACLFullViewDialog} />
 <SchemaColorsDialog
@@ -477,12 +477,12 @@
 <PickSchemaColorDialog
     bind:showDialog={showPickColorDialog}
     workspaceName={workspaceNavEntry.id}
-    graphUri={graphNavEntry.id}
+    graphName={graphNavEntry.id}
     graphLabel={graphNavEntry.label}
 />
 <OntologyDialog
     bind:showDialog={showEditOntologyDialog}
-    graphUri={graphNavEntry.id}
+    graphName={graphNavEntry.id}
     workspace={workspaceNavEntry.id}
     {namespaces}
     bind:ontology
@@ -494,16 +494,16 @@
     bind:showDialog={showDeleteDependenciesDialog}
     onClose={initialize}
     workspaceName={workspaceNavEntry.id}
-    graphUri={graphNavEntry.id}
+    graphName={graphNavEntry.id}
     resourceUuid={ontology.uuid}
 />
 <ValidationDialog
     bind:showDialog={showValidationDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphUri={graphNavEntry.id}
+    lockedGraphName={graphNavEntry.id}
 />
 <DocumentationExportDialog
     bind:showDialog={showDocumentationExportDialog}
     lockedWorkspaceName={workspaceNavEntry.id}
-    lockedGraphUri={graphNavEntry.id}
+    lockedGraphName={graphNavEntry.id}
 />

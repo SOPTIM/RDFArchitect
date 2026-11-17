@@ -96,7 +96,7 @@ public class DiagramToCIMCollectionConverterService
 
     private List<GraphEntry> buildSortedGraphEntries(String datasetName, CustomDiagram diagram) {
         return diagram.getClasses().stream()
-                .collect(Collectors.groupingBy(ClassInDiagram::getGraphUri))
+                .collect(Collectors.groupingBy(ClassInDiagram::getGraphName))
                 .entrySet()
                 .stream()
                 .sorted(Comparator.comparing(e -> e.getKey().toString()))
@@ -114,7 +114,7 @@ public class DiagramToCIMCollectionConverterService
             WorkspaceTransaction transaction, List<GraphEntry> graphEntries) {
         var copiedGraphs = new ArrayList<CopiedGraph>(graphEntries.size());
         for (var entry : graphEntries) {
-            var graph = transaction.graph(entry.graphIdentifier().graphUri()).getRdfGraph();
+            var graph = transaction.graph(entry.graphIdentifier().graphName()).getRdfGraph();
             copiedGraphs.add(new CopiedGraph(entry, GraphUtils.deepCopy(graph)));
         }
         return copiedGraphs;

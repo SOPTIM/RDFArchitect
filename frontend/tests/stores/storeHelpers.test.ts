@@ -54,7 +54,7 @@ function runLoadSlot(
 // ---------------------------------------------------------------------------
 
 describe("makeGraphKey", () => {
-    test("produces a key in the format 'workspace::graphURI'", () => {
+    test("produces a key in the format 'workspace::graphName'", () => {
         expect(makeGraphKey("myworkspace", "http://example.org/graph")).toBe(
             "myworkspace::http://example.org/graph",
         );

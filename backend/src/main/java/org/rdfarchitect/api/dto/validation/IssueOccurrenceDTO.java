@@ -26,7 +26,7 @@ import java.util.UUID;
 @Builder
 public class IssueOccurrenceDTO {
 
-    private String graphUri;
+    private String graphName;
 
     private String keyword;
 

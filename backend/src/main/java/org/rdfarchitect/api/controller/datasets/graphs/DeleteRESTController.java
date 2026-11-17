@@ -44,7 +44,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}")
 @RequiredArgsConstructor
 public class DeleteRESTController {
 
@@ -74,25 +74,25 @@ public class DeleteRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The uuids of the cim resources to analyse.") @RequestBody
                     List<UUID> uuids) {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/deletion-impact\" for {} resource(s) from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 uuids.size(),
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
 
         var result = findDeleteDependenciesUseCase.getDeleteDependencies(graphIdentifier, uuids);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/deletion-impact\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return result;
     }
@@ -117,7 +117,7 @@ public class DeleteRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(
                             description =
                                     "A list of resource delete requests, each containing the uuid of the resource to delete and the type of deletion")
@@ -126,18 +126,18 @@ public class DeleteRESTController {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/delete-requests\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
 
         deleteResourcesUseCase.executeDeleteRequests(
-                new GraphIdentifier(datasetName, extendedGraphURI), deleteRequests);
+                new GraphIdentifier(datasetName, extendedGraphName), deleteRequests);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/delete-requests\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return "success";
     }

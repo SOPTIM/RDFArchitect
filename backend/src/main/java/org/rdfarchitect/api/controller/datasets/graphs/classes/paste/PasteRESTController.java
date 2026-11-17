@@ -43,7 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{targetDatasetName}/graphs/{targetGraphURI}/paste")
+@RequestMapping("api/datasets/{targetDatasetName}/graphs/{targetGraphName}/paste")
 @RequiredArgsConstructor
 public class PasteRESTController {
 
@@ -73,7 +73,7 @@ public class PasteRESTController {
                             description =
                                     "The url encoded uri of the target graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String targetGraphURI,
+                    String targetGraphName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description =
@@ -83,19 +83,20 @@ public class PasteRESTController {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/paste\" for {} class(es) from \"{}\".",
                 targetDatasetName,
-                targetGraphURI,
+                targetGraphName,
                 pasteRequest.getSources() == null ? 0 : pasteRequest.getSources().size(),
                 originURL);
 
-        var targetExtendedGraphURI = expandURIUseCase.expandUri(targetDatasetName, targetGraphURI);
-        var targetGraphIdentifier = new GraphIdentifier(targetDatasetName, targetExtendedGraphURI);
+        var targetExtendedGraphName =
+                expandURIUseCase.expandUri(targetDatasetName, targetGraphName);
+        var targetGraphIdentifier = new GraphIdentifier(targetDatasetName, targetExtendedGraphName);
 
         var responses = copyClassUseCase.copyClasses(pasteRequest, targetGraphIdentifier);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/paste\" to \"{}\".",
                 targetDatasetName,
-                targetGraphURI,
+                targetGraphName,
                 originURL);
         return responses;
     }
@@ -119,7 +120,7 @@ public class PasteRESTController {
                             description =
                                     "The url encoded uri of the target graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String targetGraphURI,
+                    String targetGraphName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description = "The list of source classes that would be pasted.")
@@ -128,12 +129,13 @@ public class PasteRESTController {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/paste/preview\" for {} class(es) from \"{}\".",
                 targetDatasetName,
-                targetGraphURI,
+                targetGraphName,
                 previewRequest.getSources() == null ? 0 : previewRequest.getSources().size(),
                 originURL);
 
-        var targetExtendedGraphURI = expandURIUseCase.expandUri(targetDatasetName, targetGraphURI);
-        var targetGraphIdentifier = new GraphIdentifier(targetDatasetName, targetExtendedGraphURI);
+        var targetExtendedGraphName =
+                expandURIUseCase.expandUri(targetDatasetName, targetGraphName);
+        var targetGraphIdentifier = new GraphIdentifier(targetDatasetName, targetExtendedGraphName);
 
         return pastePreviewUseCase.previewPaste(previewRequest, targetGraphIdentifier);
     }

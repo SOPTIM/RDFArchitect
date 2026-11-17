@@ -83,14 +83,14 @@ public class GraphBulkContentRESTController {
             @Parameter(description = "The files containing the graph data") @RequestParam("files")
                     List<MultipartFile> files,
             @Parameter(description = "Optional graph URIs, one per file. Defaults to file names.")
-                    @RequestParam(value = "graphUris", required = false)
-                    List<String> graphUris) {
+                    @RequestParam(value = "graphNames", required = false)
+                    List<String> graphNames) {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/content/imports\" from \"{}\".",
                 datasetName,
                 originURL);
 
-        var jobId = importJobUseCase.startImport(datasetName, files, graphUris);
+        var jobId = importJobUseCase.startImport(datasetName, files, graphNames);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/content/imports\" to \"{}\": job {}.",

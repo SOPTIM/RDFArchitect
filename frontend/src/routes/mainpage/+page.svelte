@@ -123,7 +123,7 @@
         return await fetchResolveIRI({
             path: {
                 datasetName: workspace,
-                graphURI: graph,
+                graphName: graph,
                 iriIdentifier: iri,
             },
         }).then(res => res.data);

@@ -226,7 +226,7 @@
           "comment" : {
             "$ref" : "#/components/schemas/RDFSComment"
           },
-          "graphUri" : {
+          "graphName" : {
             "type" : "string"
           },
           "label" : {
@@ -337,7 +337,7 @@
       },
       "ChangeLogEntryDTO" : {
         "properties" : {
-          "affectedGraphUris" : {
+          "affectedGraphNames" : {
             "items" : {
               "type" : "string"
             },
@@ -367,13 +367,13 @@
             },
             "type" : "array"
           },
-          "restorableGraphUris" : {
+          "restorableGraphNames" : {
             "items" : {
               "type" : "string"
             },
             "type" : "array"
           },
-          "restoreTargetGraphUris" : {
+          "restoreTargetGraphNames" : {
             "items" : {
               "type" : "string"
             },
@@ -397,7 +397,7 @@
           "comment" : {
             "type" : "string"
           },
-          "graphUri" : {
+          "graphName" : {
             "type" : "string"
           },
           "label" : {
@@ -444,7 +444,7 @@
       },
       "ClassInDiagram" : {
         "properties" : {
-          "graphUri" : {
+          "graphName" : {
             "$ref" : "#/components/schemas/URI"
           },
           "uuid" : {
@@ -534,7 +534,7 @@
             "format" : "uuid",
             "type" : "string"
           },
-          "graphUri" : {
+          "graphName" : {
             "type" : "string"
           },
           "keyword" : {
@@ -658,7 +658,7 @@
             },
             "type" : "array"
           },
-          "graphUri" : {
+          "graphName" : {
             "type" : "string"
           },
           "values" : {
@@ -933,7 +933,7 @@
             },
             "type" : "array"
           },
-          "graphUri" : {
+          "graphName" : {
             "type" : "string"
           },
           "withInheritance" : {
@@ -1014,7 +1014,7 @@
           "graphColor" : {
             "type" : "string"
           },
-          "graphUri" : {
+          "graphName" : {
             "type" : "string"
           },
           "value" : {
@@ -1028,7 +1028,7 @@
           "graphColor" : {
             "type" : "string"
           },
-          "graphUri" : {
+          "graphName" : {
             "type" : "string"
           },
           "value" : {
@@ -1042,7 +1042,7 @@
           "graphColor" : {
             "type" : "string"
           },
-          "graphUri" : {
+          "graphName" : {
             "type" : "string"
           },
           "value" : {
@@ -1056,7 +1056,7 @@
           "graphColor" : {
             "type" : "string"
           },
-          "graphUri" : {
+          "graphName" : {
             "type" : "string"
           },
           "value" : {
@@ -1084,7 +1084,7 @@
           "fileName" : {
             "type" : "string"
           },
-          "graphUri" : {
+          "graphName" : {
             "type" : "string"
           },
           "index" : {
@@ -1137,7 +1137,7 @@
             },
             "type" : "array"
           },
-          "importedGraphUris" : {
+          "importedGraphNames" : {
             "items" : {
               "type" : "string"
             },
@@ -1193,7 +1193,7 @@
             "format" : "uuid",
             "type" : "string"
           },
-          "graphUri" : {
+          "graphName" : {
             "type" : "string"
           },
           "keyword" : {
@@ -1473,7 +1473,7 @@
           "sourceDatasetName" : {
             "type" : "string"
           },
-          "sourceGraphURI" : {
+          "sourceGraphName" : {
             "type" : "string"
           }
         },
@@ -1919,7 +1919,7 @@
           "expectedNewestChangeId" : {
             "type" : "string"
           },
-          "graphUris" : {
+          "graphNames" : {
             "items" : {
               "type" : "string"
             },
@@ -1963,7 +1963,7 @@
           "datasetName" : {
             "type" : "string"
           },
-          "graphUri" : {
+          "graphName" : {
             "type" : "string"
           },
           "packageUUID" : {
@@ -1977,7 +1977,7 @@
           "datasetName" : {
             "type" : "string"
           },
-          "graphUri" : {
+          "graphName" : {
             "type" : "string"
           },
           "label" : {
@@ -3591,7 +3591,7 @@
           {
             "description" : "Optional graph URIs, one per file. Defaults to file names.",
             "in" : "query",
-            "name" : "graphUris",
+            "name" : "graphNames",
             "required" : false,
             "schema" : {
               "items" : {
@@ -3820,7 +3820,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/asciidocexport/{fileEnding}" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/asciidocexport/{fileEnding}" : {
       "get" : {
         "description" : "Export the rdf-schema graph as asciidoc",
         "operationId" : "getAsciiDocExport",
@@ -3847,7 +3847,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -3887,7 +3887,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/classes" : {
       "get" : {
         "description" : "Get a list containing all classes. Doesn't include: stereotypes, attributes and associations.",
         "operationId" : "getClassList",
@@ -3914,7 +3914,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -3977,7 +3977,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -4013,7 +4013,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}" : {
       "delete" : {
         "description" : "Deletes a whole class.",
         "operationId" : "deleteClass",
@@ -4040,7 +4040,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -4099,7 +4099,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -4168,7 +4168,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -4213,7 +4213,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/associations" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/associations" : {
       "post" : {
         "description" : "Creates a new association for a specified class.",
         "operationId" : "createAssociation",
@@ -4240,7 +4240,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -4310,7 +4310,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -4358,7 +4358,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/associations/{associationUUID}" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/associations/{associationUUID}" : {
       "put" : {
         "description" : "Replaces an association of a specified class.",
         "operationId" : "replaceAssociation",
@@ -4385,7 +4385,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -4439,7 +4439,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/associations/{associationUUID}/shacl" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/associations/{associationUUID}/shacl" : {
       "get" : {
         "description" : "GET the shacl rules that can be related to a specified association.",
         "operationId" : "getAssociationSHACL",
@@ -4466,7 +4466,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -4534,7 +4534,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -4588,7 +4588,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/attributes" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/attributes" : {
       "post" : {
         "description" : "Creates a new attribute for a specified class.",
         "operationId" : "createAttribute",
@@ -4615,7 +4615,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -4686,7 +4686,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -4734,7 +4734,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/attributes/{attributeUUID}" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/attributes/{attributeUUID}" : {
       "put" : {
         "description" : "Replaces an attribute of a specified class.",
         "operationId" : "replaceAttribute",
@@ -4761,7 +4761,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -4816,7 +4816,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/attributes/{attributeUUID}/shacl" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/attributes/{attributeUUID}/shacl" : {
       "get" : {
         "description" : "GET the shacl rules that can be related to a specified attribute.",
         "operationId" : "getAttributeSHACL",
@@ -4843,7 +4843,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -4911,7 +4911,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -4965,7 +4965,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/enumentries" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/enumentries" : {
       "post" : {
         "description" : "Creates a new enum entry for a specified class.",
         "operationId" : "createEnumEntry",
@@ -4992,7 +4992,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -5038,7 +5038,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/enumentries/{enumEntryUUID}" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/enumentries/{enumEntryUUID}" : {
       "put" : {
         "description" : "Replaces the enum entry for a given enum URI and labels",
         "operationId" : "replaceEnumEntry",
@@ -5065,7 +5065,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -5120,7 +5120,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/referencedByClasses" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/referencedByClasses" : {
       "get" : {
         "description" : "Get all classes referencing this class.",
         "operationId" : "getClassesReferencingThisClass",
@@ -5147,7 +5147,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -5181,7 +5181,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/shacl" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/shacl" : {
       "get" : {
         "description" : "Get the shacl rules that can be related to a specified class.",
         "operationId" : "getSHACLRelatedToClass",
@@ -5208,7 +5208,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -5242,7 +5242,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/shacl/custom" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/shacl/custom" : {
       "put" : {
         "description" : "Replace or insert SHACL rules related to a class.",
         "operationId" : "putSHACL",
@@ -5269,7 +5269,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -5314,7 +5314,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/shacl/propertyShapes" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/shacl/propertyShapes" : {
       "get" : {
         "description" : "Get the shacl rules that can be related to a specified class.",
         "operationId" : "getPropertyShapes",
@@ -5341,7 +5341,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -5378,7 +5378,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/compare" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/compare" : {
       "get" : {
         "description" : "Compare two graphs stored in the database",
         "operationId" : "compareStoredSchemas",
@@ -5405,7 +5405,7 @@
           {
             "description" : "The url encoded uri of the base graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -5476,7 +5476,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -5523,7 +5523,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/content" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/content" : {
       "delete" : {
         "description" : "Delete an rdf-schema graph",
         "operationId" : "deleteGraph",
@@ -5550,7 +5550,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -5600,7 +5600,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -5649,7 +5649,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -5690,7 +5690,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/datatypes" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/datatypes" : {
       "get" : {
         "description" : "Get a list of datatypes/classes. Doesn't include: Primitive Datatypes, stereotypes, attributes and associations.",
         "operationId" : "listDatatypes",
@@ -5717,7 +5717,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -5745,7 +5745,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/delete-requests" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/delete-requests" : {
       "post" : {
         "description" : "Processes a list of delete requests, each specifying a resource UUID and the desired action.",
         "operationId" : "deleteResources",
@@ -5772,7 +5772,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -5811,7 +5811,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/deletion-impact" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/deletion-impact" : {
       "post" : {
         "description" : "Returns, per requested UUID, a tree of affected resources for deleting that resource.",
         "operationId" : "getDeletionImpact",
@@ -5838,7 +5838,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -5881,7 +5881,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/diagrams" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/diagrams" : {
       "get" : {
         "description" : "Returns a list of all custom diagrams for the specified graph. Each diagram includes its ID, name, and other relevant information.",
         "operationId" : "getCustomGraphDiagramList",
@@ -5908,7 +5908,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -5936,7 +5936,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/diagrams/{diagramId}" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/diagrams/{diagramId}" : {
       "delete" : {
         "operationId" : "deleteCustomGraphDiagram",
         "parameters" : [
@@ -5962,7 +5962,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -6019,7 +6019,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -6086,7 +6086,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -6129,7 +6129,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/diagrams/{diagramId}/classes" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/diagrams/{diagramId}/classes" : {
       "delete" : {
         "operationId" : "removeFromDiagram",
         "parameters" : [
@@ -6155,7 +6155,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -6227,7 +6227,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -6274,7 +6274,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/htmlexport/{fileEnding}" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/htmlexport/{fileEnding}" : {
       "get" : {
         "description" : "Export the rdf-schema graph as html",
         "operationId" : "getHTMLExport",
@@ -6301,7 +6301,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -6341,7 +6341,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/layout/{diagramUUID}" : {
       "put" : {
         "description" : "Updates the layout of the classes, edges and labels in the request body in one step. Every part is optional, only the elements sent are updated.",
         "operationId" : "updateDiagramLayout",
@@ -6368,7 +6368,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -6414,7 +6414,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}/classes" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/layout/{diagramUUID}/classes" : {
       "put" : {
         "description" : "Updates the positions for all the classes provided in the request body with the provided coordinates.",
         "operationId" : "updateClassPositions",
@@ -6441,7 +6441,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -6491,7 +6491,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}/edges" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/layout/{diagramUUID}/edges" : {
       "put" : {
         "description" : "Replaces the points of the edges in the request body with the full, ordered list of points sent for each.",
         "operationId" : "updateEdgeLayouts",
@@ -6518,7 +6518,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -6568,7 +6568,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}/labels" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/layout/{diagramUUID}/labels" : {
       "put" : {
         "description" : "Updates the offsets for all the labels provided in the request body. Labels without an offset are reset to their default placement.",
         "operationId" : "updateLabelPositions",
@@ -6595,7 +6595,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -6645,7 +6645,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/ontology" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/ontology" : {
       "delete" : {
         "description" : "Deletes the currently stored ontology.",
         "operationId" : "deleteOntology",
@@ -6672,7 +6672,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -6722,7 +6722,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -6772,7 +6772,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -6833,7 +6833,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -6869,7 +6869,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/ontology/generate" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/ontology/generate" : {
       "get" : {
         "description" : "Get the Ontology fields that can be automatically generated.",
         "operationId" : "getOntologyEntries",
@@ -6896,7 +6896,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -6924,7 +6924,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/packages" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/packages" : {
       "get" : {
         "description" : "Get two lists of packages: internal and external packages.",
         "operationId" : "listPackages",
@@ -6951,7 +6951,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7001,7 +7001,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7038,7 +7038,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/packages/{packageUUID}" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/packages/{packageUUID}" : {
       "delete" : {
         "description" : "Deletes a package by UUID.",
         "operationId" : "deletePackage",
@@ -7065,7 +7065,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7126,7 +7126,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7187,7 +7187,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7233,7 +7233,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/primitives" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/primitives" : {
       "get" : {
         "description" : "Get a list of primitive datatypes/classes. Doesn't include: stereotypes, attributes and associations.",
         "operationId" : "listPrimitives",
@@ -7260,7 +7260,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7288,7 +7288,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/rename" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/rename" : {
       "post" : {
         "description" : "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. The profile header is left untouched: what a schema is called on screen is read from there and is edited in the ontology editor.",
         "operationId" : "renameGraph",
@@ -7315,7 +7315,7 @@
           {
             "description" : "The url encoded uri of the graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7324,7 +7324,7 @@
           {
             "description" : "The url encoded uri to rename the graph to.",
             "in" : "query",
-            "name" : "newGraphURI",
+            "name" : "newGraphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7359,7 +7359,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/rendering" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/rendering" : {
       "post" : {
         "description" : "Returns rendering data for UML diagrams. The content varies based on environment configuration (Mermaid or Svelteflow).",
         "operationId" : "getRenderingDataParameterized",
@@ -7386,7 +7386,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7422,7 +7422,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/resolve/iri/{iriIdentifier}" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/resolve/iri/{iriIdentifier}" : {
       "get" : {
         "description" : "Resolve iri identifier of a cim resource to its uuid.",
         "operationId" : "resolveIri",
@@ -7449,7 +7449,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7483,7 +7483,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/combined/file" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/shacl/combined/file" : {
       "get" : {
         "description" : "Export the combined rdf-shacl graph of the generated and custom shapes for a graph.",
         "operationId" : "getCombinedSHACLAsFile",
@@ -7510,7 +7510,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7534,7 +7534,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom/file" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/shacl/custom/file" : {
       "get" : {
         "description" : "Export the rdf-shacl graph",
         "operationId" : "getCustomSHACLAsFile",
@@ -7561,7 +7561,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7610,7 +7610,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7654,7 +7654,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom/namespaces/ttl" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/shacl/custom/namespaces/ttl" : {
       "get" : {
         "description" : "Export the namespaces of the custom SHACL graph for a given graph identifier.",
         "operationId" : "getCustomSHACLNamespacesAsString",
@@ -7681,7 +7681,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7702,7 +7702,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom/string" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/shacl/custom/string" : {
       "get" : {
         "description" : "Export the rdf-shacl graph as String",
         "operationId" : "getCustomSHACLAsString",
@@ -7729,7 +7729,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7775,7 +7775,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7811,7 +7811,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom/{shaclShapeURI}" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/shacl/custom/{shaclShapeURI}" : {
       "delete" : {
         "description" : "Delete a shacl shape form a shacl graph",
         "operationId" : "deleteShape",
@@ -7838,7 +7838,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7897,7 +7897,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7942,7 +7942,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/generate/file" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/shacl/generate/file" : {
       "get" : {
         "description" : "Export the rdf-shacl graph as a file",
         "operationId" : "getGeneratedSHACLAsFile",
@@ -7969,7 +7969,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -7993,7 +7993,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/generate/string" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/shacl/generate/string" : {
       "get" : {
         "description" : "generate shacl for the whole graph and return it as a Turtle string.",
         "operationId" : "getGeneratedSHACLAsString",
@@ -8020,7 +8020,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -8045,7 +8045,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/shacl/generated/namespaces/ttl" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/shacl/generated/namespaces/ttl" : {
       "get" : {
         "description" : "Export the namespaces of the generated SHACL graph for a given graph identifier.",
         "operationId" : "getGeneratedSHACLNamespacesAsString",
@@ -8072,7 +8072,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -8093,7 +8093,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/stereotypes" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/stereotypes" : {
       "get" : {
         "description" : "Get a list of all occurring stereotypes in the graph.",
         "operationId" : "listStereotypes",
@@ -8120,7 +8120,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -8148,7 +8148,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/validate-workspace" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/validate-workspace" : {
       "get" : {
         "description" : "Validates a schema against the other schemas of its workspace and returns the issues that involve the schema.",
         "operationId" : "validateSchemaInWorkspace",
@@ -8175,7 +8175,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -8200,7 +8200,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/validate/{cgmesVersion}" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/validate/{cgmesVersion}" : {
       "get" : {
         "description" : "Validates the RDFS schema of a graph for completeness, including the profile header.",
         "operationId" : "validateSchema",
@@ -8227,7 +8227,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -8264,7 +8264,7 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/writeToDatabase" : {
+    "/api/datasets/{datasetName}/graphs/{graphName}/writeToDatabase" : {
       "post" : {
         "description" : "Write a graph to a database to persist it.",
         "operationId" : "writeToDatabase",
@@ -8291,7 +8291,7 @@
           {
             "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "graphURI",
+            "name" : "graphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -9162,7 +9162,7 @@
         ]
       }
     },
-    "/api/datasets/{targetDatasetName}/graphs/{targetGraphURI}/paste" : {
+    "/api/datasets/{targetDatasetName}/graphs/{targetGraphName}/paste" : {
       "post" : {
         "description" : "Create copies of one or more previously copied classes in the target graph. A referenced data type listed in referencesToCopy also brings the data types its own attributes need.",
         "operationId" : "pasteClasses",
@@ -9189,7 +9189,7 @@
           {
             "description" : "The url encoded uri of the target graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "targetGraphURI",
+            "name" : "targetGraphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -9228,7 +9228,7 @@
         ]
       }
     },
-    "/api/datasets/{targetDatasetName}/graphs/{targetGraphURI}/paste/preview" : {
+    "/api/datasets/{targetDatasetName}/graphs/{targetGraphName}/paste/preview" : {
       "post" : {
         "description" : "Report which data types, association targets and super classes of the given source classes the target graph does not contain yet.",
         "operationId" : "previewPaste",
@@ -9255,7 +9255,7 @@
           {
             "description" : "The url encoded uri of the target graph, or \"default\" to access the default graph.",
             "in" : "path",
-            "name" : "targetGraphURI",
+            "name" : "targetGraphName",
             "required" : true,
             "schema" : {
               "type" : "string"
@@ -9484,7 +9484,7 @@
             }
           },
           {
-            "description" : "Dataset of graph A. Required together with graph_uri_a when not uploading graph A as a file.",
+            "description" : "Dataset of graph A. Required together with graph_name_a when not uploading graph A as a file.",
             "in" : "query",
             "name" : "datasetA",
             "required" : false,
@@ -9502,7 +9502,7 @@
             }
           },
           {
-            "description" : "Dataset of graph B. Required together with graph_uri_b when not uploading graph B as a file.",
+            "description" : "Dataset of graph B. Required together with graph_name_b when not uploading graph B as a file.",
             "in" : "query",
             "name" : "datasetB",
             "required" : false,
@@ -9536,12 +9536,12 @@
               "schema" : {
                 "properties" : {
                   "fileA" : {
-                    "description" : "The file containing graph A. Mutually exclusive with dataset_a and graph_uri_a.",
+                    "description" : "The file containing graph A. Mutually exclusive with dataset_a and graph_name_a.",
                     "format" : "binary",
                     "type" : "string"
                   },
                   "fileB" : {
-                    "description" : "The file containing graph B. Mutually exclusive with dataset_b and graph_uri_b.",
+                    "description" : "The file containing graph B. Mutually exclusive with dataset_b and graph_name_b.",
                     "format" : "binary",
                     "type" : "string"
                   }

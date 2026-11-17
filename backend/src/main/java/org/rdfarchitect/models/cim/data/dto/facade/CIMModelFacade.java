@@ -38,13 +38,13 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CIMModelFacade implements ICIMModelFacade {
 
-    private final String graphUri;
+    private final String graphName;
 
     private final Model model;
 
     @Override
-    public String getGraphUri() {
-        return this.graphUri;
+    public String getGraphName() {
+        return this.graphName;
     }
 
     @Override
@@ -55,7 +55,7 @@ public class CIMModelFacade implements ICIMModelFacade {
             if (!model.contains(classResource, RDFA.uuid)) {
                 continue;
             }
-            classes.add(new CIMClass(this.graphUri, this.model, classResource));
+            classes.add(new CIMClass(this.graphName, this.model, classResource));
         }
         return classes;
     }
@@ -72,7 +72,7 @@ public class CIMModelFacade implements ICIMModelFacade {
         if (classResources.isEmpty()) {
             return null;
         }
-        return new CIMClass(this.graphUri, this.model, classResources.getFirst());
+        return new CIMClass(this.graphName, this.model, classResources.getFirst());
     }
 
     @Override
@@ -87,16 +87,17 @@ public class CIMModelFacade implements ICIMModelFacade {
                 .forEach(packageResources::add);
         var packages = new ArrayList<ICIMClassCategory>();
         for (var packageResource : packageResources) {
-            packages.add(CIMClassCategory.fromResource(this.graphUri, this.model, packageResource));
+            packages.add(
+                    CIMClassCategory.fromResource(this.graphName, this.model, packageResource));
         }
-        packages.add(new DefaultCIMClassCategory(this.graphUri, this.model));
+        packages.add(new DefaultCIMClassCategory(this.graphName, this.model));
         return packages;
     }
 
     @Override
     public ICIMClassCategory getCIMClassCategory(UUID uuid) {
         if (uuid == null) {
-            return new DefaultCIMClassCategory(this.graphUri, this.model);
+            return new DefaultCIMClassCategory(this.graphName, this.model);
         }
         var categoryResources =
                 model.listSubjectsWithProperty(RDFA.uuid, uuid.toString())
@@ -105,7 +106,7 @@ public class CIMModelFacade implements ICIMModelFacade {
         if (categoryResources.isEmpty()) {
             return null;
         }
-        return new CIMClassCategory(this.graphUri, this.model, categoryResources.getFirst());
+        return new CIMClassCategory(this.graphName, this.model, categoryResources.getFirst());
     }
 
     @Override
@@ -123,7 +124,7 @@ public class CIMModelFacade implements ICIMModelFacade {
                 model.listSubjectsWithProperty(CIMS.stereotype, CIMStereotypes.attribute).toList();
         var attributes = new ArrayList<ICIMAttribute>();
         for (var attributeResource : attributeResources) {
-            attributes.add(new CIMAttribute(this.graphUri, this.model, attributeResource));
+            attributes.add(new CIMAttribute(this.graphName, this.model, attributeResource));
         }
         return attributes;
     }
@@ -132,7 +133,7 @@ public class CIMModelFacade implements ICIMModelFacade {
         var associationResources = model.listSubjectsWithProperty(CIMS.inverseRoleName).toList();
         var associations = new ArrayList<ICIMAssociation>();
         for (var associationResource : associationResources) {
-            associations.add(new CIMAssociation(this.graphUri, this.model, associationResource));
+            associations.add(new CIMAssociation(this.graphName, this.model, associationResource));
         }
         return associations;
     }

@@ -73,12 +73,12 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     }
 
     @Override
-    public GraphContext graph(String graphUri) {
-        return workspace.getGraphWithContext(graphUri);
+    public GraphContext graph(String graphName) {
+        return workspace.getGraphWithContext(graphName);
     }
 
     @Override
-    public List<String> graphUris() {
+    public List<String> graphNames() {
         return graphs.uris();
     }
 
@@ -108,8 +108,8 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     }
 
     @Override
-    public void createGraph(String graphUri, Graph newGraph) {
-        var expanded = prefixes.expandPrefix(graphUri);
+    public void createGraph(String graphName, Graph newGraph) {
+        var expanded = prefixes.expandPrefix(graphName);
         Workspace.assertValidGraphName(expanded);
         graphs.put(expanded, new GraphWithContext(newGraph, txnContext));
         prefixes.addAll(newGraph.getPrefixMapping());
@@ -117,16 +117,16 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     }
 
     @Override
-    public void deleteGraph(String graphUri) {
-        var expanded = prefixes.expandPrefix(graphUri);
+    public void deleteGraph(String graphName) {
+        var expanded = prefixes.expandPrefix(graphName);
         graphs.remove(expanded);
         crossProfileDiagramInfo.removeColor(expanded);
     }
 
     @Override
-    public void renameGraph(String oldGraphUri, String newGraphUri) {
-        var oldUri = prefixes.expandPrefix(oldGraphUri);
-        var newUri = prefixes.expandPrefix(newGraphUri);
+    public void renameGraph(String oldGraphName, String newGraphName) {
+        var oldUri = prefixes.expandPrefix(oldGraphName);
+        var newUri = prefixes.expandPrefix(newGraphName);
         Workspace.assertValidGraphName(oldUri);
         Workspace.assertValidGraphName(newUri);
         if (oldUri.equals(newUri)) {
@@ -177,18 +177,18 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
         end();
     }
 
-    private void renameGraphInDiagrams(String oldGraphUri, String newGraphUri) {
-        var oldUri = new URI(oldGraphUri);
-        var newUri = new URI(newGraphUri);
-        rewriteGraphUri(customDiagrams.get().values(), oldUri, newUri);
+    private void renameGraphInDiagrams(String oldGraphName, String newGraphName) {
+        var oldUri = new URI(oldGraphName);
+        var newUri = new URI(newGraphName);
+        rewriteGraphName(customDiagrams.get().values(), oldUri, newUri);
         for (var graph : graphs.view().values()) {
-            rewriteGraphUri(graph.getCustomDiagrams().values(), oldUri, newUri);
+            rewriteGraphName(graph.getCustomDiagrams().values(), oldUri, newUri);
         }
     }
 
-    private static void rewriteGraphUri(
+    private static void rewriteGraphName(
             Collection<CustomDiagram> diagrams, URI oldUri, URI newUri) {
-        rewriteGraphUris(diagrams, Map.of(oldUri, newUri));
+        rewriteGraphNames(diagrams, Map.of(oldUri, newUri));
     }
 
     /**
@@ -200,20 +200,20 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
      * @param diagrams the diagrams to rewrite
      * @param renamed the URI each renamed graph has now, by the URI it had
      */
-    static void rewriteGraphUris(Collection<CustomDiagram> diagrams, Map<URI, URI> renamed) {
+    static void rewriteGraphNames(Collection<CustomDiagram> diagrams, Map<URI, URI> renamed) {
         for (var diagram : diagrams) {
             var classes = diagram.getClasses();
-            if (classes.stream().noneMatch(entry -> renamed.containsKey(entry.getGraphUri()))) {
+            if (classes.stream().noneMatch(entry -> renamed.containsKey(entry.getGraphName()))) {
                 continue;
             }
             diagram.setClasses(
                     classes.stream()
                             .map(
                                     entry ->
-                                            renamed.containsKey(entry.getGraphUri())
+                                            renamed.containsKey(entry.getGraphName())
                                                     ? new ClassInDiagram(
                                                             entry.getUuid(),
-                                                            renamed.get(entry.getGraphUri()))
+                                                            renamed.get(entry.getGraphName()))
                                                     : entry)
                             .toList());
         }

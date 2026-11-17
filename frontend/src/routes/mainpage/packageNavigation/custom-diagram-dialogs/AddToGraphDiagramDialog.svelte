@@ -30,7 +30,7 @@
     let {
         showDialog = $bindable(),
         lockedWorkspaceName,
-        lockedGraphUri,
+        lockedGraphName,
         classes,
     } = $props();
 
@@ -73,7 +73,7 @@
         existingDiagrams =
             (await customDiagramStore.getGraphDiagrams(
                 lockedWorkspaceName,
-                lockedGraphUri,
+                lockedGraphName,
             )) ?? [];
         diagramsLoaded = true;
     }
@@ -104,7 +104,7 @@
     function classesToAdd() {
         return classes.map(cls => ({
             uuid: cls.id,
-            graphUri: lockedGraphUri,
+            graphName: lockedGraphName,
         }));
     }
 
@@ -126,7 +126,7 @@
 
         const { error } = await customDiagramStore.saveGraphDiagram(
             lockedWorkspaceName,
-            lockedGraphUri,
+            lockedGraphName,
             diagramId,
             diagramData,
         );
@@ -134,7 +134,7 @@
 
         editorState.selectCustomDiagram(
             lockedWorkspaceName,
-            lockedGraphUri,
+            lockedGraphName,
             diagramId,
             DiagramType.CUSTOM_GRAPH_DIAGRAM,
         );
@@ -144,7 +144,7 @@
     async function addToDiagram(diagram) {
         const { error } = await customDiagramStore.addClassesToGraphDiagram(
             lockedWorkspaceName,
-            lockedGraphUri,
+            lockedGraphName,
             diagram.diagramId,
             classesToAdd(),
         );

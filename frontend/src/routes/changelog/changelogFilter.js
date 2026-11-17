@@ -23,7 +23,7 @@
  * what was done inside it and what was done to it — creating, deleting and renaming are recorded
  * against the set of graphs, not against the graph itself.
  *
- * @typedef {{hiddenKinds?: Set<string>, graphUri?: string|null}} ChangelogFilter
+ * @typedef {{hiddenKinds?: Set<string>, graphName?: string|null}} ChangelogFilter
  */
 
 /**
@@ -38,16 +38,16 @@
  * as much as the workspace did. It is the mark of where the workspace stands once everything has
  * been undone, and the only entry a restore can go back to the beginning from.
  *
- * @param {{affectedKinds?: string[], affectedGraphUris?: string[]}} change the recorded change
+ * @param {{affectedKinds?: string[], affectedGraphNames?: string[]}} change the recorded change
  * @param {ChangelogFilter} filter what is being shown
  * @returns {boolean} whether to show it
  */
-export function showsChange(change, { hiddenKinds, graphUri } = {}) {
+export function showsChange(change, { hiddenKinds, graphName } = {}) {
     const kinds = change.affectedKinds ?? [];
     if (kinds.length === 0) {
         return true;
     }
-    if (graphUri && !(change.affectedGraphUris ?? []).includes(graphUri)) {
+    if (graphName && !(change.affectedGraphNames ?? []).includes(graphName)) {
         return false;
     }
     const hidden = hiddenKinds ?? new Set();
@@ -62,12 +62,12 @@ export function showsChange(change, { hiddenKinds, graphUri } = {}) {
  * therefore left where it is by a restore held to a schema. Asking the one question for the other
  * would promise to undo something that stays.
  *
- * @param {{restorableGraphUris?: string[]}} change the recorded change
- * @param {string} graphUri the schema the restore is held to
+ * @param {{restorableGraphNames?: string[]}} change the recorded change
+ * @param {string} graphName the schema the restore is held to
  * @returns {boolean} whether the restore takes it back
  */
-export function restoresChange(change, graphUri) {
-    return (change.restorableGraphUris ?? []).includes(graphUri);
+export function restoresChange(change, graphName) {
+    return (change.restorableGraphNames ?? []).includes(graphName);
 }
 
 /**
@@ -82,12 +82,12 @@ export function restoresChange(change, graphUri) {
  * @param {ChangelogFilter} filter what is being shown
  * @returns {Array<object>} the deltas to show
  */
-export function visibleDeltas(change, { hiddenKinds, graphUri } = {}) {
+export function visibleDeltas(change, { hiddenKinds, graphName } = {}) {
     const hidden = hiddenKinds ?? new Set();
     return (change.contextDeltas ?? []).filter(
         delta =>
             !hidden.has(delta.contextName) &&
-            (!graphUri || delta.graphUri === graphUri) &&
+            (!graphName || delta.graphName === graphName) &&
             showsSomething(delta),
     );
 }

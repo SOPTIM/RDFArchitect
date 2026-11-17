@@ -83,7 +83,7 @@ class UniqueProfileHeaderRuleTest extends WorkspaceValidationTestBase {
                             assertThat(issue.getMessage())
                                     .isEqualTo("Keyword is used by multiple schemas: EQ");
                             assertThat(issue.getOccurrences())
-                                    .extracting(IssueOccurrenceDTO::getGraphUri)
+                                    .extracting(IssueOccurrenceDTO::getGraphName)
                                     .containsExactly(
                                             "http://example.org/graph/first",
                                             "http://example.org/graph/second");

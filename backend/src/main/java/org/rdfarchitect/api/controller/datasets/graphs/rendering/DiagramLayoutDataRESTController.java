@@ -45,7 +45,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/layout/{diagramUUID}")
 @RequiredArgsConstructor
 public class DiagramLayoutDataRESTController {
 
@@ -73,7 +73,7 @@ public class DiagramLayoutDataRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The UUID of the package or custom diagram being updated.")
                     @PathVariable
                     String diagramUUID,
@@ -91,17 +91,17 @@ public class DiagramLayoutDataRESTController {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 diagramUUID,
                 originURL);
         updateDiagramLayoutUseCase.updateDiagramLayout(
-                graphIdentifier(datasetName, graphURI),
+                graphIdentifier(datasetName, graphName),
                 resolveDiagramUUID(diagramUUID),
                 diagramLayoutDTO);
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 diagramUUID,
                 originURL);
         return Response.SUCCESS;
@@ -124,7 +124,7 @@ public class DiagramLayoutDataRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The UUID of the package or custom diagram being updated.")
                     @PathVariable
                     String diagramUUID,
@@ -145,24 +145,24 @@ public class DiagramLayoutDataRESTController {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/edges\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 diagramUUID,
                 originURL);
         updateEdgeLayoutUseCase.updateEdgeLayouts(
-                graphIdentifier(datasetName, graphURI),
+                graphIdentifier(datasetName, graphName),
                 resolveDiagramUUID(diagramUUID),
                 edgeLayoutDTOList);
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/edges\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 diagramUUID,
                 originURL);
         return Response.SUCCESS;
     }
 
-    private GraphIdentifier graphIdentifier(String datasetName, String graphURI) {
-        return new GraphIdentifier(datasetName, expandURIUseCase.expandUri(datasetName, graphURI));
+    private GraphIdentifier graphIdentifier(String datasetName, String graphName) {
+        return new GraphIdentifier(datasetName, expandURIUseCase.expandUri(datasetName, graphName));
     }
 
     private static UUID resolveDiagramUUID(String diagramUUID) {

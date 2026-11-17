@@ -72,8 +72,8 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
             Txn.executeWrite(
                     conn,
                     () -> {
-                        for (var graphURI : databasePort.listGraphUris(datasetName)) {
-                            transferGraph(conn, new GraphIdentifier(datasetName, graphURI));
+                        for (var graphName : databasePort.listGraphNames(datasetName)) {
+                            transferGraph(conn, new GraphIdentifier(datasetName, graphName));
                         }
                     });
         } catch (Exception e) {
@@ -107,7 +107,7 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
     private void transferGraph(RDFConnection conn, GraphIdentifier graphIdentifier) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var copiedGraph = GraphUtils.deepCopy(ctx.getRdfGraph());
             copiedGraph
                     .getPrefixMapping()
@@ -115,7 +115,7 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
 
             GraphUtils.removeUUIDs(copiedGraph);
 
-            conn.put(graphIdentifier.graphUri(), ModelFactory.createModelForGraph(copiedGraph));
+            conn.put(graphIdentifier.graphName(), ModelFactory.createModelForGraph(copiedGraph));
         } catch (Exception e) {
             throw new FusekiServerException(e.getMessage());
         }

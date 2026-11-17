@@ -33,7 +33,7 @@
     let {
         showDialog = $bindable(),
         lockedWorkspaceName,
-        lockedGraphUri,
+        lockedGraphName,
     } = $props();
 
     const zipMediaType = {
@@ -88,7 +88,7 @@
     ];
 
     let selectedWorkspaceName = $state(null);
-    let graphURI = $state(null);
+    let graphName = $state(null);
     let selectedDocumentEnding = $state(supportedDocumentFormats[0].ending);
     let selectedImageEnding = $state(supportedMediaTypes[0].ending);
     let selectedPlacementKey = $state(supportedDiagramPlacements[0].key);
@@ -111,13 +111,13 @@
     );
     let isExporting = $derived(progress !== null);
     let disablePrimary = $derived(
-        !selectedWorkspaceName || !graphURI || isExporting,
+        !selectedWorkspaceName || !graphName || isExporting,
     );
 
     function onOpen() {
         selectedWorkspaceName =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
-        graphURI = lockedGraphUri ?? editorState.selectedGraph.getValue();
+        graphName = lockedGraphName ?? editorState.selectedGraph.getValue();
     }
 
     function onClose() {
@@ -125,7 +125,7 @@
     }
 
     async function onPrimary() {
-        if (!selectedWorkspaceName || !graphURI || isExporting) return;
+        if (!selectedWorkspaceName || !graphName || isExporting) return;
         const documentFormat = selectedDocumentFormat;
         const mediaType = selectedMediaType;
         const currentProgress = new ExportProgress();
@@ -133,7 +133,7 @@
         try {
             const response = await documentFormat.fetch(
                 selectedWorkspaceName,
-                graphURI,
+                graphName,
                 mediaType.ending,
                 embedDiagrams,
                 currentProgress.signal,
@@ -141,7 +141,7 @@
             if (!response.ok) {
                 toastStore.error(
                     "Export failed",
-                    `Could not export "${graphURI}" as ${documentFormat.name}.`,
+                    `Could not export "${graphName}" as ${documentFormat.name}.`,
                 );
                 return;
             }
@@ -155,7 +155,7 @@
 
             const images = await generatePackageImages(
                 selectedWorkspaceName,
-                graphURI,
+                graphName,
                 mediaType,
                 currentProgress,
             );
@@ -196,13 +196,13 @@
 
             saveFile(
                 zipBlob,
-                `${getGraphLabel(graphURI)}-${documentFormat.ending}-export.zip`,
+                `${getGraphLabel(graphName)}-${documentFormat.ending}-export.zip`,
                 zipMediaType,
             );
 
             toastStore.success(
                 "Export ready",
-                `"${graphURI}" downloaded as ${documentFormat.name} export (zip).`,
+                `"${graphName}" downloaded as ${documentFormat.name} export (zip).`,
             );
             notifyFailedPackages(currentProgress);
             showDialog = false;
@@ -246,11 +246,11 @@
         return match?.[1] ?? `export.${documentFormat.ending}`;
     }
 
-    function getGraphLabel(graphURI) {
+    function getGraphLabel(graphName) {
         try {
-            return new URI(graphURI).suffix;
+            return new URI(graphName).suffix;
         } catch {
-            return graphURI;
+            return graphName;
         }
     }
 </script>
@@ -274,9 +274,9 @@
         <div class="mx-2 mt-2 flex h-full flex-col space-y-3">
             <WorkspaceAndGraphSelection
                 bind:workspace={selectedWorkspaceName}
-                bind:graph={graphURI}
+                bind:graph={graphName}
                 {lockedWorkspaceName}
-                {lockedGraphUri}
+                {lockedGraphName}
                 displayAsCard={false}
             />
 

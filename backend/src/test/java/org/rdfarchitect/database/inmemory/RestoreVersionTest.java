@@ -113,7 +113,7 @@ class RestoreVersionTest {
 
             workspace.restoreToVersion(target, RevertScope.everything());
 
-            assertThat(workspace.listGraphUris()).containsExactly(GRAPH_A);
+            assertThat(workspace.listGraphNames()).containsExactly(GRAPH_A);
             assertThat(schemaOf(GRAPH_A)).containsExactly(triple("s p o1"));
         }
 
@@ -124,7 +124,7 @@ class RestoreVersionTest {
 
             workspace.restoreToVersion(target, RevertScope.everything());
 
-            assertThat(workspace.listGraphUris()).containsExactly(GRAPH_A);
+            assertThat(workspace.listGraphNames()).containsExactly(GRAPH_A);
         }
 
         @Test
@@ -158,7 +158,7 @@ class RestoreVersionTest {
 
             workspace.restoreToVersion(target, RevertScope.everything());
 
-            assertThat(workspace.listGraphUris()).containsExactly(GRAPH_A);
+            assertThat(workspace.listGraphNames()).containsExactly(GRAPH_A);
         }
     }
 
@@ -211,7 +211,7 @@ class RestoreVersionTest {
 
             workspace.restoreToVersion(target, RevertScope.ofGraphs(GRAPH_A));
 
-            assertThat(workspace.listGraphUris()).containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
+            assertThat(workspace.listGraphNames()).containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
         }
 
         @Test
@@ -227,7 +227,7 @@ class RestoreVersionTest {
                             () -> workspace.restoreToVersion(target, RevertScope.ofGraphs(GRAPH_B)))
                     .isInstanceOf(GraphVersionControlException.class)
                     .hasMessageContaining("no schema under that URI");
-            assertThat(workspace.listGraphUris()).containsExactly(GRAPH_A);
+            assertThat(workspace.listGraphNames()).containsExactly(GRAPH_A);
         }
 
         @Test
@@ -351,7 +351,7 @@ class RestoreVersionTest {
                                         .getCustomDiagrams()
                                         .get(diagramId)
                                         .getClasses())
-                        .extracting(entry -> entry.getGraphUri().toString())
+                        .extracting(entry -> entry.getGraphName().toString())
                         .containsExactly(GRAPH_B);
             }
         }
@@ -380,14 +380,14 @@ class RestoreVersionTest {
 
             var history = workspace.getChangeHistory();
 
-            assertThat(history.getFirst().restorableGraphUris()).containsExactly(GRAPH_A);
+            assertThat(history.getFirst().restorableGraphNames()).containsExactly(GRAPH_A);
             assertThat(history)
                     .filteredOn(change -> change.message().equals("added a triple"))
                     .last()
                     .satisfies(
                             change -> {
-                                assertThat(change.affectedGraphUris()).contains(GRAPH_A);
-                                assertThat(change.restorableGraphUris()).isEmpty();
+                                assertThat(change.affectedGraphNames()).contains(GRAPH_A);
+                                assertThat(change.restorableGraphNames()).isEmpty();
                             });
         }
 
@@ -399,8 +399,8 @@ class RestoreVersionTest {
             createGraph(GRAPH_B);
             commitSchema(GRAPH_B, triple("s p b"));
 
-            assertThat(changeWithId(before).restoreTargetGraphUris()).containsExactly(GRAPH_A);
-            assertThat(newestChange().restoreTargetGraphUris())
+            assertThat(changeWithId(before).restoreTargetGraphNames()).containsExactly(GRAPH_A);
+            assertThat(newestChange().restoreTargetGraphNames())
                     .containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
         }
 
@@ -412,8 +412,8 @@ class RestoreVersionTest {
             createGraph(GRAPH_A);
             commitSchema(GRAPH_A, triple("s p new"));
 
-            assertThat(changeWithId(old).restoreTargetGraphUris()).isEmpty();
-            assertThat(newestChange().restoreTargetGraphUris()).containsExactly(GRAPH_A);
+            assertThat(changeWithId(old).restoreTargetGraphNames()).isEmpty();
+            assertThat(newestChange().restoreTargetGraphNames()).containsExactly(GRAPH_A);
         }
 
         @Test
@@ -422,7 +422,7 @@ class RestoreVersionTest {
             var target = newestChangeId();
             WorkspaceFixtures.renameGraph(workspace, GRAPH_A, GRAPH_B);
 
-            assertThat(changeWithId(target).restoreTargetGraphUris()).containsExactly(GRAPH_B);
+            assertThat(changeWithId(target).restoreTargetGraphNames()).containsExactly(GRAPH_B);
         }
 
         @Test
@@ -430,7 +430,7 @@ class RestoreVersionTest {
             commitSchema(GRAPH_A, triple("s p a"));
             workspace.undo();
 
-            assertThat(workspace.getChangeHistory().getFirst().restoreTargetGraphUris()).isEmpty();
+            assertThat(workspace.getChangeHistory().getFirst().restoreTargetGraphNames()).isEmpty();
         }
 
         @Test
@@ -678,7 +678,7 @@ class RestoreVersionTest {
 
             var step = workspace.restoreToVersion(target, RevertScope.everything());
 
-            assertThat(step.change().affectedGraphUris()).containsExactly(GRAPH_A);
+            assertThat(step.change().affectedGraphNames()).containsExactly(GRAPH_A);
         }
 
         @Test
@@ -794,23 +794,23 @@ class RestoreVersionTest {
         return newestChange().changeId();
     }
 
-    private void createGraph(String graphUri) {
-        WorkspaceFixtures.createGraph(workspace, graphUri);
+    private void createGraph(String graphName) {
+        WorkspaceFixtures.createGraph(workspace, graphName);
     }
 
-    private void commitSchema(String graphUri, Triple triple) {
-        commitSchema(workspace, graphUri, triple);
+    private void commitSchema(String graphName, Triple triple) {
+        commitSchema(workspace, graphName, triple);
     }
 
-    private static void commitSchema(Workspace target, String graphUri, Triple triple) {
-        WorkspaceFixtures.commitTriple(target, graphUri, triple, "added a triple");
+    private static void commitSchema(Workspace target, String graphName, Triple triple) {
+        WorkspaceFixtures.commitTriple(target, graphName, triple, "added a triple");
     }
 
-    private void deleteFromSchema(String graphUri, Triple triple) {
-        WorkspaceFixtures.deleteTriple(workspace, graphUri, triple, "deleted a triple");
+    private void deleteFromSchema(String graphName, Triple triple) {
+        WorkspaceFixtures.deleteTriple(workspace, graphName, triple, "deleted a triple");
     }
 
-    private List<Triple> schemaOf(String graphUri) {
-        return WorkspaceFixtures.triplesIn(workspace, graphUri);
+    private List<Triple> schemaOf(String graphName) {
+        return WorkspaceFixtures.triplesIn(workspace, graphName);
     }
 }

@@ -30,7 +30,7 @@ import java.util.UUID;
 public class SearchResult {
 
     String datasetName;
-    String graphUri;
+    String graphName;
     RDFSLabel packageLabel;
     UUID packageUUID;
     UUID uuid;

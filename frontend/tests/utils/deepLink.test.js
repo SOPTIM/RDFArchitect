@@ -45,7 +45,7 @@ const singleGraphModel = {
 };
 
 /**
- * Wires the mocked `$lib/api/generated` functions to a {dataset: {graphUri: {iri: classInfo}}}
+ * Wires the mocked `$lib/api/generated` functions to a {dataset: {graphName: {iri: classInfo}}}
  * fixture.
  *
  * Classes are looked up by IRI (resolveIri) or by their fixture uuid (getClassInformation). A
@@ -82,8 +82,8 @@ function mockApiFor(model, { searchResults = [] } = {}) {
     });
 
     resolveIri.mockImplementation(
-        async ({ path: { datasetName, graphURI, iriIdentifier } }) => {
-            const hit = resourcesOf(model[datasetName]?.[graphURI]).find(
+        async ({ path: { datasetName, graphName, iriIdentifier } }) => {
+            const hit = resourcesOf(model[datasetName]?.[graphName]).find(
                 ([resourceIri]) => resourceIri === iriIdentifier,
             );
             return hit ? { data: hit[1] } : { error: { status: 500 } };
@@ -91,8 +91,8 @@ function mockApiFor(model, { searchResults = [] } = {}) {
     );
 
     getClassInformation.mockImplementation(
-        async ({ path: { datasetName, graphURI, classUUID } }) => {
-            const hit = resourcesOf(model[datasetName]?.[graphURI]).find(
+        async ({ path: { datasetName, graphName, classUUID } }) => {
+            const hit = resourcesOf(model[datasetName]?.[graphName]).find(
                 ([, resourceUuid]) => resourceUuid === classUUID,
             );
             // Found but not a class (an attribute, or a deleted one), or not found at all: the
@@ -135,7 +135,7 @@ describe("resolveClassTarget", () => {
 
         expect(target).toEqual({
             datasetName: "profiles",
-            graphUri: "https://cim.example.org/EQ",
+            graphName: "https://cim.example.org/EQ",
             packageUUID: PACKAGE_UUID,
             classUUID: CLASS_UUID,
         });
@@ -203,7 +203,7 @@ describe("resolveClassTarget", () => {
         });
 
         expect(target?.datasetName).toBe("profiles");
-        expect(target?.graphUri).toBe("https://cim.example.org/EQ");
+        expect(target?.graphName).toBe("https://cim.example.org/EQ");
         expect(target?.classUUID).toBe(CLASS_UUID);
     });
 
@@ -351,7 +351,7 @@ describe("resolveTermTarget", () => {
     const attributeHit = {
         query: "r",
         datasetName: "profiles",
-        graphUri: "https://cim.example.org/EQ",
+        graphName: "https://cim.example.org/EQ",
         packageUUID: PACKAGE_UUID,
         parentClassUUID: CLASS_UUID,
         parentClassUri: {
@@ -377,7 +377,7 @@ describe("resolveTermTarget", () => {
 
         expect(target).toEqual({
             datasetName: "profiles",
-            graphUri: "https://cim.example.org/EQ",
+            graphName: "https://cim.example.org/EQ",
             packageUUID: PACKAGE_UUID,
             classUUID: CLASS_UUID,
             propertyUUID: null,
@@ -396,7 +396,7 @@ describe("resolveTermTarget", () => {
 
         expect(target).toEqual({
             datasetName: "profiles",
-            graphUri: "https://cim.example.org/EQ",
+            graphName: "https://cim.example.org/EQ",
             packageUUID: PACKAGE_UUID,
             classUUID: CLASS_UUID,
             propertyUUID: ATTRIBUTE_UUID,

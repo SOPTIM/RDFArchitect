@@ -76,7 +76,7 @@ class ClassExtensionServiceTest {
         var sourceGraphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(sourceFile)
-                        .setGraphName(sourceGraphId.graphUri())
+                        .setGraphName(sourceGraphId.graphName())
                         .build();
         TestWorkspaces.createGraph(databasePort, sourceGraphId, sourceGraphSource.graph());
 
@@ -84,7 +84,7 @@ class ClassExtensionServiceTest {
         var targetGraphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(targetFile)
-                        .setGraphName(targetGraphId.graphUri())
+                        .setGraphName(targetGraphId.graphName())
                         .build();
         TestWorkspaces.createGraph(databasePort, targetGraphId, targetGraphSource.graph());
 
@@ -210,7 +210,7 @@ class ClassExtensionServiceTest {
         var sourceGraphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(sourceFile)
-                        .setGraphName(sourceGraphId.graphUri())
+                        .setGraphName(sourceGraphId.graphName())
                         .build();
         TestWorkspaces.createGraph(databasePort, sourceGraphId, sourceGraphSource.graph());
 
@@ -220,7 +220,7 @@ class ClassExtensionServiceTest {
         var targetGraphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(targetFile)
-                        .setGraphName(targetGraphId.graphUri())
+                        .setGraphName(targetGraphId.graphName())
                         .build();
         TestWorkspaces.createGraph(databasePort, targetGraphId, targetGraphSource.graph());
 
@@ -230,7 +230,7 @@ class ClassExtensionServiceTest {
         String existingBaseUuidBefore;
         try (var transaction =
                 databasePort.beginTransaction(targetGraphId.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphId.graphUri());
+            var ctx = transaction.graph(targetGraphId.graphName());
             var targetModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             existingBaseUuidBefore =
                     targetModel
@@ -250,7 +250,7 @@ class ClassExtensionServiceTest {
 
         try (var transaction =
                 databasePort.beginTransaction(targetGraphId.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphId.graphUri());
+            var ctx = transaction.graph(targetGraphId.graphName());
             var targetGraph = ctx.getRdfGraph();
             var targetModel = ModelFactory.createModelForGraph(targetGraph);
             // class got added
@@ -303,7 +303,7 @@ class ClassExtensionServiceTest {
         var sourceGraphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(sourceFile)
-                        .setGraphName(sourceGraphId.graphUri())
+                        .setGraphName(sourceGraphId.graphName())
                         .build();
         TestWorkspaces.createGraph(databasePort, sourceGraphId, sourceGraphSource.graph());
 
@@ -311,7 +311,7 @@ class ClassExtensionServiceTest {
         var targetGraphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(targetFile)
-                        .setGraphName(targetGraphId.graphUri())
+                        .setGraphName(targetGraphId.graphName())
                         .build();
         TestWorkspaces.createGraph(databasePort, targetGraphId, targetGraphSource.graph());
 
@@ -329,7 +329,7 @@ class ClassExtensionServiceTest {
 
         try (var transaction =
                 databasePort.beginTransaction(targetGraphId.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphId.graphUri());
+            var ctx = transaction.graph(targetGraphId.graphName());
             var targetGraph = ctx.getRdfGraph();
             var targetModel = ModelFactory.createModelForGraph(targetGraph);
 
@@ -380,7 +380,7 @@ class ClassExtensionServiceTest {
 
         try (var transaction =
                 databasePort.beginTransaction(targetGraphId.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphId.graphUri());
+            var ctx = transaction.graph(targetGraphId.graphName());
             var targetGraph = ctx.getRdfGraph();
             var targetModel = ModelFactory.createModelForGraph(targetGraph);
 
@@ -463,7 +463,7 @@ class ClassExtensionServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.graphUri())
+                        .setGraphName(graphIdentifier.graphName())
                         .build();
         TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }
@@ -474,7 +474,7 @@ class ClassExtensionServiceTest {
             return ModelFactory.createDefaultModel()
                     .add(
                             ModelFactory.createModelForGraph(
-                                    transaction.graph(identifier.graphUri()).getRdfGraph()));
+                                    transaction.graph(identifier.graphName()).getRdfGraph()));
         }
     }
 }

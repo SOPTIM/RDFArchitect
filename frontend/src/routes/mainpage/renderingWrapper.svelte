@@ -76,14 +76,14 @@
         editorState.selectedDiagram.subscribe();
 
         const workspaceName = editorState.selectedWorkspace.getValue();
-        const graphUri = editorState.selectedGraph.getValue();
+        const graphName = editorState.selectedGraph.getValue();
         const diagramId = editorState.selectedDiagram.getProperty("id");
         const diagramType = editorState.selectedDiagram.getProperty("type");
         const filter = renderOptions.graphFilter();
 
         const nextDiagramRequestKey = getDiagramRequestKey(
             workspaceName,
-            graphUri,
+            graphName,
             diagramId,
             filter,
         );
@@ -106,7 +106,7 @@
             } else {
                 await fetchPackageRenderingData(
                     workspaceName,
-                    graphUri,
+                    graphName,
                     diagramId,
                     filter,
                 );
@@ -121,7 +121,7 @@
 
     async function fetchPackageRenderingData(
         workspaceName,
-        graphUri,
+        graphName,
         packageUUID,
         filter,
     ) {
@@ -139,7 +139,7 @@
 
         try {
             const { data, error } = await getRenderingDataParameterized({
-                path: { datasetName: workspaceName, graphURI: graphUri },
+                path: { datasetName: workspaceName, graphName: graphName },
                 body: graphFilter,
             });
 
@@ -193,7 +193,7 @@
             const { data, error } = await getCustomProfileViewRenderingData({
                 path: {
                     datasetName: editorState.selectedWorkspace.getValue(),
-                    graphURI: editorState.selectedGraph.getValue(),
+                    graphName: editorState.selectedGraph.getValue(),
                     diagramId: diagramId,
                 },
                 body: {
@@ -242,13 +242,13 @@
 
     function getDiagramRequestKey(
         workspaceName,
-        graphUri,
+        graphName,
         packageUUID,
         filter,
     ) {
         return JSON.stringify({
             workspaceName,
-            graphUri,
+            graphName,
             packageUUID,
             filter,
         });

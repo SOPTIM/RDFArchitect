@@ -24,6 +24,6 @@ import lombok.Data;
 public class PasteSourceClassDTO {
 
     String sourceDatasetName;
-    String sourceGraphURI;
+    String sourceGraphName;
     String classUUID;
 }

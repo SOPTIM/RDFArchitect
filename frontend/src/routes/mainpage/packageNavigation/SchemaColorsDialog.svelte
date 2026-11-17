@@ -21,7 +21,7 @@
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { userSettings } from "$lib/userSettings.svelte.js";
     import { normalizeHex } from "$lib/utils/color.js";
-    import { graphLabeller, graphUri } from "$lib/utils/graph-label.js";
+    import { graphLabeller, graphName } from "$lib/utils/graph-label.js";
     import { compareGraphs } from "$lib/utils/graph-order.js";
     import { uriSuffix } from "$lib/utils/iri.js";
 
@@ -52,18 +52,18 @@
         const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
         const nameOf = graphLabeller(graphs);
         const names = new Map(
-            graphs.map(graph => [graphUri(graph), nameOf(graph)]),
+            graphs.map(graph => [graphName(graph), nameOf(graph)]),
         );
         colorEntries = Object.entries(loaded)
-            .map(([graphURI, color]) => ({
-                graphURI,
+            .map(([graphName, color]) => ({
+                graphName,
                 color,
-                name: names.get(graphURI) ?? uriSuffix(graphURI),
+                name: names.get(graphName) ?? uriSuffix(graphName),
             }))
             .sort((a, b) =>
                 compareGraphs(
-                    { label: a.name, uri: a.graphURI },
-                    { label: b.name, uri: b.graphURI },
+                    { label: a.name, uri: a.graphName },
+                    { label: b.name, uri: b.graphName },
                 ),
             );
         snapshotOriginal();
@@ -76,7 +76,7 @@
 
     async function saveColors() {
         const graphColorMap = Object.fromEntries(
-            colorEntries.map(entry => [entry.graphURI, entry.color]),
+            colorEntries.map(entry => [entry.graphName, entry.color]),
         );
         const saved = await graphColors.replaceAll(
             workspaceName,
@@ -135,7 +135,7 @@
                 </p>
 
                 <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-                    {#each colorEntries as entry (entry.graphURI)}
+                    {#each colorEntries as entry (entry.graphName)}
                         <div
                             class="flex items-center gap-3 rounded border px-3 py-2"
                         >
@@ -143,21 +143,21 @@
                                 type="color"
                                 bind:value={entry.color}
                                 class="h-9 w-12 cursor-pointer rounded border-0 bg-transparent p-0"
-                                title="Pick color for {entry.graphURI}"
+                                title="Pick color for {entry.graphName}"
                             />
 
                             <div class="min-w-0 flex-1">
                                 <p
                                     class="truncate font-medium"
-                                    title={entry.graphURI}
+                                    title={entry.graphName}
                                 >
                                     {entry.name}
                                 </p>
                                 <p
                                     class="text-muted-foreground truncate text-xs"
-                                    title={entry.graphURI}
+                                    title={entry.graphName}
                                 >
-                                    {entry.graphURI}
+                                    {entry.graphName}
                                 </p>
                                 {#if duplicateColors.has(entry.color)}
                                     <p class="text-xs italic">

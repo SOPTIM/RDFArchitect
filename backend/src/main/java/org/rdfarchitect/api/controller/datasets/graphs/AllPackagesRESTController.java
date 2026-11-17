@@ -46,7 +46,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/packages")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/packages")
 @RequiredArgsConstructor
 public class AllPackagesRESTController {
 
@@ -90,27 +90,27 @@ public class AllPackagesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphName) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
 
         var internalPackageList =
                 listInternalPackagesUseCase.listInternalPackages(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+                        new GraphIdentifier(datasetName, extendedGraphName));
 
         var externalPackageList =
                 listExternalPackagesUseCase.listExternalPackages(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+                        new GraphIdentifier(datasetName, extendedGraphName));
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return new ListPackagesResponse(internalPackageList, externalPackageList);
     }
@@ -134,7 +134,7 @@ public class AllPackagesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             description = "DTO for the package to be created")
                     @RequestBody
@@ -143,13 +143,13 @@ public class AllPackagesRESTController {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
         var extendedPackageURIPrefix =
                 expandURIUseCase.expandUri(datasetName, packageDTO.getPrefix());
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
         packageDTO.setPrefix(extendedPackageURIPrefix);
 
         var newPackageUUID = addPackageUseCase.addPackage(graphIdentifier, packageDTO);
@@ -157,7 +157,7 @@ public class AllPackagesRESTController {
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/packages\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return newPackageUUID;
     }

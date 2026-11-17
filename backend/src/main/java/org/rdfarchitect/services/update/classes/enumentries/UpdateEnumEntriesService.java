@@ -45,7 +45,7 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
 
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var graph = ctx.getRdfGraph();
             if (enumEntryDTO.getLabel() == null || enumEntryDTO.getLabel().trim().isEmpty()) {
                 throw new IllegalArgumentException("New enum entry label cannot be null or empty");

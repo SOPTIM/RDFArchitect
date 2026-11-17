@@ -72,7 +72,7 @@ class WorkspaceUndoScopeTest {
 
             workspace.undo();
 
-            assertThat(workspace.listGraphUris()).isEmpty();
+            assertThat(workspace.listGraphNames()).isEmpty();
         }
 
         @Test
@@ -82,7 +82,7 @@ class WorkspaceUndoScopeTest {
 
             workspace.redo();
 
-            assertThat(workspace.listGraphUris()).containsExactly(GRAPH_A);
+            assertThat(workspace.listGraphNames()).containsExactly(GRAPH_A);
         }
 
         @Test
@@ -96,7 +96,7 @@ class WorkspaceUndoScopeTest {
             }
 
             assertThat(workspace.canRedo()).isFalse();
-            assertThat(workspace.listGraphUris()).containsExactly(GRAPH_B);
+            assertThat(workspace.listGraphNames()).containsExactly(GRAPH_B);
         }
 
         @Test
@@ -107,7 +107,7 @@ class WorkspaceUndoScopeTest {
 
             workspace.undo();
 
-            assertThat(workspace.listGraphUris()).containsExactly(GRAPH_A);
+            assertThat(workspace.listGraphNames()).containsExactly(GRAPH_A);
             assertThat(triplesIn(GRAPH_A)).containsExactly(triple);
         }
 
@@ -133,7 +133,7 @@ class WorkspaceUndoScopeTest {
 
             workspace.undo();
 
-            assertThat(workspace.listGraphUris()).containsExactly(GRAPH_A);
+            assertThat(workspace.listGraphNames()).containsExactly(GRAPH_A);
         }
 
         @Test
@@ -148,7 +148,7 @@ class WorkspaceUndoScopeTest {
 
             workspace.undo();
 
-            assertThat(workspace.listGraphUris()).containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
+            assertThat(workspace.listGraphNames()).containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
         }
     }
 
@@ -441,7 +441,7 @@ class WorkspaceUndoScopeTest {
 
             workspace.undoIfLatest(previewed);
 
-            assertThat(workspace.listGraphUris()).isEmpty();
+            assertThat(workspace.listGraphNames()).isEmpty();
         }
 
         @Test
@@ -452,7 +452,7 @@ class WorkspaceUndoScopeTest {
 
             assertThatThrownBy(() -> workspace.undoIfLatest(previewed))
                     .isInstanceOf(UndoTargetChangedException.class);
-            assertThat(workspace.listGraphUris()).containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
+            assertThat(workspace.listGraphNames()).containsExactlyInAnyOrder(GRAPH_A, GRAPH_B);
             assertThat(workspace.canRedo()).isFalse();
         }
     }
@@ -512,10 +512,10 @@ class WorkspaceUndoScopeTest {
             assertThat(layoutOf(GRAPH_A)).containsExactly(laidOutLater);
         }
 
-        private void commitLayout(String graphUri, Triple value) {
+        private void commitLayout(String graphName, Triple value) {
             try (var transaction = workspace.begin(ReadWrite.WRITE)) {
                 transaction
-                        .graph(graphUri)
+                        .graph(graphName)
                         .getDiagramLayout()
                         .getDiagramLayoutModel()
                         .getGraph()
@@ -524,10 +524,10 @@ class WorkspaceUndoScopeTest {
             }
         }
 
-        private void commitFirstLayout(String graphUri, Triple value) {
+        private void commitFirstLayout(String graphName, Triple value) {
             try (var transaction = workspace.begin(ReadWrite.WRITE)) {
                 transaction
-                        .graph(graphUri)
+                        .graph(graphName)
                         .getDiagramLayout()
                         .getDiagramLayoutModel()
                         .getGraph()
@@ -536,10 +536,10 @@ class WorkspaceUndoScopeTest {
             }
         }
 
-        private List<Triple> layoutOf(String graphUri) {
+        private List<Triple> layoutOf(String graphName) {
             try (var transaction = workspace.begin(ReadWrite.READ)) {
                 return transaction
-                        .graph(graphUri)
+                        .graph(graphName)
                         .getDiagramLayout()
                         .getDiagramLayoutModel()
                         .getGraph()
@@ -592,42 +592,42 @@ class WorkspaceUndoScopeTest {
     // Helpers
     // -------------------------------------------------------------------------
 
-    private void createGraph(String graphUri) {
-        createGraph(workspace, graphUri);
+    private void createGraph(String graphName) {
+        createGraph(workspace, graphName);
     }
 
-    private static void createGraph(Workspace target, String graphUri) {
+    private static void createGraph(Workspace target, String graphName) {
         try (var transaction = target.begin(ReadWrite.WRITE)) {
-            transaction.createGraph(graphUri, GraphFactory.createDefaultGraph());
-            transaction.commit("created graph %s".formatted(graphUri));
+            transaction.createGraph(graphName, GraphFactory.createDefaultGraph());
+            transaction.commit("created graph %s".formatted(graphName));
         }
     }
 
-    private void deleteGraph(String graphUri) {
+    private void deleteGraph(String graphName) {
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
-            transaction.deleteGraph(graphUri);
-            transaction.commit("deleted graph %s".formatted(graphUri));
+            transaction.deleteGraph(graphName);
+            transaction.commit("deleted graph %s".formatted(graphName));
         }
     }
 
-    private void commitTriple(String graphUri, Triple value) {
-        commitTriple(workspace, graphUri, value);
+    private void commitTriple(String graphName, Triple value) {
+        commitTriple(workspace, graphName, value);
     }
 
-    private static void commitTriple(Workspace target, String graphUri, Triple value) {
+    private static void commitTriple(Workspace target, String graphName, Triple value) {
         try (var transaction = target.begin(ReadWrite.WRITE)) {
-            transaction.graph(graphUri).getRdfGraph().add(value);
+            transaction.graph(graphName).getRdfGraph().add(value);
             transaction.commit("added a triple");
         }
     }
 
-    private List<Triple> triplesIn(String graphUri) {
-        return triplesIn(workspace, graphUri);
+    private List<Triple> triplesIn(String graphName) {
+        return triplesIn(workspace, graphName);
     }
 
-    private static List<Triple> triplesIn(Workspace target, String graphUri) {
+    private static List<Triple> triplesIn(Workspace target, String graphName) {
         try (var transaction = target.begin(ReadWrite.READ)) {
-            return transaction.graph(graphUri).getRdfGraph().find().toList();
+            return transaction.graph(graphName).getRdfGraph().find().toList();
         }
     }
 

@@ -88,7 +88,7 @@ public class UpdateClassLayoutService
             ClassLayoutPositionDTO classLayoutPosition) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var diagramLayout = ctx.getDiagramLayout();
             var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
             UUID packageUUID =
@@ -132,7 +132,7 @@ public class UpdateClassLayoutService
             EdgeLayoutSync.syncEdges(
                     diagramLayoutModel,
                     packageUUID,
-                    EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
+                    EdgeResolver.forGraph(graphIdentifier.graphName(), ctx.getRdfGraph()));
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Laid out", "class", ChangeDescriptions.name(className)));
@@ -146,7 +146,7 @@ public class UpdateClassLayoutService
             List<ClassPositionDTO> classPositionDTOList) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var diagramLayout = ctx.getDiagramLayout();
             var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
             var resolvedPackageUUID =
@@ -161,7 +161,7 @@ public class UpdateClassLayoutService
                 EdgeLayoutSync.syncEdges(
                         diagramLayoutModel,
                         resolvedPackageUUID,
-                        EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
+                        EdgeResolver.forGraph(graphIdentifier.graphName(), ctx.getRdfGraph()));
             }
 
             DiagramLayoutServiceUtils.commitLayout(
@@ -400,7 +400,7 @@ public class UpdateClassLayoutService
             GraphIdentifier graphIdentifier, UUID classUUID, String name) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             for (var diagramObject :
                     DLObjectFetcher.fetchAllDOs(
@@ -417,7 +417,7 @@ public class UpdateClassLayoutService
     public void deleteClassLayoutData(GraphIdentifier graphIdentifier, UUID classUUID) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             var diagramUUIDs = new LinkedHashSet<UUID>();
             for (var diagramObject :
@@ -428,7 +428,8 @@ public class UpdateClassLayoutService
             }
             var className = ChangeDescriptions.className(ctx.getRdfGraph(), classUUID);
             deleteOrphanedLabels(diagramLayoutModel, ctx.getRdfGraph(), classUUID);
-            var edgeResolver = EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph());
+            var edgeResolver =
+                    EdgeResolver.forGraph(graphIdentifier.graphName(), ctx.getRdfGraph());
             for (var diagramUUID : diagramUUIDs) {
                 EdgeLayoutSync.syncEdges(diagramLayoutModel, diagramUUID, edgeResolver);
             }
@@ -493,7 +494,7 @@ public class UpdateClassLayoutService
 
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var diagram = ctx.getCustomDiagrams().get(diagramUUID);
             if (diagram != null) {
                 var updated = diagram.getClasses();
@@ -510,7 +511,7 @@ public class UpdateClassLayoutService
             EdgeLayoutSync.syncEdges(
                     diagramLayoutModel,
                     diagramUUID,
-                    EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
+                    EdgeResolver.forGraph(graphIdentifier.graphName(), ctx.getRdfGraph()));
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Added classes to",
@@ -556,7 +557,7 @@ public class UpdateClassLayoutService
 
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var diagram = ctx.getCustomDiagrams().get(diagramUUID);
             if (diagram != null) {
                 var updated = diagram.getClasses();
@@ -568,7 +569,7 @@ public class UpdateClassLayoutService
             EdgeLayoutSync.syncEdges(
                     diagramLayoutModel,
                     diagramUUID,
-                    EdgeResolver.forGraph(graphIdentifier.graphUri(), ctx.getRdfGraph()));
+                    EdgeResolver.forGraph(graphIdentifier.graphName(), ctx.getRdfGraph()));
             transaction.commit(
                     ChangeDescriptions.actionOn(
                             "Removed classes from",
@@ -606,10 +607,10 @@ public class UpdateClassLayoutService
         if (classes.isEmpty()) {
             return;
         }
-        var graphUris =
-                classes.stream().map(c -> c.getGraphUri().toString()).collect(Collectors.toSet());
-        var existingGraphUris = new HashSet<>(databasePort.listGraphUris(datasetName));
-        if (!existingGraphUris.containsAll(graphUris)) {
+        var graphNames =
+                classes.stream().map(c -> c.getGraphName().toString()).collect(Collectors.toSet());
+        var existingGraphNames = new HashSet<>(databasePort.listGraphNames(datasetName));
+        if (!existingGraphNames.containsAll(graphNames)) {
             throw new IllegalArgumentException(
                     "Some referenced graphs do not exist in dataset: " + datasetName);
         }
@@ -639,19 +640,19 @@ public class UpdateClassLayoutService
     }
 
     private Map<UUID, String> classUriByUuid(String datasetName, List<ClassInDiagram> classes) {
-        var existingGraphUris = new HashSet<>(databasePort.listGraphUris(datasetName));
-        var classesByGraphUri =
+        var existingGraphNames = new HashSet<>(databasePort.listGraphNames(datasetName));
+        var classesByGraphName =
                 classes.stream()
-                        .filter(cls -> cls.getGraphUri() != null && cls.getUuid() != null)
-                        .filter(cls -> existingGraphUris.contains(cls.getGraphUri().toString()))
-                        .collect(Collectors.groupingBy(cls -> cls.getGraphUri().toString()));
+                        .filter(cls -> cls.getGraphName() != null && cls.getUuid() != null)
+                        .filter(cls -> existingGraphNames.contains(cls.getGraphName().toString()))
+                        .collect(Collectors.groupingBy(cls -> cls.getGraphName().toString()));
 
         var classUriByUuid = new HashMap<UUID, String>();
-        for (var entry : classesByGraphUri.entrySet()) {
+        for (var entry : classesByGraphName.entrySet()) {
             var identifier = new GraphIdentifier(datasetName, entry.getKey());
             try (var transaction =
                     databasePort.beginTransaction(identifier.datasetName(), ReadWrite.READ)) {
-                var ctx = transaction.graph(identifier.graphUri());
+                var ctx = transaction.graph(identifier.graphName());
                 var model =
                         new CIMModelFacade(
                                 entry.getKey(),

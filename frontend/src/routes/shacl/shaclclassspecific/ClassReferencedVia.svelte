@@ -28,7 +28,7 @@
         editorState.selectedClassWorkspace.getValue() ??
             editorState.selectedWorkspace.getValue(),
     );
-    let classGraphUri = $derived(
+    let classGraphName = $derived(
         editorState.selectedClassGraph.getValue() ??
             editorState.selectedGraph.getValue(),
     );
@@ -37,7 +37,7 @@
         getClassesReferencingThisClass({
             path: {
                 datasetName: classWorkspaceName,
-                graphURI: classGraphUri,
+                graphName: classGraphName,
                 classUUID: classUUID,
             },
         })

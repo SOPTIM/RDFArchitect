@@ -46,7 +46,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/compare")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/compare")
 public class SchemaComparisonRESTController {
 
     private static final Logger logger =
@@ -87,25 +87,25 @@ public class SchemaComparisonRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The file containing the graph to be compared.")
                     @RequestParam("file")
                     MultipartFile file) {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/compare\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
         var changes =
                 schemaComparisonUseCase.compareSchemas(
-                        new GraphIdentifier(datasetName, extendedGraphURI), file);
+                        new GraphIdentifier(datasetName, extendedGraphName), file);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/compare\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return changes;
     }
@@ -142,7 +142,7 @@ public class SchemaComparisonRESTController {
                             description =
                                     "The url encoded uri of the base graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The literal name of the dataset to compare against.")
                     @RequestParam("otherDataset")
                     String otherDataset,
@@ -152,23 +152,23 @@ public class SchemaComparisonRESTController {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}/graphs/{{}/compare?otherDataset={{}}&otherGraph={{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 otherDataset,
                 otherGraph,
                 originURL);
 
-        var baseGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var otherGraphURI = expandURIUseCase.expandUri(otherDataset, otherGraph);
+        var baseGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var otherGraphName = expandURIUseCase.expandUri(otherDataset, otherGraph);
 
         var changes =
                 schemaComparisonUseCase.compareSchemas(
-                        new GraphIdentifier(datasetName, baseGraphURI),
-                        new GraphIdentifier(otherDataset, otherGraphURI));
+                        new GraphIdentifier(datasetName, baseGraphName),
+                        new GraphIdentifier(otherDataset, otherGraphName));
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}/graphs/{{}/compare?otherDataset={{}}&otherGraph={{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 otherDataset,
                 otherGraph,
                 originURL);

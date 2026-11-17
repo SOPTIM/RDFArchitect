@@ -25,7 +25,7 @@
         scrollToBottom,
         namespaces,
         workspace,
-        graphUri,
+        graphName,
     } = $props();
 
     let knownFields = $state([]);
@@ -49,7 +49,7 @@
         knownFields = await ontologyStore.getKnownFields();
         const { data } = await ontologyStore.generateOntologyEntries(
             workspace,
-            graphUri,
+            graphName,
         );
         generatedEntries = data;
         setToAdd();

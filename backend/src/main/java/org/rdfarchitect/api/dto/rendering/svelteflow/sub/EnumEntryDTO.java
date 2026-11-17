@@ -30,7 +30,7 @@ public class EnumEntryDTO {
     private UUID uuid;
 
     private String label;
-    private String graphUri;
+    private String graphName;
     private String graphKeyword;
     private String color;
 }

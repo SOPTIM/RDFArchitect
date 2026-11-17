@@ -38,7 +38,7 @@
     let {
         showDialog = $bindable(),
         lockedWorkspaceName,
-        lockedGraphUri,
+        lockedGraphName,
         diagramName = "",
         diagramId,
         selectedClasses = [],
@@ -63,11 +63,11 @@
         await fetchOtherDiagrams();
         packages = await createPackageListForGraph(
             lockedWorkspaceName,
-            lockedGraphUri,
+            lockedGraphName,
         );
         classesByPackage = await createClassListForGraph(
             lockedWorkspaceName,
-            lockedGraphUri,
+            lockedGraphName,
             selectedClasses,
         );
         initializePackageSelectionState();
@@ -82,7 +82,7 @@
         try {
             const diagrams = await customDiagramStore.getGraphDiagrams(
                 lockedWorkspaceName,
-                lockedGraphUri,
+                lockedGraphName,
             );
             otherDiagrams = diagrams.filter(
                 d => d.diagramId !== localDiagramId,
@@ -124,7 +124,7 @@
             .filter(cls => cls.selected === true)
             .map(cls => ({
                 uuid: cls.uuid,
-                graphUri: lockedGraphUri,
+                graphName: lockedGraphName,
             }));
         const diagramData = {
             diagramId: localDiagramId,
@@ -134,7 +134,7 @@
 
         const { error } = await customDiagramStore.saveGraphDiagram(
             lockedWorkspaceName,
-            lockedGraphUri,
+            lockedGraphName,
             localDiagramId,
             diagramData,
         );
@@ -142,7 +142,7 @@
 
         editorState.selectCustomDiagram(
             lockedWorkspaceName,
-            lockedGraphUri,
+            lockedGraphName,
             localDiagramId,
             DiagramType.CUSTOM_GRAPH_DIAGRAM,
         );

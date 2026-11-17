@@ -55,7 +55,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/shacl/custom")
 @RequiredArgsConstructor
 public class SHACLCustomContentRestController {
 
@@ -87,26 +87,26 @@ public class SHACLCustomContentRestController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The file containing the shacl graph to be inserted")
                     @RequestParam("file")
                     MultipartFile file) {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/file\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
 
-        var graph = new GraphFileSourceImpl(file, extendedGraphURI).graph();
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graph = new GraphFileSourceImpl(file, extendedGraphName).graph();
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
         shaclInsertUseCase.replaceCustomSHACLGraph(graphIdentifier, graph);
 
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/file\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return Response.SUCCESS;
     }
@@ -130,25 +130,25 @@ public class SHACLCustomContentRestController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The entire SHACL graph as a string") @RequestBody
                     String graphString) {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/string\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
 
-        var graph = new GraphStringSourceImpl(graphString, extendedGraphURI).graph();
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var graph = new GraphStringSourceImpl(graphString, extendedGraphName).graph();
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
         shaclInsertUseCase.replaceCustomSHACLGraph(graphIdentifier, graph);
 
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/content/string\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return Response.SUCCESS;
     }
@@ -184,26 +184,26 @@ public class SHACLCustomContentRestController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphName) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/file\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
         var format = getRdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 shaclExportUseCase.exportCustomSHACLGraph(
-                        new GraphIdentifier(datasetName, extendedGraphURI), format);
-        var body = buildResponseEntity(extendedGraphURI, format, outStream);
+                        new GraphIdentifier(datasetName, extendedGraphName), format);
+        var body = buildResponseEntity(extendedGraphName, format, outStream);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/file\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return body;
     }
@@ -231,37 +231,37 @@ public class SHACLCustomContentRestController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphName) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/string\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
 
         // fetch data
         var shaclString =
                 shaclExportUseCase
                         .exportCustomSHACLGraph(
-                                new GraphIdentifier(datasetName, extendedGraphURI),
+                                new GraphIdentifier(datasetName, extendedGraphName),
                                 RDFFormat.TURTLE)
                         .toString(StandardCharsets.UTF_8);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/string\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return shaclString;
     }
 
     private ResponseEntity<byte[]> buildResponseEntity(
-            String extendedGraphURI, RDFFormat format, ByteArrayOutputStream outStream) {
+            String extendedGraphName, RDFFormat format, ByteArrayOutputStream outStream) {
         // add suggested file name to response
         var fileName = "shacl";
-        if (!extendedGraphURI.equals("default")) {
-            fileName = new URI(extendedGraphURI + "-shacl").getSuffix();
+        if (!extendedGraphName.equals("default")) {
+            fileName = new URI(extendedGraphName + "-shacl").getSuffix();
         }
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 

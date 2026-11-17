@@ -69,7 +69,7 @@ let mounted = null;
 let target = null;
 let editHeaderCalls = [];
 
-async function open(graphUri) {
+async function open(graphName) {
     target = document.createElement("div");
     document.body.appendChild(target);
     mounted = mount(RenameGraphDialog, {
@@ -77,7 +77,7 @@ async function open(graphUri) {
         props: {
             showDialog: true,
             workspaceName: "cgmes",
-            graphUri,
+            graphName,
             onEditHeader: profileClass => editHeaderCalls.push(profileClass),
         },
     });

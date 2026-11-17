@@ -32,13 +32,13 @@ public class RenameGraphService implements RenameGraphUseCase {
     private final DatabasePort databasePort;
 
     @Override
-    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri) {
+    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphName) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            transaction.renameGraph(graphIdentifier.graphUri(), newGraphUri);
+            transaction.renameGraph(graphIdentifier.graphName(), newGraphName);
             transaction.commit(
                     "Renamed the schema to \"%s\""
-                            .formatted(ChangeDescriptions.localName(newGraphUri)));
+                            .formatted(ChangeDescriptions.localName(newGraphName)));
         }
     }
 }

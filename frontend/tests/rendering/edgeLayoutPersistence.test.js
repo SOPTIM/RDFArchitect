@@ -35,7 +35,7 @@ import {
 
 const GRAPH_TARGET = {
     datasetName: "ds",
-    graphURI: "http://example.com/graph",
+    graphName: "http://example.com/graph",
     diagramUUID: "diagram",
 };
 
@@ -226,7 +226,7 @@ describe("EdgeLayoutPersistence", () => {
     test("saves a diagram across the dataset over the dataset route", async () => {
         const datasetTarget = {
             datasetName: "ds",
-            graphURI: null,
+            graphName: null,
             diagramUUID: "d",
         };
         const shown = edge("e");

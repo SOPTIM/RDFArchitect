@@ -30,7 +30,7 @@
     let {
         showDialog = $bindable(),
         lockedWorkspaceName,
-        lockedGraphUri,
+        lockedGraphName,
         classes,
     } = $props();
 
@@ -102,7 +102,7 @@
 
     function classesToAdd() {
         return classes.map(cls => ({
-            graphUri: cls.graphUri ?? lockedGraphUri,
+            graphName: cls.graphName ?? lockedGraphName,
             uuid: cls.id,
         }));
     }

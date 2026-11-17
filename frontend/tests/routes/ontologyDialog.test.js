@@ -58,7 +58,7 @@ async function open() {
         props: {
             showDialog: true,
             workspace: "cgmes",
-            graphUri: "http://example.org/graphs/Equipment",
+            graphName: "http://example.org/graphs/Equipment",
             namespaces: NAMESPACES,
             ontology: ONTOLOGY,
             readonly: false,

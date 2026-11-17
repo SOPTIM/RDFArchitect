@@ -28,15 +28,15 @@
     let {
         showDialog = $bindable(),
         workspaceName,
-        graphUri,
+        graphName,
         diagram,
     } = $props();
 
     async function deleteCustomDiagram() {
-        const { error } = graphUri
+        const { error } = graphName
             ? await customDiagramStore.deleteGraphDiagram(
                   workspaceName,
-                  graphUri,
+                  graphName,
                   diagram.diagramId,
               )
             : await customDiagramStore.deleteWorkspaceDiagram(

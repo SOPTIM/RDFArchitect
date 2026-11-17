@@ -43,10 +43,10 @@ class HTMLExportRESTControllerTest {
         controller = new HTMLExportRESTController(expandURIUseCase, exportGraphHTMLUseCase);
     }
 
-    private void stubExport(String graphURI, String expandedGraphURI) {
-        when(expandURIUseCase.expandUri("dataset", graphURI)).thenReturn(expandedGraphURI);
+    private void stubExport(String graphName, String expandedGraphName) {
+        when(expandURIUseCase.expandUri("dataset", graphName)).thenReturn(expandedGraphName);
         when(exportGraphHTMLUseCase.exportGraphAsHTML(
-                        new GraphIdentifier("dataset", expandedGraphURI), "png", false))
+                        new GraphIdentifier("dataset", expandedGraphName), "png", false))
                 .thenReturn("<html></html>".getBytes(StandardCharsets.UTF_8));
     }
 

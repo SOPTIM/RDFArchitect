@@ -45,7 +45,7 @@ public class SHACLGenerateService implements SHACLGenerateUseCase {
                         databasePort.beginTransaction(
                                 graphIdentifier.datasetName(), ReadWrite.READ);
                 var outStream = new ByteArrayOutputStream()) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             ontologyModel.setNsPrefixes(prefixes);
             var shaclModel = new SHACLFromCIMGenerator(ontologyModel, shaclPrefix, true).generate();

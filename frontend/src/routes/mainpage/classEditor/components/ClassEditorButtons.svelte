@@ -66,19 +66,19 @@
         readonly ? "@max-[12rem]:hidden" : "@max-[30rem]:hidden",
     );
     let workspaceName = $derived(classEditorContext.workspaceName);
-    let graphUri = $derived(classEditorContext.graphUri);
+    let graphName = $derived(classEditorContext.graphName);
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
         readonly = classEditorContext.readOnly;
         workspaceName = classEditorContext.workspaceName;
-        graphUri = classEditorContext.graphUri;
+        graphName = classEditorContext.graphName;
     });
 
     onMount(() => {
         readonly = classEditorContext.readOnly;
         workspaceName = classEditorContext.workspaceName;
-        graphUri = classEditorContext.graphUri;
+        graphName = classEditorContext.graphName;
     });
 
     onMount(() => {
@@ -102,15 +102,15 @@
             classEditorContext.getPackageByUuid,
         );
         saveChangesToBackend(classDto);
-        datatypesStore.invalidateGraph(workspaceName, graphUri);
+        datatypesStore.invalidateGraph(workspaceName, graphName);
         if (reactiveClass.associations.isModified)
-            classStore.invalidateGraph(workspaceName, graphUri);
+            classStore.invalidateGraph(workspaceName, graphName);
     }
 
     async function saveChangesToBackend(classDto) {
         const { error } = await classStore.replaceClass(
             workspaceName,
-            graphUri,
+            graphName,
             classDto.uuid,
             classDto,
         );
@@ -221,14 +221,14 @@
 
 <SHACLClassSpecificPopUp
     {workspaceName}
-    {graphUri}
+    {graphName}
     {reactiveClass}
     bind:showDialog={showSHACLClassDialog}
     class={reactiveClass}
 />
 <DeleteDependenciesDialog
     {workspaceName}
-    {graphUri}
+    {graphName}
     resourceUuid={reactiveClass.uuid.value}
     bind:showDialog={showDeleteDependenciesDialog}
 />

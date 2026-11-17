@@ -38,7 +38,7 @@
     let {
         showDialog = $bindable(),
         lockedWorkspaceName,
-        lockedGraphUri,
+        lockedGraphName,
     } = $props();
 
     const CompareMode = Object.freeze({
@@ -78,7 +78,7 @@
         {
             value: CompareMode.FILE_TO_FILE,
             label: "Uploaded schema → Uploaded schema",
-            disabled: !!lockedWorkspaceName || !!lockedGraphUri,
+            disabled: !!lockedWorkspaceName || !!lockedGraphName,
         },
     ]);
 
@@ -105,7 +105,7 @@
     function onOpen() {
         workspaceA =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
-        graphA = lockedGraphUri ?? editorState.selectedGraph.getValue();
+        graphA = lockedGraphName ?? editorState.selectedGraph.getValue();
 
         workspaceB = null;
         graphB = null;
@@ -196,20 +196,20 @@
                 break;
             case CompareMode.FILE_TO_STORED:
                 response = await compareSchemas({
-                    path: { datasetName: workspaceB, graphURI: graphB },
+                    path: { datasetName: workspaceB, graphName: graphB },
                     body: fileA,
                 });
                 break;
             case CompareMode.STORED_TO_FILE:
                 response = await compareSchemas({
-                    path: { datasetName: workspaceA, graphURI: graphA },
+                    path: { datasetName: workspaceA, graphName: graphA },
                     body: fileB,
                 });
                 invert = true;
                 break;
             case CompareMode.STORED_TO_STORED:
                 response = await compareStoredSchemas({
-                    path: { datasetName: workspaceA, graphURI: graphA },
+                    path: { datasetName: workspaceA, graphName: graphA },
                     query: { otherDataset: workspaceB, otherGraph: graphB },
                 });
                 break;
@@ -278,7 +278,7 @@
                         bind:workspace={workspaceA}
                         bind:graph={graphA}
                         {lockedWorkspaceName}
-                        {lockedGraphUri}
+                        {lockedGraphName}
                     />
                 </div>
 
@@ -339,7 +339,7 @@
                         bind:workspace={workspaceB}
                         bind:graph={graphB}
                         {lockedWorkspaceName}
-                        {lockedGraphUri}
+                        {lockedGraphName}
                     />
                 </div>
             {/if}
@@ -353,7 +353,7 @@
                         bind:workspace={workspaceA}
                         bind:graph={graphA}
                         {lockedWorkspaceName}
-                        {lockedGraphUri}
+                        {lockedGraphName}
                     />
                 </div>
 

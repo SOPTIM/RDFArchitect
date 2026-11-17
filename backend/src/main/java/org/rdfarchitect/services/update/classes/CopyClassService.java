@@ -125,7 +125,7 @@ public class CopyClassService implements CopyClassUseCase {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphUri());
+            var ctx = transaction.graph(targetGraphIdentifier.graphName());
             var targetGraph = ctx.getRdfGraph();
             var batch = planBatch(resolvedSources, targetGraph);
 
@@ -214,10 +214,10 @@ public class CopyClassService implements CopyClassUseCase {
         try (var transaction =
                 databasePort.beginTransaction(
                         targetGraphIdentifier.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(targetGraphIdentifier.graphUri());
+            var ctx = transaction.graph(targetGraphIdentifier.graphName());
             var targetPackage =
                     new CIMModelFacade(
-                                    targetGraphIdentifier.graphUri(),
+                                    targetGraphIdentifier.graphName(),
                                     ModelFactory.createModelForGraph(ctx.getRdfGraph()))
                             .getCIMClassCategory(packageUUID);
             if (targetPackage == null) {

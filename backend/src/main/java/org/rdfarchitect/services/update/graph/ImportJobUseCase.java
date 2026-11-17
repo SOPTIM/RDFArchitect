@@ -63,10 +63,10 @@ public interface ImportJobUseCase {
      * Progress of a single file.
      *
      * @param sizeBytes size of the file, or {@code -1} when a zip archive does not declare it
-     * @param graphUri the uri the file was imported as, {@code null} until it was imported
+     * @param graphName the uri the file was imported as, {@code null} until it was imported
      */
     record ImportFileStatus(
-            int index, String fileName, long sizeBytes, FileState state, String graphUri) {}
+            int index, String fileName, long sizeBytes, FileState state, String graphName) {}
 
     /**
      * Progress of an import job.
@@ -81,7 +81,7 @@ public interface ImportJobUseCase {
             String datasetName,
             JobState state,
             List<ImportFileStatus> files,
-            List<String> importedGraphUris,
+            List<String> importedGraphNames,
             List<String> failedImports,
             List<ImportWarning> warnings,
             List<PrefixComparison> prefixComparison,
@@ -92,7 +92,7 @@ public interface ImportJobUseCase {
      *
      * @return the id of the started job, to be passed to {@link #getStatus(UUID)}
      */
-    UUID startImport(String datasetName, List<MultipartFile> files, List<String> graphUris);
+    UUID startImport(String datasetName, List<MultipartFile> files, List<String> graphNames);
 
     /** The current progress of the job, or empty if the session has no such job for the dataset. */
     Optional<ImportJobStatus> getStatus(String datasetName, UUID jobId);

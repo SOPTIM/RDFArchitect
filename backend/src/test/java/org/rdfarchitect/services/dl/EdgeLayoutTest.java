@@ -722,7 +722,7 @@ class EdgeLayoutTest {
         layoutClasses(SUB, SUPER, OTHER_SUPER, TARGET);
         try (var transaction =
                 databasePort.beginTransaction(graphOne.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphOne.graphUri());
+            var ctx = transaction.graph(graphOne.graphName());
             DiagramLayoutServiceUtils.insertLabel(
                     ctx.getDiagramLayout().getDiagramLayoutModel(),
                     PACKAGE,
@@ -1032,7 +1032,7 @@ class EdgeLayoutTest {
         }
     }
 
-    private GraphIdentifier addGraph(String graphUri, String schema) {
+    private GraphIdentifier addGraph(String graphName, String schema) {
         var file =
                 new MockMultipartFile(
                         "file",
@@ -1042,14 +1042,14 @@ class EdgeLayoutTest {
         var graph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphUri)
+                        .setGraphName(graphName)
                         .build()
                         .graph();
-        var identifier = new GraphIdentifier(DATASET, graphUri);
+        var identifier = new GraphIdentifier(DATASET, graphName);
         databasePort.createWorkspaceIfAbsent(DATASET);
         try (var transaction = databasePort.beginTransaction(DATASET, ReadWrite.WRITE)) {
-            transaction.createGraph(graphUri, graph);
-            transaction.commit("created graph %s".formatted(graphUri));
+            transaction.createGraph(graphName, graph);
+            transaction.commit("created graph %s".formatted(graphName));
         }
         return identifier;
     }
@@ -1057,7 +1057,7 @@ class EdgeLayoutTest {
     private void editSchema(Consumer<Model> edit) {
         try (var transaction =
                 databasePort.beginTransaction(graphOne.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphOne.graphUri());
+            var ctx = transaction.graph(graphOne.graphName());
             edit.accept(ModelFactory.createModelForGraph(ctx.getRdfGraph()));
             transaction.commit("edit schema");
         }
@@ -1231,7 +1231,7 @@ class EdgeLayoutTest {
             return ModelFactory.createDefaultModel()
                     .add(
                             transaction
-                                    .graph(graphOne.graphUri())
+                                    .graph(graphOne.graphName())
                                     .getDiagramLayout()
                                     .getDiagramLayoutModel());
         }

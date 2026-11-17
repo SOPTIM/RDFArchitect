@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/datatypes")
+@RequestMapping("/api/datasets/{datasetName}/graphs/{graphName}/datatypes")
 @RequiredArgsConstructor
 public class DatatypesRESTController {
 
@@ -84,23 +84,23 @@ public class DatatypesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphName) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/datatypes\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
 
         var cimClassList =
                 listDatatypesUseCase.listDatatypes(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+                        new GraphIdentifier(datasetName, extendedGraphName));
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/datatypes\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return cimClassList;
     }

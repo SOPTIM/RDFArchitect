@@ -43,7 +43,7 @@ class ImportJob implements ImportProgressListener {
 
     private JobState state = JobState.RUNNING;
     private final List<FileProgress> files = new ArrayList<>();
-    private List<String> importedGraphUris = List.of();
+    private List<String> importedGraphNames = List.of();
     private List<String> failedImports = List.of();
     private List<ImportGraphsUseCase.ImportWarning> warnings = List.of();
     private String errorMessage;
@@ -106,7 +106,7 @@ class ImportJob implements ImportProgressListener {
     }
 
     @Override
-    public synchronized void finished(int index, Outcome outcome, String graphUri) {
+    public synchronized void finished(int index, Outcome outcome, String graphName) {
         var file = fileAt(index);
         file.state =
                 switch (outcome) {
@@ -114,7 +114,7 @@ class ImportJob implements ImportProgressListener {
                     case FAILED -> FileState.FAILED;
                     case SKIPPED -> FileState.SKIPPED;
                 };
-        file.graphUri = graphUri;
+        file.graphName = graphName;
     }
 
     @Override
@@ -179,7 +179,7 @@ class ImportJob implements ImportProgressListener {
     }
 
     synchronized void complete(ImportResult result) {
-        importedGraphUris = List.copyOf(result.importedGraphUris());
+        importedGraphNames = List.copyOf(result.importedGraphNames());
         failedImports = List.copyOf(result.failedFileNames());
         warnings = List.copyOf(result.warnings());
         state = cancelRequested ? JobState.CANCELLED : JobState.COMPLETED;
@@ -199,10 +199,10 @@ class ImportJob implements ImportProgressListener {
         }
         // The result died with the exception, but every file that made it through reported its
         // outcome, so what the import did manage to write is still recoverable from the progress.
-        importedGraphUris =
+        importedGraphNames =
                 files.stream()
-                        .filter(file -> file.state == FileState.IMPORTED && file.graphUri != null)
-                        .map(file -> file.graphUri)
+                        .filter(file -> file.state == FileState.IMPORTED && file.graphName != null)
+                        .map(file -> file.graphName)
                         .toList();
         failedImports =
                 files.stream()
@@ -225,7 +225,7 @@ class ImportJob implements ImportProgressListener {
                 datasetName,
                 state,
                 files.stream().map(FileProgress::toStatus).toList(),
-                importedGraphUris,
+                importedGraphNames,
                 failedImports,
                 warnings,
                 prefixComparison,
@@ -244,7 +244,7 @@ class ImportJob implements ImportProgressListener {
 
         private final PlannedImport plannedImport;
         private FileState state = FileState.PENDING;
-        private String graphUri;
+        private String graphName;
 
         private FileProgress(PlannedImport plannedImport) {
             this.plannedImport = plannedImport;
@@ -256,7 +256,7 @@ class ImportJob implements ImportProgressListener {
                     plannedImport.fileName(),
                     plannedImport.sizeBytes(),
                     state,
-                    graphUri);
+                    graphName);
         }
     }
 }

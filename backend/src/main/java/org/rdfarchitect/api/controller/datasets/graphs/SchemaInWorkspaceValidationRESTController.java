@@ -39,7 +39,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}")
 @RequiredArgsConstructor
 public class SchemaInWorkspaceValidationRESTController {
 
@@ -85,22 +85,22 @@ public class SchemaInWorkspaceValidationRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphName) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/validate-workspace\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
         var report =
                 workspaceValidationUseCase.validateSchemaInWorkspace(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+                        new GraphIdentifier(datasetName, extendedGraphName));
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/validate-workspace\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return report;
     }

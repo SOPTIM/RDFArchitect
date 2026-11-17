@@ -44,16 +44,16 @@ import java.util.function.Function;
 
 public class CIMObjectFetcher {
 
-    private final String graphURI;
+    private final String graphName;
 
     private final PrefixMapping prefixMapping;
 
     private final Dataset dataset;
 
-    public CIMObjectFetcher(Graph graph, String graphURI, PrefixMapping prefixMapping) {
-        this.graphURI = graphURI;
+    public CIMObjectFetcher(Graph graph, String graphName, PrefixMapping prefixMapping) {
+        this.graphName = graphName;
         this.prefixMapping = prefixMapping;
-        this.dataset = SessionDataStore.wrapGraphInDataset(graph, graphURI);
+        this.dataset = SessionDataStore.wrapGraphInDataset(graph, graphName);
         dataset.getPrefixMapping().setNsPrefixes(prefixMapping);
     }
 
@@ -101,14 +101,14 @@ public class CIMObjectFetcher {
      */
     public CIMClass fetchCIMClass(String classUUID) {
         // fetch class
-        var classQuery = CIMQueries.getClassQuery(prefixMapping, graphURI, classUUID).build();
+        var classQuery = CIMQueries.getClassQuery(prefixMapping, graphName, classUUID).build();
         CIMClass classObject =
                 executeQueryForSingleObject(classQuery, CIMObjectFactory::createCIMClass);
         // fetch stereotypes
         if (classObject != null) {
-            classObject.setGraphUri(graphURI);
+            classObject.setGraphName(graphName);
             var stereotypeQuery =
-                    CIMQueries.getStereotypesQuery(prefixMapping, classUUID, graphURI).build();
+                    CIMQueries.getStereotypesQuery(prefixMapping, classUUID, graphName).build();
             classObject.setStereotypes(fetchCIMStereotypeList(stereotypeQuery));
         }
         return classObject;
@@ -127,7 +127,7 @@ public class CIMObjectFetcher {
             var classObjectList = new ArrayList<CIMClass>();
             while (classQueryResultSet.hasNext()) {
                 var classObject = CIMObjectFactory.createCIMClass(classQueryResultSet.next());
-                classObject.setGraphUri(graphURI);
+                classObject.setGraphName(graphName);
                 classObjectList.add(classObject);
             }
 
@@ -192,7 +192,7 @@ public class CIMObjectFetcher {
                 CIMQueries.getStereotypesForUUIDsQuery(
                                 prefixMapping,
                                 subjectUUIDs.stream().map(UUID::toString).toList(),
-                                graphURI)
+                                graphName)
                         .build();
         return executeQueryForList(
                 stereotypeQuery, CIMObjectFactory::createCIMStereotypeListsByUUID);

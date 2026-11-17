@@ -51,7 +51,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/content")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/content")
 @RequiredArgsConstructor
 public class GraphContentRESTController {
 
@@ -93,25 +93,25 @@ public class GraphContentRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphName) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/content\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
         var format = getRdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 getSchemaUseCase.getSchema(
-                        new GraphIdentifier(datasetName, extendedGraphURI), format);
+                        new GraphIdentifier(datasetName, extendedGraphName), format);
 
         // add suggested file name to response
         var fileName = "default";
-        if (!extendedGraphURI.equals("default")) {
-            fileName = new URI(extendedGraphURI).getSuffix();
+        if (!extendedGraphName.equals("default")) {
+            fileName = new URI(extendedGraphName).getSuffix();
         }
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 
@@ -125,7 +125,7 @@ public class GraphContentRESTController {
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/content\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return body;
     }
@@ -165,19 +165,19 @@ public class GraphContentRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphName) {
         logger.info(
                 "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/content\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        deleteGraphUseCase.deleteGraph(new GraphIdentifier(datasetName, graphURI));
+        deleteGraphUseCase.deleteGraph(new GraphIdentifier(datasetName, graphName));
 
         logger.info(
                 "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/content\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return Response.SUCCESS;
     }
@@ -198,22 +198,22 @@ public class GraphContentRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The file containing the graph to be inserted")
                     @RequestParam(value = "file", required = false)
                     MultipartFile file) {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/content\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        replaceGraphUseCase.replaceGraph(new GraphIdentifier(datasetName, graphURI), file);
+        replaceGraphUseCase.replaceGraph(new GraphIdentifier(datasetName, graphName), file);
 
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/content\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return "success";
     }

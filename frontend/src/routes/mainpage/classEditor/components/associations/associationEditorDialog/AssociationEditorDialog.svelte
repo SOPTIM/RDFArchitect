@@ -53,7 +53,7 @@
             if (!existingClassInfo) {
                 const res = await classStore.getClassInfo(
                     ctx.workspaceName,
-                    ctx.graphUri,
+                    ctx.graphName,
                     targetValue,
                 );
                 if (res) {
@@ -102,7 +102,7 @@
         );
         const result = await saveApiAssociationToBackend(
             classEditorContext.workspaceName,
-            classEditorContext.graphUri,
+            classEditorContext.graphName,
             classUuid,
             apiAssociation,
             isNewAssociation,
@@ -121,7 +121,7 @@
         forceReloadTrigger.trigger();
         classStore.invalidateGraph(
             classEditorContext.workspaceName,
-            classEditorContext.graphUri,
+            classEditorContext.graphName,
         );
     }
 

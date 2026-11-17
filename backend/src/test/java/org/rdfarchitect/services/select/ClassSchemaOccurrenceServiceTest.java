@@ -90,7 +90,7 @@ class ClassSchemaOccurrenceServiceTest {
         assertThat(occurrences).hasSize(2);
         var source =
                 occurrences.stream()
-                        .filter(o -> o.graphUri().equals(sourceGraph.graphUri()))
+                        .filter(o -> o.graphName().equals(sourceGraph.graphName()))
                         .findFirst()
                         .orElseThrow();
         assertThat(source.present()).isTrue();
@@ -109,7 +109,7 @@ class ClassSchemaOccurrenceServiceTest {
 
         var target =
                 occurrences.stream()
-                        .filter(o -> o.graphUri().equals(targetGraph.graphUri()))
+                        .filter(o -> o.graphName().equals(targetGraph.graphName()))
                         .findFirst()
                         .orElseThrow();
         assertThat(target.present()).isFalse();
@@ -129,7 +129,7 @@ class ClassSchemaOccurrenceServiceTest {
 
         var named =
                 occurrences.stream()
-                        .filter(o -> o.graphUri().equals("http://example.org/named"))
+                        .filter(o -> o.graphName().equals("http://example.org/named"))
                         .findFirst()
                         .orElseThrow();
         assertThat(named.label()).isEqualTo("Test Vocabulary");
@@ -162,7 +162,7 @@ class ClassSchemaOccurrenceServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.graphUri())
+                        .setGraphName(graphIdentifier.graphName())
                         .build();
         TestWorkspaces.createGraph(databasePort, graphIdentifier, graphSource.graph());
     }

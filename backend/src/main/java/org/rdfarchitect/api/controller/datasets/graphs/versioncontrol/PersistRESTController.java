@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/writeToDatabase")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/writeToDatabase")
 @RequiredArgsConstructor
 public class PersistRESTController {
 
@@ -65,21 +65,21 @@ public class PersistRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphName) {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/redo\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
 
-        persistUseCase.persist(new GraphIdentifier(datasetName, extendedGraphURI));
+        persistUseCase.persist(new GraphIdentifier(datasetName, extendedGraphName));
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/redo\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 originURL);
         return Response.SUCCESS;
     }

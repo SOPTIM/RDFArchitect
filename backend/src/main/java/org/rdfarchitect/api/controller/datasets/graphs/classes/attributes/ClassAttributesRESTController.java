@@ -43,7 +43,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/attributes/{attributeUUID}")
+        "api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/attributes/{attributeUUID}")
 @RequiredArgsConstructor
 public class ClassAttributesRESTController {
 
@@ -76,7 +76,7 @@ public class ClassAttributesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @Parameter(description = "The uuid of the old, to be replaced attribute.") @PathVariable
                     String attributeUUID,
@@ -90,20 +90,20 @@ public class ClassAttributesRESTController {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 attributeUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
 
         var newAttributeUUID = updateAttributesUseCase.replaceAttribute(graphIdentifier, attribute);
 
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes/{{}}\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 attributeUUID,
                 originURL);

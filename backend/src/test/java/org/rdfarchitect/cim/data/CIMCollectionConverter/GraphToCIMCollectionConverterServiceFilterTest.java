@@ -76,7 +76,7 @@ class GraphToCIMCollectionConverterServiceFilterTest {
         RDFDataMgr.read(graph, in, Lang.TTL);
         try (var transaction =
                 database.beginTransaction(graphIdentifier.datasetName(), ReadWrite.WRITE)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             for (var triple : graph.find().toList()) {
                 ctx.getRdfGraph().add(triple);
             }
@@ -202,8 +202,8 @@ class GraphToCIMCollectionConverterServiceFilterTest {
     private static void createGraph(InMemoryDatabase port, GraphIdentifier id, Graph graph) {
         port.createWorkspaceIfAbsent(id.datasetName());
         try (var transaction = port.beginTransaction(id.datasetName(), ReadWrite.WRITE)) {
-            transaction.createGraph(id.graphUri(), graph);
-            transaction.commit("created graph %s".formatted(id.graphUri()));
+            transaction.createGraph(id.graphName(), graph);
+            transaction.commit("created graph %s".formatted(id.graphName()));
         }
     }
 }

@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}/labels")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/layout/{diagramUUID}/labels")
 @RequiredArgsConstructor
 public class LabelLayoutDataRESTController {
 
@@ -68,7 +68,7 @@ public class LabelLayoutDataRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The UUID of the package or custom diagram being updated.")
                     @PathVariable
                     String diagramUUID,
@@ -90,23 +90,23 @@ public class LabelLayoutDataRESTController {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/labels\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 diagramUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
         var resolvedDiagramUUID =
                 !diagramUUID.equals("default") ? UUID.fromString(diagramUUID) : null;
 
         updateLabelPositionsUseCase.updateLabelPositions(
-                new GraphIdentifier(datasetName, extendedGraphURI),
+                new GraphIdentifier(datasetName, extendedGraphName),
                 resolvedDiagramUUID,
                 labelPositionDTOList);
 
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/labels\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 diagramUUID,
                 originURL);
         return "success";

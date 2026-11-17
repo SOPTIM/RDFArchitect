@@ -40,15 +40,15 @@ public interface ChangeLogEntryMapper {
     @Mapping(target = "contextDeltas", source = "deltas")
     @Mapping(target = "removedOnUndo", expression = "java(entry.removedOnUndo())")
     @Mapping(
-            target = "affectedGraphUris",
-            expression = "java(java.util.List.copyOf(entry.affectedGraphUris()))")
+            target = "affectedGraphNames",
+            expression = "java(java.util.List.copyOf(entry.affectedGraphNames()))")
     @Mapping(
-            target = "restorableGraphUris",
-            expression = "java(java.util.List.copyOf(entry.restorableGraphUris()))")
+            target = "restorableGraphNames",
+            expression = "java(java.util.List.copyOf(entry.restorableGraphNames()))")
     @Mapping(target = "affectedKinds", expression = "java(entry.affectedKinds())")
     @Mapping(
-            target = "restoreTargetGraphUris",
-            expression = "java(java.util.List.copyOf(entry.restoreTargetGraphUris()))")
+            target = "restoreTargetGraphNames",
+            expression = "java(java.util.List.copyOf(entry.restoreTargetGraphNames()))")
     ChangeLogEntryDTO toDTO(WorkspaceChangeLogEntry entry);
 
     List<ChangeLogEntryDTO> toDTOList(List<WorkspaceChangeLogEntry> entries);
@@ -89,7 +89,7 @@ public interface ChangeLogEntryMapper {
     private ContextDeltaDTO toMergedContextDeltaDTO(List<ContextDelta> deltas) {
         var dto = new ContextDeltaDTO();
         dto.setContextName(deltas.getFirst().contextName());
-        dto.setGraphUri(deltas.getFirst().graphUri());
+        dto.setGraphName(deltas.getFirst().graphName());
         var netTriples = netTriples(deltas);
         if (netTriples != null) {
             dto.setAdditions(mapTriples(netTriples.additions()));
@@ -161,7 +161,7 @@ public interface ChangeLogEntryMapper {
     default ContextDeltaDTO toContextDeltaDTO(ContextDelta contextDelta) {
         var dto = new ContextDeltaDTO();
         dto.setContextName(contextDelta.contextName());
-        dto.setGraphUri(contextDelta.graphUri());
+        dto.setGraphName(contextDelta.graphName());
         dto.setAdditions(mapTriples(contextDelta.additions()));
         dto.setDeletions(mapTriples(contextDelta.deletions()));
         dto.setValues(contextDelta.values().stream().map(this::mapValueChange).toList());

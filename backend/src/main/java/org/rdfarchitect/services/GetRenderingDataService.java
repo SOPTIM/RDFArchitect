@@ -58,7 +58,7 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
 
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             rdfGraphCopy = GraphUtils.deepCopy(ctx.getRdfGraph());
             layoutData = fetchLayoutData(ctx, packageUUID);
         }
@@ -74,7 +74,7 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
 
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             var diagram = ctx.getCustomDiagrams().get(diagramUUID);
             if (diagram == null) {
                 throw new IllegalArgumentException(
@@ -109,20 +109,21 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
             RenderingLayoutData layoutData) {
         var cimModel =
                 new CIMModelFacade(
-                        graphIdentifier.graphUri(), ModelFactory.createModelForGraph(rdfGraphCopy));
+                        graphIdentifier.graphName(),
+                        ModelFactory.createModelForGraph(rdfGraphCopy));
 
         if (!filter.isIncludePropertiesFromOtherProfiles()) {
             return renderer.renderUML(cimModel, filter, layoutData, List.of(), null, null);
         }
 
         var datasetName = graphIdentifier.datasetName();
-        var keywords = CIMProfileModels.keywordsByGraphUri(listGraphsUseCase, datasetName);
+        var keywords = CIMProfileModels.keywordsByGraphName(listGraphsUseCase, datasetName);
         var otherProfiles =
                 CIMProfileModels.loadAll(
-                        databasePort, keywords, datasetName, graphIdentifier.graphUri());
+                        databasePort, keywords, datasetName, graphIdentifier.graphName());
         String primaryColor;
         try (var transaction = databasePort.beginTransaction(datasetName, ReadWrite.READ)) {
-            primaryColor = transaction.crossProfileColors().getColor(graphIdentifier.graphUri());
+            primaryColor = transaction.crossProfileColors().getColor(graphIdentifier.graphName());
         }
 
         return renderer.renderUML(
@@ -131,6 +132,6 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
                 layoutData,
                 otherProfiles,
                 primaryColor,
-                keywords.get(graphIdentifier.graphUri()));
+                keywords.get(graphIdentifier.graphName()));
     }
 }

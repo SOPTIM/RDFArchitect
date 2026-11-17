@@ -36,7 +36,7 @@
     let {
         showDialog = $bindable(),
         lockedWorkspaceName,
-        lockedGraphUri,
+        lockedGraphName,
     } = $props();
 
     const uuid = crypto.randomUUID();
@@ -47,7 +47,7 @@
     };
 
     let selectedWorkspaceName = $state(null);
-    let selectedGraphURI = $state(null);
+    let selectedGraphName = $state(null);
     let packageLabel = $state(null);
     let packageComment = $state(null);
     let packageURINamespace = $state(null);
@@ -66,7 +66,7 @@
 
     let disableSubmit = $derived(
         !selectedWorkspaceName ||
-            !selectedGraphURI ||
+            !selectedGraphName ||
             !packageURINamespace ||
             !packageLabel ||
             resourceIriAlreadyExists,
@@ -78,14 +78,14 @@
     });
 
     $effect(async () => {
-        await getResources(selectedWorkspaceName, selectedGraphURI);
+        await getResources(selectedWorkspaceName, selectedGraphName);
     });
 
     async function onOpen() {
         selectedWorkspaceName =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
-        selectedGraphURI =
-            lockedGraphUri ?? editorState.selectedGraph.getValue();
+        selectedGraphName =
+            lockedGraphName ?? editorState.selectedGraph.getValue();
 
         packageURINamespace = null;
         packageLabel = null;
@@ -96,8 +96,8 @@
         }
         namespaces = await workspaceStore.getNamespaces(selectedWorkspaceName);
 
-        if (selectedGraphURI) {
-            await getResources(selectedWorkspaceName, selectedGraphURI);
+        if (selectedGraphName) {
+            await getResources(selectedWorkspaceName, selectedGraphName);
         } else {
             packages = [];
             classes = [];
@@ -106,7 +106,7 @@
 
     function onClose() {
         selectedWorkspaceName = null;
-        selectedGraphURI = null;
+        selectedGraphName = null;
         namespaces = [];
         packageURINamespace = null;
         packages = [];
@@ -115,29 +115,29 @@
         packageComment = null;
     }
 
-    async function getResources(workspaceName, graphURI) {
+    async function getResources(workspaceName, graphName) {
         await Promise.all([
-            getPackages(workspaceName, graphURI),
-            getClasses(workspaceName, graphURI),
+            getPackages(workspaceName, graphName),
+            getClasses(workspaceName, graphName),
         ]);
     }
 
-    async function getPackages(workspaceName, graphURI) {
-        if (!workspaceName || !graphURI) {
+    async function getPackages(workspaceName, graphName) {
+        if (!workspaceName || !graphName) {
             packages = [];
             return;
         }
 
-        const result = await packageStore.getPackages(workspaceName, graphURI);
+        const result = await packageStore.getPackages(workspaceName, graphName);
         packages = result ? [...result.internal, ...result.external] : [];
     }
 
-    async function getClasses(workspaceName, graphURI) {
-        if (!workspaceName || !graphURI) {
+    async function getClasses(workspaceName, graphName) {
+        if (!workspaceName || !graphName) {
             classes = [];
             return;
         }
-        classes = (await classStore.getClasses(workspaceName, graphURI)) ?? [];
+        classes = (await classStore.getClasses(workspaceName, graphName)) ?? [];
     }
 
     function getResourceIri(resource) {
@@ -181,7 +181,7 @@
     onPrimary={() =>
         newPackage(
             selectedWorkspaceName,
-            selectedGraphURI,
+            selectedGraphName,
             packageLabel,
             packageComment,
             packageURINamespace,
@@ -192,9 +192,9 @@
     <div class="mx-2 flex h-full flex-col">
         <WorkspaceAndGraphSelection
             bind:workspace={selectedWorkspaceName}
-            bind:graph={selectedGraphURI}
+            bind:graph={selectedGraphName}
             {lockedWorkspaceName}
-            {lockedGraphUri}
+            {lockedGraphName}
             allowSelectionOfReadonlyWorkspaces={false}
             displayAsCard={false}
         />

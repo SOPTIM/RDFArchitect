@@ -56,12 +56,12 @@ public class CopyClassSourceReader {
         return sourceDTOs.stream()
                 .map(
                         dto -> {
-                            var expandedGraphURI =
+                            var expandedGraphName =
                                     expandURIUseCase.expandUri(
-                                            dto.getSourceDatasetName(), dto.getSourceGraphURI());
+                                            dto.getSourceDatasetName(), dto.getSourceGraphName());
                             var sourceGraphIdentifier =
                                     new GraphIdentifier(
-                                            dto.getSourceDatasetName(), expandedGraphURI);
+                                            dto.getSourceDatasetName(), expandedGraphName);
                             return new CopyClassSource(
                                     sourceGraphIdentifier, UUID.fromString(dto.getClassUUID()));
                         })
@@ -99,7 +99,7 @@ public class CopyClassSourceReader {
     private Model snapshotOf(GraphIdentifier graphIdentifier) {
         try (var transaction =
                 databasePort.beginTransaction(graphIdentifier.datasetName(), ReadWrite.READ)) {
-            var ctx = transaction.graph(graphIdentifier.graphUri());
+            var ctx = transaction.graph(graphIdentifier.graphName());
             return ModelFactory.createModelForGraph(GraphUtils.deepCopy(ctx.getRdfGraph()));
         }
     }
@@ -111,12 +111,12 @@ public class CopyClassSourceReader {
             log.warn(
                     "Skipping source class '{}' because graph '{}' does not contain it any more.",
                     classUUID,
-                    source.graphIdentifier().graphUri());
+                    source.graphIdentifier().graphName());
             return null;
         }
         return new ResolvedSource(
                 source.graphIdentifier(),
-                new CIMClass(source.graphIdentifier().graphUri(), model, source.classUUID()));
+                new CIMClass(source.graphIdentifier().graphName(), model, source.classUUID()));
     }
 
     public record ResolvedSource(GraphIdentifier graphIdentifier, ICIMClass cimClass) {}

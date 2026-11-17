@@ -77,12 +77,12 @@ public interface EdgeResolver {
     /**
      * Resolves edges of a diagram of a single graph, see {@link #forGraph(ICIMModelFacade)}.
      *
-     * @param graphUri the URI of the graph
+     * @param graphName the URI of the graph
      * @param graph the graph the diagram belongs to
      * @return the resolver
      */
-    static EdgeResolver forGraph(String graphUri, Graph graph) {
-        return forGraph(new CIMModelFacade(graphUri, ModelFactory.createModelForGraph(graph)));
+    static EdgeResolver forGraph(String graphName, Graph graph) {
+        return forGraph(new CIMModelFacade(graphName, ModelFactory.createModelForGraph(graph)));
     }
 
     /**

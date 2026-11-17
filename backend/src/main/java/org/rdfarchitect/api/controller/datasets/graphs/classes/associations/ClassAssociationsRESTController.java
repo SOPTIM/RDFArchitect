@@ -41,7 +41,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping(
-        "api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/associations/{associationUUID}")
+        "api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/associations/{associationUUID}")
 @RequiredArgsConstructor
 public class ClassAssociationsRESTController {
 
@@ -69,7 +69,7 @@ public class ClassAssociationsRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI,
+                    String graphName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @Parameter(description = "The old, to be replaced association.") @PathVariable
                     String associationUUID,
@@ -87,13 +87,13 @@ public class ClassAssociationsRESTController {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/{{}}\" from \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 associationUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
 
         var newAssociationUUIDs =
                 updateAssociationsUseCase.replaceAssociation(graphIdentifier, associationPairDTO);
@@ -101,7 +101,7 @@ public class ClassAssociationsRESTController {
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/{{}}\" to \"{}\".",
                 datasetName,
-                graphURI,
+                graphName,
                 classUUID,
                 associationUUID,
                 originURL);
