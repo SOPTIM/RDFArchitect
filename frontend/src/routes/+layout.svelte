@@ -37,6 +37,7 @@
     import UndoConfirmDialog from "$lib/dialog/UndoConfirmDialog.svelte";
     import { installSessionHandshake } from "$lib/embedding/session-handshake.js";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import { ownsKeyboardInput } from "$lib/eventhandling/keyboardTargets.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
@@ -183,16 +184,6 @@
         goto("/mainpage");
     }
 
-    function isInputElement(target) {
-        return (
-            target instanceof HTMLElement &&
-            (target.isContentEditable ||
-                target.tagName === "INPUT" ||
-                target.tagName === "TEXTAREA" ||
-                target.tagName === "SELECT")
-        );
-    }
-
     async function handleUndoRedo(isRedo) {
         if (isRedo && !canRedo) return;
         if (!isRedo && !canUndo) return;
@@ -218,7 +209,7 @@
 
         const key = event.key.toLowerCase();
         const hasCtrl = event.ctrlKey || event.metaKey;
-        const inputFocused = isInputElement(event.target);
+        const inputFocused = ownsKeyboardInput(event.target);
 
         const hasCtrlAltViaAltGr =
             event.getModifierState("AltGraph") && isLeftAltPressed;
