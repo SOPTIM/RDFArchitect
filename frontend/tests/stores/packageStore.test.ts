@@ -137,7 +137,7 @@ describe("packageStore", () => {
             expect(result).toEqual(MOCK_PACKAGE_LIST_INFO);
             expect(api.listPackages).toHaveBeenCalledTimes(1);
             expect(api.listPackages).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, graphName: GRAPH_URI_1 },
+                path: { workspaceName: WORKSPACE_A, graphName: GRAPH_URI_1 },
             });
         });
 
@@ -207,7 +207,7 @@ describe("packageStore", () => {
             await store.addPackage(WORKSPACE_A, GRAPH_URI_1, newPkg);
 
             expect(api.addPackage).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, graphName: GRAPH_URI_1 },
+                path: { workspaceName: WORKSPACE_A, graphName: GRAPH_URI_1 },
                 body: newPkg,
             });
         });
@@ -350,7 +350,7 @@ describe("packageStore", () => {
 
             expect(api.replacePackage).toHaveBeenCalledWith({
                 path: {
-                    datasetName: WORKSPACE_A,
+                    workspaceName: WORKSPACE_A,
                     graphName: GRAPH_URI_1,
                     packageUUID: PKG_UUID_1,
                 },

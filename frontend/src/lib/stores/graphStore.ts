@@ -67,7 +67,7 @@ function createGraphStore() {
                     ...getWorkspaceState(s, workspaceName),
                     ...patch,
                 }),
-            () => listGraphs({ path: { datasetName: workspaceName } }),
+            () => listGraphs({ path: { workspaceName: workspaceName } }),
             LOG_PREFIX,
             `graphs for workspace="${workspaceName}"`,
             force,
@@ -83,7 +83,7 @@ function createGraphStore() {
         );
 
         const { error } = await replaceGraph({
-            path: { datasetName: workspaceName, graphName },
+            path: { workspaceName: workspaceName, graphName },
         });
 
         if (error) {
@@ -116,7 +116,7 @@ function createGraphStore() {
         );
 
         const { error } = await sdkRenameGraph({
-            path: { datasetName: workspaceName, graphName: oldGraphName },
+            path: { workspaceName: workspaceName, graphName: oldGraphName },
             query: { newGraphName },
         });
 
@@ -155,7 +155,7 @@ function createGraphStore() {
         );
 
         const { error } = await deleteGraph({
-            path: { datasetName: workspaceName, graphName },
+            path: { workspaceName: workspaceName, graphName },
         });
 
         if (error) {
@@ -276,7 +276,7 @@ async function getImportStatus(
     jobId: string,
 ): Promise<Result<ImportJobStatus>> {
     const { data, error } = await sdkGetImportStatus({
-        path: { datasetName: workspaceName, jobId },
+        path: { workspaceName: workspaceName, jobId },
     });
 
     if (error || !data) {
@@ -304,7 +304,7 @@ async function resolvePrefixConflicts(
     );
 
     const { error } = await sdkResolvePrefixConflicts({
-        path: { datasetName: workspaceName, jobId },
+        path: { workspaceName: workspaceName, jobId },
         body: resolutions,
     });
 
@@ -330,7 +330,7 @@ async function cancelImport(
     console.log(`${LOG_PREFIX} Cancelling import job "${jobId}"`);
 
     const { error } = await sdkCancelImport({
-        path: { datasetName: workspaceName, jobId },
+        path: { workspaceName: workspaceName, jobId },
     });
 
     if (error) {
@@ -367,7 +367,7 @@ function uploadImport(
         .map(graphName => `graphNames=${encodeURIComponent(graphName ?? "")}`)
         .join("&");
     const url =
-        `${PUBLIC_BACKEND_URL}/api/datasets/${encodeURIComponent(workspaceName)}` +
+        `${PUBLIC_BACKEND_URL}/api/workspaces/${encodeURIComponent(workspaceName)}` +
         `/graphs/content/imports${query ? `?${query}` : ""}`;
 
     const formData = new FormData();

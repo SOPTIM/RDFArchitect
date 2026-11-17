@@ -103,7 +103,7 @@
             return;
         }
         const { data, error } = await getChangeLogAPI({
-            path: { datasetName: selectedWorkspaceName },
+            path: { workspaceName: selectedWorkspaceName },
         });
         if (!error) {
             changelog = data;

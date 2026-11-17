@@ -44,7 +44,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}")
 @RequiredArgsConstructor
 public class DeleteRESTController {
 
@@ -69,7 +69,7 @@ public class DeleteRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -78,20 +78,20 @@ public class DeleteRESTController {
             @Parameter(description = "The uuids of the cim resources to analyse.") @RequestBody
                     List<UUID> uuids) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/deletion-impact\" for {} resource(s) from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/deletion-impact\" for {} resource(s) from \"{}\".",
+                workspaceName,
                 graphName,
                 uuids.size(),
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
 
         var result = findDeleteDependenciesUseCase.getDeleteDependencies(graphIdentifier, uuids);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/deletion-impact\" from \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/deletion-impact\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return result;
@@ -112,7 +112,7 @@ public class DeleteRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -124,19 +124,19 @@ public class DeleteRESTController {
                     @RequestBody
                     List<ResourceDeleteRequest> deleteRequests) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/delete-requests\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/delete-requests\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
 
         deleteResourcesUseCase.executeDeleteRequests(
-                new GraphIdentifier(datasetName, extendedGraphName), deleteRequests);
+                new GraphIdentifier(workspaceName, extendedGraphName), deleteRequests);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/delete-requests\" from \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/delete-requests\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return "success";

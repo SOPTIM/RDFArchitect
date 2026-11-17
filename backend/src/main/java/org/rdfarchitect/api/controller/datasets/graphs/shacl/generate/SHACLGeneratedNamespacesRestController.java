@@ -40,7 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.nio.charset.StandardCharsets;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/shacl/generated/namespaces")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/shacl/generated/namespaces")
 @RequiredArgsConstructor
 public class SHACLGeneratedNamespacesRestController {
 
@@ -72,31 +72,31 @@ public class SHACLGeneratedNamespacesRestController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generated/namespaces/ttl\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/generated/namespaces/ttl\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
 
         // fetch data
         var shaclString =
                 shaclExportUseCase
                         .exportGeneratedSHACLNamespaces(
-                                new GraphIdentifier(datasetName, extendedGraphName),
+                                new GraphIdentifier(workspaceName, extendedGraphName),
                                 RDFFormat.TURTLE)
                         .toString(StandardCharsets.UTF_8);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generated/namespaces/ttl\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/generated/namespaces/ttl\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return shaclString;

@@ -42,7 +42,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/enumentries")
+@RequestMapping(
+        "/api/workspaces/{workspaceName}/graphs/{graphName}/classes/{classUUID}/enumentries")
 @RequiredArgsConstructor
 public class ClassAllEnumEntriesRESTController {
 
@@ -70,7 +71,7 @@ public class ClassAllEnumEntriesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -83,22 +84,22 @@ public class ClassAllEnumEntriesRESTController {
                     @RequestBody
                     EnumEntryDTO enumEntry) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/enumentries\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/enumentries\" from \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
 
         var newEnumEntryUUID =
                 replaceOrCreateEnumEntryUseCase.replaceOrCreateEnumEntry(
                         graphIdentifier, enumEntry);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/enumentries\" from \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/enumentries\" from \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 originURL);

@@ -51,7 +51,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/content")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/content")
 @RequiredArgsConstructor
 public class GraphContentRESTController {
 
@@ -88,25 +88,25 @@ public class GraphContentRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/content\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/content\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
         var format = getRdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 getSchemaUseCase.getSchema(
-                        new GraphIdentifier(datasetName, extendedGraphName), format);
+                        new GraphIdentifier(workspaceName, extendedGraphName), format);
 
         // add suggested file name to response
         var fileName = "default";
@@ -123,8 +123,8 @@ public class GraphContentRESTController {
                         .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
                         .body(outStream.toByteArray());
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/content\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/content\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return body;
@@ -160,23 +160,23 @@ public class GraphContentRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphName) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/content\" from \"{}\".",
-                datasetName,
+                "Received DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/content\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        deleteGraphUseCase.deleteGraph(new GraphIdentifier(datasetName, graphName));
+        deleteGraphUseCase.deleteGraph(new GraphIdentifier(workspaceName, graphName));
 
         logger.info(
-                "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/content\" to \"{}\".",
-                datasetName,
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/content\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return Response.SUCCESS;
@@ -193,7 +193,7 @@ public class GraphContentRESTController {
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -203,16 +203,16 @@ public class GraphContentRESTController {
                     @RequestParam(value = "file", required = false)
                     MultipartFile file) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/content\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/content\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        replaceGraphUseCase.replaceGraph(new GraphIdentifier(datasetName, graphName), file);
+        replaceGraphUseCase.replaceGraph(new GraphIdentifier(workspaceName, graphName), file);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/content\" to \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/content\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return "success";

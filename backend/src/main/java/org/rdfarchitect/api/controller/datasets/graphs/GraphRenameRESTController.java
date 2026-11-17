@@ -38,7 +38,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/rename")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/rename")
 @RequiredArgsConstructor
 public class GraphRenameRESTController {
 
@@ -65,26 +65,26 @@ public class GraphRenameRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(description = "The url encoded uri of the graph.") @PathVariable
                     String graphName,
             @Parameter(description = "The url encoded uri to rename the graph to.") @RequestParam
                     String newGraphName) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/rename\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/rename\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var extendedNewGraphName = expandURIUseCase.expandUri(datasetName, newGraphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedNewGraphName = expandURIUseCase.expandUri(workspaceName, newGraphName);
 
         renameGraphUseCase.renameGraph(
-                new GraphIdentifier(datasetName, extendedGraphName), extendedNewGraphName);
+                new GraphIdentifier(workspaceName, extendedGraphName), extendedNewGraphName);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/rename\" to \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/rename\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return Response.SUCCESS;

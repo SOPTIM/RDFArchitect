@@ -43,7 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphName}/rendering")
+@RequestMapping("/api/workspaces/{workspaceName}/graphs/{graphName}/rendering")
 @RequiredArgsConstructor
 public class RenderingRESTController {
 
@@ -76,21 +76,21 @@ public class RenderingRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphName,
             @RequestBody GraphFilter filter) {
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/rendering\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/rendering\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
 
         var packageUUID =
                 !filter.getPackageUUID().equals("default")
@@ -101,8 +101,8 @@ public class RenderingRESTController {
                 getRenderingDataUseCase.getRenderingData(graphIdentifier, filter, packageUUID);
 
         logger.info(
-                "Sending response to GET request \"/api/datasets/{{}}/graphs/{{}}/rendering\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request \"/api/workspaces/{{}}/graphs/{{}}/rendering\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return renderingData;

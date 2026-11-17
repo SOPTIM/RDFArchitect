@@ -139,7 +139,7 @@
 
         try {
             const { data, error } = await getRenderingDataParameterized({
-                path: { datasetName: workspaceName, graphName: graphName },
+                path: { workspaceName: workspaceName, graphName: graphName },
                 body: graphFilter,
             });
 
@@ -167,7 +167,7 @@
         try {
             const { data, error } = await getCustomDatasetViewRenderingData({
                 path: {
-                    datasetName: editorState.selectedWorkspace.getValue(),
+                    workspaceName: editorState.selectedWorkspace.getValue(),
                     diagramId: diagramId,
                 },
             });
@@ -192,7 +192,7 @@
         try {
             const { data, error } = await getCustomProfileViewRenderingData({
                 path: {
-                    datasetName: editorState.selectedWorkspace.getValue(),
+                    workspaceName: editorState.selectedWorkspace.getValue(),
                     graphName: editorState.selectedGraph.getValue(),
                     diagramId: diagramId,
                 },

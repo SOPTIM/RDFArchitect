@@ -43,7 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{targetDatasetName}/graphs/{targetGraphName}/paste")
+@RequestMapping("api/workspaces/{targetWorkspaceName}/graphs/{targetGraphName}/paste")
 @RequiredArgsConstructor
 public class PasteRESTController {
 
@@ -68,7 +68,7 @@ public class PasteRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the target dataset.") @PathVariable
-                    String targetDatasetName,
+                    String targetWorkspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the target graph, or \"default\" to access the default graph.")
@@ -81,21 +81,22 @@ public class PasteRESTController {
                     @RequestBody
                     PasteClassesRequestDTO pasteRequest) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/paste\" for {} class(es) from \"{}\".",
-                targetDatasetName,
+                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/paste\" for {} class(es) from \"{}\".",
+                targetWorkspaceName,
                 targetGraphName,
                 pasteRequest.getSources() == null ? 0 : pasteRequest.getSources().size(),
                 originURL);
 
         var targetExtendedGraphName =
-                expandURIUseCase.expandUri(targetDatasetName, targetGraphName);
-        var targetGraphIdentifier = new GraphIdentifier(targetDatasetName, targetExtendedGraphName);
+                expandURIUseCase.expandUri(targetWorkspaceName, targetGraphName);
+        var targetGraphIdentifier =
+                new GraphIdentifier(targetWorkspaceName, targetExtendedGraphName);
 
         var responses = copyClassUseCase.copyClasses(pasteRequest, targetGraphIdentifier);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/paste\" to \"{}\".",
-                targetDatasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/paste\" to \"{}\".",
+                targetWorkspaceName,
                 targetGraphName,
                 originURL);
         return responses;
@@ -115,7 +116,7 @@ public class PasteRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the target dataset.") @PathVariable
-                    String targetDatasetName,
+                    String targetWorkspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the target graph, or \"default\" to access the default graph.")
@@ -127,15 +128,16 @@ public class PasteRESTController {
                     @RequestBody
                     PastePreviewRequestDTO previewRequest) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/paste/preview\" for {} class(es) from \"{}\".",
-                targetDatasetName,
+                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/paste/preview\" for {} class(es) from \"{}\".",
+                targetWorkspaceName,
                 targetGraphName,
                 previewRequest.getSources() == null ? 0 : previewRequest.getSources().size(),
                 originURL);
 
         var targetExtendedGraphName =
-                expandURIUseCase.expandUri(targetDatasetName, targetGraphName);
-        var targetGraphIdentifier = new GraphIdentifier(targetDatasetName, targetExtendedGraphName);
+                expandURIUseCase.expandUri(targetWorkspaceName, targetGraphName);
+        var targetGraphIdentifier =
+                new GraphIdentifier(targetWorkspaceName, targetExtendedGraphName);
 
         return pastePreviewUseCase.previewPaste(previewRequest, targetGraphIdentifier);
     }

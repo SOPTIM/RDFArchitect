@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/resolve")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/resolve")
 @RequiredArgsConstructor
 public class ResolveIdentifierRESTController {
 
@@ -60,7 +60,7 @@ public class ResolveIdentifierRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -70,22 +70,22 @@ public class ResolveIdentifierRESTController {
                     @PathVariable
                     String iriIdentifier) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/resolve/iri/{{}}\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/resolve/iri/{{}}\" from \"{}\".",
+                workspaceName,
                 graphName,
                 iriIdentifier,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var extendedResourceIRI = expandURIUseCase.expandUri(datasetName, iriIdentifier);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedResourceIRI = expandURIUseCase.expandUri(workspaceName, iriIdentifier);
 
         var uuid =
                 resolveIdentifierUseCase.resolveIRI(
-                        new GraphIdentifier(datasetName, extendedGraphName), extendedResourceIRI);
+                        new GraphIdentifier(workspaceName, extendedGraphName), extendedResourceIRI);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/resolve/iri/{{}}\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/resolve/iri/{{}}\" to \"{}\".",
+                workspaceName,
                 graphName,
                 iriIdentifier,
                 originURL);

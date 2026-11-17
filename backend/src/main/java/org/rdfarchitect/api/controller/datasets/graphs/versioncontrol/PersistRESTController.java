@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/writeToDatabase")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/writeToDatabase")
 @RequiredArgsConstructor
 public class PersistRESTController {
 
@@ -60,25 +60,25 @@ public class PersistRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphName) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/redo\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/redo\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
 
-        persistUseCase.persist(new GraphIdentifier(datasetName, extendedGraphName));
+        persistUseCase.persist(new GraphIdentifier(workspaceName, extendedGraphName));
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/redo\" to \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/redo\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return Response.SUCCESS;

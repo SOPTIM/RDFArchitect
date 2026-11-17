@@ -44,7 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/asciidocexport/{fileEnding}")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/asciidocexport/{fileEnding}")
 @RequiredArgsConstructor
 public class AsciiDocExportRESTController {
 
@@ -76,7 +76,7 @@ public class AsciiDocExportRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -90,16 +90,16 @@ public class AsciiDocExportRESTController {
                     @RequestParam(defaultValue = "false")
                     boolean embedDiagrams) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/asciidocexport\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/asciidocexport\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
 
         var output =
                 exportGraphAsciiDocUseCase.exportGraphAsAsciiDoc(
-                        new GraphIdentifier(datasetName, extendedGraphName),
+                        new GraphIdentifier(workspaceName, extendedGraphName),
                         fileEnding,
                         embedDiagrams);
 
@@ -119,8 +119,8 @@ public class AsciiDocExportRESTController {
         var body = ResponseEntity.ok().headers(headers).body(output);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/asciidocexport\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/asciidocexport\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return body;

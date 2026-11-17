@@ -81,7 +81,7 @@
         );
         putShacl({
             path: {
-                datasetName: classWorkspaceName,
+                workspaceName: classWorkspaceName,
                 graphName: classGraphName,
                 classUUID: editorState.selectedClass.getProperty("id"),
             },

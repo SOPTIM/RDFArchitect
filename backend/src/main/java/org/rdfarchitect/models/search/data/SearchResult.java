@@ -29,7 +29,7 @@ import java.util.UUID;
 @Value
 public class SearchResult {
 
-    String datasetName;
+    String workspaceName;
     String graphName;
     RDFSLabel packageLabel;
     UUID packageUUID;

@@ -121,7 +121,7 @@
 
     function copyWorkspaceUrl() {
         const params = new URLSearchParams({
-            dataset: workspaceNavEntry.id,
+            workspace: workspaceNavEntry.id,
             graph: graphNavEntry.id,
             package: packageNavEntry.id,
         });

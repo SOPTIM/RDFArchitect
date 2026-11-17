@@ -203,9 +203,9 @@ public class SearchService implements SearchUseCase {
         List<SearchResult> internalSearchResults = new ArrayList<>();
         List<SearchResult> externalSearchResults = new ArrayList<>();
 
-        if (filter.getDatasetName() != null) {
+        if (filter.getWorkspaceName() != null) {
             searchDataset(
-                    filter.getDatasetName(),
+                    filter.getWorkspaceName(),
                     query,
                     filter,
                     internalSearchResults,

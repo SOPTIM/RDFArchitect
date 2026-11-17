@@ -275,7 +275,7 @@ describe("customDiagramStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.replaceCustomDatasetDiagram).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
+                path: { workspaceName: WORKSPACE_A, diagramId: DIAGRAM_ID },
                 body: MOCK_DIAGRAM_BODY,
             });
 
@@ -343,7 +343,7 @@ describe("customDiagramStore", () => {
             expect(result.error).toBeNull();
             expect(api.replaceCustomGraphDiagram).toHaveBeenCalledWith({
                 path: {
-                    datasetName: WORKSPACE_A,
+                    workspaceName: WORKSPACE_A,
                     graphName: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },
@@ -413,7 +413,7 @@ describe("customDiagramStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.deleteCustomDatasetDiagram).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
+                path: { workspaceName: WORKSPACE_A, diagramId: DIAGRAM_ID },
             });
 
             const state = get(store);
@@ -470,7 +470,7 @@ describe("customDiagramStore", () => {
             expect(result.error).toBeNull();
             expect(api.deleteCustomGraphDiagram).toHaveBeenCalledWith({
                 path: {
-                    datasetName: WORKSPACE_A,
+                    workspaceName: WORKSPACE_A,
                     graphName: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },
@@ -541,7 +541,7 @@ describe("customDiagramStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.addToCustomDatasetDiagram).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
+                path: { workspaceName: WORKSPACE_A, diagramId: DIAGRAM_ID },
                 body: CLASSES,
             });
 
@@ -618,7 +618,7 @@ describe("customDiagramStore", () => {
             expect(result.error).toBeNull();
             expect(api.addToCustomGraphDiagram).toHaveBeenCalledWith({
                 path: {
-                    datasetName: WORKSPACE_A,
+                    workspaceName: WORKSPACE_A,
                     graphName: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },
@@ -702,7 +702,7 @@ describe("customDiagramStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.removeFromCustomDatasetDiagram).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
+                path: { workspaceName: WORKSPACE_A, diagramId: DIAGRAM_ID },
                 body: CLASS_IDS,
             });
 
@@ -760,7 +760,7 @@ describe("customDiagramStore", () => {
             expect(result.error).toBeNull();
             expect(api.removeFromDiagram).toHaveBeenCalledWith({
                 path: {
-                    datasetName: WORKSPACE_A,
+                    workspaceName: WORKSPACE_A,
                     graphName: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },

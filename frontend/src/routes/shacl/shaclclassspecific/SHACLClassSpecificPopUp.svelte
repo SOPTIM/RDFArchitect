@@ -60,7 +60,7 @@
         try {
             const { data, error } = await getShaclRelatedToClass({
                 path: {
-                    datasetName: workspaceName,
+                    workspaceName: workspaceName,
                     graphName: graphName,
                     classUUID: reactiveClass.uuid.value,
                 },

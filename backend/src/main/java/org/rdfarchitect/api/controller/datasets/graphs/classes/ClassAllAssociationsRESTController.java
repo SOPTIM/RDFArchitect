@@ -47,7 +47,8 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/associations")
+@RequestMapping(
+        "api/workspaces/{workspaceName}/graphs/{graphName}/classes/{classUUID}/associations")
 @RequiredArgsConstructor
 public class ClassAllAssociationsRESTController {
 
@@ -71,7 +72,7 @@ public class ClassAllAssociationsRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -93,21 +94,21 @@ public class ClassAllAssociationsRESTController {
                     @RequestBody
                     List<AssociationPairDTO> associationPairList) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/associations\" from \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
 
         updateAssociationsUseCase.replaceAllAssociations(
                 graphIdentifier, UUID.fromString(classUUID), associationPairList);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations\" to \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/associations\" to \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 originURL);
@@ -127,7 +128,7 @@ public class ClassAllAssociationsRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -146,21 +147,21 @@ public class ClassAllAssociationsRESTController {
                     @RequestBody
                     AssociationPairDTO associationPair) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/associations/\" from \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
 
         var newAssociationUUIDs =
                 createAssociationUseCase.createAssociation(graphIdentifier, associationPair);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/\" from \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/associations/\" from \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 originURL);

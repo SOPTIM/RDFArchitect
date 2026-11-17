@@ -78,7 +78,7 @@ public interface ImportJobUseCase {
      */
     record ImportJobStatus(
             UUID jobId,
-            String datasetName,
+            String workspaceName,
             JobState state,
             List<ImportFileStatus> files,
             List<String> importedGraphNames,

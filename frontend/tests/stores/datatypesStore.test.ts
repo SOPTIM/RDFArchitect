@@ -174,7 +174,7 @@ describe("datatypesStore", () => {
 
             expect(result).toEqual(mockData);
             expect(api.listDatatypes).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE, graphName: GRAPH },
+                path: { workspaceName: WORKSPACE, graphName: GRAPH },
             });
         });
 
@@ -189,7 +189,7 @@ describe("datatypesStore", () => {
 
             expect(result).toEqual(mockData);
             expect(api.listStereotypes).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE, graphName: GRAPH },
+                path: { workspaceName: WORKSPACE, graphName: GRAPH },
             });
         });
     });

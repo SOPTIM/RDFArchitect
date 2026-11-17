@@ -196,21 +196,21 @@
                 break;
             case CompareMode.FILE_TO_STORED:
                 response = await compareSchemas({
-                    path: { datasetName: workspaceB, graphName: graphB },
+                    path: { workspaceName: workspaceB, graphName: graphB },
                     body: fileA,
                 });
                 break;
             case CompareMode.STORED_TO_FILE:
                 response = await compareSchemas({
-                    path: { datasetName: workspaceA, graphName: graphA },
+                    path: { workspaceName: workspaceA, graphName: graphA },
                     body: fileB,
                 });
                 invert = true;
                 break;
             case CompareMode.STORED_TO_STORED:
                 response = await compareStoredSchemas({
-                    path: { datasetName: workspaceA, graphName: graphA },
-                    query: { otherDataset: workspaceB, otherGraph: graphB },
+                    path: { workspaceName: workspaceA, graphName: graphA },
+                    query: { otherWorkspace: workspaceB, otherGraph: graphB },
                 });
                 break;
             default:

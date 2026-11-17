@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/layout/{diagramUUID}/labels")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/layout/{diagramUUID}/labels")
 @RequiredArgsConstructor
 public class LabelLayoutDataRESTController {
 
@@ -63,7 +63,7 @@ public class LabelLayoutDataRESTController {
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -88,24 +88,24 @@ public class LabelLayoutDataRESTController {
                     List<LabelPositionDTO> labelPositionDTOList) {
 
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/labels\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/layout/{{}}/labels\" from \"{}\".",
+                workspaceName,
                 graphName,
                 diagramUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
         var resolvedDiagramUUID =
                 !diagramUUID.equals("default") ? UUID.fromString(diagramUUID) : null;
 
         updateLabelPositionsUseCase.updateLabelPositions(
-                new GraphIdentifier(datasetName, extendedGraphName),
+                new GraphIdentifier(workspaceName, extendedGraphName),
                 resolvedDiagramUUID,
                 labelPositionDTOList);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/labels\" from \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/layout/{{}}/labels\" from \"{}\".",
+                workspaceName,
                 graphName,
                 diagramUUID,
                 originURL);

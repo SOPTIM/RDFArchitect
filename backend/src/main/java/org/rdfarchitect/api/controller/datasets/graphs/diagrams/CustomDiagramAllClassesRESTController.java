@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphName}/diagrams/{diagramId}/classes")
+@RequestMapping("/api/workspaces/{workspaceName}/graphs/{graphName}/diagrams/{diagramId}/classes")
 @RequiredArgsConstructor
 public class CustomDiagramAllClassesRESTController {
 
@@ -61,7 +61,7 @@ public class CustomDiagramAllClassesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -72,21 +72,21 @@ public class CustomDiagramAllClassesRESTController {
                     @RequestBody
                     List<ClassInDiagram> classes) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"",
-                datasetName,
+                "Received DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"",
+                workspaceName,
                 graphName,
                 diagramId,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
         customDiagramLayoutUseCase.addClassesToCustomDiagram(
-                new GraphIdentifier(datasetName, extendedGraphName),
+                new GraphIdentifier(workspaceName, extendedGraphName),
                 UUID.fromString(diagramId),
                 classes);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"",
-                datasetName,
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"",
+                workspaceName,
                 graphName,
                 diagramId,
                 originURL);
@@ -102,7 +102,7 @@ public class CustomDiagramAllClassesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -113,22 +113,22 @@ public class CustomDiagramAllClassesRESTController {
                     @RequestBody
                     List<UUID> classIds) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes\" for {} class(es) from \"{}\"",
-                datasetName,
+                "Received DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/diagrams/{{}}/classes\" for {} class(es) from \"{}\"",
+                workspaceName,
                 graphName,
                 diagramId,
                 classIds.size(),
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
         customDiagramLayoutUseCase.removeClassesFromCustomDiagram(
-                new GraphIdentifier(datasetName, extendedGraphName),
+                new GraphIdentifier(workspaceName, extendedGraphName),
                 UUID.fromString(diagramId),
                 classIds);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"",
-                datasetName,
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"",
+                workspaceName,
                 graphName,
                 diagramId,
                 originURL);

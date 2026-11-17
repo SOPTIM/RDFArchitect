@@ -48,7 +48,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/shacl/generate")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/shacl/generate")
 @RequiredArgsConstructor
 public class SHACLGenerateContentRestController {
 
@@ -74,28 +74,28 @@ public class SHACLGenerateContentRestController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generate/string\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/generate/string\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
 
         var result =
                 shaclGenerateUseCase.exportGeneratedSHACLGraph(
-                        new GraphIdentifier(datasetName, extendedGraphName),
+                        new GraphIdentifier(workspaceName, extendedGraphName),
                         PrefixEntry.create(RDFA.NS_PREFIX_SHACL, RDFA.NS_URI_SHACL));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generate/string\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/generate/string\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return result;
@@ -127,30 +127,30 @@ public class SHACLGenerateContentRestController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generate/file\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/generate/file\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
         var format = getRdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 shaclExportUseCase.exportGeneratedSHACLGraph(
-                        new GraphIdentifier(datasetName, extendedGraphName), format);
+                        new GraphIdentifier(workspaceName, extendedGraphName), format);
         var body = buildResponseEntity(extendedGraphName, format, outStream);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generate/file\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/generate/file\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return body;

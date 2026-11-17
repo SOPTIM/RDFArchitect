@@ -248,7 +248,7 @@ export class LabelLayoutController {
     }
 
     #persist(labelPositionDTOList) {
-        const { datasetName, graphName, diagramUUID } = this.#getTarget();
+        const { workspaceName, graphName, diagramUUID } = this.#getTarget();
         if (!diagramUUID || labelPositionDTOList.length === 0) {
             return;
         }
@@ -256,11 +256,11 @@ export class LabelLayoutController {
         const request = (
             graphName
                 ? updateLabelPositions({
-                      path: { datasetName, graphName, diagramUUID },
+                      path: { workspaceName, graphName, diagramUUID },
                       body: labelPositionDTOList,
                   })
                 : updateDatasetLabelPositions({
-                      path: { datasetName, diagramUUID },
+                      path: { workspaceName, diagramUUID },
                       body: labelPositionDTOList,
                   })
         ).finally(() => this.#requestsInFlight.delete(request));

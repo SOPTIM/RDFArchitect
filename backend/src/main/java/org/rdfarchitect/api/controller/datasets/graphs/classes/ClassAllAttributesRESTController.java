@@ -47,7 +47,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/attributes")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/classes/{classUUID}/attributes")
 @RequiredArgsConstructor
 public class ClassAllAttributesRESTController {
 
@@ -71,7 +71,7 @@ public class ClassAllAttributesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -86,20 +86,20 @@ public class ClassAllAttributesRESTController {
                     @RequestBody
                     AttributeDTO attribute) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/attributes\" from \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
 
         var newAttributeUUID = createAttributeUseCase.createAttribute(graphIdentifier, attribute);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes\" to \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/attributes\" to \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 originURL);
@@ -119,7 +119,7 @@ public class ClassAllAttributesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -141,21 +141,21 @@ public class ClassAllAttributesRESTController {
                     @RequestBody
                     List<AttributeDTO> attributeList) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/attributes\" from \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
 
         updateAttributesUseCase.replaceAllAttributes(
                 graphIdentifier, UUID.fromString(classUUID), attributeList);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes\" to \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/attributes\" to \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 originURL);

@@ -106,7 +106,7 @@ function createOntologyStore() {
                 setGraphState(s, key, { ...getGraphState(s, key), ...patch }),
             () =>
                 getOntology({
-                    path: { datasetName: workspaceName, graphName },
+                    path: { workspaceName: workspaceName, graphName },
                 }),
             LOG_PREFIX,
             `ontology for workspace="${workspaceName}", graph="${graphName}"`,
@@ -144,7 +144,7 @@ function createOntologyStore() {
         );
 
         const { data, error } = await getOntologyEntries({
-            path: { datasetName: workspaceName, graphName },
+            path: { workspaceName: workspaceName, graphName },
         });
 
         if (error) {
@@ -185,7 +185,7 @@ function createOntologyStore() {
         );
 
         const { error } = await createOntology({
-            path: { datasetName: workspaceName, graphName },
+            path: { workspaceName: workspaceName, graphName },
             body: newOntology,
         });
 
@@ -225,7 +225,7 @@ function createOntologyStore() {
         );
 
         const { error } = await replaceOntology({
-            path: { datasetName: workspaceName, graphName },
+            path: { workspaceName: workspaceName, graphName },
             body: newOntology,
         });
 

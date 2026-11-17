@@ -38,7 +38,7 @@ function file(overrides) {
 function running(status) {
     return {
         jobId: "job",
-        datasetName: "ds",
+        workspaceName: "ds",
         state: JobState.RUNNING,
         files: [],
         importedGraphNames: [],

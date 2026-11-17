@@ -39,7 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/classes/extendToSchema")
+@RequestMapping("api/workspaces/{workspaceName}/classes/extendToSchema")
 @RequiredArgsConstructor
 public class ClassSchemaExtensionRESTController {
 
@@ -67,27 +67,28 @@ public class ClassSchemaExtensionRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @RequestBody ExtendToSchemaRequest request) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/classes/extendToSchema\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/classes/extendToSchema\" from \"{}\".",
+                workspaceName,
                 originURL);
 
         var targetGraphIdentifier =
                 new GraphIdentifier(
-                        datasetName, expandURIUseCase.expandUri(datasetName, request.graphName()));
+                        workspaceName,
+                        expandURIUseCase.expandUri(workspaceName, request.graphName()));
 
         var results =
                 classExtensionUseCase.extendClasses(
-                        datasetName,
+                        workspaceName,
                         request.classUUIDs(),
                         targetGraphIdentifier,
                         request.withInheritance());
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/classes/extendToSchema\" to \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/classes/extendToSchema\" to \"{}\".",
+                workspaceName,
                 originURL);
         return results;
     }

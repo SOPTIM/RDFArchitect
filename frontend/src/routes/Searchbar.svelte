@@ -64,7 +64,7 @@
 
     function selectSubject(searchResult) {
         const target = {
-            datasetName: searchResult.datasetName,
+            workspaceName: searchResult.workspaceName,
             graphName: searchResult.graphName,
             packageUUID: searchResult.packageUUID,
         };
@@ -92,7 +92,7 @@
         }
 
         const body = {
-            datasetName:
+            workspaceName:
                 selectedFilter.value !== "all"
                     ? editorState.selectedWorkspace.getValue()
                     : null,
@@ -156,7 +156,7 @@
     }
 
     function formatSearchResult(result) {
-        let path = `${result.datasetName}/${new URI(result.graphName).suffix}/`;
+        let path = `${result.workspaceName}/${new URI(result.graphName).suffix}/`;
         if (result.type !== "PACKAGE") {
             if (result.packageLabel) {
                 path += `${getPackageDisplayLabel(result.packageLabel.value)}/`;

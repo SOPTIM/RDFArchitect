@@ -141,9 +141,9 @@
             });
             if (!error) {
                 // Keep any model-selection params so a snapshot link can deep-link into a
-                // dataset/graph/package or class (e.g. /?snapshot=...&class=<iri>).
+                // workspace/graph/package or class (e.g. /?snapshot=...&class=<iri>).
                 const forwarded = new URLSearchParams();
-                for (const key of ["dataset", "graph", "package", "class"]) {
+                for (const key of ["workspace", "graph", "package", "class"]) {
                     const value = page.url.searchParams.get(key);
                     if (value) {
                         forwarded.set(key, value);

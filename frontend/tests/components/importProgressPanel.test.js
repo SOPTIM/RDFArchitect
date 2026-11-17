@@ -38,7 +38,7 @@ function render(progress) {
 function statusOf(files, state) {
     return {
         jobId: "job",
-        datasetName: "ds",
+        workspaceName: "ds",
         state,
         files,
         importedGraphNames: files

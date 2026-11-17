@@ -53,7 +53,7 @@
 
     async function importGraph() {
         replaceGraphWithFile({
-            path: { datasetName: workspaceName, graphName: graphName },
+            path: { workspaceName: workspaceName, graphName: graphName },
             body: { file },
         })
             .then(res => {

@@ -182,7 +182,7 @@ describe("versionControlStore", () => {
             expect(await store.canUndo(WORKSPACE)).toBe(true);
             expect(await store.canRedo(WORKSPACE)).toBe(false);
             expect(api.canUndo).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE },
+                path: { workspaceName: WORKSPACE },
             });
         });
 
@@ -273,7 +273,7 @@ describe("versionControlStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.undo).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE },
+                path: { workspaceName: WORKSPACE },
             });
         });
     });
@@ -320,7 +320,7 @@ describe("versionControlStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.undo).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE },
+                path: { workspaceName: WORKSPACE },
             });
 
             // An undone change can sit in any graph, so every graph-keyed cache
@@ -765,7 +765,7 @@ describe("versionControlStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.redo).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE },
+                path: { workspaceName: WORKSPACE },
             });
 
             expect(classStore.invalidateWorkspace).toHaveBeenCalledWith(
@@ -841,7 +841,7 @@ describe("versionControlStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.restoreVersion).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE },
+                path: { workspaceName: WORKSPACE },
                 body: { versionId: CHANGE_ID, graphNames: [] },
             });
             // The workspace steps back to the version and answers with it:
@@ -887,7 +887,7 @@ describe("versionControlStore", () => {
             await store.restore(CHANGE_ID, ["http://example.org/a"], WORKSPACE);
 
             expect(api.restoreVersion).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE },
+                path: { workspaceName: WORKSPACE },
                 body: {
                     versionId: CHANGE_ID,
                     graphNames: ["http://example.org/a"],
@@ -1032,7 +1032,7 @@ describe("versionControlStore", () => {
             });
 
             expect(api.restoreVersion).toHaveBeenCalledWith({
-                path: { datasetName: WORKSPACE },
+                path: { workspaceName: WORKSPACE },
                 body: {
                     versionId: CHANGE_ID,
                     graphNames: [],
@@ -1099,7 +1099,7 @@ describe("versionControlStore", () => {
 
             expect(api.restoreVersion).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    path: { datasetName: WORKSPACE },
+                    path: { workspaceName: WORKSPACE },
                 }),
             );
         });

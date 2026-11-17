@@ -27,7 +27,7 @@ Add a new `@GetMapping` to `AllClassesRESTController` (or a new controller if a 
 ```java
 @GetMapping("/abstract")
 @Operation(summary = "list abstract classes", tags = {"class"})
-public List<ClassDTO> listAbstract(@PathVariable String datasetName,
+public List<ClassDTO> listAbstract(@PathVariable String workspaceName,
                                     @PathVariable String graphURI,
                                     @RequestHeader(...) String originURL) {
     logger.info("Received GET request: \".../abstract\" from \"{}\".", originURL);
@@ -59,7 +59,7 @@ Call the new endpoint either by adding a method to the relevant store or by dire
 
 ```javascript
 const abstractClasses = listAbstract({
-    path = { datasetName: datasetName, graphURI: graphURI }
+    path = { workspaceName: workspaceName, graphURI: graphURI }
 })
 ```
 

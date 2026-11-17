@@ -40,7 +40,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/shacl/custom/{shaclShapeURI}")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/shacl/custom/{shaclShapeURI}")
 @RequiredArgsConstructor
 public class SHACLCustomShapeRESTController {
 
@@ -68,7 +68,7 @@ public class SHACLCustomShapeRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -80,21 +80,21 @@ public class SHACLCustomShapeRESTController {
                     @RequestBody
                     String shaclString) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/{{}}\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/{{}}\" from \"{}\".",
+                workspaceName,
                 graphName,
                 shaclShapeURI,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var extendedShaclShapeURI = expandURIUseCase.expandUri(datasetName, shaclShapeURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedShaclShapeURI = expandURIUseCase.expandUri(workspaceName, shaclShapeURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
         shaclReplaceShapeUseCase.replaceSHACLShape(
                 graphIdentifier, extendedShaclShapeURI, shaclString);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/{{}}\" to \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/{{}}\" to \"{}\".",
+                workspaceName,
                 graphName,
                 shaclShapeURI,
                 originURL);
@@ -115,7 +115,7 @@ public class SHACLCustomShapeRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -124,20 +124,20 @@ public class SHACLCustomShapeRESTController {
             @Parameter(description = "The property shape to delete.") @PathVariable
                     String shaclShapeURI) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/shacl/{{}}\" from \"{}\".",
-                datasetName,
+                "Received DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/{{}}\" from \"{}\".",
+                workspaceName,
                 graphName,
                 shaclShapeURI,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var extendedShaclShapeURI = expandURIUseCase.expandUri(datasetName, shaclShapeURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var extendedShaclShapeURI = expandURIUseCase.expandUri(workspaceName, shaclShapeURI);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
         shaclDeleteShapeUseCase.deleteSHACLShape(graphIdentifier, extendedShaclShapeURI);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/shacl/{{}}\" to \"{}\".",
-                datasetName,
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/{{}}\" to \"{}\".",
+                workspaceName,
                 graphName,
                 shaclShapeURI,
                 originURL);

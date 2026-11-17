@@ -45,7 +45,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/shacl/combined")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/shacl/combined")
 @RequiredArgsConstructor
 public class SHACLContentRestController {
 
@@ -82,30 +82,30 @@ public class SHACLContentRestController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/file\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/file\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
         var format = getRdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 shaclExportUseCase.exportCombinedSHACLGraph(
-                        new GraphIdentifier(datasetName, extendedGraphName), format);
+                        new GraphIdentifier(workspaceName, extendedGraphName), format);
         var body = buildResponseEntity(extendedGraphName, format, outStream);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/file\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/file\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return body;

@@ -67,12 +67,12 @@ example the [CIMNotebook](https://opencgmes.soptim.de/cimnotebook/overview) IDE 
 link straight to a diagram or class:
 
 ```
-https://<host>/mainpage?dataset=<name>&graph=<uri>&package=<uuid|iri|default>&class=<iri|uuid>
+https://<host>/mainpage?workspace=<name>&graph=<uri>&package=<uuid|iri|default>&class=<iri|uuid>
 ```
 
-- `dataset`, `graph`, `package` — open the given package diagram. `package` accepts a package
+- `workspace`, `graph`, `package` — open the given package diagram. `package` accepts a package
   UUID, a package IRI, or `default` for the default package.
-- `class` — select a schema term and open the package diagram containing it. `dataset` and `graph`
+- `class` — select a schema term and open the package diagram containing it. `workspace` and `graph`
   narrow where it is looked for; either works on its own, and without both, every schema in the
   session is searched until the term is found.
 

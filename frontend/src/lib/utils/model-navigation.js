@@ -29,22 +29,22 @@ import {
  * With `propertyUUID`, the class editor additionally reveals that attribute, association or enum
  * entry — how a search hit or a deep link on a property lands on the row the user asked for.
  *
- * @param {{datasetName: string, graphName: string, packageUUID: string | null | undefined, classUUID: string, propertyUUID?: string | null}} target
+ * @param {{workspaceName: string, graphName: string, packageUUID: string | null | undefined, classUUID: string, propertyUUID?: string | null}} target
  */
 export function navigateToClass({
-    datasetName,
+    workspaceName,
     graphName,
     packageUUID,
     classUUID,
     propertyUUID = null,
 }) {
-    editorState.selectedWorkspace.updateValue(datasetName);
+    editorState.selectedWorkspace.updateValue(workspaceName);
     editorState.selectedGraph.updateValue(graphName);
     editorState.selectedDiagram.updateValue({
         type: DiagramType.PACKAGE,
         id: packageUUID ?? "default",
     });
-    editorState.selectedClassWorkspace.updateValue(datasetName);
+    editorState.selectedClassWorkspace.updateValue(workspaceName);
     editorState.selectedClassGraph.updateValue(graphName);
     editorState.selectedClass.updateValue({
         type: ClassType.SINGLE_CLASS,
@@ -58,10 +58,10 @@ export function navigateToClass({
 /**
  * Opens a package diagram without selecting a class.
  *
- * @param {{datasetName: string, graphName: string, packageUUID: string | null | undefined}} target
+ * @param {{workspaceName: string, graphName: string, packageUUID: string | null | undefined}} target
  */
-export function navigateToPackage({ datasetName, graphName, packageUUID }) {
-    editorState.selectedWorkspace.updateValue(datasetName);
+export function navigateToPackage({ workspaceName, graphName, packageUUID }) {
+    editorState.selectedWorkspace.updateValue(workspaceName);
     editorState.selectedGraph.updateValue(graphName);
     editorState.selectedClass.updateValue({ type: null, id: null });
     editorState.focusedClassUUID.updateValue(null);

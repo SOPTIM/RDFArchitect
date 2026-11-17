@@ -46,7 +46,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/packages")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/packages")
 @RequiredArgsConstructor
 public class AllPackagesRESTController {
 
@@ -85,31 +85,31 @@ public class AllPackagesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/packages\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
 
         var internalPackageList =
                 listInternalPackagesUseCase.listInternalPackages(
-                        new GraphIdentifier(datasetName, extendedGraphName));
+                        new GraphIdentifier(workspaceName, extendedGraphName));
 
         var externalPackageList =
                 listExternalPackagesUseCase.listExternalPackages(
-                        new GraphIdentifier(datasetName, extendedGraphName));
+                        new GraphIdentifier(workspaceName, extendedGraphName));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/packages\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return new ListPackagesResponse(internalPackageList, externalPackageList);
@@ -129,7 +129,7 @@ public class AllPackagesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -141,22 +141,22 @@ public class AllPackagesRESTController {
                     PackageDTO packageDTO) {
 
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/packages\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
         var extendedPackageURIPrefix =
-                expandURIUseCase.expandUri(datasetName, packageDTO.getPrefix());
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+                expandURIUseCase.expandUri(workspaceName, packageDTO.getPrefix());
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
         packageDTO.setPrefix(extendedPackageURIPrefix);
 
         var newPackageUUID = addPackageUseCase.addPackage(graphIdentifier, packageDTO);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/packages\" to \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/packages\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return newPackageUUID;

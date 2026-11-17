@@ -143,7 +143,7 @@ function createVersionControlStore() {
             steppable: new Map(s.steppable).set(key, { ...read(s), ...patch }),
         });
         const ask = () =>
-            MOVES[direction].check({ path: { datasetName: target } });
+            MOVES[direction].check({ path: { workspaceName: target } });
 
         const cached = await loadSlot(
             store,
@@ -329,7 +329,7 @@ function createVersionControlStore() {
             expectedChangeId = confirmation.changeId;
         }
         const { data, error, response } = await MOVES[direction].apply({
-            path: { datasetName: target },
+            path: { workspaceName: target },
             query: expectedChangeId ? { expectedChangeId } : undefined,
         });
         if (error && response?.status === 409) {
@@ -372,7 +372,7 @@ function createVersionControlStore() {
                 return { error: null, skipped: true };
             }
             const { data, error, response } = await sdkRestore({
-                path: { datasetName: target },
+                path: { workspaceName: target },
                 body: {
                     versionId: changeId,
                     graphNames,
@@ -448,7 +448,7 @@ function createVersionControlStore() {
         workspace: string,
     ): Promise<{ confirmed: boolean; changeId?: string }> {
         const { data, error } = await sdkUndoPreview({
-            path: { datasetName: workspace },
+            path: { workspaceName: workspace },
         });
         if (error) {
             console.error(`${LOG} could not read the undo preview`, error);

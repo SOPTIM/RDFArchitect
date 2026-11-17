@@ -57,9 +57,11 @@ export async function validateWorkspaceAndShowResult(
     try {
         const response = graphName
             ? await validateSchemaInWorkspace({
-                  path: { datasetName: workspaceName, graphName: graphName },
+                  path: { workspaceName: workspaceName, graphName: graphName },
               })
-            : await validateWorkspace({ path: { datasetName: workspaceName } });
+            : await validateWorkspace({
+                  path: { workspaceName: workspaceName },
+              });
 
         if (response.error) {
             console.error(response.error);

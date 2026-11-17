@@ -41,7 +41,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "/api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/enumentries/{enumEntryUUID}")
+        "/api/workspaces/{workspaceName}/graphs/{graphName}/classes/{classUUID}/enumentries/{enumEntryUUID}")
 @RequiredArgsConstructor
 public class ClassEnumEntriesRESTController {
 
@@ -65,7 +65,7 @@ public class ClassEnumEntriesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -80,22 +80,22 @@ public class ClassEnumEntriesRESTController {
                     @RequestBody
                     EnumEntryDTO enumEntry) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/enumentries/{{}}\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/enumentries/{{}}\" from \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 enumEntryUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
 
         var newEnumEntryUUID =
                 replaceOrCreateEnumEntryUseCase.replaceOrCreateEnumEntry(
-                        new GraphIdentifier(datasetName, extendedGraphName), enumEntry);
+                        new GraphIdentifier(workspaceName, extendedGraphName), enumEntry);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/enumentries/{{}}\" from \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/enumentries/{{}}\" from \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 enumEntryUUID,

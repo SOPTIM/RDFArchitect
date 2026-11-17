@@ -133,7 +133,7 @@
         }
         let { data } = await getDeletionImpact({
             path: {
-                datasetName: workspaceName,
+                workspaceName: workspaceName,
                 graphName: graphName,
             },
             body: targetUuids,
@@ -190,7 +190,7 @@
         const label = isSingle ? roots[0].resourceIdentifier.label : null;
 
         let { error } = await deleteResources({
-            path: { datasetName: workspaceName, graphName: graphName },
+            path: { workspaceName: workspaceName, graphName: graphName },
             body: payload,
         });
         if (error) {

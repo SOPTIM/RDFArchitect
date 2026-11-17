@@ -44,7 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/packages/{packageUUID}")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/packages/{packageUUID}")
 @RequiredArgsConstructor
 public class PackageRESTController {
 
@@ -68,7 +68,7 @@ public class PackageRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -82,20 +82,20 @@ public class PackageRESTController {
                     PackageDTO packageDTO) {
 
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL,
                 packageUUID);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
 
         replacePackageUseCase.replacePackage(graphIdentifier, packageDTO);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL,
                 packageUUID);
@@ -115,7 +115,7 @@ public class PackageRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -125,20 +125,20 @@ public class PackageRESTController {
                     UUID packageUUID) {
 
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
-                datasetName,
+                "Received DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                workspaceName,
                 graphName,
                 packageUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
 
         deletePackageUseCase.deletePackage(graphIdentifier, packageUUID);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
-                datasetName,
+                "Sending response to DELETE request: \"/api/workspaces/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                workspaceName,
                 graphName,
                 packageUUID,
                 originURL);
@@ -158,7 +158,7 @@ public class PackageRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -168,20 +168,20 @@ public class PackageRESTController {
                     UUID packageUUID) {
 
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                workspaceName,
                 graphName,
                 packageUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
 
         var result = getPackageUseCase.getPackage(graphIdentifier, packageUUID);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                workspaceName,
                 graphName,
                 packageUUID,
                 originURL);

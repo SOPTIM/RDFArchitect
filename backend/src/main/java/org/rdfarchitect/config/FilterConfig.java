@@ -55,9 +55,9 @@ public class FilterConfig {
         FilterRegistrationBean<DatasetFilter> registrationBean = new FilterRegistrationBean<>();
         registrationBean.setFilter(new DatasetFilter(databasePort));
         registrationBean.setOrder(2);
-        // erinnerung: das URL pattern /api/datasets/* matched auch auf /api/datasets, obwohl am
+        // erinnerung: das URL pattern /api/workspaces/* matched auch auf /api/workspaces, obwohl am
         // ende kein slash ist
-        registrationBean.addUrlPatterns("/api/datasets/*");
+        registrationBean.addUrlPatterns("/api/workspaces/*");
         return registrationBean;
     }
 }

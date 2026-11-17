@@ -35,7 +35,7 @@ export const PASTE_PREVIEW_FAILED = Symbol("pastePreviewFailed");
 
 function sourcesOf(entries) {
     return entries.map(e => ({
-        sourceDatasetName: e.workspaceName,
+        sourceWorkspaceName: e.workspaceName,
         sourceGraphName: e.graphName,
         classUUID: e.classUUID,
     }));
@@ -55,7 +55,7 @@ export async function loadPastePreview(workspaceName, graphName, options) {
     try {
         const { data, error } = await previewPaste({
             path: {
-                targetDatasetName: workspaceName,
+                targetWorkspaceName: workspaceName,
                 targetGraphName: graphName,
             },
             body: {

@@ -39,7 +39,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/referencedByClasses")
+        "api/workspaces/{workspaceName}/graphs/{graphName}/classes/{classUUID}/referencedByClasses")
 @RequiredArgsConstructor
 public class ClassReferencedByClassesRESTController {
 
@@ -63,7 +63,7 @@ public class ClassReferencedByClassesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -71,22 +71,22 @@ public class ClassReferencedByClassesRESTController {
                     String graphName,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/referencedByClasses\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/referencedByClasses\" from \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
 
         var classesReferencingThisClass =
                 getClassesReferencingThisClassUseCase.getClassesReferencingThisClass(
                         graphIdentifier, UUID.fromString(classUUID));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/referencedByClasses\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/referencedByClasses\" to \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 originURL);

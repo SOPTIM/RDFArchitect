@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/content")
+@RequestMapping("api/workspaces/{workspaceName}/content")
 @RequiredArgsConstructor
 public class DatasetContentRESTController {
 
@@ -74,20 +74,20 @@ public class DatasetContentRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName) {
+                    String workspaceName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/content\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/content\" from \"{}\".",
+                workspaceName,
                 originURL);
 
         var format = getRdfFormat(acceptHeader);
 
         var fileName =
-                datasetName
+                workspaceName
                         + "."
                         + getRdfFormat(acceptHeader).getLang().getFileExtensions().getFirst();
 
-        var outStream = getDatasetSchemaUseCase.getDatasetSchema(datasetName, format);
+        var outStream = getDatasetSchemaUseCase.getDatasetSchema(workspaceName, format);
         var headers = new HttpHeaders();
         headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));
         var body =
@@ -97,8 +97,8 @@ public class DatasetContentRESTController {
                         .body(outStream.toByteArray());
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/content\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/content\" to \"{}\".",
+                workspaceName,
                 originURL);
         return body;
     }

@@ -85,7 +85,7 @@ function createPackageStore() {
             },
             async () => {
                 const { data, error } = await listPackages({
-                    path: { datasetName: workspaceName, graphName },
+                    path: { workspaceName: workspaceName, graphName },
                 });
                 if (error) return { error };
                 return {
@@ -165,7 +165,7 @@ function createPackageStore() {
         });
 
         const { data, error } = await addPackage({
-            path: { datasetName: workspaceName, graphName },
+            path: { workspaceName: workspaceName, graphName },
             body: pkg,
         });
 
@@ -219,7 +219,7 @@ function createPackageStore() {
 
         const { error } = await replacePackage({
             path: {
-                datasetName: workspaceName,
+                workspaceName: workspaceName,
                 graphName,
                 packageUUID: pkg.uuid,
             },

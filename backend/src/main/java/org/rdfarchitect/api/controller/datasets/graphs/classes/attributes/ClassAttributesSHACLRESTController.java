@@ -45,7 +45,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping(
-        "api/datasets/{datasetName}/graphs/{graphName}/classes/{classUUID}/attributes/{attributeUUID}/shacl")
+        "api/workspaces/{workspaceName}/graphs/{graphName}/classes/{classUUID}/attributes/{attributeUUID}/shacl")
 @RequiredArgsConstructor
 public class ClassAttributesSHACLRESTController {
 
@@ -71,7 +71,7 @@ public class ClassAttributesSHACLRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -81,23 +81,23 @@ public class ClassAttributesSHACLRESTController {
             @Parameter(description = "The uuid of the attribute.") @PathVariable
                     String attributeUUID) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes/{{}}/shacl\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/attributes/{{}}/shacl\" from \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 attributeUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
 
         var shacl =
                 shaclGetShapeUseCase.getPropertyShapesForAttribute(
                         graphIdentifier, UUID.fromString(attributeUUID));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes/{{}}/shacl\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/attributes/{{}}/shacl\" to \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 attributeUUID,
@@ -118,7 +118,7 @@ public class ClassAttributesSHACLRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -130,22 +130,22 @@ public class ClassAttributesSHACLRESTController {
             @Parameter(description = "The SHACL shapes to be inserted.") @RequestBody
                     String shaclString) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes/{{}}/shacl\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/attributes/{{}}/shacl\" from \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 attributeUUID,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
 
         shaclUpdateUseCase.updatePropertyShacl(
                 graphIdentifier, UUID.fromString(attributeUUID), shaclString);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes/{{}}/shacl\" to \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/classes/{{}}/attributes/{{}}/shacl\" to \"{}\".",
+                workspaceName,
                 graphName,
                 classUUID,
                 attributeUUID,

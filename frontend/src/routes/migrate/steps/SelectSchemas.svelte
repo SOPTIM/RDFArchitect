@@ -151,9 +151,9 @@
         try {
             let { error } = await computeMigrationContext({
                 query: {
-                    datasetA: workspaceA,
+                    workspaceA: workspaceA,
                     graphA: graphA,
-                    datasetB: workspaceB,
+                    workspaceB: workspaceB,
                     graphB: graphB,
                     ignorePrefixes: ignorePrefixes,
                 },

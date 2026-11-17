@@ -146,7 +146,7 @@ class CopyClassServiceTest {
 
     private PasteSourceClassDTO referenceSource(String classUUID) {
         var source = new PasteSourceClassDTO();
-        source.setSourceDatasetName(referenceSourceGraphIdentifier.datasetName());
+        source.setSourceWorkspaceName(referenceSourceGraphIdentifier.datasetName());
         source.setSourceGraphName(referenceSourceGraphIdentifier.graphName());
         source.setClassUUID(classUUID);
         return source;
@@ -154,7 +154,7 @@ class CopyClassServiceTest {
 
     private PasteSourceClassDTO defaultGraphSource(String classUUID) {
         var source = new PasteSourceClassDTO();
-        source.setSourceDatasetName(graphIdentifier.datasetName());
+        source.setSourceWorkspaceName(graphIdentifier.datasetName());
         source.setSourceGraphName(graphIdentifier.graphName());
         source.setClassUUID(classUUID);
         return source;
@@ -333,11 +333,11 @@ class CopyClassServiceTest {
         request.setCopyAssociations(false);
 
         var source = new PasteSourceClassDTO();
-        source.setSourceDatasetName(graphIdentifier.datasetName());
+        source.setSourceWorkspaceName(graphIdentifier.datasetName());
         source.setSourceGraphName(graphIdentifier.graphName());
         source.setClassUUID(CLASS_UUID);
         var duplicateSource = new PasteSourceClassDTO();
-        duplicateSource.setSourceDatasetName(graphIdentifier.datasetName());
+        duplicateSource.setSourceWorkspaceName(graphIdentifier.datasetName());
         duplicateSource.setSourceGraphName(graphIdentifier.graphName());
         duplicateSource.setClassUUID(CLASS_UUID);
         request.setSources(List.of(source, duplicateSource));

@@ -45,7 +45,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/layout/{diagramUUID}")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/layout/{diagramUUID}")
 @RequiredArgsConstructor
 public class DiagramLayoutDataRESTController {
 
@@ -68,7 +68,7 @@ public class DiagramLayoutDataRESTController {
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -89,18 +89,18 @@ public class DiagramLayoutDataRESTController {
                     @RequestBody
                     DiagramLayoutDTO diagramLayoutDTO) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/layout/{{}}\" from \"{}\".",
+                workspaceName,
                 graphName,
                 diagramUUID,
                 originURL);
         updateDiagramLayoutUseCase.updateDiagramLayout(
-                graphIdentifier(datasetName, graphName),
+                graphIdentifier(workspaceName, graphName),
                 resolveDiagramUUID(diagramUUID),
                 diagramLayoutDTO);
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}\" from \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/layout/{{}}\" from \"{}\".",
+                workspaceName,
                 graphName,
                 diagramUUID,
                 originURL);
@@ -119,7 +119,7 @@ public class DiagramLayoutDataRESTController {
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -143,26 +143,27 @@ public class DiagramLayoutDataRESTController {
                     @RequestBody
                     List<EdgeLayoutDTO> edgeLayoutDTOList) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/edges\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/layout/{{}}/edges\" from \"{}\".",
+                workspaceName,
                 graphName,
                 diagramUUID,
                 originURL);
         updateEdgeLayoutUseCase.updateEdgeLayouts(
-                graphIdentifier(datasetName, graphName),
+                graphIdentifier(workspaceName, graphName),
                 resolveDiagramUUID(diagramUUID),
                 edgeLayoutDTOList);
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/edges\" from \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/layout/{{}}/edges\" from \"{}\".",
+                workspaceName,
                 graphName,
                 diagramUUID,
                 originURL);
         return Response.SUCCESS;
     }
 
-    private GraphIdentifier graphIdentifier(String datasetName, String graphName) {
-        return new GraphIdentifier(datasetName, expandURIUseCase.expandUri(datasetName, graphName));
+    private GraphIdentifier graphIdentifier(String workspaceName, String graphName) {
+        return new GraphIdentifier(
+                workspaceName, expandURIUseCase.expandUri(workspaceName, graphName));
     }
 
     private static UUID resolveDiagramUUID(String diagramUUID) {

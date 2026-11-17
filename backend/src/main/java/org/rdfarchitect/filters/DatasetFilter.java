@@ -42,7 +42,7 @@ public class DatasetFilter implements Filter {
      * route cannot leave the offset below pointing into the middle of a workspace name — a mistake
      * that builds cleanly and silently guards the wrong thing.
      */
-    private static final String PREFIX = "/api/datasets/";
+    private static final String PREFIX = "/api/workspaces/";
 
     private final DatabasePort databasePort;
 

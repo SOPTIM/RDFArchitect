@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphName}/datatypes")
+@RequestMapping("/api/workspaces/{workspaceName}/graphs/{graphName}/datatypes")
 @RequiredArgsConstructor
 public class DatatypesRESTController {
 
@@ -79,27 +79,27 @@ public class DatatypesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/datatypes\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/datatypes\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
 
         var cimClassList =
                 listDatatypesUseCase.listDatatypes(
-                        new GraphIdentifier(datasetName, extendedGraphName));
+                        new GraphIdentifier(workspaceName, extendedGraphName));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/datatypes\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/datatypes\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return cimClassList;

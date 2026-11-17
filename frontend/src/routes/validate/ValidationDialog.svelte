@@ -115,7 +115,7 @@
             case ValidationMode.STORED:
                 response = await validateSchema({
                     path: {
-                        datasetName: workspace,
+                        workspaceName: workspace,
                         graphName: graph,
                         cgmesVersion: cgmesVersion,
                     },

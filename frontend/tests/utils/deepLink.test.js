@@ -71,8 +71,8 @@ function mockApiFor(model, { searchResults = [] } = {}) {
         data: Object.keys(model).map(name => ({ name })),
     });
 
-    listGraphs.mockImplementation(async ({ path: { datasetName } }) => {
-        const graphs = model[datasetName];
+    listGraphs.mockImplementation(async ({ path: { workspaceName } }) => {
+        const graphs = model[workspaceName];
         // The real endpoint serves URIs as plain {prefix, suffix} objects, never as strings.
         return {
             data: graphs
@@ -82,8 +82,8 @@ function mockApiFor(model, { searchResults = [] } = {}) {
     });
 
     resolveIri.mockImplementation(
-        async ({ path: { datasetName, graphName, iriIdentifier } }) => {
-            const hit = resourcesOf(model[datasetName]?.[graphName]).find(
+        async ({ path: { workspaceName, graphName, iriIdentifier } }) => {
+            const hit = resourcesOf(model[workspaceName]?.[graphName]).find(
                 ([resourceIri]) => resourceIri === iriIdentifier,
             );
             return hit ? { data: hit[1] } : { error: { status: 500 } };
@@ -91,8 +91,8 @@ function mockApiFor(model, { searchResults = [] } = {}) {
     );
 
     getClassInformation.mockImplementation(
-        async ({ path: { datasetName, graphName, classUUID } }) => {
-            const hit = resourcesOf(model[datasetName]?.[graphName]).find(
+        async ({ path: { workspaceName, graphName, classUUID } }) => {
+            const hit = resourcesOf(model[workspaceName]?.[graphName]).find(
                 ([, resourceUuid]) => resourceUuid === classUUID,
             );
             // Found but not a class (an attribute, or a deleted one), or not found at all: the
@@ -134,7 +134,7 @@ describe("resolveClassTarget", () => {
         });
 
         expect(target).toEqual({
-            datasetName: "profiles",
+            workspaceName: "profiles",
             graphName: "https://cim.example.org/EQ",
             packageUUID: PACKAGE_UUID,
             classUUID: CLASS_UUID,
@@ -154,7 +154,7 @@ describe("resolveClassTarget", () => {
             classRef: CLASS_IRI,
         });
 
-        expect(target?.datasetName).toBe("profiles");
+        expect(target?.workspaceName).toBe("profiles");
         expect(target?.classUUID).toBe(CLASS_UUID);
     });
 
@@ -202,7 +202,7 @@ describe("resolveClassTarget", () => {
             classRef: CLASS_IRI,
         });
 
-        expect(target?.datasetName).toBe("profiles");
+        expect(target?.workspaceName).toBe("profiles");
         expect(target?.graphName).toBe("https://cim.example.org/EQ");
         expect(target?.classUUID).toBe(CLASS_UUID);
     });
@@ -312,7 +312,7 @@ describe("resolveClassTarget", () => {
             classRef: CLASS_IRI,
         });
 
-        expect(target?.datasetName).toBe("profiles");
+        expect(target?.workspaceName).toBe("profiles");
     });
 
     test("returns null when every candidate class was deleted", async () => {
@@ -350,7 +350,7 @@ describe("resolveTermTarget", () => {
 
     const attributeHit = {
         query: "r",
-        datasetName: "profiles",
+        workspaceName: "profiles",
         graphName: "https://cim.example.org/EQ",
         packageUUID: PACKAGE_UUID,
         parentClassUUID: CLASS_UUID,
@@ -376,7 +376,7 @@ describe("resolveTermTarget", () => {
         });
 
         expect(target).toEqual({
-            datasetName: "profiles",
+            workspaceName: "profiles",
             graphName: "https://cim.example.org/EQ",
             packageUUID: PACKAGE_UUID,
             classUUID: CLASS_UUID,
@@ -395,7 +395,7 @@ describe("resolveTermTarget", () => {
         });
 
         expect(target).toEqual({
-            datasetName: "profiles",
+            workspaceName: "profiles",
             graphName: "https://cim.example.org/EQ",
             packageUUID: PACKAGE_UUID,
             classUUID: CLASS_UUID,

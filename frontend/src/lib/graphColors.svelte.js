@@ -53,7 +53,7 @@ function createGraphColors() {
 
     async function load(workspaceName) {
         const { data, error } = await getCrossProfileColors({
-            path: { datasetName: workspaceName },
+            path: { workspaceName: workspaceName },
         });
         if (error) {
             console.error(
@@ -179,7 +179,7 @@ async function put(workspaceName, colorsByGraph) {
     }
     try {
         const { error } = await updateCrossProfileColors({
-            path: { datasetName: workspaceName },
+            path: { workspaceName: workspaceName },
             body: { graphColors: payload },
         });
         if (error) {

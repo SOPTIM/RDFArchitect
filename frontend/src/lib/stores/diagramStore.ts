@@ -101,7 +101,7 @@ function createCustomDiagramStore() {
             },
             () =>
                 getCustomDatasetDiagramList({
-                    path: { datasetName: workspaceName },
+                    path: { workspaceName: workspaceName },
                 }),
             LOG_PREFIX,
             `workspace diagrams for "${workspaceName}"`,
@@ -131,7 +131,7 @@ function createCustomDiagramStore() {
             },
             () =>
                 getCustomGraphDiagramList({
-                    path: { datasetName: workspaceName, graphName },
+                    path: { workspaceName: workspaceName, graphName },
                 }),
             LOG_PREFIX,
             `graph diagrams for workspace="${workspaceName}" graph="${graphName}"`,
@@ -146,7 +146,7 @@ function createCustomDiagramStore() {
         diagram: CustomDiagramDto,
     ): Promise<Result> {
         const { error } = await replaceCustomDatasetDiagram({
-            path: { datasetName: workspaceName, diagramId },
+            path: { workspaceName: workspaceName, diagramId },
             body: diagram,
         });
 
@@ -190,7 +190,7 @@ function createCustomDiagramStore() {
         diagram: CustomDiagramDto,
     ): Promise<Result> {
         const { error } = await replaceCustomGraphDiagram({
-            path: { datasetName: workspaceName, graphName, diagramId },
+            path: { workspaceName: workspaceName, graphName, diagramId },
             body: diagram,
         });
 
@@ -230,7 +230,7 @@ function createCustomDiagramStore() {
         diagramId: string,
     ): Promise<Result> {
         const { error } = await deleteCustomDatasetDiagram({
-            path: { datasetName: workspaceName, diagramId },
+            path: { workspaceName: workspaceName, diagramId },
         });
 
         if (error) {
@@ -266,7 +266,7 @@ function createCustomDiagramStore() {
         diagramId: string,
     ): Promise<Result> {
         const { error } = await deleteCustomGraphDiagram({
-            path: { datasetName: workspaceName, graphName, diagramId },
+            path: { workspaceName: workspaceName, graphName, diagramId },
         });
 
         if (error) {
@@ -303,7 +303,7 @@ function createCustomDiagramStore() {
         classes: string[],
     ): Promise<Result> {
         const { error } = await addToCustomDatasetDiagram({
-            path: { datasetName: workspaceName, diagramId },
+            path: { workspaceName: workspaceName, diagramId },
             body: classes as never,
         });
 
@@ -330,7 +330,7 @@ function createCustomDiagramStore() {
         classes: string[],
     ): Promise<Result> {
         const { error } = await addToCustomGraphDiagram({
-            path: { datasetName: workspaceName, graphName, diagramId },
+            path: { workspaceName: workspaceName, graphName, diagramId },
             body: classes as never,
         });
 
@@ -356,7 +356,7 @@ function createCustomDiagramStore() {
         classIDs: string[],
     ): Promise<Result> {
         const { error } = await removeFromCustomDatasetDiagram({
-            path: { datasetName: workspaceName, diagramId },
+            path: { workspaceName: workspaceName, diagramId },
             body: classIDs,
         });
 
@@ -384,7 +384,7 @@ function createCustomDiagramStore() {
         classIds: string[],
     ): Promise<Result> {
         const { error } = await removeFromDiagram({
-            path: { datasetName: workspaceName, graphName, diagramId },
+            path: { workspaceName: workspaceName, graphName, diagramId },
             body: classIds,
         });
 

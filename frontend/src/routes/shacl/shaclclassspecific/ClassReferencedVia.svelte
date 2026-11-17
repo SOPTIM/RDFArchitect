@@ -36,7 +36,7 @@
     function fetchClassesReferencingThisClass(classUUID) {
         getClassesReferencingThisClass({
             path: {
-                datasetName: classWorkspaceName,
+                workspaceName: classWorkspaceName,
                 graphName: classGraphName,
                 classUUID: classUUID,
             },

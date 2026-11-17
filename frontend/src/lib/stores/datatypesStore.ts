@@ -196,7 +196,7 @@ function createVocabStore() {
             "primitives",
             () =>
                 listPrimitives({
-                    path: { datasetName: workspaceName, graphName },
+                    path: { workspaceName: workspaceName, graphName },
                 }),
             force,
         );
@@ -214,7 +214,7 @@ function createVocabStore() {
             "datatypes",
             () =>
                 listDatatypes({
-                    path: { datasetName: workspaceName, graphName },
+                    path: { workspaceName: workspaceName, graphName },
                 }),
             force,
         );
@@ -232,7 +232,7 @@ function createVocabStore() {
             "stereotypes",
             () =>
                 listStereotypes({
-                    path: { datasetName: workspaceName, graphName },
+                    path: { workspaceName: workspaceName, graphName },
                 }),
             force,
         );

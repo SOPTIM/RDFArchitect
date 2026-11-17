@@ -27,7 +27,7 @@ import { LabelLayoutController } from "$lib/rendering/svelteflow/interaction/lab
 const CLASS_SIZE = { width: 100, height: 50 };
 
 const GRAPH_TARGET = {
-    datasetName: "ds",
+    workspaceName: "ds",
     graphName: "http://example.com/graph",
     diagramUUID: "diagram",
 };
@@ -127,7 +127,7 @@ describe("LabelLayoutController", () => {
         const { state, labelLayout } = controllerFor(
             [classNode("a", 0, 0), classNode("b", 300, 0)],
             [associationEdge("e", "a", "b")],
-            { datasetName: "ds", graphName: null, diagramUUID: "diagram" },
+            { workspaceName: "ds", graphName: null, diagramUUID: "diagram" },
         );
 
         labelLayout.handleMove([dropped(labelNodesOf(state.nodes)[0], 5, 10)]);
@@ -135,7 +135,7 @@ describe("LabelLayoutController", () => {
         expect(updateLabelPositions).not.toHaveBeenCalled();
         expect(updateDatasetLabelPositions).toHaveBeenCalledWith(
             expect.objectContaining({
-                path: { datasetName: "ds", diagramUUID: "diagram" },
+                path: { workspaceName: "ds", diagramUUID: "diagram" },
             }),
         );
     });

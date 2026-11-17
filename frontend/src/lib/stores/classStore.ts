@@ -232,7 +232,7 @@ function createClassStore() {
                 }),
             () =>
                 getClassList({
-                    path: { datasetName: workspaceName, graphName },
+                    path: { workspaceName: workspaceName, graphName },
                     query: { includeExternalClasses: includeExternal },
                 }),
             LOG_PREFIX,
@@ -269,7 +269,7 @@ function createClassStore() {
 
         const promise = (async (): Promise<ClassUmlAdaptedDto | null> => {
             const { data, error } = await getClassInformation({
-                path: { datasetName: workspaceName, graphName, classUUID },
+                path: { workspaceName: workspaceName, graphName, classUUID },
                 query: { includeSuperClasses: true },
             });
 
@@ -344,7 +344,7 @@ function createClassStore() {
         );
 
         const { data, error } = await addClass({
-            path: { datasetName: workspaceName, graphName },
+            path: { workspaceName: workspaceName, graphName },
             body: request,
         });
         if (error) {
@@ -388,7 +388,7 @@ function createClassStore() {
 
         const { data, error } = await pasteClasses({
             path: {
-                targetDatasetName: workspaceName,
+                targetWorkspaceName: workspaceName,
                 targetGraphName: graphName,
             },
             body: request,
@@ -437,7 +437,7 @@ function createClassStore() {
         console.log(`${LOG_PREFIX} Replacing class classUUID="${classUUID}"`);
 
         const { error } = await replaceClass({
-            path: { datasetName: workspaceName, graphName, classUUID },
+            path: { workspaceName: workspaceName, graphName, classUUID },
             body: cls,
         });
         if (error) {
@@ -477,7 +477,7 @@ function createClassStore() {
         );
 
         const { data, error } = await createAttribute({
-            path: { datasetName: workspaceName, graphName, classUUID },
+            path: { workspaceName: workspaceName, graphName, classUUID },
             body: attribute,
         });
         if (error) {
@@ -534,7 +534,7 @@ function createClassStore() {
 
         const { data, error } = await replaceAttribute({
             path: {
-                datasetName: workspaceName,
+                workspaceName: workspaceName,
                 graphName,
                 classUUID,
                 attributeUUID: attribute.uuid,
@@ -581,7 +581,7 @@ function createClassStore() {
         );
 
         const { data, error } = await createEnumEntry({
-            path: { datasetName: workspaceName, graphName, classUUID },
+            path: { workspaceName: workspaceName, graphName, classUUID },
             body: enumEntry,
         });
         if (error) {
@@ -635,7 +635,7 @@ function createClassStore() {
 
         const { data, error } = await replaceEnumEntry({
             path: {
-                datasetName: workspaceName,
+                workspaceName: workspaceName,
                 graphName,
                 classUUID,
                 enumEntryUUID: enumEntry.uuid,
@@ -678,7 +678,7 @@ function createClassStore() {
         );
 
         const { data, error } = await createAssociation({
-            path: { datasetName: workspaceName, graphName, classUUID },
+            path: { workspaceName: workspaceName, graphName, classUUID },
             body: pair,
         });
         if (error) {
@@ -738,7 +738,7 @@ function createClassStore() {
 
         const { data, error } = await replaceAssociation({
             path: {
-                datasetName: workspaceName,
+                workspaceName: workspaceName,
                 graphName,
                 classUUID,
                 associationUUID,

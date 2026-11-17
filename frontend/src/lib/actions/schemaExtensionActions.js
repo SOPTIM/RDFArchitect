@@ -66,7 +66,7 @@ export async function getClassSchemas(workspaceName, classUuid) {
     }
     try {
         const { data, error } = await listSchemas({
-            path: { datasetName: workspaceName, classUUID: classUuid },
+            path: { workspaceName: workspaceName, classUUID: classUuid },
         });
         if (error) {
             console.error("failed to load the schemas of a class:", error);
@@ -109,7 +109,7 @@ export async function extendClassesToSchema(
 ) {
     try {
         const { data, error } = await extendToSchema({
-            path: { datasetName: workspaceName },
+            path: { workspaceName: workspaceName },
             body: {
                 graphName: String(targetGraphName),
                 classUUIDs: classUuids,

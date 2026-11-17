@@ -67,7 +67,7 @@ async function open(graphName) {
 }
 
 const route = (workspace, graph) =>
-    `http://backend/api/datasets/${workspace}/graphs/${graph}`;
+    `http://backend/api/workspaces/${workspace}/graphs/${graph}`;
 
 vi.mock("$lib/config/runtime", () => ({ PUBLIC_BACKEND_URL: "" }));
 

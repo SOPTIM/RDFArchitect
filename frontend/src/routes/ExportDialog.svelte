@@ -34,7 +34,7 @@
                   graphExportComponent.handleExport(
                       (workspaceName, graphName) =>
                           PUBLIC_BACKEND_URL +
-                          "/api/datasets/" +
+                          "/api/workspaces/" +
                           encodeURIComponent(workspaceName) +
                           "/graphs/" +
                           encodeURIComponent(graphName) +

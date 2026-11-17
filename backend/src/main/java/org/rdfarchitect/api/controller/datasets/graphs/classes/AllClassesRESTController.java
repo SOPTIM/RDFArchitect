@@ -48,7 +48,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/classes")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/classes")
 @RequiredArgsConstructor
 public class AllClassesRESTController {
 
@@ -89,7 +89,7 @@ public class AllClassesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -102,15 +102,15 @@ public class AllClassesRESTController {
                     @RequestBody
                     AddNewClassRequest addNewClassRequest) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" from \"{}\".",
-                datasetName,
+                "Received POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
         var extendedClassURIPrefix =
-                expandURIUseCase.expandUri(datasetName, addNewClassRequest.classURIPrefix);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+                expandURIUseCase.expandUri(workspaceName, addNewClassRequest.classURIPrefix);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
 
         var classUUID =
                 addClassUseCase.addClass(
@@ -121,8 +121,8 @@ public class AllClassesRESTController {
                         addNewClassRequest.classLayoutPosition);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".",
-                datasetName,
+                "Sending response to POST request: \"/api/workspaces/{{}}/graphs/{{}}/classes\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
@@ -157,7 +157,7 @@ public class AllClassesRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -167,21 +167,21 @@ public class AllClassesRESTController {
                     @RequestParam(required = false, defaultValue = "false")
                     boolean includeExternalClasses) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/classes\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
 
         var cimClassList =
                 getClassListUseCase.getClassList(
-                        new GraphIdentifier(datasetName, extendedGraphName),
+                        new GraphIdentifier(workspaceName, extendedGraphName),
                         includeExternalClasses);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/classes\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return cimClassList;

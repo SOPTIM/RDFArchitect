@@ -79,7 +79,7 @@ async function getPackageDiagram(
         includeRelationsToExternalPackages: true,
     };
     const res = await getRenderingDataParameterized({
-        path: { datasetName: workspaceName, graphName: graphName },
+        path: { workspaceName: workspaceName, graphName: graphName },
         body: filter,
         signal: signal,
     });

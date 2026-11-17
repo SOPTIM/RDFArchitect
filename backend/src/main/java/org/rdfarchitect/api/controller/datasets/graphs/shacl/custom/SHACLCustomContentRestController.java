@@ -55,7 +55,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphName}/shacl/custom")
+@RequestMapping("api/workspaces/{workspaceName}/graphs/{graphName}/shacl/custom")
 @RequiredArgsConstructor
 public class SHACLCustomContentRestController {
 
@@ -82,7 +82,7 @@ public class SHACLCustomContentRestController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -92,20 +92,20 @@ public class SHACLCustomContentRestController {
                     @RequestParam("file")
                     MultipartFile file) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/file\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/custom/file\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
 
         var graph = new GraphFileSourceImpl(file, extendedGraphName).graph();
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
         shaclInsertUseCase.replaceCustomSHACLGraph(graphIdentifier, graph);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/file\" to \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/custom/file\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return Response.SUCCESS;
@@ -125,7 +125,7 @@ public class SHACLCustomContentRestController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
@@ -134,20 +134,20 @@ public class SHACLCustomContentRestController {
             @Parameter(description = "The entire SHACL graph as a string") @RequestBody
                     String graphString) {
         logger.info(
-                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/string\" from \"{}\".",
-                datasetName,
+                "Received PUT request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/custom/string\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
 
         var graph = new GraphStringSourceImpl(graphString, extendedGraphName).graph();
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphName);
+        var graphIdentifier = new GraphIdentifier(workspaceName, extendedGraphName);
         shaclInsertUseCase.replaceCustomSHACLGraph(graphIdentifier, graph);
 
         logger.info(
-                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/content/string\" to \"{}\".",
-                datasetName,
+                "Sending response to PUT request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/content/string\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return Response.SUCCESS;
@@ -179,30 +179,30 @@ public class SHACLCustomContentRestController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/file\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/custom/file\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
         var format = getRdfFormat(acceptHeader);
 
         // fetch data
         var outStream =
                 shaclExportUseCase.exportCustomSHACLGraph(
-                        new GraphIdentifier(datasetName, extendedGraphName), format);
+                        new GraphIdentifier(workspaceName, extendedGraphName), format);
         var body = buildResponseEntity(extendedGraphName, format, outStream);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/file\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/custom/file\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return body;
@@ -226,31 +226,31 @@ public class SHACLCustomContentRestController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
+                    String workspaceName,
             @Parameter(
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/string\" from \"{}\".",
-                datasetName,
+                "Received GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/custom/string\" from \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
 
-        var extendedGraphName = expandURIUseCase.expandUri(datasetName, graphName);
+        var extendedGraphName = expandURIUseCase.expandUri(workspaceName, graphName);
 
         // fetch data
         var shaclString =
                 shaclExportUseCase
                         .exportCustomSHACLGraph(
-                                new GraphIdentifier(datasetName, extendedGraphName),
+                                new GraphIdentifier(workspaceName, extendedGraphName),
                                 RDFFormat.TURTLE)
                         .toString(StandardCharsets.UTF_8);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/string\" to \"{}\".",
-                datasetName,
+                "Sending response to GET request: \"/api/workspaces/{{}}/graphs/{{}}/shacl/custom/string\" to \"{}\".",
+                workspaceName,
                 graphName,
                 originURL);
         return shaclString;

@@ -360,7 +360,7 @@
 
     function diagramTarget() {
         return {
-            datasetName: editorState.selectedWorkspace.getValue(),
+            workspaceName: editorState.selectedWorkspace.getValue(),
             graphName: editorState.selectedGraph.getValue(),
             diagramUUID: editorState.selectedDiagram.getProperty("id"),
         };
