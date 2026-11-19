@@ -149,7 +149,7 @@ Use one of these markers whenever the change is not backward compatible.
 
 ## Changelog
 
-- Keep `CHANGELOG.md` up to date manually for notable user-facing changes.
+- `CHANGELOG.md` is generated from the squash commit titles by the `Update Changelog` workflow when a release is prepared. Do not edit it by hand.
 - Release versions are derived from git tags (`vX.Y.Z`).
 
 ## Contributor Checklist
