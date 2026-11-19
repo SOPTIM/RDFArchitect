@@ -38,6 +38,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.rdf.TestRDFUtils;
 
 import utils.TestWorkspaces;
@@ -101,7 +102,7 @@ class InMemorySparqlExecutorTest {
     @Test
     void executeSingleQuery_onDefaultWithValidAllQuery_shouldReturnAllResults() {
         // Arrange
-        String schemaName = "default";
+        String schemaName = null;
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
@@ -124,13 +125,13 @@ class InMemorySparqlExecutorTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"http://anyUri", "http://example.org/graph"})
+    @ValueSource(strings = {"anyName", "my profile"})
     void executeSingleQuery_onNamedWithValidAllQuery_shouldReturnAllResults(String schemaName) {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
-        String queryString = "SELECT * FROM <" + schemaName + "> WHERE { ?s ?p ?o }";
+        String queryString = "SELECT * FROM <" + SchemaIri.of(schemaName) + "> WHERE { ?s ?p ?o }";
         var query = QueryFactory.create(queryString);
 
         // Act
@@ -151,7 +152,7 @@ class InMemorySparqlExecutorTest {
     @Test
     void executeSingleQuery_onDefaultWithValidNoResultQuery_shouldReturnEmptyResultSet() {
         // Arrange
-        String schemaName = "default";
+        String schemaName = null;
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
@@ -177,7 +178,7 @@ class InMemorySparqlExecutorTest {
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
         String queryString =
                 "SELECT * FROM <"
-                        + schemaName
+                        + SchemaIri.of(schemaName)
                         + "> WHERE { ?s ?p ?o . FILTER(?p = <http://nonexisting>) }";
         var query = QueryFactory.create(queryString);
 
@@ -194,7 +195,7 @@ class InMemorySparqlExecutorTest {
     @Test
     void executeSingleQuery_queryNotSelectedExistentGraph_emptyResult() {
         // Arrange
-        String schemaName = "default";
+        String schemaName = null;
         exampleGraphs = List.of(createExampleGraph());
         var identifier = new GraphIdentifier(WORKSPACE, "http://example.org/graph");
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.getFirst());
@@ -214,7 +215,7 @@ class InMemorySparqlExecutorTest {
     @Test
     void executeSingleUpdate_onDefaultWithValidUpdate_shouldUpdateGraph() {
         // Arrange
-        String schemaName = "default";
+        String schemaName = "http://example.org/graph";
         exampleGraphs = List.of(createExampleGraph(), GraphFactory.createDefaultGraph());
         var identifier = new GraphIdentifier(WORKSPACE, schemaName);
         TestWorkspaces.createGraph(inMemoryDatabase, identifier, exampleGraphs.get(1));
@@ -229,7 +230,7 @@ class InMemorySparqlExecutorTest {
             try (var transaction = inMemoryDatabase.beginTransaction(WORKSPACE, ReadWrite.WRITE)) {
                 var dataset =
                         SessionDataStore.wrapGraphInDataset(
-                                transaction.graph(schemaName).getRdfGraph(), schemaName);
+                                transaction.graph(schemaName).getRdfGraph(), null);
                 UpdateExecutionFactory.create(update, dataset).execute();
                 transaction.commit("inserted a triple");
             }

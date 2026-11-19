@@ -31,6 +31,7 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
@@ -39,7 +40,6 @@ import org.rdfarchitect.models.changelog.HistoryPosition;
 import org.rdfarchitect.models.changelog.RevertScope;
 import org.rdfarchitect.models.changelog.WorkspaceChangeLogEntry;
 import org.rdfarchitect.models.changelog.WorkspaceHistoryStep;
-import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphSourceBuilderImpl;
 
 import java.util.ArrayList;
@@ -215,7 +215,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
             var graphSource =
                     new GraphSourceBuilderImpl()
                             .setGraph(transaction.graph(schemaName).getRdfGraph())
-                            .setGraphName(schemaName)
+                            .setGraphName(SchemaIri.of(schemaName))
                             .build();
             databaseConnection.insertGraph(graphSource, workspaceName);
         }
@@ -286,15 +286,11 @@ public class SessionDataStoreImpl implements SessionDataStore {
         var dataset = DatasetFactory.createGeneral();
         dataset.getPrefixMapping().setNsPrefixes(prefixMapping);
 
-        // insert graphs
-        // default
-        var graph = fetchGraph(databaseConnection, workspaceName, "default");
-        dataset.setDefaultModel(ModelFactory.createModelForGraph(graph));
-        // named
+        // insert named graphs, the default graph holds no graph of the workspace
         while (queryResultSet.hasNext()) {
-            var schemaName = queryResultSet.next().get(graphVar).asNode();
-            graph = fetchGraph(databaseConnection, workspaceName, schemaName.getURI());
-            dataset.addNamedModel(schemaName.getURI(), ModelFactory.createModelForGraph(graph));
+            var graphIri = queryResultSet.next().get(graphVar).asNode().getURI();
+            var graph = fetchGraph(databaseConnection, workspaceName, graphIri);
+            dataset.addNamedModel(graphIri, ModelFactory.createModelForGraph(graph));
         }
         return dataset;
     }
@@ -304,15 +300,14 @@ public class SessionDataStoreImpl implements SessionDataStore {
      *
      * @param databaseConnection The connection to the external Database.
      * @param workspaceName The name of the dataset.
-     * @param schemaName The schemaName.
+     * @param graphIri The IRI of the named graph.
      * @return fetched {@link Graph}
      */
     private Graph fetchGraph(
-            DatabaseConnection databaseConnection, String workspaceName, String schemaName) {
+            DatabaseConnection databaseConnection, String workspaceName, String graphIri) {
         var query =
-                new CIMBaseQueryBuilder()
-                        .setGraph(schemaName)
-                        .build()
+                new SelectBuilder()
+                        .from(graphIri)
                         .addVar("?sub")
                         .addVar("?pre")
                         .addVar("?obj")
@@ -361,7 +356,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
      * Throws an exceptions if the graph or its dataset does not exist
      *
      * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
+     *     schema name.
      * @throws DataAccessException if the dataset or graph does not exist.
      */
     private void assertThatGraphExists(GraphIdentifier graphIdentifier) {

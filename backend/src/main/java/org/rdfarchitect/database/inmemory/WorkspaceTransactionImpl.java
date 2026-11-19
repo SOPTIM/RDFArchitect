@@ -28,7 +28,6 @@ import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagramCollection;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 import org.rdfarchitect.rdf.graph.wrapper.WorkspaceTransactionContext;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
@@ -109,7 +108,6 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
 
     @Override
     public void createGraph(String schemaName, Graph newGraph) {
-        Workspace.assertValidSchemaName(schemaName);
         graphs.put(schemaName, new GraphWithContext(newGraph, txnContext));
         prefixes.addAll(newGraph.getPrefixMapping());
         crossProfileDiagramInfo.setColor(schemaName, CrossProfileUtils.generateRandomDarkColor());
@@ -123,16 +121,15 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
 
     @Override
     public void renameGraph(String oldSchemaName, String newSchemaName) {
-        Workspace.assertValidSchemaName(oldSchemaName);
-        Workspace.assertValidSchemaName(newSchemaName);
         if (oldSchemaName.equals(newSchemaName)) {
             return;
         }
         if (!graphs.contains(oldSchemaName)) {
-            throw new ResourceNotFoundException("Graph URI " + oldSchemaName + " does not exist.");
+            throw new ResourceNotFoundException("Schema " + oldSchemaName + " does not exist.");
         }
         if (graphs.contains(newSchemaName)) {
-            throw new ResourceConflictException("Graph URI " + newSchemaName + " already exists.");
+            throw new ResourceConflictException(
+                    "A schema named " + newSchemaName + " already exists.");
         }
         graphs.rename(oldSchemaName, newSchemaName);
         renameGraphInDiagrams(oldSchemaName, newSchemaName);
@@ -174,29 +171,24 @@ final class WorkspaceTransactionImpl implements WorkspaceTransaction {
     }
 
     private void renameGraphInDiagrams(String oldSchemaName, String newSchemaName) {
-        var oldUri = new URI(oldSchemaName);
-        var newUri = new URI(newSchemaName);
-        rewriteSchemaName(customDiagrams.get().values(), oldUri, newUri);
+        var renamed = Map.of(oldSchemaName, newSchemaName);
+        rewriteSchemaNames(customDiagrams.get().values(), renamed);
         for (var graph : graphs.view().values()) {
-            rewriteSchemaName(graph.getCustomDiagrams().values(), oldUri, newUri);
+            rewriteSchemaNames(graph.getCustomDiagrams().values(), renamed);
         }
     }
 
-    private static void rewriteSchemaName(
-            Collection<CustomDiagram> diagrams, URI oldUri, URI newUri) {
-        rewriteSchemaNames(diagrams, Map.of(oldUri, newUri));
-    }
-
     /**
-     * Points the classes of the diagrams at the URIs their graphs have now.
+     * Points the classes of the diagrams at the names their graphs have now.
      *
-     * <p>Every reference is looked up once, so that two graphs which swapped their URIs are not
+     * <p>Every reference is looked up once, so that two graphs which swapped their names are not
      * rewritten back and forth.
      *
      * @param diagrams the diagrams to rewrite
-     * @param renamed the URI each renamed graph has now, by the URI it had
+     * @param renamed the name each renamed graph has now, by the name it had
      */
-    static void rewriteSchemaNames(Collection<CustomDiagram> diagrams, Map<URI, URI> renamed) {
+    static void rewriteSchemaNames(
+            Collection<CustomDiagram> diagrams, Map<String, String> renamed) {
         for (var diagram : diagrams) {
             var classes = diagram.getClasses();
             if (classes.stream().noneMatch(entry -> renamed.containsKey(entry.getSchemaName()))) {

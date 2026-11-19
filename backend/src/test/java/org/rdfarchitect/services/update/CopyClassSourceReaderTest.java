@@ -50,7 +50,8 @@ class CopyClassSourceReaderTest {
     private static final String CLASS_UUID = "43836908-c7f7-4749-bb8b-3ac9250de655";
     private static final String UNKNOWN_CLASS_UUID = "0f0e0d0c-0b0a-4988-8766-554433221100";
 
-    private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
+    private final GraphIdentifier graphIdentifier =
+            new GraphIdentifier("default", "http://example.org/graph");
 
     private DatabasePort databasePort;
     private CopyClassSourceReader sourceReader;

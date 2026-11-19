@@ -67,8 +67,8 @@ public class ClassSchemaOccurrenceService implements ListClassSchemaOccurrencesU
     private Map<String, GraphDTO> schemasBySchemaName(String workspaceName) {
         var schemas = new HashMap<String, GraphDTO>();
         for (var graph : listGraphsUseCase.listGraphs(workspaceName)) {
-            if (graph.getUri() != null) {
-                schemas.put(graph.getUri().toString(), graph);
+            if (graph.getName() != null) {
+                schemas.put(graph.getName(), graph);
             }
         }
         return schemas;

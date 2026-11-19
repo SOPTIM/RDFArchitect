@@ -67,10 +67,7 @@ public class PasteRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the target dataset.") @PathVariable
                     String targetWorkspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the target graph, or \"default\" to access the default graph.")
-                    @PathVariable
+            @Parameter(description = "The name of the target schema.") @PathVariable
                     String targetSchemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
@@ -112,10 +109,7 @@ public class PasteRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the target dataset.") @PathVariable
                     String targetWorkspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the target graph, or \"default\" to access the default graph.")
-                    @PathVariable
+            @Parameter(description = "The name of the target schema.") @PathVariable
                     String targetSchemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,

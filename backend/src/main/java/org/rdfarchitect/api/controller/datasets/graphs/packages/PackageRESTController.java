@@ -67,11 +67,7 @@ public class PackageRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The UUID of the package to be replaced.") @PathVariable
                     String packageUUID,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -113,11 +109,7 @@ public class PackageRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The UUID of the package to be deleted.") @PathVariable
                     UUID packageUUID) {
 
@@ -155,11 +147,7 @@ public class PackageRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The UUID of the package to retrieve.") @PathVariable
                     UUID packageUUID) {
 

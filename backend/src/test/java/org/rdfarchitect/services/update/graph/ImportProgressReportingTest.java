@@ -25,7 +25,6 @@ import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
-import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
 import org.springframework.mock.web.MockMultipartFile;
@@ -103,7 +102,7 @@ class ImportProgressReportingTest {
         assertThat(listener.outcomes)
                 .containsExactlyInAnyOrderEntriesOf(
                         Map.of(0, Outcome.IMPORTED, 1, Outcome.SKIPPED));
-        assertThat(result.importedSchemaNames()).containsExactly(RDFA.GRAPH_URI + "first");
+        assertThat(result.importedSchemaNames()).containsExactly("first");
         assertThat(result.failedFileNames()).isEmpty();
     }
 
@@ -123,7 +122,7 @@ class ImportProgressReportingTest {
         assertThat(listener.outcomes)
                 .containsExactly(Map.entry(0, Outcome.FAILED), Map.entry(1, Outcome.IMPORTED));
         assertThat(result.failedFileNames()).containsExactly("broken.ttl");
-        assertThat(result.importedSchemaNames()).containsExactly(RDFA.GRAPH_URI + "good");
+        assertThat(result.importedSchemaNames()).containsExactly("good");
     }
 
     @Test
@@ -145,7 +144,7 @@ class ImportProgressReportingTest {
         assertThat(listener.outcomes)
                 .containsExactly(Map.entry(0, Outcome.FAILED), Map.entry(1, Outcome.IMPORTED));
         assertThat(result.failedFileNames()).containsExactly("broken.zip");
-        assertThat(result.importedSchemaNames()).containsExactly(RDFA.GRAPH_URI + "good");
+        assertThat(result.importedSchemaNames()).containsExactly("good");
     }
 
     @Test
@@ -186,7 +185,7 @@ class ImportProgressReportingTest {
                 importGraphsUseCase.importGraphs(
                         "ds", List.of(graphFile("first.ttl")), null, ImportProgressListener.NOOP);
 
-        assertThat(result.importedSchemaNames()).containsExactly(RDFA.GRAPH_URI + "first");
+        assertThat(result.importedSchemaNames()).containsExactly("first");
     }
 
     private MultipartFile graphFile(String fileName) {

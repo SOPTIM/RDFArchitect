@@ -524,14 +524,8 @@ function describe(move: Move, change: ChangeLogEntryDto | undefined): string {
         graph => graph !== editorState.selectedGraph.getValue(),
     );
     if (elsewhere.length === 0) return what;
-    if (elsewhere.length === 1) return `${what} in ${shortName(elsewhere[0])}`;
+    if (elsewhere.length === 1) return `${what} in ${elsewhere[0]}`;
     return `${what} in ${elsewhere.length} graphs`;
-}
-
-/** The readable tail of a graph URI, for a label that has to fit in a toast. */
-function shortName(schemaName: string): string {
-    const tail = schemaName.split(/[#/]/).filter(Boolean).pop();
-    return tail || schemaName;
 }
 
 export { createVersionControlStore };

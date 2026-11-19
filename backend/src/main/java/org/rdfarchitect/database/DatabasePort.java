@@ -128,10 +128,10 @@ public interface DatabasePort {
     PrefixMapping getPrefixMapping(String workspaceName);
 
     /**
-     * Lists all graph URIs belonging to the dataset.
+     * Lists all schema names belonging to the dataset.
      *
      * @param workspaceName literal dataset name
-     * @return graph URIs within the dataset
+     * @return schema names within the dataset
      */
     List<String> listSchemaNames(String workspaceName);
 
@@ -139,7 +139,7 @@ public interface DatabasePort {
      * Persists pending changes of the graph to the backing database.
      *
      * @param databaseConnection resolved database connection
-     * @param graphIdentifier identifies dataset and graph URI
+     * @param graphIdentifier identifies dataset and schema name
      */
     void persist(DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier);
 

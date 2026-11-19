@@ -19,7 +19,12 @@ package org.rdfarchitect.api.controller.datasets.graphs;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import lombok.RequiredArgsConstructor;
 
@@ -64,6 +69,13 @@ public class GraphBulkContentRESTController {
             description =
                     "Starts a background import of one or more rdf graphs into the dataset. Accepts multiple files and/or zip archives containing several graph files, and returns the id of the job to poll for progress.",
             tags = {"graph"},
+            parameters =
+                    @Parameter(
+                            name = "schemaNames",
+                            in = ParameterIn.QUERY,
+                            description =
+                                    "Optional schema names, one per file. Defaults to the file names without extension.",
+                            array = @ArraySchema(schema = @Schema(type = "string"))),
             responses = {
                 @ApiResponse(responseCode = "202", description = "Import started"),
                 @ApiResponse(
@@ -82,9 +94,11 @@ public class GraphBulkContentRESTController {
                     String workspaceName,
             @Parameter(description = "The files containing the graph data") @RequestParam("files")
                     List<MultipartFile> files,
-            @Parameter(description = "Optional graph URIs, one per file. Defaults to file names.")
-                    @RequestParam(value = "schemaNames", required = false)
-                    List<String> schemaNames) {
+            @Parameter(hidden = true) HttpServletRequest request) {
+        // read the raw values: Spring splits a single value bound to a List at its commas, which a
+        // schema name may hold
+        var values = request.getParameterValues("schemaNames");
+        var schemaNames = values == null ? null : List.of(values);
         logger.info(
                 "Received POST request: \"/api/workspaces/{{}}/schemas/content/imports\" from \"{}\".",
                 workspaceName,

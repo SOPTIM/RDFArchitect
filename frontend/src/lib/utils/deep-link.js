@@ -135,7 +135,7 @@ async function resolvePropertyTarget({ dataset, graph, iri }) {
         if (hit) {
             return {
                 workspaceName: hit.workspaceName,
-                schemaName: schemaNameOf(hit.schemaName),
+                schemaName: hit.schemaName,
                 packageUUID: hit.packageUUID ?? null,
                 classUUID: hit.parentClassUUID,
                 propertyUUID: hit.uuid ?? null,
@@ -172,7 +172,7 @@ function sameIri(uri, iri) {
         return false;
     }
     try {
-        return schemaNameOf(uri) === iri;
+        return iriOf(uri) === iri;
     } catch {
         return false;
     }
@@ -200,7 +200,7 @@ async function listGraphPairs(datasetFilter, graphFilter) {
             continue;
         }
         for (const graph of graphs) {
-            const schemaName = schemaNameOf(graph.uri);
+            const schemaName = graph.name;
             if (graphFilter && schemaName !== graphFilter) {
                 continue;
             }
@@ -211,14 +211,14 @@ async function listGraphPairs(datasetFilter, graphFilter) {
 }
 
 /**
- * The graph list endpoint serves URIs as `{prefix, suffix}` objects, not strings — interpolating
- * one straight into a request path yields "[object Object]" and every lookup misses.
+ * The search endpoint serves URIs as `{prefix, suffix}` objects, not strings — comparing one
+ * straight against an IRI never matches.
  *
- * @param {string | {prefix: string | null, suffix: string}} graph
- * @returns {string} the full graph IRI
+ * @param {string | {prefix: string | null, suffix: string}} uri
+ * @returns {string} the full IRI
  */
-function schemaNameOf(graph) {
-    return typeof graph === "string" ? graph : new URI(graph).toString();
+function iriOf(uri) {
+    return typeof uri === "string" ? uri : new URI(uri).toString();
 }
 
 async function tryResolveIri(workspaceName, schemaName, iri) {

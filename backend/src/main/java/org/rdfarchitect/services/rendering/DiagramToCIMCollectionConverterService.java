@@ -33,8 +33,8 @@ import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -99,11 +99,11 @@ public class DiagramToCIMCollectionConverterService
                 .collect(Collectors.groupingBy(ClassInDiagram::getSchemaName))
                 .entrySet()
                 .stream()
-                .sorted(Comparator.comparing(e -> e.getKey().toString()))
+                .sorted(Map.Entry.comparingByKey())
                 .map(
                         e ->
                                 new GraphEntry(
-                                        new GraphIdentifier(workspaceName, e.getKey().toString()),
+                                        new GraphIdentifier(workspaceName, e.getKey()),
                                         e.getValue().stream()
                                                 .map(c -> c.getUuid().toString())
                                                 .toList()))

@@ -48,11 +48,10 @@ class AsciiDocExportRESTControllerTest {
 
     @Test
     void getAsciiDocExport_namesTheFileAfterTheGraph() {
-        stubExport("http://example.com/EQ");
+        stubExport("EQ");
 
         var response =
-                controller.getAsciiDocExport(
-                        HttpHeaders.ORIGIN, "dataset", "http://example.com/EQ", "png", false);
+                controller.getAsciiDocExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png", false);
 
         assertThat(response.getHeaders().getContentDisposition().getFilename())
                 .isEqualTo("EQ.adoc");
@@ -60,25 +59,24 @@ class AsciiDocExportRESTControllerTest {
 
     @Test
     void getAsciiDocExport_exposesTheContentDispositionToTheBrowser() {
-        stubExport("http://example.com/EQ");
+        stubExport("EQ");
 
         var response =
-                controller.getAsciiDocExport(
-                        HttpHeaders.ORIGIN, "dataset", "http://example.com/EQ", "png", false);
+                controller.getAsciiDocExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png", false);
 
         assertThat(response.getHeaders().getAccessControlExposeHeaders())
                 .containsExactly(HttpHeaders.CONTENT_DISPOSITION);
     }
 
     @Test
-    void getAsciiDocExport_defaultGraph_fallsBackToDefaultFileName() {
-        stubExport("default");
+    void getAsciiDocExport_keepsTheSchemaNameAsItIs() {
+        stubExport("my-profile");
 
         var response =
                 controller.getAsciiDocExport(
-                        HttpHeaders.ORIGIN, "dataset", "default", "png", false);
+                        HttpHeaders.ORIGIN, "dataset", "my-profile", "png", false);
 
         assertThat(response.getHeaders().getContentDisposition().getFilename())
-                .isEqualTo("default.adoc");
+                .isEqualTo("my-profile.adoc");
     }
 }

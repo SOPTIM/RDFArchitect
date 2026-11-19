@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,11 +79,7 @@ public class SHACLContentRestController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName) {
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName) {
         logger.info(
                 "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/file\" from \"{}\".",
                 workspaceName,
@@ -110,10 +105,7 @@ public class SHACLContentRestController {
     private ResponseEntity<byte[]> buildResponseEntity(
             String schemaName, RDFFormat format, ByteArrayOutputStream outStream) {
         // add suggested file name to response
-        var fileName = "shacl";
-        if (!schemaName.equals("default")) {
-            fileName = new URI(schemaName + "-shacl").getSuffix();
-        }
+        var fileName = schemaName + "-shacl";
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 
         var headers = new HttpHeaders();

@@ -176,7 +176,7 @@ class QueryDatasetServiceTest {
 
         var graph = onlyGraph();
 
-        assertThat(graph.getUri().toString()).isEqualTo("http://example.org/graphs/current");
+        assertThat(graph.getName()).isEqualTo("http://example.org/graphs/current");
         assertThat(graph.getKeyword()).isEqualTo("TST");
         assertThat(graph.getLabel()).isEqualTo("Test Vocabulary");
         assertThat(graph.getDescription()).isEqualTo("A vocabulary that names itself.");
@@ -230,7 +230,7 @@ class QueryDatasetServiceTest {
 
         var graph = onlyGraph();
 
-        assertThat(graph.getUri().toString()).isEqualTo("http://example.org/graphs/plain");
+        assertThat(graph.getName()).isEqualTo("http://example.org/graphs/plain");
         assertThat(graph.getKeyword()).isNull();
         assertThat(graph.getLabel()).isNull();
         assertThat(graph.getDescription()).isNull();
@@ -337,7 +337,7 @@ class QueryDatasetServiceTest {
 
     private static GraphDTO graphOf(List<GraphDTO> graphs, String schemaName) {
         return graphs.stream()
-                .filter(graph -> graph.getUri().toString().equals(schemaName))
+                .filter(graph -> graph.getName().equals(schemaName))
                 .findFirst()
                 .orElseThrow();
     }

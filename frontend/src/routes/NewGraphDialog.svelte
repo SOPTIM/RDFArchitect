@@ -18,7 +18,9 @@
 <script>
     import { v4 as uuidv4 } from "uuid";
 
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { isInvalidSchemaName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { schemaName } from "$lib/utils/graph-label.js";
@@ -32,8 +34,6 @@
     let { showDialog = $bindable(), lockedWorkspaceName } = $props();
 
     const uniqueId = uuidv4();
-    const defaultSchemaNamePrefix = "http://graph#";
-    const uriSchemePattern = /^[a-zA-Z][a-zA-Z\d+.-]*:/;
     const workspaceInputId = `workspaceNameNewGraph-${uniqueId}`;
     const workspaceListId = `workspaceNamesNewGraph-${uniqueId}`;
     const graphInputId = `schemaNameNewGraph-${uniqueId}`;
@@ -50,30 +50,18 @@
             readOnlyWorkspaces.includes(workspaceNameUserInput),
     );
 
-    const resolvedSchemaName = $derived(resolveSchemaName(schemaNameUserInput));
-    const graphExists = $derived(
-        !!resolvedSchemaName &&
-            existingGraphs.some(
-                graph => schemaName(graph) === resolvedSchemaName,
-            ),
+    const resolvedSchemaName = $derived(schemaNameUserInput.trim());
+    const schemaNameViolations = $derived(
+        isInvalidSchemaName(
+            schemaNameUserInput,
+            existingGraphs.map(graph => schemaName(graph)),
+        ),
     );
     const disableSubmit = $derived(
         !workspaceNameUserInput ||
-            !resolvedSchemaName ||
             workspaceIsReadOnly ||
-            graphExists,
+            schemaNameViolations.length > 0,
     );
-
-    function resolveSchemaName(graphInput) {
-        const trimmedInput = graphInput.trim();
-        if (!trimmedInput) {
-            return "";
-        }
-        if (uriSchemePattern.test(trimmedInput)) {
-            return trimmedInput;
-        }
-        return defaultSchemaNamePrefix + trimmedInput;
-    }
 
     async function onOpen() {
         workspaceNameUserInput =
@@ -179,13 +167,13 @@
             class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
             type="text"
             id={graphInputId}
-            placeholder={defaultSchemaNamePrefix}
+            placeholder="Schema name"
             autocomplete="off"
             bind:value={schemaNameUserInput}
         />
 
-        {#if graphExists}
-            <div class="mt-1 mb-1 h-6 text-sm">Schema already exists</div>
+        {#if schemaNameUserInput}
+            <ViolationMessages violations={schemaNameViolations} />
         {/if}
     </div>
 </ActionDialog>

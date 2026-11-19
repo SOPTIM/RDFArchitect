@@ -63,7 +63,8 @@ class CopyClassServiceTest {
 
     private CopyClassService copyClassService;
     private DatabasePort databasePort;
-    private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
+    private final GraphIdentifier graphIdentifier =
+            new GraphIdentifier("default", "http://example.org/graph");
     private final GraphIdentifier referenceSourceGraphIdentifier =
             new GraphIdentifier("default", "http://example.org/source");
     private final GraphIdentifier targetGraphIdentifier =

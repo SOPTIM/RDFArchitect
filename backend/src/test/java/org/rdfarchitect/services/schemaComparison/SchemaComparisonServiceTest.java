@@ -50,7 +50,7 @@ class SchemaComparisonServiceTest {
     private DatabasePort databasePort;
 
     private static final GraphIdentifier GRAPH_IDENTIFIER =
-            new GraphIdentifier("default", "default");
+            new GraphIdentifier("default", "http://example.org/graph");
     private static final GraphIdentifier OTHER_GRAPH_IDENTIFIER =
             new GraphIdentifier("default", "http://example.org/otherGraph");
 

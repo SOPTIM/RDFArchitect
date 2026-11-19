@@ -42,7 +42,7 @@ public interface WorkspaceTransaction extends AutoCloseable {
     /**
      * Returns the graph identified by {@code schemaName} for the duration of this transaction.
      *
-     * @param schemaName the graph URI
+     * @param schemaName the schema name
      * @return the graph's contents
      */
     GraphContext graph(String schemaName);
@@ -50,7 +50,7 @@ public interface WorkspaceTransaction extends AutoCloseable {
     /**
      * Returns the URIs of the graphs the workspace currently holds.
      *
-     * @return the graph URIs
+     * @return the schema names
      */
     List<String> schemaNames();
 
@@ -94,7 +94,7 @@ public interface WorkspaceTransaction extends AutoCloseable {
     /**
      * Creates or replaces the graph registered under {@code schemaName}.
      *
-     * @param schemaName the graph URI
+     * @param schemaName the schema name
      * @param graph the graph's initial contents
      */
     void createGraph(String schemaName, Graph graph);
@@ -102,7 +102,7 @@ public interface WorkspaceTransaction extends AutoCloseable {
     /**
      * Removes the graph identified by {@code schemaName}. Does nothing if it does not exist.
      *
-     * @param schemaName the graph URI
+     * @param schemaName the schema name
      */
     void deleteGraph(String schemaName);
 
@@ -110,8 +110,8 @@ public interface WorkspaceTransaction extends AutoCloseable {
      * Registers the graph known as {@code oldSchemaName} under {@code newSchemaName} and rewrites
      * every reference to it in the workspace. The graph keeps its contents and its history.
      *
-     * @param oldSchemaName the graph URI to rename
-     * @param newSchemaName the graph URI to rename to
+     * @param oldSchemaName the schema name to rename
+     * @param newSchemaName the schema name to rename to
      */
     void renameGraph(String oldSchemaName, String newSchemaName);
 

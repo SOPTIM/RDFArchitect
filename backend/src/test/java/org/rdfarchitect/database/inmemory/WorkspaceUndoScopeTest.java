@@ -33,7 +33,6 @@ import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.graph.UndoTargetChangedException;
 import org.rdfarchitect.models.changelog.ParticipantId;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.TestRDFUtils;
 
 import java.util.List;
@@ -175,7 +174,7 @@ class WorkspaceUndoScopeTest {
         @Test
         void undo_ofADeletedWorkspaceDiagram_bringsItBackWithItsClasses() {
             var diagramId = UUID.randomUUID();
-            var classes = List.of(new ClassInDiagram(UUID.randomUUID(), new URI(GRAPH_A)));
+            var classes = List.of(new ClassInDiagram(UUID.randomUUID(), GRAPH_A));
             try (var transaction = workspace.begin(ReadWrite.WRITE)) {
                 transaction.diagrams().put(diagramId, new CustomDiagram(diagramId, "d", classes));
                 transaction.commit("created a diagram");
@@ -365,8 +364,7 @@ class WorkspaceUndoScopeTest {
                 transaction
                         .diagrams()
                         .get(diagramId)
-                        .setClasses(
-                                List.of(new ClassInDiagram(UUID.randomUUID(), new URI(GRAPH_A))));
+                        .setClasses(List.of(new ClassInDiagram(UUID.randomUUID(), GRAPH_A)));
                 transaction.commit("added a class to the diagram");
             }
 

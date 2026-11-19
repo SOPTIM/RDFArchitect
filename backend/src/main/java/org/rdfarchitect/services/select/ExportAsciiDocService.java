@@ -26,7 +26,6 @@ import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -81,16 +80,7 @@ public class ExportAsciiDocService implements ExportGraphAsciiDocUseCase {
     /** Prefix of all anchors of this document, derived from the name of the exported graph. */
     private String anchorPrefix(GraphIdentifier graphIdentifier) {
         var schemaName = graphIdentifier.schemaName();
-        var name = DEFAULT_NAME;
-        if (schemaName != null && !schemaName.isBlank() && !DEFAULT_NAME.equals(schemaName)) {
-            try {
-                var suffix = new URI(schemaName).getSuffix();
-                name = suffix.isBlank() ? schemaName : suffix;
-            } catch (IllegalArgumentException _) {
-                name = schemaName;
-            }
-        }
-        return identifier(name);
+        return identifier(schemaName == null || schemaName.isBlank() ? DEFAULT_NAME : schemaName);
     }
 
     private String buildStereotypeList() {

@@ -24,7 +24,6 @@ import {
     resolveIri,
     search,
 } from "$lib/api/generated";
-import { URI } from "$lib/models/dto/index.ts";
 import { resolveClassTarget, resolveTermTarget } from "$lib/utils/deep-link.js";
 
 const CLASS_IRI = "https://cim.example.org/CIM#ACLineSegment";
@@ -35,7 +34,7 @@ const ATTRIBUTE_UUID = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
 
 const singleGraphModel = {
     profiles: {
-        "https://cim.example.org/EQ": {
+        EQ: {
             [CLASS_IRI]: {
                 uuid: CLASS_UUID,
                 package: { uuid: PACKAGE_UUID, label: "Wires" },
@@ -73,10 +72,9 @@ function mockApiFor(model, { searchResults = [] } = {}) {
 
     listGraphs.mockImplementation(async ({ path: { workspaceName } }) => {
         const graphs = model[workspaceName];
-        // The real endpoint serves URIs as plain {prefix, suffix} objects, never as strings.
         return {
             data: graphs
-                ? Object.keys(graphs).map(uri => ({ uri: { ...new URI(uri) } }))
+                ? Object.keys(graphs).map(name => ({ name }))
                 : undefined,
         };
     });
@@ -129,13 +127,13 @@ describe("resolveClassTarget", () => {
 
         const target = await resolveClassTarget({
             dataset: "profiles",
-            graph: "https://cim.example.org/EQ",
+            graph: "EQ",
             classRef: CLASS_IRI,
         });
 
         expect(target).toEqual({
             workspaceName: "profiles",
-            schemaName: "https://cim.example.org/EQ",
+            schemaName: "EQ",
             packageUUID: PACKAGE_UUID,
             classUUID: CLASS_UUID,
         });
@@ -143,7 +141,7 @@ describe("resolveClassTarget", () => {
 
     test("searches all datasets and graphs when none are given", async () => {
         const model = {
-            other: { "https://cim.example.org/SSH": {} },
+            other: { SSH: {} },
             ...singleGraphModel,
         };
         mockApiFor(model);
@@ -161,7 +159,7 @@ describe("resolveClassTarget", () => {
     test("restricts the search to the given dataset", async () => {
         const model = {
             other: {
-                "https://cim.example.org/EQ": {
+                EQ: {
                     [CLASS_IRI]: {
                         uuid: CLASS_UUID,
                         package: { uuid: PACKAGE_UUID },
@@ -185,7 +183,7 @@ describe("resolveClassTarget", () => {
         // what the dataset holding it is called in this session (a loaded snapshot, say).
         const model = {
             other: {
-                "https://cim.example.org/SSH": {
+                SSH: {
                     [CLASS_IRI]: {
                         uuid: "0d0d0d0d-1111-4222-8333-444444444444",
                         package: { uuid: PACKAGE_UUID },
@@ -198,12 +196,12 @@ describe("resolveClassTarget", () => {
 
         const target = await resolveClassTarget({
             dataset: null,
-            graph: "https://cim.example.org/EQ",
+            graph: "EQ",
             classRef: CLASS_IRI,
         });
 
         expect(target?.workspaceName).toBe("profiles");
-        expect(target?.schemaName).toBe("https://cim.example.org/EQ");
+        expect(target?.schemaName).toBe("EQ");
         expect(target?.classUUID).toBe(CLASS_UUID);
     });
 
@@ -212,7 +210,7 @@ describe("resolveClassTarget", () => {
 
         const target = await resolveClassTarget({
             dataset: null,
-            graph: "https://cim.example.org/SSH",
+            graph: "SSH",
             classRef: CLASS_IRI,
         });
 
@@ -235,7 +233,7 @@ describe("resolveClassTarget", () => {
     test("returns null packageUUID for classes without a package", async () => {
         const model = {
             profiles: {
-                "https://cim.example.org/EQ": {
+                EQ: {
                     [CLASS_IRI]: { uuid: CLASS_UUID },
                 },
             },
@@ -260,7 +258,7 @@ describe("resolveClassTarget", () => {
     test("does not mistake a property for a class", async () => {
         mockApiFor({
             profiles: {
-                "https://cim.example.org/EQ": {
+                EQ: {
                     [CLASS_IRI]: {
                         uuid: CLASS_UUID,
                         package: { uuid: PACKAGE_UUID, label: "Wires" },
@@ -298,7 +296,7 @@ describe("resolveClassTarget", () => {
         // class lookup answers with an empty body.
         const model = {
             stale: {
-                "https://cim.example.org/EQ": {
+                EQ: {
                     [CLASS_IRI]: { uuid: CLASS_UUID, deleted: true },
                 },
             },
@@ -318,7 +316,7 @@ describe("resolveClassTarget", () => {
     test("returns null when every candidate class was deleted", async () => {
         const model = {
             stale: {
-                "https://cim.example.org/EQ": {
+                EQ: {
                     [CLASS_IRI]: { uuid: CLASS_UUID, deleted: true },
                 },
             },
@@ -338,7 +336,7 @@ describe("resolveClassTarget", () => {
 describe("resolveTermTarget", () => {
     const attributeModel = {
         profiles: {
-            "https://cim.example.org/EQ": {
+            EQ: {
                 [CLASS_IRI]: {
                     uuid: CLASS_UUID,
                     package: { uuid: PACKAGE_UUID, label: "Wires" },
@@ -351,7 +349,7 @@ describe("resolveTermTarget", () => {
     const attributeHit = {
         query: "r",
         workspaceName: "profiles",
-        schemaName: "https://cim.example.org/EQ",
+        schemaName: "EQ",
         packageUUID: PACKAGE_UUID,
         parentClassUUID: CLASS_UUID,
         parentClassUri: {
@@ -377,7 +375,7 @@ describe("resolveTermTarget", () => {
 
         expect(target).toEqual({
             workspaceName: "profiles",
-            schemaName: "https://cim.example.org/EQ",
+            schemaName: "EQ",
             packageUUID: PACKAGE_UUID,
             classUUID: CLASS_UUID,
             propertyUUID: null,
@@ -396,7 +394,7 @@ describe("resolveTermTarget", () => {
 
         expect(target).toEqual({
             workspaceName: "profiles",
-            schemaName: "https://cim.example.org/EQ",
+            schemaName: "EQ",
             packageUUID: PACKAGE_UUID,
             classUUID: CLASS_UUID,
             propertyUUID: ATTRIBUTE_UUID,

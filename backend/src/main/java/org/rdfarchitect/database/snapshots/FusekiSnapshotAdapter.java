@@ -29,6 +29,7 @@ import org.rdfarchitect.config.DatabaseConfig;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.SnapshotPort;
 import org.rdfarchitect.database.implementations.http.FusekiHttpAdminProtocol;
 import org.rdfarchitect.exception.database.DataAccessException;
@@ -115,7 +116,9 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
 
             GraphUtils.removeUUIDs(copiedGraph);
 
-            conn.put(graphIdentifier.schemaName(), ModelFactory.createModelForGraph(copiedGraph));
+            conn.put(
+                    SchemaIri.of(graphIdentifier.schemaName()),
+                    ModelFactory.createModelForGraph(copiedGraph));
         } catch (Exception e) {
             throw new FusekiServerException(e.getMessage());
         }

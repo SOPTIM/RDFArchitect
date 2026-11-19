@@ -25,7 +25,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.select.ExportGraphAsciiDocUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,11 +74,7 @@ public class AsciiDocExportRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The file ending of the diagram files.") @PathVariable
                     String fileEnding,
             @Parameter(
@@ -97,10 +92,7 @@ public class AsciiDocExportRESTController {
                 exportGraphAsciiDocUseCase.exportGraphAsAsciiDoc(
                         new GraphIdentifier(workspaceName, schemaName), fileEnding, embedDiagrams);
 
-        var fileName = "default";
-        if (!schemaName.equals("default")) {
-            fileName = new URI(schemaName).getSuffix();
-        }
+        var fileName = schemaName;
         fileName += ".adoc";
 
         var headers = new HttpHeaders();

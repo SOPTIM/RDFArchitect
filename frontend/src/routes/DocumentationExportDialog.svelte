@@ -24,7 +24,6 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { URI } from "$lib/models/dto/index.ts";
     import { editorState } from "$lib/sharedState.svelte.js";
     import { ExportProgress } from "$lib/utils/exportProgress.svelte.js";
     import { saveFile } from "$lib/utils/fileUtils.ts";
@@ -196,7 +195,7 @@
 
             saveFile(
                 zipBlob,
-                `${getGraphLabel(schemaName)}-${documentFormat.ending}-export.zip`,
+                `${schemaName}-${documentFormat.ending}-export.zip`,
                 zipMediaType,
             );
 
@@ -244,14 +243,6 @@
     function getDocumentFilename(contentDisposition, documentFormat) {
         const match = contentDisposition?.match(/filename="?([^"]+)"?/);
         return match?.[1] ?? `export.${documentFormat.ending}`;
-    }
-
-    function getGraphLabel(schemaName) {
-        try {
-            return new URI(schemaName).suffix;
-        } catch {
-            return schemaName;
-        }
     }
 </script>
 

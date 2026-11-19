@@ -32,11 +32,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.exception.database.ResourceNotFoundException;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.TestRDFUtils;
 
 import java.util.List;
@@ -72,8 +72,6 @@ class WorkspaceTest {
         graph.add(TestRDFUtils.triple("a c c"));
         return graph;
     }
-
-    private static final String DEFAULT_GRAPH_NAME = "default";
 
     @Test
     void constructor_noArgs_returnsEmptyCollection() {
@@ -133,28 +131,37 @@ class WorkspaceTest {
     }
 
     @Test
-    void constructor_defaultGraphOnlyDataset_returnCollectionWith1Graph() {
+    void constructor_namedGraphs_namesEachGraphAfterItsIri() {
+        // Arrange
+        var dataset = DatasetFactory.create();
+        for (var iri :
+                List.of(
+                        SchemaIri.of("my profile"),
+                        "http://graph#legacy",
+                        "http://example.org/legacy")) {
+            dataset.getNamedModel(iri).getGraph().add(TestRDFUtils.triple("a a a"));
+        }
+
+        // Act
+        Workspace workspace = new Workspace(WORKSPACE, dataset);
+
+        // Assert
+        assertThat(workspace.listSchemaNames())
+                .containsExactlyInAnyOrder("my profile", "legacy", "legacy-2");
+    }
+
+    @Test
+    void constructor_defaultGraphOnlyDataset_leavesTheDefaultGraphOut() {
         // Arrange
         var dataset = DatasetFactory.create();
         Graph model = dataset.getDefaultModel().getGraph();
         model.add(TestRDFUtils.triple("a a a"));
-        model.add(TestRDFUtils.triple("b b b"));
-        model.add(TestRDFUtils.triple("c c c"));
-
-        Workspace workspace = new Workspace(WORKSPACE, dataset);
 
         // Act
-        List<String> schemaNames = workspace.listSchemaNames();
-        int size = schemaNames.size();
+        Workspace workspace = new Workspace(WORKSPACE, dataset);
 
         // Assert
-        assertThat(size).isEqualTo(1);
-        try (var transaction = workspace.begin(ReadWrite.READ)) {
-            var ctx = transaction.graph(DEFAULT_GRAPH_NAME);
-            assertThat(ctx).isNotNull();
-            assertThat(ctx.getRdfGraph().find().toList()).hasSize(3);
-            assertThat(transaction.mode()).isEqualTo(ReadWrite.READ);
-        }
+        assertThat(workspace.listSchemaNames()).isEmpty();
     }
 
     @ParameterizedTest
@@ -177,21 +184,6 @@ class WorkspaceTest {
     }
 
     @Test
-    void begin_nonExistingDefaultSchemaName_returnsEmptyDefaultGraph() {
-        // Arrange
-        Workspace workspace = new Workspace(WORKSPACE);
-
-        // Act
-        try (var transaction = workspace.begin(ReadWrite.READ)) {
-            var ctx = transaction.graph(DEFAULT_GRAPH_NAME);
-            // Assert
-            assertThat(ctx).isNotNull();
-            assertThat(ctx.getRdfGraph().find().toList()).isEmpty();
-            assertThat(transaction.mode()).isEqualTo(ReadWrite.READ);
-        }
-    }
-
-    @Test
     void begin_nonExistingNamedSchemaName_throwsException() {
         // Arrange
         Workspace workspace = new Workspace(WORKSPACE);
@@ -199,19 +191,7 @@ class WorkspaceTest {
         // Act/Assert
         assertThatExceptionOfType(ResourceNotFoundException.class)
                 .isThrownBy(() -> workspace.getGraphWithContext("http://example.org/nonexistent"))
-                .withMessageContaining("Graph URI http://example.org/nonexistent does not exist.");
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"", "foo", "bar", "otherInvalidUri"})
-    void begin_invalidUri_throwsException(String schemaName) {
-        // Arrange
-        Workspace workspace = new Workspace(WORKSPACE);
-
-        // Act/Assert
-        assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> workspace.getGraphWithContext(schemaName))
-                .withMessage("Graph Uri " + schemaName + " is not a valid URI");
+                .withMessageContaining("Schema http://example.org/nonexistent does not exist.");
     }
 
     @Test
@@ -272,7 +252,8 @@ class WorkspaceTest {
                 "http://example.org/graph1",
                 "http://example.org/graph2",
                 "http://example.org/graph3",
-                DEFAULT_GRAPH_NAME
+                "default",
+                "my-profile"
             })
     void create_validName_returnsGraphRewindable(String schemaName) {
         // Arrange
@@ -288,19 +269,6 @@ class WorkspaceTest {
             assertThat(ctx.getRdfGraph().isIsomorphicWith(exampleGraphs.get(1))).isTrue();
             assertThat(transaction.mode()).isEqualTo(ReadWrite.READ);
         }
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"", "foo", "bar", "otherInvalidUri"})
-    void create_invalidUri_throwsException(String schemaName) {
-        // Arrange
-        Workspace workspace = new Workspace(WORKSPACE);
-        exampleGraphs = List.of(createExampleGraph());
-
-        // Act/Assert
-        var firstGraph = exampleGraphs.getFirst();
-        assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> createGraph(workspace, schemaName, firstGraph));
     }
 
     @Test
@@ -346,9 +314,8 @@ class WorkspaceTest {
         var diagram = new CustomDiagram(diagramId);
         diagram.setClasses(
                 List.of(
-                        new ClassInDiagram(classUuid, new URI("http://example.org/graph1")),
-                        new ClassInDiagram(
-                                UUID.randomUUID(), new URI("http://example.org/other"))));
+                        new ClassInDiagram(classUuid, "http://example.org/graph1"),
+                        new ClassInDiagram(UUID.randomUUID(), "http://example.org/other")));
         try (var transaction = workspace.begin(ReadWrite.WRITE)) {
             transaction.diagrams().put(diagramId, diagram);
             transaction.commit("added a diagram");
@@ -375,9 +342,7 @@ class WorkspaceTest {
         var ownDiagramId = UUID.randomUUID();
         var ownDiagram = new CustomDiagram(ownDiagramId);
         ownDiagram.setClasses(
-                List.of(
-                        new ClassInDiagram(
-                                UUID.randomUUID(), new URI("http://example.org/graph1"))));
+                List.of(new ClassInDiagram(UUID.randomUUID(), "http://example.org/graph1")));
         try (var transaction = workspace.begin(ReadWrite.READ)) {
             transaction
                     .graph("http://example.org/graph1")
@@ -387,9 +352,7 @@ class WorkspaceTest {
         var foreignDiagramId = UUID.randomUUID();
         var foreignDiagram = new CustomDiagram(foreignDiagramId);
         foreignDiagram.setClasses(
-                List.of(
-                        new ClassInDiagram(
-                                UUID.randomUUID(), new URI("http://example.org/graph1"))));
+                List.of(new ClassInDiagram(UUID.randomUUID(), "http://example.org/graph1")));
         try (var transaction = workspace.begin(ReadWrite.READ)) {
             transaction
                     .graph("http://example.org/other")

@@ -61,7 +61,7 @@ class DeleteResourcesServiceTest {
             "src/test/java/org/rdfarchitect/services/delete/testdata.ttl";
 
     private static final GraphIdentifier GRAPH_IDENTIFIER =
-            new GraphIdentifier("default", "default");
+            new GraphIdentifier("default", "http://example.org/graph");
 
     private static final String CIM_NS = "http://iec.ch/TC57/CIM100#";
 

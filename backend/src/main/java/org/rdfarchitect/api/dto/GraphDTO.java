@@ -21,8 +21,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-
 import java.util.List;
 
 /**
@@ -36,7 +34,7 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 public class GraphDTO {
-    private URI uri;
+    private String name;
     private String keyword;
     private String label;
     private String description;

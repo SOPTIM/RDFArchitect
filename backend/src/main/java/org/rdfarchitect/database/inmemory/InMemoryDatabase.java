@@ -164,7 +164,7 @@ public interface InMemoryDatabase {
      * Checks whether a Graph exists in a specified dataset.
      *
      * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
+     *     schema name.
      * @return True if the graph exists, otherwise False.
      */
     boolean containsGraph(GraphIdentifier graphIdentifier);
@@ -192,7 +192,7 @@ public interface InMemoryDatabase {
      *
      * @param databaseConnection The connection to the persistent Database.
      * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
+     *     schema name.
      * @throws DataAccessException if the dataset or graph does not exist.
      */
     void writeToDatabase(DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier);

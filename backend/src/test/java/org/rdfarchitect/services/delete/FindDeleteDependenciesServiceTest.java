@@ -58,7 +58,7 @@ class FindDeleteDependenciesServiceTest {
             "src/test/java/org/rdfarchitect/services/delete/testdata.ttl";
 
     private static final GraphIdentifier GRAPH_IDENTIFIER =
-            new GraphIdentifier("default", "default");
+            new GraphIdentifier("default", "http://example.org/graph");
 
     // UUIDs from the TTL test data
     private static final UUID PARENT_CLASS_UUID =

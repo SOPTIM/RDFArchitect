@@ -170,7 +170,7 @@ class ImportConcurrencyTest {
                         List.of(
                                 new BlockingMultipartFile(TURTLE, null, null),
                                 new BlockingMultipartFile(OTHER_TURTLE, null, null)),
-                        List.of("http://example.org/one", "http://example.org/two"),
+                        List.of("one", "two"),
                         ImportProgressListener.NOOP);
 
         assertThat(result.importedSchemaNames()).hasSize(2);
@@ -184,6 +184,22 @@ class ImportConcurrencyTest {
     }
 
     @Test
+    void importGraphs_singleFile_namesTheWholeSchemaNameInTheHistory() {
+        databasePort.createWorkspaceIfAbsent(WORKSPACE);
+
+        importGraphs.importGraphs(
+                WORKSPACE,
+                List.of(new BlockingMultipartFile(TURTLE, null, null)),
+                List.of("EQ#2"),
+                ImportProgressListener.NOOP);
+
+        assertThat(databasePort.listChanges(WORKSPACE))
+                .first()
+                .satisfies(
+                        entry -> assertThat(entry.message()).isEqualTo("Imported schema \"EQ#2\""));
+    }
+
+    @Test
     void undo_ofAnImportOfSeveralFiles_takesAllOfThemBack() {
         databasePort.createWorkspaceIfAbsent(WORKSPACE);
         importGraphs.importGraphs(
@@ -191,7 +207,7 @@ class ImportConcurrencyTest {
                 List.of(
                         new BlockingMultipartFile(TURTLE, null, null),
                         new BlockingMultipartFile(OTHER_TURTLE, null, null)),
-                List.of("http://example.org/one", "http://example.org/two"),
+                List.of("one", "two"),
                 ImportProgressListener.NOOP);
 
         databasePort.undo(WORKSPACE);

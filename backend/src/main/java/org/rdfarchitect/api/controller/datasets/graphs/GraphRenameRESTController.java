@@ -52,7 +52,9 @@ public class GraphRenameRESTController {
             tags = {"graph"},
             responses = {
                 @ApiResponse(responseCode = "200"),
-                @ApiResponse(responseCode = "409", description = "Graph URI already exists")
+                @ApiResponse(
+                        responseCode = "409",
+                        description = "A schema of that name already exists")
             })
     @PostMapping
     public String renameGraph(
@@ -64,9 +66,8 @@ public class GraphRenameRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(description = "The url encoded uri of the graph.") @PathVariable
-                    String schemaName,
-            @Parameter(description = "The url encoded uri to rename the graph to.") @RequestParam
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
+            @Parameter(description = "The name to rename the schema to.") @RequestParam
                     String newSchemaName) {
         logger.info(
                 "Received POST request: \"/api/workspaces/{{}}/schemas/{{}}/rename\" from \"{}\".",

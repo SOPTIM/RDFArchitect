@@ -23,6 +23,7 @@ import org.apache.jena.query.QueryFactory;
 import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
 import org.rdfarchitect.models.cim.queries.CIMQueryVars;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
@@ -254,19 +255,9 @@ public class SearchService implements SearchUseCase {
             SearchFilter filter,
             List<SearchResult> searchResults,
             List<SearchResult> externalSearchResults) {
-        String specificInternalQuery;
-        String specificExternalQuery;
-        if (Objects.equals(graphIdentifier.schemaName(), "default")) {
-            specificInternalQuery = SPARQL_INTERNAL_QUERY.replace(GRAPH, "");
-            specificExternalQuery = SPARQL_EXTERNAL_QUERY.replace(GRAPH, "");
-        } else {
-            specificInternalQuery =
-                    SPARQL_INTERNAL_QUERY.replace(
-                            GRAPH, "FROM <" + graphIdentifier.schemaName() + ">");
-            specificExternalQuery =
-                    SPARQL_EXTERNAL_QUERY.replace(
-                            GRAPH, "FROM <" + graphIdentifier.schemaName() + ">");
-        }
+        var from = "FROM <" + SchemaIri.of(graphIdentifier.schemaName()) + ">";
+        var specificInternalQuery = SPARQL_INTERNAL_QUERY.replace(GRAPH, from);
+        var specificExternalQuery = SPARQL_EXTERNAL_QUERY.replace(GRAPH, from);
         specificInternalQuery = specificInternalQuery.replace("searchQuery", query);
         specificExternalQuery = specificExternalQuery.replace("searchQuery", query);
         var internalQueryWithPackageConstraint =

@@ -27,11 +27,11 @@ public interface RenameGraphUseCase {
      *
      * <p>The profile header is deliberately left untouched. What a schema is called on screen is
      * read from that header — {@code dcterms:title}, {@code dcat:keyword} — and is edited in the
-     * ontology editor. A graph URI names only the graph itself, and is what names a schema that has
-     * no header to be read from.
+     * ontology editor. The schema name names only the graph itself, and is what names a schema that
+     * has no header to be read from.
      *
-     * @param graphIdentifier identifies dataset and current graph URI
-     * @param newSchemaName the graph URI to rename to
+     * @param graphIdentifier identifies dataset and current schema name
+     * @param newSchemaName the schema name to rename to
      */
     void renameGraph(GraphIdentifier graphIdentifier, String newSchemaName);
 }

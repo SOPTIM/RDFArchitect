@@ -24,20 +24,20 @@ import { graphStore } from "$lib/stores/graphStore.ts";
 import SchemaColorsDialog from "../../src/routes/mainpage/packageNavigation/SchemaColorsDialog.svelte";
 
 const CURRENT = {
-    uri: { prefix: "http://graph#", suffix: "Equipment" },
+    name: "Equipment",
     keyword: "EQ",
     label: "Core Equipment Vocabulary",
 };
 
 /** Two legacy profiles reading alike, as the official equipment profiles do. */
 const LEGACY_CORE = {
-    uri: { prefix: "http://graph#", suffix: "EquipmentCore" },
+    name: "EquipmentCore",
     keyword: "EQ",
     label: "EquipmentProfile",
 };
 
 const LEGACY_OPERATION = {
-    uri: { prefix: "http://graph#", suffix: "EquipmentOperation" },
+    name: "EquipmentOperation",
     keyword: "EQ",
     label: "EquipmentProfile",
 };
@@ -73,9 +73,9 @@ vi.mock("$lib/stores/graphStore.ts", () => ({
 
 beforeEach(() => {
     schemaColors.reload.mockResolvedValue({
-        "http://graph#EquipmentOperation": "#112233",
-        "http://graph#Equipment": "#445566",
-        "http://graph#EquipmentCore": "#778899",
+        EquipmentOperation: "#112233",
+        Equipment: "#445566",
+        EquipmentCore: "#778899",
     });
     graphStore.getGraphs.mockResolvedValue([
         CURRENT,
@@ -95,7 +95,7 @@ afterEach(() => {
 describe("SchemaColorsDialog", () => {
     /**
      * A color is picked for a schema, so the schema has to be named the way the tree names it —
-     * the tail of the graph URI is a different name for the same thing.
+     * the graph name is a different name for the same thing.
      */
     test("names and orders the schemas the way the navigation does", async () => {
         await open();

@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.select.GetSchemaUseCase;
 import org.rdfarchitect.services.update.graph.DeleteGraphUseCase;
 import org.rdfarchitect.services.update.graph.ReplaceGraphUseCase;
@@ -87,11 +86,7 @@ public class GraphContentRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName) {
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName) {
         logger.info(
                 "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/content\" from \"{}\".",
                 workspaceName,
@@ -105,10 +100,7 @@ public class GraphContentRESTController {
                 getSchemaUseCase.getSchema(new GraphIdentifier(workspaceName, schemaName), format);
 
         // add suggested file name to response
-        var fileName = "default";
-        if (!schemaName.equals("default")) {
-            fileName = new URI(schemaName).getSuffix();
-        }
+        var fileName = schemaName;
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 
         var headers = new HttpHeaders();
@@ -157,11 +149,7 @@ public class GraphContentRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName) {
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName) {
         logger.info(
                 "Received DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/content\" from \"{}\".",
                 workspaceName,
@@ -190,11 +178,7 @@ public class GraphContentRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The file containing the graph to be inserted")
                     @RequestParam(value = "file", required = false)
                     MultipartFile file) {

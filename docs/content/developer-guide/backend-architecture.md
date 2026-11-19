@@ -87,7 +87,7 @@ public class DatasetRESTController {
 
 Conventions worth knowing:
 
-- **One controller per resource path tier.** `api/workspaces`, `api/workspaces/{name}/schemas`, `api/workspaces/{name}/schemas/{uri}/classes`, etc. Controllers do not span tiers.
+- **One controller per resource path tier.** `api/workspaces`, `api/workspaces/{name}/schemas`, `api/workspaces/{name}/schemas/{schemaName}/classes`, etc. Controllers do not span tiers.
 - **Always `@Operation` annotated** — Swagger UI is part of the public deliverable.
 - **Always log on receive and on respond**, with the originating URL, dataset, and graph names where applicable. Audit log style.
 - **Use cases are constructor-injected via `@RequiredArgsConstructor` (Lombok).** No field injection.

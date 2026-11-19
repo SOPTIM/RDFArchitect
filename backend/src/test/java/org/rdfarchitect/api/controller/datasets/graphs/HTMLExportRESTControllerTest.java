@@ -48,11 +48,9 @@ class HTMLExportRESTControllerTest {
 
     @Test
     void getHTMLExport_namesTheFileAfterTheGraph() {
-        stubExport("http://example.com/EQ");
+        stubExport("EQ");
 
-        var response =
-                controller.getHTMLExport(
-                        HttpHeaders.ORIGIN, "dataset", "http://example.com/EQ", "png", false);
+        var response = controller.getHTMLExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png", false);
 
         assertThat(response.getHeaders().getContentDisposition().getFilename())
                 .isEqualTo("EQ.html");
@@ -60,24 +58,22 @@ class HTMLExportRESTControllerTest {
 
     @Test
     void getHTMLExport_exposesTheContentDispositionToTheBrowser() {
-        stubExport("http://example.com/EQ");
+        stubExport("EQ");
 
-        var response =
-                controller.getHTMLExport(
-                        HttpHeaders.ORIGIN, "dataset", "http://example.com/EQ", "png", false);
+        var response = controller.getHTMLExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png", false);
 
         assertThat(response.getHeaders().getAccessControlExposeHeaders())
                 .containsExactly(HttpHeaders.CONTENT_DISPOSITION);
     }
 
     @Test
-    void getHTMLExport_defaultGraph_fallsBackToDefaultFileName() {
-        stubExport("default");
+    void getHTMLExport_keepsTheSchemaNameAsItIs() {
+        stubExport("my-profile");
 
         var response =
-                controller.getHTMLExport(HttpHeaders.ORIGIN, "dataset", "default", "png", false);
+                controller.getHTMLExport(HttpHeaders.ORIGIN, "dataset", "my-profile", "png", false);
 
         assertThat(response.getHeaders().getContentDisposition().getFilename())
-                .isEqualTo("default.html");
+                .isEqualTo("my-profile.html");
     }
 }

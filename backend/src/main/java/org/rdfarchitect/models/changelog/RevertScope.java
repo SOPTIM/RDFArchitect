@@ -87,16 +87,9 @@ public record RevertScope(Set<String> schemaNames) {
         }
         var names =
                 schemaNames.stream()
-                        .map(RevertScope::localName)
                         .sorted()
                         .map("\"%s\""::formatted)
                         .collect(Collectors.joining(", "));
         return (schemaNames.size() == 1 ? "schema " : "schemas ") + names;
-    }
-
-    /** The part of a graph URI after its last {@code #} or {@code /}, as the import names it. */
-    private static String localName(String uri) {
-        var cut = Math.max(uri.lastIndexOf('#'), uri.lastIndexOf('/'));
-        return cut < 0 || cut == uri.length() - 1 ? uri : uri.substring(cut + 1);
     }
 }

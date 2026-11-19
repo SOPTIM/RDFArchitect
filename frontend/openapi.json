@@ -445,7 +445,7 @@
       "ClassInDiagram" : {
         "properties" : {
           "schemaName" : {
-            "$ref" : "#/components/schemas/URI"
+            "type" : "string"
           },
           "uuid" : {
             "format" : "uuid",
@@ -953,6 +953,9 @@
           "label" : {
             "type" : "string"
           },
+          "name" : {
+            "type" : "string"
+          },
           "ontologyHeader" : {
             "type" : "boolean"
           },
@@ -961,9 +964,6 @@
           },
           "profileClassUuid" : {
             "type" : "string"
-          },
-          "uri" : {
-            "$ref" : "#/components/schemas/URI"
           },
           "versionInfo" : {
             "type" : "string"
@@ -2771,7 +2771,7 @@
             }
           },
           {
-            "description" : "URI of graph A. Required together with workspace_a when not uploading graph A as a file.",
+            "description" : "Name of schema A. Required together with workspace_a when not uploading schema A as a file.",
             "in" : "query",
             "name" : "schemaA",
             "required" : false,
@@ -2789,7 +2789,7 @@
             }
           },
           {
-            "description" : "URI of graph B. Required together with workspace_b when not uploading graph B as a file.",
+            "description" : "Name of schema B. Required together with workspace_b when not uploading schema B as a file.",
             "in" : "query",
             "name" : "schemaB",
             "required" : false,
@@ -3473,7 +3473,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the target graph, or \"default\" to access the default graph.",
+            "description" : "The name of the target schema.",
             "in" : "path",
             "name" : "targetSchemaName",
             "required" : true,
@@ -3539,7 +3539,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the target graph, or \"default\" to access the default graph.",
+            "description" : "The name of the target schema.",
             "in" : "path",
             "name" : "targetSchemaName",
             "required" : true,
@@ -5245,6 +5245,17 @@
         "operationId" : "startImport",
         "parameters" : [
           {
+            "description" : "Optional schema names, one per file. Defaults to the file names without extension.",
+            "in" : "query",
+            "name" : "schemaNames",
+            "schema" : {
+              "items" : {
+                "type" : "string"
+              },
+              "type" : "array"
+            }
+          },
+          {
             "description" : "The name/url of the inquirer.",
             "in" : "header",
             "name" : "Origin",
@@ -5261,18 +5272,6 @@
             "required" : true,
             "schema" : {
               "type" : "string"
-            }
-          },
-          {
-            "description" : "Optional graph URIs, one per file. Defaults to file names.",
-            "in" : "query",
-            "name" : "schemaNames",
-            "required" : false,
-            "schema" : {
-              "items" : {
-                "type" : "string"
-              },
-              "type" : "array"
             }
           }
         ],
@@ -5520,7 +5519,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -5587,7 +5586,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -5650,7 +5649,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -5713,7 +5712,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -5772,7 +5771,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -5841,7 +5840,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -5913,7 +5912,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -5983,7 +5982,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -6058,7 +6057,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -6139,7 +6138,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -6207,7 +6206,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -6288,7 +6287,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -6359,7 +6358,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -6434,7 +6433,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -6516,7 +6515,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -6584,7 +6583,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -6665,7 +6664,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -6738,7 +6737,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -6820,7 +6819,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -6881,7 +6880,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -6942,7 +6941,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7014,7 +7013,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7078,7 +7077,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the base graph, or \"default\" to access the default graph.",
+            "description" : "The name of the base schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7096,7 +7095,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph to compare against.",
+            "description" : "The name of the schema to compare against.",
             "in" : "query",
             "name" : "otherSchema",
             "required" : true,
@@ -7149,7 +7148,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7223,7 +7222,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7273,7 +7272,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7322,7 +7321,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7390,7 +7389,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7445,7 +7444,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7511,7 +7510,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7581,7 +7580,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7635,7 +7634,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7692,7 +7691,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7759,7 +7758,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7828,7 +7827,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7900,7 +7899,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -7974,7 +7973,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8041,7 +8040,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8114,7 +8113,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8191,7 +8190,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8268,7 +8267,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8345,7 +8344,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8395,7 +8394,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8445,7 +8444,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8506,7 +8505,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8569,7 +8568,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8624,7 +8623,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8674,7 +8673,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8738,7 +8737,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8799,7 +8798,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8860,7 +8859,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8933,7 +8932,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8988,7 +8987,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -8997,7 +8996,7 @@
             }
           },
           {
-            "description" : "The url encoded uri to rename the graph to.",
+            "description" : "The name to rename the schema to.",
             "in" : "query",
             "name" : "newSchemaName",
             "required" : true,
@@ -9025,7 +9024,7 @@
                 }
               }
             },
-            "description" : "Graph URI already exists"
+            "description" : "A schema of that name already exists"
           }
         },
         "summary" : "Rename graph",
@@ -9059,7 +9058,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9122,7 +9121,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9183,7 +9182,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9234,7 +9233,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9283,7 +9282,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9354,7 +9353,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9402,7 +9401,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9448,7 +9447,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9511,7 +9510,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9570,7 +9569,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9642,7 +9641,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9693,7 +9692,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9745,7 +9744,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9793,7 +9792,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9848,7 +9847,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9900,7 +9899,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,
@@ -9964,7 +9963,7 @@
             }
           },
           {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "description" : "The name of the schema.",
             "in" : "path",
             "name" : "schemaName",
             "required" : true,

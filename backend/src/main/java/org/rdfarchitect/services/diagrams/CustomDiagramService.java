@@ -122,7 +122,7 @@ public class CustomDiagramService
             String workspaceName, boolean doLayout, List<CIMProfileModel> profiles) {
         var graphDTOsMap =
                 listGraphsUseCase.listGraphs(workspaceName).stream()
-                        .collect(Collectors.toMap(g -> g.getUri().toString(), g -> g));
+                        .collect(Collectors.toMap(g -> g.getName(), g -> g));
         // Merging the profiles is the expensive part and only reads, so it runs under a read
         // lock; the layout is inserted afterwards under a write lock. Inserting is idempotent, so
         // the gap between the two does no harm.
@@ -289,7 +289,7 @@ public class CustomDiagramService
         return diagram.getClasses().stream()
                 .filter(cls -> cls.getUuid().equals(classId) && cls.getSchemaName() != null)
                 .findFirst()
-                .map(cls -> classNameInGraph(transaction, cls.getSchemaName().toString(), classId))
+                .map(cls -> classNameInGraph(transaction, cls.getSchemaName(), classId))
                 .orElse("");
     }
 

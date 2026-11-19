@@ -68,11 +68,7 @@ public class DeleteRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The uuids of the cim resources to analyse.") @RequestBody
                     List<UUID> uuids) {
         logger.info(
@@ -110,11 +106,7 @@ public class DeleteRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(
                             description =
                                     "A list of resource delete requests, each containing the uuid of the resource to delete and the type of deletion")

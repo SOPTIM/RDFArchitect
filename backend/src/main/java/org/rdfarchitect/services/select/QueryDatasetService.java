@@ -36,9 +36,9 @@ import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.DatasetDTO;
 import org.rdfarchitect.api.dto.GraphDTO;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.SchemaIri;
 import org.rdfarchitect.database.WorkspaceTransaction;
 import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.springframework.stereotype.Service;
@@ -69,12 +69,8 @@ public class QueryDatasetService
         // fetch graphs and insert into resultDataset
         try (var transaction = databasePort.beginTransaction(workspaceName, ReadWrite.READ)) {
             for (String schemaName : transaction.schemaNames()) {
-                if (schemaName.equals("default")) {
-                    resultDataset.setDefaultModel(getGraphAsModel(workspaceName, "default"));
-                } else {
-                    resultDataset.addNamedModel(
-                            schemaName, getGraphAsModel(workspaceName, schemaName));
-                }
+                resultDataset.addNamedModel(
+                        SchemaIri.of(schemaName), getGraphAsModel(workspaceName, schemaName));
             }
         }
 
@@ -127,7 +123,7 @@ public class QueryDatasetService
      */
     private GraphDTO readGraph(
             WorkspaceTransaction transaction, String schemaName, PrefixMapping datasetPrefixes) {
-        var dto = GraphDTO.builder().uri(new URI(schemaName)).build();
+        var dto = GraphDTO.builder().name(schemaName).build();
         try {
             var stored = transaction.graph(schemaName).getRdfGraph();
             var graph = GraphUtils.deepCopy(stored);

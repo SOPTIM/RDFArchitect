@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.rdfarchitect.services.shacl.SHACLGenerateUseCase;
@@ -72,11 +71,7 @@ public class SHACLGenerateContentRestController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName) {
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName) {
         logger.info(
                 "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/generate/string\" from \"{}\".",
                 workspaceName,
@@ -123,11 +118,7 @@ public class SHACLGenerateContentRestController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName) {
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName) {
         logger.info(
                 "Received GET request: \"/api/workspaces/{{}}/schemas/{{}}/shacl/generate/file\" from \"{}\".",
                 workspaceName,
@@ -153,10 +144,7 @@ public class SHACLGenerateContentRestController {
     private ResponseEntity<byte[]> buildResponseEntity(
             String schemaName, RDFFormat format, ByteArrayOutputStream outStream) {
         // add suggested file name to response
-        var fileName = "shacl";
-        if (!schemaName.equals("default")) {
-            fileName = new URI(schemaName + "-shacl").getSuffix();
-        }
+        var fileName = schemaName + "-shacl";
         fileName += "." + format.getLang().getFileExtensions().getFirst();
 
         var headers = new HttpHeaders();

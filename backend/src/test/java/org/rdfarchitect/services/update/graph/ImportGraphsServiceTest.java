@@ -39,7 +39,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.WorkspaceTransaction;
-import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.PlannedImport;
 import org.rdfarchitect.services.update.graph.PrefixResolutionDTO.Action;
 import org.springframework.mock.web.MockMultipartFile;
@@ -98,15 +97,72 @@ class ImportGraphsServiceTest {
                         workspaceName, List.of(file1, file2), null, ImportProgressListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
-        assertThat(result.importedSchemaNames())
-                .containsExactly(RDFA.GRAPH_URI + "graph", RDFA.GRAPH_URI + "graph_1");
+        assertThat(result.importedSchemaNames()).containsExactly("graph", "graph-2");
 
         var captor = ArgumentCaptor.forClass(String.class);
 
         verify(transaction, times(2)).createGraph(captor.capture(), any(Graph.class));
 
-        assertThat(captor.getAllValues())
-                .containsExactly(RDFA.GRAPH_URI + "graph", RDFA.GRAPH_URI + "graph_1");
+        assertThat(captor.getAllValues()).containsExactly("graph", "graph-2");
+    }
+
+    @Test
+    void importGraphs_fileNameWithDashes_namesTheSchemaAfterTheFileAsItIs() {
+        var file =
+                new MockMultipartFile(
+                        "graph",
+                        "my-profile v2.ttl",
+                        "text/turtle",
+                        "@prefix ex: <http://example.com/> . ex:a ex:b ex:c ."
+                                .getBytes(StandardCharsets.UTF_8));
+
+        var result =
+                importGraphsUseCase.importGraphs(
+                        "ds", List.of(file), null, ImportProgressListener.NOOP);
+
+        assertThat(result.importedSchemaNames()).containsExactly("my-profile v2");
+    }
+
+    @Test
+    void importGraphs_requestedName_isTrimmedAndUsedAsItIs() {
+        var file =
+                new MockMultipartFile(
+                        "graph",
+                        "graph.ttl",
+                        "text/turtle",
+                        "@prefix ex: <http://example.com/> . ex:a ex:b ex:c ."
+                                .getBytes(StandardCharsets.UTF_8));
+
+        var result =
+                importGraphsUseCase.importGraphs(
+                        "ds",
+                        List.of(file),
+                        List.of("  Équipement-Core "),
+                        ImportProgressListener.NOOP);
+
+        assertThat(result.importedSchemaNames()).containsExactly("Équipement-Core");
+    }
+
+    @Test
+    void importGraphs_requestedNameIsNoValidName_failsTheFile() {
+        var file =
+                new MockMultipartFile(
+                        "graph",
+                        "graph.ttl",
+                        "text/turtle",
+                        "@prefix ex: <http://example.com/> . ex:a ex:b ex:c ."
+                                .getBytes(StandardCharsets.UTF_8));
+
+        var result =
+                importGraphsUseCase.importGraphs(
+                        "ds",
+                        List.of(file),
+                        List.of("http://graph#x"),
+                        ImportProgressListener.NOOP);
+
+        assertThat(result.importedSchemaNames()).isEmpty();
+        assertThat(result.failedFileNames()).containsExactly("graph.ttl");
+        verify(transaction, never()).createGraph(anyString(), any());
     }
 
     @Test
@@ -206,7 +262,7 @@ class ImportGraphsServiceTest {
                         workspaceName, List.of(file), null, ImportProgressListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
-        assertThat(result.importedSchemaNames()).containsExactly(RDFA.GRAPH_URI + "schema");
+        assertThat(result.importedSchemaNames()).containsExactly("schema");
         assertThat(result.warnings()).hasSize(1);
 
         var warning = result.warnings().getFirst();
@@ -236,8 +292,7 @@ class ImportGraphsServiceTest {
         when(databasePortMock.getPrefixMapping(workspaceName))
                 .thenReturn(prefixMapping(cimNamespace));
         when(transaction.prefixes()).thenReturn(prefixMapping(cimNamespace));
-        when(databasePortMock.listSchemaNames(workspaceName))
-                .thenReturn(List.of(RDFA.GRAPH_URI + "existing"));
+        when(databasePortMock.listSchemaNames(workspaceName)).thenReturn(List.of("existing"));
     }
 
     private PrefixComparison contestedEntryOf(RecordingListener listener) {
@@ -485,7 +540,7 @@ class ImportGraphsServiceTest {
 
         assertThat(listener.failedBeforeAsking).containsExactly("broken.ttl");
         assertThat(result.failedFileNames()).containsExactly("broken.ttl");
-        assertThat(result.importedSchemaNames()).containsExactly(RDFA.GRAPH_URI + "dl30");
+        assertThat(result.importedSchemaNames()).containsExactly("dl30");
     }
 
     @Test
@@ -550,7 +605,7 @@ class ImportGraphsServiceTest {
                         workspaceName, List.of(file), null, ImportProgressListener.NOOP);
 
         assertThat(result.failedFileNames()).isEmpty();
-        assertThat(result.importedSchemaNames()).containsExactly(RDFA.GRAPH_URI + "schema");
+        assertThat(result.importedSchemaNames()).containsExactly("schema");
         assertThat(result.warnings()).isEmpty();
     }
 }

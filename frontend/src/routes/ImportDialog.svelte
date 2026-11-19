@@ -24,7 +24,9 @@
     import FileDropZone from "$lib/components/FileDropZone.svelte";
     import ImportProgressPanel from "$lib/components/ImportProgressPanel.svelte";
     import NamespacePrefixComparison from "$lib/components/NamespacePrefixComparison.svelte";
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { isInvalidSchemaName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
@@ -50,7 +52,6 @@
     const DEFAULT_WORKSPACE_NAME = "default";
     const POLL_INTERVAL_MS = 300;
     const MAX_FAILED_POLLS = 3;
-    const GRAPH_NAMESPACE_URI = "http://graph#"; // Keep in sync with RDFA.GRAPH_URI (backend)
     const DEFAULT_GRAPH_NAME = "graph";
     const supportedFileExtensions = supportedRDFMediaTypes.map(
         type => type.fileExtension,
@@ -118,10 +119,14 @@
         }
         return "";
     });
+    let fileNameViolations = $derived(
+        files.map((_, index) => schemaNameViolations(index)),
+    );
     let enableSubmit = $derived(
         files.length > 0 &&
             !isWorkspaceReadOnly(workspaceNameUserInput) &&
             !newWorkspaceNameError &&
+            fileNameViolations.every(violations => violations.length === 0) &&
             progress === null,
     );
 
@@ -168,7 +173,8 @@
         return readOnlyWorkspaces.includes(targetWorkspace);
     }
 
-    function getSanitizedSchemaName(fileName) {
+    /** The file name without its extension, which the backend names the schema by as well. */
+    function buildSchemaName(fileName) {
         if (!fileName) {
             return DEFAULT_GRAPH_NAME;
         }
@@ -178,24 +184,23 @@
             lastDotIndex === -1
                 ? normalized
                 : normalized.substring(0, lastDotIndex);
-        const sanitized = baseName.replace(/\W/g, "_");
-        return sanitized.trim() ? sanitized : DEFAULT_GRAPH_NAME;
+        return baseName.trim() ? baseName : DEFAULT_GRAPH_NAME;
     }
 
-    function buildSchemaName(fileName) {
-        const sanitized = getSanitizedSchemaName(fileName);
-        return `${GRAPH_NAMESPACE_URI}${sanitized}`;
-    }
-
-    function ensureSchemaNamespaceUri(schemaName, fallbackName) {
-        const trimmed = schemaName?.trim();
-        if (!trimmed) {
-            return buildSchemaName(fallbackName);
+    /**
+     * What is wrong with the name a file is to be imported under. Two files of the upload may not
+     * share a name, but one may take the name of an existing schema: the backend then imports it
+     * under that name with a number appended.
+     */
+    function schemaNameViolations(index) {
+        const entry = files[index];
+        if (entry.isZip) {
+            return [];
         }
-        if (trimmed.includes("://")) {
-            return trimmed;
-        }
-        return `${GRAPH_NAMESPACE_URI}${trimmed}`;
+        const otherNames = files
+            .filter((other, idx) => idx !== index && !other.isZip)
+            .map(other => other.schemaName.trim());
+        return isInvalidSchemaName(entry.schemaName, otherNames);
     }
 
     function addFiles(newFiles, directoryNames = []) {
@@ -246,9 +251,7 @@
         const workspaceName = getUserInputWorkspaceName();
         const filesToImport = files.map(entry => entry.file);
         const schemaNames = files.map(entry =>
-            entry.isZip
-                ? ""
-                : ensureSchemaNamespaceUri(entry.schemaName, entry.file.name),
+            entry.isZip ? "" : entry.schemaName.trim(),
         );
 
         const currentProgress = new ImportProgress();
@@ -574,7 +577,7 @@
                             >
                                 <div class="flex-1">
                                     <input
-                                        id={`graph-uri-${index}`}
+                                        id={`graph-name-${index}`}
                                         class="border-border bg-window-background focus:border-blue ring-none w-full rounded border-2 p-2 text-sm outline-none"
                                         type="text"
                                         value={fileEntry.isZip
@@ -586,6 +589,10 @@
                                                 index,
                                                 event.target.value,
                                             )}
+                                    />
+                                    <ViolationMessages
+                                        violations={fileNameViolations[index] ??
+                                            []}
                                     />
                                 </div>
                                 <div

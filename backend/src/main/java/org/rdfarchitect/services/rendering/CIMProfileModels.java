@@ -67,8 +67,8 @@ public final class CIMProfileModels {
             ListGraphsUseCase listGraphsUseCase, String workspaceName) {
         var keywords = new HashMap<String, String>();
         for (var graph : listGraphsUseCase.listGraphs(workspaceName)) {
-            if (graph.getUri() != null) {
-                keywords.put(graph.getUri().toString(), graph.getKeyword());
+            if (graph.getName() != null) {
+                keywords.put(graph.getName(), graph.getKeyword());
             }
         }
         return keywords;

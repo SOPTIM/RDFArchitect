@@ -67,11 +67,7 @@ public class CustomDiagramsRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
             @RequestBody GraphFilter filter) {
         logger.info(
@@ -106,11 +102,7 @@ public class CustomDiagramsRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
             @Parameter(description = "DTO for the diagram to be replaced.") @RequestBody
                     CustomDiagramDTO diagram) {
@@ -143,11 +135,7 @@ public class CustomDiagramsRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId) {
         logger.info(
                 "Received DELETE request: \"/api/workspaces/{{}}/schemas/{{}}/diagrams/{{}}\" from \"{}\"",

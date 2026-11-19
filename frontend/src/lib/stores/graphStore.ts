@@ -129,7 +129,7 @@ function createGraphStore() {
             toastStore.error(
                 "Rename failed",
                 isConflict
-                    ? `A schema with the uri "${newSchemaName}" already exists.`
+                    ? `A schema named "${newSchemaName}" already exists.`
                     : `Could not rename schema "${oldSchemaName}".`,
             );
             return { error };
@@ -175,10 +175,7 @@ function createGraphStore() {
             const dsState = getWorkspaceState(s, workspaceName);
             if (!dsState) return s;
             const nextData =
-                dsState.data?.filter(g => {
-                    const uri = `${g.uri?.prefix ?? ""}${g.uri?.suffix ?? ""}`;
-                    return uri !== schemaName;
-                }) ?? null;
+                dsState.data?.filter(g => g.name !== schemaName) ?? null;
 
             return setWorkspaceState(s, workspaceName, {
                 ...dsState,

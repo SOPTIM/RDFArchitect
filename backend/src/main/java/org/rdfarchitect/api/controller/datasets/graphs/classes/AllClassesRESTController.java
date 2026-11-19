@@ -88,11 +88,7 @@ public class AllClassesRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                             required = true,
                             description =
@@ -153,11 +149,7 @@ public class AllClassesRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String workspaceName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String schemaName,
+            @Parameter(description = "The name of the schema.") @PathVariable String schemaName,
             @Parameter(description = "Whether to include external classes.")
                     @RequestParam(required = false, defaultValue = "false")
                     boolean includeExternalClasses) {

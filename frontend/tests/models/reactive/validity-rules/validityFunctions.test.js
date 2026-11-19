@@ -17,6 +17,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+    isInvalidSchemaName,
     isInvalidSuperClass,
     isManuallyEnteredConcreteStereotype,
 } from "../../../../src/lib/models/reactive/validity-rules/validityFunctions.js";
@@ -59,5 +60,65 @@ describe("isInvalidSuperClass", () => {
 
     it("flags anything that is neither a uuid nor a uri", () => {
         expect(isInvalidSuperClass("LimitSet")).toHaveLength(1);
+    });
+});
+
+describe("isInvalidSchemaName", () => {
+    const FORBIDDEN = [
+        'A schema name must not contain any of \\ / : * ? " < > | ; and must not be a name reserved by the file system',
+    ];
+
+    it.each(["my-profile", "Equipment Core", "a%b#c&d+e"])(
+        "accepts %j",
+        name => {
+            expect(isInvalidSchemaName(name, [])).toEqual([]);
+        },
+    );
+
+    it("ignores whitespace around the name", () => {
+        expect(isInvalidSchemaName("  Equipment  ", [])).toEqual([]);
+    });
+
+    it("flags an empty name", () => {
+        expect(isInvalidSchemaName("", [])).toEqual(["must not be empty"]);
+    });
+
+    it("flags a name of whitespace only", () => {
+        expect(isInvalidSchemaName("   ", [])).toEqual(["must not be empty"]);
+    });
+
+    it("flags a missing name", () => {
+        expect(isInvalidSchemaName(undefined, [])).toEqual([
+            "must not be empty",
+        ]);
+    });
+
+    it.each(["\\", "/", ":", "*", "?", '"', "<", ">", "|", ";"])(
+        "flags a name containing %j",
+        character => {
+            expect(isInvalidSchemaName(`a${character}b`, [])).toEqual(
+                FORBIDDEN,
+            );
+        },
+    );
+
+    it("flags a name the file system reserves", () => {
+        expect(isInvalidSchemaName("CON", [])).toEqual(FORBIDDEN);
+    });
+
+    it("flags a name another schema of the workspace already has", () => {
+        expect(isInvalidSchemaName("Equipment", ["Equipment"])).toEqual([
+            "A schema with this name already exists",
+        ]);
+    });
+
+    it("compares the trimmed name against the other schemas", () => {
+        expect(isInvalidSchemaName(" Equipment ", ["Equipment"])).toEqual([
+            "A schema with this name already exists",
+        ]);
+    });
+
+    it("accepts a name when there are no other schemas to compare against", () => {
+        expect(isInvalidSchemaName("Equipment", undefined)).toEqual([]);
     });
 });

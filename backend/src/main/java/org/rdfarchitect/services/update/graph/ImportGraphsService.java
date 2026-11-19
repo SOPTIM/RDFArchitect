@@ -28,9 +28,9 @@ import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.SchemaNames;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
-import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
@@ -514,8 +514,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     private static String importMessage(List<ParsedGraph> parsed) {
         return parsed.size() == 1
-                ? ChangeDescriptions.actionOn(
-                        "Imported", "schema", ChangeDescriptions.localName(parsed.getFirst().uri()))
+                ? ChangeDescriptions.actionOn("Imported", "schema", parsed.getFirst().uri())
                 : "Imported %d schemas".formatted(parsed.size());
     }
 
@@ -576,11 +575,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     }
 
     private String ensureUniqueSchemaName(String schemaName, Set<String> reservedSchemaNames) {
-        var candidate = schemaName;
-        int suffix = 1;
-        while (reservedSchemaNames.contains(candidate)) {
-            candidate = schemaName + "_" + suffix++;
-        }
+        var candidate = SchemaNames.unique(schemaName, reservedSchemaNames);
         reservedSchemaNames.add(candidate);
         return candidate;
     }
@@ -590,26 +585,17 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         var fileNamePath = Paths.get(name).getFileName();
         var lastPathSegment = fileNamePath == null ? FALL_BACK_NAME : fileNamePath.toString();
         var lastDotIndex = lastPathSegment.lastIndexOf(".");
-        var sanitized =
-                lastPathSegment
-                        .substring(0, lastDotIndex < 0 ? lastPathSegment.length() : lastDotIndex)
-                        .replaceAll("\\W", "_");
-
-        if (sanitized.isBlank()) {
-            sanitized = FALL_BACK_NAME;
-        }
-        return RDFA.GRAPH_URI + sanitized;
+        var baseName =
+                lastPathSegment.substring(
+                        0, lastDotIndex < 0 ? lastPathSegment.length() : lastDotIndex);
+        return baseName.isBlank() ? FALL_BACK_NAME : baseName;
     }
 
-    private String normalizeSchemaName(String requestedUri, String fallbackFileName) {
-        if (requestedUri == null || requestedUri.isBlank()) {
-            return buildSchemaNameFromFileName(fallbackFileName);
+    private String normalizeSchemaName(String requestedName, String fallbackFileName) {
+        if (requestedName == null || requestedName.isBlank()) {
+            return SchemaNames.validate(buildSchemaNameFromFileName(fallbackFileName));
         }
-        var trimmed = requestedUri.trim();
-        if (trimmed.contains("://")) {
-            return trimmed;
-        }
-        return RDFA.GRAPH_URI + trimmed;
+        return SchemaNames.validate(requestedName);
     }
 
     private boolean isZipFile(MultipartFile file) {
