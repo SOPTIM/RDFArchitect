@@ -5245,6 +5245,17 @@
         "operationId" : "startImport",
         "parameters" : [
           {
+            "description" : "Optional schema names, one per file. Defaults to the file names without extension.",
+            "in" : "query",
+            "name" : "schemaNames",
+            "schema" : {
+              "items" : {
+                "type" : "string"
+              },
+              "type" : "array"
+            }
+          },
+          {
             "description" : "The name/url of the inquirer.",
             "in" : "header",
             "name" : "Origin",
@@ -5261,18 +5272,6 @@
             "required" : true,
             "schema" : {
               "type" : "string"
-            }
-          },
-          {
-            "description" : "Optional schema names, one per file. Defaults to the file names without extension.",
-            "in" : "query",
-            "name" : "schemaNames",
-            "required" : false,
-            "schema" : {
-              "items" : {
-                "type" : "string"
-              },
-              "type" : "array"
             }
           }
         ],
