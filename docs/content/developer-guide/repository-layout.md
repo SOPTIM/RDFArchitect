@@ -42,7 +42,7 @@ sidebar_position: 2
 ├── docker/                   # Compose-based local stack (gateway + frontend + backend)
 ├── docs/                     # User-facing documentation (this site)
 ├── .github/                  # CI workflows, issue/PR templates, governance
-├── AGENTS.md                 # Rules for coding agents (CLAUDE.md imports it)
+├── AGENTS.md                 # Rules for coding agents (.claude/CLAUDE.md imports it)
 └── CHANGELOG.md              # Generated at release, Keep-a-Changelog style
 ```
 
