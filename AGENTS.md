@@ -73,7 +73,7 @@ These files are generated and MUST NOT be edited by hand. Where a command is giv
 
 Commits follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) and `.github/CONTRIBUTING.md`.
 
-- Commit messages and PR titles MUST use `<type>[optional scope][!]: <description> (#<pr>, RDFA-<id>, GH-<issue>)`. The PR title becomes the squash commit and the changelog entry.
+- Commit messages and PR titles MUST use `<type>[optional scope][!]: <description> (#<pr>, RDFA-<id>, GH-<issue>)`. Omit `#<pr>` while no PR exists. The PR title becomes the squash commit and the changelog entry.
 - The type MUST be one of `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `style`.
 - The description MUST start with a lowercase imperative verb, without a trailing period. It SHOULD be short and specific.
 - Commit bodies and PR descriptions SHOULD be limited to the relevant changes and written as bullet points, not prose.
