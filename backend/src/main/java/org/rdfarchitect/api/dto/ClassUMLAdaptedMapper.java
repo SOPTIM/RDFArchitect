@@ -47,20 +47,27 @@ public interface ClassUMLAdaptedMapper {
     @Mapping(target = "prefix", source = "uri.prefix")
     @Mapping(target = "label", source = "label.value")
     @Mapping(target = "comment", source = "comment.value")
+    @Mapping(target = "superClass", source = "superClasses")
     ClassUMLAdaptedDTO toDTO(CIMClassUMLAdapted cimClassUMLAdapted);
 
     List<ClassUMLAdaptedDTO> toDTOList(List<CIMClassUMLAdapted> cimClassList);
 
     @Mapping(target = "uri", source = ".")
     @Mapping(target = "graphUri", ignore = true)
+    @Mapping(target = "superClasses", source = "superClass")
     CIMClassUMLAdapted toCIMObject(ClassUMLAdaptedDTO dto);
 
     List<CIMClassUMLAdapted> toCIMObjectList(List<ClassUMLAdaptedDTO> dtoList);
 
-    default ClassUMLAdaptedDTO mapSuperClass(RDFSSubClassOf superClass) {
-        if (superClass == null) {
+    /**
+     * The first superclass only, because this DTO nests one superclass to carry a single lineage.
+     * The graph may hold several; see {@link #buildSuperClasses}.
+     */
+    default ClassUMLAdaptedDTO mapSuperClass(List<RDFSSubClassOf> superClasses) {
+        if (superClasses == null || superClasses.isEmpty()) {
             return null;
         }
+        var superClass = superClasses.getFirst();
         return ClassUMLAdaptedDTO.builder()
                 .prefix(superClass.getUri().getPrefix())
                 .label(superClass.getUri().getSuffix())
@@ -71,11 +78,18 @@ public interface ClassUMLAdaptedMapper {
         return new URI(dto.getPrefix() + dto.getLabel());
     }
 
-    default RDFSSubClassOf buildSuperClass(ClassUMLAdaptedDTO dto) {
+    /**
+     * The superclasses a saved class keeps, which is the one this DTO carries and no more. A class
+     * imported with several loses the others the first time it is saved, the same way a package
+     * loses its parent and an association its stereotypes.
+     */
+    default List<RDFSSubClassOf> buildSuperClasses(ClassUMLAdaptedDTO dto) {
         if (dto == null) {
-            return null;
+            return List.of();
         }
-        return new RDFSSubClassOf(
-                new URI(dto.getPrefix() + dto.getLabel()), new RDFSLabel(dto.getLabel(), "en"));
+        return List.of(
+                new RDFSSubClassOf(
+                        new URI(dto.getPrefix() + dto.getLabel()),
+                        new RDFSLabel(dto.getLabel(), "en")));
     }
 }

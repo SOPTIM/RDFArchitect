@@ -110,6 +110,7 @@ public class CIMObjectFetcher {
             var stereotypeQuery =
                     CIMQueries.getStereotypesQuery(prefixMapping, classUUID, graphURI).build();
             classObject.setStereotypes(fetchCIMStereotypeList(stereotypeQuery));
+            resolveSuperClassesForList(List.of(classObject));
         }
         return classObject;
     }
@@ -131,6 +132,7 @@ public class CIMObjectFetcher {
                 classObjectList.add(classObject);
             }
 
+            resolveSuperClassesForList(classObjectList);
             return resolveStereotypesForList(
                     classObjectList, CIMClass::getUuid, CIMClass::setStereotypes);
         }
@@ -153,11 +155,14 @@ public class CIMObjectFetcher {
     }
 
     /**
-     * * Resolves and sets the {@link CIMSStereotype CIMSStereotypes} for a list of objects in a
-     * single * batched query, instead of one query per object. * * @param objects The objects to
-     * resolve stereotypes for. * @param uuidExtractor Function to extract the UUID from an object.
-     * * @param stereotypeSetter Function to set the resolved stereotypes on an object. * @param <T>
-     * The type of object. * @return The given list of objects, with stereotypes set.
+     * Resolves and sets the {@link CIMSStereotype CIMSStereotypes} for a list of objects in a
+     * single batched query, instead of one query per object.
+     *
+     * @param objects The objects to resolve stereotypes for.
+     * @param uuidExtractor Function to extract the UUID from an object.
+     * @param stereotypeSetter Function to set the resolved stereotypes on an object.
+     * @param <T> The type of object.
+     * @return The given list of objects, with stereotypes set.
      */
     private <T> List<T> resolveStereotypesForList(
             List<T> objects,
@@ -196,6 +201,39 @@ public class CIMObjectFetcher {
                         .build();
         return executeQueryForList(
                 stereotypeQuery, CIMObjectFactory::createCIMStereotypeListsByUUID);
+    }
+
+    /**
+     * Resolves and sets the superclasses of a list of classes in a single batched query. A class
+     * may declare several, so they cannot be bound in the class query without multiplying its rows.
+     *
+     * @param classes The classes to resolve the superclasses of
+     * @return the given list, with superclasses set
+     */
+    public <T extends CIMClass> List<T> resolveSuperClassesForList(List<T> classes) {
+        var uuids =
+                classes.stream()
+                        .map(CIMClass::getUuid)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList();
+        if (uuids.isEmpty()) {
+            return classes;
+        }
+        var superClassQuery =
+                CIMQueries.getSuperClassesForUUIDsQuery(
+                                prefixMapping,
+                                uuids.stream().map(UUID::toString).toList(),
+                                graphURI)
+                        .build();
+        var superClassesByUUID =
+                executeQueryForList(superClassQuery, CIMObjectFactory::createSuperClassListsByUUID);
+        for (var cimClass : classes) {
+            cimClass.setSuperClasses(
+                    new ArrayList<>(
+                            superClassesByUUID.getOrDefault(cimClass.getUuid(), List.of())));
+        }
+        return classes;
     }
 
     /**

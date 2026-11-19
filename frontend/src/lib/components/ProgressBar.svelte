@@ -23,6 +23,9 @@
     let { label, percent, ariaLabel } = $props();
 
     let rounded = $derived(Math.round(Math.min(100, Math.max(0, percent))));
+    // A step that takes a while sits on the same percentage for seconds at a time, where a bar
+    // that only has a width reads as stuck rather than as working.
+    let working = $derived(rounded < 100);
 </script>
 
 <div class="mb-1 flex items-baseline justify-between gap-2">
@@ -43,7 +46,40 @@
     aria-label={ariaLabel}
 >
     <div
-        class="bg-blue h-full rounded transition-[width] duration-200 ease-out"
+        class="bg-blue relative h-full overflow-hidden rounded transition-[width] duration-200 ease-out"
         style={`width:${rounded}%`}
-    ></div>
+    >
+        {#if working}
+            <span class="sheen"></span>
+        {/if}
+    </div>
 </div>
+
+<style>
+    .sheen {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgb(255 255 255 / 0.5) 50%,
+            transparent 100%
+        );
+        animation: sheen 1.4s linear infinite;
+    }
+
+    @keyframes sheen {
+        from {
+            transform: translateX(-100%);
+        }
+        to {
+            transform: translateX(100%);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .sheen {
+            animation: none;
+        }
+    }
+</style>

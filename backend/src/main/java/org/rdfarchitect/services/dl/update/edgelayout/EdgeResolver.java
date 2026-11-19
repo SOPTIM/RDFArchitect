@@ -23,7 +23,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.dl.data.dto.relations.EdgeKey;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
-import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelReader;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMResource;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
@@ -61,7 +61,7 @@ public interface EdgeResolver {
      * @param model the graph the diagram belongs to
      * @return the resolver
      */
-    static EdgeResolver forGraph(ICIMModelFacade model) {
+    static EdgeResolver forGraph(ICIMModelReader model) {
         return classUUIDs -> {
             var edges = new LinkedHashMap<EdgeKey, String>();
             for (var classUUID : classUUIDs) {
@@ -75,7 +75,7 @@ public interface EdgeResolver {
     }
 
     /**
-     * Resolves edges of a diagram of a single graph, see {@link #forGraph(ICIMModelFacade)}.
+     * Resolves edges of a diagram of a single graph, see {@link #forGraph(ICIMModelReader)}.
      *
      * @param graphUri the URI of the graph
      * @param graph the graph the diagram belongs to

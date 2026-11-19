@@ -30,7 +30,6 @@ import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
-import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.ChangeDescriptions;
 import org.rdfarchitect.services.update.graph.ImportProgressListener.Outcome;
@@ -43,7 +42,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -72,7 +70,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             String datasetName,
             List<MultipartFile> files,
             List<String> graphUris,
-            ImportProgressListener listener) {
+            GraphImportListener listener) {
         var sources = planSources(files, graphUris);
         listener.planned(
                 sources.stream()
@@ -105,7 +103,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     private PrefixNegotiation negotiatePrefixes(
             String datasetName,
             List<PlannedSource> sources,
-            ImportProgressListener listener,
+            GraphImportListener listener,
             ImportResult result) {
         if (listener.isCancelled()) {
             return PrefixNegotiation.none();
@@ -131,7 +129,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     /** Reports the files the scan could not parse and returns where they sit in the plan. */
     private Set<Integer> failUnreadable(
-            List<ScanResult> scanned, ImportResult result, ImportProgressListener listener) {
+            List<ScanResult> scanned, ImportResult result, GraphImportListener listener) {
         var unreadableIndices = new HashSet<Integer>();
         for (var scanResult : scanned) {
             if (scanResult.scanned().readable()) {
@@ -355,7 +353,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             List<ParsedGraph> parsed,
             PlannedSource source,
             Set<String> reservedGraphUris,
-            ImportProgressListener listener,
+            GraphImportListener listener,
             PrefixNegotiation negotiation) {
         if (source.unreadableReason() != null) {
             failRemaining(result, source.plannedFiles(), listener, negotiation);
@@ -412,7 +410,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             PlannedFile plannedFile,
             MultipartFile file,
             Set<String> reservedGraphUris,
-            ImportProgressListener listener,
+            GraphImportListener listener,
             ResolvedPrefixes resolved) {
         if (listener.isCancelled()) {
             listener.finished(plannedFile.index(), Outcome.SKIPPED, null);
@@ -421,8 +419,8 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         listener.started(plannedFile.index());
         try {
             var graphUri =
-                    ensureUniqueGraphUri(
-                            normalizeGraphUri(
+                    GraphUris.ensureUnique(
+                            GraphUris.normalize(
                                     plannedFile.requestedGraphUri(), plannedFile.fileName()),
                             reservedGraphUris);
 
@@ -451,7 +449,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     private void failRemaining(
             ImportResult result,
             List<PlannedFile> plannedFiles,
-            ImportProgressListener listener,
+            GraphImportListener listener,
             PrefixNegotiation negotiation) {
         for (var plannedFile : plannedFiles) {
             if (negotiation.isUnreadable(plannedFile)) {
@@ -478,7 +476,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             String datasetName,
             List<ParsedGraph> parsed,
             ResolvedPrefixes resolved,
-            ImportProgressListener listener) {
+            GraphImportListener listener) {
         if (parsed.isEmpty()) {
             return;
         }
@@ -506,7 +504,11 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             result.importedGraphUris().add(graph.uri());
             if (!graph.undisplayableProperties().isEmpty()) {
                 result.warnings()
-                        .add(new ImportWarning(graph.fileName(), graph.undisplayableProperties()));
+                        .add(
+                                new ImportWarning(
+                                        graph.fileName(),
+                                        graph.uri(),
+                                        graph.undisplayableProperties()));
             }
             listener.finished(graph.index(), Outcome.IMPORTED, graph.uri());
         }
@@ -525,7 +527,11 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             Graph graph,
             int index,
             String fileName,
-            List<String> undisplayableProperties) {}
+            List<UncarriedItem> undisplayableProperties) {}
+
+    /** Why such a property stays invisible, which the warning carries as its reason. */
+    private static final String NOT_DISPLAYABLE =
+            "stored, but carries no CIM stereotype or association use";
 
     /**
      * Finds properties that are imported but will not be displayed in the editor. RDFArchitect only
@@ -535,18 +541,22 @@ public class ImportGraphsService implements ImportGraphsUseCase {
      * invisible, so we surface it as a warning instead of dropping it silently.
      *
      * @param graph the parsed graph to inspect
-     * @return the names (labels, falling back to URIs) of properties that will not be displayed
+     * @return one item per such property, each saying which it is and why it stays invisible
      */
-    private List<String> findUndisplayableProperties(Graph graph) {
+    private List<UncarriedItem> findUndisplayableProperties(Graph graph) {
         var model = ModelFactory.createModelForGraph(graph);
-        var undisplayableProperties = new ArrayList<String>();
+        var undisplayableProperties = new ArrayList<UncarriedItem>();
         model.listSubjectsWithProperty(RDF.type, RDF.Property)
                 .filterKeep(Resource::isURIResource)
                 .filterKeep(property -> property.hasProperty(RDFS.domain))
                 .filterDrop(
                         property -> property.hasProperty(CIMS.stereotype, CIMStereotypes.attribute))
                 .filterDrop(property -> property.hasProperty(CIMS.associationUsed))
-                .forEachRemaining(property -> undisplayableProperties.add(propertyName(property)));
+                .forEachRemaining(
+                        property ->
+                                undisplayableProperties.add(
+                                        new UncarriedItem(
+                                                propertyName(property), NOT_DISPLAYABLE)));
         return undisplayableProperties;
     }
 
@@ -573,43 +583,6 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                 .setGraphName(graphUri)
                 .build()
                 .graph();
-    }
-
-    private String ensureUniqueGraphUri(String graphUri, Set<String> reservedGraphUris) {
-        var candidate = graphUri;
-        int suffix = 1;
-        while (reservedGraphUris.contains(candidate)) {
-            candidate = graphUri + "_" + suffix++;
-        }
-        reservedGraphUris.add(candidate);
-        return candidate;
-    }
-
-    private String buildGraphUriFromFileName(String fileName) {
-        var name = Objects.requireNonNullElse(fileName, FALL_BACK_NAME);
-        var fileNamePath = Paths.get(name).getFileName();
-        var lastPathSegment = fileNamePath == null ? FALL_BACK_NAME : fileNamePath.toString();
-        var lastDotIndex = lastPathSegment.lastIndexOf(".");
-        var sanitized =
-                lastPathSegment
-                        .substring(0, lastDotIndex < 0 ? lastPathSegment.length() : lastDotIndex)
-                        .replaceAll("\\W", "_");
-
-        if (sanitized.isBlank()) {
-            sanitized = FALL_BACK_NAME;
-        }
-        return RDFA.GRAPH_URI + sanitized;
-    }
-
-    private String normalizeGraphUri(String requestedUri, String fallbackFileName) {
-        if (requestedUri == null || requestedUri.isBlank()) {
-            return buildGraphUriFromFileName(fallbackFileName);
-        }
-        var trimmed = requestedUri.trim();
-        if (trimmed.contains("://")) {
-            return trimmed;
-        }
-        return RDFA.GRAPH_URI + trimmed;
     }
 
     private boolean isZipFile(MultipartFile file) {

@@ -234,25 +234,24 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
         return attributeMermaidStrings;
     }
 
+    /** One arrow per superclass, because a class may declare several. */
     private void appendClassInheritance(RenderContext renderContext) {
         for (var cimClass : renderContext.cimCollection.getClasses()) {
-            if (cimClass.getSuperClass() == null) {
-                continue;
-            }
             var classUUID = renderContext.uriToUUIDMap.get(cimClass.getUri().toString());
-            var superClassUUID =
-                    renderContext.uriToUUIDMap.get(cimClass.getSuperClass().getUri().toString());
-            renderContext
-                    .mermaidString
-                    .append(TAB)
-                    .append("`")
-                    .append(classUUID)
-                    .append("`")
-                    .append(" --|> ")
-                    .append("`")
-                    .append(superClassUUID)
-                    .append("`")
-                    .append("\n");
+            for (var superClass : cimClass.getSuperClasses()) {
+                var superClassUUID = renderContext.uriToUUIDMap.get(superClass.getUri().toString());
+                renderContext
+                        .mermaidString
+                        .append(TAB)
+                        .append("`")
+                        .append(classUUID)
+                        .append("`")
+                        .append(" --|> ")
+                        .append("`")
+                        .append(superClassUUID)
+                        .append("`")
+                        .append("\n");
+            }
         }
     }
 

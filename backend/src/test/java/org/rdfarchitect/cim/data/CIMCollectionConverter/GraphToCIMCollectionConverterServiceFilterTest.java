@@ -194,8 +194,8 @@ class GraphToCIMCollectionConverterServiceFilterTest {
         var childClass = classIterator.next();
         var superClass = classIterator.next();
 
-        assertThat(childClass.getSuperClass()).isNull();
-        assertThat(superClass.getSuperClass()).isNull();
+        assertThat(childClass.getSuperClasses()).isEmpty();
+        assertThat(superClass.getSuperClasses()).isEmpty();
     }
 
     /** Creates a workspace and a graph in it, the way an upload does. */

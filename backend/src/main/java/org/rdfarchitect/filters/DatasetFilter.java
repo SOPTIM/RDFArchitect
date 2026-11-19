@@ -78,7 +78,7 @@ public class DatasetFilter implements Filter {
                         || uri.matches(PREFIX + "[^/]+/graphs/[^/]+/content"))) {
             return true;
         }
-        if (uri.matches(PREFIX + "[^/]+/graphs/content/imports(/.*)?")) {
+        if (uri.matches(PREFIX + "[^/]+/imports(/.*)?")) {
             return true;
         }
         var datasets = databasePort.listDatasets();

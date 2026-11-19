@@ -109,7 +109,7 @@ class ImportConcurrencyTest {
 
             var result =
                     importGraphs.importGraphs(
-                            WORKSPACE, List.of(file), null, ImportProgressListener.NOOP);
+                            WORKSPACE, List.of(file), null, GraphImportListener.NOOP);
 
             reader.join(10_000);
             assertThat(readFailure.get()).isNull();
@@ -150,7 +150,7 @@ class ImportConcurrencyTest {
             var file = new BlockingMultipartFile(TURTLE, null, null);
             var result =
                     importGraphs.importGraphs(
-                            WORKSPACE, List.of(file), null, ImportProgressListener.NOOP);
+                            WORKSPACE, List.of(file), null, GraphImportListener.NOOP);
 
             importFinished.countDown();
             reader.join(10_000);
@@ -171,7 +171,7 @@ class ImportConcurrencyTest {
                                 new BlockingMultipartFile(TURTLE, null, null),
                                 new BlockingMultipartFile(OTHER_TURTLE, null, null)),
                         List.of("http://example.org/one", "http://example.org/two"),
-                        ImportProgressListener.NOOP);
+                        GraphImportListener.NOOP);
 
         assertThat(result.importedGraphUris()).hasSize(2);
         assertThat(databasePort.listChanges(WORKSPACE))
@@ -192,7 +192,7 @@ class ImportConcurrencyTest {
                         new BlockingMultipartFile(TURTLE, null, null),
                         new BlockingMultipartFile(OTHER_TURTLE, null, null)),
                 List.of("http://example.org/one", "http://example.org/two"),
-                ImportProgressListener.NOOP);
+                GraphImportListener.NOOP);
 
         databasePort.undo(WORKSPACE);
 
