@@ -77,7 +77,7 @@
 <ActionDialog
     bind:showDialog
     title="Not everything could be imported"
-    primaryLabel="Close"
+    primaryLabel="Back"
     size="w-3/4"
 >
     <!-- Sized by what it holds, up to the point where the list scrolls instead of growing. A
