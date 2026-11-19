@@ -653,7 +653,10 @@ class RestoreVersionTest {
 
             assertThat(step.change().message())
                     .isEqualTo(
-                            "Restored schema \"a\" to the state after: created graph " + GRAPH_B);
+                            "Restored schema \""
+                                    + GRAPH_A
+                                    + "\" to the state after: created graph "
+                                    + GRAPH_B);
             assertThat(currentChange().changeId()).isEqualTo(step.change().changeId());
             assertThat(workspace.canRedo()).isFalse();
         }

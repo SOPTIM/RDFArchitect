@@ -514,8 +514,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     private static String importMessage(List<ParsedGraph> parsed) {
         return parsed.size() == 1
-                ? ChangeDescriptions.actionOn(
-                        "Imported", "schema", ChangeDescriptions.localName(parsed.getFirst().uri()))
+                ? ChangeDescriptions.actionOn("Imported", "schema", parsed.getFirst().uri())
                 : "Imported %d schemas".formatted(parsed.size());
     }
 
