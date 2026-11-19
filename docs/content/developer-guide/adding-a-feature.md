@@ -73,4 +73,4 @@ Vitest unit tests for any new logic in `lib/`. Manual smoke test through the UI;
 
 ## Step 8 — PR
 
-Follow the squash commit format and the pre-merge checklist in [`CONTRIBUTING.md`](https://github.com/SOPTIM/RDFArchitect/blob/main/.github/CONTRIBUTING.md). Update `CHANGELOG.md` under `## [Unreleased]` if the change is user-facing.
+Follow the squash commit format and the pre-merge checklist in [`CONTRIBUTING.md`](https://github.com/SOPTIM/RDFArchitect/blob/main/.github/CONTRIBUTING.md). The squash commit title becomes the changelog entry; do not edit `CHANGELOG.md` by hand.
