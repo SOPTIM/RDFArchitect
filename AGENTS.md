@@ -10,32 +10,30 @@ The backend follows a hexagonal architecture (`docs/content/developer-guide/back
 
 - Each new action MUST get its own `*UseCase` interface with one method, implemented by a service in the matching package under `services/`.
 - Controllers MUST depend only on use-case interfaces.
-- Data access MUST go through `DatabasePort` only.
 - New SPARQL queries MUST be separate files under `backend/src/main/resources/sparql-templates/`, loaded via `SparqlTemplateLoader`, not inline in Java.
 - Existing code has deviations (use cases with several methods, packages by operation, inline queries). New code MUST NOT copy them.
 
 ## Generated files
 
-These files MUST NOT be edited by hand. They MUST be regenerated with the given command when the trigger applies.
+These files are generated and MUST NOT be edited by hand. Where a command is given, run it when the trigger applies.
 
-- `CHANGELOG.md`: generated from squash commit titles by the `Update Changelog` workflow at release time. Never touch it.
-- `frontend/openapi.json`: after changing REST routes or DTOs, run `mvn exec:java@export-openapi` in `backend/` and commit the result; CI checks it.
+- `CHANGELOG.md`: generated from squash commit titles by the `Update Changelog` workflow at release time.
+- `frontend/openapi.json`: after changing REST routes or DTOs, run `mvn -B compile exec:java@export-openapi` in `backend/` and commit the result; CI checks it.
 - `frontend/src/lib/api/generated/`: after `frontend/openapi.json` changes, run `npm run api:generate` in `frontend/`.
-- `docs/content/reference/changelog.md`: synced automatically by `npm start` and `npm run build` in `docs/`.
 - `backend/LICENSES-THIRD-PARTY.md`: after changing dependencies in `backend/pom.xml`, run `mvn -B org.codehaus.mojo:license-maven-plugin:add-third-party` in `backend/`; CI checks it.
 - `frontend/LICENSES-THIRD-PARTY.md`: after changing dependencies in `frontend/package.json`, run `npm run licenses:generate` in `frontend/`; lint checks it.
 
 ## Code quality
 
 - Code and comments MUST be in English.
-- Code MUST NOT be duplicated. Existing helpers SHOULD be reused, and new code SHOULD be written to be reusable.
-- Readability and maintainability MUST take priority over brevity and cleverness.
+- Code SHOULD NOT be duplicated. Existing helpers SHOULD be reused, and new code SHOULD be written to be reusable.
+- Readability and maintainability SHOULD take priority over brevity and cleverness.
 
 ## Comments
 
 - Comments SHOULD only be added where the code is not self-explanatory. Use plain language and short sentences; bullet points are fine.
 - A comment MAY explain a non-obvious reason, such as a workaround or an external constraint.
-- Comments MUST NOT narrate the change, justify decisions, or refer to previous or other code ("previously …", "same as in X").
+- Comments MUST NOT narrate the change, justify decisions, or refer to previous code ("previously …").
 - Comments MUST NOT restate the code. If a comment would only repeat it, improve the name instead.
 - Comments MUST NOT contain ticket, PR or author references.
 - Commented-out code MUST NOT be committed. Delete unused code.
@@ -66,8 +64,8 @@ These files MUST NOT be edited by hand. They MUST be regenerated with the given 
 
 ## Tests and checks
 
-- Backend tests: `mvn -B test`, a single class with `mvn -B test -Dtest=<ClassName>`.
-- Frontend tests: `npm run test`, a single file with `npm run test -- <path>`.
+- Backend tests, in `backend/`: `mvn -B test`, a single class with `mvn -B test -Dtest=<ClassName>`.
+- Frontend tests, in `frontend/`: `npm run test`, a single file with `npm run test -- <path>`.
 - Before committing, run in `backend/`: `mvn -B spotless:apply`, then `mvn -B -Plint -DskipTests verify`.
 - Before committing, run in `frontend/`: `npm run format`, then `npm run lint`.
 
@@ -77,7 +75,7 @@ Commits follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/
 
 - Commit messages and PR titles MUST use `<type>[optional scope][!]: <description> (#<pr>, RDFA-<id>, GH-<issue>)`. The PR title becomes the squash commit and the changelog entry.
 - The type MUST be one of `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `style`.
-- The description MUST be imperative, lowercase and without a trailing period. It SHOULD be short and specific.
+- The description MUST start with a lowercase imperative verb, without a trailing period. It SHOULD be short and specific.
 - Commit bodies and PR descriptions SHOULD be limited to the relevant changes and written as bullet points, not prose.
-- Breaking changes MUST be marked with `!` in the header or `BREAKING CHANGE:` in the body.
+- Breaking changes MUST have `!` in the header; only these are listed under Breaking Changes in the changelog. A `BREAKING CHANGE:` footer MAY add details.
 - Every commit MUST be signed off (`git commit -s`) for the DCO.

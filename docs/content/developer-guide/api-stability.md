@@ -24,7 +24,7 @@ The version shown in the application is computed at build time from `git describ
 - Renaming a configuration property.
 - Anything that requires existing custom SHACL or stored data to be migrated.
 
-Mark such changes with `!` in the conventional-commit header (`feat(api)!: ...`) or `BREAKING CHANGE:` in the body. The changelog lists such commits under `### Breaking Changes`.
+Mark such changes with `!` in the conventional-commit header (`feat(api)!: ...`) or `BREAKING CHANGE:` in the body. Only commits with `!` in the header are listed under `### Breaking Changes`.
 
 ## What does *not* count as breaking?
 
