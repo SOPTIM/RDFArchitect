@@ -1,0 +1,108 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix cim:  <http://iec.ch/TC57/CIM100#> .
+@prefix rdfa: <https://rdf-architect.soptim.de#> .
+@prefix mrid: <urn:mrid:> .
+
+mrid:_a2f2ed4f-8ebc-3cbb-8c21-a29dc40ab61d a cim:DiagramObjectStyle ; cim:IdentifiedObject.name "class" .
+mrid:_a5ff356d-d42c-3b66-b0be-d24415c54159 a cim:DiagramObjectStyle ; cim:IdentifiedObject.name "multiplicity" .
+mrid:_af14b067-a480-3cdc-b58b-f5ba6908a3fb a cim:DiagramObjectStyle ; cim:IdentifiedObject.name "association" .
+mrid:_5fed3411-faf8-3217-8ef1-f040028b2c21 a cim:DiagramObjectStyle ; cim:IdentifiedObject.name "inheritance" .
+
+mrid:_00000000-0000-4000-8000-0000000000d1 a cim:Diagram ;
+    cim:IdentifiedObject.name "Package" ;
+    cim:Diagram.orientation cim:OrientationKind.negative .
+
+mrid:_00000000-0000-4000-8000-0000000000d2 a cim:Diagram ;
+    cim:IdentifiedObject.name "Custom" ;
+    cim:Diagram.orientation cim:OrientationKind.negative .
+
+mrid:_00000000-0000-4000-8000-0000000000c1 a cim:DiagramObject ;
+    cim:IdentifiedObject.name "Sub" ;
+    cim:DiagramObject.Diagram mrid:_00000000-0000-4000-8000-0000000000d1 ;
+    cim:DiagramObject.IdentifiedObject mrid:_00000000-0000-4000-8000-0000000000a1 ;
+    cim:DiagramObject.DiagramObjectStyle mrid:_a2f2ed4f-8ebc-3cbb-8c21-a29dc40ab61d .
+mrid:_00000000-0000-4000-8000-0000000000f1 a cim:DiagramObjectPoint ;
+    cim:DiagramObjectPoint.DiagramObject mrid:_00000000-0000-4000-8000-0000000000c1 ;
+    cim:DiagramObjectPoint.xPosition "10.0" ;
+    cim:DiagramObjectPoint.yPosition "20.0" ;
+    cim:DiagramObjectPoint.zPosition "1" ;
+    cim:DiagramObjectPoint.DiagramObjectGluePoint mrid:_00000000-0000-4000-8000-0000000000e1 .
+mrid:_00000000-0000-4000-8000-0000000000e1 a cim:DiagramObjectGluePoint .
+
+mrid:_00000000-0000-4000-8000-0000000000c2 a cim:DiagramObject ;
+    cim:IdentifiedObject.name "Super" ;
+    cim:DiagramObject.Diagram mrid:_00000000-0000-4000-8000-0000000000d1 ;
+    cim:DiagramObject.IdentifiedObject mrid:_00000000-0000-4000-8000-0000000000a2 ;
+    cim:DiagramObject.DiagramObjectStyle mrid:_a2f2ed4f-8ebc-3cbb-8c21-a29dc40ab61d .
+mrid:_00000000-0000-4000-8000-0000000000f2 a cim:DiagramObjectPoint ;
+    cim:DiagramObjectPoint.DiagramObject mrid:_00000000-0000-4000-8000-0000000000c2 ;
+    cim:DiagramObjectPoint.xPosition "300.0" ;
+    cim:DiagramObjectPoint.yPosition "20.0" ;
+    cim:DiagramObjectPoint.zPosition "2" ;
+    cim:DiagramObjectPoint.DiagramObjectGluePoint mrid:_00000000-0000-4000-8000-0000000000e2 .
+mrid:_00000000-0000-4000-8000-0000000000e2 a cim:DiagramObjectGluePoint .
+
+mrid:_00000000-0000-4000-8000-0000000000c3 a cim:DiagramObject ;
+    cim:IdentifiedObject.name "Target" ;
+    cim:DiagramObject.Diagram mrid:_00000000-0000-4000-8000-0000000000d1 ;
+    cim:DiagramObject.IdentifiedObject mrid:_00000000-0000-4000-8000-0000000000a3 ;
+    cim:DiagramObject.DiagramObjectStyle mrid:_a2f2ed4f-8ebc-3cbb-8c21-a29dc40ab61d .
+mrid:_00000000-0000-4000-8000-0000000000f3 a cim:DiagramObjectPoint ;
+    cim:DiagramObjectPoint.DiagramObject mrid:_00000000-0000-4000-8000-0000000000c3 ;
+    cim:DiagramObjectPoint.xPosition "10.0" ;
+    cim:DiagramObjectPoint.yPosition "300.0" ;
+    cim:DiagramObjectPoint.DiagramObjectGluePoint mrid:_00000000-0000-4000-8000-0000000000e3 .
+mrid:_00000000-0000-4000-8000-0000000000e3 a cim:DiagramObjectGluePoint .
+
+mrid:_00000000-0000-4000-8000-0000000000b1 a cim:DiagramObject ;
+    cim:IdentifiedObject.name "Sub Super" ;
+    cim:DiagramObject.Diagram mrid:_00000000-0000-4000-8000-0000000000d1 ;
+    cim:DiagramObject.IdentifiedObject mrid:_00000000-0000-4000-8000-0000000000a1 ;
+    rdfa:DiagramObject.otherClass mrid:_00000000-0000-4000-8000-0000000000a2 ;
+    cim:DiagramObject.DiagramObjectStyle mrid:_5fed3411-faf8-3217-8ef1-f040028b2c21 .
+mrid:_00000000-0000-4000-8000-000000000010 a cim:DiagramObjectPoint ;
+    cim:DiagramObjectPoint.DiagramObject mrid:_00000000-0000-4000-8000-0000000000b1 ;
+    cim:DiagramObjectPoint.xPosition "300.0" ;
+    cim:DiagramObjectPoint.yPosition "40.0" ;
+    cim:DiagramObjectPoint.sequenceNumber "10" ;
+    cim:DiagramObjectPoint.DiagramObjectGluePoint mrid:_00000000-0000-4000-8000-0000000000e2 .
+mrid:_00000000-0000-4000-8000-000000000000 a cim:DiagramObjectPoint ;
+    cim:DiagramObjectPoint.DiagramObject mrid:_00000000-0000-4000-8000-0000000000b1 ;
+    cim:DiagramObjectPoint.xPosition "60.0" ;
+    cim:DiagramObjectPoint.yPosition "40.0" ;
+    cim:DiagramObjectPoint.sequenceNumber "0" ;
+    cim:DiagramObjectPoint.DiagramObjectGluePoint mrid:_00000000-0000-4000-8000-0000000000e1 .
+mrid:_00000000-0000-4000-8000-000000000002 a cim:DiagramObjectPoint ;
+    cim:DiagramObjectPoint.DiagramObject mrid:_00000000-0000-4000-8000-0000000000b1 ;
+    cim:DiagramObjectPoint.xPosition "180.0" ;
+    cim:DiagramObjectPoint.yPosition "90.0" ;
+    cim:DiagramObjectPoint.sequenceNumber "2" .
+
+mrid:_00000000-0000-4000-8000-0000000000b2 a cim:DiagramObject ;
+    cim:IdentifiedObject.name "Sub Target" ;
+    cim:DiagramObject.Diagram mrid:_00000000-0000-4000-8000-0000000000d1 ;
+    cim:DiagramObject.IdentifiedObject mrid:_00000000-0000-4000-8000-0000000000a4 ;
+    rdfa:DiagramObject.otherClass mrid:_00000000-0000-4000-8000-0000000000a5 ;
+    cim:DiagramObject.DiagramObjectStyle mrid:_af14b067-a480-3cdc-b58b-f5ba6908a3fb .
+
+mrid:_00000000-0000-4000-8000-0000000000b3 a cim:DiagramObject ;
+    cim:IdentifiedObject.name "0..1" ;
+    cim:DiagramObject.Diagram mrid:_00000000-0000-4000-8000-0000000000d1 ;
+    cim:DiagramObject.IdentifiedObject mrid:_00000000-0000-4000-8000-0000000000a4 ;
+    cim:DiagramObject.DiagramObjectStyle mrid:_a5ff356d-d42c-3b66-b0be-d24415c54159 .
+mrid:_00000000-0000-4000-8000-0000000000f4 a cim:DiagramObjectPoint ;
+    cim:DiagramObjectPoint.DiagramObject mrid:_00000000-0000-4000-8000-0000000000b3 ;
+    cim:DiagramObjectPoint.xPosition "25.0" ;
+    cim:DiagramObjectPoint.yPosition "250.0" .
+
+mrid:_00000000-0000-4000-8000-0000000000c4 a cim:DiagramObject ;
+    cim:IdentifiedObject.name "Sub" ;
+    cim:DiagramObject.Diagram mrid:_00000000-0000-4000-8000-0000000000d2 ;
+    cim:DiagramObject.IdentifiedObject mrid:_00000000-0000-4000-8000-0000000000a1 ;
+    cim:DiagramObject.DiagramObjectStyle mrid:_a2f2ed4f-8ebc-3cbb-8c21-a29dc40ab61d .
+mrid:_00000000-0000-4000-8000-0000000000f5 a cim:DiagramObjectPoint ;
+    cim:DiagramObjectPoint.DiagramObject mrid:_00000000-0000-4000-8000-0000000000c4 ;
+    cim:DiagramObjectPoint.xPosition "0.0" ;
+    cim:DiagramObjectPoint.yPosition "0.0" ;
+    cim:DiagramObjectPoint.DiagramObjectGluePoint mrid:_00000000-0000-4000-8000-0000000000e4 .
+mrid:_00000000-0000-4000-8000-0000000000e4 a cim:DiagramObjectGluePoint .

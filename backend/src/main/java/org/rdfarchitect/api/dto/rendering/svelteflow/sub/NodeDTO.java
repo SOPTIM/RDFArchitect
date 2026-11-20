@@ -20,6 +20,8 @@ package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 import lombok.Builder;
 import lombok.Data;
 
+import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
+
 import java.util.UUID;
 
 /** DTO representing a SvelteFlow node. */
@@ -28,7 +30,7 @@ import java.util.UUID;
 public class NodeDTO {
 
     private UUID id;
-    private PositionDTO position;
+    private XYZPosition position;
     private String type;
     private NodeDataDTO data;
 }

@@ -39,9 +39,11 @@ Edit the ontology metadata block (title, version, conformsTo, keyword, license, 
 
 ### UML-style diagrams
 
-Diagrams render classes with full attribute and association detail, inheritance arrows, stereotypes, and cardinalities. SvelteFlow is the default renderer (pan/zoom/auto-layout); Mermaid is available as an alternative, for example for embedding in Markdown-based documentation.
+Diagrams render classes with full attribute and association detail, inheritance arrows, stereotypes, and cardinalities. Diagrams are rendered with SvelteFlow (pan/zoom/auto-layout). The Mermaid renderer is deprecated: it can still be switched on in the configuration, but it is no longer developed and lacks the newer diagram features, such as arranging edges.
 
-In the SvelteFlow diagram, classes, attributes, associations, enum entries, and the multiplicities and role names on association edges open their editors directly, without a detour through the class editor.
+In the SvelteFlow diagram, classes, attributes, associations, enum entries, the multiplicities and role names on association edges, and the edges themselves open their editors directly, without a detour through the class editor.
+
+Edges can be routed by hand with bend points, and their ends can be pinned to a place on the class border with docking points. Class positions, edge courses, and label positions are stored together with the schema in the Diagram Layout profile of CGMES (IEC 61970-453), so a diagram keeps its layout. Diagrams that have not been arranged yet are laid out automatically with ELK Layered from the Eclipse Layout Kernel.
 
 ### Visualise SHACL constraints on the class you are looking at
 

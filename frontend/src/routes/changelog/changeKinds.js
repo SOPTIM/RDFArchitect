@@ -32,7 +32,7 @@ const KINDS = {
     },
     dl: {
         label: "Layout",
-        description: "Where classes and edge labels sit on a diagram",
+        description: "Where classes, edge points and labels sit on a diagram",
     },
     diagrams: {
         label: "Diagrams",

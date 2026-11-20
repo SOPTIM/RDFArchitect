@@ -21,8 +21,8 @@ import lombok.experimental.UtilityClass;
 
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeLabelDTO;
-import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
 import org.rdfarchitect.dl.data.dto.relations.DiagramObjectStyle;
+import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher.LabelKey;
 
 import java.util.UUID;
@@ -103,7 +103,7 @@ public class SvelteFlowLabels {
                 .build();
     }
 
-    private PositionDTO positionFor(RenderingLayoutData layoutData, LabelKey key) {
+    private XYZPosition positionFor(RenderingLayoutData layoutData, LabelKey key) {
         if (layoutData == null || layoutData.getLabelLayoutingData() == null) {
             return null;
         }
@@ -111,9 +111,6 @@ public class SvelteFlowLabels {
         if (position == null) {
             return null;
         }
-        return PositionDTO.builder()
-                .x(position.getPosition().getX())
-                .y(position.getPosition().getY())
-                .build();
+        return position.getPosition();
     }
 }

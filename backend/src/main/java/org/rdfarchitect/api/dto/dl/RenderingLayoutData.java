@@ -21,6 +21,8 @@ import lombok.Builder;
 import lombok.Data;
 
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
+import org.rdfarchitect.dl.data.dto.relations.EdgeKey;
+import org.rdfarchitect.dl.queries.select.DLObjectFetcher.EdgePoints;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher.LabelKey;
 
 import java.util.Map;
@@ -37,4 +39,6 @@ public class RenderingLayoutData {
     Map<UUID, DiagramObjectPoint> classLayoutingData;
 
     Map<LabelKey, DiagramObjectPoint> labelLayoutingData;
+
+    Map<EdgeKey, EdgePoints> edgeLayoutingData;
 }
