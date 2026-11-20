@@ -26,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.services.snapshot.CreateSnapshotUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -34,6 +35,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@ConditionalOnBooleanProperty(name = "snapshots.enabled", matchIfMissing = true)
 @RequestMapping("api/snapshots")
 @RequiredArgsConstructor
 public class AllSnapshotsRESTController {

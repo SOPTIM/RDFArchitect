@@ -747,6 +747,24 @@ public class Workspace {
         }
     }
 
+    /**
+     * Returns the change the workspace stands on, see {@link HistoryPosition#currentChangeId()}, or
+     * {@code null} while another thread is writing to it. Does not wait for that write: an import
+     * holds the workspace for as long as it runs, and the answer would be out of date the moment
+     * the write commits anyway.
+     */
+    public UUID currentChangeId() {
+        var lock = rwLock.readLock();
+        if (!lock.tryLock()) {
+            return null;
+        }
+        try {
+            return historyPosition().currentChangeId();
+        } finally {
+            lock.unlock();
+        }
+    }
+
     /** Returns where the workspace stands in its history. */
     private HistoryPosition historyPosition() {
         var behind = changeLog.undoHistory();

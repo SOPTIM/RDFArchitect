@@ -20,22 +20,37 @@ package org.rdfarchitect.listeners;
 import jakarta.servlet.http.HttpSessionEvent;
 import jakarta.servlet.http.HttpSessionListener;
 
-import lombok.RequiredArgsConstructor;
-
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+/**
+ * Fills each new session with the workspaces kept in the external database. Does nothing where
+ * there is no such database ({@code database.enabled=false}), as in the desktop app.
+ */
 @Component
-@RequiredArgsConstructor
 public class DatasetSessionListener implements HttpSessionListener {
 
     private final DatabasePort databasePort;
     private final DatabaseConnection databaseConnection;
+    private final boolean databaseEnabled;
+
+    public DatasetSessionListener(
+            DatabasePort databasePort,
+            DatabaseConnection databaseConnection,
+            @Value("${database.enabled:true}") boolean databaseEnabled) {
+        this.databasePort = databasePort;
+        this.databaseConnection = databaseConnection;
+        this.databaseEnabled = databaseEnabled;
+    }
 
     @Override
     public void sessionCreated(HttpSessionEvent event) {
+        if (!databaseEnabled) {
+            return;
+        }
         SessionContext.setSessionId(event.getSession().getId());
         databasePort.fetchFromDatabase(databaseConnection);
         SessionContext.clear();

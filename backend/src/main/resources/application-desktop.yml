@@ -1,0 +1,29 @@
+# The desktop app: started by org.rdfarchitect.desktop.DesktopLauncher on the user's own machine,
+# which also chooses the port. The backend serves the user interface itself.
+server:
+  address: 127.0.0.1
+database:
+  enabled: false
+snapshots:
+  enabled: false
+frontend:
+  # The user interface comes from this backend, so no other origin may read its answers.
+  url: http://127.0.0.1
+spring:
+  main:
+    banner-mode: off
+  web:
+    resources:
+      # DesktopConfiguration serves the user interface instead of the default static locations.
+      add-mappings: false
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+desktop:
+  exit-when-closed: true
+  heartbeat-interval: 10s
+  client-timeout: 150s
+  close-grace: 15s
+  startup-timeout: 5m
