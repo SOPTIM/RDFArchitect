@@ -101,6 +101,16 @@ class WorkspaceFileLocationsTest {
     }
 
     @Test
+    void forgetsAFileReplacedByAnother() {
+        locations.remember("Draft", FILE, databasePort.currentChangeId("Draft"));
+
+        locations.forget("Draft");
+
+        assertThat(locations.locationOf("Draft")).isEmpty();
+        assertThat(locations.workspacesWithFile()).isEmpty();
+    }
+
+    @Test
     void keepsFilesPerSession() {
         locations.remember("Draft", FILE, databasePort.currentChangeId("Draft"));
 
