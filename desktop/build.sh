@@ -157,20 +157,24 @@ done
 # under a name of its own: jpackage puts it next to the app icon, which it names after the app,
 # and on a case-insensitive file system rdfarchitect.icns and RDFArchitect.icns are one file.
 write_file_association() {
-  local icon="$WORK/rdfa-workspace-file.${1##*.}"
-  cp "$1" "$icon"
   cat > "$WORK/rdfa-association.properties" <<EOF
 extension=rdfa
 mime-type=application/x-rdfarchitect-workspace
 description=RDFArchitect workspace
-icon=$icon
 EOF
+  if [[ -n "${1:-}" ]]; then
+    local icon="$WORK/rdfa-workspace-file.${1##*.}"
+    cp "$1" "$icon"
+    echo "icon=$icon" >> "$WORK/rdfa-association.properties"
+  fi
 }
 
 case "$os" in
   windows)
     common_options+=(--icon "$DESKTOP/icons/rdfarchitect.ico")
-    write_file_association "$DESKTOP/icons/rdfarchitect.ico"
+    # Without an icon of its own: jpackage 25 references the icon of a file association in the
+    # .msi without installing it, and light.exe stops with LGHT0094 (unresolved File symbol).
+    write_file_association
     installer_type=msi
     installer_options=(
       --win-menu --win-menu-group "$APP_NAME" --win-shortcut --win-shortcut-prompt
@@ -221,9 +225,8 @@ esac
 
 if $installer; then
   log "Installer ($installer_type)"
-  # Verbose, because the installer tools' own messages are only shown that way. The temporary
-  # files go into the build directory: the WiX Toolset failed to find the file association's
-  # icon in the user's temporary directory, which Windows runners name by its short 8.3 path.
+  # Verbose, because the installer tools' own messages are only shown that way; the temporary
+  # files are kept in the build directory for a look after a failure.
   "$JAVA_BIN/jpackage" --type "$installer_type" --dest "$WORK/installer" --verbose \
     --temp "$WORK/installer-temp" \
     "${common_options[@]}" "${installer_options[@]}"
