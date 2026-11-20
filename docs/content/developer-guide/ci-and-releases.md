@@ -35,7 +35,7 @@ JAVA_HOME=/path/to/jdk-25 desktop/build.sh              # portable archive in de
 JAVA_HOME=/path/to/jdk-25 desktop/build.sh --installer  # plus .msi, .dmg or .deb
 ```
 
-It builds the frontend, then the desktop jar with `mvn -Pdesktop package` (which copies `frontend/build` into the jar), trims a Java runtime with `jlink`, and packages both with `jpackage`. The `.msi` needs the WiX Toolset, the `.deb` needs `dpkg-deb` and `fakeroot`. On Windows run it from Git Bash.
+It builds the frontend, then the desktop jar with `mvn -Pdesktop package` (which copies `frontend/build` into the jar), trims a Java runtime with `jlink`, and packages both with `jpackage`. The `.msi` needs the WiX Toolset 3 on the path, the `.deb` needs `dpkg-deb` and `fakeroot`. On Windows run it from Git Bash. The installers register `.rdfa` files with the app (`--file-associations`); the launcher hands a file it is started with to the running app, which opens a window at `/mainpage?open=<id>`.
 
 To try the desktop mode during development without packaging, build the frontend and run the backend with the profile and the build directory:
 

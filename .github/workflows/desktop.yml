@@ -88,9 +88,11 @@ jobs:
           path: frontend/build
       - name: Resolve build metadata
         run: bash .github/scripts/resolve_version.sh >> "$GITHUB_ENV"
-      - name: Install packaging tools
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y fakeroot
+      - name: Put the WiX Toolset on the path
+        # Installed on the windows-2022 image, but not on the path, where jpackage looks for it.
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: if ($env:WIX) { Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $env:WIX "bin") }
       - name: Build portable app
         run: desktop/build.sh --skip-frontend --version "$APP_VERSION"
       - name: Build installer
