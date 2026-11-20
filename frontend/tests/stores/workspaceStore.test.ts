@@ -20,6 +20,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import * as api from "../../src/lib/api/generated";
 import { type CimPrefixPair } from "../../src/lib/api/generated";
+import { workspaceFiles } from "../../src/lib/desktop/workspaceFiles.js";
 import { toastStore } from "../../src/lib/eventhandling/toastStore.svelte.js";
 import { createWorkspaceStore } from "../../src/lib/stores/workspaceStore";
 
@@ -269,6 +270,32 @@ describe("WorkspaceStore", () => {
             expect(result.error).toBeNull();
             const state = get(store);
             expect(state.data).toBeNull(); // Data remains null, safely bypassed
+        });
+
+        test("forgets the file the workspace was saved to", async () => {
+            vi.mocked(api.deleteDataset).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
+            workspaceFiles.remember("workspaceA", { name: "A.rdfa" });
+
+            await store.remove("workspaceA");
+
+            // A workspace created under this name later must not be saved over that file.
+            expect(workspaceFiles.get("workspaceA")).toBeUndefined();
+        });
+
+        test("keeps the file when the workspace could not be deleted", async () => {
+            vi.mocked(api.deleteDataset).mockResolvedValue({
+                data: undefined,
+                error: new Error("server error"),
+            });
+            workspaceFiles.remember("workspaceA", { name: "A.rdfa" });
+
+            await store.remove("workspaceA");
+
+            expect(workspaceFiles.fileName("workspaceA")).toBe("A.rdfa");
+            workspaceFiles.forget("workspaceA");
         });
     });
 

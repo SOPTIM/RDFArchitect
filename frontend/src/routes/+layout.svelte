@@ -32,7 +32,17 @@
     import BrandLogo from "$lib/components/BrandLogo.svelte";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ToastContainer from "$lib/components/ToastContainer.svelte";
-    import { PUBLIC_EMBED_SESSION_HANDSHAKE } from "$lib/config/runtime";
+    import {
+        PUBLIC_DESKTOP,
+        PUBLIC_EMBED_SESSION_HANDSHAKE,
+        PUBLIC_SHARE_SNAPSHOT_ENABLED,
+    } from "$lib/config/runtime";
+    import {
+        refreshDesktopStatus,
+        startDesktopSession,
+    } from "$lib/desktop/desktopSession.svelte.js";
+    import DesktopStoppedOverlay from "$lib/desktop/DesktopStoppedOverlay.svelte";
+    import UnsavedIndicator from "$lib/desktop/UnsavedIndicator.svelte";
     import { isDialogOpen } from "$lib/dialog/openDialogs.js";
     import UndoConfirmDialog from "$lib/dialog/UndoConfirmDialog.svelte";
     import { installSessionHandshake } from "$lib/embedding/session-handshake.js";
@@ -100,15 +110,29 @@
         await fetchUndoRedo();
     });
 
+    // Imports upload with XMLHttpRequest, which the fetch interceptor does not see; they all end
+    // in a reload of the editor, after which the desktop app asks again what is unsaved.
+    $effect(() => {
+        forceReloadTrigger.subscribe();
+        void refreshDesktopStatus();
+    });
+
     onMount(() => {
         installBackendFetchInterceptor();
         probeBackendConnection();
-        loadSnapshot();
+        if (PUBLIC_SHARE_SNAPSHOT_ENABLED) {
+            loadSnapshot();
+        }
+        const stopDesktopSession = startDesktopSession();
         // Lets an embedding IDE read the workspaces of this very session; opt-in per deployment.
-        return installSessionHandshake({
+        const removeHandshake = installSessionHandshake({
             enabled: PUBLIC_EMBED_SESSION_HANDSHAKE,
             fetchSessionId: sessionId,
         });
+        return () => {
+            removeHandshake?.();
+            stopDesktopSession();
+        };
     });
 
     /** The backend session this browser is using, or null when it cannot be read. */
@@ -362,8 +386,13 @@
                 <!-- Right -->
                 <div class="w-1/3">
                     <div
-                        class="mr-2 ml-auto flex max-w-35 flex-1 justify-end space-x-2"
+                        class="mr-2 ml-auto flex max-w-80 flex-1 items-center justify-end space-x-2"
                     >
+                        {#if PUBLIC_DESKTOP}
+                            <UnsavedIndicator
+                                workspaceName={selectedWorkspace}
+                            />
+                        {/if}
                         {#if isWorkspaceReadOnly}
                             <ButtonControl
                                 callOnClick={requestEnableEditing}
@@ -382,6 +411,7 @@
         </div>
     </div>
     <ToastContainer />
+    <DesktopStoppedOverlay />
     <UndoConfirmDialog />
     <PasteClassesDialog />
 </Tooltip.Provider>

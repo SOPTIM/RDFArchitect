@@ -33,7 +33,9 @@
         PUBLIC_APP_VERSION,
         PUBLIC_COMMIT_SHA,
         PUBLIC_DEPLOYMENT_ENVIRONMENT,
+        PUBLIC_DESKTOP,
         PUBLIC_REPOSITORY_URL,
+        PUBLIC_SHARE_SNAPSHOT_ENABLED,
     } from "$lib/config/runtime";
 
     import { goto } from "$app/navigation";
@@ -140,14 +142,25 @@
                     Generate constraints and display them contextually.
                 </p>
             </div>
-            <div
-                class="bg-window-background border-border text-default-text rounded-lg border p-5 shadow-sm"
-            >
-                <h3 class="text-base font-semibold">Share</h3>
-                <p class="mt-2 text-sm opacity-80">
-                    Share snapshots to reproduce views.
-                </p>
-            </div>
+            {#if PUBLIC_DESKTOP}
+                <div
+                    class="bg-window-background border-border text-default-text rounded-lg border p-5 shadow-sm"
+                >
+                    <h3 class="text-base font-semibold">Local Files</h3>
+                    <p class="mt-2 text-sm opacity-80">
+                        Save workspaces as files and open them again later.
+                    </p>
+                </div>
+            {:else if PUBLIC_SHARE_SNAPSHOT_ENABLED}
+                <div
+                    class="bg-window-background border-border text-default-text rounded-lg border p-5 shadow-sm"
+                >
+                    <h3 class="text-base font-semibold">Share</h3>
+                    <p class="mt-2 text-sm opacity-80">
+                        Share snapshots to reproduce views.
+                    </p>
+                </div>
+            {/if}
         </div>
 
         <!-- Tips -->
@@ -167,10 +180,17 @@
                     • Keyboard shortcuts: Undo (Ctrl+Z) and Redo (Ctrl+Y) work
                     when editing.
                 </p>
-                <p>
-                    • Share current state via “Share Snapshot” in the menu to
-                    reproduce a view.
-                </p>
+                {#if PUBLIC_DESKTOP}
+                    <p>
+                        • Save a workspace with File → Save Workspace (Ctrl+S)
+                        and open it again with File → Open Workspace (Ctrl+O).
+                    </p>
+                {:else if PUBLIC_SHARE_SNAPSHOT_ENABLED}
+                    <p>
+                        • Share current state via “Share Snapshot” in the menu
+                        to reproduce a view.
+                    </p>
+                {/if}
                 <p>
                     • Import or export schemas from the menu to move data
                     between environments.
@@ -189,36 +209,57 @@
             <div
                 class="bg-window-background border-border text-default-text mt-3 rounded border p-4 text-sm shadow-sm"
             >
-                <ul class="list-disc space-y-2 pl-5">
-                    <li>
-                        <strong>Local development</strong>
-                        <ul class="mt-1 list-disc space-y-1 pl-5">
-                            <li>
-                                Editor data is kept only in the local backend
-                                during runtime. Restarting the backend clears
-                                the data.
-                            </li>
-                            <li>
-                                When you share a snapshot, the snapshot data is
-                                uploaded to Fuseki and persists there.
-                            </li>
-                        </ul>
-                    </li>
-                    <li>
-                        <strong>Deployment</strong>
-                        <ul class="mt-1 list-disc space-y-1 pl-5">
-                            <li>
-                                Session data is ephemeral and may be cleared
-                                after restarts or updates.
-                            </li>
-                            <li>
-                                When you share a snapshot, the snapshot data is
-                                uploaded to Fuseki and remains there. Currently
-                                snapshots cannot be deleted by the user.
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
+                {#if PUBLIC_DESKTOP}
+                    <ul class="list-disc space-y-2 pl-5">
+                        <li>
+                            Everything stays on this computer. RDFArchitect runs
+                            locally and is reachable from this computer only.
+                        </li>
+                        <li>
+                            Workspaces are kept in memory while RDFArchitect
+                            runs and are gone once its last window is closed.
+                            Save them as files to keep them; closing a window
+                            with unsaved changes asks first.
+                        </li>
+                    </ul>
+                {:else}
+                    <ul class="list-disc space-y-2 pl-5">
+                        <li>
+                            <strong>Local development</strong>
+                            <ul class="mt-1 list-disc space-y-1 pl-5">
+                                <li>
+                                    Editor data is kept only in the local
+                                    backend during runtime. Restarting the
+                                    backend clears the data.
+                                </li>
+                                {#if PUBLIC_SHARE_SNAPSHOT_ENABLED}
+                                    <li>
+                                        When you share a snapshot, the snapshot
+                                        data is uploaded to Fuseki and persists
+                                        there.
+                                    </li>
+                                {/if}
+                            </ul>
+                        </li>
+                        <li>
+                            <strong>Deployment</strong>
+                            <ul class="mt-1 list-disc space-y-1 pl-5">
+                                <li>
+                                    Session data is ephemeral and may be cleared
+                                    after restarts or updates.
+                                </li>
+                                {#if PUBLIC_SHARE_SNAPSHOT_ENABLED}
+                                    <li>
+                                        When you share a snapshot, the snapshot
+                                        data is uploaded to Fuseki and remains
+                                        there. Currently snapshots cannot be
+                                        deleted by the user.
+                                    </li>
+                                {/if}
+                            </ul>
+                        </li>
+                    </ul>
+                {/if}
             </div>
         </div>
     </div>
