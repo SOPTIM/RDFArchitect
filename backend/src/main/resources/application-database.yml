@@ -1,4 +1,9 @@
 database:
+  # false: there is no external triple store, so a new session starts without workspaces
+  enabled: true
   defaultDataset: default
   http:
     endpoint: http://localhost:3030
+snapshots:
+  # false: Share Snapshot is switched off and its endpoints are not registered
+  enabled: true

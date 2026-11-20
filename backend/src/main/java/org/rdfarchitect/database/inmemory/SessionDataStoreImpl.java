@@ -161,6 +161,11 @@ public class SessionDataStoreImpl implements SessionDataStore {
         return workspace(workspaceName).getChangeHistory();
     }
 
+    @Override
+    public UUID currentChangeId(String workspaceName) {
+        return workspace(workspaceName).currentChangeId();
+    }
+
     private Workspace workspace(String workspaceName) {
         var workspace = findWorkspace(workspaceName);
         if (workspace == null) {

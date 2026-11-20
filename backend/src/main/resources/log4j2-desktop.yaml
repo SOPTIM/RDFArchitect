@@ -1,0 +1,32 @@
+# Logging of the desktop app, selected by org.rdfarchitect.desktop.DesktopLauncher. Writes to the
+# app's data directory rather than to the working directory, which may not be writable there
+# (C:\Program Files) and is not where a user would look.
+Configuration:
+  Properties:
+    Property:
+      - name: "logDir"
+        value: "${sys:rdfarchitect.desktop.log-dir:-logs}"
+  Appenders:
+    Console:
+      name: "CONSOLE"
+      PatternLayout:
+        disableAnsi: false
+        pattern: "[%d] - %highlight{%-5level} - [%thread] %c{1.} - %msg%n%throwable"
+    RollingFile:
+      - name: "FILE"
+        fileName: "${logDir}/rdfarchitect.log"
+        filePattern: "${logDir}/rdfarchitect-%i.log"
+        PatternLayout:
+          pattern: "[%d{yyyy-MM-dd HH:mm:ss}] - %-5level - [%thread] %c{1.} - %msg%n%throwable"
+        DefaultRolloverStrategy:
+          max: 5
+        Policies:
+          OnStartupTriggeringPolicy: { }
+          SizeBasedTriggeringPolicy:
+            size: "10MB"
+  Loggers:
+    Root:
+      level: "INFO"
+      AppenderRef:
+        - ref: "CONSOLE"
+        - ref: "FILE"
