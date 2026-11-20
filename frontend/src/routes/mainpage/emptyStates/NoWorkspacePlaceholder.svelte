@@ -20,11 +20,14 @@
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
+    import { PUBLIC_DESKTOP } from "$lib/config/runtime";
 
     import NewWorkspaceDialog from "../../NewWorkspaceDialog.svelte";
+    import WorkspaceImportDialog from "../../WorkspaceImportDialog.svelte";
     import SchemaDropZone from "../SchemaDropZone.svelte";
 
     let showNewWorkspaceDialog = $state(false);
+    let showOpenWorkspaceDialog = $state(false);
 </script>
 
 <SchemaDropZone
@@ -33,18 +36,35 @@
 >
     <EmptyStateCard
         title="No workspace yet"
-        description="A workspace holds your schemas, packages and diagrams. Create one to get started."
+        description={PUBLIC_DESKTOP
+            ? "A workspace holds your schemas, packages and diagrams. Create one, or open one you saved before."
+            : "A workspace holds your schemas, packages and diagrams. Create one to get started."}
         icon={faDatabase}
     >
-        <div class="w-52">
-            <ButtonControl
-                callOnClick={() => (showNewWorkspaceDialog = true)}
-                height={9}
-            >
-                Create Workspace
-            </ButtonControl>
+        <div class="flex flex-col items-center gap-2">
+            <div class="w-52">
+                <ButtonControl
+                    callOnClick={() => (showNewWorkspaceDialog = true)}
+                    height={9}
+                >
+                    Create Workspace
+                </ButtonControl>
+            </div>
+            {#if PUBLIC_DESKTOP}
+                <div class="w-52">
+                    <ButtonControl
+                        callOnClick={() => (showOpenWorkspaceDialog = true)}
+                        height={9}
+                    >
+                        Open Workspace…
+                    </ButtonControl>
+                </div>
+            {/if}
         </div>
     </EmptyStateCard>
 </SchemaDropZone>
 
 <NewWorkspaceDialog bind:showDialog={showNewWorkspaceDialog} />
+{#if PUBLIC_DESKTOP}
+    <WorkspaceImportDialog bind:showDialog={showOpenWorkspaceDialog} />
+{/if}
