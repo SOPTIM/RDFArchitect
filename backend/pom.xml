@@ -469,18 +469,6 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
-            <version>4.1.2</version>
-            <exclusions>
-                <!-- HTTP/3 binaries for five platforms (12 MB); nothing here speaks HTTP/3. -->
-                <exclusion>
-                    <groupId>io.netty</groupId>
-                    <artifactId>netty-codec-native-quic</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-log4j2</artifactId>
         </dependency>
         <dependency>
