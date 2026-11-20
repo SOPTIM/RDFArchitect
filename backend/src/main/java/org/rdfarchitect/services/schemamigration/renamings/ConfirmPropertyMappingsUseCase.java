@@ -17,10 +17,11 @@
 
 package org.rdfarchitect.services.schemamigration.renamings;
 
-import org.rdfarchitect.api.dto.migration.PropertyOverview;
+import org.rdfarchitect.api.dto.migration.ClassPropertyMappings;
 
 import java.util.List;
 
-public interface GetPropertyRenamingsUseCase {
-    List<PropertyOverview> getPropertyRenamings();
+public interface ConfirmPropertyMappingsUseCase {
+
+    void confirmPropertyMappings(List<ClassPropertyMappings> classPropertyMappings);
 }

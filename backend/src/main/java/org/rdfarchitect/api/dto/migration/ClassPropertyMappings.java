@@ -19,7 +19,7 @@ package org.rdfarchitect.api.dto.migration;
 
 import lombok.Data;
 
-import org.rdfarchitect.models.changes.RenameCandidate;
+import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
@@ -27,9 +27,9 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
 import java.util.List;
 
 @Data
-public class PropertyRenamings {
+public class ClassPropertyMappings {
     String classLabel;
-    List<RenameCandidate<SemanticAttributeChange>> attributeRenames;
-    List<RenameCandidate<SemanticAssociationChange>> associationRenames;
-    List<RenameCandidate<SemanticEnumEntryChange>> enumEntryRenames;
+    List<ResourceMapping<SemanticAttributeChange>> attributeMappings;
+    List<ResourceMapping<SemanticAssociationChange>> associationMappings;
+    List<ResourceMapping<SemanticEnumEntryChange>> enumEntryMappings;
 }

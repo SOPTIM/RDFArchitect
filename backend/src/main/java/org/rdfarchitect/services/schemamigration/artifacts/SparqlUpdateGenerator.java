@@ -22,18 +22,22 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.datatypes.TypeMapper;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.update.UpdateRequest;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.context.MigrationSessionStore;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticPropertyChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.cim.queries.templates.SparqlTemplateLoader;
 import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -64,10 +68,10 @@ public class SparqlUpdateGenerator {
         }
 
         var subClasses = getClassHierarchy(classIri);
-        var result = new UpdateRequest();
+        var result = new StringBuilder();
 
         for (var subClass : subClasses) {
-            result.add(generateAddAttributeToSingleClassUpdate(attributeChange, subClass));
+            append(result, generateAddAttributeToSingleClassUpdate(attributeChange, subClass));
         }
 
         return result.toString();
@@ -113,10 +117,101 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateRenameAttributeUpdate(SemanticAttributeChange attributeChange) {
-        var pss = SparqlTemplateLoader.loadTemplate("migration/attribute-renamed");
-        pss.setIri("oldAttribute", attributeChange.getOldIRI());
-        pss.setIri("newAttribute", attributeChange.getIri());
+        var result = new StringBuilder();
+        for (var oldIri : attributeChange.getAllOldIRIs()) {
+            var pss = SparqlTemplateLoader.loadTemplate("migration/attribute-renamed");
+            pss.setIri("oldAttribute", oldIri);
+            pss.setIri("newAttribute", attributeChange.getIri());
+            append(result, pss.toString());
+        }
+        return result.toString();
+    }
+
+    private String generateRenamePropertyUpdate(SemanticPropertyChange propertyChange) {
+        return switch (propertyChange) {
+            case SemanticAttributeChange attribute -> generateRenameAttributeUpdate(attribute);
+            case SemanticAssociationChange association ->
+                    generateRenameAssociationUpdate(association);
+            case SemanticEnumEntryChange enumEntry -> generateRenameEnumEntryUpdate(enumEntry);
+            default ->
+                    throw new IllegalStateException(
+                            "Cannot rewrite a property of unknown kind: "
+                                    + propertyChange.getIri());
+        };
+    }
+
+    private String deleteFromClassesLosingProperty(
+            String oldPropertyIri,
+            Collection<String> keepingClasses,
+            Map<String, String> renamedClasses) {
+        var result = new StringBuilder();
+
+        for (var classIri : classesCarrying(oldPropertyIri)) {
+            var renamedTo = renamedClasses.get(classIri);
+            if (keepingClasses.contains(renamedTo != null ? renamedTo : classIri)) {
+                continue;
+            }
+
+            append(result, deletePropertyFromClass(oldPropertyIri, classIri));
+            if (renamedTo != null) {
+                // the class rename may have retyped the instances before this runs
+                append(result, deletePropertyFromClass(oldPropertyIri, renamedTo));
+            }
+        }
+        return result.toString();
+    }
+
+    private String deletePropertyFromClass(String propertyIri, String classIri) {
+        var pss = SparqlTemplateLoader.loadTemplate("migration/property-deleted");
+        pss.setIri("property", propertyIri);
+        pss.setIri("domain", classIri);
         return pss.toString();
+    }
+
+    private List<String> classesCarrying(String propertyIri) {
+        var originalSchema = migrationSessionStore.getContext().getOriginalSchema();
+        if (originalSchema == null) {
+            return List.of();
+        }
+
+        var model = ModelFactory.createModelForGraph(originalSchema);
+        var domain = model.getResource(propertyIri).getPropertyResourceValue(RDFS.domain);
+        return domain == null ? List.of() : hierarchyOf(domain);
+    }
+
+    public String generateMovePropertyUpdate(
+            SemanticPropertyChange propertyChange, Map<String, String> renamedClasses) {
+        var keepingClasses = getClassHierarchy(propertyChange.getDomain());
+
+        var result = new StringBuilder();
+        for (var oldIri : propertyChange.getAllOldIRIs()) {
+            append(result, deleteFromClassesLosingProperty(oldIri, keepingClasses, renamedClasses));
+        }
+        append(result, generateRenamePropertyUpdate(propertyChange));
+        return result.toString();
+    }
+
+    public <T extends SemanticPropertyChange> String generateSplitPropertyUpdate(
+            List<T> siblings, Map<String, String> renamedClasses) {
+        var oldProperty = siblings.getFirst().getOldIRI();
+        var result = new StringBuilder();
+        var keepingClasses = new HashSet<String>();
+        for (var sibling : siblings) {
+            var targetHierarchy = getClassHierarchy(sibling.getDomain());
+            keepingClasses.addAll(targetHierarchy);
+            for (var classIri : targetHierarchy) {
+                var pss = SparqlTemplateLoader.loadTemplate("migration/property-split");
+                pss.setIri("oldProperty", oldProperty);
+                pss.setIri("newProperty", sibling.getIri());
+                pss.setIri("domain", classIri);
+                append(result, pss.toString());
+            }
+        }
+        // a split rewrites per target, so there is no plain rewrite left to carry the rest
+        append(
+                result,
+                deleteFromClassesLosingProperty(oldProperty, keepingClasses, renamedClasses));
+        return result.toString();
     }
 
     public String generateDatatypeChangedUpdate(SemanticAttributeChange attributeChange) {
@@ -158,10 +253,14 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateRenameEnumEntryUpdate(SemanticEnumEntryChange enumEntryChange) {
-        var pss = SparqlTemplateLoader.loadTemplate("migration/enum-entry-renamed");
-        pss.setIri("oldEnumEntry", enumEntryChange.getOldIRI());
-        pss.setIri("newEnumEntry", enumEntryChange.getIri());
-        return pss.toString();
+        var result = new StringBuilder();
+        for (var oldIri : enumEntryChange.getAllOldIRIs()) {
+            var pss = SparqlTemplateLoader.loadTemplate("migration/enum-entry-renamed");
+            pss.setIri("oldEnumEntry", oldIri);
+            pss.setIri("newEnumEntry", enumEntryChange.getIri());
+            append(result, pss.toString());
+        }
+        return result.toString();
     }
 
     public String generateDeleteEnumEntryUpdate(SemanticEnumEntryChange enumEntryChange) {
@@ -179,14 +278,13 @@ public class SparqlUpdateGenerator {
         }
 
         var subClasses = getClassHierarchy(associationChange.getMapping());
-        var result = new UpdateRequest();
+        var result = new StringBuilder();
 
         for (var subClass : subClasses) {
-            result.add(generateAddAssociationToSingleClassUpdate(associationChange, subClass));
+            append(result, generateAddAssociationToSingleClassUpdate(associationChange, subClass));
         }
 
-        var updateString = result.toString();
-        return updateString.replace("<mapping>", associationChange.getMapping());
+        return result.toString();
     }
 
     public String generateAddAssociationToSingleClassUpdate(
@@ -205,10 +303,14 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateRenameAssociationUpdate(SemanticAssociationChange associationChange) {
-        var pss = SparqlTemplateLoader.loadTemplate("migration/association-renamed");
-        pss.setIri("oldAssociation", associationChange.getOldIRI());
-        pss.setIri("newAssociation", associationChange.getIri());
-        return pss.toString();
+        var result = new StringBuilder();
+        for (var oldIri : associationChange.getAllOldIRIs()) {
+            var pss = SparqlTemplateLoader.loadTemplate("migration/association-renamed");
+            pss.setIri("oldAssociation", oldIri);
+            pss.setIri("newAssociation", associationChange.getIri());
+            append(result, pss.toString());
+        }
+        return result.toString();
     }
 
     public String generateAssociationTargetChangeUpdate(
@@ -218,12 +320,15 @@ public class SparqlUpdateGenerator {
     }
 
     /**
-     * Whether the attribute is left without a default value. A required attribute may be waived on
-     * purpose when no default makes sense for it (RDFA-714), and then nothing is generated for it:
-     * the instances stay uninitialized instead of being filled with an invented value, and the
-     * existing ones keep the values they have. Without this guard the missing value would either
-     * end up in the script as an ill-typed empty literal or break generation altogether.
+     * Appends a single update to a multi-update script. The templates already carry the trailing
+     * {@code ;} that separates them, so the blocks only need to be concatenated.
      */
+    private void append(StringBuilder script, String update) {
+        if (!update.isBlank()) {
+            script.append(update);
+        }
+    }
+
     private boolean lacksDefaultValue(SemanticAttributeChange attributeChange) {
         return attributeChange.getDefaultValue() == null
                 || attributeChange.getDefaultValue().isBlank();
@@ -232,8 +337,11 @@ public class SparqlUpdateGenerator {
     private List<String> getClassHierarchy(String classIri) {
         var graph = migrationSessionStore.getContext().getUpdatedSchema();
         var model = ModelFactory.createModelForGraph(graph);
-        var classResource = model.getResource(classIri);
+        return hierarchyOf(model.getResource(classIri));
+    }
 
+    /** The class itself, if it can have instances at all, together with everything deriving. */
+    private List<String> hierarchyOf(Resource classResource) {
         var classHierarchy = CIMClassUtils.findDerivingClasses(classResource);
         if (CIMClassUtils.isInstantiableClass(classResource)) {
             classHierarchy.add(classResource);

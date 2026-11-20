@@ -1,0 +1,10 @@
+DELETE {
+    ?instance ?oldProperty ?value
+}
+INSERT {
+    ?instance ?newProperty ?value
+}
+WHERE {
+    ?instance ?oldProperty ?value .
+    ?instance a ?domain .
+};

@@ -25,7 +25,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import org.apache.jena.rdf.model.Resource;
-import org.rdfarchitect.models.changes.RenameCandidate;
+import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.triplechanges.TripleClassChange;
 
 import java.util.ArrayList;
@@ -50,15 +50,15 @@ public final class SemanticClassChange extends SemanticResourceChange {
     @Builder.Default private List<SemanticEnumEntryChange> enumEntries = new ArrayList<>();
 
     @Builder.Default
-    private List<RenameCandidate<SemanticAttributeChange>> attributeRenameCandidates =
+    private List<ResourceMapping<SemanticAttributeChange>> attributeResourceMappings =
             new ArrayList<>();
 
     @Builder.Default
-    private List<RenameCandidate<SemanticAssociationChange>> associationRenameCandidates =
+    private List<ResourceMapping<SemanticAssociationChange>> associationResourceMappings =
             new ArrayList<>();
 
     @Builder.Default
-    private List<RenameCandidate<SemanticEnumEntryChange>> enumEntryRenameCandidates =
+    private List<ResourceMapping<SemanticEnumEntryChange>> enumEntryResourceMappings =
             new ArrayList<>();
 
     public SemanticClassChange(TripleClassChange tripleChange) {
@@ -66,9 +66,9 @@ public final class SemanticClassChange extends SemanticResourceChange {
         this.attributes = new ArrayList<>();
         this.associations = new ArrayList<>();
         this.enumEntries = new ArrayList<>();
-        this.attributeRenameCandidates = new ArrayList<>();
-        this.associationRenameCandidates = new ArrayList<>();
-        this.enumEntryRenameCandidates = new ArrayList<>();
+        this.attributeResourceMappings = new ArrayList<>();
+        this.associationResourceMappings = new ArrayList<>();
+        this.enumEntryResourceMappings = new ArrayList<>();
     }
 
     public SemanticClassChange(SemanticClassChange other) {
@@ -85,9 +85,9 @@ public final class SemanticClassChange extends SemanticResourceChange {
                 other.enumEntries.stream()
                         .map(SemanticEnumEntryChange::copy)
                         .collect(Collectors.toCollection(ArrayList::new));
-        this.attributeRenameCandidates = new ArrayList<>(other.attributeRenameCandidates);
-        this.associationRenameCandidates = new ArrayList<>(other.associationRenameCandidates);
-        this.enumEntryRenameCandidates = new ArrayList<>(other.enumEntryRenameCandidates);
+        this.attributeResourceMappings = new ArrayList<>(other.attributeResourceMappings);
+        this.associationResourceMappings = new ArrayList<>(other.associationResourceMappings);
+        this.enumEntryResourceMappings = new ArrayList<>(other.enumEntryResourceMappings);
     }
 
     public SemanticClassChange(Resource resource, SemanticResourceChangeType changeType) {
@@ -95,9 +95,9 @@ public final class SemanticClassChange extends SemanticResourceChange {
         this.attributes = new ArrayList<>();
         this.associations = new ArrayList<>();
         this.enumEntries = new ArrayList<>();
-        this.attributeRenameCandidates = new ArrayList<>();
-        this.associationRenameCandidates = new ArrayList<>();
-        this.enumEntryRenameCandidates = new ArrayList<>();
+        this.attributeResourceMappings = new ArrayList<>();
+        this.associationResourceMappings = new ArrayList<>();
+        this.enumEntryResourceMappings = new ArrayList<>();
     }
 
     @Override
