@@ -51,6 +51,21 @@ class DesktopLauncherTest {
     }
 
     @Test
+    void keepsTheDisplayWhereThereIsOne() {
+        assertThat(DesktopLauncher.hasDisplay(OperatingSystem.WINDOWS, Map.of())).isTrue();
+        assertThat(DesktopLauncher.hasDisplay(OperatingSystem.MAC, Map.of())).isTrue();
+        assertThat(DesktopLauncher.hasDisplay(OperatingSystem.LINUX, Map.of("DISPLAY", ":0")))
+                .isTrue();
+        assertThat(
+                        DesktopLauncher.hasDisplay(
+                                OperatingSystem.LINUX, Map.of("WAYLAND_DISPLAY", "wayland-0")))
+                .isTrue();
+        assertThat(DesktopLauncher.hasDisplay(OperatingSystem.LINUX, Map.of())).isFalse();
+        assertThat(DesktopLauncher.hasDisplay(OperatingSystem.LINUX, Map.of("DISPLAY", " ")))
+                .isFalse();
+    }
+
+    @Test
     void recognisesAPortTakenWhileStartingUp() {
         var wrapped =
                 new ApplicationContextException(

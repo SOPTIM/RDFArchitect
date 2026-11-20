@@ -34,6 +34,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.function.Consumer;
@@ -146,6 +147,9 @@ public final class DesktopLauncher {
 
         var application = new SpringApplication(Launcher.class);
         application.setAdditionalProfiles("desktop");
+        // Spring makes the JVM headless by default, after which the splash screen can no longer be
+        // closed and stays up until the app ends.
+        application.setHeadless(!hasDisplay(OperatingSystem.current(), System.getenv()));
         ConfigurableApplicationContext context;
         try {
             context = application.run(springArguments(options, port, dataDirectory));
@@ -213,6 +217,18 @@ public final class DesktopLauncher {
             root = root.getCause();
         }
         return root.getMessage() != null ? root.getMessage() : root.toString();
+    }
+
+    /** Whether there is a display to show the splash screen and dialogs on. */
+    static boolean hasDisplay(OperatingSystem os, Map<String, String> env) {
+        if (os != OperatingSystem.LINUX) {
+            return true;
+        }
+        return isSet(env.get("DISPLAY")) || isSet(env.get("WAYLAND_DISPLAY"));
+    }
+
+    private static boolean isSet(String value) {
+        return value != null && !value.isBlank();
     }
 
     static boolean isPortInUse(Throwable failure) {
