@@ -153,13 +153,17 @@ for option in "${JAVA_OPTIONS[@]}"; do
   common_options+=(--java-options "$option")
 done
 
-# Installers register .rdfa files: double-clicking one opens it in the app.
+# Installers register .rdfa files: double-clicking one opens it in the app. The icon is copied
+# under a name of its own: jpackage puts it next to the app icon, which it names after the app,
+# and on a case-insensitive file system rdfarchitect.icns and RDFArchitect.icns are one file.
 write_file_association() {
+  local icon="$WORK/rdfa-workspace-file.${1##*.}"
+  cp "$1" "$icon"
   cat > "$WORK/rdfa-association.properties" <<EOF
 extension=rdfa
 mime-type=application/x-rdfarchitect-workspace
 description=RDFArchitect workspace
-icon=$1
+icon=$icon
 EOF
 }
 
@@ -217,7 +221,8 @@ esac
 
 if $installer; then
   log "Installer ($installer_type)"
-  "$JAVA_BIN/jpackage" --type "$installer_type" --dest "$WORK/installer" \
+  # Verbose, because the installer tools' own messages are only shown that way.
+  "$JAVA_BIN/jpackage" --type "$installer_type" --dest "$WORK/installer" --verbose \
     "${common_options[@]}" "${installer_options[@]}"
   for file in "$WORK/installer"/*; do
     extension="${file##*.}"
