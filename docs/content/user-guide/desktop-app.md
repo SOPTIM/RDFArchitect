@@ -38,6 +38,8 @@ The desktop app keeps your workspaces in memory while it runs, like the server k
 
 Saving to the same file again works where the browser can write files, which Chrome, Edge and Brave can. In other browsers every save downloads the file into your downloads folder.
 
+With RDFArchitect installed from the installer, double-clicking a `.rdfa` file opens it: RDFArchitect starts if it is not running, and a window shows the file in **Open Workspace**. **File → Save Workspace** then writes back to that file, in every browser. The portable archives do not register `.rdfa` files; start RDFArchitect with the file as argument instead, for example `RDFArchitect.exe model.rdfa`.
+
 While the workspace you are working on has changes that are not saved yet, the toolbar shows **Unsaved**; clicking it saves. Undoing back to where you saved makes the workspace saved again. A workspace without any schema is never reported as unsaved.
 
 ## Closing
@@ -71,6 +73,7 @@ The app can be started from a terminal with options, for example `RDFArchitect -
 | `--port=17407` | `RDFARCHITECT_PORT` | Port on `127.0.0.1` (default `17407`). When it is taken, any free port is used. `0` always picks a free one. |
 | `--data-dir=<dir>` | `RDFARCHITECT_DATA_DIR` | Where to keep logs and the window's browser profile. |
 | `--help` | | Lists the options. |
+| `<file>.rdfa` | | Workspace files to open. |
 
 Any backend setting can be given as `--<property>=<value>` as well, for example `--desktop.exit-when-closed=false` to keep RDFArchitect running without a window.
 
