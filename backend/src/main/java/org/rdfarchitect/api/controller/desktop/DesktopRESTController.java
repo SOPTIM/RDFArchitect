@@ -312,6 +312,8 @@ public class DesktopRESTController {
     public void saved(
             @PathVariable String workspaceName,
             @RequestBody(required = false) SavedVersionDTO savedVersion) {
+        // The browser wrote or read a file of its own choosing, which is the workspace's file now.
+        fileLocations.forget(workspaceName);
         if (savedVersion != null && savedVersion.getVersion() != null) {
             savedWorkspaces.markSaved(workspaceName, savedVersion.getVersion());
             return;

@@ -214,6 +214,12 @@ class DesktopApplicationTest {
         assertThat(send("POST", "/api/desktop/workspaces/Handed/file", null).statusCode())
                 .isEqualTo(204);
         assertThat(Files.size(onDisk)).isGreaterThan(100);
+
+        // Saved elsewhere by the browser: that file is the workspace's file from now on.
+        assertThat(send("PUT", "/api/desktop/workspaces/Handed/saved", null).statusCode())
+                .isEqualTo(204);
+        assertThat(send("POST", "/api/desktop/workspaces/Handed/file", null).statusCode())
+                .isEqualTo(409);
     }
 
     @Test

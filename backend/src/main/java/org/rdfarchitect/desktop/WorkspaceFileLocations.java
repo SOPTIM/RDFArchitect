@@ -56,6 +56,11 @@ public class WorkspaceFileLocations {
         locations.put(key(workspaceName), new Location(path, version));
     }
 
+    /** Forgets the file of the workspace, which was saved to or opened from another one. */
+    public void forget(String workspaceName) {
+        locations.remove(key(workspaceName));
+    }
+
     /** Returns the file of the workspace, if it has one that still belongs to it. */
     public Optional<Path> locationOf(String workspaceName) {
         var key = key(workspaceName);
