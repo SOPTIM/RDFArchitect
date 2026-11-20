@@ -19,10 +19,12 @@
 # app needs, and the app itself, packed as a portable archive and optionally as an installer.
 #
 # Usage: desktop/build.sh [options]
-#   --version <v>      version to build, default: from git (.github/scripts/resolve_version.sh)
-#   --installer        also build the installer: .msi on Windows, .dmg on macOS, .deb on Linux
-#   --skip-frontend    use the existing frontend/build
-#   --skip-backend     use the existing backend/target/rdfarchitect-desktop.jar
+#   --version <v>           version to build, default: from git (.github/scripts/resolve_version.sh)
+#   --installer             also build the installer: .msi on Windows, .dmg on macOS, .deb on Linux
+#   --skip-frontend         use the existing frontend/build
+#   --skip-backend          use the existing backend/target/rdfarchitect-desktop.jar
+#   --installer-from <dir>  Windows only: build just the .msi, from the app in <dir>, an unpacked
+#                           portable archive whose RDFArchitect.exe was signed meanwhile
 #
 # Needs a JDK 25 or newer (JAVA_HOME, with jlink and jpackage), Maven, and Node.js 24 with npm.
 # The .msi needs the WiX Toolset; the .deb needs dpkg-deb and fakeroot.
@@ -50,15 +52,17 @@ JAVA_OPTIONS=('-XX:MaxRAMPercentage=50' '-splash:$APPDIR/splash.png')
 
 version=""
 installer=false
+installer_from=""
 build_frontend=true
 build_backend=true
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --version) version="$2"; shift 2 ;;
     --installer) installer=true; shift ;;
+    --installer-from) installer_from="$2"; installer=true; shift 2 ;;
     --skip-frontend) build_frontend=false; shift ;;
     --skip-backend) build_backend=false; shift ;;
-    -h|--help) sed -n '17,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '17,32p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -104,6 +108,19 @@ artifact="$APP_NAME-$version-$os-$arch"
 
 log "Building $APP_NAME $version ($numeric_version) for $os-$arch"
 
+if [[ -n "$installer_from" ]]; then
+  if [[ "$os" != windows ]]; then
+    echo "--installer-from builds the Windows installer only." >&2
+    exit 2
+  fi
+  installer_from="$(cd "$installer_from" && pwd)"
+  case "$installer_from/" in
+    "$WORK"/*) echo "--installer-from must not be inside $WORK, which is cleared." >&2; exit 2 ;;
+  esac
+  build_frontend=false
+  build_backend=false
+fi
+
 if $build_frontend; then
   log "Frontend"
   (
@@ -121,37 +138,17 @@ if $build_backend; then
     mvn -B -Pdesktop clean package -DskipTests -Ddesktop.version="$version"
   )
 fi
-JAR="$ROOT/backend/target/rdfarchitect-desktop.jar"
-if [[ ! -f "$JAR" ]]; then
-  echo "Missing $JAR" >&2
-  exit 1
-fi
 
-rm -rf "$WORK" && mkdir -p "$WORK/input" "$DIST"
-cp "$JAR" "$WORK/input/rdfarchitect-desktop.jar"
-cp "$DESKTOP/icons/splash.png" "$WORK/input/splash.png"
+rm -rf "$WORK" && mkdir -p "$WORK" "$DIST"
 
-log "Java runtime"
-"$JAVA_BIN/jlink" \
-  --add-modules "$JAVA_MODULES" \
-  --include-locales=en,de \
-  --strip-debug --no-header-files --no-man-pages \
-  --compress=zip-6 \
-  --output "$WORK/runtime"
-
-common_options=(
+# What describes the app wherever jpackage builds something: the app itself or an installer.
+package_options=(
   --name "$APP_NAME"
   --app-version "$numeric_version"
   --vendor "$VENDOR"
   --description "$DESCRIPTION"
   --copyright "$COPYRIGHT"
-  --input "$WORK/input"
-  --main-jar rdfarchitect-desktop.jar
-  --runtime-image "$WORK/runtime"
 )
-for option in "${JAVA_OPTIONS[@]}"; do
-  common_options+=(--java-options "$option")
-done
 
 # Installers register .rdfa files: double-clicking one opens it in the app. The icon is copied
 # under a name of its own: jpackage puts it next to the app icon, which it names after the app,
@@ -171,7 +168,7 @@ EOF
 
 case "$os" in
   windows)
-    common_options+=(--icon "$DESKTOP/icons/rdfarchitect.ico")
+    package_options+=(--icon "$DESKTOP/icons/rdfarchitect.ico")
     # Without an icon of its own: jpackage 25 references the icon of a file association in the
     # .msi without installing it, and light.exe stops with LGHT0094 (unresolved File symbol).
     write_file_association
@@ -183,7 +180,7 @@ case "$os" in
     )
     ;;
   mac)
-    common_options+=(
+    package_options+=(
       --icon "$DESKTOP/icons/rdfarchitect.icns"
       --mac-package-identifier de.soptim.rdfarchitect
       --mac-package-name "$APP_NAME"
@@ -195,7 +192,7 @@ case "$os" in
     )
     ;;
   linux)
-    common_options+=(--icon "$DESKTOP/icons/rdfarchitect.png")
+    package_options+=(--icon "$DESKTOP/icons/rdfarchitect.png")
     write_file_association "$DESKTOP/icons/rdfarchitect.png"
     installer_type=deb
     installer_options=(
@@ -206,30 +203,72 @@ case "$os" in
     ;;
 esac
 
-log "App image"
-"$JAVA_BIN/jpackage" --type app-image --dest "$WORK/image" "${common_options[@]}"
+if [[ -z "$installer_from" ]]; then
+  JAR="$ROOT/backend/target/rdfarchitect-desktop.jar"
+  if [[ ! -f "$JAR" ]]; then
+    echo "Missing $JAR" >&2
+    exit 1
+  fi
+  mkdir -p "$WORK/input"
+  cp "$JAR" "$WORK/input/rdfarchitect-desktop.jar"
+  cp "$DESKTOP/icons/splash.png" "$WORK/input/splash.png"
 
-log "Portable archive"
-case "$os" in
-  windows)
-    # The JDK's own jar tool, so no zip program is needed; M leaves out the manifest.
-    (cd "$WORK/image" && "$JAVA_BIN/jar" -cfM "$DIST/$artifact.zip" "$APP_NAME")
-    ;;
-  mac)
-    ditto -c -k --keepParent "$WORK/image/$APP_NAME.app" "$DIST/$artifact.zip"
-    ;;
-  linux)
-    tar -C "$WORK/image" -czf "$DIST/$artifact.tar.gz" "$APP_NAME"
-    ;;
-esac
+  log "Java runtime"
+  "$JAVA_BIN/jlink" \
+    --add-modules "$JAVA_MODULES" \
+    --include-locales=en,de \
+    --strip-debug --no-header-files --no-man-pages \
+    --compress=zip-6 \
+    --output "$WORK/runtime"
+
+  # What only the app itself is built from; an installer made from an app takes it from there.
+  launcher_options=(
+    --input "$WORK/input"
+    --main-jar rdfarchitect-desktop.jar
+    --runtime-image "$WORK/runtime"
+  )
+  for option in "${JAVA_OPTIONS[@]}"; do
+    launcher_options+=(--java-options "$option")
+  done
+
+  log "App image"
+  "$JAVA_BIN/jpackage" --type app-image --dest "$WORK/image" \
+    "${package_options[@]}" "${launcher_options[@]}"
+
+  log "Portable archive"
+  case "$os" in
+    windows)
+      # The JDK's own jar tool, so no zip program is needed; M leaves out the manifest.
+      (cd "$WORK/image" && "$JAVA_BIN/jar" -cfM "$DIST/$artifact.zip" "$APP_NAME")
+      ;;
+    mac)
+      ditto -c -k --keepParent "$WORK/image/$APP_NAME.app" "$DIST/$artifact.zip"
+      ;;
+    linux)
+      tar -C "$WORK/image" -czf "$DIST/$artifact.tar.gz" "$APP_NAME"
+      ;;
+  esac
+fi
 
 if $installer; then
   log "Installer ($installer_type)"
+  if [[ "$os" == windows ]]; then
+    # Always made from a finished app, so that the RDFArchitect.exe it installs can be signed
+    # before the installer is built: by the signing flow (--installer-from), or not at all.
+    app_image="${installer_from:-$WORK/image}/$APP_NAME"
+    if [[ ! -f "$app_image/$APP_NAME.exe" ]]; then
+      echo "No $APP_NAME.exe in $app_image" >&2
+      exit 1
+    fi
+    source_options=(--app-image "$app_image")
+  else
+    source_options=("${launcher_options[@]}")
+  fi
   # Verbose, because the installer tools' own messages are only shown that way; the temporary
   # files are kept in the build directory for a look after a failure.
   "$JAVA_BIN/jpackage" --type "$installer_type" --dest "$WORK/installer" --verbose \
     --temp "$WORK/installer-temp" \
-    "${common_options[@]}" "${installer_options[@]}"
+    "${package_options[@]}" "${source_options[@]}" "${installer_options[@]}"
   for file in "$WORK/installer"/*; do
     extension="${file##*.}"
     cp "$file" "$DIST/$artifact.$extension"

@@ -17,10 +17,10 @@ Every [release on GitHub](https://github.com/SOPTIM/RDFArchitect/releases) carri
 | macOS | `RDFArchitect-<version>-mac-arm64.zip` (Apple silicon) or `…-mac-x64.zip` (Intel): unpack it and move `RDFArchitect.app` to *Applications* | `…-mac-arm64.dmg` or `…-mac-x64.dmg` |
 | Linux | `RDFArchitect-<version>-linux-x64.tar.gz`: unpack it and run `RDFArchitect/bin/RDFArchitect` | `…-linux-x64.deb` |
 
-The app is not signed with a vendor certificate yet, so the first start asks once:
+The first start may ask once:
 
-- **Windows** may show *Windows protected your PC*. Choose **More info → Run anyway**.
-- **macOS** refuses an app downloaded from the internet that Apple has not checked. Open **System Settings → Privacy & Security** and choose **Open Anyway** next to the message about RDFArchitect, or right-click the app and choose **Open**.
+- **Windows:** the downloads are signed. For a new version Windows SmartScreen may still show *Windows protected your PC* until the version has become known: choose **More info → Run anyway**.
+- **macOS:** the app is not signed, so macOS refuses to open it at first. Open **System Settings → Privacy & Security**, scroll to the message about RDFArchitect and choose **Open Anyway**. On macOS 14 and earlier, right-clicking the app and choosing **Open** does the same. From a terminal, `xattr -dr com.apple.quarantine /Applications/RDFArchitect.app` lets it start as well.
 
 ## The window
 
