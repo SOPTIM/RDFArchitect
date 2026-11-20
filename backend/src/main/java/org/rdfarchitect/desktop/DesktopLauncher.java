@@ -33,6 +33,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.Properties;
 
 import javax.swing.JOptionPane;
 
@@ -50,6 +51,11 @@ public final class DesktopLauncher {
     static final String LOG_DIRECTORY_PROPERTY = "rdfarchitect.desktop.log-dir";
 
     private static final String LOG_CONFIGURATION = "log4j2-desktop.yaml";
+
+    private static final String APP_VERSION = "APP_VERSION";
+
+    /** Written by the {@code desktop} Maven profile. */
+    private static final String VERSION_RESOURCE = "rdfarchitect-desktop.properties";
 
     private static final Duration STARTUP_OF_ANOTHER_INSTANCE = Duration.ofSeconds(60);
 
@@ -82,6 +88,11 @@ public final class DesktopLauncher {
         System.setProperty(LOG_DIRECTORY_PROPERTY, logDirectory.toString());
         System.setProperty("log4j2.configurationFile", LOG_CONFIGURATION);
 
+        // Read by AppVersionResolver like the APP_VERSION of the container images.
+        if (configuredVersion().isBlank()) {
+            bundledVersion().ifPresent(version -> System.setProperty(APP_VERSION, version));
+        }
+
         var logger = LogManager.getLogger(DesktopLauncher.class);
         try {
             Files.createDirectories(logDirectory);
@@ -108,7 +119,7 @@ public final class DesktopLauncher {
      */
     private static boolean run(DesktopOptions options, Path dataDirectory, Logger logger)
             throws IOException {
-        var version = new AppVersionResolver(System.getenv("APP_VERSION")).resolveVersion();
+        var version = new AppVersionResolver(configuredVersion()).resolveVersion();
         var port = options.port();
         if (port != 0 && !LocalPorts.isFree(port)) {
             var running = LocalPorts.desktopAppVersion(port);
@@ -189,6 +200,38 @@ public final class DesktopLauncher {
             }
         }
         return Optional.empty();
+    }
+
+    private static String configuredVersion() {
+        var property = System.getProperty(APP_VERSION);
+        if (property != null && !property.isBlank()) {
+            return property;
+        }
+        var variable = System.getenv(APP_VERSION);
+        return variable != null ? variable : "";
+    }
+
+    /**
+     * Returns the version the desktop build was made for. Taken from the build rather than from
+     * {@code git.properties}, which cannot name the lightweight release tags.
+     */
+    static Optional<String> bundledVersion() {
+        try (var in =
+                DesktopLauncher.class.getClassLoader().getResourceAsStream(VERSION_RESOURCE)) {
+            if (in == null) {
+                return Optional.empty();
+            }
+            var properties = new Properties();
+            properties.load(in);
+            var version = properties.getProperty("version", "").strip();
+            // Unfiltered, or a build that was not given a version.
+            if (version.isEmpty() || version.contains("@") || version.equals("0.0.0")) {
+                return Optional.empty();
+            }
+            return Optional.of(version);
+        } catch (IOException _) {
+            return Optional.empty();
+        }
     }
 
     static String startPage(int port) {

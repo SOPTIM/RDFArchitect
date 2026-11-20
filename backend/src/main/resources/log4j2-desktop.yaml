@@ -20,8 +20,9 @@ Configuration:
           pattern: "[%d{yyyy-MM-dd HH:mm:ss}] - %-5level - [%thread] %c{1.} - %msg%n%throwable"
         DefaultRolloverStrategy:
           max: 5
+        # Size only: a second start, which just opens a window of the running app, must not
+        # roll over the file the running app still writes to.
         Policies:
-          OnStartupTriggeringPolicy: { }
           SizeBasedTriggeringPolicy:
             size: "10MB"
   Loggers:

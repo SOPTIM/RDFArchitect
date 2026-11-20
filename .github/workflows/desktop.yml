@@ -1,0 +1,125 @@
+name: Desktop App
+
+# Builds the desktop app for Windows, macOS and Linux, and attaches it to a release when one is
+# published. jpackage only builds for the system it runs on, hence one job per platform.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "desktop/**"
+      - ".github/workflows/desktop.yml"
+      - "backend/src/main/java/org/rdfarchitect/desktop/**"
+      - "backend/src/main/resources/application-desktop.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - name: Resolve build metadata
+        run: |
+          bash ../.github/scripts/resolve_version.sh >> "$GITHUB_ENV"
+      - name: Clean install
+        run: npm ci
+      - name: Generate API client
+        run: npm run api:generate
+      - name: Build
+        env:
+          PUBLIC_APP_VERSION: ${{ env.APP_VERSION }}
+        run: npm run build
+      - name: Upload user interface
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: frontend-build
+          path: frontend/build
+          if-no-files-found: error
+          retention-days: 1
+
+  package:
+    needs: frontend
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            platform: windows-x64
+          - runner: macos-15
+            platform: mac-arm64
+          - runner: macos-15-intel
+            platform: mac-x64
+          - runner: ubuntu-24.04
+            platform: linux-x64
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Setup Java
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: "temurin"
+          java-version: "25"
+          cache: maven
+      - name: Download user interface
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: frontend-build
+          path: frontend/build
+      - name: Resolve build metadata
+        run: bash .github/scripts/resolve_version.sh >> "$GITHUB_ENV"
+      - name: Install packaging tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y fakeroot
+      - name: Build portable app
+        run: desktop/build.sh --skip-frontend --version "$APP_VERSION"
+      - name: Build installer
+        # The portable archive is the main download; a runner without the installer tooling
+        # (the WiX Toolset on Windows) should not hold it back.
+        continue-on-error: true
+        run: desktop/build.sh --skip-frontend --skip-backend --installer --version "$APP_VERSION"
+      - name: Upload app
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: desktop-${{ matrix.platform }}
+          path: desktop/dist/*
+          if-no-files-found: error
+
+  release:
+    if: github.event_name == 'release'
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download apps
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: desktop-*
+          path: dist
+          merge-multiple: true
+      - name: Attach to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
