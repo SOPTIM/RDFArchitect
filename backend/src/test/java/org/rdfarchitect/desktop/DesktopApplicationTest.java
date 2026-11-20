@@ -40,7 +40,8 @@ import java.util.zip.ZipInputStream;
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
             "desktop.exit-when-closed=false",
-            "desktop.user-interface=classpath:/desktop-ui/"
+            "desktop.user-interface=classpath:/desktop-ui/",
+            "desktop.data-directory=${java.io.tmpdir}/rdfarchitect-desktop-test-${random.uuid}"
         })
 @ActiveProfiles("desktop")
 class DesktopApplicationTest {
@@ -162,6 +163,17 @@ class DesktopApplicationTest {
         try (var zip = new ZipInputStream(new ByteArrayInputStream(file.body()))) {
             assertThat(zip.getNextEntry()).isNotNull();
         }
+    }
+
+    @Test
+    void offersNoWorkspacesFromAPreviousRunThatKeptNone() throws Exception {
+        var listed = get("/api/desktop/recovery");
+
+        assertThat(listed.statusCode()).isEqualTo(200);
+        assertThat(listed.body()).isEqualTo("[]");
+        assertThat(get("/api/desktop/recovery/missing.rdfa").statusCode()).isEqualTo(404);
+        assertThat(send("DELETE", "/api/desktop/recovery/missing.rdfa", null).statusCode())
+                .isEqualTo(404);
     }
 
     @Test

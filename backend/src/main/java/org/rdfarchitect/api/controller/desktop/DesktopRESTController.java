@@ -27,6 +27,8 @@ import org.rdfarchitect.config.AppVersionResolver;
 import org.rdfarchitect.desktop.ClientPresence;
 import org.rdfarchitect.desktop.DesktopWorkspaceFiles;
 import org.rdfarchitect.desktop.SavedWorkspaces;
+import org.rdfarchitect.desktop.WorkspaceRecovery;
+import org.rdfarchitect.desktop.WorkspaceRecovery.RecoveredWorkspace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
@@ -35,6 +37,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -65,16 +68,19 @@ public class DesktopRESTController {
     private final ClientPresence clientPresence;
     private final SavedWorkspaces savedWorkspaces;
     private final DesktopWorkspaceFiles workspaceFiles;
+    private final WorkspaceRecovery workspaceRecovery;
     private final String version;
 
     public DesktopRESTController(
             ClientPresence clientPresence,
             SavedWorkspaces savedWorkspaces,
             DesktopWorkspaceFiles workspaceFiles,
+            WorkspaceRecovery workspaceRecovery,
             AppVersionResolver versionResolver) {
         this.clientPresence = clientPresence;
         this.savedWorkspaces = savedWorkspaces;
         this.workspaceFiles = workspaceFiles;
+        this.workspaceRecovery = workspaceRecovery;
         this.version = versionResolver.resolveVersion();
     }
 
@@ -99,6 +105,7 @@ public class DesktopRESTController {
             @Parameter(description = "An id the window chose for itself.") @PathVariable
                     String windowId) {
         clientPresence.heartbeat(windowId);
+        workspaceRecovery.noteSession();
         return new DesktopStatusDTO(savedWorkspaces.unsavedWorkspaces());
     }
 
@@ -137,6 +144,44 @@ public class DesktopRESTController {
                 .headers(headers)
                 .contentType(MediaType.parseMediaType("application/zip"))
                 .body(file.content());
+    }
+
+    @Operation(
+            summary = "Workspaces kept from the previous run",
+            description =
+                    "The unsaved workspaces the desktop app kept when it last stopped, newest first.",
+            tags = {"desktop"})
+    @GetMapping("/recovery")
+    public List<RecoveredWorkspace> recoveredWorkspaces() {
+        return workspaceRecovery.previousRun();
+    }
+
+    @Operation(
+            summary = "Workspace kept from the previous run",
+            description = "The workspace file of a workspace kept from the previous run.",
+            tags = {"desktop"})
+    @GetMapping("/recovery/{id}")
+    public ResponseEntity<byte[]> recoveredWorkspace(@PathVariable String id) {
+        return workspaceRecovery
+                .read(id)
+                .map(
+                        content ->
+                                ResponseEntity.ok()
+                                        .contentType(MediaType.parseMediaType("application/zip"))
+                                        .body(content))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    }
+
+    @Operation(
+            summary = "Discard a workspace kept from the previous run",
+            description = "Removes the copy, once it is restored or not wanted.",
+            tags = {"desktop"})
+    @DeleteMapping("/recovery/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void discardRecoveredWorkspace(@PathVariable String id) {
+        if (!workspaceRecovery.discard(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
     }
 
     @Operation(

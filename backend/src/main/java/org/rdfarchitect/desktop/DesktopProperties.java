@@ -43,6 +43,15 @@ public class DesktopProperties {
      */
     private String userInterface = "classpath:/rdfarchitect-web/";
 
+    /**
+     * The app's data directory, where unsaved workspaces are kept between runs ({@code recovery/}).
+     * Set by the launcher; without it nothing is kept.
+     */
+    private String dataDirectory;
+
+    /** How often unsaved workspaces are written to the data directory. */
+    private Duration recoveryInterval = Duration.ofMinutes(2);
+
     /** Whether the backend shuts down once no window is open any more. */
     private boolean exitWhenClosed = true;
 

@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.web.server.PortInUseException;
 import org.springframework.context.ApplicationContextException;
 
+import java.nio.file.Path;
 import java.util.Map;
 
 class DesktopLauncherTest {
@@ -31,10 +32,11 @@ class DesktopLauncherTest {
     void namesTheSessionCookieAfterThePort() {
         var options = DesktopOptions.parse(new String[] {"--desktop.close-grace=30s"}, Map.of());
 
-        assertThat(DesktopLauncher.springArguments(options, 17407))
+        assertThat(DesktopLauncher.springArguments(options, 17407, Path.of("/data/rdfa")))
                 .containsSubsequence(
                         "--server.port=17407",
                         "--server.servlet.session.cookie.name=RDFA_DESKTOP_SESSION_17407")
+                .contains("--desktop.data-directory=" + Path.of("/data/rdfa"))
                 .endsWith("--desktop.close-grace=30s");
     }
 

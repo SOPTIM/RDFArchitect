@@ -46,6 +46,16 @@ RDFArchitect stops by itself once its last window is closed; there is nothing el
 
 A window whose RDFArchitect has stopped (for example after a crash, or because its process was ended) says so and offers to reload. Start RDFArchitect again first.
 
+## Restoring unsaved work
+
+While it runs, RDFArchitect keeps a copy of every workspace with unsaved changes in its data directory (see below), every two minutes and once more when it stops. So unsaved work survives a window closed despite the question, a crashed browser or a computer that shuts down. The next start offers those workspaces in **Restore Unsaved Workspaces**:
+
+- **Restore** brings the workspace back as it was kept, under its old name or, when that is taken, with *(recovered)* appended. It is still unsaved: save it to keep it.
+- **Discard** deletes the copy.
+- **Later** asks again at the next start.
+
+A copy is removed as soon as its workspace is saved or deleted. If RDFArchitect itself crashes, up to the last two minutes of changes can be missing from the copy.
+
 ## Differences from the server
 
 - **Share Snapshot** is not available: there is no shared server to keep a snapshot on. Send the workspace file instead.
@@ -64,10 +74,10 @@ The app can be started from a terminal with options, for example `RDFArchitect -
 
 Any backend setting can be given as `--<property>=<value>` as well, for example `--desktop.exit-when-closed=false` to keep RDFArchitect running without a window.
 
-The app keeps its log files and the window's browser profile in:
+The app keeps its log files, the window's browser profile and the copies of unsaved workspaces in:
 
 - Windows: `%LOCALAPPDATA%\RDFArchitect`
 - macOS: `~/Library/Application Support/RDFArchitect`
 - Linux: `~/.local/share/rdfarchitect` (or `$XDG_DATA_HOME/rdfarchitect`)
 
-The log is `logs/rdfarchitect.log` there. Deleting the directory resets the window's size and browser settings; your workspace files are not in it.
+The log is `logs/rdfarchitect.log` there, the copies of unsaved workspaces are in `recovery/`. Deleting the directory resets the window's size and browser settings and drops those copies; your own workspace files are not in it.

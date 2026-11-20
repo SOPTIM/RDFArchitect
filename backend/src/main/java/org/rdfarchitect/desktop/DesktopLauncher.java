@@ -144,7 +144,7 @@ public final class DesktopLauncher {
         var application = new SpringApplication(Launcher.class);
         application.setAdditionalProfiles("desktop");
         try {
-            application.run(springArguments(options, port));
+            application.run(springArguments(options, port, dataDirectory));
         } catch (RuntimeException e) {
             if (!isPortInUse(e)) {
                 throw new IllegalStateException(rootMessage(e), e);
@@ -238,13 +238,14 @@ public final class DesktopLauncher {
         return LocalPorts.baseUrl(port) + "/mainpage";
     }
 
-    static String[] springArguments(DesktopOptions options, int port) {
+    static String[] springArguments(DesktopOptions options, int port, Path dataDirectory) {
         var arguments = new ArrayList<String>();
         arguments.add("--server.port=" + port);
         // Cookies are kept per host, not per port: a second backend on this machine, such as a
         // development server, would otherwise take over the session.
         arguments.add("--server.servlet.session.cookie.name=RDFA_DESKTOP_SESSION_" + port);
         arguments.add("--logging.config=classpath:" + LOG_CONFIGURATION);
+        arguments.add("--desktop.data-directory=" + dataDirectory);
         arguments.addAll(options.springArguments());
         return arguments.toArray(String[]::new);
     }
