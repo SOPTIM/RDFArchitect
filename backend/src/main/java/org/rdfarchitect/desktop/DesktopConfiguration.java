@@ -18,6 +18,7 @@
 package org.rdfarchitect.desktop;
 
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.services.archive.exporting.ExportWorkspaceUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -33,9 +34,11 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -96,6 +99,48 @@ public class DesktopConfiguration implements WebMvcConfigurer {
         return new SavedWorkspaces(databasePort);
     }
 
+    @Bean(destroyMethod = "close")
+    public WorkspaceRecovery workspaceRecovery(
+            DatabasePort databasePort,
+            SavedWorkspaces savedWorkspaces,
+            ExportWorkspaceUseCase exportWorkspaceUseCase) {
+        var dataDirectory = properties.getDataDirectory();
+        var directory =
+                dataDirectory == null || dataDirectory.isBlank()
+                        ? null
+                        : Path.of(dataDirectory).resolve("recovery");
+        return new WorkspaceRecovery(
+                directory, databasePort, savedWorkspaces, exportWorkspaceUseCase);
+    }
+
+    /** Shut down before the recovery writes its last copies, so the two never run together. */
+    @Bean(destroyMethod = "shutdownNow")
+    public ScheduledExecutorService workspaceRecoveryWriter(WorkspaceRecovery workspaceRecovery) {
+        var executor =
+                Executors.newSingleThreadScheduledExecutor(daemonThreads("desktop-recovery"));
+        var period = properties.getRecoveryInterval().toMillis();
+        executor.scheduleWithFixedDelay(
+                () -> {
+                    try {
+                        workspaceRecovery.writeUnsaved();
+                    } catch (RuntimeException e) {
+                        logger.error("Keeping unsaved workspaces failed.", e);
+                    }
+                },
+                period,
+                period,
+                TimeUnit.MILLISECONDS);
+        return executor;
+    }
+
+    private static ThreadFactory daemonThreads(String name) {
+        return runnable -> {
+            var thread = new Thread(runnable, name);
+            thread.setDaemon(true);
+            return thread;
+        };
+    }
+
     @Bean
     public ClientPresence clientPresence(
             DesktopProperties properties, ApplicationContext applicationContext) {
@@ -112,12 +157,7 @@ public class DesktopConfiguration implements WebMvcConfigurer {
     @Bean(destroyMethod = "shutdownNow")
     public ScheduledExecutorService clientPresenceChecker(ClientPresence clientPresence) {
         var executor =
-                Executors.newSingleThreadScheduledExecutor(
-                        runnable -> {
-                            var thread = new Thread(runnable, "desktop-presence");
-                            thread.setDaemon(true);
-                            return thread;
-                        });
+                Executors.newSingleThreadScheduledExecutor(daemonThreads("desktop-presence"));
         var period = PRESENCE_CHECK_PERIOD.toMillis();
         // A check that throws would cancel every later one, and the app would never shut down.
         executor.scheduleAtFixedRate(

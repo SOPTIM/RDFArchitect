@@ -42,6 +42,7 @@
         startDesktopSession,
     } from "$lib/desktop/desktopSession.svelte.js";
     import DesktopStoppedOverlay from "$lib/desktop/DesktopStoppedOverlay.svelte";
+    import RecoveryDialog from "$lib/desktop/RecoveryDialog.svelte";
     import UnsavedIndicator from "$lib/desktop/UnsavedIndicator.svelte";
     import { isDialogOpen } from "$lib/dialog/openDialogs.js";
     import UndoConfirmDialog from "$lib/dialog/UndoConfirmDialog.svelte";
@@ -412,6 +413,9 @@
     </div>
     <ToastContainer />
     <DesktopStoppedOverlay />
+    {#if PUBLIC_DESKTOP}
+        <RecoveryDialog />
+    {/if}
     <UndoConfirmDialog />
     <PasteClassesDialog />
 </Tooltip.Provider>
