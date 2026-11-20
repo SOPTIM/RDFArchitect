@@ -2,10 +2,17 @@ name: Desktop App
 
 # Builds the desktop app for Windows, macOS and Linux, and attaches it to a release when one is
 # published. jpackage only builds for the system it runs on, hence one job per platform.
+# Pushes and pull requests build it when they change the packaging.
 on:
   release:
     types: [published]
   workflow_dispatch:
+  push:
+    paths:
+      - "desktop/**"
+      - ".github/workflows/desktop.yml"
+      - "backend/src/main/java/org/rdfarchitect/desktop/**"
+      - "backend/src/main/resources/application-desktop.yml"
   pull_request:
     paths:
       - "desktop/**"
