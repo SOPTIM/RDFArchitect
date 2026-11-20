@@ -15,7 +15,7 @@ const targetPath = join(here, '..', 'content', 'reference', 'changelog.md');
 
 const frontmatter = `---
 title: Changelog
-sidebar_position: 5
+sidebar_position: 6
 description: Release history of RDFArchitect, mirrored from the repository root CHANGELOG.md.
 ---
 

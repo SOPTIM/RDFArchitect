@@ -47,6 +47,7 @@ const sidebars = {
     'developer-guide/api-stability',
     'developer-guide/rdf-shacl-sparql',
     'developer-guide/cim-evaluation',
+    'developer-guide/diagram-layout-triples',
     'developer-guide/ci-and-releases',
     'developer-guide/contribution-scenarios',
   ],
