@@ -113,6 +113,61 @@ export async function markWorkspaceSaved(workspaceName, version = null) {
     }
 }
 
+/**
+ * Saves the workspace to the file the backend knows for it, one the operating system handed over.
+ *
+ * @returns {Promise<boolean>} whether it had such a file
+ */
+export async function saveWorkspaceToItsFile(workspaceName) {
+    const response = await fetch(workspaceUrl(workspaceName, "/file"), {
+        method: "POST",
+        credentials: "include",
+    });
+    if (response.status === 409) {
+        return false;
+    }
+    if (!response.ok) {
+        throw await failure(response);
+    }
+    return true;
+}
+
+/**
+ * Reads a workspace file the operating system asked the app to open.
+ *
+ * @returns {Promise<File>}
+ */
+export async function fetchOpenRequest(id) {
+    const response = await fetch(
+        desktopUrl(`/open-requests/${encodeURIComponent(id)}`),
+        { credentials: "include" },
+    );
+    if (!response.ok) {
+        throw await failure(response);
+    }
+    const fileName =
+        fileNameOfContentDisposition(
+            response.headers.get("Content-Disposition"),
+        ) ?? "workspace.rdfa";
+    return new File([await response.blob()], fileName, {
+        type: "application/zip",
+    });
+}
+
+/** Records that the workspace was opened from the file of an open request. */
+export async function markOpenedFrom(workspaceName, requestId) {
+    const response = await fetch(
+        workspaceUrl(
+            workspaceName,
+            `/opened-from/${encodeURIComponent(requestId)}`,
+        ),
+        { method: "PUT", credentials: "include" },
+    );
+    if (!response.ok) {
+        throw await failure(response);
+    }
+}
+
 /** The file name a `Content-Disposition` header names, preferring its UTF-8 form. */
 export function fileNameOfContentDisposition(header) {
     if (!header) {

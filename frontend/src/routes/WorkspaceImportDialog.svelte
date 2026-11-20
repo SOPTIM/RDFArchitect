@@ -26,6 +26,7 @@
         canChooseFiles,
         chooseWorkspaceFile,
         workspaceOpenedFromFile,
+        workspaceOpenedFromRequest,
     } from "$lib/desktop/saveWorkspace.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { graphStore } from "$lib/stores/graphStore.ts";
@@ -42,7 +43,15 @@
     } from "$lib/utils/importJob.svelte.js";
     import { JobState } from "$lib/utils/importProgress.svelte.js";
 
-    let { showDialog = $bindable() } = $props();
+    /**
+     * `initialArchive` preselects a file, and `openRequestId` names the open request it came from
+     * when the operating system handed it over (desktop app).
+     */
+    let {
+        showDialog = $bindable(),
+        initialArchive = null,
+        openRequestId = null,
+    } = $props();
 
     const uniqueId = uuidv4();
     const nameInputId = `workspaceArchiveName-${uniqueId}`;
@@ -70,6 +79,9 @@
         clearInputs();
         const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
         existingWorkspaces = workspaces.map(workspace => workspace.label);
+        if (initialArchive) {
+            await selectArchive([initialArchive]);
+        }
     }
 
     function onClose() {
@@ -131,6 +143,7 @@
 
     async function dismissImport() {
         const handle = archiveHandle;
+        const requestId = archive === initialArchive ? openRequestId : null;
         const result = await job.dismiss();
         // The workspace is restored as a whole or not at all.
         if (result?.state === JobState.COMPLETED) {
@@ -138,7 +151,12 @@
                 result.workspaceName,
                 result.importedGraphUris,
             );
-            if (PUBLIC_DESKTOP) {
+            if (PUBLIC_DESKTOP && requestId) {
+                await workspaceOpenedFromRequest(
+                    result.workspaceName,
+                    requestId,
+                );
+            } else if (PUBLIC_DESKTOP) {
                 await workspaceOpenedFromFile(result.workspaceName, handle);
             }
         }

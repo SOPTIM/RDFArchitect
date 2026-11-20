@@ -17,9 +17,12 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
+    fetchOpenRequest,
     fetchWorkspaceFile,
     fileNameOfContentDisposition,
+    markOpenedFrom,
     markWorkspaceSaved,
+    saveWorkspaceToItsFile,
     sendHeartbeat,
 } from "$lib/desktop/desktopApi.js";
 
@@ -92,6 +95,47 @@ describe("desktop API", () => {
         expect(url).toBe("/api/desktop/workspaces/Draft/saved");
         expect(init.method).toBe("PUT");
         expect(JSON.parse(init.body)).toEqual({ version: "v-2" });
+    });
+
+    test("tells whether the backend had a file to save to", async () => {
+        fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+        fetchMock.mockResolvedValueOnce(new Response("none", { status: 409 }));
+
+        expect(await saveWorkspaceToItsFile("Draft")).toBe(true);
+        expect(await saveWorkspaceToItsFile("Draft")).toBe(false);
+        expect(fetchMock).toHaveBeenCalledWith(
+            "/api/desktop/workspaces/Draft/file",
+            { method: "POST", credentials: "include" },
+        );
+    });
+
+    test("reads a file the operating system handed over", async () => {
+        fetchMock.mockResolvedValue(
+            new Response("zip", {
+                headers: {
+                    "Content-Disposition": `attachment; filename="Model.rdfa"`,
+                },
+            }),
+        );
+
+        const file = await fetchOpenRequest("request-1");
+
+        expect(fetchMock).toHaveBeenCalledWith(
+            "/api/desktop/open-requests/request-1",
+            { credentials: "include" },
+        );
+        expect(file.name).toBe("Model.rdfa");
+    });
+
+    test("records where an opened workspace came from", async () => {
+        fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+
+        await markOpenedFrom("My Draft", "request-1");
+
+        expect(fetchMock).toHaveBeenCalledWith(
+            "/api/desktop/workspaces/My%20Draft/opened-from/request-1",
+            { method: "PUT", credentials: "include" },
+        );
     });
 
     test("reports a failed heartbeat with its status", async () => {

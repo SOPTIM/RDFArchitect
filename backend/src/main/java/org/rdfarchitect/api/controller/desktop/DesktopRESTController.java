@@ -22,11 +22,14 @@ import io.swagger.v3.oas.annotations.Parameter;
 
 import org.rdfarchitect.api.dto.desktop.DesktopInfoDTO;
 import org.rdfarchitect.api.dto.desktop.DesktopStatusDTO;
+import org.rdfarchitect.api.dto.desktop.OpenRequestDTO;
 import org.rdfarchitect.api.dto.desktop.SavedVersionDTO;
 import org.rdfarchitect.config.AppVersionResolver;
 import org.rdfarchitect.desktop.ClientPresence;
 import org.rdfarchitect.desktop.DesktopWorkspaceFiles;
+import org.rdfarchitect.desktop.OpenRequests;
 import org.rdfarchitect.desktop.SavedWorkspaces;
+import org.rdfarchitect.desktop.WorkspaceFileLocations;
 import org.rdfarchitect.desktop.WorkspaceRecovery;
 import org.rdfarchitect.desktop.WorkspaceRecovery.RecoveredWorkspace;
 import org.slf4j.Logger;
@@ -48,7 +51,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -69,6 +76,8 @@ public class DesktopRESTController {
     private final SavedWorkspaces savedWorkspaces;
     private final DesktopWorkspaceFiles workspaceFiles;
     private final WorkspaceRecovery workspaceRecovery;
+    private final OpenRequests openRequests;
+    private final WorkspaceFileLocations fileLocations;
     private final String version;
 
     public DesktopRESTController(
@@ -76,11 +85,15 @@ public class DesktopRESTController {
             SavedWorkspaces savedWorkspaces,
             DesktopWorkspaceFiles workspaceFiles,
             WorkspaceRecovery workspaceRecovery,
+            OpenRequests openRequests,
+            WorkspaceFileLocations fileLocations,
             AppVersionResolver versionResolver) {
         this.clientPresence = clientPresence;
         this.savedWorkspaces = savedWorkspaces;
         this.workspaceFiles = workspaceFiles;
         this.workspaceRecovery = workspaceRecovery;
+        this.openRequests = openRequests;
+        this.fileLocations = fileLocations;
         this.version = versionResolver.resolveVersion();
     }
 
@@ -106,7 +119,8 @@ public class DesktopRESTController {
                     String windowId) {
         clientPresence.heartbeat(windowId);
         workspaceRecovery.noteSession();
-        return new DesktopStatusDTO(savedWorkspaces.unsavedWorkspaces());
+        return new DesktopStatusDTO(
+                savedWorkspaces.unsavedWorkspaces(), fileLocations.workspacesWithFile());
     }
 
     @Operation(
@@ -144,6 +158,109 @@ public class DesktopRESTController {
                 .headers(headers)
                 .contentType(MediaType.parseMediaType("application/zip"))
                 .body(file.content());
+    }
+
+    @Operation(
+            summary = "Open a workspace file",
+            description =
+                    "Registers a workspace file on this computer to be opened, as the launcher does"
+                            + " for a double-clicked .rdfa file. A window opened at"
+                            + " /mainpage?open=<id> then opens it.",
+            tags = {"desktop"})
+    @PostMapping("/open-requests")
+    @ResponseStatus(HttpStatus.CREATED)
+    public OpenRequestDTO requestOpen(@RequestBody OpenRequestDTO request) {
+        if (request.getPath() == null || request.getPath().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No file to open.");
+        }
+        try {
+            var registered = openRequests.add(Path.of(request.getPath()));
+            return new OpenRequestDTO(
+                    registered.id(), registered.fileName(), registered.path().toString());
+        } catch (IllegalArgumentException e) {
+            // InvalidPathException is one as well.
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    @Operation(
+            summary = "Workspace file to open",
+            description = "The content of a workspace file registered to be opened.",
+            tags = {"desktop"})
+    @GetMapping("/open-requests/{id}")
+    public ResponseEntity<byte[]> openRequestContent(@PathVariable String id) {
+        var request =
+                openRequests
+                        .get(id)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        byte[] content;
+        try {
+            content = Files.readAllBytes(request.path());
+        } catch (IOException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND, "Cannot read " + request.fileName());
+        }
+        var headers = new HttpHeaders();
+        headers.setContentDisposition(
+                ContentDisposition.attachment()
+                        .filename(request.fileName(), StandardCharsets.UTF_8)
+                        .build());
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .body(content);
+    }
+
+    @Operation(
+            summary = "Workspace opened from a registered file",
+            description =
+                    "Records that the workspace was opened from the file of an open request: it is"
+                            + " saved, and Save writes to that file.",
+            tags = {"desktop"})
+    @PutMapping("/workspaces/{workspaceName}/opened-from/{requestId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void openedFrom(@PathVariable String workspaceName, @PathVariable String requestId) {
+        var request =
+                openRequests
+                        .remove(requestId)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (!savedWorkspaces.markSavedNow(workspaceName)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "The workspace is being changed right now.");
+        }
+        fileLocations.remember(
+                workspaceName,
+                request.path(),
+                savedWorkspaces.savedVersion(workspaceName).orElseThrow());
+    }
+
+    @Operation(
+            summary = "Save a workspace to its file",
+            description =
+                    "Writes the workspace to the file it was opened from on this computer and records"
+                            + " it as saved. 409 if it has no such file.",
+            tags = {"desktop"})
+    @PostMapping("/workspaces/{workspaceName}/file")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void saveToFile(@PathVariable String workspaceName) {
+        var path =
+                fileLocations
+                        .locationOf(workspaceName)
+                        .orElseThrow(
+                                () ->
+                                        new ResponseStatusException(
+                                                HttpStatus.CONFLICT,
+                                                "The workspace has no file to save to."));
+        try {
+            var saved = workspaceFiles.writeTo(workspaceName, path);
+            if (saved != null) {
+                savedWorkspaces.markSaved(workspaceName, saved);
+                fileLocations.remember(workspaceName, path, saved);
+            }
+            logger.info("Saved workspace \"{}\" to {}.", workspaceName, path);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Could not write " + path, e);
+        }
     }
 
     @Operation(

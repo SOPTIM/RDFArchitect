@@ -99,6 +99,16 @@ public class DesktopConfiguration implements WebMvcConfigurer {
         return new SavedWorkspaces(databasePort);
     }
 
+    @Bean
+    public OpenRequests openRequests() {
+        return new OpenRequests();
+    }
+
+    @Bean
+    public WorkspaceFileLocations workspaceFileLocations(DatabasePort databasePort) {
+        return new WorkspaceFileLocations(databasePort);
+    }
+
     @Bean(destroyMethod = "close")
     public WorkspaceRecovery workspaceRecovery(
             DatabasePort databasePort,

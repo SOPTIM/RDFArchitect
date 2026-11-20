@@ -60,6 +60,7 @@
     import { versionControlStore } from "$lib/stores/versionControlStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
+    import DesktopOpenRequests from "./DesktopOpenRequests.svelte";
     import {
         editorState,
         forceReloadTrigger,
@@ -415,6 +416,7 @@
     <DesktopStoppedOverlay />
     {#if PUBLIC_DESKTOP}
         <RecoveryDialog />
+        <DesktopOpenRequests />
     {/if}
     <UndoConfirmDialog />
     <PasteClassesDialog />

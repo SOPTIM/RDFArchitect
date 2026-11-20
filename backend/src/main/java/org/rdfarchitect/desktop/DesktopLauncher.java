@@ -23,6 +23,7 @@ import org.rdfarchitect.Launcher;
 import org.rdfarchitect.config.AppVersionResolver;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.web.server.PortInUseException;
+import org.springframework.context.ConfigurableApplicationContext;
 
 import java.awt.GraphicsEnvironment;
 import java.awt.SplashScreen;
@@ -32,8 +33,10 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.function.Consumer;
 
 import javax.swing.JOptionPane;
 
@@ -93,6 +96,9 @@ public final class DesktopLauncher {
             bundledVersion().ifPresent(version -> System.setProperty(APP_VERSION, version));
         }
 
+        // Before anything else touches AWT: macOS sends the files to open as events.
+        OpenFileEvents.install();
+
         var logger = LogManager.getLogger(DesktopLauncher.class);
         try {
             Files.createDirectories(logDirectory);
@@ -120,16 +126,13 @@ public final class DesktopLauncher {
     private static boolean run(DesktopOptions options, Path dataDirectory, Logger logger)
             throws IOException {
         var version = new AppVersionResolver(configuredVersion()).resolveVersion();
+        var browserProfile = DesktopPaths.browserProfile(dataDirectory);
         var port = options.port();
         if (port != 0 && !LocalPorts.isFree(port)) {
             var running = LocalPorts.desktopAppVersion(port);
             if (running.isPresent() && running.get().equals(version)) {
                 logger.info("RDFArchitect {} is running already, opening a window.", version);
-                closeSplash();
-                AppWindow.open(
-                        startPage(port),
-                        options.browser(),
-                        DesktopPaths.browserProfile(dataDirectory));
+                handOver(port, options, browserProfile, logger);
                 return false;
             }
             logger.info(
@@ -143,8 +146,9 @@ public final class DesktopLauncher {
 
         var application = new SpringApplication(Launcher.class);
         application.setAdditionalProfiles("desktop");
+        ConfigurableApplicationContext context;
         try {
-            application.run(springArguments(options, port, dataDirectory));
+            context = application.run(springArguments(options, port, dataDirectory));
         } catch (RuntimeException e) {
             if (!isPortInUse(e)) {
                 throw new IllegalStateException(rootMessage(e), e);
@@ -154,18 +158,53 @@ public final class DesktopLauncher {
                 throw new IllegalStateException("Port " + port + " is in use.", e);
             }
             logger.info("RDFArchitect {} started meanwhile, opening a window.", version);
-            closeSplash();
-            AppWindow.open(
-                    startPage(port), options.browser(), DesktopPaths.browserProfile(dataDirectory));
+            handOver(port, options, browserProfile, logger);
             return false;
         }
 
-        var url = startPage(port);
-        logger.info("RDFArchitect {} is running at {}", version, url);
-        System.out.println("RDFArchitect is running at " + url);
-        AppWindow.open(url, options.browser(), DesktopPaths.browserProfile(dataDirectory));
+        var openRequests = context.getBean(OpenRequests.class);
+        var appPort = port;
+        Consumer<List<Path>> openInNewWindow =
+                files ->
+                        AppWindow.open(
+                                startPage(appPort, register(files, openRequests, logger)),
+                                options.browser(),
+                                browserProfile);
+        var files = new ArrayList<>(options.files());
+        files.addAll(OpenFileEvents.takeAndForward(openInNewWindow));
+
+        var url = startPage(port, register(files, openRequests, logger));
+        logger.info("RDFArchitect {} is running at {}", version, startPage(port));
+        System.out.println("RDFArchitect is running at " + startPage(port));
+        AppWindow.open(url, options.browser(), browserProfile);
         closeSplash();
         return true;
+    }
+
+    /** Opens a window of the app already running on the port, with the files to open in it. */
+    private static void handOver(
+            int port, DesktopOptions options, Path browserProfile, Logger logger) {
+        var ids = new ArrayList<String>();
+        for (var file : options.files()) {
+            LocalPorts.requestOpen(port, file)
+                    .ifPresentOrElse(
+                            ids::add, () -> logger.warn("Could not hand over {} to open.", file));
+        }
+        closeSplash();
+        AppWindow.open(startPage(port, ids), options.browser(), browserProfile);
+    }
+
+    private static List<String> register(
+            List<Path> files, OpenRequests openRequests, Logger logger) {
+        var ids = new ArrayList<String>();
+        for (var file : files) {
+            try {
+                ids.add(openRequests.add(file).id());
+            } catch (IllegalArgumentException e) {
+                logger.warn("Not opening {}: {}", file, e.getMessage());
+            }
+        }
+        return ids;
     }
 
     private static String rootMessage(Throwable failure) {
@@ -236,6 +275,13 @@ public final class DesktopLauncher {
 
     static String startPage(int port) {
         return LocalPorts.baseUrl(port) + "/mainpage";
+    }
+
+    /** The editor, told to open the files of the given open requests. */
+    static String startPage(int port, List<String> openRequestIds) {
+        return openRequestIds.isEmpty()
+                ? startPage(port)
+                : startPage(port) + "?open=" + String.join(",", openRequestIds);
     }
 
     static String[] springArguments(DesktopOptions options, int port, Path dataDirectory) {
