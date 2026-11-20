@@ -18,6 +18,10 @@
 <script>
     import { faKeyboard } from "@fortawesome/free-solid-svg-icons";
 
+    import {
+        PUBLIC_DESKTOP,
+        PUBLIC_SHARE_SNAPSHOT_ENABLED,
+    } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
 
     let { showDialog = $bindable() } = $props();
@@ -26,6 +30,22 @@
         {
             title: "File",
             shortcuts: [
+                ...(PUBLIC_DESKTOP
+                    ? [
+                          {
+                              description: "Open Workspace",
+                              keys: ["Ctrl", "O"],
+                          },
+                          {
+                              description: "Save Workspace",
+                              keys: ["Ctrl", "S"],
+                          },
+                          {
+                              description: "Save Workspace As",
+                              keys: ["Ctrl", "Shift", "S"],
+                          },
+                      ]
+                    : []),
                 { description: "Import Schema (RDFS)", keys: ["Ctrl", "I"] },
                 { description: "Export Schema (RDFS)", keys: ["Ctrl", "E"] },
                 {
@@ -40,7 +60,14 @@
                     description: "Export Documentation",
                     keys: ["Ctrl", "Alt", "H"],
                 },
-                { description: "Share Snapshot", keys: ["Ctrl", "Shift", "S"] },
+                ...(PUBLIC_SHARE_SNAPSHOT_ENABLED
+                    ? [
+                          {
+                              description: "Share Snapshot",
+                              keys: ["Ctrl", "Shift", "S"],
+                          },
+                      ]
+                    : []),
             ],
         },
         {
