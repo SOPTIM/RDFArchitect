@@ -20,6 +20,7 @@ const sidebars = {
 
   userSidebar: [
     'user-guide/overview',
+    'user-guide/desktop-app',
     'user-guide/workspace-and-importing',
     'user-guide/organising-schemas',
     'user-guide/editing-classes',

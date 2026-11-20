@@ -2,6 +2,8 @@
 # which also chooses the port. The backend serves the user interface itself.
 server:
   address: 127.0.0.1
+  mime-mappings:
+    webmanifest: application/manifest+json
 database:
   enabled: false
 snapshots:
