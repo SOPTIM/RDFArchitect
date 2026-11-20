@@ -209,18 +209,23 @@ public class WorkspaceRecovery {
         return file.isPresent();
     }
 
+    /**
+     * Finds the kept workspace by its id among the files there are, rather than building a path
+     * from the id, so no id reaches outside the directory however it is spelled.
+     */
     private Optional<Path> previousRunFile(String id) {
-        if (previousRun == null || id == null || !FILE_NAME.matcher(id).matches()) {
+        if (previousRun == null || id == null || !Files.isDirectory(previousRun)) {
             return Optional.empty();
         }
-        var file = previousRun.resolve(id).normalize();
-        var parent = file.getParent();
-        if (parent == null
-                || !parent.equals(previousRun.normalize())
-                || !Files.isRegularFile(file)) {
+        try (Stream<Path> files = Files.list(previousRun)) {
+            return files.filter(Files::isRegularFile)
+                    .filter(file -> FILE_NAME.matcher(nameOf(file)).matches())
+                    .filter(file -> nameOf(file).equals(id))
+                    .findFirst();
+        } catch (IOException e) {
+            logger.warn("Could not look for the kept workspace {}.", id, e);
             return Optional.empty();
         }
-        return Optional.of(file);
     }
 
     private RecoveredWorkspace describe(Path file) {
