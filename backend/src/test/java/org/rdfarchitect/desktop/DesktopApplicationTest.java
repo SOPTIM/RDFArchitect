@@ -19,8 +19,11 @@ package org.rdfarchitect.desktop;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.rdfarchitect.api.controller.desktop.DesktopRESTController;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -33,6 +36,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.zip.ZipInputStream;
 
 /** The desktop profile as the browser window sees it, over HTTP. */
@@ -146,7 +151,7 @@ class DesktopApplicationTest {
     void savesAWorkspaceToAFileNamingItsVersion() throws Exception {
         assertThat(send("PUT", "/api/workspaces/Draft%20One", null).statusCode()).isEqualTo(200);
         assertThat(send("POST", "/api/desktop/windows/w/heartbeat", null).body())
-                .isEqualTo("{\"unsavedWorkspaces\":[]}");
+                .contains("\"unsavedWorkspaces\":[]");
 
         var file =
                 client.send(
@@ -163,6 +168,67 @@ class DesktopApplicationTest {
         try (var zip = new ZipInputStream(new ByteArrayInputStream(file.body()))) {
             assertThat(zip.getNextEntry()).isNotNull();
         }
+    }
+
+    private HttpResponse<String> postJson(String path, String json)
+            throws IOException, InterruptedException {
+        return client.send(
+                HttpRequest.newBuilder(URI.create(url(path)))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(json))
+                        .build(),
+                HttpResponse.BodyHandlers.ofString());
+    }
+
+    @Test
+    void opensAFileTheOperatingSystemHandsOverAndSavesBackToIt(@TempDir Path directory)
+            throws Exception {
+        assertThat(send("PUT", "/api/workspaces/Handed", null).statusCode()).isEqualTo(200);
+        var file =
+                client.send(
+                        HttpRequest.newBuilder(
+                                        URI.create(url("/api/desktop/workspaces/Handed/file")))
+                                .build(),
+                        HttpResponse.BodyHandlers.ofByteArray());
+        var onDisk = Files.write(directory.resolve("Handed.rdfa"), file.body());
+
+        var registered =
+                postJson(
+                        "/api/desktop/open-requests",
+                        "{\"path\":"
+                                + new ObjectMapper().writeValueAsString(onDisk.toString())
+                                + "}");
+        assertThat(registered.statusCode()).isEqualTo(201);
+        var id = new ObjectMapper().readTree(registered.body()).get("id").asText();
+        assertThat(get("/api/desktop/open-requests/" + id).statusCode()).isEqualTo(200);
+
+        assertThat(
+                        send("PUT", "/api/desktop/workspaces/Handed/opened-from/" + id, null)
+                                .statusCode())
+                .isEqualTo(204);
+        assertThat(get("/api/desktop/open-requests/" + id).statusCode()).isEqualTo(404);
+        assertThat(send("POST", "/api/desktop/windows/w/heartbeat", null).body())
+                .contains("\"workspacesWithFile\":[\"Handed\"]");
+
+        Files.writeString(onDisk, "overwritten");
+        assertThat(send("POST", "/api/desktop/workspaces/Handed/file", null).statusCode())
+                .isEqualTo(204);
+        assertThat(Files.size(onDisk)).isGreaterThan(100);
+    }
+
+    @Test
+    void refusesToOpenWhatIsNoWorkspaceFile(@TempDir Path directory) throws Exception {
+        var text = Files.writeString(directory.resolve("notes.txt"), "text");
+
+        assertThat(
+                        postJson(
+                                        "/api/desktop/open-requests",
+                                        "{\"path\":\"" + text.getFileName() + "\"}")
+                                .statusCode())
+                .isEqualTo(400);
+        assertThat(postJson("/api/desktop/open-requests", "{}").statusCode()).isEqualTo(400);
+        assertThat(send("POST", "/api/desktop/workspaces/missing/file", null).statusCode())
+                .isEqualTo(409);
     }
 
     @Test

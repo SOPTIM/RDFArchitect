@@ -40,6 +40,8 @@ export const desktopSession = $state({
     active: false,
     /** The workspaces with unsaved changes, as of the last heartbeat. */
     unsavedWorkspaces: [],
+    /** The workspaces whose file the backend writes on Save, as of the last heartbeat. */
+    workspacesWithFile: [],
     /** Whether the backend has stopped answering, which leaves this window without its data. */
     stopped: false,
 });
@@ -95,6 +97,7 @@ export function stopDesktopSession() {
     sayGoodbye();
     desktopSession.active = false;
     desktopSession.unsavedWorkspaces = [];
+    desktopSession.workspacesWithFile = [];
     desktopSession.stopped = false;
     missedHeartbeats = 0;
 }
@@ -127,6 +130,8 @@ function heartbeat() {
         .then(status => {
             missedHeartbeats = 0;
             desktopSession.unsavedWorkspaces = status?.unsavedWorkspaces ?? [];
+            desktopSession.workspacesWithFile =
+                status?.workspacesWithFile ?? [];
         })
         .catch(error => {
             // A network error means nobody listens any more; an error status is a backend

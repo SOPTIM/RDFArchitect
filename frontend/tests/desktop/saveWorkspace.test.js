@@ -18,14 +18,20 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
     fetchWorkspaceFile,
+    markOpenedFrom,
     markWorkspaceSaved,
+    saveWorkspaceToItsFile,
 } from "$lib/desktop/desktopApi.js";
-import { refreshDesktopStatus } from "$lib/desktop/desktopSession.svelte.js";
+import {
+    desktopSession,
+    refreshDesktopStatus,
+} from "$lib/desktop/desktopSession.svelte.js";
 import {
     chooseWorkspaceFile,
     saveWorkspace,
     suggestedFileName,
     workspaceOpenedFromFile,
+    workspaceOpenedFromRequest,
 } from "$lib/desktop/saveWorkspace.js";
 import { workspaceFiles } from "$lib/desktop/workspaceFiles.js";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -55,8 +61,11 @@ function abort() {
 vi.mock("$lib/desktop/desktopApi.js", () => ({
     fetchWorkspaceFile: vi.fn(),
     markWorkspaceSaved: vi.fn(),
+    markOpenedFrom: vi.fn(),
+    saveWorkspaceToItsFile: vi.fn(),
 }));
 vi.mock("$lib/desktop/desktopSession.svelte.js", () => ({
+    desktopSession: { workspacesWithFile: [] },
     refreshDesktopStatus: vi.fn(() => Promise.resolve()),
 }));
 vi.mock("$lib/eventhandling/toastStore.svelte.js", () => ({
@@ -76,6 +85,7 @@ describe("saveWorkspace", () => {
         });
         vi.mocked(markWorkspaceSaved).mockResolvedValue(undefined);
         workspaceFiles.forget("Draft");
+        desktopSession.workspacesWithFile = [];
     });
 
     afterEach(() => {
@@ -175,6 +185,49 @@ describe("saveWorkspace", () => {
             });
 
             expect(await chooseWorkspaceFile()).toBeNull();
+        });
+    });
+
+    describe("for a file the operating system handed over", () => {
+        beforeEach(() => {
+            desktopSession.workspacesWithFile = ["Draft"];
+        });
+
+        test("lets the backend write it", async () => {
+            vi.mocked(saveWorkspaceToItsFile).mockResolvedValue(true);
+            window.showSaveFilePicker = vi.fn();
+
+            expect(await saveWorkspace("Draft")).toBe("saved");
+
+            expect(saveWorkspaceToItsFile).toHaveBeenCalledWith("Draft");
+            expect(window.showSaveFilePicker).not.toHaveBeenCalled();
+            expect(fetchWorkspaceFile).not.toHaveBeenCalled();
+            expect(refreshDesktopStatus).toHaveBeenCalled();
+        });
+
+        test("asks where to when the backend has no file for it after all", async () => {
+            vi.mocked(saveWorkspaceToItsFile).mockResolvedValue(false);
+
+            expect(await saveWorkspace("Draft")).toBe("saved");
+
+            expect(saveFile).toHaveBeenCalled();
+            expect(markWorkspaceSaved).toHaveBeenCalledWith("Draft", "v1");
+        });
+
+        test("asks where to for Save As", async () => {
+            await saveWorkspace("Draft", { saveAs: true });
+
+            expect(saveWorkspaceToItsFile).not.toHaveBeenCalled();
+            expect(saveFile).toHaveBeenCalled();
+        });
+
+        test("records the request a workspace was opened from", async () => {
+            workspaceFiles.remember("Draft", { name: "Old.rdfa" });
+
+            await workspaceOpenedFromRequest("Draft", "request-1");
+
+            expect(markOpenedFrom).toHaveBeenCalledWith("Draft", "request-1");
+            expect(workspaceFiles.get("Draft")).toBeUndefined();
         });
     });
 

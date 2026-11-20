@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.desktop;
 
+import java.net.URI;
+import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -101,7 +103,7 @@ record DesktopOptions(
             } else if (arg.startsWith("-")) {
                 throw new IllegalArgumentException("Unknown option: " + arg);
             } else if (!arg.isBlank()) {
-                files.add(Path.of(arg));
+                files.add(fileOf(arg));
             }
         }
         return new DesktopOptions(
@@ -111,6 +113,18 @@ record DesktopOptions(
                 help,
                 List.copyOf(springArguments),
                 List.copyOf(files));
+    }
+
+    /** A file given as a path, or as a {@code file:} URI as Linux desktop entries pass it. */
+    private static Path fileOf(String arg) {
+        if (arg.regionMatches(true, 0, "file:", 0, "file:".length())) {
+            try {
+                return Path.of(URI.create(arg));
+            } catch (IllegalArgumentException | FileSystemNotFoundException _) {
+                throw new IllegalArgumentException("Not a file: " + arg);
+            }
+        }
+        return Path.of(arg);
     }
 
     private static String valueOf(String arg) {

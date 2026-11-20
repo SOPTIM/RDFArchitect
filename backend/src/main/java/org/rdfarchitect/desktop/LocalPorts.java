@@ -20,6 +20,7 @@ package org.rdfarchitect.desktop;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.rdfarchitect.api.dto.desktop.DesktopInfoDTO;
+import org.rdfarchitect.api.dto.desktop.OpenRequestDTO;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -28,6 +29,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -57,6 +59,42 @@ final class LocalPorts {
     static int anyFreePort() throws IOException {
         try (var socket = new ServerSocket(0, 1, InetAddress.getByName(LOOPBACK))) {
             return socket.getLocalPort();
+        }
+    }
+
+    /**
+     * Asks the desktop app listening on the port to open a workspace file.
+     *
+     * @param port the port of the app
+     * @param file the file to open
+     * @return the id of the request, for the window to name
+     */
+    static Optional<String> requestOpen(int port, Path file) {
+        var client = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
+        try {
+            var mapper = new ObjectMapper();
+            var body =
+                    mapper.writeValueAsString(
+                            new OpenRequestDTO(null, null, file.toAbsolutePath().toString()));
+            var request =
+                    HttpRequest.newBuilder(URI.create(baseUrl(port) + "/api/desktop/open-requests"))
+                            .timeout(TIMEOUT)
+                            .header("Content-Type", "application/json")
+                            .POST(HttpRequest.BodyPublishers.ofString(body))
+                            .build();
+            var response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 201) {
+                return Optional.empty();
+            }
+            return Optional.ofNullable(
+                    mapper.readValue(response.body(), OpenRequestDTO.class).getId());
+        } catch (IOException | RuntimeException _) {
+            return Optional.empty();
+        } catch (InterruptedException _) {
+            Thread.currentThread().interrupt();
+            return Optional.empty();
+        } finally {
+            client.close();
         }
     }
 

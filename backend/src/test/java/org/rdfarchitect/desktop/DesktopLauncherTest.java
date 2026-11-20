@@ -24,6 +24,7 @@ import org.springframework.boot.web.server.PortInUseException;
 import org.springframework.context.ApplicationContextException;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 class DesktopLauncherTest {
@@ -43,6 +44,10 @@ class DesktopLauncherTest {
     @Test
     void opensTheEditor() {
         assertThat(DesktopLauncher.startPage(17407)).isEqualTo("http://127.0.0.1:17407/mainpage");
+        assertThat(DesktopLauncher.startPage(17407, List.of()))
+                .isEqualTo("http://127.0.0.1:17407/mainpage");
+        assertThat(DesktopLauncher.startPage(17407, List.of("a", "b")))
+                .isEqualTo("http://127.0.0.1:17407/mainpage?open=a,b");
     }
 
     @Test

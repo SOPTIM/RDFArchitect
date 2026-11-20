@@ -78,6 +78,16 @@ class DesktopOptionsTest {
     }
 
     @Test
+    void takesFilesAsPathsOrAsFileUris() {
+        var options =
+                DesktopOptions.parse(
+                        new String[] {"/tmp/a.rdfa", "file:///tmp/My%20Draft.rdfa"}, Map.of());
+
+        assertThat(options.files())
+                .containsExactly(Path.of("/tmp/a.rdfa"), Path.of("/tmp/My Draft.rdfa"));
+    }
+
+    @Test
     void ignoresTheProcessSerialNumberFinderPasses() {
         var options = DesktopOptions.parse(new String[] {"-psn_0_123456"}, Map.of());
 

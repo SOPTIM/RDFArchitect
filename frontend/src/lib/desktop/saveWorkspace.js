@@ -17,8 +17,16 @@
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import { saveFile, workspaceArchiveMediaType } from "$lib/utils/fileUtils";
 
-import { fetchWorkspaceFile, markWorkspaceSaved } from "./desktopApi.js";
-import { refreshDesktopStatus } from "./desktopSession.svelte.js";
+import {
+    fetchWorkspaceFile,
+    markOpenedFrom,
+    markWorkspaceSaved,
+    saveWorkspaceToItsFile,
+} from "./desktopApi.js";
+import {
+    desktopSession,
+    refreshDesktopStatus,
+} from "./desktopSession.svelte.js";
 import { workspaceFiles } from "./workspaceFiles.js";
 
 /** What the file pickers offer, and the directory they remember between uses. */
@@ -64,7 +72,9 @@ export function suggestedFileName(workspaceName) {
 
 /**
  * Saves the workspace to a workspace file: to the file it was opened from or last saved to, or
- * to one the user chooses first for Save As and for a workspace that has none.
+ * to one the user chooses first for Save As and for a workspace that has none. A file the
+ * operating system handed over (a double-clicked one) is written by the backend, which knows where
+ * it is; the browser only can write files it chose itself.
  *
  * The picker has to open first, while the click or key press that asked for it still counts as
  * the user's: browsers refuse it otherwise.
@@ -78,11 +88,23 @@ export async function saveWorkspace(workspaceName, { saveAs = false } = {}) {
         return "failed";
     }
     try {
-        let handle = null;
+        let handle = saveAs
+            ? null
+            : (workspaceFiles.get(workspaceName) ?? null);
+        if (
+            !saveAs &&
+            !handle &&
+            desktopSession.workspacesWithFile.includes(workspaceName) &&
+            (await saveWorkspaceToItsFile(workspaceName))
+        ) {
+            await refreshDesktopStatus();
+            toastStore.success(
+                "Workspace saved",
+                `"${workspaceName}" was saved to the file it was opened from.`,
+            );
+            return "saved";
+        }
         if (canChooseFiles()) {
-            handle = saveAs
-                ? null
-                : (workspaceFiles.get(workspaceName) ?? null);
             if (!handle) {
                 handle = await window.showSaveFilePicker({
                     ...PICKER_OPTIONS,
@@ -157,6 +179,23 @@ export async function workspaceOpenedFromFile(workspaceName, handle) {
     } catch (error) {
         console.warn(
             `[saveWorkspace] Could not mark "${workspaceName}" as saved`,
+            error,
+        );
+    }
+    await refreshDesktopStatus();
+}
+
+/**
+ * Records that a workspace was just opened from a file the operating system handed over: it holds
+ * nothing the file does not, and Save writes back to that file.
+ */
+export async function workspaceOpenedFromRequest(workspaceName, requestId) {
+    workspaceFiles.forget(workspaceName);
+    try {
+        await markOpenedFrom(workspaceName, requestId);
+    } catch (error) {
+        console.warn(
+            `[saveWorkspace] Could not record where "${workspaceName}" came from`,
             error,
         );
     }

@@ -31,4 +31,10 @@ public class DesktopStatusDTO {
 
     /** The workspaces holding changes that no file has, sorted by name. */
     private List<String> unsavedWorkspaces;
+
+    /**
+     * The workspaces whose file the backend writes itself on Save, because it was handed over by
+     * the operating system rather than chosen in the browser. Sorted by name.
+     */
+    private List<String> workspacesWithFile;
 }

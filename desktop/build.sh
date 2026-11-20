@@ -153,14 +153,25 @@ for option in "${JAVA_OPTIONS[@]}"; do
   common_options+=(--java-options "$option")
 done
 
+# Installers register .rdfa files: double-clicking one opens it in the app.
+write_file_association() {
+  cat > "$WORK/rdfa-association.properties" <<EOF
+extension=rdfa
+mime-type=application/x-rdfarchitect-workspace
+description=RDFArchitect workspace
+icon=$1
+EOF
+}
+
 case "$os" in
   windows)
     common_options+=(--icon "$DESKTOP/icons/rdfarchitect.ico")
+    write_file_association "$DESKTOP/icons/rdfarchitect.ico"
     installer_type=msi
     installer_options=(
       --win-menu --win-menu-group "$APP_NAME" --win-shortcut --win-shortcut-prompt
       --win-dir-chooser --win-per-user-install --win-upgrade-uuid "$WINDOWS_UPGRADE_UUID"
-      --license-file "$ROOT/LICENSE"
+      --license-file "$ROOT/LICENSE" --file-associations "$WORK/rdfa-association.properties"
     )
     ;;
   mac)
@@ -169,16 +180,20 @@ case "$os" in
       --mac-package-identifier de.soptim.rdfarchitect
       --mac-package-name "$APP_NAME"
     )
+    write_file_association "$DESKTOP/icons/rdfarchitect.icns"
     installer_type=dmg
-    installer_options=(--license-file "$ROOT/LICENSE")
+    installer_options=(
+      --license-file "$ROOT/LICENSE" --file-associations "$WORK/rdfa-association.properties"
+    )
     ;;
   linux)
     common_options+=(--icon "$DESKTOP/icons/rdfarchitect.png")
+    write_file_association "$DESKTOP/icons/rdfarchitect.png"
     installer_type=deb
     installer_options=(
       --linux-package-name rdfarchitect --linux-shortcut --linux-menu-group Development
       --linux-app-category devel --linux-deb-maintainer "opencgmes@soptim.de"
-      --license-file "$ROOT/LICENSE"
+      --license-file "$ROOT/LICENSE" --file-associations "$WORK/rdfa-association.properties"
     )
     ;;
 esac
