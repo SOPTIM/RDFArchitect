@@ -221,8 +221,11 @@ esac
 
 if $installer; then
   log "Installer ($installer_type)"
-  # Verbose, because the installer tools' own messages are only shown that way.
+  # Verbose, because the installer tools' own messages are only shown that way. The temporary
+  # files go into the build directory: the WiX Toolset failed to find the file association's
+  # icon in the user's temporary directory, which Windows runners name by its short 8.3 path.
   "$JAVA_BIN/jpackage" --type "$installer_type" --dest "$WORK/installer" --verbose \
+    --temp "$WORK/installer-temp" \
     "${common_options[@]}" "${installer_options[@]}"
   for file in "$WORK/installer"/*; do
     extension="${file##*.}"
