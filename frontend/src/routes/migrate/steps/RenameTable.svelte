@@ -74,6 +74,13 @@
         }
     }
 
+    function targetsShareAClass(mapping) {
+        const domains = mapping.newResources
+            .map(resource => resource.domain)
+            .filter(domain => domain != null);
+        return new Set(domains).size < domains.length;
+    }
+
     /** Linking what another row already claims would make the two a merge. */
     function isClaimedElsewhere(candidate, mapping) {
         return (
@@ -179,6 +186,13 @@
                                         : "+ Link"}
                                 </button>
                             </div>
+
+                            {#if targetsShareAClass(mapping)}
+                                <p class="text-red-text mt-1 text-xs">
+                                    Several of these are on the same class and
+                                    can not be migrated correctly.
+                                </p>
+                            {/if}
 
                             {#if expandedIds.has(mapping.id)}
                                 <div

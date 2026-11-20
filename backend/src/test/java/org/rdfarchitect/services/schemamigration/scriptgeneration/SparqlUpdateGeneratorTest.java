@@ -40,6 +40,7 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.services.schemamigration.artifacts.SparqlUpdateGenerator;
 
 import java.util.List;
+import java.util.Map;
 
 @ExtendWith(MockitoExtension.class)
 class SparqlUpdateGeneratorTest {
@@ -194,7 +195,7 @@ class SparqlUpdateGeneratorTest {
                         splitSibling(
                                 PREFIX + "OldClass.voltage", PREFIX + "ClassC.voltage", "ClassC"));
 
-        var update = generator.generateSplitPropertyUpdate(siblings);
+        var update = generator.generateSplitPropertyUpdate(siblings, Map.of());
         UpdateAction.parseExecute(update, schema);
 
         assertThat(instance.hasProperty(oldAttribute)).isFalse();
@@ -225,7 +226,7 @@ class SparqlUpdateGeneratorTest {
                         splitSibling(
                                 PREFIX + "OldClass.voltage", PREFIX + "ClassB.voltage", "ClassB"));
 
-        var update = generator.generateSplitPropertyUpdate(siblings);
+        var update = generator.generateSplitPropertyUpdate(siblings, Map.of());
         UpdateAction.parseExecute(update, schema);
 
         assertThat(instance.hasProperty(oldAttribute)).isFalse();

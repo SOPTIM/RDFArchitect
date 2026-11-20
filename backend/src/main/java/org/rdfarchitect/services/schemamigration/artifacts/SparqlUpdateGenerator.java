@@ -37,6 +37,7 @@ import org.springframework.stereotype.Component;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -140,17 +141,31 @@ public class SparqlUpdateGenerator {
     }
 
     private String deleteFromClassesLosingProperty(
-            String oldPropertyIri, Collection<String> keepingClasses) {
+            String oldPropertyIri,
+            Collection<String> keepingClasses,
+            Map<String, String> renamedClasses) {
         var result = new StringBuilder();
+
         for (var classIri : classesCarrying(oldPropertyIri)) {
-            if (!keepingClasses.contains(classIri)) {
-                var pss = SparqlTemplateLoader.loadTemplate("migration/property-deleted");
-                pss.setIri("property", oldPropertyIri);
-                pss.setIri("domain", classIri);
-                append(result, pss.toString());
+            var renamedTo = renamedClasses.get(classIri);
+            if (keepingClasses.contains(renamedTo != null ? renamedTo : classIri)) {
+                continue;
+            }
+
+            append(result, deletePropertyFromClass(oldPropertyIri, classIri));
+            if (renamedTo != null) {
+                // the class rename may have retyped the instances before this runs
+                append(result, deletePropertyFromClass(oldPropertyIri, renamedTo));
             }
         }
         return result.toString();
+    }
+
+    private String deletePropertyFromClass(String propertyIri, String classIri) {
+        var pss = SparqlTemplateLoader.loadTemplate("migration/property-deleted");
+        pss.setIri("property", propertyIri);
+        pss.setIri("domain", classIri);
+        return pss.toString();
     }
 
     private List<String> classesCarrying(String propertyIri) {
@@ -164,18 +179,20 @@ public class SparqlUpdateGenerator {
         return domain == null ? List.of() : hierarchyOf(domain);
     }
 
-    public String generateMovePropertyUpdate(SemanticPropertyChange propertyChange) {
+    public String generateMovePropertyUpdate(
+            SemanticPropertyChange propertyChange, Map<String, String> renamedClasses) {
         var keepingClasses = getClassHierarchy(propertyChange.getDomain());
 
         var result = new StringBuilder();
         for (var oldIri : propertyChange.getAllOldIRIs()) {
-            append(result, deleteFromClassesLosingProperty(oldIri, keepingClasses));
+            append(result, deleteFromClassesLosingProperty(oldIri, keepingClasses, renamedClasses));
         }
         append(result, generateRenamePropertyUpdate(propertyChange));
         return result.toString();
     }
 
-    public <T extends SemanticPropertyChange> String generateSplitPropertyUpdate(List<T> siblings) {
+    public <T extends SemanticPropertyChange> String generateSplitPropertyUpdate(
+            List<T> siblings, Map<String, String> renamedClasses) {
         var oldProperty = siblings.getFirst().getOldIRI();
         var result = new StringBuilder();
         var keepingClasses = new HashSet<String>();
@@ -191,7 +208,9 @@ public class SparqlUpdateGenerator {
             }
         }
         // a split rewrites per target, so there is no plain rewrite left to carry the rest
-        append(result, deleteFromClassesLosingProperty(oldProperty, keepingClasses));
+        append(
+                result,
+                deleteFromClassesLosingProperty(oldProperty, keepingClasses, renamedClasses));
         return result.toString();
     }
 

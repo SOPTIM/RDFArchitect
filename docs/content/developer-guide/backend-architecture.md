@@ -123,12 +123,9 @@ next `diffAfter…Confirm` list into:
 | Review the changes | `MigrationChangesService` | `diffAfterDefaultValueConfirm` ↔ user edits |
 | Download script/report | `artifacts/MigrationArtifactsService` | `diffAfterDefaultValueConfirm` → artefacts |
 
-The logic each step applies to the changes sits in Lombok `@UtilityClass` helpers next to its
-service — `RenameDetector`, `RenameReclassifier`, `PropertyMappingDetector`,
-`PropertyMappingApplier`, `PropagatedChangeCalculator`, `DefaultValueAssigner` and the two
-inheritance handlers. A step service itself only loads the context, calls those helpers in order,
-and stores the result, so a new migration capability usually means extending a helper rather than
-the service.
+The services themselves are supplemented by `@UtilityClasses` that sit next to them, like 
+`RenameDetector`, `RenameReclassifier`,`PropertyMappingUtilities`, `PropagatedChangeCalculator`, `DefaultValueAssigner` and the two
+inheritance handlers.
 
 ## Generated artefacts
 

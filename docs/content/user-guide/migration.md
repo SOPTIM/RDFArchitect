@@ -78,6 +78,8 @@ Where a deleted property and its successor aren't a clean 1:1 pairing, two furth
 - **Split** — one deleted property matched against several added ones (for example, an attribute pushed down from a superclass onto more than one subclass).
 - **Merge** — several deleted properties, from different classes, that all converge on the same added one (the reverse: several subclasses' attributes consolidated onto a shared superclass).
 
+A split hands each instance the target that belongs to its class, so the targets are expected to be on classes no instance belongs to at once. Where two targets do both apply — two on one class, or one on a class and one on a class deriving from it — only the first of them receives the value and the others stay empty. The step warns about the first of those; the second it cannot see, so splitting across a class and its subclass is worth checking by hand.
+
 A split is only proposed where a single property of that name is being lost. Where a superclass and a subclass each carry a property of the same name and each loses its own, those are read as one rename per class instead of as one property split across both.
 
 A split or merge row lists every property on its many side and can be adjusted the same way a plain rename can: link a deleted property to more than one target to turn it into a split, or link two deleted properties to the same target to turn them into a merge. Rows linking more than one property on *both* sides are marked **Conflicting**. They are not submitted, and the wizard does not hold you on the step for them: **Continue** skips those rows with a warning and moves on, which leaves the properties involved as a plain deletion and a plain addition.
@@ -171,7 +173,7 @@ Under the heading, your comment appears as a quoted note, followed by the field 
 
 Three notes are worth looking out for:
 
-- *"The values are migrated by the change on the receiving class, so nothing is deleted here."* — a move, merge or split carried this property to another class. It is listed here so that the class it left does not look untouched, but no update in the script removes anything from it; the receiving class's entry does the one migration the data needs.
+- *"The values are migrated by the change on the receiving class. Instances that are not also instances of a receiving class lose the property."* — a move, merge or split carried this property to another class, and it is listed here so that the class it left does not look untouched. Which half applies depends on where the property went. Moved **up** the hierarchy, every instance of this class is also an instance of the receiving class, so the values travel with it and nothing is removed. Moved **down** or sideways, the instances outside the receiving class's hierarchy are not taken along, and the script deletes the property from them.
 - *"The datatypes were marked equivalent, so existing values are kept."* — the trace of an **Equivalent** tick in step 5. It documents that a datatype change was deliberately not migrated.
 - *"Potentially invalid targets due to superclass changes"* — a class lost a superclass that an association points to. Instances of the listed classes may no longer be valid targets of that association. The script cannot decide this for you; the report flags it so that you can check it against your data.
 

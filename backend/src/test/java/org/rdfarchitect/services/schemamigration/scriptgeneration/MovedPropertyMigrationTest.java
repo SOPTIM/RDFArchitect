@@ -61,12 +61,13 @@ class MovedPropertyMigrationTest {
     private SparqlMigrationBuilder builder;
     private Model schema;
     private Model originalSchema;
+    private SchemaMigrationContext context;
 
     @BeforeEach
     void setUp() {
         schema = ModelFactory.createDefaultModel();
         originalSchema = ModelFactory.createDefaultModel();
-        var context = new SchemaMigrationContext();
+        context = new SchemaMigrationContext();
         context.setUpdatedSchema(schema.getGraph());
         context.setOriginalSchema(originalSchema.getGraph());
         lenient().when(migrationSessionStore.getContext()).thenReturn(context);
@@ -136,6 +137,58 @@ class MovedPropertyMigrationTest {
         assertThat(valuesOf(data, "Child.p")).containsExactly("value-of-child");
         assertThat(valuesOf(data, "OtherChild.p")).containsExactly("value-of-otherChild");
         assertThat(valuesOf(data, "Base.p")).isEmpty();
+    }
+
+    @Test
+    void movedProperty_whenTheClassItCameFromWasRenamed_keepsItsValues() {
+        concreteClass("DiagramObject", null);
+        originalClass("TextDiagramObject", "DiagramObject");
+        concreteClass("TextLabel", "DiagramObject");
+        propertyOfOldClass("TextDiagramObject.text", "TextDiagramObject");
+
+        var renamedClass =
+                SemanticClassChange.builder()
+                        .iri(PREFIX + "TextLabel")
+                        .oldIRI(PREFIX + "TextDiagramObject")
+                        .label("TextLabel")
+                        .semanticResourceChangeType(SemanticResourceChangeType.RENAME)
+                        .attributes(new ArrayList<>())
+                        .associations(new ArrayList<>())
+                        .enumEntries(new ArrayList<>())
+                        .build();
+        var moved = new SemanticAttributeChange();
+        moved.setIri(PREFIX + "DiagramObject.text");
+        moved.setOldIRI(PREFIX + "TextDiagramObject.text");
+        moved.setLabel("text");
+        moved.setDomain(PREFIX + "DiagramObject");
+        moved.setSemanticResourceChangeType(SemanticResourceChangeType.MOVE);
+        var receivingClass = classChange("DiagramObject", moved);
+
+        // the script orders classes however they come, so neither order may lose the value
+        for (var classes :
+                List.of(
+                        List.of(renamedClass, receivingClass),
+                        List.of(receivingClass, renamedClass))) {
+            var data = ModelFactory.createDefaultModel();
+            data.createResource(PREFIX + "t1")
+                    .addProperty(RDF.type, data.createResource(PREFIX + "TextDiagramObject"))
+                    .addProperty(data.createProperty(PREFIX + "TextDiagramObject.text"), "Hallo");
+
+            UpdateAction.parseExecute(builder.generateMigrationScript(classes), data);
+
+            assertThat(valuesOf(data, "DiagramObject.text")).containsExactly("Hallo");
+        }
+    }
+
+    /** A class the updated schema no longer has under that name. */
+    private void originalClass(String localName, String superClass) {
+        var resource = originalSchema.createResource(PREFIX + localName);
+        resource.addProperty(RDF.type, RDFS.Class);
+        resource.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+        if (superClass != null) {
+            resource.addProperty(
+                    RDFS.subClassOf, originalSchema.createResource(PREFIX + superClass));
+        }
     }
 
     private SemanticAttributeChange splitSibling(String targetClass) {

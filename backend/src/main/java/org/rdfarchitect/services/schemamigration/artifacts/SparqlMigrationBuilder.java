@@ -30,6 +30,7 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeTyp
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -42,18 +43,19 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
 
     private final SparqlUpdateGenerator updateGenerator;
 
-    private record SplitGroups(
+    private record ScriptContext(
             Map<String, List<SemanticAttributeChange>> attributeGroups,
             Map<String, List<SemanticAssociationChange>> associationGroups,
             Set<String> emittedAttributeGroups,
-            Set<String> emittedAssociationGroups) {}
+            Set<String> emittedAssociationGroups,
+            Map<String, String> renamedClasses) {}
 
     @Override
     public String generateMigrationScript(List<SemanticClassChange> classChanges) {
-        var splitGroups = collectSplitGroups(classChanges);
+        var scriptContext = collectScriptContext(classChanges);
         var sb = new StringBuilder();
         for (var classChange : classChanges) {
-            var classBlock = generateUpdateForClass(classChange, splitGroups);
+            var classBlock = generateUpdateForClass(classChange, scriptContext);
             if (!classBlock.isBlank()) {
                 sb.append(classBlock);
             }
@@ -61,7 +63,7 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         return sb.toString();
     }
 
-    private SplitGroups collectSplitGroups(List<SemanticClassChange> classChanges) {
+    private ScriptContext collectScriptContext(List<SemanticClassChange> classChanges) {
         var allAttributes = new ArrayList<SemanticAttributeChange>();
         var allAssociations = new ArrayList<SemanticAssociationChange>();
         for (var classChange : classChanges) {
@@ -69,15 +71,26 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
             allAssociations.addAll(classChange.getAssociations());
         }
 
-        return new SplitGroups(
+        return new ScriptContext(
                 groupSplitSiblings(allAttributes),
                 groupSplitSiblings(allAssociations),
                 new HashSet<>(),
-                new HashSet<>());
+                new HashSet<>(),
+                collectRenamedClasses(classChanges));
+    }
+
+    private Map<String, String> collectRenamedClasses(List<SemanticClassChange> classChanges) {
+        var renamedClasses = new HashMap<String, String>();
+        for (var classChange : classChanges) {
+            for (var oldIri : classChange.getAllOldIRIs()) {
+                renamedClasses.put(oldIri, classChange.getIri());
+            }
+        }
+        return renamedClasses;
     }
 
     private String generateUpdateForClass(
-            SemanticClassChange classChange, SplitGroups splitGroups) {
+            SemanticClassChange classChange, ScriptContext scriptContext) {
         var sb = new StringBuilder();
 
         appendComment(sb, classChange);
@@ -98,7 +111,7 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
             processClassChanges(classChange, sb);
         }
 
-        processPropertyChanges(classChange, sb, splitGroups);
+        processPropertyChanges(classChange, sb, scriptContext);
 
         return sb.toString();
     }
@@ -112,9 +125,9 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
     }
 
     private void processPropertyChanges(
-            SemanticClassChange classChange, StringBuilder sb, SplitGroups splitGroups) {
+            SemanticClassChange classChange, StringBuilder sb, ScriptContext scriptContext) {
         for (var attribute : classChange.getAttributes()) {
-            var block = generateUpdateForAttribute(attribute, classChange.getIri(), splitGroups);
+            var block = generateUpdateForAttribute(attribute, classChange.getIri(), scriptContext);
             if (!block.isBlank()) {
                 sb.append(block);
             }
@@ -122,7 +135,7 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
 
         for (var association : classChange.getAssociations()) {
             var block =
-                    generateUpdateForAssociation(association, classChange.getIri(), splitGroups);
+                    generateUpdateForAssociation(association, classChange.getIri(), scriptContext);
             if (!block.isBlank()) {
                 sb.append(block);
             }
@@ -139,7 +152,7 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
     }
 
     private String generateUpdateForAttribute(
-            SemanticAttributeChange attributeChange, String classIri, SplitGroups splitGroups) {
+            SemanticAttributeChange attributeChange, String classIri, ScriptContext scriptContext) {
         var sb = new StringBuilder();
         appendComment(sb, attributeChange);
 
@@ -148,9 +161,10 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                     case DELETE -> updateGenerator.generateDeletePropertyUpdate(attributeChange);
                     case RENAME -> updateGenerator.generateRenameAttributeUpdate(attributeChange);
                     case MOVE, MERGE ->
-                            updateGenerator.generateMovePropertyUpdate(attributeChange)
+                            updateGenerator.generateMovePropertyUpdate(
+                                            attributeChange, scriptContext.renamedClasses())
                                     + initializeTargetInstances(attributeChange, classIri);
-                    case SPLIT -> generateSplitAttributeUpdate(attributeChange, splitGroups);
+                    case SPLIT -> generateSplitAttributeUpdate(attributeChange, scriptContext);
                     case ADD ->
                             updateGenerator.generateAddAttributeUpdate(attributeChange, classIri);
                     case ADDED_FROM_INHERITANCE ->
@@ -179,23 +193,23 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
     }
 
     private String generateSplitAttributeUpdate(
-            SemanticAttributeChange attributeChange, SplitGroups splitGroups) {
-        var group = splitGroups.attributeGroups().get(attributeChange.getOldIRI());
+            SemanticAttributeChange attributeChange, ScriptContext scriptContext) {
+        var group = scriptContext.attributeGroups().get(attributeChange.getOldIRI());
         if (group == null
-                || !splitGroups.emittedAttributeGroups().add(attributeChange.getOldIRI())) {
+                || !scriptContext.emittedAttributeGroups().add(attributeChange.getOldIRI())) {
             return "";
         }
-        return updateGenerator.generateSplitPropertyUpdate(group);
+        return updateGenerator.generateSplitPropertyUpdate(group, scriptContext.renamedClasses());
     }
 
     private String generateSplitAssociationUpdate(
-            SemanticAssociationChange associationChange, SplitGroups splitGroups) {
-        var group = splitGroups.associationGroups().get(associationChange.getOldIRI());
+            SemanticAssociationChange associationChange, ScriptContext scriptContext) {
+        var group = scriptContext.associationGroups().get(associationChange.getOldIRI());
         if (group == null
-                || !splitGroups.emittedAssociationGroups().add(associationChange.getOldIRI())) {
+                || !scriptContext.emittedAssociationGroups().add(associationChange.getOldIRI())) {
             return "";
         }
-        return updateGenerator.generateSplitPropertyUpdate(group);
+        return updateGenerator.generateSplitPropertyUpdate(group, scriptContext.renamedClasses());
     }
 
     private void processAttributeFieldChanges(
@@ -281,7 +295,9 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
     }
 
     private String generateUpdateForAssociation(
-            SemanticAssociationChange associationChange, String classIri, SplitGroups splitGroups) {
+            SemanticAssociationChange associationChange,
+            String classIri,
+            ScriptContext scriptContext) {
         var sb = new StringBuilder();
         appendComment(sb, associationChange);
 
@@ -298,9 +314,10 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                     case RENAME ->
                             updateGenerator.generateRenameAssociationUpdate(associationChange);
                     case MOVE, MERGE ->
-                            updateGenerator.generateMovePropertyUpdate(associationChange)
+                            updateGenerator.generateMovePropertyUpdate(
+                                            associationChange, scriptContext.renamedClasses())
                                     + initializeTargetInstances(associationChange, classIri);
-                    case SPLIT -> generateSplitAssociationUpdate(associationChange, splitGroups);
+                    case SPLIT -> generateSplitAssociationUpdate(associationChange, scriptContext);
                     default -> null;
                 };
 

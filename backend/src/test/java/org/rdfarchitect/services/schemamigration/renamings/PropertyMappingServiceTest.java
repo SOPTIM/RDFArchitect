@@ -30,12 +30,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.rdfarchitect.api.dto.migration.ClassPropertyMappingOverview;
+import org.rdfarchitect.api.dto.migration.ClassPropertyMappings;
 import org.rdfarchitect.context.MigrationSessionStore;
 import org.rdfarchitect.context.SchemaMigrationContext;
-import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
+import org.rdfarchitect.models.changes.MappingType;
+import org.rdfarchitect.models.changes.ResourceMapping;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
-import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
@@ -125,8 +126,8 @@ class PropertyMappingServiceTest {
                 .label(name)
                 .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
                 .attributes(new ArrayList<>(List.of(attributeChange)))
-                .associations(new ArrayList<SemanticAssociationChange>())
-                .enumEntries(new ArrayList<SemanticEnumEntryChange>())
+                .associations(new ArrayList<>())
+                .enumEntries(new ArrayList<>())
                 .build();
     }
 
@@ -159,5 +160,110 @@ class PropertyMappingServiceTest {
         service.confirmPropertyMappings(List.of());
 
         assertThat(proposedMappings(service.getPropertyMappings())).isZero();
+    }
+
+    @Test
+    void reconfirmingClassRenames_keepsThePropertyMappingOfTheRenamedClass() {
+        var oldModel = ModelFactory.createDefaultModel();
+        declareClass(oldModel, "DiagramObject", null);
+        declareClass(oldModel, "TextDiagramObject", "DiagramObject");
+        declareTextAttribute(oldModel, "TextDiagramObject.text", "TextDiagramObject");
+        var newModel = ModelFactory.createDefaultModel();
+        declareClass(newModel, "DiagramObject", null);
+        declareClass(newModel, "TextLabel", "DiagramObject");
+        declareTextAttribute(newModel, "DiagramObject.text", "DiagramObject");
+        context.setOriginalSchema(oldModel.getGraph());
+        context.setUpdatedSchema(newModel.getGraph());
+
+        var deletedClass =
+                textClassChange(
+                        "TextDiagramObject",
+                        SemanticResourceChangeType.DELETE,
+                        textAttribute(
+                                "TextDiagramObject.text",
+                                "TextDiagramObject",
+                                SemanticResourceChangeType.DELETE));
+        var addedClass = textClassChange("TextLabel", SemanticResourceChangeType.ADD);
+        var receivingClass =
+                textClassChange(
+                        "DiagramObject",
+                        SemanticResourceChangeType.CHANGE,
+                        textAttribute(
+                                "DiagramObject.text",
+                                "DiagramObject",
+                                SemanticResourceChangeType.ADD));
+        context.setSemanticDiff(new ArrayList<>(List.of(deletedClass, addedClass, receivingClass)));
+
+        var classMappingService = new ClassMappingService(migrationSessionStore);
+        var classRename = new ResourceMapping<>(deletedClass, addedClass, 1.0);
+        classRename.setType(MappingType.RENAME);
+        var renames = new ArrayList<>(List.of(classRename));
+
+        classMappingService.confirmClassRenamings(renames);
+        assertThat(proposedMappings(service.getPropertyMappings()))
+                .as("the move onto DiagramObject is proposed on the first visit")
+                .isEqualTo(1);
+
+        service.confirmPropertyMappings(confirmWhateverWasProposed());
+
+        // back to step 3 and Continue again, without changing anything
+        classMappingService.confirmClassRenamings(renames);
+
+        assertThat(proposedMappings(service.getPropertyMappings())).isEqualTo(1);
+    }
+
+    private List<ClassPropertyMappings> confirmWhateverWasProposed() {
+        var body = new ArrayList<ClassPropertyMappings>();
+        for (var cls : context.getDiffAfterClassConfirm()) {
+            if (cls.getAttributeResourceMappings().isEmpty()) {
+                continue;
+            }
+            var entry = new ClassPropertyMappings();
+            entry.setClassLabel(cls.getLabel());
+            entry.setAttributeMappings(cls.getAttributeResourceMappings());
+            entry.setAssociationMappings(new ArrayList<>());
+            entry.setEnumEntryMappings(new ArrayList<>());
+            body.add(entry);
+        }
+        return body;
+    }
+
+    private void declareClass(Model model, String name, String superClass) {
+        var cls = model.createResource(PREFIX + name);
+        cls.addProperty(RDF.type, RDFS.Class);
+        cls.addProperty(RDFS.label, model.createLiteral(name));
+        cls.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
+        if (superClass != null) {
+            cls.addProperty(RDFS.subClassOf, model.createResource(PREFIX + superClass));
+        }
+    }
+
+    private void declareTextAttribute(Model model, String name, String domain) {
+        var attribute = model.createResource(PREFIX + name);
+        attribute.addProperty(RDF.type, RDF.Property);
+        attribute.addProperty(RDFS.label, model.createLiteral("text"));
+        attribute.addProperty(RDFS.domain, model.createResource(PREFIX + domain));
+    }
+
+    private SemanticAttributeChange textAttribute(
+            String iri, String domain, SemanticResourceChangeType type) {
+        return SemanticAttributeChange.builder()
+                .iri(PREFIX + iri)
+                .label("text")
+                .domain(PREFIX + domain)
+                .semanticResourceChangeType(type)
+                .build();
+    }
+
+    private SemanticClassChange textClassChange(
+            String name, SemanticResourceChangeType type, SemanticAttributeChange... attributes) {
+        return SemanticClassChange.builder()
+                .iri(PREFIX + name)
+                .label(name)
+                .semanticResourceChangeType(type)
+                .attributes(new ArrayList<>(List.of(attributes)))
+                .associations(new ArrayList<>())
+                .enumEntries(new ArrayList<>())
+                .build();
     }
 }

@@ -494,8 +494,9 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
 
             if (type == SemanticResourceChangeType.REMOVED_VIA_MAPPING
                     && !prop.getMappedToIRIs().isEmpty()) {
-                sb.append("The values are migrated by the change on the receiving class, so ")
-                        .append("nothing is deleted here.\n\n");
+                sb.append("The values are migrated by the change on the receiving class. ")
+                        .append("Instances that are not also instances of a receiving class ")
+                        .append("lose the property.\n\n");
             }
 
             if (prop.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE

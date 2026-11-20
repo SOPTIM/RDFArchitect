@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Drives the class step of the migration wizard: suggests which deleted class became which added
@@ -54,6 +55,7 @@ public class ClassMappingService implements GetClassMappingsUseCase, ClassRenami
     @Override
     public void confirmClassRenamings(List<ResourceMapping<SemanticClassChange>> renames) {
         var context = migrationSessionStore.getContext();
+        var confirmedBefore = context.getDiffAfterClassConfirm();
         context.setResourceMappings(renames);
         var classChanges = new ArrayList<>(context.getSemanticDiff());
 
@@ -63,7 +65,31 @@ public class ClassMappingService implements GetClassMappingsUseCase, ClassRenami
             classChanges.add(RenameObjectBuilder.createRenameObject(rename));
         }
         RenameReclassifier.reclassifyChangesDueToRenames(classChanges, renames);
+        carryOverPropertyMappings(classChanges, confirmedBefore);
 
         context.setDiffAfterClassConfirm(classChanges);
+    }
+
+    private void carryOverPropertyMappings(
+            List<SemanticClassChange> classChanges, List<SemanticClassChange> confirmedBefore) {
+        if (confirmedBefore == null) {
+            return;
+        }
+
+        var before =
+                confirmedBefore.stream()
+                        .collect(
+                                Collectors.toMap(
+                                        SemanticClassChange::getIri, c -> c, (first, _) -> first));
+
+        for (var classChange : classChanges) {
+            var previous = before.get(classChange.getIri());
+            if (previous == null || previous == classChange) {
+                continue;
+            }
+            classChange.setAttributeResourceMappings(previous.getAttributeResourceMappings());
+            classChange.setAssociationResourceMappings(previous.getAssociationResourceMappings());
+            classChange.setEnumEntryResourceMappings(previous.getEnumEntryResourceMappings());
+        }
     }
 }

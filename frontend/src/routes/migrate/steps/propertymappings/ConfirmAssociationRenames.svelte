@@ -20,7 +20,13 @@
     const props = $props();
 </script>
 
-<PropertyMappingStep {...props} kind="associations" resourceType="Association">
+<PropertyMappingStep
+    {...props}
+    kind="associations"
+    resourceType="Association"
+    addedTitle="Added Associations"
+    emptyStateDescription="There are no association changes to review in this migration."
+>
     <p>
         This step lets you review potential association renames and moves for
         all classes. A candidate from elsewhere in the inheritance chain is

@@ -65,6 +65,13 @@
 </script>
 
 <div class="text-default-text flex flex-col space-y-8">
+    <InfoBox type="warn">
+        Splits where multiple targets can apply to the same instance, for
+        example if they are on the same class, can not be migrated correctly.
+        Only one of the properties will be applied. If you wish to instantiate
+        all target properties, consider doing so as a new property and not as
+        part of a split.
+    </InfoBox>
     <InfoBox type="info">
         {@render children?.()}
     </InfoBox>
