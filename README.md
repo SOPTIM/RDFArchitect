@@ -65,6 +65,10 @@ When cloning this repository, initialize the submodule with:
 git submodule update --init --recursive
 ```
 
+## Download
+
+To use RDFArchitect on your own computer, download the desktop app for Windows, macOS or Linux from the [latest release](https://github.com/SOPTIM/RDFArchitect/releases/latest). It brings its own Java runtime and needs no server; see [The desktop app](https://rdfarchitect.soptim.de/user-guide/desktop-app). Building it yourself: `desktop/build.sh` (see the [developer guide](https://rdfarchitect.soptim.de/developer-guide/ci-and-releases#desktop-app)).
+
 ## Prerequisites
 
 - Java 25 or higher
