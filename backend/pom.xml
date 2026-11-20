@@ -479,6 +479,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <version>4.1.2</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
