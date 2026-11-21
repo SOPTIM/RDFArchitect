@@ -50,7 +50,8 @@
         onclick={save}
     >
         <Fa icon={faCircle} class="text-orange" size="xs" />
-        <span>Unsaved</span>
+        <!-- The dot says it on narrow windows, where the toolbar has no room for the word. -->
+        <span class="max-lg:sr-only">Unsaved</span>
         <Fa icon={faFloppyDisk} />
     </button>
 {/if}
