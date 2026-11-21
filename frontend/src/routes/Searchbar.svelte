@@ -19,12 +19,12 @@
     import {
         faCaretDown,
         faMagnifyingGlass,
+        faXmark,
     } from "@fortawesome/free-solid-svg-icons";
-    import { onDestroy, onMount } from "svelte";
+    import { onDestroy, onMount, tick } from "svelte";
     import { Fa } from "svelte-fa";
 
     import { search } from "$lib/api/generated/index.ts";
-    import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
@@ -35,24 +35,28 @@
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     const filters = [
-        { name: "All Workspaces", value: "all" },
-        { name: "Current Workspace", value: "workspace" },
-        { name: "Current Schema", value: "graph" },
-        { name: "Current Package", value: "package" },
+        { name: "All Workspaces", short: "All", value: "all" },
+        { name: "Current Workspace", short: "Workspace", value: "workspace" },
+        { name: "Current Schema", short: "Schema", value: "graph" },
+        { name: "Current Package", short: "Package", value: "package" },
     ];
 
     const shortcutsUnregister = [];
 
     let showScopeDropdown = $state(false);
-    let selectedFilter = $state({ name: "All Workspaces", value: "all" });
+    let selectedFilter = $state(filters[0]);
     let queryString = $state("");
     let searchResults = $state([]);
     let inputElement = $state(null);
+    let toggleButton = $state(null);
+    // Below the md breakpoint the field folds into a button and opens below the toolbar; on wider
+    // windows it is always shown and this has no effect.
+    let open = $state(false);
 
     onMount(() => {
         shortcutsUnregister.push(
             shortcutStore.register("focusSearch", ["ctrl", "f"], () =>
-                focusInput(),
+                openSearch(),
             ),
         );
     });
@@ -192,78 +196,174 @@
         };
     }
 
-    function focusInput() {
+    async function openSearch() {
+        open = true;
+        await tick();
         inputElement?.focus();
         inputElement?.select();
     }
+
+    function closeSearch({ returnFocus = false } = {}) {
+        showScopeDropdown = false;
+        if (!open) {
+            return;
+        }
+        open = false;
+        if (returnFocus) {
+            toggleButton?.focus();
+        }
+    }
+
+    function chooseFilter(filter) {
+        selectedFilter = filter;
+        showScopeDropdown = false;
+        inputElement?.focus();
+        submitQuery();
+    }
+
+    function chooseResult(result) {
+        selectSubject(result);
+        searchResults = [];
+        closeSearch();
+    }
+
+    /** Esc takes back one thing at a time: the scope list, then the results, then the field. */
+    function handleKeydown(event) {
+        if (event.key !== "Escape") {
+            return;
+        }
+        if (showScopeDropdown) {
+            showScopeDropdown = false;
+        } else if (searchResults.length > 0) {
+            searchResults = [];
+        } else if (open) {
+            closeSearch({ returnFocus: true });
+        } else {
+            return;
+        }
+        // Answered here, so the window does not also take it as Esc for the editor.
+        event.preventDefault();
+    }
+
+    function handleFocusOut(event) {
+        if (
+            event.relatedTarget &&
+            !event.currentTarget.contains(event.relatedTarget)
+        ) {
+            closeSearch();
+        }
+    }
 </script>
 
-<form onsubmit={submitQuery}>
-    <div class="flex h-9 space-x-1.5">
-        <div
-            class="relative"
-            use:clickOutside
-            onoutclick={() => {
-                showScopeDropdown = false;
-            }}
+<!-- The toolbar is positioned, so the folded field opens as a panel right below it. -->
+<div
+    class="flex justify-end"
+    role="search"
+    use:clickOutside
+    onoutclick={() => {
+        searchResults = [];
+        closeSearch();
+    }}
+    onfocusout={handleFocusOut}
+>
+    <!-- Hidden through a wrapper: app.css forces the display of every button. -->
+    <div class="shrink-0 md:hidden">
+        <button
+            bind:this={toggleButton}
+            type="button"
+            class="text-blue hover:bg-lightblue focus-visible:outline-blue flex h-9 w-9 cursor-pointer items-center justify-center rounded focus-visible:outline-2"
+            aria-label="Search"
+            aria-expanded={open}
+            aria-controls="toolbar-search"
+            title="Search (Ctrl+F)"
+            onclick={() => (open ? closeSearch() : openSearch())}
         >
-            <div class="w-44">
-                <ButtonControl
-                    height={9}
-                    callOnClick={() => (showScopeDropdown = !showScopeDropdown)}
+            <Fa icon={faMagnifyingGlass} />
+        </button>
+    </div>
+    <!-- Esc is answered for the controls inside, all of which take the keyboard themselves. -->
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+    <form
+        id="toolbar-search"
+        class={`flex w-full items-center gap-2 ${
+            open
+                ? "max-md:border-border max-md:bg-window-background max-md:absolute max-md:inset-x-2 max-md:top-full max-md:z-50 max-md:mt-1 max-md:w-auto max-md:rounded-md max-md:border max-md:p-2 max-md:shadow-lg"
+                : "max-md:hidden"
+        }`}
+        onsubmit={submitQuery}
+        onkeydown={handleKeydown}
+    >
+        <div
+            class="border-button-border focus-within:border-blue focus-within:bg-lightblue relative flex h-9 min-w-0 flex-1 items-stretch rounded border bg-white"
+        >
+            <div
+                class="relative flex shrink-0"
+                use:clickOutside
+                onoutclick={() => {
+                    showScopeDropdown = false;
+                }}
+            >
+                <button
+                    type="button"
+                    class="text-blue hover:bg-lightblue focus-visible:outline-blue flex cursor-pointer items-center gap-1.5 rounded-l px-2.5 text-sm whitespace-nowrap focus-visible:outline-2 focus-visible:-outline-offset-2"
+                    title={`Search in: ${selectedFilter.name}`}
+                    aria-label={`Search in: ${selectedFilter.name}`}
+                    aria-expanded={showScopeDropdown}
+                    onclick={() => (showScopeDropdown = !showScopeDropdown)}
                 >
-                    <span class="relative flex w-40 items-center">
-                        <span class="mx-auto text-center">
-                            {selectedFilter.name}
-                        </span>
-                        <Fa
-                            icon={faCaretDown}
-                            class={`absolute right-0 transform transition-transform duration-200 ${showScopeDropdown ? "rotate-180" : ""}`}
-                        />
-                    </span>
-                </ButtonControl>
+                    {selectedFilter.short}
+                    <Fa
+                        icon={faCaretDown}
+                        class={`transition-transform duration-200 ${showScopeDropdown ? "rotate-180" : ""}`}
+                    />
+                </button>
+                {#if showScopeDropdown}
+                    <div
+                        class="border-border bg-window-background absolute top-full left-0 z-50 mt-0.5 flex w-44 flex-col rounded border text-sm shadow"
+                    >
+                        {#each filters as filter (filter.value)}
+                            <button
+                                type="button"
+                                class="text-blue border-window-background hover:border-blue hover:bg-lightblue border px-4 py-2 first:rounded-t last:rounded-b hover:cursor-pointer"
+                                aria-current={filter.value ===
+                                    selectedFilter.value}
+                                onclick={() => chooseFilter(filter)}
+                            >
+                                {filter.name}
+                            </button>
+                        {/each}
+                    </div>
+                {/if}
             </div>
-            {#if showScopeDropdown}
-                <div
-                    class="border-border bg-window-background absolute z-50 mt-0.5 flex w-44 flex-col rounded border text-sm shadow"
-                >
-                    {#each filters as filter}
-                        <button
-                            class="text-blue border-window-background hover:border-blue hover:bg-lightblue disabled:text-button-disabled-background border px-4 py-2 first:rounded-t last:rounded-b hover:cursor-pointer disabled:cursor-not-allowed"
-                            onclick={() => {
-                                selectedFilter = filter;
-                                showScopeDropdown = false;
-                            }}
-                        >
-                            {filter.name}
-                        </button>
-                    {/each}
-                </div>
-            {/if}
-        </div>
-        <div
-            class="focus-within:bg-lightblue relative h-full w-full flex-col rounded bg-white"
-        >
+            <span
+                class="bg-button-border my-1.5 w-px shrink-0"
+                aria-hidden="true"
+            ></span>
             <input
                 type="text"
                 id="query-string"
                 autocomplete="off"
+                aria-label="Search"
                 bind:this={inputElement}
                 bind:value={queryString}
                 placeholder="Search..."
-                class="text-default-text focus:border-blue border-input-default-background disabled:bg-button-disabled-background read-only:bg-default-background h-full w-full rounded border bg-transparent p-1 px-2 font-[350] outline-none"
+                class="text-default-text h-full min-w-0 flex-1 bg-transparent px-2 font-[350] outline-none"
                 oninput={submitQuery}
             />
+            <button
+                type="submit"
+                class="text-blue disabled:text-button-hover-background flex shrink-0 cursor-pointer items-center px-2.5 disabled:cursor-not-allowed"
+                aria-label="Run search"
+                disabled={queryString.trim().length < 3}
+            >
+                <Fa icon={faMagnifyingGlass} />
+            </button>
 
             <div
-                class="bg-window-background border-border absolute top-full right-0 left-0 z-50 mt-0.5 max-h-72 overflow-y-auto rounded border shadow {searchResults.length ===
+                class="bg-window-background border-border absolute top-full right-0 z-50 mt-0.5 max-h-72 w-full min-w-[min(26rem,calc(100vw-1rem))] overflow-y-auto rounded border shadow {searchResults.length ===
                 0
                     ? 'hidden'
                     : ''}"
-                use:clickOutside
-                onoutclick={() => {
-                    searchResults = [];
-                }}
             >
                 {#each searchResults as result}
                     {#if "message" in result}
@@ -282,13 +382,9 @@
                                 if (e.key !== "Enter") {
                                     return;
                                 }
-                                selectSubject(result);
-                                searchResults = [];
+                                chooseResult(result);
                             }}
-                            onclick={() => {
-                                selectSubject(result);
-                                searchResults = [];
-                            }}
+                            onclick={() => chooseResult(result)}
                         >
                             <div class="overflow-auto">
                                 <p class="text-xs font-light">
@@ -314,16 +410,17 @@
                 {/each}
             </div>
         </div>
-
-        <div class="relative">
-            <ButtonControl
-                type="submit"
-                aria-labelledby="search"
-                disabled={queryString.trim().length < 3}
-                height={9}
-            >
-                <Fa icon={faMagnifyingGlass} />
-            </ButtonControl>
-        </div>
-    </div>
-</form>
+        {#if open}
+            <div class="shrink-0 md:hidden">
+                <button
+                    type="button"
+                    class="text-default-text hover:bg-nav-hover-background flex h-9 w-9 cursor-pointer items-center justify-center rounded"
+                    aria-label="Close search"
+                    onclick={() => closeSearch({ returnFocus: true })}
+                >
+                    <Fa icon={faXmark} />
+                </button>
+            </div>
+        {/if}
+    </form>
+</div>

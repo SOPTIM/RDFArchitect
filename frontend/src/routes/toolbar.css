@@ -23,6 +23,28 @@
         border-color 0.2s ease;
 }
 
+/*
+ * The menu and the right-hand controls keep the width they need; the middle gives way. It stays
+ * centred while there is room, then moves aside and narrows instead of covering the menu.
+ */
+.toolbar-layout {
+    display: grid;
+    grid-template-columns:
+        minmax(max-content, 1fr)
+        minmax(0, 36rem)
+        minmax(max-content, 1fr);
+    /* The logo's button is taller than the bar; it may overflow, the row may not. */
+    grid-template-rows: 100%;
+    align-items: center;
+    column-gap: 1rem;
+}
+
+@media (width < 48rem) {
+    .toolbar-layout {
+        column-gap: 0.5rem;
+    }
+}
+
 /* A page laid out like the editor but not one, told apart by the colour of the bar above it. */
 .toolbar-surface--named {
     background: var(--color-lightblue);
